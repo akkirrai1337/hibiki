@@ -1,9 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Hibiki icon">
-  <defs>
-    <clipPath id="circleClip">
-      <circle cx="60" cy="60" r="60" />
-    </clipPath>
-  </defs>
-  <rect width="120" height="120" rx="60" fill="#ffffff" />
-  <image href="hibiki.jpg" x="0" y="-3" width="120" height="126" preserveAspectRatio="xMidYMid slice" clip-path="url(#circleClip)" />
+  <circle cx="60" cy="60" r="60" fill="#ffffff" />
+  <g fill="none" stroke="#4169ad" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 73 C36 84 52 89 68 84 C79 81 88 74 93 66" />
+    <path d="M30 63 C28 50 27 37 31 27 L45 43" />
+    <path d="M67 40 L79 21 C84 32 87 43 87 55" />
+    <path d="M45 45 C51 40 58 37 65 35" />
+    <path d="M18 66 L30 62" />
+    <path d="M91 52 L104 43" />
+    <path d="M95 63 L109 66" />
+  </g>
+  <g fill="#4169ad">
+    <ellipse cx="47" cy="61" rx="6" ry="9" transform="rotate(-14 47 61)" />
+    <ellipse cx="66" cy="55" rx="6" ry="9" transform="rotate(-14 66 55)" />
+    <path d="M57 70 C60 66 64 67 65 72 C63 76 59 77 57 70" />
+    <path d="M39 42 L34 31 L47 43 Z" />
+    <path d="M76 34 L79 25 L83 42 Z" />
+  </g>
 </svg>

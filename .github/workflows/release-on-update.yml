@@ -95,27 +95,25 @@ jobs:
         shell: bash
         run: |
           SAFE_SHA="${GITHUB_SHA::7}"
-          TAG="update-v${{ steps.version.outputs.name }}-${{ github.run_number }}-${SAFE_SHA}"
+          TAG="v${{ steps.version.outputs.name }}-${{ github.run_number }}-${SAFE_SHA}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          cat > release-notes.md <<EOF
-          Автоматический релиз по коммиту с \`[update]\`.
+          cat > release-notes.md <<'EOF'
+          ## Fixes
 
-          Commit: ${GITHUB_SHA}
-          Version: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
-          Message: ${{ github.event.head_commit.message }}
+          - ${{ github.event.head_commit.message }}
           EOF
 
       - name: Rename APK
         shell: bash
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk "release/hibiki-${{ steps.version.outputs.name }}-${{ github.sha }}-release.apk"
+          cp app/build/outputs/apk/release/app-release.apk "release/hibiki-v${{ steps.version.outputs.name }}.${{ github.run_number }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag }}
-          name: Hibiki ${{ steps.version.outputs.name }} update ${{ github.run_number }}
+          name: v${{ steps.version.outputs.name }}.${{ github.run_number }}
           body_path: release-notes.md
           files: release/*.apk
-          prerelease: true
+          prerelease: false
