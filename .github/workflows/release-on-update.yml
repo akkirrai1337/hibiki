@@ -37,17 +37,45 @@ jobs:
       - name: Decode release keystore
         shell: bash
         env:
+          # This secret must contain base64 of the real keystore file.
+          # Your local file can be named without extension, for example:
+          # C:\projects\keys\hibiki\hibiki
           HIBIKI_RELEASE_KEYSTORE_BASE64: ${{ secrets.HIBIKI_RELEASE_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$HIBIKI_RELEASE_KEYSTORE_BASE64" ]; then
             echo "Missing GitHub secret: HIBIKI_RELEASE_KEYSTORE_BASE64"
+            echo "Create it from your local keystore file, for example in PowerShell:"
+            echo "[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\projects\keys\hibiki\hibiki'))"
             exit 1
           fi
-          printf '%s' "$HIBIKI_RELEASE_KEYSTORE_BASE64" | base64 --decode > app/release-keystore.jks
+
+          printf '%s' "$HIBIKI_RELEASE_KEYSTORE_BASE64" | base64 --decode > app/hibiki
+          if [ ! -s app/hibiki ]; then
+            echo "Decoded keystore is empty. Check HIBIKI_RELEASE_KEYSTORE_BASE64."
+            exit 1
+          fi
+
+      - name: Validate release signing secrets
+        shell: bash
+        env:
+          HIBIKI_RELEASE_STORE_PASSWORD: ${{ secrets.HIBIKI_RELEASE_STORE_PASSWORD }}
+          HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
+          HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in HIBIKI_RELEASE_STORE_PASSWORD HIBIKI_RELEASE_KEY_ALIAS HIBIKI_RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing GitHub secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Build signed release APK
         env:
-          HIBIKI_RELEASE_STORE_FILE: release-keystore.jks
+          HIBIKI_RELEASE_STORE_FILE: hibiki
           HIBIKI_RELEASE_STORE_PASSWORD: ${{ secrets.HIBIKI_RELEASE_STORE_PASSWORD }}
           HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
           HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}

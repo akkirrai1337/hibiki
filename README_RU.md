@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./docs/hibiki.jpg" alt="Hibiki icon" width="120" height="120" style="border-radius: 50%; object-fit: cover;"/>
+<img src="./docs/hibiki-round.svg" alt="Hibiki icon" width="120" height="120"/>
 
 # [Hibiki](https://github.com/akkirrai1337/hibiki)
 
@@ -38,10 +38,12 @@
     <img src="./docs/screenshots/ru/mainscreen.jpg" alt="Главная" width="250"/>
     <img src="./docs/screenshots/ru/search.jpg" alt="Поиск" width="250"/>
     <img src="./docs/screenshots/ru/details.jpg" alt="Страница тайтла" width="250"/>
+    <br/>
     <img src="./docs/screenshots/ru/voiceover.jpg" alt="Выбор озвучки" width="250"/>
     <img src="./docs/screenshots/ru/episodes.jpg" alt="Список серий" width="250"/>
-    <img src="./docs/screenshots/ru/player.jpg" alt="Плеер" width="250"/>
     <img src="./docs/screenshots/ru/library.jpg" alt="Библиотека" width="250"/>
+    <br/>
+    <img src="./docs/screenshots/ru/player.jpg" alt="Плеер" width="760"/>
 </div>
 
 ### Сборка

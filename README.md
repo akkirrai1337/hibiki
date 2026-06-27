@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./docs/hibiki.jpg" alt="Hibiki icon" width="120" height="120" style="border-radius: 50%; object-fit: cover;"/>
+<img src="./docs/hibiki-round.svg" alt="Hibiki icon" width="120" height="120"/>
 
 # [Hibiki](https://github.com/akkirrai1337/hibiki)
 
@@ -38,10 +38,12 @@
     <img src="./docs/screenshots/en/mainscreen.jpg" alt="Home screen" width="250"/>
     <img src="./docs/screenshots/en/search.jpg" alt="Search screen" width="250"/>
     <img src="./docs/screenshots/en/title.jpg" alt="Title details screen" width="250"/>
+    <br/>
     <img src="./docs/screenshots/en/voiceover.jpg" alt="Voiceover selection screen" width="250"/>
     <img src="./docs/screenshots/en/episodes.jpg" alt="Episodes screen" width="250"/>
-    <img src="./docs/screenshots/en/player.jpg" alt="Player screen" width="250"/>
     <img src="./docs/screenshots/en/library.jpg" alt="Library screen" width="250"/>
+    <br/>
+    <img src="./docs/screenshots/en/player.jpg" alt="Player screen" width="760"/>
 </div>
 
 ### Build

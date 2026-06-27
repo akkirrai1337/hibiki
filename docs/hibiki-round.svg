@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Hibiki icon">
+  <defs>
+    <clipPath id="circleClip">
+      <circle cx="60" cy="60" r="60" />
+    </clipPath>
+  </defs>
+  <rect width="120" height="120" rx="60" fill="#ffffff" />
+  <image href="hibiki.jpg" x="0" y="-3" width="120" height="126" preserveAspectRatio="xMidYMid slice" clip-path="url(#circleClip)" />
+</svg>
