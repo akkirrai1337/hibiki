@@ -126,9 +126,7 @@ fun LibraryScreen(
     ) {
         item {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = UiDimens.ScreenPadding),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AppSearchTopBar(
@@ -139,6 +137,7 @@ fun LibraryScreen(
                     onProfileClick = onProfileClick,
                     onFilterClick = { isFilterDialogVisible = true },
                     onFocusChange = { isSearchFocused = it },
+                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                 )
                 LibraryCategoryChips(
                     selectedCategory = state.selectedCategory,
@@ -219,7 +218,10 @@ private fun LibraryCategoryChips(
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(end = 4.dp)
+        contentPadding = PaddingValues(
+            start = UiDimens.ScreenPadding,
+            end = UiDimens.ScreenPadding,
+        )
     ) {
         items(categories) { category ->
             val selected = category == selectedCategory

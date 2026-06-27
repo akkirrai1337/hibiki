@@ -90,6 +90,14 @@ The current codebase contains a working Compose UI, search, title pages, source 
 
 </div>
 
+### Contact
+
+<div align="left">
+
+For questions, suggestions, or bug reports, you can contact me on Discord: `akkirrai`
+
+</div>
+
 ### License
 
 <div align="left">

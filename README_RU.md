@@ -92,6 +92,14 @@ Windows:
 
 </div>
 
+### Связь
+
+<div align="left">
+
+По вопросам, предложениям или баг-репортам можно написать мне в Discord: `akkirrai`
+
+</div>
+
 ### Лицензия
 
 <div align="left">
