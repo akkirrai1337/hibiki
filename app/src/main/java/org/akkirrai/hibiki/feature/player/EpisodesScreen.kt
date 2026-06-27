@@ -1,0 +1,463 @@
+package org.akkirrai.hibiki.feature.player
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
+import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
+import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
+import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.core.model.WatchEpisode
+import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.LibraryRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.source.WatchStateRepository
+
+@Composable
+fun EpisodesScreen(
+    sourceId: String,
+    sourceTitle: String,
+    downloadMode: Boolean,
+    onBackClick: () -> Unit,
+    onEpisodeClick: (WatchEpisode) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: EpisodesViewModel = viewModel(
+        factory = EpisodesViewModel.Factory(
+            sourceId = sourceId,
+            context = LocalContext.current,
+        )
+    ),
+) {
+    val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val watchStateRepository = remember(context) { WatchStateRepository(context.applicationContext) }
+    val offlineDownloadRepository = remember(context) { OfflineDownloadRepository(context.applicationContext) }
+    val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context.applicationContext) }
+    val libraryRepository = remember(context) { LibraryRepository(context.applicationContext) }
+    val titleId = remember(sourceId) { sourceId.substringBefore(':') }
+    val savedProgress = remember(state, titleId) { watchStateRepository.getEpisodeProgress(titleId) }
+    val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
+    val navigationLocked = navigationLockedState.value
+    var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.result, sourceId) {
+        val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
+        while (true) {
+            downloadStates = withContext(Dispatchers.IO) {
+                offlineDownloadRepository.getEpisodeStates(
+                    sourceId = sourceId,
+                    episodeIds = content.items.map { it.id },
+                )
+            }
+            delay(700)
+        }
+    }
+
+    WatchScreenScaffold(
+        onBackClick = {
+            if (navigationLocked) return@WatchScreenScaffold
+            navigationLockedState.value = true
+            onBackClick()
+        },
+        navigationLocked = navigationLocked,
+        modifier = modifier,
+    ) {
+        when (val result = state.result) {
+            EpisodesUiState.Loading -> {
+                AppCenteredLoading(modifier = Modifier.fillMaxSize())
+            }
+
+            EpisodesUiState.Empty -> {
+                WatchEmptyState(
+                    title = sourceTitle,
+                    message = stringResource(R.string.watch_episodes_empty_title),
+                    icon = Icons.Outlined.VideoLibrary,
+                    modifier = Modifier.fillMaxSize(),
+                    onRetry = viewModel::load,
+                )
+            }
+
+            is EpisodesUiState.Error -> {
+                WatchEmptyState(
+                    title = sourceTitle,
+                    message = result.message,
+                    icon = Icons.Outlined.VideoLibrary,
+                    modifier = Modifier.fillMaxSize(),
+                    onRetry = viewModel::load,
+                )
+            }
+
+            is EpisodesUiState.Content -> {
+                val nextEpisodeId = nextEpisodeId(result.items, savedProgress)
+                val downloadSource = remember(sourceId, sourceTitle, result.items.size) {
+                    WatchSource(
+                        sourceId = sourceId,
+                        title = sourceTitle.ifBlank { context.getString(R.string.watch_source_fallback) },
+                        episodeCount = result.items.size,
+                    )
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 68.dp, bottom = 12.dp),
+                ) {
+                    items(result.items, key = WatchEpisode::id) { episode ->
+                        val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
+                        EpisodeRow(
+                            episode = episode,
+                            progress = progress,
+                            status = resolveEpisodeStatus(
+                                episode = episode,
+                                progress = progress,
+                                nextEpisodeId = nextEpisodeId,
+                            ),
+                            downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
+                            showDownloadControls = downloadMode,
+                            enabled = !navigationLocked,
+                            onClick = {
+                                if (navigationLocked) return@EpisodeRow
+                                navigationLockedState.value = true
+                                onEpisodeClick(episode)
+                            },
+                            onDownloadClick = {
+                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
+                                coroutineScope.launch {
+                                    offlineDownloadRepository.enqueueEpisodes(
+                                        source = downloadSource,
+                                        episodes = listOf(episode),
+                                    )
+                                    offlineTitleMetadataRepository.get(titleId)?.let { cachedAnime ->
+                                        libraryRepository.saveToLibrary(cachedAnime, LibraryCategory.Saved)
+                                    }
+                                }
+                            },
+                            onPauseClick = {
+                                offlineDownloadRepository.pauseEpisode(sourceId, episode.id)
+                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Paused)
+                            },
+                            onResumeClick = {
+                                offlineDownloadRepository.resumeEpisode(sourceId, episode.id)
+                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
+                            },
+                            onRemoveClick = {
+                                offlineDownloadRepository.removeEpisode(sourceId, episode.id)
+                                val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
+                                downloadStates = updatedStates
+                                if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
+                                    libraryRepository.removeSavedFromLibrary(titleId)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeRow(
+    episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
+    status: EpisodeProgressStatus,
+    downloadState: OfflineEpisodeDownloadState,
+    showDownloadControls: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = UiDimens.ScreenPadding, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = buildEpisodeHeadline(episode, status),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val subtitle = buildEpisodeSubtitle(progress, status, downloadState)
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (status == EpisodeProgressStatus.InProgress && progress != null && progress.durationMs > 0L) {
+                LinearProgressIndicator(
+                    progress = { (progress.positionMs.toFloat() / progress.durationMs.toFloat()).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+        }
+        if (showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed) {
+            EpisodeDownloadAction(
+                state = downloadState,
+                controlsEnabled = showDownloadControls,
+                onDownloadClick = onDownloadClick,
+                onPauseClick = onPauseClick,
+                onResumeClick = onResumeClick,
+                onRemoveClick = onRemoveClick,
+            )
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+}
+
+@Composable
+private fun EpisodeDownloadAction(
+    state: OfflineEpisodeDownloadState,
+    controlsEnabled: Boolean,
+    onDownloadClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+) {
+    if (!controlsEnabled) {
+        if (state == OfflineEpisodeDownloadState.Completed) {
+            PassiveDownloadStateIcon()
+        }
+        return
+    }
+
+    when (state) {
+        OfflineEpisodeDownloadState.NotDownloaded,
+        OfflineEpisodeDownloadState.Failed -> WatchDownloadIconButton(
+            icon = Icons.Outlined.Download,
+            contentDescription = stringResource(R.string.watch_download),
+            active = false,
+            onClick = onDownloadClick,
+        )
+        OfflineEpisodeDownloadState.Queued -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Pause,
+                contentDescription = stringResource(R.string.watch_pause),
+                active = true,
+                onClick = onPauseClick,
+            )
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Delete,
+                contentDescription = stringResource(R.string.watch_remove_download),
+                active = true,
+                onClick = onRemoveClick,
+            )
+        }
+        is OfflineEpisodeDownloadState.Downloading -> Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WatchDownloadProgressBadge(progress = state.progress)
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Pause,
+                contentDescription = stringResource(R.string.watch_pause),
+                active = true,
+                onClick = onPauseClick,
+            )
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Delete,
+                contentDescription = stringResource(R.string.watch_remove_download),
+                active = true,
+                onClick = onRemoveClick,
+            )
+        }
+        OfflineEpisodeDownloadState.Paused -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.PlayArrow,
+                contentDescription = stringResource(R.string.watch_resume),
+                active = true,
+                onClick = onResumeClick,
+            )
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Delete,
+                contentDescription = stringResource(R.string.watch_remove_download),
+                active = true,
+                onClick = onRemoveClick,
+            )
+        }
+        OfflineEpisodeDownloadState.Completed -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WatchDownloadStateIcon(
+                icon = Icons.Outlined.Check,
+                contentDescription = stringResource(R.string.watch_downloaded),
+            )
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Delete,
+                contentDescription = stringResource(R.string.watch_remove_download),
+                active = true,
+                onClick = onRemoveClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PassiveDownloadStateIcon() {
+    WatchDownloadStateIcon(
+        icon = Icons.Outlined.Check,
+        contentDescription = stringResource(R.string.watch_downloaded),
+    )
+}
+
+
+private fun resolveEpisodeStatus(
+    episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
+    nextEpisodeId: String?,
+): EpisodeProgressStatus {
+    val fraction = if (progress != null && progress.durationMs > 0L) {
+        progress.positionMs.toFloat() / progress.durationMs.toFloat()
+    } else {
+        0f
+    }
+    return when {
+        progress == null || progress.positionMs == 0L -> {
+            if (episode.id == nextEpisodeId) EpisodeProgressStatus.Next else EpisodeProgressStatus.NotStarted
+        }
+        fraction >= 0.9f -> EpisodeProgressStatus.Watched
+        else -> EpisodeProgressStatus.InProgress
+    }
+}
+
+private fun nextEpisodeId(
+    episodes: List<WatchEpisode>,
+    progressItems: List<EpisodeWatchProgress>,
+): String? {
+    val watchedNumbers = progressItems.filter { it.durationMs > 0L && it.positionMs.toFloat() / it.durationMs.toFloat() >= 0.9f }
+        .map(EpisodeWatchProgress::episodeNumber)
+    val lastWatched = watchedNumbers.maxOrNull() ?: return episodes.firstOrNull()?.id
+    return episodes.firstOrNull { it.number > lastWatched }?.id
+}
+
+@Composable
+private fun buildEpisodeHeadline(
+    episode: WatchEpisode,
+    status: EpisodeProgressStatus,
+): String {
+    val number = if (episode.number % 1.0 == 0.0) episode.number.toInt().toString() else episode.number.toString()
+    return when (status) {
+        EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
+        EpisodeProgressStatus.Next -> stringResource(R.string.watch_episode_headline_next, number)
+        else -> stringResource(R.string.watch_episode_headline, number)
+    }
+}
+
+@Composable
+private fun buildEpisodeSubtitle(
+    progress: EpisodeWatchProgress?,
+    status: EpisodeProgressStatus,
+    downloadState: OfflineEpisodeDownloadState,
+): String {
+    val downloadLabel = when (downloadState) {
+        OfflineEpisodeDownloadState.NotDownloaded -> ""
+        OfflineEpisodeDownloadState.Queued -> stringResource(R.string.watch_status_queued)
+        is OfflineEpisodeDownloadState.Downloading -> stringResource(R.string.watch_status_downloading, (downloadState.progress * 100).toInt())
+        OfflineEpisodeDownloadState.Paused -> stringResource(R.string.watch_status_paused)
+        OfflineEpisodeDownloadState.Completed -> stringResource(R.string.watch_downloaded)
+        OfflineEpisodeDownloadState.Failed -> stringResource(R.string.watch_status_failed)
+    }
+    val watchLabel = when (status) {
+        EpisodeProgressStatus.Watched -> stringResource(R.string.watch_status_watched)
+        EpisodeProgressStatus.Next -> stringResource(R.string.watch_status_next_episode)
+        EpisodeProgressStatus.InProgress -> {
+            if (progress == null || progress.durationMs <= 0L) "" else {
+                val remainingMinutes = ((progress.durationMs - progress.positionMs).coerceAtLeast(0L) / 60_000L).coerceAtLeast(1L)
+                stringResource(
+                    R.string.watch_progress_remaining,
+                    formatDuration(progress.positionMs),
+                    formatDuration(progress.durationMs),
+                    remainingMinutes,
+                )
+            }
+        }
+        EpisodeProgressStatus.NotStarted -> ""
+    }
+    return listOf(watchLabel, downloadLabel)
+        .filter(String::isNotBlank)
+        .joinToString(" · ")
+}
+
+private fun formatDuration(durationMs: Long): String {
+    if (durationMs <= 0L) return "00:00"
+    val totalSeconds = durationMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
+}
+
+private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {
+    return when (this) {
+        OfflineEpisodeDownloadState.NotDownloaded,
+        OfflineEpisodeDownloadState.Failed -> false
+        OfflineEpisodeDownloadState.Queued,
+        is OfflineEpisodeDownloadState.Downloading,
+        OfflineEpisodeDownloadState.Paused,
+        OfflineEpisodeDownloadState.Completed -> true
+    }
+}
