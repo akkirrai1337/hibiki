@@ -3,9 +3,12 @@ package org.akkirrai.hibiki.core.log
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.PackageInfoCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.ArrayDeque
@@ -13,6 +16,7 @@ import java.util.Date
 import java.util.Locale
 
 object AppLogger {
+    private const val LOG_EXPORT_TAG = "HibikiLogExport"
     private const val MAX_ENTRIES = 600
     private val entries = ArrayDeque<String>(MAX_ENTRIES)
     private val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
@@ -43,33 +47,59 @@ object AppLogger {
 
     fun shareLogs(context: Context): Result<Unit> = runCatching {
         val appContext = context.applicationContext
-        val file = exportToFile(appContext)
-        val uri = FileProvider.getUriForFile(
-            appContext,
-            "${appContext.packageName}.fileprovider",
-            file,
+        Log.d(LOG_EXPORT_TAG, "shareLogs: started, package=${appContext.packageName}")
+        val file = runCatching {
+            exportToFile(appContext)
+        }.onFailure { throwable ->
+            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to create export file", throwable)
+        }.getOrThrow()
+        Log.d(
+            LOG_EXPORT_TAG,
+            "shareLogs: file created path=${file.absolutePath}, exists=${file.exists()}, size=${file.length()}",
         )
+        val authority = "${appContext.packageName}.fileprovider"
+        val uri = runCatching {
+            FileProvider.getUriForFile(appContext, authority, file)
+        }.onFailure { throwable ->
+            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to get FileProvider uri, authority=$authority", throwable)
+        }.getOrThrow()
+        Log.d(LOG_EXPORT_TAG, "shareLogs: uri=$uri")
+        val logText = runCatching {
+            file.readText()
+        }.onFailure { throwable ->
+            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to read exported log text", throwable)
+        }.getOrThrow()
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TEXT, logText)
             putExtra(Intent.EXTRA_SUBJECT, "Hibiki logs")
             clipData = ClipData.newUri(appContext.contentResolver, file.name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        grantReadAccess(context, uri, sendIntent)
         val chooser = Intent.createChooser(sendIntent, "Export Hibiki logs").apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            if (context === appContext) {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(chooser)
+        Log.d(LOG_EXPORT_TAG, "shareLogs: starting chooser")
+        runCatching {
+            context.startActivity(chooser)
+        }.onFailure { throwable ->
+            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to start chooser", throwable)
+        }.getOrThrow()
+        Log.d(LOG_EXPORT_TAG, "shareLogs: chooser started")
+        Unit
+    }.onFailure { throwable ->
+        Log.e(LOG_EXPORT_TAG, "shareLogs: export failed", throwable)
     }
 
     private fun exportToFile(context: Context): File {
         val now = Date()
         val filename = "hibiki-logs-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(now)}.txt"
         val exportDirectory = File(context.cacheDir, "logs").apply {
-            check(exists() || mkdirs()) { "Could not create log export directory" }
+            Log.d(LOG_EXPORT_TAG, "exportToFile: directory=$absolutePath, exists=${exists()}")
+            check(exists() || mkdirs()) { "Could not create log export directory: $absolutePath" }
         }
         exportDirectory.listFiles()
             ?.filter { it.isFile && it.name.startsWith("hibiki-logs-") }
@@ -83,7 +113,7 @@ object AppLogger {
             appendLine("generated_at=${formatTimestamp(now)}")
             appendLine("app_id=${context.packageName}")
             appendLine("version_name=${packageInfo.versionName.orEmpty()}")
-            appendLine("version_code=${packageInfo.longVersionCode}")
+            appendLine("version_code=${PackageInfoCompat.getLongVersionCode(packageInfo)}")
             appendLine("android_sdk=${Build.VERSION.SDK_INT}")
             appendLine("device=${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("brand=${Build.BRAND}")
@@ -92,8 +122,33 @@ object AppLogger {
         val body = synchronized(entries) {
             entries.joinToString(separator = System.lineSeparator())
         }
+        Log.d(LOG_EXPORT_TAG, "exportToFile: writing ${body.length} log chars to ${file.absolutePath}")
         file.writeText(header + body)
+        Log.d(LOG_EXPORT_TAG, "exportToFile: wrote file, size=${file.length()}")
         return file
+    }
+
+    private fun grantReadAccess(
+        context: Context,
+        uri: Uri,
+        intent: Intent,
+    ) {
+        val targets = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        Log.d(LOG_EXPORT_TAG, "grantReadAccess: found ${targets.size} share targets")
+        targets.forEach { resolveInfo ->
+            val packageName = resolveInfo.activityInfo.packageName
+            runCatching {
+                context.grantUriPermission(
+                    packageName,
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }.onSuccess {
+                Log.d(LOG_EXPORT_TAG, "grantReadAccess: granted to $packageName")
+            }.onFailure { throwable ->
+                Log.e(LOG_EXPORT_TAG, "grantReadAccess: failed for $packageName", throwable)
+            }
+        }
     }
 
     private fun append(
