@@ -69,6 +69,9 @@ class OfflineTitleMetadataRepository(context: Context) {
             put("title", related.title)
             put("posterUrl", related.posterUrl)
             put("posterFallbackUrl", related.posterFallbackUrl)
+            put("type", related.type)
+            put("year", related.year)
+            put("episodeCount", related.episodeCount)
         }
     }
 
@@ -128,6 +131,9 @@ class OfflineTitleMetadataRepository(context: Context) {
                     title = item.optString("title"),
                     posterUrl = item.optString("posterUrl").ifBlank { null },
                     posterFallbackUrl = item.optString("posterFallbackUrl").ifBlank { null },
+                    type = item.optString("type").ifBlank { null },
+                    year = item.optInt("year").takeIf { it > 0 },
+                    episodeCount = item.optInt("episodeCount").takeIf { it > 0 },
                 )
             )
         }

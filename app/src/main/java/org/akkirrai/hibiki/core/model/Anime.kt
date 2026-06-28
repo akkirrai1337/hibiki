@@ -19,7 +19,8 @@ data class Anime(
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
     val franchiseAnime: List<RelatedAnime> = emptyList(),
-    val relatedAnime: List<RelatedAnime> = emptyList()
+    val relatedAnime: List<RelatedAnime> = emptyList(),
+    val releaseDate: String? = null,
 )
 
 data class AnimeRating(
@@ -33,4 +34,7 @@ data class RelatedAnime(
     val title: String,
     val posterUrl: String? = null,
     val posterFallbackUrl: String? = null,
+    val type: String? = null,
+    val year: Int? = null,
+    val episodeCount: Int? = null,
 )

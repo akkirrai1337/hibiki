@@ -388,6 +388,7 @@ private data class YummyAnimePayload(
     @SerialName("alternative_titles") val alternativeTitles: List<String> = emptyList(),
     val aliases: List<String> = emptyList(),
     val year: Int? = null,
+    val season: Int? = null,
     val episodes: JsonElement? = null,
     @SerialName("episodes_count") val episodesCount: Int? = null,
     val status: String? = null,
@@ -452,6 +453,7 @@ private data class YummyAnimePayload(
             studios = studios.mapNotNull { it.title.normalize() }.distinct(),
             franchiseAnime = viewingOrder.mapNotNull(YummyViewingOrderEntry::toRelatedAnimeTitle),
             relatedAnime = viewingOrder.mapNotNull(YummyViewingOrderEntry::toRelatedAnimeTitle),
+            season = season,
         )
     }
 }
@@ -472,6 +474,8 @@ private data class YummyViewingOrderEntry(
             id = id,
             title = normalizedTitle,
             posterUrl = poster?.bestUrl(),
+            type = type?.alias,
+            year = year,
         )
     }
 }

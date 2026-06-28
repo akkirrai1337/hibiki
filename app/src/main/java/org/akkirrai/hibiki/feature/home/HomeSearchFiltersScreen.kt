@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -224,7 +225,7 @@ fun HomeSearchFiltersScreen(
                         }
                     }
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                        columns = GridCells.Adaptive(minSize = 156.dp),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = UiDimens.ScreenPadding,
@@ -397,29 +398,43 @@ private fun FiltersHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 12.dp),
+            .padding(
+                start = UiDimens.ScreenPadding,
+                top = 14.dp,
+                end = UiDimens.ScreenPadding,
+                bottom = 10.dp,
+            ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             onClick = onBackClick,
-            modifier = Modifier.size(44.dp),
+            modifier = Modifier.size(48.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.52f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                     contentDescription = stringResource(R.string.cd_back),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -791,7 +806,7 @@ private fun GenreSelectionChip(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(36.dp),
+            .heightIn(min = 44.dp),
         shape = RoundedCornerShape(14.dp),
         color = if (selected) {
             selectedColor
@@ -813,7 +828,9 @@ private fun GenreSelectionChip(
         ),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
@@ -826,9 +843,11 @@ private fun GenreSelectionChip(
             }
             Text(
                 text = option.title,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = 0.dp),
                 style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

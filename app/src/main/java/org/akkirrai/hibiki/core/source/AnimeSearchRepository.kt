@@ -186,6 +186,7 @@ class AnimeSearchRepository(
                 .ifEmpty { fallback?.franchiseAnime.orEmpty() },
             relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.relatedAnime.orEmpty() },
+            releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
         )
     }
 
@@ -226,6 +227,22 @@ class AnimeSearchRepository(
             year?.toString(),
         )
         return parts.joinToString(" · ").ifBlank { fallbackSubtitle.orEmpty() }
+    }
+
+    private fun AnimeTitle.formatReleaseDate(preferEnglish: Boolean): String? {
+        val releaseYear = year ?: return null
+        val seasonTitle = season?.toSeasonTitle(preferEnglish)
+        return listOfNotNull(seasonTitle, releaseYear.toString()).joinToString(" ")
+    }
+
+    private fun Int.toSeasonTitle(preferEnglish: Boolean): String? {
+        return when (this) {
+            1 -> if (preferEnglish) "Winter" else "Зима"
+            2 -> if (preferEnglish) "Spring" else "Весна"
+            3 -> if (preferEnglish) "Summer" else "Лето"
+            4 -> if (preferEnglish) "Autumn" else "Осень"
+            else -> null
+        }
     }
 
     private fun String?.isAnnouncementStatus(): Boolean {
@@ -376,6 +393,9 @@ class AnimeSearchRepository(
                 id = related.id,
                 title = related.title,
                 posterUrl = related.posterUrl,
+                type = related.type,
+                year = related.year,
+                episodeCount = related.episodeCount,
             )
         }
     }

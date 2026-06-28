@@ -25,6 +25,7 @@ data class AnimeTitle(
     val similarAnime: List<RelatedAnimeTitle> = emptyList(),
     val franchiseAnime: List<RelatedAnimeTitle> = emptyList(),
     val relatedAnime: List<RelatedAnimeTitle> = emptyList(),
+    val season: Int? = null,
 ) {
     val displayName: String
         get() = russianName?.takeIf(String::isNotBlank)
@@ -91,6 +92,9 @@ data class RelatedAnimeTitle(
     val id: String,
     val title: String,
     val posterUrl: String? = null,
+    val type: String? = null,
+    val year: Int? = null,
+    val episodeCount: Int? = null,
 )
 
 data class ProviderMatch(

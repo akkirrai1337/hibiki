@@ -28,7 +28,6 @@ internal data class ScreenshotsSection(
 
 internal data class RelatedSection(
     val items: List<RelatedAnime>,
-    val expanded: Boolean,
 ) : DetailsSection {
     override val key: String = "related"
 }
@@ -38,7 +37,6 @@ internal fun buildDetailsUiModel(
     hero: HeroInfo,
     description: String,
     isDescriptionExpanded: Boolean,
-    isRelatedExpanded: Boolean,
 ): DetailsUiModel {
     val sections = buildList {
         if (anime.screenshots.isNotEmpty()) {
@@ -46,10 +44,7 @@ internal fun buildDetailsUiModel(
         }
         if (anime.franchiseAnime.isNotEmpty()) {
             add(
-                RelatedSection(
-                    items = anime.franchiseAnime,
-                    expanded = isRelatedExpanded,
-                )
+                RelatedSection(items = anime.franchiseAnime)
             )
         }
     }

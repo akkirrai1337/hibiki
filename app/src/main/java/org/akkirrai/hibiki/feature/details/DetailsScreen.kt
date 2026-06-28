@@ -3,6 +3,13 @@ package org.akkirrai.hibiki.feature.details
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -38,6 +45,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
@@ -60,6 +68,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -95,6 +104,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import org.akkirrai.hibiki.R
@@ -103,7 +113,6 @@ import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
-import org.akkirrai.hibiki.core.design.component.AppCard
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppSection
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
@@ -156,7 +165,7 @@ fun DetailsScreen(
     var currentAnime by remember(anime.id) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDescriptionExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isDescriptionExpanded ?: false) }
     var isAlternativeTitlesExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isAlternativeTitlesExpanded ?: false) }
-    var isFranchiseExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isFranchiseExpanded ?: false) }
+    var isRelatedSheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isMetaExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isMetaExpanded ?: false) }
     var libraryCategory by remember(anime.id) { mutableStateOf<LibraryCategory?>(null) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
@@ -179,7 +188,6 @@ fun DetailsScreen(
     val currentAnimeState by rememberUpdatedState(currentAnime)
     val descriptionExpandedState by rememberUpdatedState(isDescriptionExpanded)
     val alternativeTitlesExpandedState by rememberUpdatedState(isAlternativeTitlesExpanded)
-    val franchiseExpandedState by rememberUpdatedState(isFranchiseExpanded)
     val metaExpandedState by rememberUpdatedState(isMetaExpanded)
 
     DisposableEffect(searchRepository, watchRepository) {
@@ -195,7 +203,6 @@ fun DetailsScreen(
                 anime = currentAnimeState,
                 isDescriptionExpanded = descriptionExpandedState,
                 isAlternativeTitlesExpanded = alternativeTitlesExpandedState,
-                isFranchiseExpanded = franchiseExpandedState,
                 isMetaExpanded = metaExpandedState,
                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
                 firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
@@ -255,15 +262,16 @@ fun DetailsScreen(
         heroInfo,
         description,
         isDescriptionExpanded,
-        isFranchiseExpanded,
     ) {
         buildDetailsUiModel(
             anime = currentAnime,
             hero = heroInfo,
             description = description,
             isDescriptionExpanded = isDescriptionExpanded,
-            isRelatedExpanded = isFranchiseExpanded,
         )
+    }
+    val relatedItems = remember(uiModel.sections) {
+        uiModel.sections.filterIsInstance<RelatedSection>().firstOrNull()?.items.orEmpty()
     }
     val selectedSource = remember(watchSources.toList(), sourceSelection) {
         resolveSelectedSource(
@@ -391,25 +399,20 @@ fun DetailsScreen(
                 key = { _, section -> section.key }
             ) { _, section ->
                 when (section) {
-                    is ScreenshotsSection -> AppSection(
-                        title = stringResource(R.string.details_screenshots),
-                        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                    ) {
-                        ScreenshotsRow(section.screenshots)
-                    }
+                    is ScreenshotsSection -> ScreenshotsSectionContent(
+                        screenshots = section.screenshots,
+                    )
 
                     is RelatedSection -> {
                         RelatedAnimeList(
                             items = section.items,
-                            expanded = section.expanded,
-                            currentAnimeId = uiModel.anime.id,
-                            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                            onToggleExpanded = {
-                                isFranchiseExpanded = !isFranchiseExpanded
+                            modifier = Modifier.padding(
+                                start = DETAIL_SECTION_START_PADDING,
+                                end = UiDimens.ScreenPadding,
+                            ),
+                            onOpen = {
+                                isRelatedSheetOpen = true
                             },
-                            onAnimeClick = { related ->
-                                onRelatedAnimeClick(related.toAnime())
-                            }
                         )
                     }
                 }
@@ -430,6 +433,26 @@ fun DetailsScreen(
         PosterPreviewOverlay(
             anime = currentAnime,
             onDismiss = { isPosterPreviewOpen = false }
+        )
+    }
+
+    if (isRelatedSheetOpen && relatedItems.isNotEmpty()) {
+        RelatedAnimeSheet(
+            items = relatedItems,
+            currentAnime = currentAnime,
+            title = stringResource(R.string.details_related_titles),
+            subtitle = stringResource(
+                R.string.details_related_franchise,
+                remember(currentAnime.title) { buildCompactFranchiseTitle(currentAnime.title) },
+            ),
+            countLabel = stringResource(R.string.details_related_count_label, relatedItems.size),
+            currentLabel = stringResource(R.string.details_current),
+            episodeLabel = localizedEpisodeWord,
+            onDismiss = { isRelatedSheetOpen = false },
+            onAnimeClick = { related ->
+                isRelatedSheetOpen = false
+                onRelatedAnimeClick(related.toAnime())
+            },
         )
     }
 
@@ -650,7 +673,7 @@ private fun DetailHeroSection(
     onDownloadClick: () -> Unit,
     onPrimaryClick: () -> Unit,
 ) {
-    val heroHorizontalPadding = UiDimens.ScreenPadding
+    val heroHorizontalPadding = DETAIL_CONTENT_START_PADDING
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val libraryButtonText = when {
         isUserLibraryCategorySelected -> stringResource(libraryCategory!!.labelResId)
@@ -857,7 +880,7 @@ private fun DetailContentCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(15.dp),
+                .padding(DETAIL_CONTENT_CARD_INNER_PADDING),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             OverviewFacts(anime = anime, heroInfo = heroInfo)
@@ -1368,8 +1391,8 @@ private fun OverviewFacts(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         FactsLine(label = stringResource(R.string.details_type), value = localizedType(heroInfo.type))
-        if (heroInfo.year.isNotBlank()) {
-            FactsLine(label = stringResource(R.string.details_year), value = heroInfo.year)
+        if (heroInfo.releaseDate.isNotBlank()) {
+            FactsLine(label = stringResource(R.string.details_release_date), value = heroInfo.releaseDate)
         }
         if (heroInfo.status.isNotBlank()) {
             FactsLine(label = stringResource(R.string.details_status), value = heroInfo.status)
@@ -1411,8 +1434,36 @@ private fun DescriptionContent(
 }
 
 @Composable
+private fun ScreenshotsSectionContent(
+    screenshots: List<String>,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.details_screenshots),
+            modifier = Modifier.padding(
+                start = DETAIL_SECTION_START_PADDING,
+                end = UiDimens.ScreenPadding,
+            ),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        ScreenshotsRow(screenshots)
+    }
+}
+
+@Composable
 private fun ScreenshotsRow(screenshots: List<String>) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(
+            start = DETAIL_SECTION_START_PADDING,
+            end = UiDimens.ScreenPadding,
+        ),
+    ) {
         items(screenshots) { screenshot ->
             Box(
                 modifier = Modifier
@@ -1433,131 +1484,291 @@ private fun ScreenshotsRow(screenshots: List<String>) {
 @Composable
 private fun RelatedAnimeList(
     items: List<RelatedAnime>,
-    expanded: Boolean,
-    currentAnimeId: String,
     modifier: Modifier = Modifier,
-    onToggleExpanded: () -> Unit,
-    onAnimeClick: (RelatedAnime) -> Unit,
+    onOpen: () -> Unit,
 ) {
-    val normalizedCurrentAnimeId = YummyIdMigration.normalizeTitleId(currentAnimeId)
-
-    AppCard(
-        modifier = modifier,
-        contentPadding = PaddingValues(14.dp)
-    ) {
-        RelatedAnimeHeader(
-            expanded = expanded,
-            count = items.size,
-            onClick = onToggleExpanded,
-        )
-        if (expanded) {
-            items.forEachIndexed { index, related ->
-                val isCurrentAnime = YummyIdMigration.normalizeTitleId(related.id) == normalizedCurrentAnimeId
-                RelatedAnimeRow(
-                    order = index + 1,
-                    anime = related,
-                    isCurrentAnime = isCurrentAnime,
-                    onClick = { if (!isCurrentAnime) onAnimeClick(related) }
-                )
-            }
-
-            if (items.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-            }
-        }
+    val cardShape = RoundedCornerShape(22.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val cardColor by animateColorAsState(
+        targetValue = if (isPressed) {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f)
+        },
+        animationSpec = tween(durationMillis = 140),
+        label = "Related anime preview color",
+    )
+    val previewItems = remember(items) { items.take(3) }
+    val previewTitle = remember(items) {
+        items
+            .take(2)
+            .joinToString(" • ") { it.title }
+            .ifBlank { null }
     }
-}
 
-@Composable
-private fun RelatedAnimeHeader(
-    expanded: Boolean,
-    count: Int,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
+    Surface(
+        onClick = onOpen,
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .heightIn(min = 84.dp),
+        shape = cardShape,
+        color = cardColor,
+        tonalElevation = 1.dp,
+        interactionSource = interactionSource,
     ) {
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = stringResource(R.string.details_related),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.details_related),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.54f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = items.size.toString(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier.width(72.dp),
+                    horizontalArrangement = Arrangement.spacedBy((-10).dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    previewItems.forEach { anime ->
+                        AppTonalSurface(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        ) {
+                            NetworkImage(
+                                imageUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                            )
+                        }
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    previewTitle?.let { title ->
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.details_related_show_all_count, items.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
         }
-        Surface(
-            shape = RoundedCornerShape(999.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RelatedAnimeSheet(
+    items: List<RelatedAnime>,
+    currentAnime: Anime,
+    title: String,
+    subtitle: String,
+    countLabel: String,
+    currentLabel: String,
+    episodeLabel: String,
+    onDismiss: () -> Unit,
+    onAnimeClick: (RelatedAnime) -> Unit,
+) {
+    val normalizedCurrentAnimeId = YummyIdMigration.normalizeTitleId(currentAnime.id)
+    BackHandler(onBack = onDismiss)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding(),
         ) {
-            Text(
-                text = count.toString(),
-                modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = title,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "$subtitle • $countLabel",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    RelatedSheetCloseButton(onClick = onDismiss)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(items, key = RelatedAnime::id) { related ->
+                    val isCurrentAnime = YummyIdMigration.normalizeTitleId(related.id) == normalizedCurrentAnimeId
+                    RelatedAnimeSheetRow(
+                        anime = related,
+                        isCurrentAnime = isCurrentAnime,
+                        currentLabel = currentLabel,
+                        episodeLabel = episodeLabel,
+                        onClick = { if (!isCurrentAnime) onAnimeClick(related) },
+                    )
+                }
+            }
         }
-        Icon(
-            imageVector = if (expanded) {
-                Icons.Outlined.KeyboardArrowDown
-            } else {
-                Icons.AutoMirrored.Outlined.KeyboardArrowRight
-            },
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-            modifier = Modifier.size(22.dp),
-        )
     }
 }
 
 @Composable
-private fun RelatedAnimeRow(
-    order: Int,
+private fun RelatedSheetCloseButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.size(32.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = stringResource(R.string.cd_close),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RelatedAnimeSheetRow(
     anime: RelatedAnime,
     isCurrentAnime: Boolean,
+    currentLabel: String,
+    episodeLabel: String,
     onClick: () -> Unit,
 ) {
-    AppTonalSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            ,
+    val rowShape = RoundedCornerShape(18.dp)
+    val rowInteractionSource = remember { MutableInteractionSource() }
+    val isRowPressed by rowInteractionSource.collectIsPressedAsState()
+    val rowColor by animateColorAsState(
+        targetValue = when {
+            isCurrentAnime -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.26f)
+            isRowPressed -> MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f)
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f)
+        },
+        animationSpec = tween(durationMillis = 130),
+        label = "Related anime sheet row color",
+    )
+    val meta = remember(anime.id, anime.type, anime.year, anime.episodeCount, episodeLabel) {
+        buildRelatedAnimeMeta(anime = anime, episodeLabel = episodeLabel)
+    }
+
+    Surface(
         onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         enabled = !isCurrentAnime,
-        shape = RoundedCornerShape(18.dp),
-        color = if (isCurrentAnime) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        }
+        shape = rowShape,
+        color = rowColor,
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.12f)),
+        interactionSource = rowInteractionSource,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = order.toString(),
-                modifier = Modifier.width(20.dp),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
             AppTonalSurface(
                 modifier = Modifier
-                    .size(width = 44.dp, height = 62.dp)
+                    .size(width = 48.dp, height = 68.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -1565,34 +1776,110 @@ private fun RelatedAnimeRow(
                 NetworkImage(
                     imageUrl = anime.posterUrl,
                     fallbackUrl = anime.posterFallbackUrl,
-                    contentDescription = anime.title
+                    contentDescription = anime.title,
                 )
             }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 62.dp),
-                contentAlignment = Alignment.CenterStart,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Text(
-                    text = anime.title,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isCurrentAnime) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isCurrentAnime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Start,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Text(
+                        text = anime.title,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = if (isCurrentAnime) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (isCurrentAnime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Start,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (isCurrentAnime) {
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        ) {
+                            Text(
+                                text = currentLabel,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+                if (meta != null) {
+                    Text(
+                        text = meta,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             if (!isCurrentAnime) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
+        }
+    }
+}
+
+private fun buildCompactFranchiseTitle(title: String): String {
+    return title
+        .substringBefore(". ")
+        .substringBefore(" — ")
+        .substringBefore(" - ")
+        .substringBefore(": ")
+        .trim()
+        .takeIf(String::isNotBlank)
+        ?: title
+}
+
+private fun buildRelatedAnimeMeta(
+    anime: RelatedAnime,
+    episodeLabel: String,
+): String? {
+    val parts = buildList {
+        anime.type
+            ?.toRelatedAnimeTypeLabel()
+            ?.takeIf(String::isNotBlank)
+            ?.let(::add)
+        anime.year
+            ?.takeIf { it > 0 }
+            ?.toString()
+            ?.let(::add)
+        anime.episodeCount
+            ?.takeIf { it > 0 }
+            ?.let { count -> add("$count $episodeLabel") }
+    }
+    return parts.joinToString(" · ").takeIf(String::isNotBlank)
+}
+
+private fun String.toRelatedAnimeTypeLabel(): String {
+    val value = trim()
+    return when (value.lowercase(Locale.ROOT)) {
+        "tv", "tv_series", "series", "serial", "сериал" -> "TV"
+        "ova" -> "OVA"
+        "ona" -> "ONA"
+        "special", "спешл" -> "Special"
+        "movie", "film", "фильм" -> "Movie"
+        else -> value.replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase(Locale.ROOT) else char.toString()
         }
     }
 }
@@ -1763,7 +2050,7 @@ private fun buildSourceSelectorLabel(
 
 internal data class HeroInfo(
     val type: String,
-    val year: String,
+    val releaseDate: String,
     val episodes: String,
     val status: String,
     val studio: String,
@@ -1796,7 +2083,9 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
     val status = anime.status.takeUnless { it.isBlank() || it == UNKNOWN_VALUE }.orEmpty()
     return HeroInfo(
         type = type,
-        year = year.takeUnless { it == DEFAULT_YEAR || it == UNKNOWN_VALUE }.orEmpty(),
+        releaseDate = anime.releaseDate
+            ?.takeIf { it.isNotBlank() && it != DEFAULT_YEAR && it != UNKNOWN_VALUE }
+            ?: year.takeUnless { it == DEFAULT_YEAR || it == UNKNOWN_VALUE }.orEmpty(),
         episodes = episodes,
         status = status,
         studio = anime.studios.joinToString(", "),
@@ -1905,7 +2194,6 @@ private data class DetailsScreenSavedState(
     val anime: Anime,
     val isDescriptionExpanded: Boolean,
     val isAlternativeTitlesExpanded: Boolean,
-    val isFranchiseExpanded: Boolean,
     val isMetaExpanded: Boolean,
     val firstVisibleItemIndex: Int,
     val firstVisibleItemScrollOffset: Int,
@@ -1915,6 +2203,10 @@ private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSav
 private val DETAIL_HERO_POSTER_TOP_PADDING = 66.dp
 private val DETAIL_HERO_POSTER_BLOCK_HEIGHT = 252.dp
 private val DETAIL_HERO_TITLE_TOP_SPACING = 28.dp
+private val DETAIL_CONTENT_START_PADDING = UiDimens.ScreenPadding
+private val DETAIL_CONTENT_CARD_INNER_PADDING = 15.dp
+private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
+private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
 
 private data class MetaChipUi(
     val label: String,

@@ -6,6 +6,7 @@
     <string name="nav_library">Библиотека</string>
     <string name="nav_settings">Настройки</string>
     <string name="cd_back">Назад</string>
+    <string name="cd_close">Закрыть</string>
     <string name="cd_search">Искать</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_ok">ОК</string>
@@ -105,7 +106,7 @@
     <string name="details_type">Тип</string>
     <string name="details_episodes">Эпизоды</string>
     <string name="details_episodes_released">Серий вышло</string>
-    <string name="details_year">Год</string>
+    <string name="details_release_date">Дата выхода</string>
     <string name="details_status">Статус</string>
     <string name="details_studio">Студия</string>
     <string name="details_source_material">Первоисточник</string>
@@ -113,6 +114,12 @@
     <string name="details_genres">Жанры</string>
     <string name="details_characters">Главные герои</string>
     <string name="details_related">Связанное</string>
+    <string name="details_related_titles">Связанные тайтлы</string>
+    <string name="details_related_franchise">Франшиза: %1$s</string>
+    <string name="details_related_preview_subtitle">Сезоны, OVA, спешлы и другие тайтлы</string>
+    <string name="details_related_sheet_subtitle">Сезоны, OVA, спешлы и другие тайтлы этой франшизы</string>
+    <string name="details_related_count_label">%1$d тайтлов</string>
+    <string name="details_related_open_hint">Нажмите на тайтл, чтобы открыть его страницу</string>
     <string name="details_related_show_all_count">Показать все %1$d</string>
     <string name="details_current">Текущий</string>
     <string name="details_expand">Показать больше</string>
