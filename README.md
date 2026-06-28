@@ -4,59 +4,63 @@
 
 # [Hibiki](https://github.com/akkirrai1337/hibiki)
 
-[Русская версия](README_RU.md)
+[English version](README.md)
 
-**Hibiki is an unofficial YummyAnime client for Android with catalog browsing, search, title pages, watch progress, a local library, a built-in player, and saved episode support. Source switching may be added in the future.**
+**[Hibiki](https://github.com/akkirrai1337/hibiki) — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
 
 ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
 ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
 ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-### Main Features
+### Основные возможности
 
 <div align="left">
 
-* Anime catalog with featured titles, trending titles, and recent updates
-* Search by title with filters
-* Detailed title pages with poster, description, ratings, genres, screenshots and related titles
-* Watch source and episode selection
-* Built-in Media3 player with HLS, DASH and MP4 support
-* Player settings: quality, source, player option, playback speed, autoplay next episode and opening/ending skip
-* Watch progress saving and continue watching from the last viewed title
-* Local library with categories: watching, planned, completed, dropped, on hold, favorite and saved
-* Saved episodes with local playback cache
-* Account screen and sign-in flow; profile-related features are still in progress
-* Russian and English interface localization
-* Sanitized log export for bug reports
+* Каталог аниме с подборками, трендами и недавними обновлениями
+* Поиск по названию с фильтрами
+* Подробные страницы тайтлов с постером, описанием, оценками, жанрами, скриншотами и связанными тайтлами
+* Выбор источника просмотра и серии
+* Встроенный Media3-плеер с поддержкой HLS, DASH и MP4
+* Настройки плеера: качество, источник, вариант плеера, скорость воспроизведения, автопереход к следующей серии и пропуск опенинга/эндинга
+* Сохранение прогресса просмотра и продолжение с последнего открытого тайтла
+* Локальная библиотека с категориями: смотрю, запланировано, просмотрено, брошено, отложено, избранное и сохранённое
+* Сохранённые серии с локальным кэшем воспроизведения
+* Экран аккаунта и вход; функции профиля ещё в разработке
+* Русская и английская локализация интерфейса
+* Экспорт очищенных логов для баг-репортов
 
 </div>
 
-### In-App Screenshots
+### Скриншоты
 
 <div align="center">
-    <img src="./docs/screenshots/en/mainscreen.jpg" alt="Home screen" width="250"/>
-    <img src="./docs/screenshots/en/search.jpg" alt="Search screen" width="250"/>
-    <img src="./docs/screenshots/en/title.jpg" alt="Title details screen" width="250"/>
+    <img src="./docs/screenshots/ru/mainscreen.jpg" alt="Главная" width="250"/>
+    <img src="./docs/screenshots/ru/search.jpg" alt="Поиск" width="250"/>
+    <img src="./docs/screenshots/ru/details.jpg" alt="Страница тайтла" width="250"/>
     <br/>
-    <img src="./docs/screenshots/en/voiceover.jpg" alt="Voiceover selection screen" width="250"/>
-    <img src="./docs/screenshots/en/episodes.jpg" alt="Episodes screen" width="250"/>
-    <img src="./docs/screenshots/en/library.jpg" alt="Library screen" width="250"/>
+    <img src="./docs/screenshots/ru/voiceover.jpg" alt="Выбор озвучки" width="250"/>
+    <img src="./docs/screenshots/ru/episodes.jpg" alt="Список серий" width="250"/>
+    <img src="./docs/screenshots/ru/library.jpg" alt="Библиотека" width="250"/>
     <br/>
-    <img src="./docs/screenshots/en/player.jpg" alt="Player screen" width="760"/>
+    <img src="./docs/screenshots/ru/player.jpg" alt="Плеер" width="760"/>
 </div>
 
-### Build
+### Сборка
 
-<div align="left">
-
-JDK 21 is recommended.
+Для репозитория рекомендуется JDK 21.
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-Run parser tests:
+Компиляция debug Kotlin sources:
+
+```bash
+./gradlew :app:compileDebugKotlin
+```
+
+Запуск тестов parser-модуля:
 
 ```bash
 ./gradlew :parsers:test
@@ -68,41 +72,39 @@ Windows:
 .\gradlew.bat :app:assembleDebug
 ```
 
-</div>
-
-### Project State
+### Реальное состояние проекта
 
 <div align="left">
 
-The current codebase contains a working Compose UI, search, title pages, source and episode flow, player, local library, watch progress, account screen and saved episode pipeline. Some account/profile and source/storage features are still partial integration points.
+В текущем коде есть рабочий Compose UI, поиск, страницы тайтлов, сценарий источников и серий, плеер, локальная библиотека, прогресс просмотра, экран аккаунта и сохранённые серии. Некоторые функции аккаунта/профиля и настройки источников/хранилища пока остаются частично подключёнными точками интеграции.
 
 </div>
 
-### Planned Ideas
+### Что я ещё хочу реализовать
 
 <div align="left">
 
-- [ ] Picture-in-picture playback
-- [ ] Video scaling modes: stretch, crop and fit
-- [ ] More useful YummyAnime sign-in with profile data loading
-- [ ] Full anime catalog screen
-- [ ] More ideas later
+- [ ] Просмотр картинка-в-картинке
+- [ ] Режимы масштабирования видео: stretch, crop и fit
+- [ ] Более полезный вход в YummyAnime с загрузкой данных профиля
+- [ ] Полноценный экран каталога аниме
+- [ ] Больше идей позже
 
 </div>
 
-### Contact
+### Связь
 
 <div align="left">
 
-For questions, suggestions, or bug reports, you can contact me on Discord: `akkirrai`
+По вопросам, предложениям или баг-репортам можно написать мне в Discord: `akkirrai`
 
 </div>
 
-### License
+### Лицензия
 
 <div align="left">
 
-Hibiki is licensed under the [GNU General Public License v3.0](LICENSE).
+Hibiki распространяется под лицензией [GNU General Public License v3.0](LICENSE).
 
 </div>
 
@@ -110,7 +112,7 @@ Hibiki is licensed under the [GNU General Public License v3.0](LICENSE).
 
 <div align="left">
 
-Hibiki is not affiliated with YummyAnime and is not an official YummyAnime application. The app currently works as a YummyAnime client; source switching may be added in the future. Availability of some features depends on external data sources and local caching.
+Hibiki не связан с YummyAnime и не является официальным приложением YummyAnime. Сейчас приложение работает как клиент YummyAnime; в будущем может появиться переключение источников. Доступность некоторых функций зависит от внешних источников данных и локального кэширования.
 
 </div>
 
