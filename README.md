@@ -4,7 +4,7 @@
 
 # [Hibiki](https://github.com/akkirrai1337/hibiki)
 
-[English version](README.md)
+[English version](README_EN.md)
 
 **[Hibiki](https://github.com/akkirrai1337/hibiki) — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
 
