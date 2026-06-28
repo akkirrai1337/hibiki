@@ -62,6 +62,8 @@ import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 
+private const val WATCHED_END_TOLERANCE_MS = 1_000L
+
 @Composable
 fun EpisodesScreen(
     sourceId: String,
@@ -371,16 +373,11 @@ private fun resolveEpisodeStatus(
     progress: EpisodeWatchProgress?,
     nextEpisodeId: String?,
 ): EpisodeProgressStatus {
-    val fraction = if (progress != null && progress.durationMs > 0L) {
-        progress.positionMs.toFloat() / progress.durationMs.toFloat()
-    } else {
-        0f
-    }
     return when {
         progress == null || progress.positionMs == 0L -> {
             if (episode.id == nextEpisodeId) EpisodeProgressStatus.Next else EpisodeProgressStatus.NotStarted
         }
-        fraction >= 0.9f -> EpisodeProgressStatus.Watched
+        progress.isWatchedToEnd() -> EpisodeProgressStatus.Watched
         else -> EpisodeProgressStatus.InProgress
     }
 }
@@ -389,7 +386,7 @@ private fun nextEpisodeId(
     episodes: List<WatchEpisode>,
     progressItems: List<EpisodeWatchProgress>,
 ): String? {
-    val watchedNumbers = progressItems.filter { it.durationMs > 0L && it.positionMs.toFloat() / it.durationMs.toFloat() >= 0.9f }
+    val watchedNumbers = progressItems.filter(EpisodeWatchProgress::isWatchedToEnd)
         .map(EpisodeWatchProgress::episodeNumber)
     val lastWatched = watchedNumbers.maxOrNull() ?: return episodes.firstOrNull()?.id
     return episodes.firstOrNull { it.number > lastWatched }?.id
@@ -441,6 +438,10 @@ private fun buildEpisodeSubtitle(
     return listOf(watchLabel, downloadLabel)
         .filter(String::isNotBlank)
         .joinToString(" · ")
+}
+
+private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
+    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
 }
 
 private fun formatDuration(durationMs: Long): String {

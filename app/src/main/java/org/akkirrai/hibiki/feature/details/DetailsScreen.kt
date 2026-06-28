@@ -1657,7 +1657,7 @@ private fun buildWatchCtaState(
         return WatchCtaState(label = stringResource(R.string.details_watch), action = WatchPrimaryAction.OpenEpisodes)
     }
     val inProgressEpisode = progressItems
-        .filter { progressFraction(it.positionMs, it.durationMs) in 0.0001f..<0.9f }
+        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
         .maxByOrNull(EpisodeWatchProgress::updatedAt)
     if (inProgressEpisode != null) {
         val remainingMinutes = ((inProgressEpisode.durationMs - inProgressEpisode.positionMs).coerceAtLeast(0L) / 60_000L)
@@ -1719,7 +1719,7 @@ private fun resolveNextEpisodeNumber(
     episodeCount: Int?,
 ): Double? {
     val watchedNumbers = progressItems
-        .filter { progressFraction(it.positionMs, it.durationMs) >= 0.9f }
+        .filter(EpisodeWatchProgress::isWatchedToEnd)
         .map(EpisodeWatchProgress::episodeNumber)
     val lastWatched = watchedNumbers.maxOrNull() ?: return 1.0
     val nextSavedEpisode = progressItems
@@ -1737,13 +1737,11 @@ private fun resolveNextEpisodeNumber(
     }
 }
 
-private fun progressFraction(positionMs: Long, durationMs: Long): Float {
-    return if (positionMs > 0L && durationMs > 0L) {
-        positionMs.toFloat() / durationMs.toFloat()
-    } else {
-        0f
-    }
+private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
+    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
 }
+
+private const val WATCHED_END_TOLERANCE_MS = 1_000L
 
 private fun formatEpisodeNumber(number: Double): String {
     return if (number % 1.0 == 0.0) {
