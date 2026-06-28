@@ -16,6 +16,7 @@ import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -37,6 +38,7 @@ class HomeRepository(
         client = client,
         applicationToken = applicationTokenStore.getEffectiveApplicationToken(),
         debugLogger = { message -> AppLogger.d(TAG, message) },
+        languageProvider = ::yummyLanguage,
     )
     private val searchRepository = AnimeSearchRepository(appContext, client)
     private val watchStateRepository = WatchStateRepository(appContext)
@@ -66,10 +68,11 @@ class HomeRepository(
         Log.d(TAG, "loadHomeState: called")
         val fallback = fallbackHomeState()
         val rotationSlot = effectiveTrendingRotationSlot()
+        val languageKey = yummyLanguage()
         cachedHomeContent?.let { cached ->
-            if (cached.rotationSlot == rotationSlot) {
+            if (cached.rotationSlot == rotationSlot && cached.languageKey == languageKey) {
                 Log.d(TAG, "loadHomeState: using cachedHomeContent — " +
-                    "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, slot=$rotationSlot")
+                    "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, slot=$rotationSlot, lang=$languageKey")
                 return HomeUiState(
                     featuredAnime = cached.featuredAnime,
                     continueAnime = loadContinueAnime(),
@@ -83,7 +86,7 @@ class HomeRepository(
         ensureInternetConnection()
 
         val trendingOffset = trendingOffsetForSlot(rotationSlot)
-        Log.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset)")
+        Log.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
         val catalog = runCatching {
             yummySource.getCatalog(
                 limit = HOME_TRENDING_WINDOW_SIZE,
@@ -118,6 +121,7 @@ class HomeRepository(
         Log.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
         cachedHomeContent = CachedHomeContent(
             rotationSlot = rotationSlot,
+            languageKey = languageKey,
             featuredAnime = featuredAnime,
             trending = trending.ifEmpty { fallbackTrending },
             recentlyUpdated = recentlyUpdated,
@@ -204,7 +208,7 @@ class HomeRepository(
         )
         val response = runCatching {
             client.get("$YUMMY_BASE_URL/anime/schedule") {
-                header("Lang", "ru")
+                header("Lang", yummyLanguage())
                 applicationToken?.takeIf(String::isNotBlank)?.let {
                     header("X-Application", it)
                 }
@@ -268,9 +272,7 @@ class HomeRepository(
         val isAnnouncement = status.isAnnouncementStatus()
         return Anime(
             id = title.id,
-            title = title.russianName?.takeIf(String::isNotBlank)
-                ?: title.englishName?.takeIf(String::isNotBlank)
-                ?: title.originalName,
+            title = displayTitle(title),
             subtitle = subtitle,
             episodesLabel = if (isAnnouncement) announcementLabel() else title.episodeCount?.let { episodesCountLabel(it) }.orEmpty(),
             status = status,
@@ -312,12 +314,34 @@ class HomeRepository(
         }
     }
 
-    private fun isRussianLocale(): Boolean = appContext.resources.configuration.locales[0]?.language == "ru"
+    private fun preferEnglish(): Boolean {
+        return when (appPreferences.state.value.languageMode) {
+            LanguageMode.ENGLISH -> true
+            LanguageMode.RUSSIAN -> false
+            LanguageMode.SYSTEM -> appContext.resources.configuration.locales[0]?.language != "ru"
+        }
+    }
+
+    private fun yummyLanguage(): String = if (preferEnglish()) "en" else "ru"
+
+    private fun displayTitle(title: AnimeTitle): String {
+        return if (preferEnglish()) {
+            title.englishName?.takeIf(String::isNotBlank)
+                ?: title.originalName.takeIf(String::isNotBlank)
+                ?: title.russianName.orEmpty()
+        } else {
+            title.russianName?.takeIf(String::isNotBlank)
+                ?: title.englishName?.takeIf(String::isNotBlank)
+                ?: title.originalName
+        }
+    }
+
+    private fun isRussianLocale(): Boolean = !preferEnglish()
 
     private fun announcementLabel(): String = if (isRussianLocale()) "анонс" else "announcement"
 
     private fun episodesCountLabel(count: Int): String {
-        return if (appContext.resources.configuration.locales[0]?.language == "ru") {
+        return if (isRussianLocale()) {
             "$count серий"
         } else {
             "$count episodes"
@@ -325,7 +349,7 @@ class HomeRepository(
     }
 
     private fun releasedEpisodesLabel(aired: Int, total: Int?): String {
-        val isRu = appContext.resources.configuration.locales[0]?.language == "ru"
+        val isRu = isRussianLocale()
         return when {
             total != null -> if (isRu) "$aired из $total серий" else "$aired of $total episodes"
             else -> if (isRu) "$aired серий вышло" else "$aired episodes released"
@@ -400,6 +424,7 @@ class HomeRepository(
 
     private data class CachedHomeContent(
         val rotationSlot: Long,
+        val languageKey: String,
         val featuredAnime: List<Anime>,
         val trending: List<Anime>,
         val recentlyUpdated: List<Anime>,

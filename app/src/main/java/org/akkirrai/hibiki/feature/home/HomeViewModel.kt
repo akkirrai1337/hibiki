@@ -12,10 +12,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.SearchUiState
 
 class HomeViewModel(
@@ -23,6 +27,7 @@ class HomeViewModel(
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext
+    private val appPreferences = AppPreferences(appContext)
     private val _uiState = MutableStateFlow(
         HomeUiState(isLoading = true)
     )
@@ -31,6 +36,7 @@ class HomeViewModel(
     init {
         load()
         loadSearchFilterCatalog()
+        observeLanguageChanges()
     }
 
     fun refresh() {
@@ -254,6 +260,20 @@ class HomeViewModel(
         searchJob?.cancel()
         repository.close()
         super.onCleared()
+    }
+
+    private fun observeLanguageChanges() {
+        viewModelScope.launch {
+            appPreferences.state
+                .map { it.languageMode }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    clearSearch()
+                    load()
+                    loadSearchFilterCatalog()
+                }
+        }
     }
 
     private fun loadSearchFilterCatalog() {

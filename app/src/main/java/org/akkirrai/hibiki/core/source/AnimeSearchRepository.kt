@@ -33,6 +33,7 @@ class AnimeSearchRepository(
         client = client,
         applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
         debugLogger = { message -> AppLogger.d(TAG, message) },
+        languageProvider = ::yummyLanguage,
     )
     private val titleMatcher = TitleMatcher()
     private val detailsMutex = Mutex()
@@ -281,6 +282,8 @@ class AnimeSearchRepository(
             LanguageMode.SYSTEM -> false
         }
     }
+
+    private fun yummyLanguage(): String = if (preferEnglish()) "en" else "ru"
 
     private fun ensureInternetConnection() {
         val context = appContext ?: return

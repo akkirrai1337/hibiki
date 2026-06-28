@@ -64,6 +64,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -151,6 +153,7 @@ fun HomeScreen(
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
+    val pullToRefreshState = rememberPullToRefreshState()
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
         if (isImeVisible) {
@@ -209,7 +212,17 @@ fun HomeScreen(
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
                     onRefresh = viewModel::refresh,
-                    modifier = Modifier.fillMaxSize()
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize(),
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isLoading,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET),
+                        )
+                    },
                 ) {
                     LazyColumn(
                         contentPadding = PaddingValues(
@@ -856,6 +869,7 @@ private fun AnimeImagePlaceholder(
 
 private const val FEATURED_AUTO_ADVANCE_MS = 5000
 private val HOME_TOP_BAR_HEIGHT = 50.dp
+private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
 
 private fun buildHomeMeta(

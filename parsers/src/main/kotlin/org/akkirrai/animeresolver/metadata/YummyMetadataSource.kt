@@ -34,6 +34,7 @@ class YummyMetadataSource(
     private val baseUrl: String = "https://api.yani.tv",
     private val searchLimit: Int = 20,
     private val debugLogger: ((String) -> Unit)? = null,
+    private val languageProvider: () -> String = { "ru" },
 ) : MetadataSource {
     override val name: String = "YummyAnime"
 
@@ -47,8 +48,9 @@ class YummyMetadataSource(
         type: String? = null,
     ): List<AnimeTitle> {
         println("[YummyMetadataSource] getCatalog(limit=$limit, offset=$offset, sort=$sort, type=$type)")
+        val language = requestLanguage()
         val response = client.get("$baseUrl/anime") {
-            addHeaders()
+            addHeaders(language)
             parameter("limit", limit)
             parameter("offset", offset)
             parameter("sort", sort)
@@ -56,7 +58,7 @@ class YummyMetadataSource(
         }
         return response.bodyOrThrow<YummyEnvelope<List<YummyAnimePayload>>>(name)
             .response
-            .map(YummyAnimePayload::toAnimeTitle)
+            .map { payload -> payload.toAnimeTitle(language) }
     }
 
     override suspend fun search(query: String): List<AnimeTitle> {
@@ -71,8 +73,9 @@ class YummyMetadataSource(
                 "genres=${request.includedGenreAliases}, excludedGenres=${request.excludedGenreAliases}, " +
                 "yearFrom=${request.yearFrom}, yearTo=${request.yearTo})"
         )
+        val language = requestLanguage()
         val response = client.get("$baseUrl/anime") {
-            addHeaders()
+            addHeaders(language)
             request.query.trim().takeIf(String::isNotBlank)?.let { parameter("q", it) }
             parameter("limit", request.limit)
             parameter("offset", request.offset)
@@ -86,7 +89,7 @@ class YummyMetadataSource(
         }
         return response.bodyOrThrow<YummyEnvelope<List<YummyAnimePayload>>>(name)
             .response
-            .map(YummyAnimePayload::toAnimeTitle)
+            .map { payload -> payload.toAnimeTitle(language) }
     }
 
     suspend fun search(
@@ -119,12 +122,13 @@ class YummyMetadataSource(
 
     override suspend fun getById(id: String): AnimeTitle {
         println("[YummyMetadataSource] getById(id=$id)")
+        val language = requestLanguage()
         val response = client.get("$baseUrl/anime/$id") {
-            addHeaders()
+            addHeaders(language)
         }
         return response.bodyOrThrow<YummyEnvelope<YummyAnimePayload>>(name)
             .response
-            .toAnimeTitle()
+            .toAnimeTitle(language)
     }
 
     private suspend fun loadFilterCatalogFromSwagger(): AnimeSearchFilterCatalog {
@@ -182,13 +186,20 @@ class YummyMetadataSource(
         return SearchFilterOption(id = alias, title = alias)
     }
 
-    private fun io.ktor.client.request.HttpRequestBuilder.addHeaders() {
-        header("Lang", "ru")
+    private fun io.ktor.client.request.HttpRequestBuilder.addHeaders(language: String) {
+        header("Lang", language)
         debugLogger?.invoke(
-            "Yummy request: xApplicationAttached=${!applicationToken.isNullOrBlank()}, url=${url.buildString()}"
+            "Yummy request: lang=$language, xApplicationAttached=${!applicationToken.isNullOrBlank()}, url=${url.buildString()}"
         )
         applicationToken?.takeIf(String::isNotBlank)?.let {
             header("X-Application", it)
+        }
+    }
+
+    private fun requestLanguage(): String {
+        return when (languageProvider().trim().lowercase()) {
+            "en", "eng", "english" -> "en"
+            else -> "ru"
         }
     }
 
@@ -394,17 +405,21 @@ private data class YummyAnimePayload(
     val genres: List<YummyCatalogValue> = emptyList(),
     val studios: List<YummyCatalogValue> = emptyList(),
 ) {
-    fun toAnimeTitle(): AnimeTitle {
-        val russianName = title.normalize()
-        val englishName = titleEn.normalize()
+    fun toAnimeTitle(language: String): AnimeTitle {
+        val localizedTitle = title.normalize()
+        val explicitEnglishName = titleEn.normalize()
             ?: titleEnglish.normalize()
+        val englishName = explicitEnglishName
+            ?: localizedTitle?.takeIf { language == "en" && !it.hasCyrillic() }
+        val russianName = localizedTitle?.takeIf { language != "en" || it.hasCyrillic() }
+        val japaneseName = titleJp.normalize()
+            ?: titleJapanese.normalize()
         val originalName = titleOrig.normalize()
             ?: titleOriginal.normalize()
+            ?: japaneseName
             ?: englishName
             ?: russianName
             ?: animeId.toString()
-        val japaneseName = titleJp.normalize()
-            ?: titleJapanese.normalize()
         val synonyms = buildList {
             addAll(synonyms.mapNotNull(String::normalize))
             addAll(otherTitles.mapNotNull(String::normalize))
@@ -538,6 +553,10 @@ private data class YummyMetadataImage(
 
 private fun String?.normalize(): String? =
     this?.trim()?.takeIf(String::isNotBlank)
+
+private fun String.hasCyrillic(): Boolean = any { char ->
+    char in '\u0400'..'\u04FF'
+}
 
 private fun String?.normalizeUrl(): String? {
     val normalized = this.normalize() ?: return null

@@ -30,10 +30,18 @@ class AppPreferences(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
+            KEY_THEME_MODE,
+            KEY_LANGUAGE_MODE,
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_FORCE_ADVANCE_TRENDING_SLOT_ON_REFRESH -> {
                 _state.value = _state.value.copy(
+                    themeMode = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
+                        ?.let(ThemeMode::valueOf)
+                        ?: ThemeMode.SYSTEM,
+                    languageMode = prefs.getString(KEY_LANGUAGE_MODE, LanguageMode.SYSTEM.name)
+                        ?.let(LanguageMode::valueOf)
+                        ?: LanguageMode.SYSTEM,
                     autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                     autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                     forceAdvanceTrendingSlotOnRefresh = prefs.getBoolean(
