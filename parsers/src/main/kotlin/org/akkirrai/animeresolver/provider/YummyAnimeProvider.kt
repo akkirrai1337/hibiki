@@ -171,6 +171,10 @@ class YummyAnimeProvider(
     private fun playerPriority(name: String?): Int = when (name?.lowercase()) {
         "kodik" -> 0
         "aksor" -> 1
+        "alloha" -> 2
+        "sibnet" -> 3
+        "cvh" -> 4
+        "vk" -> 5
         else -> 10
     }
 

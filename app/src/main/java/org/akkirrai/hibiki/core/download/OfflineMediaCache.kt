@@ -11,7 +11,6 @@ import androidx.media3.datasource.cache.NoOpCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.offline.DownloadManager
 import java.io.File
-import java.net.URI
 import java.util.concurrent.Executors
 
 @UnstableApi
@@ -77,18 +76,6 @@ object OfflineMediaCache {
         headers.forEach { (name, value) ->
             if (name.isNotBlank() && value.isNotBlank()) {
                 requestHeaders[name] = value
-            }
-        }
-
-        val referer = requestHeaders.entries
-            .firstOrNull { (name, _) -> name.equals("Referer", ignoreCase = true) || name.equals("Referrer", ignoreCase = true) }
-            ?.value
-        if (referer != null) {
-            val origin = runCatching {
-                URI(referer).let { uri -> "${uri.scheme}://${uri.host}" }
-            }.getOrNull()
-            if (origin != null && requestHeaders.keys.none { it.equals("Origin", ignoreCase = true) }) {
-                requestHeaders["Origin"] = origin
             }
         }
 

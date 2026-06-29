@@ -12,9 +12,12 @@ import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.extractor.AksorExtractor
 import org.akkirrai.animeresolver.extractor.AniBoomExtractor
+import org.akkirrai.animeresolver.extractor.CvhExtractor
 import org.akkirrai.animeresolver.extractor.DirectHlsExtractor
 import org.akkirrai.animeresolver.extractor.DirectMp4Extractor
 import org.akkirrai.animeresolver.extractor.KodikExtractor
+import org.akkirrai.animeresolver.extractor.SibnetExtractor
+import org.akkirrai.animeresolver.extractor.VkExtractor
 import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
@@ -65,12 +68,16 @@ class AnimeWatchRepository(
         applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
         debugLogger = { message -> AppLogger.d(TAG, message) },
     )
-    private val extractors = listOf<PlayerExtractor>(
+    private val extractors = listOfNotNull<PlayerExtractor>(
         DirectHlsExtractor(),
         DirectMp4Extractor(),
         AniBoomExtractor(client),
         KodikExtractor(client),
         AksorExtractor(client),
+        appContext?.let(::AllohaWebViewExtractor),
+        SibnetExtractor(client),
+        CvhExtractor(client),
+        VkExtractor(client),
     )
     private val validator = HttpStreamValidator(client)
     private val loadMutex = Mutex()
@@ -215,6 +222,27 @@ class AnimeWatchRepository(
                     }
                     streams.firstNotNullOfOrNull { stream ->
                         val validation = validator.validate(stream)
+                        AppLogger.d(
+                            TAG,
+                            buildString {
+                                append("validate stream: player=")
+                                append(link.playerName)
+                                append(", type=")
+                                append(stream.type)
+                                append(", quality=")
+                                append(stream.quality)
+                                append(", success=")
+                                append(validation.success)
+                                append(", status=")
+                                append(validation.statusCode)
+                                append(", finalUrl=")
+                                append(validation.finalUrl)
+                                append(", headers=")
+                                append(stream.headers)
+                                append(", message=")
+                                append(validation.message)
+                            },
+                        )
                         if (!validation.success) return@firstNotNullOfOrNull null
                         PlaybackStream(
                             animeTitle = payload.match.title,
@@ -274,31 +302,15 @@ class AnimeWatchRepository(
                 backends = listOf(PlaybackBackendOption(provider.id, provider.name)),
             )
         val links = getFilteredLinks(payload, episode)
-
-        val resolvedLinkOptions = links.flatMap { link ->
-            val extractor = extractors.firstOrNull { it.supports(link) }
-            val variants = extractor?.let {
-                runCatching {
-                    withTimeout(resolveAttemptTimeoutMillis(link.playerName, link.playerName)) {
-                        it.extractVariants(link)
-                    }
-                }.getOrDefault(emptyList())
-            }.orEmpty()
-            if (variants.isEmpty()) {
-                listOf(
-                    PlaybackLinkOption(
-                        playerName = link.playerName,
-                        qualityLabel = link.quality,
-                    )
-                )
-            } else {
-                variants.map { stream ->
-                    PlaybackLinkOption(
-                        playerName = link.playerName,
-                        qualityLabel = stream.quality ?: link.quality,
-                    )
-                }
-            }
+        val resolvedLinkOptions = prioritizeLinks(
+            links = links,
+            preferredPlayerName = null,
+            preferredQuality = null,
+        ).map { link ->
+            PlaybackLinkOption(
+                playerName = link.playerName,
+                qualityLabel = link.quality,
+            )
         }
 
         return PlaybackSettingsOptions(
@@ -427,7 +439,11 @@ class AnimeWatchRepository(
     private fun playerPriority(name: String?): Int = when {
         name.containsPlayerToken("kodik") -> 0
         name.containsPlayerToken("aksor") -> 1
-        name.containsPlayerToken("aniboom") -> 2
+        name.containsPlayerToken("alloha") -> 2
+        name.containsPlayerToken("sibnet") -> 3
+        name.containsPlayerToken("cvh") -> 4
+        name.containsPlayerToken("vk") -> 5
+        name.containsPlayerToken("aniboom") -> 6
         else -> 10
     }
 

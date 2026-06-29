@@ -81,24 +81,30 @@ class HttpStreamValidator(
         val headResponse = client.head(stream.url) {
             stream.headers.forEach { (name, value) -> header(name, value) }
         }
-        if (!headResponse.status.isSuccess()) {
-            return failure(stream, headResponse.status.value, "HEAD вернул HTTP ${headResponse.status.value}")
-        }
         val rangeResponse = client.get(stream.url) {
             stream.headers.forEach { (name, value) -> header(name, value) }
             header(HttpHeaders.Range, "bytes=0-1023")
         }
         val bytes = rangeResponse.bodyAsBytes()
         if (!rangeResponse.status.isSuccess() || bytes.isEmpty()) {
-            return failure(stream, rangeResponse.status.value, "Range GET не вернул данные")
+            val headSummary = if (headResponse.status.isSuccess()) {
+                "HEAD отработал успешно"
+            } else {
+                "HEAD вернул HTTP ${headResponse.status.value}"
+            }
+            return failure(stream, rangeResponse.status.value, "$headSummary, Range GET не вернул данные")
         }
         return StreamValidationResult(
             success = true,
             streamType = stream.type,
             quality = stream.quality,
-            finalUrl = rangeResponse.call.request.url.toString(),
+            finalUrl = stream.url,
             statusCode = rangeResponse.status.value,
-            message = "HEAD и Range GET успешно вернули данные",
+            message = if (headResponse.status.isSuccess()) {
+                "HEAD и Range GET успешно вернули данные"
+            } else {
+                "HEAD вернул HTTP ${headResponse.status.value}, но Range GET успешно вернул данные"
+            },
         )
     }
 

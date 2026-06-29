@@ -131,6 +131,7 @@ import org.akkirrai.hibiki.core.model.PlaybackSegmentType
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
+import org.akkirrai.hibiki.core.model.WatchSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -161,7 +162,6 @@ fun PlayerScreen(
     var unlockButtonVisible by remember { mutableStateOf(false) }
     var playlistVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
-    var settingsOpenRequested by remember { mutableStateOf(false) }
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var controlsInteractionTick by remember { mutableIntStateOf(0) }
     var unlockButtonInteractionTick by remember { mutableIntStateOf(0) }
@@ -417,6 +417,21 @@ fun PlayerScreen(
 
     LaunchedEffect(state.playback) {
         val playback = state.playback ?: return@LaunchedEffect
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            buildString {
+                append("[player.prepare] sourceId=")
+                append(state.currentSourceId)
+                append(" episodeId=")
+                append(state.currentEpisodeId)
+                append(" type=")
+                append(playback.streamType)
+                append(" url=")
+                append(playback.streamUrl)
+                append(" headers=")
+                append(playback.headers)
+            },
+        )
         keepControlsVisible()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
@@ -462,14 +477,6 @@ fun PlayerScreen(
         blocked = gestureSeekActive || isSeeking,
         onHide = { unlockButtonVisible = false },
     )
-
-    LaunchedEffect(settingsOpenRequested, state.isSettingsLoading) {
-        if (settingsOpenRequested && !state.isSettingsLoading) {
-            settingsOpenRequested = false
-            settingsVisible = true
-            keepControlsVisible()
-        }
-    }
 
     val rawActiveSkipSegment = state.playback?.segments
         ?.firstOrNull { segment -> positionMs >= segment.startMs && positionMs < segment.endMs }
@@ -766,11 +773,11 @@ fun PlayerScreen(
                         positionMs = sliderPositionMs
                         isSeeking = false
                     },
-                    settingsEnabled = !state.isLoading,
+                    settingsEnabled = true,
                     onSettingsClick = {
                         keepControlsVisible()
                         settingsDestination = PlayerSettingsDestination.Root
-                        settingsOpenRequested = true
+                        settingsVisible = true
                         viewModel.loadSettingsOptions()
                     },
                     onLockClick = {
@@ -820,34 +827,40 @@ fun PlayerScreen(
 
         state.errorMessage?.let { message ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f)),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .widthIn(max = 420.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.84f),
                 ) {
-                    Text(
-                        text = stringResource(R.string.watch_player_error_title),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = message,
-                        color = Color.White.copy(alpha = 0.78f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.watch_player_retry),
-                        modifier = Modifier
-                            .alpha(0.92f)
-                            .clickable { viewModel.load(forceRefresh = true) },
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    Column(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.watch_player_error_title),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = message,
+                            color = Color.White.copy(alpha = 0.78f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.watch_player_retry),
+                            modifier = Modifier
+                                .alpha(0.92f)
+                                .clickable { viewModel.load(forceRefresh = true) },
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
         }
@@ -890,6 +903,7 @@ fun PlayerScreen(
                 PlayerSettingsSheet(
                     destination = settingsDestination,
                     selectedSpeed = playbackSpeed,
+                    selectedSourceId = state.currentSourceId,
                     selectedProviderId = state.selectedProviderId,
                     selectedPlayerName = state.selectedPlayerName,
                     selectedQualityLabel = state.selectedQualityLabel ?: state.playback?.qualityLabel,
@@ -909,6 +923,11 @@ fun PlayerScreen(
                         keepControlsVisible()
                         playbackSpeed = speed
                         applyPlaybackSpeed(speed)
+                    },
+                    onSelectVoiceover = {
+                        keepControlsVisible()
+                        saveCurrentPlaybackProgress()
+                        viewModel.selectVoiceover(it)
                     },
                     onSelectBackend = {
                         keepControlsVisible()
@@ -1286,6 +1305,7 @@ private fun PlayerTopOverlay(
 private fun PlayerSettingsSheet(
     destination: PlayerSettingsDestination,
     selectedSpeed: Float,
+    selectedSourceId: String,
     selectedProviderId: String?,
     selectedPlayerName: String?,
     selectedQualityLabel: String?,
@@ -1296,6 +1316,7 @@ private fun PlayerSettingsSheet(
     onNavigate: (PlayerSettingsDestination) -> Unit,
     onBack: () -> Unit,
     onSelectSpeed: (Float) -> Unit,
+    onSelectVoiceover: (WatchSource) -> Unit,
     onSelectBackend: (String?) -> Unit,
     onSelectPlayer: (String?) -> Unit,
     onSelectQuality: (String?) -> Unit,
@@ -1316,6 +1337,15 @@ private fun PlayerSettingsSheet(
             label = backend.providerName,
             selected = selectedProviderId == backend.providerId || (selectedProviderId == null && options.backends.firstOrNull()?.providerId == backend.providerId),
             onClick = { onSelectBackend(backend.providerId) },
+        )
+    }
+    val voiceoverValues = options.voiceovers.map { source ->
+        SelectableValue(
+            id = source.sourceId,
+            label = source.title.ifBlank { source.sourceId },
+            description = source.qualityLabel,
+            selected = selectedSourceId == source.sourceId,
+            onClick = { onSelectVoiceover(source) },
         )
     }
     val playerValues = options.links.mapNotNull { link ->
@@ -1373,6 +1403,15 @@ private fun PlayerSettingsSheet(
                 ) {
                     when (targetDestination) {
                         PlayerSettingsDestination.Root -> {
+                            if (voiceoverValues.size > 1) {
+                                item {
+                                    PlayerSettingsEntry(
+                                        title = stringResource(R.string.watch_player_settings_voiceover),
+                                        value = voiceoverValues.firstOrNull { it.selected }?.label ?: voiceoverValues.first().label,
+                                        onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
+                                    )
+                                }
+                            }
                             if (qualityValues.isNotEmpty()) {
                                 item {
                                     PlayerSettingsEntry(
@@ -1425,6 +1464,12 @@ private fun PlayerSettingsSheet(
 
                         PlayerSettingsDestination.Speed -> {
                             items(speedValues, key = SelectableValue::id) { value ->
+                                PlayerSettingsChoiceRow(value = value)
+                            }
+                        }
+
+                        PlayerSettingsDestination.Voiceover -> {
+                            items(voiceoverValues, key = SelectableValue::id) { value ->
                                 PlayerSettingsChoiceRow(value = value)
                             }
                         }
@@ -1612,6 +1657,7 @@ private data class SelectableValue(
 private enum class PlayerSettingsDestination(@param:StringRes val titleResId: Int) {
     Root(R.string.watch_player_settings_root),
     Speed(R.string.watch_player_settings_speed),
+    Voiceover(R.string.watch_player_settings_voiceover),
     Backend(R.string.watch_player_settings_backend),
     Player(R.string.watch_player_settings_player),
     Quality(R.string.watch_player_settings_quality),

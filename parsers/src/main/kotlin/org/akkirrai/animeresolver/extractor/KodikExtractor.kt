@@ -6,11 +6,11 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.Parameters
 import io.ktor.http.isSuccess
-import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -23,13 +23,14 @@ import org.akkirrai.animeresolver.model.StreamType
 import org.akkirrai.animeresolver.model.VideoSegment
 import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.decodeShiftedBase64
 import org.akkirrai.animeresolver.network.hostOf
 import org.akkirrai.animeresolver.network.normalizeUrl
 import org.akkirrai.animeresolver.network.originOf
-import org.akkirrai.animeresolver.network.bodyOrThrow
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 class KodikExtractor(
     private val client: HttpClient,
@@ -40,24 +41,27 @@ class KodikExtractor(
         return host.contains("kodik")
     }
 
-    override suspend fun extract(link: PlayerLink): VideoStream {
-        return extractVariants(link).first()
-    }
+    override suspend fun extract(link: PlayerLink): VideoStream =
+        extractVariants(link).first()
 
     override suspend fun extractVariants(link: PlayerLink): List<VideoStream> {
         val pageUrl = normalizeUrl(link.url)
         val pageOrigin = originOf(pageUrl)
-        val pageHtml = loadHtml(pageUrl, link.headers)
-        val pageInfo = parsePageInfo(pageHtml)
-        val segments = parseSkipSegments(pageHtml)
+        val page = loadPage(pageUrl, link.headers)
+        val pageInfo = parsePageInfo(page.html)
+        val endpointUrl = resolveEndpointUrl(page.html, pageUrl, pageOrigin, link.headers)
+        val segments = parseSkipSegments(page.html)
 
-        val response = client.post("$pageOrigin/ftor") {
+        val response = client.post(endpointUrl) {
             link.headers.forEach { (name, value) -> header(name, value) }
             header(HttpHeaders.Accept, "application/json, text/javascript, */*; q=0.01")
             header(HttpHeaders.Origin, pageOrigin)
             header(HttpHeaders.Referrer, pageUrl)
             header("X-Requested-With", "XMLHttpRequest")
             header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
+            if (page.cookies.isNotBlank()) {
+                header(HttpHeaders.Cookie, page.cookies)
+            }
             setBody(FormDataContent(Parameters.build {
                 appendRequiredUrlParams(pageInfo.urlParams)
                 append("bad_user", "false")
@@ -73,12 +77,12 @@ class KodikExtractor(
         val candidates = ftor.links.entries.flatMap { (quality, items) ->
             items.mapNotNull { item ->
                 val source = item.src?.takeIf(String::isNotBlank)?.let(::decodeSource) ?: return@mapNotNull null
-                qualityValue(quality)?.let { qualityValue ->
+                qualityValue(quality)?.let { numericQuality ->
                     VideoStream(
-                        url = source,
+                        url = repairManifestQuality(source, expectedQuality = numericQuality),
                         type = streamTypeFor(item, source),
-                        quality = "${qualityValue}p",
-                        headers = link.headers + (HttpHeaders.Referrer to pageUrl),
+                        quality = "${numericQuality}p",
+                        headers = buildPlaybackHeaders(link.headers, pageUrl),
                         segments = segments,
                     )
                 }
@@ -91,7 +95,7 @@ class KodikExtractor(
         }
     }
 
-    private suspend fun loadHtml(url: String, headers: Map<String, String>): String {
+    private suspend fun loadPage(url: String, headers: Map<String, String>): KodikPage {
         val response = client.get(url) {
             headers.forEach { (name, value) -> header(name, value) }
             header(HttpHeaders.Accept, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
@@ -99,7 +103,45 @@ class KodikExtractor(
         if (!response.status.isSuccess()) {
             throw SourceException("Kodik вернул HTTP ${response.status.value}", response.status.value)
         }
-        return response.bodyAsText()
+        return KodikPage(
+            html = response.bodyAsText(),
+            cookies = response.headers.getAll(HttpHeaders.SetCookie)
+                ?.joinToString("; ") { it.substringBefore(';') }
+                .orEmpty(),
+        )
+    }
+
+    private suspend fun resolveEndpointUrl(
+        html: String,
+        pageUrl: String,
+        pageOrigin: String,
+        headers: Map<String, String>,
+    ): String {
+        val playerScriptUrl = PLAYER_SCRIPT.find(html)?.groupValues?.getOrNull(1)
+            ?.let { normalizeScriptUrl(it, pageOrigin) }
+            ?: return "$pageOrigin/ftor"
+        val script = runCatching {
+            val response = client.get(playerScriptUrl) {
+                headers.forEach { (name, value) -> header(name, value) }
+                header(HttpHeaders.Referrer, pageUrl)
+                header(HttpHeaders.Accept, "*/*")
+            }
+            if (!response.status.isSuccess()) return@runCatching null
+            response.bodyAsText()
+        }.getOrNull() ?: return "$pageOrigin/ftor"
+
+        val endpointPath = ATOB_ENDPOINT.findAll(script)
+            .mapNotNull { match ->
+                runCatching {
+                    String(Base64.getDecoder().decode(match.groupValues[1]))
+                }.getOrNull()
+            }
+            .firstOrNull { decoded ->
+                decoded.startsWith("/") && !decoded.startsWith("//") && decoded.length <= 12
+            }
+            ?: return "$pageOrigin/ftor"
+
+        return "$pageOrigin$endpointPath"
     }
 
     private fun parsePageInfo(html: String): KodikPageInfo {
@@ -122,6 +164,26 @@ class KodikExtractor(
         )
     }
 
+    private fun buildPlaybackHeaders(
+        inputHeaders: Map<String, String>,
+        pageUrl: String,
+    ): Map<String, String> {
+        val headers = LinkedHashMap<String, String>()
+        inputHeaders.forEach { (name, value) ->
+            if (name.isNotBlank() && value.isNotBlank()) {
+                headers[name] = value
+            }
+        }
+        headers.removeByName(HttpHeaders.Referrer)
+        headers.removeByName("Referrer")
+        headers[HttpHeaders.Referrer] = pageUrl
+        return headers
+    }
+
+    private fun MutableMap<String, String>.removeByName(name: String) {
+        keys.firstOrNull { it.equals(name, ignoreCase = true) }?.let(::remove)
+    }
+
     private fun findRequired(regex: Regex, text: String, label: String): String =
         regex.find(text)?.groupValues?.get(1)
             ?: throw SourceException("Kodik не смог прочитать $label")
@@ -139,8 +201,15 @@ class KodikExtractor(
         }
     }
 
-    private fun decodeSource(raw: String): String {
-        return decodeShiftedBase64(raw)
+    private fun decodeSource(raw: String): String =
+        decodeShiftedBase64(raw)
+
+    private fun repairManifestQuality(url: String, expectedQuality: Int): String {
+        val match = HLS_QUALITY_MANIFEST.find(url) ?: return url
+        val actualQuality = match.groupValues.getOrNull(1)?.toIntOrNull() ?: return url
+        return if (actualQuality >= expectedQuality) url else {
+            url.replaceRange(match.range, "/$expectedQuality.mp4:hls:manifest.m3u8")
+        }
     }
 
     private fun parseSkipSegments(html: String): List<VideoSegment> {
@@ -177,14 +246,24 @@ class KodikExtractor(
             else -> StreamType.MP4
         }
 
+    private fun normalizeScriptUrl(scriptUrl: String, pageOrigin: String): String = when {
+        scriptUrl.startsWith("//") -> "https:$scriptUrl"
+        scriptUrl.startsWith("/") -> "$pageOrigin$scriptUrl"
+        scriptUrl.startsWith("http", ignoreCase = true) -> scriptUrl
+        else -> "$pageOrigin/$scriptUrl"
+    }
+
     private companion object {
         val JSON = Json { ignoreUnknownKeys = true; explicitNulls = false }
-        val URL_PARAMS = Regex("""var urlParams = '([^']+)'""")
-        val VIDEO_ID = Regex("var videoId = \"([^\"]+)\"")
-        val TYPE = Regex("var type = \"([^\"]+)\"")
-        val HASH = Regex("""vInfo\.hash = '([^']+)'""")
+        val URL_PARAMS = Regex("""\burlParams\s*=\s*'([^']+)'""")
+        val VIDEO_ID = Regex("""\b(?:var\s+videoId|(?:videoInfo|vInfo)\.id)\s*=\s*["']([^"']+)["']""")
+        val TYPE = Regex("""\b(?:var\s+type|(?:videoInfo|vInfo)\.type)\s*=\s*["']([^"']+)["']""")
+        val HASH = Regex("""\b(?:vInfo|videoInfo)\.hash\s*=\s*["']([^"']+)["']""")
         val SKIP_BUTTON = Regex("""parseSkipButton\(\s*["']([^"']+)["']\s*,\s*["']([^"']*)["']\s*\)""")
         val REQUIRED_URL_PARAM_KEYS = listOf("d", "d_sign", "pd", "pd_sign", "ref", "ref_sign")
+        val PLAYER_SCRIPT = Regex("""src=["']((?://[^"']+)?/assets/js/app\.player_single[^"']+)["']""", RegexOption.IGNORE_CASE)
+        val ATOB_ENDPOINT = Regex("""atob\("([A-Za-z0-9+/=]+)"\)""")
+        val HLS_QUALITY_MANIFEST = Regex("""/(\d+)\.mp4:hls:manifest\.m3u8(?=$|[?#])""")
     }
 }
 
@@ -216,6 +295,11 @@ private fun String.toVideoSegmentType(): VideoSegmentType =
         "anime" -> VideoSegmentType.OPENING
         else -> VideoSegmentType.UNKNOWN
     }
+
+private data class KodikPage(
+    val html: String,
+    val cookies: String,
+)
 
 private data class KodikPageInfo(
     val videoId: String,

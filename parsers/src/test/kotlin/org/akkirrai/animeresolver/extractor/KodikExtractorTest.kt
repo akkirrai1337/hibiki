@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
@@ -180,6 +181,51 @@ class KodikExtractorTest {
         client.close()
     }
 
+    @Test
+    fun `uses player script endpoint and forwards cookies from page load`() = runBlocking {
+        var cookieHeader: String? = null
+        val engine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/seria/337505/db59e08c1dfd13e437ad6ef5a701c450/720p" -> respond(
+                    content = SCRIPT_ENDPOINT_PAGE_HTML,
+                    headers = Headers.build {
+                        append(HttpHeaders.ContentType, "text/html")
+                        append(HttpHeaders.SetCookie, "session=abc123; Path=/")
+                    },
+                )
+
+                "/assets/js/app.player_single.min.js" -> respond(
+                    content = """const endpoint = atob("${java.util.Base64.getEncoder().encodeToString("/xfor".toByteArray())}");""",
+                    headers = headersOf(HttpHeaders.ContentType, "application/javascript"),
+                )
+
+                "/xfor" -> respond(
+                    content = FTOR_JSON,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                ).also {
+                    cookieHeader = request.headers[HttpHeaders.Cookie]
+                }
+
+                else -> error("Unexpected URL: ${request.url}")
+            }
+        }
+        val client = HttpClient(engine) {
+            install(ContentNegotiation) { json() }
+        }
+
+        val stream = KodikExtractor(client).extract(
+            PlayerLink(
+                url = "https://kodikplayer.com/seria/337505/db59e08c1dfd13e437ad6ef5a701c450/720p",
+                type = PlayerType.EMBED,
+                quality = null,
+            ),
+        )
+
+        assertEquals("https://cdn.example/720.m3u8", stream.url)
+        assertEquals("session=abc123", cookieHeader)
+        client.close()
+    }
+
     private companion object {
         val PAGE_HTML = """
             <html>
@@ -211,6 +257,18 @@ class KodikExtractorTest {
                 var videoId = "1483325";
                 var urlParams = '{"d":"ru.yummyani.me","d_sign":"sig1","pd":"kodikplayer.com","pd_sign":"sig2","ref":"https%3A%2F%2Fru.yummyani.me%2F","ref_sign":"sig3","translations":false,"advert_debug":true,"first_url":false}';
                 vInfo.hash = '34cd58be942b7f659aaf88d8d2b04f9c';
+              </script>
+            </html>
+        """.trimIndent()
+
+        val SCRIPT_ENDPOINT_PAGE_HTML = """
+            <html>
+              <script src="/assets/js/app.player_single.min.js"></script>
+              <script>
+                videoInfo.type = 'seria';
+                videoInfo.id = '337505';
+                var urlParams = '{"d":"kodik.cc","d_sign":"sig1","pd":"kodikplayer.com","pd_sign":"sig2","ref":"https://yummy.test/watch","ref_sign":"sig3"}';
+                videoInfo.hash = 'db59e08c1dfd13e437ad6ef5a701c450';
               </script>
             </html>
         """.trimIndent()

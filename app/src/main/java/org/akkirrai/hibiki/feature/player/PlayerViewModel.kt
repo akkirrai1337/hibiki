@@ -62,6 +62,7 @@ class PlayerViewModel(
                 recoveryAttempted = excludedStreamUrls.isNotEmpty(),
             )
         }
+        loadSettingsOptions()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val episodesDeferred = async {
                 runCatching {
@@ -138,18 +139,16 @@ class PlayerViewModel(
             return
         }
         settingsLoadJob?.cancel()
-        _uiState.update {
-            it.copy(
-                currentEpisodeId = episodeId,
-                playback = null,
-                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
-                isSettingsLoading = false,
-                settingsOptions = PlaybackSettingsOptions(),
-                settingsOptionsKey = null,
-                failedStreamUrls = emptySet(),
-                recoveryAttempted = false,
-            )
-        }
+            _uiState.update {
+                it.copy(
+                    currentEpisodeId = episodeId,
+                    playback = null,
+                    pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
+                    settingsOptionsKey = null,
+                    failedStreamUrls = emptySet(),
+                    recoveryAttempted = false,
+                )
+            }
         load()
     }
 
@@ -219,8 +218,6 @@ class PlayerViewModel(
                     selectedProviderId = null,
                     selectedPlayerName = null,
                     selectedQualityLabel = source.qualityLabel,
-                    isSettingsLoading = false,
-                    settingsOptions = PlaybackSettingsOptions(),
                     settingsOptionsKey = null,
                     failedStreamUrls = emptySet(),
                     recoveryAttempted = false,
@@ -236,8 +233,6 @@ class PlayerViewModel(
         _uiState.update {
             it.copy(
                 selectedProviderId = providerId,
-                isSettingsLoading = false,
-                settingsOptions = PlaybackSettingsOptions(),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -251,8 +246,6 @@ class PlayerViewModel(
         _uiState.update {
             it.copy(
                 selectedPlayerName = playerName,
-                isSettingsLoading = false,
-                settingsOptions = PlaybackSettingsOptions(),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -391,6 +384,16 @@ data class PlayerUiState(
 )
 
 private fun PlayerUiState.settingsOptionsKey(): String =
-    "$currentSourceId:$currentEpisodeId:${selectedProviderId.orEmpty()}"
+    buildString {
+        append(currentSourceId)
+        append(':')
+        append(currentEpisodeId)
+        append(':')
+        append(selectedProviderId.orEmpty())
+        append(':')
+        append(selectedPlayerName.orEmpty())
+        append(':')
+        append(selectedQualityLabel.orEmpty())
+    }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
