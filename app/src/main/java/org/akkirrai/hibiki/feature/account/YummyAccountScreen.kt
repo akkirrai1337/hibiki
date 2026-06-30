@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,11 +25,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -62,10 +65,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import java.time.Instant
 import java.time.LocalDate
@@ -82,7 +83,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.account.YummyAccountSessionState
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 
 @Composable
@@ -98,6 +98,8 @@ fun YummyAccountScreen(
     var apiKeyEnabled by remember { mutableStateOf(repository.isApplicationTokenEnabled()) }
     var apiKeyAvailable by remember { mutableStateOf(!repository.getApplicationToken().isNullOrBlank()) }
     var apiKeyHelpVisible by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf(AccountPage.Profile) }
+    val notificationCount = 0
     val loginErrorMessage = stringResource(R.string.yummy_account_login_error)
 
     LaunchedEffect(Unit) {
@@ -114,12 +116,36 @@ fun YummyAccountScreen(
         contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             AccountTopBar(
-                title = if (state is YummyAccountScreenState.SignedIn) {
-                    stringResource(R.string.yummy_account_title)
-                } else {
-                    stringResource(R.string.yummy_account_sign_in_title)
+                title = when (page) {
+                    AccountPage.Profile -> stringResource(R.string.yummy_account_title)
+                    AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
                 },
-                onBackClick = onBackClick,
+                onBackClick = {
+                    if (page == AccountPage.Settings) {
+                        page = AccountPage.Profile
+                    } else {
+                        onBackClick()
+                    }
+                },
+                action = if (state is YummyAccountScreenState.SignedIn && page == AccountPage.Profile) {
+                    {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TopBarActionIcon(
+                                imageVector = Icons.Outlined.NotificationsNone,
+                                contentDescription = "Уведомления",
+                                badgeCount = notificationCount,
+                                onClick = {},
+                            )
+                            TopBarActionIcon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.yummy_account_settings_title),
+                                onClick = { page = AccountPage.Settings },
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
             )
         },
     ) { innerPadding ->
@@ -186,6 +212,7 @@ fun YummyAccountScreen(
             )
 
             is YummyAccountScreenState.SignedIn -> SignedInScreen(
+                page = page,
                 profile = current.profile,
                 libraryItems = current.libraryItems,
                 busy = busy,
@@ -201,6 +228,7 @@ fun YummyAccountScreen(
                     busy = true
                     coroutineScope.launch {
                         repository.signOut()
+                        page = AccountPage.Profile
                         state = YummyAccountScreenState.SignedOut
                         busy = false
                     }
@@ -231,38 +259,97 @@ fun YummyAccountScreen(
 }
 
 @Composable
-private fun AccountTopBar(
-    title: String,
-    onBackClick: () -> Unit,
+private fun TopBarActionIcon(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    badgeCount: Int = 0,
+    onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Box {
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .clickable(onClick = onBackClick),
+                .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.38f))
+                .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                contentDescription = stringResource(R.string.cd_back),
-                modifier = Modifier.size(18.dp),
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(19.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        if (badgeCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(WARM_ACCENT),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = badgeCount.coerceAtMost(9).toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountTopBar(
+    title: String,
+    onBackClick: () -> Unit,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(52.dp)
+                .padding(horizontal = UiDimens.ScreenPadding, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .clickable(onClick = onBackClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.cd_back),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (action != null) {
+                action()
+            } else {
+                Spacer(modifier = Modifier.size(36.dp))
+            }
+        }
     }
 }
 
@@ -314,6 +401,7 @@ private fun SignedOutScreen(
 
 @Composable
 private fun SignedInScreen(
+    page: AccountPage,
     profile: YummyProfile,
     libraryItems: List<YummyUserAnimeListItem>,
     busy: Boolean,
@@ -327,50 +415,38 @@ private fun SignedInScreen(
     val snapshot = remember(profile, libraryItems) {
         buildProfileSnapshot(profile, libraryItems)
     }
-    var selectedSegment by remember { mutableStateOf(ProfileSegment.Stats) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = UiDimens.ScreenPadding, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        ProfileCard(
-            profile = profile,
-            snapshot = snapshot,
-            busy = busy,
-            onExit = onExit,
-        )
-        ProfileSegmentTabs(
-            selected = selectedSegment,
-            onSelected = { selectedSegment = it },
-        )
-        when (selectedSegment) {
-            ProfileSegment.Stats -> {
-                StatsGrid(snapshot = snapshot)
-                StatusChipsGrid(segments = snapshot.distributionSegments)
-                DistributionCard(snapshot = snapshot)
-                ActivityCard(snapshot = snapshot, compact = true)
-            }
-            ProfileSegment.Activity -> {
-                ActivityCard(snapshot = snapshot, compact = false)
-                StatsGrid(snapshot = snapshot)
-            }
-            ProfileSegment.Library -> {
-                StatusChipsGrid(segments = snapshot.distributionSegments)
-                DistributionCard(snapshot = snapshot)
+        when (page) {
+            AccountPage.Profile -> {
+                ProfileCard(
+                    profile = profile,
+                    busy = busy,
+                    onExit = onExit,
+                )
+                AnalyticsCard(snapshot = snapshot)
                 RecentLibraryCard(items = snapshot.recentLibraryItems)
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+            AccountPage.Settings -> {
+                AccountSettingsScreenContent(
+                    busy = busy,
+                    enabled = apiKeyEnabled,
+                    available = apiKeyAvailable,
+                    onEnabledChange = onApiKeyEnabledChange,
+                    onHelpClick = onApiKeyHelpClick,
+                    onExit = onExit,
+                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
-        AccessSettingsCard(
-            enabled = apiKeyEnabled,
-            available = apiKeyAvailable,
-            onEnabledChange = onApiKeyEnabledChange,
-            onHelpClick = onApiKeyHelpClick,
-        )
-        Spacer(modifier = Modifier.height(28.dp))
     }
 }
 
@@ -503,211 +579,299 @@ private fun AccountForm(
 @Composable
 private fun ProfileCard(
     profile: YummyProfile,
-    snapshot: YummyProfileSnapshot,
     busy: Boolean,
     onExit: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Box {
-            ProfileBanner(
-                bannerUrl = profile.banner?.cropped ?: profile.banner?.full,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(132.dp),
-            )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.78f)),
-            )
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Avatar(
-                        avatarUrl = profile.avatarUrl,
-                        nickname = profile.nickname,
-                    )
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = profile.nickname.ifBlank { stringResource(R.string.yummy_account_profile_fallback) },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        CompactProfileFacts(
-                            registeredAt = profile.registerDate?.let(::formatEpochDate) ?: "-",
-                            birthDate = profile.birthDate?.let(::formatEpochDate) ?: "-",
-                            sex = profile.sex.toLabel(),
-                        )
-                    }
-                    IconButton(
-                        onClick = onExit,
-                        enabled = !busy,
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.62f)),
-                    ) {
-                        if (busy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.Logout,
-                                contentDescription = stringResource(R.string.action_sign_out),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.82f),
-                            )
-                        }
-                    }
-                }
-                SocialLinksRow(profile = profile)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    StreakTile(
-                        modifier = Modifier.weight(1f),
-                        days = snapshot.streakDays.coerceAtLeast(1),
-                    )
-                    ProfileMetricStrip(
-                        modifier = Modifier.weight(1.35f),
-                        snapshot = snapshot,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompactProfileFacts(
-    registeredAt: String,
-    birthDate: String,
-    sex: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        CompactFactLine(stringResource(R.string.yummy_account_profile_registered), registeredAt)
-        CompactFactLine(stringResource(R.string.yummy_account_profile_birthdate), birthDate)
-        CompactFactLine(stringResource(R.string.yummy_account_profile_gender), sex)
-    }
-}
-
-@Composable
-private fun CompactFactLine(
-    title: String,
-    value: String,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = title,
-            modifier = Modifier.width(94.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun ProfileMetricStrip(
-    snapshot: YummyProfileSnapshot,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.height(74.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.42f),
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .fillMaxWidth()
+                .padding(horizontal = 11.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MiniMetric(
-                value = snapshot.watchTimeLabel,
-                label = stringResource(R.string.yummy_account_stat_watch_time),
+            Avatar(
+                avatarUrl = profile.avatarUrl,
+                nickname = profile.nickname,
+                modifier = Modifier.size(60.dp),
             )
-            MiniMetric(
-                value = snapshot.libraryTotal.toString(),
-                label = stringResource(R.string.yummy_account_stat_library),
-            )
-        }
-    }
-}
-
-@Composable
-private fun MiniMetric(
-    value: String,
-    label: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun ProfileInfoGroup(
-    items: List<Pair<String, String>>,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.42f),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items.forEach { (title, value) ->
-                ProfileInfoLine(
-                    title = title,
-                    value = value,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                Text(
+                    text = profile.nickname.ifBlank { stringResource(R.string.yummy_account_profile_fallback) },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                ProfileMetaLine(
+                    registeredAt = profile.registerDate?.let(::formatEpochDateCompact) ?: "—",
+                    sex = profile.sex.toLabel(),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.12f))
+                    .clickable(enabled = !busy, onClick = onExit),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Logout,
+                    contentDescription = stringResource(R.string.action_sign_out),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
         }
     }
+}
+
+@Composable
+private fun AnalyticsCard(
+    snapshot: YummyProfileSnapshot,
+) {
+    val hasActivity = snapshot.activeDaysCount > 0
+    val statusSegments = remember(snapshot.distributionSegments, snapshot.favoriteCount) {
+        snapshot.distributionSegments + DistributionSegment(
+            label = "Любимое",
+            count = snapshot.favoriteCount,
+            color = FAVORITE_ACCENT,
+        )
+    }
+    val durationSegments = remember(snapshot.durationSegments, snapshot.favoriteHoursLabel) {
+        snapshot.durationSegments + DurationSegment(
+            label = "Любимое",
+            hoursLabel = snapshot.favoriteHoursLabel,
+            value = 0L,
+            color = FAVORITE_ACCENT,
+        )
+    }
+    val hasDurationData = durationSegments.any { it.value > 0L }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "Активность",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.025f),
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
+                ) {
+                    ActivityHeatmap(
+                        days = snapshot.activityDays,
+                        rows = 7,
+                        columns = 20,
+                        cellSize = 8,
+                        gap = 3,
+                        muted = !hasActivity,
+                    )
+                    if (!hasActivity) {
+                        Text(
+                            text = "Нет активности",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CompactMetricChip(
+                    modifier = Modifier.weight(1f),
+                    value = snapshot.streakDays.toString(),
+                    label = "дней подряд",
+                )
+                CompactMetricChip(
+                    modifier = Modifier.weight(1f),
+                    value = snapshot.activeDaysCount.toString(),
+                    label = "активных дней",
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "Время по спискам",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DistributionDonut(
+                        segments = durationSegments,
+                        centerLabel = snapshot.watchTimeLabel,
+                        modifier = Modifier.size(78.dp),
+                        muted = !hasDurationData,
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(1.dp),
+                    ) {
+                        durationSegments.forEach { segment ->
+                            DurationLegendRow(segment = segment, muted = !hasDurationData)
+                        }
+                    }
+                }
+            }
+            Text(
+                text = "Списки",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            StatusTilesGrid(segments = statusSegments)
+        }
+    }
+}
+
+@Composable
+private fun CompactMetricChip(
+    modifier: Modifier = Modifier,
+    value: String,
+    label: String,
+) {
+    Surface(
+        modifier = modifier.height(34.dp),
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.09f),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = WARM_ACCENT,
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusTilesGrid(
+    segments: List<DistributionSegment>,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        segments.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { segment ->
+                    StatusTile(
+                        modifier = Modifier.weight(1f),
+                        segment = segment,
+                    )
+                }
+                repeat(2 - row.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusTile(
+    segment: DistributionSegment,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.height(40.dp),
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.13f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(segment.color.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(segment.color),
+                )
+            }
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = segment.count.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = segment.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.86f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileMetaLine(
+    registeredAt: String,
+    sex: String,
+) {
+    Text(
+        text = "$registeredAt • $sex",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
@@ -719,12 +883,8 @@ private fun Avatar(
     val resolvedUrl = normalizeYummyAssetUrl(avatarUrl)
     Box(
         modifier = modifier
-            .size(118.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(5.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color(0xFFEDEDED)),
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f)),
         contentAlignment = Alignment.Center,
     ) {
         if (resolvedUrl == null) {
@@ -753,67 +913,6 @@ private fun Avatar(
 }
 
 @Composable
-private fun ProfileBanner(
-    bannerUrl: String?,
-    modifier: Modifier = Modifier,
-) {
-    val resolvedUrl = normalizeYummyAssetUrl(bannerUrl)
-    if (resolvedUrl == null) {
-        DefaultBannerPlaceholder(modifier)
-    } else {
-        Box(modifier = modifier) {
-            PosterImage(
-                primaryUrl = resolvedUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                placeholder = { DefaultBannerPlaceholder(Modifier.fillMaxSize()) },
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.24f)),
-            )
-        }
-    }
-}
-
-@Composable
-private fun DefaultBannerPlaceholder(
-    modifier: Modifier = Modifier,
-) {
-    val markColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val cell = 28.dp.toPx()
-            val radius = 5.dp.toPx()
-            var y = -cell
-            while (y < size.height + cell) {
-                var x = -cell
-                while (x < size.width + cell) {
-                    drawCircle(
-                        color = markColor,
-                        radius = radius,
-                        center = androidx.compose.ui.geometry.Offset(x + cell / 2f, y + cell / 2f),
-                    )
-                    x += cell
-                }
-                y += cell
-            }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .align(Alignment.TopCenter)
-                .background(Color(0xFFFF6166)),
-        )
-    }
-}
-
-@Composable
 private fun DefaultAvatarPlaceholder(
     nickname: String,
 ) {
@@ -830,445 +929,30 @@ private fun DefaultAvatarPlaceholder(
         Icon(
             imageVector = Icons.Outlined.Person,
             contentDescription = nickname,
-            modifier = Modifier.size(54.dp),
+            modifier = Modifier.size(40.dp),
             tint = Color(0xFF6D6D6D),
         )
     }
 }
 
 @Composable
-private fun ProfileInfoLine(
-    title: String,
-    value: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "$title:",
-            modifier = Modifier.width(116.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-        Text(
-            text = value.ifBlank { "â€”" },
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun SocialLinksRow(
-    profile: YummyProfile,
-) {
-    val links = buildList {
-        if (profile.ids?.vkId != null) add("VK" to Color(0xFF3375D6))
-        if (!profile.ids?.telegramNickname.isNullOrBlank()) add("TG" to Color(0xFF2699D6))
-        if (!profile.ids?.shikimoriNickname.isNullOrBlank()) add("SH" to Color(0xFF4F5366))
-    }
-    if (links.isEmpty()) return
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        links.forEach { (text, color) ->
-            SocialBadge(text = text, color = color)
-        }
-    }
-}
-
-@Composable
-private fun SocialBadge(
-    text: String,
-    color: Color,
-) {
-    Box(
-        modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(color),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-        )
-    }
-}
-
-@Composable
-private fun StreakTile(
-    days: Int,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.height(74.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.42f),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = days.toString(),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.yummy_account_streak_site_days),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProfileSegmentTabs(
-    selected: ProfileSegment,
-    onSelected: (ProfileSegment) -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            ProfileSegment.entries.forEach { segment ->
-                SegmentTab(
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(segment.titleRes),
-                    selected = selected == segment,
-                    onClick = { onSelected(segment) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SegmentTab(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .height(36.dp)
-            .clip(RoundedCornerShape(11.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(11.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-        } else {
-            Color.Transparent
-        },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatusChipsGrid(
-    segments: List<DistributionSegment>,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SectionTitle(stringResource(R.string.yummy_account_statuses_title))
-            segments.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { segment ->
-                        StatusChip(
-                            modifier = Modifier.weight(1f),
-                            segment = segment,
-                        )
-                    }
-                    repeat(3 - row.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusChip(
-    segment: DistributionSegment,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(segment.color),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = segment.count.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = segment.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatsGrid(
-    snapshot: YummyProfileSnapshot,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.yummy_account_stat_watch_time),
-            value = snapshot.watchTimeLabel,
-            subtitle = stringResource(R.string.yummy_account_stat_episodes, snapshot.totalEpisodes),
-        )
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.yummy_account_stat_streak),
-            value = snapshot.streakLabel,
-            subtitle = stringResource(R.string.yummy_account_stat_active_days, snapshot.activeDaysCount),
-        )
-        StatCard(
-            modifier = Modifier.weight(1f),
-            title = stringResource(R.string.yummy_account_stat_library),
-            value = snapshot.libraryTotal.toString(),
-            subtitle = stringResource(R.string.yummy_account_stat_favorites, snapshot.favoriteCount),
-        )
-    }
-}
-
-@Composable
-private fun StatCard(
-    title: String,
-    value: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .padding(10.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DistributionCard(
-    snapshot: YummyProfileSnapshot,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SectionTitle(stringResource(R.string.yummy_account_distribution_title))
-            if (snapshot.distributionSegments.none { it.count > 0 }) {
-                DistributionEmptyPreview(segments = snapshot.distributionSegments)
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DistributionDonut(
-                        segments = snapshot.distributionSegments,
-                        total = snapshot.libraryTotal,
-                    )
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        snapshot.distributionSegments.filter { it.count > 0 }.forEach { segment ->
-                            DistributionRow(segment)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DistributionEmptyPreview(
-    segments: List<DistributionSegment>,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier.size(82.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawArc(
-                    color = Color.White.copy(alpha = 0.08f),
-                    startAngle = -90f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
-            Text(
-                text = "0",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-        ) {
-            segments.take(3).forEach { segment ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(segment.color.copy(alpha = 0.44f)),
-                    )
-                    Text(
-                        text = segment.label,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = "0",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                    )
-                }
-            }
-            Text(
-                text = stringResource(R.string.yummy_account_distribution_empty),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
 private fun DistributionDonut(
-    segments: List<DistributionSegment>,
-    total: Int,
+    segments: List<DurationSegment>,
+    centerLabel: String,
+    modifier: Modifier = Modifier,
+    muted: Boolean = false,
 ) {
-    val trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val trackColor = if (muted) {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.58f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
     Box(
-        modifier = Modifier.size(92.dp),
+        modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 12.dp.toPx()
+            val strokeWidth = 10.dp.toPx()
             drawArc(
                 color = trackColor,
                 startAngle = -90f,
@@ -1277,11 +961,11 @@ private fun DistributionDonut(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
             )
             var startAngle = -90f
-            val safeTotal = total.coerceAtLeast(1)
-            segments.filter { it.count > 0 }.forEach { segment ->
-                val sweep = segment.count / safeTotal.toFloat() * 360f
+            val safeTotal = segments.sumOf(DurationSegment::value).coerceAtLeast(1L)
+            segments.filter { it.value > 0L }.forEach { segment ->
+                val sweep = segment.value / safeTotal.toFloat() * 360f
                 drawArc(
-                    color = segment.color,
+                    color = if (muted) segment.color.copy(alpha = 0.4f) else segment.color,
                     startAngle = startAngle,
                     sweepAngle = sweep,
                     useCenter = false,
@@ -1292,116 +976,96 @@ private fun DistributionDonut(
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = total.toString(),
-                style = MaterialTheme.typography.titleLarge,
+                text = centerLabel,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (muted) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
             )
             Text(
-                text = stringResource(R.string.yummy_account_distribution_total),
+                text = "всего",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
             )
         }
     }
 }
 
 @Composable
-private fun DistributionRow(
-    segment: DistributionSegment,
+private fun DurationLegendRow(
+    segment: DurationSegment,
+    muted: Boolean = false,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(10.dp)
+                .size(7.dp)
                 .clip(CircleShape)
                 .background(segment.color),
         )
         Text(
             text = segment.label,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (muted) {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f)
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = segment.count.toString(),
-            style = MaterialTheme.typography.labelLarge,
+            text = segment.hoursLabel,
+            modifier = Modifier.width(30.dp),
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun ActivityCard(
-    snapshot: YummyProfileSnapshot,
-    compact: Boolean = false,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionTitle(stringResource(R.string.yummy_account_activity_title))
-            if (snapshot.activeDaysCount == 0) {
-                ActivityHeatmap(
-                    days = snapshot.activityDays.takeLast(34),
-                    columns = 17,
-                    cellSize = 10,
-                    muted = true,
-                )
-                EmptyState(text = stringResource(R.string.yummy_account_activity_empty))
+            maxLines = 1,
+            color = if (muted) {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f)
             } else {
-                ActivityHeatmap(
-                    days = if (compact) snapshot.activityDays.takeLast(34) else snapshot.activityDays,
-                    columns = 17,
-                    cellSize = if (compact) 10 else 14,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.yummy_account_activity_summary,
-                        snapshot.activeDaysCount,
-                        snapshot.streakDays,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+                WARM_ACCENT
+            },
+        )
     }
 }
 
 @Composable
 private fun ActivityHeatmap(
     days: List<ActivityDay>,
-    columns: Int = 17,
+    rows: Int = 7,
+    columns: Int = 20,
     cellSize: Int = 14,
+    gap: Int = 2,
     muted: Boolean = false,
 ) {
-    val rows = days.chunked(columns)
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.forEach { day ->
+    val emptyColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.34f)
+    val paddedDays = buildList<ActivityDay?> {
+        addAll(days.takeLast(rows * columns))
+        repeat((rows * columns) - size) { add(null) }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(gap.dp)) {
+        repeat(rows) { rowIndex ->
+            Row(horizontalArrangement = Arrangement.spacedBy(gap.dp)) {
+                repeat(columns) { columnIndex ->
+                    val itemIndex = columnIndex * rows + rowIndex
+                    val day = paddedDays.getOrNull(itemIndex)
                     Box(
                         modifier = Modifier
                             .size(cellSize.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(3.dp))
                             .background(
-                                day.color(
-                                    base = MaterialTheme.colorScheme.primary,
-                                    muted = muted,
-                                ),
+                                when {
+                                    day == null || day.intensity <= 0 -> emptyColor
+                                    else -> day.color(base = WARM_ACCENT, muted = muted)
+                                },
                             ),
                     )
                 }
@@ -1416,16 +1080,28 @@ private fun RecentLibraryCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(11.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            SectionTitle(stringResource(R.string.yummy_account_recent_library_title))
+            Text(
+                text = "Последние добавления",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (items.isEmpty()) {
-                EmptyState(text = stringResource(R.string.yummy_account_recent_library_empty))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    EmptyState(text = "Нет недавних добавлений")
+                }
             } else {
                 items.forEach { item ->
                     RecentLibraryRow(item)
@@ -1440,14 +1116,14 @@ private fun RecentLibraryRow(
     item: RecentLibraryItem,
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.22f),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -1484,44 +1160,74 @@ private fun RecentLibraryRow(
 }
 
 @Composable
+private fun AccountSettingsScreenContent(
+    busy: Boolean,
+    enabled: Boolean,
+    available: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onHelpClick: () -> Unit,
+    onExit: () -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AccessSettingsCard(
+            enabled = enabled,
+            available = available,
+            onEnabledChange = onEnabledChange,
+            onHelpClick = onHelpClick,
+        )
+        AccountDangerZoneCard(
+            busy = busy,
+            onExit = onExit,
+        )
+    }
+}
+
+@Composable
 private fun AccessSettingsCard(
     enabled: Boolean,
     available: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onHelpClick: () -> Unit,
 ) {
-    val statusHint = if (available) {
-        stringResource(R.string.yummy_account_api_key_enabled_hint)
-    } else {
-        stringResource(R.string.yummy_account_api_key_disabled_hint)
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle(stringResource(R.string.yummy_account_settings_access_section))
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
-            SectionTitle(stringResource(R.string.yummy_account_access_title))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            SettingsListSurface {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.yummy_account_api_key_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = if (available) {
+                                stringResource(R.string.yummy_account_api_key_enabled_hint_short)
+                            } else {
+                                stringResource(R.string.yummy_account_api_key_disabled_hint_short)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.yummy_account_api_key_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
                         IconButton(
                             onClick = onHelpClick,
                             modifier = Modifier.size(22.dp),
@@ -1533,21 +1239,77 @@ private fun AccessSettingsCard(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        Switch(
+                            checked = enabled,
+                            onCheckedChange = onEnabledChange,
+                            enabled = true,
+                            modifier = Modifier.scale(0.86f),
+                        )
                     }
-                    Text(
-                        text = statusHint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = onEnabledChange,
-                    enabled = true,
-                    modifier = Modifier.scale(0.86f),
-                )
             }
         }
+    }
+}
+
+@Composable
+private fun AccountDangerZoneCard(
+    busy: Boolean,
+    onExit: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle(stringResource(R.string.yummy_account_settings_account_section))
+        SettingsListSurface {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !busy, onClick = onExit)
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.yummy_account_sign_out_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else {
+                    OutlinedButton(
+                        onClick = onExit,
+                        enabled = !busy,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.22f)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_sign_out),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsListSurface(
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        content()
     }
 }
 
@@ -1555,33 +1317,12 @@ private fun AccessSettingsCard(
 private fun EmptyState(
     text: String,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                modifier = Modifier.size(13.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
@@ -1656,11 +1397,13 @@ private fun buildProfileSnapshot(
         activeDaysCount = activityCounts.size,
         totalEpisodes = history.sumOf { it.episodeCount ?: 0 },
         favoriteCount = libraryItems.count(YummyUserAnimeListItem::isFavorite),
+        favoriteHoursLabel = localizedHourLabel("0"),
         libraryTotal = libraryItems.size,
         distributionSegments = buildDistributionSegments(libraryItems),
+        durationSegments = buildDurationSegments(watchSums),
         activityDays = activityDays,
         recentLibraryItems = recentItems,
-        onlineDaysLabel = profile.daysOnline?.toString() ?: "â€”",
+        onlineDaysLabel = profile.daysOnline?.toString() ?: "—",
     )
 }
 
@@ -1677,26 +1420,58 @@ private fun buildDistributionSegments(
     )
 }
 
+private fun buildDurationSegments(
+    watchSums: List<org.akkirrai.animeresolver.metadata.YummyProfileWatchSum>,
+): List<DurationSegment> {
+    fun sumFor(vararg keys: String): Long {
+        val normalizedKeys = keys.map { it.lowercase(Locale.ROOT) }
+        return watchSums
+            .filter { item ->
+                val bucket = listOf(item.alias, item.shortName, item.name)
+                    .filterNotNull()
+                    .joinToString(" ")
+                    .lowercase(Locale.ROOT)
+                normalizedKeys.any(bucket::contains)
+            }
+            .sumOf { it.spentTime ?: 0L }
+    }
+
+    val values = listOf(
+        Triple("Смотрю", sumFor("watch", "watching", "смотр"), YummyUserList.Watching.toColor()),
+        Triple("В планах", sumFor("plan", "planned", "план"), YummyUserList.Planned.toColor()),
+        Triple("Просмотрено", sumFor("complete", "completed", "просмотр"), YummyUserList.Completed.toColor()),
+        Triple("Брошено", sumFor("drop", "dropped", "брош"), YummyUserList.Dropped.toColor()),
+        Triple("Отложено", sumFor("hold", "on hold", "отлож"), YummyUserList.OnHold.toColor()),
+    )
+
+    return values.map { (label, value, color) ->
+        DurationSegment(
+            label = label,
+            hoursLabel = formatDurationLabel(value),
+            value = value,
+            color = color,
+        )
+    }
+}
+
 private fun YummyProfileSex?.toLabel(): String {
-    val ru = Locale.getDefault().language == "ru"
     return when (this) {
-        YummyProfileSex.Male -> if (ru) "ÐœÑƒÐ¶ÑÐºÐ¾Ð¹" else "Male"
-        YummyProfileSex.Female -> if (ru) "Ð–ÐµÐ½ÑÐºÐ¸Ð¹" else "Female"
-        else -> "â€”"
+        YummyProfileSex.Male -> "Мужской"
+        YummyProfileSex.Female -> "Женский"
+        else -> "Не указано"
     }
 }
 
 private fun YummyUserList?.toReadableLabel(): String = localizedListLabel(this)
 
 private fun localizedListLabel(list: YummyUserList?): String {
-    val ru = Locale.getDefault().language == "ru"
     return when (list) {
-        YummyUserList.Watching -> if (ru) "Ð¡Ð¼Ð¾Ñ‚Ñ€ÑŽ" else "Watching"
-        YummyUserList.Planned -> if (ru) "Ð—Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾" else "Planned"
-        YummyUserList.Completed -> if (ru) "ÐŸÑ€Ð¾ÑÐ¼Ð¾Ñ‚Ñ€ÐµÐ½Ð¾" else "Completed"
-        YummyUserList.Dropped -> if (ru) "Ð‘Ñ€Ð¾ÑˆÐµÐ½Ð¾" else "Dropped"
-        YummyUserList.OnHold -> if (ru) "ÐžÑ‚Ð»Ð¾Ð¶ÐµÐ½Ð¾" else "On hold"
-        null -> if (ru) "ÐÐµ ÑƒÐºÐ°Ð·Ð°Ð½Ð¾" else "Unknown"
+        YummyUserList.Watching -> "Смотрю"
+        YummyUserList.Planned -> "В планах"
+        YummyUserList.Completed -> "Просмотрено"
+        YummyUserList.Dropped -> "Брошено"
+        YummyUserList.OnHold -> "Отложено"
+        null -> "Не указано"
     }
 }
 
@@ -1716,7 +1491,7 @@ private fun ActivityDay.color(
     muted: Boolean = false,
 ): Color {
     if (muted) {
-        return base.copy(alpha = 0.08f)
+        return base.copy(alpha = 0.24f)
     }
     return when (intensity) {
         0 -> base.copy(alpha = 0.12f)
@@ -1756,20 +1531,24 @@ private fun formatEpochDate(value: Long): String {
     return epochToLocalDate(value).format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault()))
 }
 
+private fun formatEpochDateCompact(value: Long): String {
+    return epochToLocalDate(value).format(DateTimeFormatter.ofPattern("dd.MM.yy", Locale("ru")))
+}
+
 private fun formatEpochDateShort(value: Long): String {
     val date = epochToLocalDate(value)
     val daysAgo = ChronoUnit.DAYS.between(date, LocalDate.now()).toInt()
     val ru = Locale.getDefault().language == "ru"
     return when {
-        daysAgo <= 0 -> if (ru) "Ð¡ÐµÐ³Ð¾Ð´Ð½Ñ" else "Today"
-        daysAgo == 1 -> if (ru) "Ð’Ñ‡ÐµÑ€Ð°" else "Yesterday"
-        daysAgo < 7 -> if (ru) "${daysAgo}Ð´" else "${daysAgo}d"
+        daysAgo <= 0 -> if (ru) "Сегодня" else "Today"
+        daysAgo == 1 -> if (ru) "Вчера" else "Yesterday"
+        daysAgo < 7 -> if (ru) "${daysAgo}д" else "${daysAgo}d"
         else -> date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
     }
 }
 
 private fun localizedHourLabel(value: String): String {
-    return if (Locale.getDefault().language == "ru") "$value Ñ‡" else "${value}h"
+    return "$value ч"
 }
 
 private fun normalizeYummyAssetUrl(rawUrl: String?): String? {
@@ -1790,8 +1569,10 @@ private data class YummyProfileSnapshot(
     val activeDaysCount: Int,
     val totalEpisodes: Int,
     val favoriteCount: Int,
+    val favoriteHoursLabel: String,
     val libraryTotal: Int,
     val distributionSegments: List<DistributionSegment>,
+    val durationSegments: List<DurationSegment>,
     val activityDays: List<ActivityDay>,
     val recentLibraryItems: List<RecentLibraryItem>,
     val onlineDaysLabel: String,
@@ -1800,6 +1581,13 @@ private data class YummyProfileSnapshot(
 private data class DistributionSegment(
     val label: String,
     val count: Int,
+    val color: Color,
+)
+
+private data class DurationSegment(
+    val label: String,
+    val hoursLabel: String,
+    val value: Long,
     val color: Color,
 )
 
@@ -1814,12 +1602,9 @@ private data class RecentLibraryItem(
     val color: Color,
 )
 
-private enum class ProfileSegment(
-    val titleRes: Int,
-) {
-    Stats(R.string.yummy_account_segment_stats),
-    Activity(R.string.yummy_account_segment_activity),
-    Library(R.string.yummy_account_segment_library),
+private enum class AccountPage {
+    Profile,
+    Settings,
 }
 
 private sealed interface YummyAccountScreenState {
@@ -1833,5 +1618,7 @@ private sealed interface YummyAccountScreenState {
     data class Error(val message: String) : YummyAccountScreenState
 }
 
-private const val HEATMAP_DAYS = 68
+private const val HEATMAP_DAYS = 140
 private const val YUMMY_WEB_BASE = "https://ru.yummyani.me"
+private val WARM_ACCENT = Color(0xFFFFB86A)
+private val FAVORITE_ACCENT = Color(0xFFD06BFF)
