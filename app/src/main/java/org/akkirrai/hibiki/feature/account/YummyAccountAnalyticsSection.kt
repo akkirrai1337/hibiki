@@ -28,7 +28,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
 
 @Composable
@@ -36,9 +38,10 @@ internal fun AnalyticsCard(
     snapshot: YummyProfileSnapshot,
 ) {
     val hasActivity = snapshot.activeDaysCount > 0
-    val statusSegments = remember(snapshot.distributionSegments, snapshot.favoriteCount) {
+    val favoriteLabel = stringResource(R.string.library_category_favorite)
+    val statusSegments = remember(snapshot.distributionSegments, snapshot.favoriteCount, favoriteLabel) {
         snapshot.distributionSegments + DistributionSegment(
-            label = "Любимое",
+            label = favoriteLabel,
             count = snapshot.favoriteCount,
             color = yummyFavoriteListColor(),
         )
@@ -47,9 +50,10 @@ internal fun AnalyticsCard(
         snapshot.durationSegments,
         snapshot.favoriteHoursLabel,
         snapshot.favoriteDurationSeconds,
+        favoriteLabel,
     ) {
         snapshot.durationSegments + DurationSegment(
-            label = "Любимое",
+            label = favoriteLabel,
             hoursLabel = snapshot.favoriteHoursLabel,
             value = snapshot.favoriteDurationSeconds,
             color = yummyFavoriteListColor(),
@@ -67,7 +71,7 @@ internal fun AnalyticsCard(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                text = "Время по спискам",
+                text = stringResource(R.string.yummy_account_watch_by_lists_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -145,7 +149,7 @@ private fun StreakBlock(
             color = Color(0xFFFF6670),
         )
         Text(
-            text = "дней на сайте",
+            text = stringResource(R.string.yummy_account_site_days_label),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -277,7 +281,7 @@ private fun DistributionDonut(
                 },
             )
             Text(
-                text = "всего",
+                text = stringResource(R.string.yummy_account_total_duration_center),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
             )

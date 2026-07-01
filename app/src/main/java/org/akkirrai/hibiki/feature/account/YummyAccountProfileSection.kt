@@ -169,10 +169,11 @@ private fun DefaultAvatarPlaceholder(
     }
 }
 
+@Composable
 private fun YummyProfileSex?.toLabel(): String {
     return when (this) {
-        YummyProfileSex.Male -> "Мужской"
-        YummyProfileSex.Female -> "Женский"
-        else -> "Не указано"
+        YummyProfileSex.Male -> stringResource(R.string.yummy_account_profile_gender_male)
+        YummyProfileSex.Female -> stringResource(R.string.yummy_account_profile_gender_female)
+        else -> stringResource(R.string.yummy_account_profile_unknown)
     }
 }

@@ -217,7 +217,7 @@ private fun NotificationActionIcon(
     Box {
         AppFloatingIconButton(
             imageVector = Icons.Outlined.NotificationsNone,
-            contentDescription = "Уведомления",
+            contentDescription = stringResource(R.string.yummy_account_notifications_cd),
             onClick = onClick,
         )
         if (notificationCount > 0) {
@@ -314,8 +314,9 @@ private fun SignedInScreen(
     onApiKeyHelpClick: () -> Unit,
     onExit: () -> Unit,
 ) {
-    val snapshot = remember(profile, libraryItems, listWatchStats) {
-        buildProfileSnapshot(profile, libraryItems, listWatchStats)
+    val context = LocalContext.current
+    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats) {
+        buildProfileSnapshot(context.resources, profile, libraryItems, listWatchStats)
     }
 
     Column(

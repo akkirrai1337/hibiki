@@ -243,6 +243,17 @@
     <string name="yummy_account_activity_empty_hint">No activity yet</string>
     <string name="yummy_account_recent_library_title">Recent library additions</string>
     <string name="yummy_account_recent_library_empty">No recent additions</string>
+    <string name="yummy_account_recent_additions_title">Recent additions</string>
+    <string name="yummy_account_watch_by_lists_title">Watch time by list</string>
+    <string name="yummy_account_site_days_label">days on site</string>
+    <string name="yummy_account_total_duration_center">total</string>
+    <string name="yummy_account_notifications_cd">Notifications</string>
+    <string name="yummy_account_profile_gender_male">Male</string>
+    <string name="yummy_account_profile_gender_female">Female</string>
+    <string name="yummy_account_date_today">Today</string>
+    <string name="yummy_account_date_yesterday">Yesterday</string>
+    <string name="yummy_account_date_days_ago_short">%1$dd</string>
+    <string name="yummy_account_duration_hours_short">%1$s h</string>
     <string name="yummy_account_settings_title">Account settings</string>
     <string name="yummy_account_settings_session_title">Session</string>
     <string name="yummy_account_settings_session_hint">Manage technical account options and sign out from here.</string>

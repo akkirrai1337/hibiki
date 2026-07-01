@@ -245,6 +245,17 @@
     <string name="yummy_account_activity_empty_hint">Пока нет активности</string>
     <string name="yummy_account_recent_library_title">Последние добавления в библиотеку</string>
     <string name="yummy_account_recent_library_empty">Нет недавних добавлений</string>
+    <string name="yummy_account_recent_additions_title">Последние добавления</string>
+    <string name="yummy_account_watch_by_lists_title">Время по спискам</string>
+    <string name="yummy_account_site_days_label">дней на сайте</string>
+    <string name="yummy_account_total_duration_center">всего</string>
+    <string name="yummy_account_notifications_cd">Уведомления</string>
+    <string name="yummy_account_profile_gender_male">Мужской</string>
+    <string name="yummy_account_profile_gender_female">Женский</string>
+    <string name="yummy_account_date_today">Сегодня</string>
+    <string name="yummy_account_date_yesterday">Вчера</string>
+    <string name="yummy_account_date_days_ago_short">%1$dд</string>
+    <string name="yummy_account_duration_hours_short">%1$s ч</string>
     <string name="yummy_account_settings_title">Настройки аккаунта</string>
     <string name="yummy_account_settings_session_title">Сессия</string>
     <string name="yummy_account_settings_session_hint">Здесь собраны технические параметры аккаунта и безопасный выход.</string>

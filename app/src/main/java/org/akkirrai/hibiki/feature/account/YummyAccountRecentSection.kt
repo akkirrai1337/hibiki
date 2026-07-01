@@ -21,10 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 
 @Composable
@@ -41,7 +43,7 @@ internal fun RecentLibraryCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = "Последние добавления",
+                text = stringResource(R.string.yummy_account_recent_additions_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -53,7 +55,7 @@ internal fun RecentLibraryCard(
                         .height(28.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    EmptyState(text = "Нет недавних добавлений")
+                    EmptyState(text = stringResource(R.string.yummy_account_recent_library_empty))
                 }
             } else {
                 items.forEach { item ->

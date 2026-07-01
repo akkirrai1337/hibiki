@@ -1,19 +1,27 @@
 package org.akkirrai.hibiki.core.design
 
+import android.content.res.Resources
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import org.akkirrai.animeresolver.metadata.YummyUserList
+import org.akkirrai.hibiki.R
 
 const val YUMMY_FAVORITE_LIST_ID = 4
 
-fun YummyUserList?.yummyListLabel(): String {
+@StringRes
+fun YummyUserList?.yummyListLabelRes(): Int {
     return when (this) {
-        YummyUserList.Watching -> "Смотрю"
-        YummyUserList.Planned -> "В планах"
-        YummyUserList.Completed -> "Просмотрено"
-        YummyUserList.Dropped -> "Брошено"
-        YummyUserList.OnHold -> "Отложено"
-        null -> "Не указано"
+        YummyUserList.Watching -> R.string.library_category_watching
+        YummyUserList.Planned -> R.string.library_category_planned
+        YummyUserList.Completed -> R.string.library_category_completed
+        YummyUserList.Dropped -> R.string.library_category_dropped
+        YummyUserList.OnHold -> R.string.library_category_on_hold
+        null -> R.string.yummy_account_profile_unknown
     }
+}
+
+fun YummyUserList?.yummyListLabel(resources: Resources): String {
+    return resources.getString(yummyListLabelRes())
 }
 
 fun YummyUserList?.yummyListColor(): Color {
