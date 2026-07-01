@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,12 +31,31 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 
+object AppFloatingHeaderDefaults {
+    @Composable
+    fun containerColor(): Color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
+
+    @Composable
+    fun scrimBrush(): Brush {
+        val surface = MaterialTheme.colorScheme.surface
+        return Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to surface.copy(alpha = 0.96f),
+                0.62f to surface.copy(alpha = 0.58f),
+                1f to surface.copy(alpha = 0f),
+            ),
+        )
+    }
+}
+
 @Composable
 fun AppFloatingHeader(
     title: String,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     includeStatusBarsPadding: Boolean = true,
+    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
+    scrimBrush: Brush = AppFloatingHeaderDefaults.scrimBrush(),
     actions: (@Composable () -> Unit)? = null,
 ) {
     val baseModifier = if (includeStatusBarsPadding) {
@@ -43,21 +63,48 @@ fun AppFloatingHeader(
     } else {
         modifier
     }
-    Row(
-        modifier = baseModifier
-            .fillMaxWidth()
-            .padding(
-                start = UiDimens.ScreenPadding,
-                top = 14.dp,
-                end = UiDimens.ScreenPadding,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Box(
+        modifier = baseModifier.fillMaxWidth(),
     ) {
-        AppFloatingBackButton(onClick = onBackClick)
-        AppFloatingTitlePill(text = title)
-        Spacer(modifier = Modifier.weight(1f))
-        actions?.invoke()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp)
+                .background(scrimBrush),
+        )
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(
+                    start = UiDimens.ScreenPadding,
+                    top = 14.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            AppFloatingBackButton(
+                onClick = onBackClick,
+                containerColor = containerColor,
+            )
+            AppFloatingTitlePill(
+                text = title,
+                containerColor = containerColor,
+            )
+        }
+        if (actions != null) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                        top = 14.dp,
+                        end = UiDimens.ScreenPadding,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                actions()
+            }
+        }
     }
 }
 
@@ -65,12 +112,14 @@ fun AppFloatingHeader(
 fun AppFloatingBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
     AppFloatingIconButton(
         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
         contentDescription = stringResource(R.string.cd_back),
         onClick = onClick,
         modifier = modifier,
+        containerColor = containerColor,
     )
 }
 
@@ -80,12 +129,13 @@ fun AppFloatingIconButton(
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
     Box(
         modifier = modifier
             .size(48.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
+            .background(containerColor)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -102,8 +152,12 @@ fun AppFloatingIconButton(
 fun AppFloatingTitlePill(
     text: String,
     modifier: Modifier = Modifier,
+    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
-    AppFloatingPill(modifier = modifier) {
+    AppFloatingPill(
+        modifier = modifier,
+        containerColor = containerColor,
+    ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 18.dp),
@@ -119,13 +173,14 @@ fun AppFloatingTitlePill(
 @Composable
 fun AppFloatingPill(
     modifier: Modifier = Modifier,
+    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
     content: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier
             .height(48.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)),
+            .background(containerColor),
         contentAlignment = Alignment.Center,
     ) {
         content()

@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +21,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -99,93 +96,88 @@ fun YummyAccountScreen(
         }
     }
 
-    Scaffold(
+    Box(
         modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentWindowInsets = WindowInsets.navigationBars,
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
-            when (val current = state) {
-                YummyAccountScreenState.Checking -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CheckingContent()
-                }
-
-                YummyAccountScreenState.SignedOut -> SignedOutScreen(
-                    busy = busy,
-                    errorMessage = null,
-                    paddingValues = PaddingValues(top = 78.dp),
-                    onSubmit = submitCredentials,
-                )
-
-                is YummyAccountScreenState.Error -> SignedOutScreen(
-                    busy = busy,
-                    errorMessage = current.message,
-                    paddingValues = PaddingValues(top = 78.dp),
-                    onSubmit = submitCredentials,
-                )
-
-                is YummyAccountScreenState.SignedIn -> SignedInScreen(
-                    page = page,
-                    profile = current.profile,
-                    libraryItems = current.libraryItems,
-                    listWatchStats = current.listWatchStats,
-                    busy = busy,
-                    apiKeyEnabled = apiKeyEnabled,
-                    apiKeyAvailable = apiKeyAvailable,
-                    paddingValues = PaddingValues(top = 78.dp),
-                    onApiKeyEnabledChange = { enabled ->
-                        apiKeyEnabled = enabled
-                        repository.setApplicationTokenEnabled(enabled)
-                    },
-                    onApiKeyHelpClick = { apiKeyHelpVisible = true },
-                    onExit = {
-                        busy = true
-                        coroutineScope.launch {
-                            repository.signOut()
-                            page = AccountPage.Profile
-                            state = YummyAccountScreenState.SignedOut
-                            busy = false
-                        }
-                    },
-                )
+    ) {
+        when (val current = state) {
+            YummyAccountScreenState.Checking -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CheckingContent()
             }
 
-            AppFloatingHeader(
-                title = when (page) {
-                    AccountPage.Profile -> stringResource(R.string.yummy_account_title)
-                    AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
+            YummyAccountScreenState.SignedOut -> SignedOutScreen(
+                busy = busy,
+                errorMessage = null,
+                paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
+                onSubmit = submitCredentials,
+            )
+
+            is YummyAccountScreenState.Error -> SignedOutScreen(
+                busy = busy,
+                errorMessage = current.message,
+                paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
+                onSubmit = submitCredentials,
+            )
+
+            is YummyAccountScreenState.SignedIn -> SignedInScreen(
+                page = page,
+                profile = current.profile,
+                libraryItems = current.libraryItems,
+                listWatchStats = current.listWatchStats,
+                busy = busy,
+                apiKeyEnabled = apiKeyEnabled,
+                apiKeyAvailable = apiKeyAvailable,
+                paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
+                onApiKeyEnabledChange = { enabled ->
+                    apiKeyEnabled = enabled
+                    repository.setApplicationTokenEnabled(enabled)
                 },
-                onBackClick = {
-                    if (page == AccountPage.Settings) {
+                onApiKeyHelpClick = { apiKeyHelpVisible = true },
+                onExit = {
+                    busy = true
+                    coroutineScope.launch {
+                        repository.signOut()
                         page = AccountPage.Profile
-                    } else {
-                        onBackClick()
+                        state = YummyAccountScreenState.SignedOut
+                        busy = false
                     }
-                },
-                actions = if (state is YummyAccountScreenState.SignedIn && page == AccountPage.Profile) {
-                    {
-                        NotificationActionIcon(
-                            notificationCount = notificationCount,
-                            onClick = {},
-                        )
-                        AppFloatingIconButton(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.yummy_account_settings_title),
-                            onClick = { page = AccountPage.Settings },
-                        )
-                    }
-                } else {
-                    null
                 },
             )
         }
+
+        AppFloatingHeader(
+            title = when (page) {
+                AccountPage.Profile -> stringResource(R.string.yummy_account_title)
+                AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
+            },
+            onBackClick = {
+                if (page == AccountPage.Settings) {
+                    page = AccountPage.Profile
+                } else {
+                    onBackClick()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth(),
+            actions = if (state is YummyAccountScreenState.SignedIn && page == AccountPage.Profile) {
+                {
+                    NotificationActionIcon(
+                        notificationCount = notificationCount,
+                        onClick = {},
+                    )
+                    AppFloatingIconButton(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.yummy_account_settings_title),
+                        onClick = { page = AccountPage.Settings },
+                    )
+                }
+            } else {
+                null
+            },
+        )
     }
 
     if (apiKeyHelpVisible) {
@@ -273,8 +265,8 @@ private fun SignedOutScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .verticalScroll(rememberScrollState())
+            .padding(paddingValues)
             .padding(horizontal = UiDimens.ScreenPadding, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -322,8 +314,8 @@ private fun SignedInScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .verticalScroll(rememberScrollState())
+            .padding(paddingValues)
             .padding(horizontal = UiDimens.ScreenPadding, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -384,3 +376,5 @@ private sealed interface YummyAccountScreenState {
 
     data class Error(val message: String) : YummyAccountScreenState
 }
+
+private val AccountHeaderContentTopPadding = 48.dp

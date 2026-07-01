@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.feature.settings
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -47,10 +49,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
+import androidx.core.content.pm.PackageInfoCompat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.AppPreferencesState
@@ -186,6 +189,10 @@ fun SettingsScreen(
                 )
             }
         }
+
+        item {
+            AppVersionText(text = appVersionLabel(context))
+        }
     }
 
     if (showLanguageSheet) {
@@ -198,6 +205,30 @@ fun SettingsScreen(
             onDismiss = { showLanguageSheet = false }
         )
     }
+}
+
+@Composable
+private fun AppVersionText(
+    text: String,
+) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+        textAlign = TextAlign.Center,
+    )
+}
+
+private fun appVersionLabel(context: Context): String {
+    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+    return context.getString(
+        R.string.settings_app_version,
+        packageInfo.versionName.orEmpty().ifBlank { "unknown" },
+        PackageInfoCompat.getLongVersionCode(packageInfo),
+    )
 }
 
 @Composable
