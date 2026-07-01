@@ -106,13 +106,10 @@ fun HibikiApp(
                     destinations = destinations,
                     currentTopLevel = currentTopLevel,
                     onDestinationClick = { destination ->
-                        navController.navigate(destination.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                        }
+                        navController.navigateTopLevelDestination(
+                            currentTopLevel = currentTopLevel,
+                            destination = destination,
+                        )
                     }
                 )
             }
@@ -158,7 +155,13 @@ private fun HibikiNavHost(
             .background(MaterialTheme.colorScheme.surface)
             .clipToBounds()
     ) {
-        composable(TopLevelDestination.Home.route) { backStackEntry ->
+        composable(
+            route = TopLevelDestination.Home.route,
+            enterTransition = { topLevelEnterTransition() },
+            exitTransition = { topLevelExitTransition() },
+            popEnterTransition = { topLevelEnterTransition() },
+            popExitTransition = { topLevelExitTransition() },
+        ) { backStackEntry ->
             val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
@@ -215,7 +218,13 @@ private fun HibikiNavHost(
                 modifier = screenModifier,
             )
         }
-        composable(TopLevelDestination.Library.route) {
+        composable(
+            route = TopLevelDestination.Library.route,
+            enterTransition = { topLevelEnterTransition() },
+            exitTransition = { topLevelExitTransition() },
+            popEnterTransition = { topLevelEnterTransition() },
+            popExitTransition = { topLevelExitTransition() },
+        ) {
             LibraryScreen(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
@@ -228,7 +237,13 @@ private fun HibikiNavHost(
                 modifier = topLevelScreenModifier
             )
         }
-        composable(TopLevelDestination.Settings.route) {
+        composable(
+            route = TopLevelDestination.Settings.route,
+            enterTransition = { topLevelEnterTransition() },
+            exitTransition = { topLevelExitTransition() },
+            popEnterTransition = { topLevelEnterTransition() },
+            popExitTransition = { topLevelExitTransition() },
+        ) {
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
                 bottomContentPadding = TopLevelBottomContentPadding,
@@ -535,6 +550,22 @@ private fun CompactBottomBarItem(
 private fun NavHostController.navigateSingleTopTo(route: String) {
     navigate(route) {
         launchSingleTop = true
+    }
+}
+
+private fun NavHostController.navigateTopLevelDestination(
+    currentTopLevel: TopLevelDestination,
+    destination: TopLevelDestination,
+) {
+    if (currentTopLevel == destination) return
+
+    navigate(destination.route) {
+        launchSingleTop = true
+        restoreState = true
+        popUpTo(currentTopLevel.route) {
+            inclusive = true
+            saveState = true
+        }
     }
 }
 
