@@ -24,11 +24,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -68,6 +66,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -395,47 +394,12 @@ private fun FiltersHeader(
     title: String,
     onBackClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = UiDimens.ScreenPadding,
-                top = 14.dp,
-                end = UiDimens.ScreenPadding,
-                bottom = 10.dp,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            onClick = onBackClick,
-            modifier = Modifier.size(48.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(R.string.cd_back),
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f),
-        ) {
-            Text(
-                text = title,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+    AppFloatingHeader(
+        title = title,
+        onBackClick = onBackClick,
+        includeStatusBarsPadding = false,
+        modifier = Modifier.padding(bottom = 10.dp),
+    )
 }
 
 @Composable

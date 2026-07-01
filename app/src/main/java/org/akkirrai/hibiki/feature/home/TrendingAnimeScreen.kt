@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,16 +17,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,11 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -59,6 +49,8 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
+import org.akkirrai.hibiki.core.design.component.AppFloatingPill
 import org.akkirrai.hibiki.core.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.PosterCard
@@ -133,29 +125,19 @@ fun TrendingAnimeScreen(
             }
         }
 
-        Row(
+        AppFloatingHeader(
+            title = stringResource(R.string.home_trending),
+            onBackClick = onBackClick,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .padding(
-                    start = UiDimens.ScreenPadding,
-                    top = 14.dp,
-                    end = UiDimens.ScreenPadding,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            FloatingBackButton(onClick = onBackClick)
-
-            FloatingTitlePill(text = stringResource(R.string.home_trending))
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            TrendingFilterButton(
-                selectedFilter = state.selectedFilter,
-                onFilterClick = viewModel::selectFilter,
-            )
-        }
+                .fillMaxWidth(),
+            actions = {
+                TrendingFilterButton(
+                    selectedFilter = state.selectedFilter,
+                    onFilterClick = viewModel::selectFilter,
+                )
+            },
+        )
     }
 }
 
@@ -168,13 +150,9 @@ private fun TrendingFilterButton(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        Box(
+        AppFloatingPill(
             modifier = Modifier
-                .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
                 .clickable { expanded = true },
-            contentAlignment = Alignment.Center,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -209,52 +187,6 @@ private fun TrendingFilterButton(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun FloatingBackButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-            contentDescription = stringResource(R.string.cd_back),
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
-private fun FloatingTitlePill(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 18.dp),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 

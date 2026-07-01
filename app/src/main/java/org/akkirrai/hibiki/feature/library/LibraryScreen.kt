@@ -77,6 +77,7 @@ import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.PosterImage
+import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -318,7 +319,11 @@ private fun LibrarySearchFiltersDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     item {
-                        LibraryFilterSectionTitle(stringResource(R.string.search_filters_type))
+                        SectionHeader(
+                            title = stringResource(R.string.search_filters_type),
+                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            titleColor = MaterialTheme.colorScheme.onBackground,
+                        )
                         LibrarySingleChoiceOptions(
                             options = catalog.typeOptions,
                             selected = pendingFilters.type,
@@ -327,7 +332,11 @@ private fun LibrarySearchFiltersDialog(
                     }
                     item { HorizontalDivider() }
                     item {
-                        LibraryFilterSectionTitle(stringResource(R.string.search_filters_status))
+                        SectionHeader(
+                            title = stringResource(R.string.search_filters_status),
+                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            titleColor = MaterialTheme.colorScheme.onBackground,
+                        )
                         LibrarySingleChoiceOptions(
                             options = catalog.statusOptions,
                             selected = pendingFilters.status,
@@ -336,7 +345,11 @@ private fun LibrarySearchFiltersDialog(
                     }
                     item { HorizontalDivider() }
                     item {
-                        LibraryFilterSectionTitle(stringResource(R.string.search_filters_genres))
+                        SectionHeader(
+                            title = stringResource(R.string.search_filters_genres),
+                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            titleColor = MaterialTheme.colorScheme.onBackground,
+                        )
                     }
                     items(catalog.genreOptions, key = { it }) { genre ->
                         LibraryGenreFilterRow(
@@ -386,18 +399,6 @@ private fun LibrarySearchFiltersDialog(
             }
         }
     }
-}
-
-@Composable
-private fun LibraryFilterSectionTitle(
-    title: String,
-) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground,
-    )
 }
 
 @Composable

@@ -10,35 +10,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.core.design.component.YummySignInForm
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,18 +42,13 @@ fun YummyAccountSheet(
     onSubmit: (String, String) -> Unit,
     onExit: () -> Unit,
 ) {
-    var loginValue by remember { mutableStateOf("") }
-    var secretValue by remember { mutableStateOf("") }
-    var localError by remember { mutableStateOf<String?>(null) }
-    val loginRequiredMessage = stringResource(R.string.yummy_account_login_required)
-
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = UiDimens.ScreenPadding, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
+        ) {
             Text(
                 text = "YummyAnime",
                 style = MaterialTheme.typography.titleLarge,
@@ -86,70 +74,10 @@ fun YummyAccountSheet(
                 }
                 YummyAccountUiState.SignedOut,
                 is YummyAccountUiState.Error -> {
-                    if (state is YummyAccountUiState.Error) {
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    localError?.let { message ->
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = loginValue,
-                        onValueChange = {
-                            loginValue = it
-                            localError = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.yummy_account_login_label)) },
-                        enabled = !busy,
-                    )
-                    OutlinedTextField(
-                        value = secretValue,
-                        onValueChange = {
-                            secretValue = it
-                            localError = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.yummy_account_password_label)) },
-                        enabled = !busy,
-                        visualTransformation = PasswordVisualTransformation(),
-                    )
-                    Button(
-                        onClick = {
-                            val normalizedLogin = loginValue.trim()
-                            if (normalizedLogin.isBlank() || secretValue.isBlank()) {
-                                localError = loginRequiredMessage
-                            } else {
-                                onSubmit(normalizedLogin, secretValue)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        if (busy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                            Spacer(modifier = Modifier.size(8.dp))
-                        }
-                        Text(stringResource(R.string.action_sign_in))
-                    }
-                    Text(
-                        text = stringResource(R.string.yummy_account_password_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    YummySignInForm(
+                        busy = busy,
+                        errorMessage = (state as? YummyAccountUiState.Error)?.message,
+                        onSubmit = onSubmit,
                     )
                 }
             }

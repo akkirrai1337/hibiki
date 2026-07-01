@@ -7,6 +7,7 @@ import org.akkirrai.animeresolver.metadata.YummyAnimeListState
 import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
 import org.akkirrai.animeresolver.metadata.YummyUserList
+import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -81,6 +82,10 @@ class YummyAccountRepository(
         return api.getProfile()
     }
 
+    suspend fun getUserProfile(userId: Long): YummyProfile {
+        return api.getUserProfile(userId = userId)
+    }
+
     suspend fun refreshSession(): String {
         val refreshedToken = api.refreshToken()
         tokenStore.saveAccessToken(refreshedToken)
@@ -141,6 +146,10 @@ class YummyAccountRepository(
 
     suspend fun getUserLists(userId: Long): List<YummyUserAnimeListItem> {
         return api.getUserLists(userId = userId)
+    }
+
+    suspend fun getUserStatsLists(userId: Long): List<YummyUserListWatchStat> {
+        return api.getUserStatsLists(userId = userId)
     }
 
     suspend fun setOnline() {

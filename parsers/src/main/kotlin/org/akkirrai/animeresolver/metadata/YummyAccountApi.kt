@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -112,6 +113,25 @@ class YummyAccountApi(
         return response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
             .response
             .toModel()
+    }
+
+    suspend fun getUserProfile(userId: Long): YummyProfile {
+        val response = client.get("$baseUrl/users/id$userId") {
+            addHeaders(resolveAccessToken(null))
+            parameter("need_counts", true)
+        }
+        return response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
+            .response
+            .toModel()
+    }
+
+    suspend fun getUserStatsLists(userId: Long): List<YummyUserListWatchStat> {
+        val response = client.get("$baseUrl/users/$userId/stats/lists") {
+            addHeaders(resolveAccessToken(null))
+        }
+        return response.bodyOrThrow<YummyAccountEnvelope<List<YummyUserListWatchStatResponse>>>(SOURCE)
+            .response
+            .mapNotNull(YummyUserListWatchStatResponse::toModel)
     }
 
     suspend fun refreshToken(accessToken: String? = null): String {
@@ -253,6 +273,13 @@ private data class YummyProfileResponse(
     val banner: YummyProfileBannerResponse? = null,
     val watches: YummyProfileWatchesResponse? = null,
     @SerialName("days_online") val daysOnline: Int? = null,
+    val counts: Map<String, Int>? = null,
+    val friends: YummyProfileFriendsResponse? = null,
+    @SerialName("reviewsCount") val reviewsCount: Int? = null,
+    @SerialName("reviews_count") val reviewsCountObject: YummyApprovedCountResponse? = null,
+    @SerialName("posts_count") val postsCount: YummyApprovedCountResponse? = null,
+    @SerialName("comments_count") val commentsCount: Int? = null,
+    @SerialName("collections_count") val collectionsCount: Int? = null,
     val oldNicknames: List<YummyOldNicknameResponse> = emptyList(),
 ) {
     fun toModel(): YummyProfile {
@@ -273,6 +300,14 @@ private data class YummyProfileResponse(
             banner = banner?.toModel(),
             watches = watches?.toModel(),
             daysOnline = daysOnline,
+            counts = counts.orEmpty().toProfileCounts(),
+            socialCounts = YummyProfileSocialCounts(
+                friends = friends?.friends ?: 0,
+                reviews = reviewsCount?.takeIf { it > 0 } ?: reviewsCountObject?.approved ?: 0,
+                comments = commentsCount ?: 0,
+                posts = postsCount?.approved ?: 0,
+                collections = collectionsCount ?: 0,
+            ),
             oldNicknames = oldNicknames.map(YummyOldNicknameResponse::toModel),
         )
     }
@@ -391,6 +426,16 @@ private data class YummyProfileWatchHistoryResponse(
 }
 
 @Serializable
+private data class YummyProfileFriendsResponse(
+    val friends: Int = 0,
+)
+
+@Serializable
+private data class YummyApprovedCountResponse(
+    val approved: Int = 0,
+)
+
+@Serializable
 private data class YummyOldNicknameResponse(
     val nickname: String? = null,
     val date: Long? = null,
@@ -425,20 +470,77 @@ private data class YummyAnimeListUpdateRequest(
 private data class YummyUserAnimeListItemResponse(
     @SerialName("anime_id") val animeId: Long,
     val title: String? = null,
+    val poster: YummyAccountPosterResponse? = null,
+    val rating: Double? = null,
     val list: Int? = null,
     @SerialName("is_favorite") val isFavorite: Boolean = false,
+    val user: YummyAnimeUserResponse? = null,
     val date: Long? = null,
 ) {
     fun toModel(): YummyUserAnimeListItem {
+        val nestedList = user?.list
         return YummyUserAnimeListItem(
             animeId = animeId,
             title = title.orEmpty(),
-            list = list?.let(YummyUserList::fromValue),
-            isFavorite = isFavorite,
+            posterUrl = poster?.bestUrl(),
+            yummyRating = rating?.takeIf { it > 0.0 },
+            list = (list ?: nestedList?.list?.id)?.let(YummyUserList::fromValue),
+            isFavorite = isFavorite || nestedList?.isFavorite == true,
             addedAt = date,
         )
     }
 }
+
+@Serializable
+private data class YummyAnimeUserResponse(
+    val list: YummyAnimeUserListResponse? = null,
+)
+
+@Serializable
+private data class YummyAnimeUserListResponse(
+    @SerialName("is_fav") val isFavorite: Boolean = false,
+    val list: YummyUserListInfoResponse? = null,
+)
+
+@Serializable
+private data class YummyAccountPosterResponse(
+    val small: String? = null,
+    val medium: String? = null,
+    val big: String? = null,
+    val huge: String? = null,
+    val fullsize: String? = null,
+    val mega: String? = null,
+) {
+    fun bestUrl(): String? {
+        return listOf(mega, huge, big, medium, fullsize, small)
+            .firstOrNull { !it.isNullOrBlank() }
+    }
+}
+
+@Serializable
+private data class YummyUserListWatchStatResponse(
+    val list: YummyUserListInfoResponse? = null,
+    val seconds: Long = 0L,
+) {
+    fun toModel(): YummyUserListWatchStat? {
+        val info = list ?: return null
+        val id = info.id ?: return null
+        return YummyUserListWatchStat(
+            rawListId = id,
+            list = YummyUserList.fromValue(id),
+            title = info.title.orEmpty(),
+            href = info.href.orEmpty(),
+            seconds = seconds.coerceAtLeast(0L),
+        )
+    }
+}
+
+@Serializable
+private data class YummyUserListInfoResponse(
+    val id: Int? = null,
+    val title: String? = null,
+    val href: String? = null,
+)
 
 data class YummyLoginResult(
     val success: Boolean,
@@ -605,6 +707,17 @@ private fun JsonObject.jsonObject(key: String): JsonObject? {
     return get(key) as? JsonObject
 }
 
+private fun Map<String, Int>.toProfileCounts(): YummyProfileCounts {
+    return YummyProfileCounts(
+        watching = get("0") ?: 0,
+        planned = get("1") ?: 0,
+        completed = get("2") ?: 0,
+        dropped = get("3") ?: 0,
+        favorite = get("4") ?: 0,
+        onHold = get("5") ?: 0,
+    )
+}
+
 private fun JsonElement?.extractReadableMessage(): String? {
     return when (this) {
         null -> null
@@ -635,6 +748,8 @@ data class YummyProfile(
     val banner: YummyProfileBanner? = null,
     val watches: YummyProfileWatches? = null,
     val daysOnline: Int? = null,
+    val counts: YummyProfileCounts = YummyProfileCounts(),
+    val socialCounts: YummyProfileSocialCounts = YummyProfileSocialCounts(),
     val oldNicknames: List<YummyOldNickname> = emptyList(),
 )
 
@@ -698,6 +813,26 @@ data class YummyOldNickname(
     val date: Long? = null,
 )
 
+data class YummyProfileCounts(
+    val watching: Int = 0,
+    val planned: Int = 0,
+    val completed: Int = 0,
+    val dropped: Int = 0,
+    val onHold: Int = 0,
+    val favorite: Int = 0,
+) {
+    val hasAny: Boolean
+        get() = watching + planned + completed + dropped + onHold + favorite > 0
+}
+
+data class YummyProfileSocialCounts(
+    val friends: Int = 0,
+    val reviews: Int = 0,
+    val comments: Int = 0,
+    val posts: Int = 0,
+    val collections: Int = 0,
+)
+
 data class YummyAnimeListState(
     val list: YummyUserList?,
     val isFavorite: Boolean,
@@ -706,9 +841,19 @@ data class YummyAnimeListState(
 data class YummyUserAnimeListItem(
     val animeId: Long,
     val title: String,
+    val posterUrl: String?,
+    val yummyRating: Double?,
     val list: YummyUserList?,
     val isFavorite: Boolean,
     val addedAt: Long?,
+)
+
+data class YummyUserListWatchStat(
+    val rawListId: Int?,
+    val list: YummyUserList?,
+    val title: String,
+    val href: String,
+    val seconds: Long,
 )
 
 enum class YummyUserList(val value: Int) {
