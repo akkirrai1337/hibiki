@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,14 +33,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import coil.compose.SubcomposeAsyncImage
 import org.akkirrai.hibiki.R
 
 @Composable
 fun AppSearchTopBar(
     query: String,
     isSearchActive: Boolean,
+    profileAvatarUrl: String? = null,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
     onProfileClick: () -> Unit,
@@ -178,12 +182,37 @@ fun AppSearchTopBar(
                     .alpha(profileAlpha.value),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Person,
-                    contentDescription = stringResource(R.string.home_profile),
-                    modifier = Modifier.size(21.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (profileAvatarUrl.isNullOrBlank()) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = stringResource(R.string.home_profile),
+                        modifier = Modifier.size(21.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    SubcomposeAsyncImage(
+                        model = profileAvatarUrl,
+                        contentDescription = stringResource(R.string.home_profile),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(21.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        error = {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(21.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                    )
+                }
             }
         }
     }

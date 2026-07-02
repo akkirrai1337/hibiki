@@ -79,6 +79,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -105,12 +106,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
-import org.akkirrai.hibiki.core.account.YummyAccountSessionState
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
@@ -126,6 +128,7 @@ import org.akkirrai.hibiki.core.design.component.searchStateGridContent
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.feature.account.normalizeYummyAssetUrl
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -139,6 +142,12 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val accountRepository = remember(context) { YummyAccountRepository(context) }
+    var profileAvatarUrl by remember {
+        mutableStateOf(accountRepository.getCachedProfile()?.resolvedAvatarUrl())
+    }
     val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
     val errorMessage = state.errorMessage
@@ -155,6 +164,31 @@ fun HomeScreen(
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
+
+    DisposableEffect(accountRepository) {
+        onDispose {
+            accountRepository.close()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, accountRepository) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
+                profileAvatarUrl = accountRepository.getCachedProfile()?.resolvedAvatarUrl()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(accountRepository) {
+        if (accountRepository.isLoggedIn()) {
+            profileAvatarUrl = runCatching { accountRepository.refreshProfileCache().resolvedAvatarUrl() }
+                .getOrElse { accountRepository.getCachedProfile()?.resolvedAvatarUrl() }
+        }
+    }
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
         if (isImeVisible) {
@@ -290,6 +324,7 @@ fun HomeScreen(
         AppSearchTopBar(
             query = state.searchQuery,
             isSearchActive = isSearchBarExpanded,
+            profileAvatarUrl = profileAvatarUrl,
             onQueryChange = viewModel::onSearchQueryChange,
             onClear = viewModel::clearSearch,
             onProfileClick = onProfileClick,
@@ -878,6 +913,12 @@ private val HOME_TOP_BAR_HEIGHT = 50.dp
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
+
+private fun org.akkirrai.animeresolver.metadata.YummyProfile.resolvedAvatarUrl(): String? {
+    return normalizeYummyAssetUrl(
+        avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
+    )
+}
 
 private fun buildHomeMeta(
     anime: Anime,
