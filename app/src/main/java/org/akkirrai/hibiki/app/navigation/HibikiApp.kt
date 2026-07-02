@@ -48,6 +48,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.core.design.component.AppBottomScrim
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.account.YummyAccountScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
@@ -97,6 +98,9 @@ fun HibikiApp(
         }
 
         if (isTopLevelDestination) {
+            AppBottomScrim(
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -133,7 +137,7 @@ private fun HibikiNavHost(
             top = contentPadding.calculateTopPadding(),
             bottom = contentPadding.calculateBottomPadding() +
                 if (showBottomBar) {
-                    BottomBarHeight - BottomBarLiftY + BottomBarContentExtraPadding
+                    BottomBarHeight - BottomBarDropY + BottomBarContentExtraPadding
                 } else {
                     0.dp
                 }
@@ -407,22 +411,22 @@ private fun HibikiNavHost(
     }
 }
 
-private val BottomBarHeight = 76.dp
+private val BottomBarHeight = 62.dp
 private val BottomBarOuterHorizontalPadding = 16.dp
-private val BottomBarInnerHorizontalPadding = 10.dp
-private val BottomBarInnerVerticalPadding = 6.dp
-private val BottomBarCornerRadius = 28.dp
+private val BottomBarInnerHorizontalPadding = 8.dp
+private val BottomBarInnerVerticalPadding = 4.dp
+private val BottomBarCornerRadius = 24.dp
 
-private val BottomBarItemHeight = 52.dp
-private val BottomBarActivePillHeight = 50.dp
+private val BottomBarItemHeight = 48.dp
+private val BottomBarActivePillHeight = 46.dp
 private val BottomBarIconSlotHeight = 24.dp
 private val BottomBarLabelSlotHeight = 16.dp
 private val BottomBarIconSize = 21.dp
 private val BottomBarIconLabelGap = 1.dp
 private val BottomBarLabelSize = 11.sp
-private val BottomBarLiftY = 0.dp
+private val BottomBarDropY = 6.dp
 private val BottomBarContentExtraPadding = 12.dp
-private val TopLevelBottomContentPadding = BottomBarHeight + 24.dp
+private val TopLevelBottomContentPadding = BottomBarHeight - BottomBarDropY + 24.dp
 
 @Composable
 private fun CompactBottomBar(
@@ -434,7 +438,7 @@ private fun CompactBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(BottomBarHeight)
-            .offset(y = -BottomBarLiftY)
+            .offset(y = BottomBarDropY)
             .padding(horizontal = BottomBarOuterHorizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
@@ -453,7 +457,7 @@ private fun CompactBottomBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 60.dp)
+                    .heightIn(min = 52.dp)
                     .padding(
                         horizontal = BottomBarInnerHorizontalPadding,
                         vertical = BottomBarInnerVerticalPadding,

@@ -21,31 +21,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 
 object AppFloatingHeaderDefaults {
-    @Composable
-    fun containerColor(): Color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
+    val ControlHeight: Dp = 48.dp
+    val ControlRadius: Dp = 24.dp
+    val ControlIconSize: Dp = 22.dp
+    val TitleHorizontalPadding: Dp = 18.dp
 
     @Composable
-    fun scrimBrush(): Brush {
-        val surface = MaterialTheme.colorScheme.surface
-        return Brush.verticalGradient(
-            colorStops = arrayOf(
-                0f to surface.copy(alpha = 0.96f),
-                0.62f to surface.copy(alpha = 0.58f),
-                1f to surface.copy(alpha = 0f),
-            ),
-        )
-    }
+    fun containerColor(): Color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
 }
 
 @Composable
@@ -55,7 +48,6 @@ fun AppFloatingHeader(
     modifier: Modifier = Modifier,
     includeStatusBarsPadding: Boolean = true,
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
-    scrimBrush: Brush = AppFloatingHeaderDefaults.scrimBrush(),
     actions: (@Composable () -> Unit)? = null,
 ) {
     val baseModifier = if (includeStatusBarsPadding) {
@@ -66,12 +58,7 @@ fun AppFloatingHeader(
     Box(
         modifier = baseModifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .background(scrimBrush),
-        )
+        AppTopScrim()
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -133,7 +120,7 @@ fun AppFloatingIconButton(
 ) {
     Box(
         modifier = modifier
-            .size(48.dp)
+            .size(AppFloatingHeaderDefaults.ControlHeight)
             .clip(CircleShape)
             .background(containerColor)
             .clickable(onClick = onClick),
@@ -142,7 +129,7 @@ fun AppFloatingIconButton(
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(AppFloatingHeaderDefaults.ControlIconSize),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -160,7 +147,7 @@ fun AppFloatingTitlePill(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 18.dp),
+            modifier = Modifier.padding(horizontal = AppFloatingHeaderDefaults.TitleHorizontalPadding),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -178,8 +165,8 @@ fun AppFloatingPill(
 ) {
     Box(
         modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(AppFloatingHeaderDefaults.ControlHeight)
+            .clip(RoundedCornerShape(AppFloatingHeaderDefaults.ControlRadius))
             .background(containerColor),
         contentAlignment = Alignment.Center,
     ) {
