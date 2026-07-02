@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.NavHostController
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -161,10 +162,30 @@ private fun HibikiNavHost(
     ) {
         composable(
             route = TopLevelDestination.Home.route,
-            enterTransition = { topLevelEnterTransition() },
-            exitTransition = { topLevelExitTransition() },
-            popEnterTransition = { topLevelEnterTransition() },
-            popExitTransition = { topLevelExitTransition() },
+            enterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            exitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popEnterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popExitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
         ) { backStackEntry ->
             val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel(
@@ -224,10 +245,30 @@ private fun HibikiNavHost(
         }
         composable(
             route = TopLevelDestination.Library.route,
-            enterTransition = { topLevelEnterTransition() },
-            exitTransition = { topLevelExitTransition() },
-            popEnterTransition = { topLevelEnterTransition() },
-            popExitTransition = { topLevelExitTransition() },
+            enterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            exitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popEnterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popExitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
         ) {
             LibraryScreen(
                 onAnimeClick = { anime ->
@@ -243,10 +284,30 @@ private fun HibikiNavHost(
         }
         composable(
             route = TopLevelDestination.Settings.route,
-            enterTransition = { topLevelEnterTransition() },
-            exitTransition = { topLevelExitTransition() },
-            popEnterTransition = { topLevelEnterTransition() },
-            popExitTransition = { topLevelExitTransition() },
+            enterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            exitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popEnterTransition = {
+                topLevelEnterTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
+            popExitTransition = {
+                topLevelExitTransition(
+                    initialRoute = initialState.destination.route,
+                    targetRoute = targetState.destination.route,
+                )
+            },
         ) {
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
@@ -566,8 +627,7 @@ private fun NavHostController.navigateTopLevelDestination(
     navigate(destination.route) {
         launchSingleTop = true
         restoreState = true
-        popUpTo(currentTopLevel.route) {
-            inclusive = true
+        popUpTo(graph.findStartDestination().id) {
             saveState = true
         }
     }

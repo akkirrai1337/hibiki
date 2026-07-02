@@ -304,7 +304,6 @@ fun HomeScreen(
                 item {
                     AnimeSection(
                         title = stringResource(R.string.home_recent_updates),
-                        actionLabel = stringResource(R.string.home_refresh),
                         icon = Icons.Outlined.Refresh,
                         items = state.recentlyUpdated,
                         onAnimeClick = onAnimeClick
@@ -814,7 +813,7 @@ private fun EmptyContinueContent() {
 @Composable
 private fun AnimeSection(
     title: String,
-    actionLabel: String,
+    actionLabel: String? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
