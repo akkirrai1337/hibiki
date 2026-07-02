@@ -1,5 +1,13 @@
 package org.akkirrai.hibiki.app.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,25 +106,56 @@ fun HibikiApp(
             )
         }
 
-        if (isTopLevelDestination) {
-            AppBottomScrim(
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-            ) {
-                CompactBottomBar(
-                    destinations = destinations,
-                    currentTopLevel = currentTopLevel,
-                    onDestinationClick = { destination ->
-                        navController.navigateTopLevelDestination(
-                            currentTopLevel = currentTopLevel,
-                            destination = destination,
-                        )
-                    }
+        AnimatedVisibility(
+            visible = isTopLevelDestination,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            enter = slideInHorizontally(
+                animationSpec = tween(
+                    durationMillis = BottomBarTransitionDurationMs,
+                    easing = BottomBarSlideEasing,
+                ),
+                initialOffsetX = { fullWidth -> -fullWidth },
+            ) + fadeIn(
+                animationSpec = tween(
+                    durationMillis = BottomBarFadeDurationMs,
+                    easing = FastOutSlowInEasing,
+                ),
+            ),
+            exit = slideOutHorizontally(
+                animationSpec = tween(
+                    durationMillis = BottomBarTransitionDurationMs,
+                    easing = BottomBarSlideEasing,
+                ),
+                targetOffsetX = { fullWidth -> -fullWidth },
+            ) + fadeOut(
+                animationSpec = tween(
+                    durationMillis = BottomBarFadeDurationMs,
+                    easing = FastOutSlowInEasing,
+                ),
+            ),
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                AppBottomScrim(
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                ) {
+                    CompactBottomBar(
+                        destinations = destinations,
+                        currentTopLevel = currentTopLevel,
+                        onDestinationClick = { destination ->
+                            navController.navigateTopLevelDestination(
+                                currentTopLevel = currentTopLevel,
+                                destination = destination,
+                            )
+                        }
+                    )
+                }
             }
         }
     }
@@ -488,6 +527,9 @@ private val BottomBarLabelSize = 11.sp
 private val BottomBarDropY = 6.dp
 private val BottomBarContentExtraPadding = 12.dp
 private val TopLevelBottomContentPadding = BottomBarHeight - BottomBarDropY + 24.dp
+private val BottomBarSlideEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+private const val BottomBarTransitionDurationMs = 360
+private const val BottomBarFadeDurationMs = 260
 
 @Composable
 private fun CompactBottomBar(
