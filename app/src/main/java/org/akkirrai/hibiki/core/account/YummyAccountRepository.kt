@@ -15,6 +15,7 @@ import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 class YummyAccountRepository(
     context: Context,
     private val tokenStore: YummyAccountTokenStore = AndroidKeystoreYummyAccountTokenStore(context),
+    private val profileCacheStore: YummyProfileCacheStore = SharedPreferencesYummyProfileCacheStore(context),
     private val applicationTokenStore: YummyApplicationTokenStore = AndroidKeystoreYummyApplicationTokenStore(context),
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     applicationTokenProvider: (() -> String?)? = null,
@@ -30,6 +31,8 @@ class YummyAccountRepository(
     fun isLoggedIn(): Boolean = tokenStore.hasAccessToken()
 
     fun getStoredToken(): String? = tokenStore.getAccessToken()
+
+    fun getCachedProfile(): YummyProfile? = profileCacheStore.getProfile()
 
     fun isApplicationTokenEnabled(): Boolean = applicationTokenStore.isApplicationTokenEnabled()
 
@@ -67,7 +70,7 @@ class YummyAccountRepository(
         }
         tokenStore.saveAccessToken(result.accessToken)
         saveDiscoveredApplicationToken()
-        return api.getProfile()
+        return refreshProfileCache()
     }
 
     private fun saveDiscoveredApplicationToken() {
@@ -79,11 +82,31 @@ class YummyAccountRepository(
     }
 
     suspend fun getProfile(): YummyProfile {
-        return api.getProfile()
+        return api.getProfile().also(profileCacheStore::saveProfile)
     }
 
     suspend fun getUserProfile(userId: Long): YummyProfile {
         return api.getUserProfile(userId = userId)
+    }
+
+    suspend fun refreshProfileCache(): YummyProfile {
+        val profile = api.getProfile()
+        val detailedProfile = runCatching { api.getUserProfile(userId = profile.id) }
+            .getOrDefault(profile)
+        profileCacheStore.saveProfile(detailedProfile)
+        return detailedProfile
+    }
+
+    suspend fun warmProfileCacheIfLoggedIn() {
+        if (!tokenStore.hasAccessToken()) {
+            profileCacheStore.clearProfile()
+            return
+        }
+
+        runCatching { refreshProfileCache() }
+            .onFailure { throwable ->
+                AppLogger.w(LOG_TAG, "Failed to warm cached profile: ${throwable.message}")
+            }
     }
 
     suspend fun refreshSession(): String {
@@ -95,29 +118,38 @@ class YummyAccountRepository(
     suspend fun signOut() {
         runCatching { api.logout() }
         tokenStore.clearAccessToken()
+        profileCacheStore.clearProfile()
     }
 
     fun clearLocalSession() {
         tokenStore.clearAccessToken()
+        profileCacheStore.clearProfile()
     }
 
     suspend fun validateSession(): YummyAccountSessionState {
         if (!tokenStore.hasAccessToken()) {
+            profileCacheStore.clearProfile()
             return YummyAccountSessionState.LoggedOut
         }
 
-        return runCatching { api.getProfile() }
+        val cachedProfile = profileCacheStore.getProfile()
+
+        return runCatching { refreshProfileCache() }
             .fold(
                 onSuccess = { profile -> YummyAccountSessionState.LoggedIn(profile) },
                 onFailure = { firstError ->
                     val refreshed = runCatching { refreshSession() }.getOrNull()
                     if (refreshed.isNullOrBlank()) {
-                        YummyAccountSessionState.Invalid(firstError)
+                        cachedProfile?.let(YummyAccountSessionState::LoggedIn)
+                            ?: YummyAccountSessionState.Invalid(firstError)
                     } else {
-                        runCatching { api.getProfile() }
+                        runCatching { refreshProfileCache() }
                             .fold(
                                 onSuccess = { profile -> YummyAccountSessionState.LoggedIn(profile) },
-                                onFailure = { secondError -> YummyAccountSessionState.Invalid(secondError) },
+                                onFailure = { secondError ->
+                                    cachedProfile?.let(YummyAccountSessionState::LoggedIn)
+                                        ?: YummyAccountSessionState.Invalid(secondError)
+                                },
                             )
                     }
                 },

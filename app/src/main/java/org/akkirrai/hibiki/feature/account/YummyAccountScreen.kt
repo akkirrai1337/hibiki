@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,12 +68,23 @@ fun YummyAccountScreen(
     var page by remember { mutableStateOf(AccountPage.Profile) }
     val notificationCount = 0
     val loginErrorMessage = stringResource(R.string.yummy_account_login_error)
+
+    DisposableEffect(repository) {
+        onDispose {
+            repository.close()
+        }
+    }
+
     val submitCredentials: (String, String) -> Unit = { login, secret ->
         busy = true
         coroutineScope.launch {
             state = runCatching {
                 val profile = repository.signIn(login = login, secret = secret)
-                loadSignedInState(repository, profile)
+                loadSignedInState(
+                    repository = repository,
+                    profile = profile,
+                    refreshDetailedProfile = false,
+                )
             }.fold(
                 onSuccess = {
                     apiKeyAvailable = !repository.getApplicationToken().isNullOrBlank()
@@ -89,9 +101,22 @@ fun YummyAccountScreen(
     }
 
     LaunchedEffect(Unit) {
+        val cachedProfile = repository.getCachedProfile()
+        if (repository.isLoggedIn() && cachedProfile != null) {
+            state = YummyAccountScreenState.SignedIn(
+                profile = cachedProfile,
+                libraryItems = emptyList(),
+                listWatchStats = emptyList(),
+            )
+        }
+
         state = when (val result = repository.validateSession()) {
             YummyAccountSessionState.LoggedOut -> YummyAccountScreenState.SignedOut
-            is YummyAccountSessionState.LoggedIn -> loadSignedInState(repository, result.profile)
+            is YummyAccountSessionState.LoggedIn -> loadSignedInState(
+                repository = repository,
+                profile = result.profile,
+                refreshDetailedProfile = false,
+            )
             is YummyAccountSessionState.Invalid -> YummyAccountScreenState.SignedOut
         }
     }
@@ -235,11 +260,16 @@ private fun NotificationActionIcon(
 private suspend fun loadSignedInState(
     repository: YummyAccountRepository,
     profile: YummyProfile,
+    refreshDetailedProfile: Boolean = true,
 ): YummyAccountScreenState.SignedIn {
     val (detailedProfile, libraryItems, listWatchStats) = coroutineScope {
         val detailedProfile = async {
-            runCatching { repository.getUserProfile(profile.id) }
-                .getOrDefault(profile)
+            if (refreshDetailedProfile) {
+                runCatching { repository.getUserProfile(profile.id) }
+                    .getOrDefault(profile)
+            } else {
+                profile
+            }
         }
         val libraryItems = async {
             runCatching { repository.getUserLists(profile.id) }

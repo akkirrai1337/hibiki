@@ -14,14 +14,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import java.util.Locale
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
+import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val accountRepository by lazy(LazyThreadSafetyMode.NONE) {
+        YummyAccountRepository(applicationContext)
+    }
+    private var profileWarmupJob: Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
@@ -43,6 +52,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        profileWarmupJob?.cancel()
+        profileWarmupJob = lifecycleScope.launch {
+            accountRepository.warmProfileCacheIfLoggedIn()
+        }
+    }
+
+    override fun onDestroy() {
+        profileWarmupJob?.cancel()
+        accountRepository.close()
+        super.onDestroy()
     }
 }
 
