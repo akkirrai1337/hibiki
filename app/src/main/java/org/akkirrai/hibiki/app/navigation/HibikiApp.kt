@@ -34,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.design.component.AppBottomScrim
+import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.account.YummyAccountScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
@@ -80,12 +82,19 @@ fun HibikiApp(
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry.value?.destination
+    val currentRoute = currentDestination?.route
     val isTopLevelDestination = destinations.any { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     }
     val currentTopLevel = destinations.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: TopLevelDestination.Home
+    LaunchedEffect(currentRoute) {
+        PerfLogger.mark(
+            event = "Navigation route changed",
+            details = "route=$currentRoute, topLevel=$isTopLevelDestination",
+        )
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -245,6 +254,7 @@ private fun HibikiNavHost(
                 onFilterClick = {
                     navController.navigateSingleTopTo(AnimeNavType.SEARCH_FILTERS_ROUTE)
                 },
+                isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
                 bottomContentPadding = TopLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
             )
@@ -316,7 +326,7 @@ private fun HibikiNavHost(
                 onProfileClick = {
                     navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
                 },
-                isActive = currentTopLevel == TopLevelDestination.Library,
+                isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
                 bottomContentPadding = TopLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
             )

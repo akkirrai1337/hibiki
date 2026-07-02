@@ -38,6 +38,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,7 @@ import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.log.PerfLogger
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +88,10 @@ fun SettingsScreen(
     }
 
     var showLanguageSheet by remember { mutableStateOf(false) }
+    val appVersionText = remember(context) { appVersionLabel(context) }
+    LaunchedEffect(Unit) {
+        PerfLogger.mark("SettingsScreen composed")
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -191,7 +197,7 @@ fun SettingsScreen(
         }
 
         item {
-            AppVersionText(text = appVersionLabel(context))
+            AppVersionText(text = appVersionText)
         }
     }
 

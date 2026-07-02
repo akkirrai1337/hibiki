@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -20,10 +21,14 @@ import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.core.account.YummyAccountRepository
+import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.feature.account.resolvedAvatarUrl
 
 class HomeViewModel(
     private val repository: HomeRepository,
+    private val accountRepository: YummyAccountRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext
@@ -34,13 +39,17 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        PerfLogger.mark("HomeViewModel created")
         load()
+        refreshProfileAvatar()
         loadSearchFilterCatalog()
         observeLanguageChanges()
     }
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            PerfLogger.mark("Home refresh started")
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.refreshHomeState() }
                 .onSuccess { state ->
@@ -53,6 +62,11 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
+                        profileAvatarUrl = current.profileAvatarUrl,
+                    )
+                    PerfLogger.mark(
+                        event = "Home refresh finished",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
@@ -62,11 +76,17 @@ class HomeViewModel(
                             errorMessage = throwable.message ?: appString(R.string.home_error_refresh_failed),
                         )
                     }
+                    PerfLogger.mark(
+                        event = "Home refresh failed",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms, error=${throwable::class.java.simpleName}",
+                    )
                 }
         }
     }
 
     private var searchJob: Job? = null
+    private var profileAvatarJob: Job? = null
+    private var lastProfileAvatarReadAt = 0L
 
     fun onSearchQueryChange(value: String) {
         _uiState.update { it.copy(searchQuery = value) }
@@ -231,6 +251,8 @@ class HomeViewModel(
 
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            PerfLogger.mark("Home load started")
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.loadHomeState() }
                 .onSuccess { state ->
@@ -243,6 +265,11 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
+                        profileAvatarUrl = current.profileAvatarUrl,
+                    )
+                    PerfLogger.mark(
+                        event = "Home load finished",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
@@ -252,13 +279,46 @@ class HomeViewModel(
                             errorMessage = throwable.message ?: appString(R.string.home_error_load_failed),
                         )
                     }
+                    PerfLogger.mark(
+                        event = "Home load failed",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms, error=${throwable::class.java.simpleName}",
+                    )
                 }
+        }
+    }
+
+    fun refreshProfileAvatar() {
+        val now = SystemClock.elapsedRealtime()
+        if (profileAvatarJob?.isActive == true) {
+            PerfLogger.mark("Home profile avatar refresh skipped", "reason=already_running")
+            return
+        }
+        if (lastProfileAvatarReadAt > 0L && now - lastProfileAvatarReadAt < PROFILE_AVATAR_CACHE_READ_THROTTLE_MS) {
+            PerfLogger.mark(
+                event = "Home profile avatar refresh skipped",
+                details = "reason=throttled, sinceLast=${now - lastProfileAvatarReadAt}ms",
+            )
+            return
+        }
+
+        profileAvatarJob = viewModelScope.launch(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            PerfLogger.mark("Home profile avatar refresh started")
+            val cachedAvatarUrl = accountRepository.getCachedProfile()?.resolvedAvatarUrl()
+            lastProfileAvatarReadAt = SystemClock.elapsedRealtime()
+            _uiState.update { it.copy(profileAvatarUrl = cachedAvatarUrl) }
+            PerfLogger.mark(
+                event = "Home profile avatar refresh finished",
+                details = "source=cache, duration=${System.currentTimeMillis() - startedAt}ms, hasAvatar=${cachedAvatarUrl != null}",
+            )
         }
     }
 
     override fun onCleared() {
         searchJob?.cancel()
+        profileAvatarJob?.cancel()
         repository.close()
+        accountRepository.close()
         super.onCleared()
     }
 
@@ -297,6 +357,7 @@ class HomeViewModel(
         const val SEARCH_DEBOUNCE_MS = 450L
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
+        const val PROFILE_AVATAR_CACHE_READ_THROTTLE_MS = 5_000L
     }
 
     class Factory(
@@ -306,6 +367,7 @@ class HomeViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return HomeViewModel(
                 repository = HomeRepository(context = context),
+                accountRepository = YummyAccountRepository(context = context.applicationContext),
                 context = context.applicationContext,
             ) as T
         }

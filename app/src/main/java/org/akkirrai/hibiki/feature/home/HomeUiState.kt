@@ -12,6 +12,7 @@ data class HomeUiState(
     val popular: List<Anime> = emptyList(),
     val trending: List<Anime> = emptyList(),
     val recentlyUpdated: List<Anime> = emptyList(),
+    val profileAvatarUrl: String? = null,
     val searchQuery: String = "",
     val searchResult: SearchUiState = SearchUiState.Idle,
     val searchFilterCatalog: AnimeSearchFilterCatalog? = null,

@@ -96,6 +96,12 @@ internal fun normalizeYummyAssetUrl(rawUrl: String?): String? {
     }
 }
 
+internal fun YummyProfile.resolvedAvatarUrl(): String? {
+    return normalizeYummyAssetUrl(
+        avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
+    )
+}
+
 private fun buildDistributionSegments(
     resources: Resources,
     profile: YummyProfile,

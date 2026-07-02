@@ -48,7 +48,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,10 +65,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -78,6 +75,7 @@ import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
+import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -95,26 +93,24 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val visibleEntries = state.visibleEntries
-    val lifecycleOwner = LocalLifecycleOwner.current
     var isSearchFocused by remember { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
     val isSearchActive = isSearchFocused && isImeVisible
     var isFilterDialogVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isActive) {
-        if (isActive) {
-            viewModel.syncFromStorage()
-        }
+    LaunchedEffect(Unit) {
+        PerfLogger.mark("LibraryScreen composed")
     }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.syncFromStorage()
-            }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            PerfLogger.mark("LibraryScreen active", "defer=${LIBRARY_DEFERRED_SYNC_DELAY_MS}ms")
+            delay(LIBRARY_DEFERRED_SYNC_DELAY_MS)
+            PerfLogger.mark("LibraryScreen deferred sync trigger")
+            viewModel.syncFromStorage()
+        } else {
+            PerfLogger.mark("LibraryScreen inactive")
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LazyColumn(
@@ -208,6 +204,8 @@ fun LibraryScreen(
         )
     }
 }
+
+private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
 
 @Composable
 private fun LibraryCategoryChips(

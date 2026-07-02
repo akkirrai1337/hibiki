@@ -112,7 +112,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
@@ -125,10 +124,10 @@ import org.akkirrai.hibiki.core.design.component.PosterCard
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.searchStateGridContent
+import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
-import org.akkirrai.hibiki.feature.account.normalizeYummyAssetUrl
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -138,16 +137,12 @@ fun HomeScreen(
     onShowAllTrendingClick: () -> Unit,
     onProfileClick: () -> Unit,
     onFilterClick: () -> Unit,
+    isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val accountRepository = remember(context) { YummyAccountRepository(context) }
-    var profileAvatarUrl by remember {
-        mutableStateOf(accountRepository.getCachedProfile()?.resolvedAvatarUrl())
-    }
     val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
     val errorMessage = state.errorMessage
@@ -165,28 +160,15 @@ fun HomeScreen(
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
 
-    DisposableEffect(accountRepository) {
-        onDispose {
-            accountRepository.close()
-        }
-    }
-
-    DisposableEffect(lifecycleOwner, accountRepository) {
+    DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
-                profileAvatarUrl = accountRepository.getCachedProfile()?.resolvedAvatarUrl()
+                viewModel.refreshProfileAvatar()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(accountRepository) {
-        if (accountRepository.isLoggedIn()) {
-            profileAvatarUrl = runCatching { accountRepository.refreshProfileCache().resolvedAvatarUrl() }
-                .getOrElse { accountRepository.getCachedProfile()?.resolvedAvatarUrl() }
         }
     }
 
@@ -274,6 +256,7 @@ fun HomeScreen(
                     FeaturedCarousel(
                         items = featuredAnime,
                         onAnimeClick = onAnimeClick,
+                        autoAdvanceEnabled = isActive,
                     )
                 }
             }
@@ -323,7 +306,7 @@ fun HomeScreen(
         AppSearchTopBar(
             query = state.searchQuery,
             isSearchActive = isSearchBarExpanded,
-            profileAvatarUrl = profileAvatarUrl,
+            profileAvatarUrl = state.profileAvatarUrl,
             onQueryChange = viewModel::onSearchQueryChange,
             onClear = viewModel::clearSearch,
             onProfileClick = onProfileClick,
@@ -406,6 +389,7 @@ private fun HomeErrorState(
 private fun FeaturedCarousel(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
+    autoAdvanceEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(
@@ -416,6 +400,10 @@ private fun FeaturedCarousel(
     val progress = remember { Animatable(0f) }
 
     var indicatorPage by remember { mutableStateOf(0) }
+
+    LaunchedEffect(autoAdvanceEnabled) {
+        PerfLogger.mark("Home featured carousel active changed", "active=$autoAdvanceEnabled")
+    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
@@ -437,8 +425,15 @@ private fun FeaturedCarousel(
             }
     }
 
-    LaunchedEffect(timerRestartKey, items.size) {
-        if (items.size <= 1) return@LaunchedEffect
+    LaunchedEffect(timerRestartKey, items.size, autoAdvanceEnabled) {
+        if (!autoAdvanceEnabled || items.size <= 1) {
+            progress.stop()
+            PerfLogger.mark(
+                event = "Home featured carousel timer stopped",
+                details = "active=$autoAdvanceEnabled, items=${items.size}",
+            )
+            return@LaunchedEffect
+        }
 
         if (pagerState.isScrollInProgress) {
             snapshotFlow { pagerState.isScrollInProgress }
@@ -912,12 +907,6 @@ private val HOME_TOP_BAR_HEIGHT = 50.dp
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
-
-private fun org.akkirrai.animeresolver.metadata.YummyProfile.resolvedAvatarUrl(): String? {
-    return normalizeYummyAssetUrl(
-        avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
-    )
-}
 
 private fun buildHomeMeta(
     anime: Anime,

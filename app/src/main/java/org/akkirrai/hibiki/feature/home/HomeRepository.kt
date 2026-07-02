@@ -66,7 +66,6 @@ class HomeRepository(
 
     suspend fun loadHomeState(): HomeUiState {
         Log.d(TAG, "loadHomeState: called")
-        val fallback = fallbackHomeState()
         val rotationSlot = effectiveTrendingRotationSlot()
         val languageKey = yummyLanguage()
         cachedHomeContent?.let { cached ->
@@ -87,20 +86,16 @@ class HomeRepository(
 
         val trendingOffset = trendingOffsetForSlot(rotationSlot)
         Log.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-        val catalog = runCatching {
-            yummySource.getCatalog(
-                limit = HOME_TRENDING_WINDOW_SIZE,
-                offset = trendingOffset,
-                sort = "top",
-            )
-        }.onFailure { e ->
-            Log.e(TAG, "loadHomeState: getCatalog failed — ${e::class.simpleName}: ${e.message}")
-        }.getOrElse { emptyList() }
+        val catalog = yummySource.getCatalog(
+            limit = HOME_TRENDING_WINDOW_SIZE,
+            offset = trendingOffset,
+            sort = "top",
+        )
         Log.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
 
         if (catalog.isEmpty()) {
-            Log.w(TAG, "loadHomeState: catalog empty, returning fallback")
-            return fallback
+            Log.w(TAG, "loadHomeState: catalog empty")
+            throw IllegalStateException(appContext.getString(R.string.home_error_load_failed))
         }
 
         val homeWindow = catalog.map(::toHomeAnime)
@@ -114,10 +109,7 @@ class HomeRepository(
             .take(HOME_SECTION_LIMIT)
         val fallbackTrending = trending
         Log.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
-        val recentlyUpdated = loadRecentlyUpdated().ifEmpty {
-            Log.w(TAG, "loadHomeState: loadRecentlyUpdated returned empty, using fallback (${fallback.recentlyUpdated.size} items)")
-            fallback.recentlyUpdated
-        }
+        val recentlyUpdated = loadRecentlyUpdated()
         Log.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
         cachedHomeContent = CachedHomeContent(
             rotationSlot = rotationSlot,

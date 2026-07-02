@@ -24,12 +24,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,15 +36,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
 import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
-import org.akkirrai.hibiki.core.account.YummyAccountSessionState
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
@@ -56,70 +50,13 @@ import org.akkirrai.hibiki.core.design.component.YummySignInForm
 fun YummyAccountScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: YummyAccountViewModel = viewModel(factory = YummyAccountViewModel.Factory(LocalContext.current)),
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val repository = remember(context) { YummyAccountRepository(context) }
-    var state by remember { mutableStateOf<YummyAccountScreenState>(YummyAccountScreenState.Checking) }
-    var busy by remember { mutableStateOf(false) }
-    var apiKeyEnabled by remember { mutableStateOf(repository.isApplicationTokenEnabled()) }
-    var apiKeyAvailable by remember { mutableStateOf(!repository.getApplicationToken().isNullOrBlank()) }
+    val uiState by viewModel.uiState.collectAsState()
+    val state = uiState.screenState
+    val page = uiState.page
     var apiKeyHelpVisible by remember { mutableStateOf(false) }
-    var page by remember { mutableStateOf(AccountPage.Profile) }
     val notificationCount = 0
-    val loginErrorMessage = stringResource(R.string.yummy_account_login_error)
-
-    DisposableEffect(repository) {
-        onDispose {
-            repository.close()
-        }
-    }
-
-    val submitCredentials: (String, String) -> Unit = { login, secret ->
-        busy = true
-        coroutineScope.launch {
-            state = runCatching {
-                val profile = repository.signIn(login = login, secret = secret)
-                loadSignedInState(
-                    repository = repository,
-                    profile = profile,
-                    refreshDetailedProfile = false,
-                )
-            }.fold(
-                onSuccess = {
-                    apiKeyAvailable = !repository.getApplicationToken().isNullOrBlank()
-                    it
-                },
-                onFailure = { throwable ->
-                    YummyAccountScreenState.Error(
-                        throwable.message ?: loginErrorMessage,
-                    )
-                },
-            )
-            busy = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        val cachedProfile = repository.getCachedProfile()
-        if (repository.isLoggedIn() && cachedProfile != null) {
-            state = YummyAccountScreenState.SignedIn(
-                profile = cachedProfile,
-                libraryItems = emptyList(),
-                listWatchStats = emptyList(),
-            )
-        }
-
-        state = when (val result = repository.validateSession()) {
-            YummyAccountSessionState.LoggedOut -> YummyAccountScreenState.SignedOut
-            is YummyAccountSessionState.LoggedIn -> loadSignedInState(
-                repository = repository,
-                profile = result.profile,
-                refreshDetailedProfile = false,
-            )
-            is YummyAccountSessionState.Invalid -> YummyAccountScreenState.SignedOut
-        }
-    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -133,17 +70,17 @@ fun YummyAccountScreen(
             }
 
             YummyAccountScreenState.SignedOut -> SignedOutScreen(
-                busy = busy,
+                busy = uiState.busy,
                 errorMessage = null,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
-                onSubmit = submitCredentials,
+                onSubmit = viewModel::submitCredentials,
             )
 
             is YummyAccountScreenState.Error -> SignedOutScreen(
-                busy = busy,
+                busy = uiState.busy,
                 errorMessage = current.message,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
-                onSubmit = submitCredentials,
+                onSubmit = viewModel::submitCredentials,
             )
 
             is YummyAccountScreenState.SignedIn -> SignedInScreen(
@@ -151,24 +88,13 @@ fun YummyAccountScreen(
                 profile = current.profile,
                 libraryItems = current.libraryItems,
                 listWatchStats = current.listWatchStats,
-                busy = busy,
-                apiKeyEnabled = apiKeyEnabled,
-                apiKeyAvailable = apiKeyAvailable,
+                busy = uiState.busy,
+                apiKeyEnabled = uiState.apiKeyEnabled,
+                apiKeyAvailable = uiState.apiKeyAvailable,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
-                onApiKeyEnabledChange = { enabled ->
-                    apiKeyEnabled = enabled
-                    repository.setApplicationTokenEnabled(enabled)
-                },
+                onApiKeyEnabledChange = viewModel::setApplicationTokenEnabled,
                 onApiKeyHelpClick = { apiKeyHelpVisible = true },
-                onExit = {
-                    busy = true
-                    coroutineScope.launch {
-                        repository.signOut()
-                        page = AccountPage.Profile
-                        state = YummyAccountScreenState.SignedOut
-                        busy = false
-                    }
-                },
+                onExit = viewModel::signOut,
             )
         }
 
@@ -179,7 +105,7 @@ fun YummyAccountScreen(
             },
             onBackClick = {
                 if (page == AccountPage.Settings) {
-                    page = AccountPage.Profile
+                    viewModel.setPage(AccountPage.Profile)
                 } else {
                     onBackClick()
                 }
@@ -196,7 +122,7 @@ fun YummyAccountScreen(
                     AppFloatingIconButton(
                         imageVector = Icons.Outlined.Settings,
                         contentDescription = stringResource(R.string.yummy_account_settings_title),
-                        onClick = { page = AccountPage.Settings },
+                        onClick = { viewModel.setPage(AccountPage.Settings) },
                     )
                 }
             } else {
@@ -255,34 +181,6 @@ private fun NotificationActionIcon(
             }
         }
     }
-}
-
-private suspend fun loadSignedInState(
-    repository: YummyAccountRepository,
-    profile: YummyProfile,
-    refreshDetailedProfile: Boolean = true,
-): YummyAccountScreenState.SignedIn {
-    val (detailedProfile, libraryItems, listWatchStats) = coroutineScope {
-        val detailedProfile = async {
-            if (refreshDetailedProfile) {
-                runCatching { repository.getUserProfile(profile.id) }
-                    .getOrDefault(profile)
-            } else {
-                profile
-            }
-        }
-        val libraryItems = async {
-            runCatching { repository.getUserLists(profile.id) }
-                .getOrDefault(emptyList())
-        }
-        val listWatchStats = async {
-            runCatching { repository.getUserStatsLists(profile.id) }
-                .getOrDefault(emptyList())
-        }
-
-        Triple(detailedProfile.await(), libraryItems.await(), listWatchStats.await())
-    }
-    return YummyAccountScreenState.SignedIn(detailedProfile, libraryItems, listWatchStats)
 }
 
 @Composable
@@ -388,23 +286,6 @@ private fun CheckingContent() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-private enum class AccountPage {
-    Profile,
-    Settings,
-}
-
-private sealed interface YummyAccountScreenState {
-    data object Checking : YummyAccountScreenState
-    data object SignedOut : YummyAccountScreenState
-    data class SignedIn(
-        val profile: YummyProfile,
-        val libraryItems: List<YummyUserAnimeListItem>,
-        val listWatchStats: List<YummyUserListWatchStat>,
-    ) : YummyAccountScreenState
-
-    data class Error(val message: String) : YummyAccountScreenState
 }
 
 private val AccountHeaderContentTopPadding = 48.dp

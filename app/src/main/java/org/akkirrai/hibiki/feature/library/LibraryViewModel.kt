@@ -1,16 +1,20 @@
 package org.akkirrai.hibiki.feature.library
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
+import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
@@ -19,42 +23,82 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 
 class LibraryViewModel(
     context: Context,
-    private val libraryRepository: LibraryRepository = LibraryRepository(context.applicationContext),
-    private val searchRepository: AnimeSearchRepository = AnimeSearchRepository(context.applicationContext),
-    private val offlineDownloadRepository: OfflineDownloadRepository = OfflineDownloadRepository(context.applicationContext),
-    private val offlineTitleMetadataRepository: OfflineTitleMetadataRepository = OfflineTitleMetadataRepository(context.applicationContext),
+    libraryRepository: LibraryRepository? = null,
+    searchRepository: AnimeSearchRepository? = null,
+    offlineDownloadRepository: OfflineDownloadRepository? = null,
+    offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
 ) : ViewModel() {
+    private val appContext = context.applicationContext
+    private val libraryRepositoryDelegate = lazy { libraryRepository ?: LibraryRepository(appContext) }
+    private val searchRepositoryDelegate = lazy { searchRepository ?: AnimeSearchRepository(appContext) }
+    private val offlineDownloadRepositoryDelegate = lazy {
+        offlineDownloadRepository ?: OfflineDownloadRepository(appContext)
+    }
+    private val offlineTitleMetadataRepositoryDelegate = lazy {
+        offlineTitleMetadataRepository ?: OfflineTitleMetadataRepository(appContext)
+    }
+    private val libraryRepository by libraryRepositoryDelegate
+    private val searchRepository by searchRepositoryDelegate
+    private val offlineDownloadRepository by offlineDownloadRepositoryDelegate
+    private val offlineTitleMetadataRepository by offlineTitleMetadataRepositoryDelegate
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+    private var syncJob: Job? = null
+    private var lastStorageSyncAt = 0L
+    private var lastDetailsRefreshAt = 0L
 
     init {
-        syncFromStorage()
-        refreshDetails()
+        PerfLogger.mark("LibraryViewModel created")
     }
 
-    fun syncFromStorage() {
-        val saved = libraryRepository.getLibraryEntries()
-        _uiState.update {
-            it.copy(
-                entries = saved,
-                selectedCategory = preferredCategory(saved, it.selectedCategory),
-            )
+    fun syncFromStorage(force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && syncJob?.isActive == true) {
+            PerfLogger.mark("Library sync skipped", "reason=already_running")
+            return
         }
-        reconcileSavedDownloadsAsync()
-    }
+        if (!force && lastStorageSyncAt > 0L && now - lastStorageSyncAt < LOCAL_SYNC_THROTTLE_MS) {
+            PerfLogger.mark(
+                event = "Library sync skipped",
+                details = "reason=throttled, sinceLast=${now - lastStorageSyncAt}ms",
+            )
+            return
+        }
 
-    private fun reconcileSavedDownloadsAsync() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val changed = reconcileSavedDownloads()
-            if (changed) {
-                val saved = libraryRepository.getLibraryEntries()
-                _uiState.update {
-                    it.copy(
-                        entries = saved,
-                        selectedCategory = preferredCategory(saved, it.selectedCategory),
-                    )
-                }
+        PerfLogger.mark("Library sync scheduled", "force=$force")
+        syncJob = viewModelScope.launch(Dispatchers.IO) {
+            val syncStartedAt = SystemClock.elapsedRealtime()
+            var saved = PerfLogger.measure("Library storage read") {
+                libraryRepository.getLibraryEntries()
             }
+            lastStorageSyncAt = SystemClock.elapsedRealtime()
+            updateEntries(saved)
+
+            val changed = PerfLogger.measure("Library reconcile downloads") {
+                reconcileSavedDownloads()
+            }
+            if (changed) {
+                saved = PerfLogger.measure("Library storage reread after reconcile") {
+                    libraryRepository.getLibraryEntries()
+                }
+                updateEntries(saved)
+            }
+
+            val shouldRefreshDetails = force ||
+                lastDetailsRefreshAt == 0L ||
+                SystemClock.elapsedRealtime() - lastDetailsRefreshAt >= DETAILS_REFRESH_INTERVAL_MS
+            if (shouldRefreshDetails) {
+                refreshDetails(saved)
+            } else {
+                PerfLogger.mark(
+                    event = "Library details refresh skipped",
+                    details = "reason=interval, entries=${saved.size}",
+                )
+            }
+            PerfLogger.mark(
+                event = "Library sync finished",
+                details = "entries=${saved.size}, changed=$changed, duration=${PerfLogger.elapsedMs(syncStartedAt)}ms",
+            )
         }
     }
 
@@ -70,14 +114,16 @@ class LibraryViewModel(
         return changed
     }
 
-    private fun refreshDetails() {
-        val saved = _uiState.value.entries
+    private suspend fun refreshDetails(saved: List<LibraryEntry>) {
         if (saved.isEmpty()) {
+            PerfLogger.mark("Library details refresh skipped", "reason=empty")
             return
         }
 
+        val startedAt = SystemClock.elapsedRealtime()
+        PerfLogger.mark("Library details refresh started", "entries=${saved.size}")
         _uiState.update { it.copy(isRefreshing = true) }
-        viewModelScope.launch(Dispatchers.IO) {
+        try {
             val refreshed = saved
                 .groupBy { entry -> entry.anime.id }
                 .flatMap { (_, groupedEntries) ->
@@ -88,6 +134,11 @@ class LibraryViewModel(
                     }
 
                     val freshAnime = runCatching { searchRepository.getDetails(baseEntry.anime.id, baseEntry.anime) }
+                        .onFailure { throwable ->
+                            if (throwable is CancellationException) {
+                                throw throwable
+                            }
+                        }
                         .getOrNull()
                     val anime = freshAnime ?: baseEntry.anime
                     if (freshAnime != null) {
@@ -99,6 +150,7 @@ class LibraryViewModel(
                         .sortedBy(LibraryCategory::ordinal)
                         .map { category -> baseEntry.copy(anime = anime, category = category) }
                 }
+            lastDetailsRefreshAt = SystemClock.elapsedRealtime()
             _uiState.update {
                 it.copy(
                     entries = refreshed,
@@ -106,18 +158,26 @@ class LibraryViewModel(
                     isRefreshing = false,
                 )
             }
+            PerfLogger.mark(
+                event = "Library details refresh finished",
+                details = "entries=${saved.size}, refreshed=${refreshed.size}, duration=${PerfLogger.elapsedMs(startedAt)}ms",
+            )
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 
     fun selectCategory(category: LibraryCategory) {
-        val saved = libraryRepository.getLibraryEntries()
+        _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    private fun updateEntries(entries: List<LibraryEntry>) {
         _uiState.update {
             it.copy(
-                entries = saved,
-                selectedCategory = category,
+                entries = entries,
+                selectedCategory = preferredCategory(entries, it.selectedCategory),
             )
         }
-        reconcileSavedDownloadsAsync()
     }
 
     fun onSearchQueryChange(query: String) {
@@ -147,7 +207,10 @@ class LibraryViewModel(
     }
 
     override fun onCleared() {
-        searchRepository.close()
+        if (searchRepositoryDelegate.isInitialized()) {
+            PerfLogger.mark("LibraryViewModel close search repository")
+            searchRepository.close()
+        }
         super.onCleared()
     }
 
@@ -242,3 +305,6 @@ private fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryC
         LibraryCategory.entries.toList()
     }
 }
+
+private const val LOCAL_SYNC_THROTTLE_MS = 2_000L
+private const val DETAILS_REFRESH_INTERVAL_MS = 30 * 60 * 1_000L

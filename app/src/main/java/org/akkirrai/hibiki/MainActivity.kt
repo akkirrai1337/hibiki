@@ -22,8 +22,10 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val accountRepository by lazy(LazyThreadSafetyMode.NONE) {
@@ -58,7 +60,9 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         profileWarmupJob?.cancel()
         profileWarmupJob = lifecycleScope.launch {
-            accountRepository.warmProfileCacheIfLoggedIn()
+            withContext(Dispatchers.IO) {
+                accountRepository.warmProfileCacheIfLoggedIn()
+            }
         }
     }
 

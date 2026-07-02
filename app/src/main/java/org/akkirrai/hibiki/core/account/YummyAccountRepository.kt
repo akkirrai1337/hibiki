@@ -17,16 +17,22 @@ class YummyAccountRepository(
     private val tokenStore: YummyAccountTokenStore = AndroidKeystoreYummyAccountTokenStore(context),
     private val profileCacheStore: YummyProfileCacheStore = SharedPreferencesYummyProfileCacheStore(context),
     private val applicationTokenStore: YummyApplicationTokenStore = AndroidKeystoreYummyApplicationTokenStore(context),
-    private val client: HttpClient = AndroidHttpClientFactory.create(),
-    applicationTokenProvider: (() -> String?)? = null,
+    private val clientFactory: () -> HttpClient = AndroidHttpClientFactory::create,
+    private val applicationTokenProvider: (() -> String?)? = null,
 ) {
     private val stringContext = context
-    private val api = YummyAccountApi(
-        client = client,
-        applicationToken = applicationTokenProvider?.invoke() ?: applicationTokenStore.getEffectiveApplicationToken(),
-        accessTokenProvider = tokenStore::getAccessToken,
-        debugLogger = { message -> AppLogger.d(LOG_TAG, message) },
-    )
+    private var createdClient: HttpClient? = null
+    private val client: HttpClient by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        clientFactory().also { createdClient = it }
+    }
+    private val api: YummyAccountApi by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        YummyAccountApi(
+            client = client,
+            applicationToken = applicationTokenProvider?.invoke() ?: applicationTokenStore.getEffectiveApplicationToken(),
+            accessTokenProvider = tokenStore::getAccessToken,
+            debugLogger = { message -> AppLogger.d(LOG_TAG, message) },
+        )
+    }
 
     fun isLoggedIn(): Boolean = tokenStore.hasAccessToken()
 
@@ -189,7 +195,7 @@ class YummyAccountRepository(
     }
 
     fun close() {
-        client.close()
+        createdClient?.close()
     }
 
     private companion object {
