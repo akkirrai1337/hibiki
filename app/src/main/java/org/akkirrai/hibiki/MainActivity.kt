@@ -1,10 +1,12 @@
 package org.akkirrai.hibiki
 
 import android.content.Context
+import android.net.Uri
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
@@ -32,6 +34,20 @@ class MainActivity : ComponentActivity() {
         YummyAccountRepository(applicationContext)
     }
     private var profileWarmupJob: Job? = null
+    private var pendingBackupDocumentCallback: ((Uri?) -> Unit)? = null
+    private val createBackupDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        pendingBackupDocumentCallback?.invoke(uri)
+        pendingBackupDocumentCallback = null
+    }
+    private var pendingOpenBackupDocumentCallback: ((Uri?) -> Unit)? = null
+    private val openBackupDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        pendingOpenBackupDocumentCallback?.invoke(uri)
+        pendingOpenBackupDocumentCallback = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_Hibiki)
@@ -49,11 +65,34 @@ class MainActivity : ComponentActivity() {
                     themeMode = preferences.themeMode
                 ) {
                     HibikiApp(
-                        appPreferences = appPreferences
+                        appPreferences = appPreferences,
+                        onCreateBackupDocument = ::createBackupDocument,
+                        onOpenBackupDocument = ::openBackupDocument,
                     )
                 }
             }
         }
+    }
+
+    private fun createBackupDocument(
+        fileName: String,
+        onResult: (Uri?) -> Unit,
+    ) {
+        pendingBackupDocumentCallback?.invoke(null)
+        pendingBackupDocumentCallback = onResult
+        createBackupDocumentLauncher.launch(fileName)
+    }
+
+    private fun openBackupDocument(onResult: (Uri?) -> Unit) {
+        pendingOpenBackupDocumentCallback?.invoke(null)
+        pendingOpenBackupDocumentCallback = onResult
+        openBackupDocumentLauncher.launch(
+            arrayOf(
+                "application/zip",
+                "application/octet-stream",
+                "*/*",
+            ),
+        )
     }
 
     override fun onStart() {

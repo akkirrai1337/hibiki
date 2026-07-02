@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.app.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -76,7 +77,9 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 @Composable
 fun HibikiApp(
-    appPreferences: AppPreferences? = null
+    appPreferences: AppPreferences? = null,
+    onCreateBackupDocument: ((String, (Uri?) -> Unit) -> Unit)? = null,
+    onOpenBackupDocument: (((Uri?) -> Unit) -> Unit)? = null,
 ) {
     val navController = rememberNavController()
     val destinations = TopLevelDestination.entries
@@ -110,6 +113,8 @@ fun HibikiApp(
                 navController = navController,
                 contentPadding = innerPadding,
                 appPreferences = appPreferences,
+                onCreateBackupDocument = onCreateBackupDocument,
+                onOpenBackupDocument = onOpenBackupDocument,
                 showBottomBar = isTopLevelDestination,
                 currentTopLevel = currentTopLevel,
             )
@@ -176,6 +181,8 @@ private fun HibikiNavHost(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     appPreferences: AppPreferences? = null,
+    onCreateBackupDocument: ((String, (Uri?) -> Unit) -> Unit)? = null,
+    onOpenBackupDocument: (((Uri?) -> Unit) -> Unit)? = null,
     showBottomBar: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
 ) {
@@ -361,7 +368,9 @@ private fun HibikiNavHost(
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
                 bottomContentPadding = TopLevelBottomContentPadding,
-                appPreferences = appPreferences
+                appPreferences = appPreferences,
+                onCreateBackupDocument = onCreateBackupDocument,
+                onOpenBackupDocument = onOpenBackupDocument,
             )
         }
         composable(

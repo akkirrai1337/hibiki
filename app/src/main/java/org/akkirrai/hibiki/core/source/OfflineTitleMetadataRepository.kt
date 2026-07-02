@@ -141,7 +141,7 @@ class OfflineTitleMetadataRepository(context: Context) {
 
     private fun key(id: String): String = "offline_title_${YummyIdMigration.normalizeTitleId(id)}"
 
-    private companion object {
+    companion object {
         const val PREFS_NAME = "hibiki_offline_title_metadata"
     }
 }

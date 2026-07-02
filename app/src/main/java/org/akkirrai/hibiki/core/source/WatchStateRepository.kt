@@ -241,9 +241,9 @@ class WatchStateRepository(context: Context) {
         return this
     }
 
-    private companion object {
+    companion object {
         const val PREFS_NAME = "hibiki_watch_state"
-        const val PROGRESS_PREFIX = "progress_"
-        const val SEPARATOR = '\u001F'
+        private const val PROGRESS_PREFIX = "progress_"
+        private const val SEPARATOR = '\u001F'
     }
 }

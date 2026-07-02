@@ -361,10 +361,10 @@ class LibraryRepository(context: Context) {
         return related.copy(id = YummyIdMigration.normalizeTitleId(related.id))
     }
 
-    private companion object {
+    companion object {
         const val PREFS_NAME = "hibiki_library"
-        const val LIBRARY_IDS_KEY = "library_ids"
-        const val LEGACY_FAVORITE_IDS_KEY = "favorite_ids"
+        private const val LIBRARY_IDS_KEY = "library_ids"
+        private const val LEGACY_FAVORITE_IDS_KEY = "favorite_ids"
     }
 }
 
