@@ -4,11 +4,9 @@ import android.content.Context
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 
 class OfflineDownloadRepository(
     context: Context,
-    @Suppress("UNUSED_PARAMETER") private val watchRepository: AnimeWatchRepository = AnimeWatchRepository(),
 ) {
     private val appContext = context.applicationContext
 

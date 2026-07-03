@@ -213,8 +213,10 @@
     <string name="yummy_account_password_label">Пароль</string>
     <string name="yummy_account_login_required">Введите логин и пароль</string>
     <string name="yummy_account_password_note">Пароль не сохраняется</string>
+    <string name="yummy_account_error_invalid_credentials">Неверный логин или пароль</string>
     <string name="yummy_account_error_missing_access_token">YummyAnime не вернул токен доступа</string>
     <string name="yummy_account_error_captcha_required">YummyAnime запросил captcha-проверку. Такой сценарий входа приложение пока не поддерживает.</string>
+    <string name="yummy_account_error_temporarily_unavailable">YummyAnime временно недоступен. Попробуйте позже.</string>
     <string name="yummy_account_profile_fallback">Профиль YummyAnime</string>
     <string name="yummy_account_profile_header">Профиль %1$s</string>
     <string name="yummy_account_profile_id">ID: %1$d</string>

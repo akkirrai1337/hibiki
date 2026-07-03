@@ -29,10 +29,7 @@ class PlayerViewModel(
 ) : ViewModel() {
     private val titleId = sourceId.substringBefore(':')
     private val watchStateRepository = WatchStateRepository(context.applicationContext)
-    private val offlineDownloadRepository = OfflineDownloadRepository(
-        context = context.applicationContext,
-        watchRepository = repository,
-    )
+    private val offlineDownloadRepository = OfflineDownloadRepository(context = context.applicationContext)
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
     private val _uiState = MutableStateFlow(

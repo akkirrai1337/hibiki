@@ -18,6 +18,8 @@ import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.account.YummyAccountSessionState
+import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 
 class YummyAccountViewModel(
     context: Context,
@@ -49,8 +51,13 @@ class YummyAccountViewModel(
             }.fold(
                 onSuccess = { it },
                 onFailure = { throwable ->
+                    AppLogger.w(
+                        LOG_TAG,
+                        "Sign-in failed: ${throwable::class.simpleName}: ${throwable.message}",
+                        throwable,
+                    )
                     YummyAccountScreenState.Error(
-                        throwable.message ?: appContext.getString(R.string.yummy_account_login_error),
+                        throwable.toSignInUiMessage(),
                     )
                 },
             )
@@ -71,6 +78,16 @@ class YummyAccountViewModel(
     fun setApplicationTokenEnabled(enabled: Boolean) {
         repository.setApplicationTokenEnabled(enabled)
         _uiState.update { it.copy(apiKeyEnabled = enabled) }
+    }
+
+    fun clearSignInError() {
+        _uiState.update { state ->
+            if (state.screenState is YummyAccountScreenState.Error) {
+                state.copy(screenState = YummyAccountScreenState.SignedOut)
+            } else {
+                state
+            }
+        }
     }
 
     fun signOut() {
@@ -127,6 +144,32 @@ class YummyAccountViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return YummyAccountViewModel(context = context.applicationContext) as T
         }
+    }
+
+    private fun Throwable.toSignInUiMessage(): String {
+        val normalizedMessage = message.orEmpty().lowercase()
+
+        return when {
+            this is NoInternetConnectionException ->
+                appContext.getString(R.string.home_error_no_internet)
+            normalizedMessage.contains("error_code\":7") ||
+                normalizedMessage.contains("invalid password") ||
+                normalizedMessage.contains("wrong password") ||
+                normalizedMessage.contains("invalid login") ->
+                appContext.getString(R.string.yummy_account_error_invalid_credentials)
+            normalizedMessage.contains("captcha") ->
+                appContext.getString(R.string.yummy_account_error_captcha_required)
+            normalizedMessage.contains("timeout") ||
+                normalizedMessage.contains("timed out") ||
+                normalizedMessage.contains("http 5") ||
+                normalizedMessage.contains("server") ->
+                appContext.getString(R.string.yummy_account_error_temporarily_unavailable)
+            else -> appContext.getString(R.string.yummy_account_login_error)
+        }
+    }
+
+    private companion object {
+        const val LOG_TAG = "YummyAccount"
     }
 }
 

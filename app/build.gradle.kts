@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -9,17 +7,9 @@ plugins {
 android {
     namespace = "org.akkirrai.hibiki"
 
-    val localProperties = Properties().apply {
-        val file = rootProject.file("local.properties")
-        if (file.isFile) {
-            file.inputStream().use { input -> load(input) }
-        }
-    }
-
     fun releaseSigningValue(name: String): String? =
         System.getenv(name)
             ?: providers.gradleProperty(name).orNull
-            ?: localProperties.getProperty(name)
 
     val releaseStoreFile = releaseSigningValue("HIBIKI_RELEASE_STORE_FILE")
     val releaseStorePassword = releaseSigningValue("HIBIKI_RELEASE_STORE_PASSWORD")

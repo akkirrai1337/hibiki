@@ -426,10 +426,10 @@ fun PlayerScreen(
                 append(state.currentEpisodeId)
                 append(" type=")
                 append(playback.streamType)
-                append(" url=")
-                append(playback.streamUrl)
-                append(" headers=")
-                append(playback.headers)
+                append(" streamHost=")
+                append(playback.streamUrl.safeHost())
+                append(" headerNames=")
+                append(playback.headers.safeHeaderNames())
             },
         )
         keepControlsVisible()
@@ -2159,6 +2159,22 @@ private val PLAYBACK_SPEEDS = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')
+}
+
+private fun String?.safeHost(): String {
+    if (this.isNullOrBlank()) return "unknown"
+    return runCatching { URI(this).host }
+        .getOrNull()
+        ?.takeIf(String::isNotBlank)
+        ?: "unknown"
+}
+
+private fun Map<String, String>.safeHeaderNames(): String {
+    if (isEmpty()) return "[]"
+    return keys
+        .filter(String::isNotBlank)
+        .sorted()
+        .joinToString(prefix = "[", postfix = "]")
 }
 
 private fun buildSeekDeltaLabel(deltaMs: Long): String {

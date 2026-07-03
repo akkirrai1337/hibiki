@@ -211,8 +211,10 @@
     <string name="yummy_account_password_label">Password</string>
     <string name="yummy_account_login_required">Enter login and password</string>
     <string name="yummy_account_password_note">Password is not stored</string>
+    <string name="yummy_account_error_invalid_credentials">Incorrect login or password</string>
     <string name="yummy_account_error_missing_access_token">YummyAnime did not return an access token</string>
     <string name="yummy_account_error_captcha_required">YummyAnime requested captcha verification. This sign-in flow is not supported in the app yet.</string>
+    <string name="yummy_account_error_temporarily_unavailable">YummyAnime is temporarily unavailable. Try again later.</string>
     <string name="yummy_account_profile_fallback">YummyAnime profile</string>
     <string name="yummy_account_profile_header">Profile %1$s</string>
     <string name="yummy_account_profile_id">ID: %1$d</string>

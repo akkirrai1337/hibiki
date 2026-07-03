@@ -157,10 +157,7 @@ fun DetailsScreen(
     val libraryRepository = remember { LibraryRepository(context.applicationContext) }
     val offlineTitleMetadataRepository = remember { OfflineTitleMetadataRepository(context.applicationContext) }
     val offlineDownloadRepository = remember {
-        OfflineDownloadRepository(
-            context = context.applicationContext,
-            watchRepository = watchRepository,
-        )
+        OfflineDownloadRepository(context = context.applicationContext)
     }
     var currentAnime by remember(anime.id) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDescriptionExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isDescriptionExpanded ?: false) }

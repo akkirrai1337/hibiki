@@ -40,12 +40,17 @@ fun YummySignInForm(
     busy: Boolean,
     errorMessage: String?,
     onSubmit: (String, String) -> Unit,
+    onInputChanged: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var loginValue by remember { mutableStateOf("") }
     var secretValue by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(null) }
     val loginRequiredMessage = stringResource(R.string.yummy_account_login_required)
+    val invalidCredentialsMessage = stringResource(R.string.yummy_account_error_invalid_credentials)
+    val showCredentialError = errorMessage == invalidCredentialsMessage
+    val loginFieldError = showCredentialError || (localError != null && loginValue.isBlank())
+    val passwordFieldError = showCredentialError || (localError != null && secretValue.isBlank())
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -108,9 +113,11 @@ fun YummySignInForm(
                     onValueChange = {
                         loginValue = it
                         localError = null
+                        onInputChanged()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    isError = loginFieldError,
                     label = {
                         Text(text = stringResource(R.string.yummy_account_login_label))
                     },
@@ -126,9 +133,11 @@ fun YummySignInForm(
                     onValueChange = {
                         secretValue = it
                         localError = null
+                        onInputChanged()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    isError = passwordFieldError,
                     label = {
                         Text(text = stringResource(R.string.yummy_account_password_label))
                     },

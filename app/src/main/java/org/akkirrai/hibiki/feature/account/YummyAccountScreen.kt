@@ -75,6 +75,7 @@ fun YummyAccountScreen(
                 errorMessage = null,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
                 onSubmit = viewModel::submitCredentials,
+                onInputChanged = viewModel::clearSignInError,
             )
 
             is YummyAccountScreenState.Error -> SignedOutScreen(
@@ -82,6 +83,7 @@ fun YummyAccountScreen(
                 errorMessage = current.message,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
                 onSubmit = viewModel::submitCredentials,
+                onInputChanged = viewModel::clearSignInError,
             )
 
             is YummyAccountScreenState.SignedIn -> SignedInScreen(
@@ -191,6 +193,7 @@ private fun SignedOutScreen(
     errorMessage: String?,
     paddingValues: PaddingValues,
     onSubmit: (String, String) -> Unit,
+    onInputChanged: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -204,6 +207,7 @@ private fun SignedOutScreen(
             busy = busy,
             errorMessage = errorMessage,
             onSubmit = onSubmit,
+            onInputChanged = onInputChanged,
         )
     }
 }

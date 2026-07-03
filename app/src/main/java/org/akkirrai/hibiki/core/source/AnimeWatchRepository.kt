@@ -43,6 +43,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
 data class WatchSourcesCacheSnapshot(
@@ -235,10 +236,10 @@ class AnimeWatchRepository(
                                 append(validation.success)
                                 append(", status=")
                                 append(validation.statusCode)
-                                append(", finalUrl=")
-                                append(validation.finalUrl)
-                                append(", headers=")
-                                append(stream.headers)
+                                append(", streamHost=")
+                                append(validation.finalUrl.safeHost())
+                                append(", headerNames=")
+                                append(stream.headers.safeHeaderNames())
                                 append(", message=")
                                 append(validation.message)
                             },
@@ -472,6 +473,22 @@ class AnimeWatchRepository(
 
     private fun String?.normalizePlayerName(): String =
         this.orEmpty().trim().lowercase()
+
+    private fun String?.safeHost(): String {
+        if (this.isNullOrBlank()) return "unknown"
+        return runCatching { URI(this).host }
+            .getOrNull()
+            ?.takeIf(String::isNotBlank)
+            ?: "unknown"
+    }
+
+    private fun Map<String, String>.safeHeaderNames(): String {
+        if (isEmpty()) return "[]"
+        return keys
+            .filter(String::isNotBlank)
+            .sorted()
+            .joinToString(prefix = "[", postfix = "]")
+    }
 
     private fun appString(@androidx.annotation.StringRes resId: Int, vararg formatArgs: Any): String {
         val context = appContext ?: return ""
