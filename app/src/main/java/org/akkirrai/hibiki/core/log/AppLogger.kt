@@ -1,11 +1,15 @@
 package org.akkirrai.hibiki.core.log
 
 import android.content.ClipData
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
+import android.os.Process
 import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
@@ -14,12 +18,111 @@ import java.text.SimpleDateFormat
 import java.util.ArrayDeque
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.system.exitProcess
 
 object AppLogger {
     private const val LOG_EXPORT_TAG = "HibikiLogExport"
     private const val MAX_ENTRIES = 600
     private val entries = ArrayDeque<String>(MAX_ENTRIES)
     private val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    private val installed = AtomicBoolean(false)
+    private val startedActivities = AtomicInteger(0)
+    private val contextValues = ConcurrentHashMap<String, String>()
+    @Volatile
+    private var previousUncaughtExceptionHandler: Thread.UncaughtExceptionHandler? = null
+
+    fun install(context: Context) {
+        if (!installed.compareAndSet(false, true)) return
+
+        val appContext = context.applicationContext
+        contextValues["package"] = appContext.packageName
+        contextValues["process"] = processName()
+        contextValues["pid"] = Process.myPid().toString()
+        contextValues["sdk"] = Build.VERSION.SDK_INT.toString()
+        contextValues["device"] = sanitize("${Build.MANUFACTURER} ${Build.MODEL}")
+        contextValues["brand"] = sanitize(Build.BRAND)
+
+        runCatching {
+            val packageInfo = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+            contextValues["version"] = sanitize(packageInfo.versionName.orEmpty())
+            contextValues["versionCode"] = PackageInfoCompat.getLongVersionCode(packageInfo).toString()
+        }.onFailure { throwable ->
+            w(LOG_EXPORT_TAG, "Failed to collect package info", throwable)
+        }
+
+        (appContext as? Application)?.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                    setContext("activity", activity.localClassName)
+                    d("HibikiLifecycle", "activity created savedState=${savedInstanceState != null}")
+                }
+
+                override fun onActivityStarted(activity: Activity) {
+                    val count = startedActivities.incrementAndGet()
+                    setContext("activity", activity.localClassName)
+                    setContext("foreground", (count > 0).toString())
+                    d("HibikiLifecycle", "activity started visibleActivities=$count")
+                }
+
+                override fun onActivityResumed(activity: Activity) {
+                    setContext("activity", activity.localClassName)
+                    setContext("resumedActivity", activity.localClassName)
+                    d("HibikiLifecycle", "activity resumed")
+                }
+
+                override fun onActivityPaused(activity: Activity) {
+                    d("HibikiLifecycle", "activity paused")
+                }
+
+                override fun onActivityStopped(activity: Activity) {
+                    val count = startedActivities.decrementAndGet().coerceAtLeast(0)
+                    startedActivities.set(count)
+                    setContext("foreground", (count > 0).toString())
+                    d("HibikiLifecycle", "activity stopped visibleActivities=$count")
+                }
+
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+
+                override fun onActivityDestroyed(activity: Activity) {
+                    d("HibikiLifecycle", "activity destroyed")
+                }
+            }
+        )
+
+        previousUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            e(
+                tag = "HibikiCrash",
+                message = "Uncaught exception on thread=${thread.name}",
+                throwable = throwable,
+            )
+            previousUncaughtExceptionHandler?.uncaughtException(thread, throwable)
+                ?: run {
+                    Process.killProcess(Process.myPid())
+                    exitProcess(10)
+                }
+        }
+
+        i("HibikiLogger", "Logger installed")
+    }
+
+    fun setContext(key: String, value: String?) {
+        val normalizedKey = key.trim().takeIf(String::isNotBlank) ?: return
+        if (value.isNullOrBlank()) {
+            contextValues.remove(normalizedKey)
+        } else {
+            contextValues[normalizedKey] = sanitize(value)
+        }
+    }
+
+    fun v(tag: String, message: String) {
+        val sanitized = sanitize(message)
+        Log.v(tag, sanitized)
+        append("V", tag, sanitized)
+    }
 
     fun d(tag: String, message: String) {
         val sanitized = sanitize(message)
@@ -47,13 +150,13 @@ object AppLogger {
 
     fun shareLogs(context: Context): Result<Unit> = runCatching {
         val appContext = context.applicationContext
-        Log.d(LOG_EXPORT_TAG, "shareLogs: started, package=${appContext.packageName}")
+        d(LOG_EXPORT_TAG, "shareLogs: started, package=${appContext.packageName}")
         val file = runCatching {
             exportToFile(appContext)
         }.onFailure { throwable ->
-            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to create export file", throwable)
+            e(LOG_EXPORT_TAG, "shareLogs: failed to create export file", throwable)
         }.getOrThrow()
-        Log.d(
+        d(
             LOG_EXPORT_TAG,
             "shareLogs: file created path=${file.absolutePath}, exists=${file.exists()}, size=${file.length()}",
         )
@@ -61,13 +164,13 @@ object AppLogger {
         val uri = runCatching {
             FileProvider.getUriForFile(appContext, authority, file)
         }.onFailure { throwable ->
-            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to get FileProvider uri, authority=$authority", throwable)
+            e(LOG_EXPORT_TAG, "shareLogs: failed to get FileProvider uri, authority=$authority", throwable)
         }.getOrThrow()
-        Log.d(LOG_EXPORT_TAG, "shareLogs: uri=$uri")
+        d(LOG_EXPORT_TAG, "shareLogs: uri=$uri")
         val logText = runCatching {
             file.readText()
         }.onFailure { throwable ->
-            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to read exported log text", throwable)
+            e(LOG_EXPORT_TAG, "shareLogs: failed to read exported log text", throwable)
         }.getOrThrow()
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -82,23 +185,23 @@ object AppLogger {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        Log.d(LOG_EXPORT_TAG, "shareLogs: starting chooser")
+        d(LOG_EXPORT_TAG, "shareLogs: starting chooser")
         runCatching {
             context.startActivity(chooser)
         }.onFailure { throwable ->
-            Log.e(LOG_EXPORT_TAG, "shareLogs: failed to start chooser", throwable)
+            e(LOG_EXPORT_TAG, "shareLogs: failed to start chooser", throwable)
         }.getOrThrow()
-        Log.d(LOG_EXPORT_TAG, "shareLogs: chooser started")
+        d(LOG_EXPORT_TAG, "shareLogs: chooser started")
         Unit
     }.onFailure { throwable ->
-        Log.e(LOG_EXPORT_TAG, "shareLogs: export failed", throwable)
+        e(LOG_EXPORT_TAG, "shareLogs: export failed", throwable)
     }
 
     private fun exportToFile(context: Context): File {
         val now = Date()
         val filename = "hibiki-logs-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(now)}.txt"
         val exportDirectory = File(context.cacheDir, "logs").apply {
-            Log.d(LOG_EXPORT_TAG, "exportToFile: directory=$absolutePath, exists=${exists()}")
+            d(LOG_EXPORT_TAG, "exportToFile: directory=$absolutePath, exists=${exists()}")
             check(exists() || mkdirs()) { "Could not create log export directory: $absolutePath" }
         }
         exportDirectory.listFiles()
@@ -122,9 +225,9 @@ object AppLogger {
         val body = synchronized(entries) {
             entries.joinToString(separator = System.lineSeparator())
         }
-        Log.d(LOG_EXPORT_TAG, "exportToFile: writing ${body.length} log chars to ${file.absolutePath}")
+        d(LOG_EXPORT_TAG, "exportToFile: writing ${body.length} log chars to ${file.absolutePath}")
         file.writeText(header + body)
-        Log.d(LOG_EXPORT_TAG, "exportToFile: wrote file, size=${file.length()}")
+        d(LOG_EXPORT_TAG, "exportToFile: wrote file, size=${file.length()}")
         return file
     }
 
@@ -134,7 +237,7 @@ object AppLogger {
         intent: Intent,
     ) {
         val targets = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        Log.d(LOG_EXPORT_TAG, "grantReadAccess: found ${targets.size} share targets")
+        d(LOG_EXPORT_TAG, "grantReadAccess: found ${targets.size} share targets")
         targets.forEach { resolveInfo ->
             val packageName = resolveInfo.activityInfo.packageName
             runCatching {
@@ -144,9 +247,9 @@ object AppLogger {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION,
                 )
             }.onSuccess {
-                Log.d(LOG_EXPORT_TAG, "grantReadAccess: granted to $packageName")
+                d(LOG_EXPORT_TAG, "grantReadAccess: granted to $packageName")
             }.onFailure { throwable ->
-                Log.e(LOG_EXPORT_TAG, "grantReadAccess: failed for $packageName", throwable)
+                e(LOG_EXPORT_TAG, "grantReadAccess: failed for $packageName", throwable)
             }
         }
     }
@@ -165,6 +268,7 @@ object AppLogger {
             append(tag)
             append(": ")
             append(message)
+            appendContext()
             throwable?.let {
                 append(" | ")
                 append(sanitizeThrowable(it))
@@ -187,8 +291,8 @@ object AppLogger {
             }
             throwable.stackTrace
                 .asSequence()
-                .filter { it.className.startsWith("org.akkirrai.hibiki") }
-                .take(8)
+                .filter { it.className.startsWith("org.akkirrai") }
+                .take(16)
                 .forEach { frame ->
                     append(" <- ")
                     append(frame.className.substringAfterLast('.'))
@@ -198,6 +302,25 @@ object AppLogger {
                     append(frame.lineNumber)
                 }
         }
+    }
+
+    private fun StringBuilder.appendContext() {
+        val snapshot = buildContextSnapshot()
+        if (snapshot.isEmpty()) return
+        append(" | context={")
+        snapshot.entries.joinTo(this, separator = ",") { (key, value) -> "$key=$value" }
+        append("}")
+    }
+
+    private fun buildContextSnapshot(): Map<String, String> {
+        val thread = Thread.currentThread()
+        return contextValues
+            .toSortedMap()
+            .toMutableMap()
+            .apply {
+                put("thread", sanitize(thread.name))
+                put("threadId", thread.id.toString())
+            }
     }
 
     private fun sanitize(value: String): String {
@@ -213,6 +336,14 @@ object AppLogger {
 
     private fun formatTimestamp(date: Date): String = synchronized(timestampFormat) {
         timestampFormat.format(date)
+    }
+
+    private fun processName(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            Application.getProcessName()
+        } else {
+            "pid-${Process.myPid()}"
+        }
     }
 
     private const val MAX_EXPORTED_FILES = 5

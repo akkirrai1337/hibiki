@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.app.navigation
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -60,6 +59,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.design.component.AppBottomScrim
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.account.YummyAccountScreen
@@ -78,8 +78,6 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 @Composable
 fun HibikiApp(
     appPreferences: AppPreferences? = null,
-    onCreateBackupDocument: ((String, (Uri?) -> Unit) -> Unit)? = null,
-    onOpenBackupDocument: (((Uri?) -> Unit) -> Unit)? = null,
 ) {
     val navController = rememberNavController()
     val destinations = TopLevelDestination.entries
@@ -93,6 +91,8 @@ fun HibikiApp(
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: TopLevelDestination.Home
     LaunchedEffect(currentRoute) {
+        AppLogger.setContext("route", currentRoute ?: "<none>")
+        AppLogger.setContext("topLevelRoute", currentTopLevel.route)
         PerfLogger.mark(
             event = "Navigation route changed",
             details = "route=$currentRoute, topLevel=$isTopLevelDestination",
@@ -113,8 +113,6 @@ fun HibikiApp(
                 navController = navController,
                 contentPadding = innerPadding,
                 appPreferences = appPreferences,
-                onCreateBackupDocument = onCreateBackupDocument,
-                onOpenBackupDocument = onOpenBackupDocument,
                 showBottomBar = isTopLevelDestination,
                 currentTopLevel = currentTopLevel,
             )
@@ -181,8 +179,6 @@ private fun HibikiNavHost(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     appPreferences: AppPreferences? = null,
-    onCreateBackupDocument: ((String, (Uri?) -> Unit) -> Unit)? = null,
-    onOpenBackupDocument: (((Uri?) -> Unit) -> Unit)? = null,
     showBottomBar: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
 ) {
@@ -369,8 +365,6 @@ private fun HibikiNavHost(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
                 bottomContentPadding = TopLevelBottomContentPadding,
                 appPreferences = appPreferences,
-                onCreateBackupDocument = onCreateBackupDocument,
-                onOpenBackupDocument = onOpenBackupDocument,
             )
         }
         composable(

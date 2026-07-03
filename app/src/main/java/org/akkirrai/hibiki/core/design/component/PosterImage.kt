@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.core.design.component
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +10,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.SubcomposeAsyncImage
 import androidx.compose.material3.MaterialTheme
 import coil.request.ErrorResult
+import org.akkirrai.hibiki.core.log.AppLogger
 
 @Composable
 fun PosterImage(
@@ -113,7 +113,7 @@ private fun logPosterFailure(
     fallbackUrl: String?,
     throwable: Throwable?,
 ) {
-    Log.d(
+    AppLogger.d(
         POSTER_LOG_TAG,
         buildString {
             append("[image.")

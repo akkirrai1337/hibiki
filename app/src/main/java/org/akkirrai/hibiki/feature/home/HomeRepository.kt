@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
-import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -54,23 +53,23 @@ class HomeRepository(
     }
 
     suspend fun refreshHomeState(): HomeUiState {
-        Log.d(TAG, "refreshHomeState: clearing cache")
+        AppLogger.d(TAG, "refreshHomeState: clearing cache")
         ensureInternetConnection()
         cachedHomeContent = null
         if (appPreferences.state.value.forceAdvanceTrendingSlotOnRefresh) {
             manualTrendingRotationSlotOverride = effectiveTrendingRotationSlot() + 1
-            Log.d(TAG, "refreshHomeState: advanced trending slot override to $manualTrendingRotationSlotOverride")
+            AppLogger.d(TAG, "refreshHomeState: advanced trending slot override to $manualTrendingRotationSlotOverride")
         }
         return loadHomeState()
     }
 
     suspend fun loadHomeState(): HomeUiState {
-        Log.d(TAG, "loadHomeState: called")
+        AppLogger.d(TAG, "loadHomeState: called")
         val rotationSlot = effectiveTrendingRotationSlot()
         val languageKey = yummyLanguage()
         cachedHomeContent?.let { cached ->
             if (cached.rotationSlot == rotationSlot && cached.languageKey == languageKey) {
-                Log.d(TAG, "loadHomeState: using cachedHomeContent — " +
+                AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
                     "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, slot=$rotationSlot, lang=$languageKey")
                 return HomeUiState(
                     featuredAnime = cached.featuredAnime,
@@ -85,16 +84,16 @@ class HomeRepository(
         ensureInternetConnection()
 
         val trendingOffset = trendingOffsetForSlot(rotationSlot)
-        Log.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
+        AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
         val catalog = yummySource.getCatalog(
             limit = HOME_TRENDING_WINDOW_SIZE,
             offset = trendingOffset,
             sort = "top",
         )
-        Log.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
+        AppLogger.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
 
         if (catalog.isEmpty()) {
-            Log.w(TAG, "loadHomeState: catalog empty")
+            AppLogger.w(TAG, "loadHomeState: catalog empty")
             throw IllegalStateException(appContext.getString(R.string.home_error_load_failed))
         }
 
@@ -108,9 +107,9 @@ class HomeRepository(
             .filterNot { it.id in featuredIds }
             .take(HOME_SECTION_LIMIT)
         val fallbackTrending = trending
-        Log.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
+        AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
         val recentlyUpdated = loadRecentlyUpdated()
-        Log.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
+        AppLogger.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
         cachedHomeContent = CachedHomeContent(
             rotationSlot = rotationSlot,
             languageKey = languageKey,
@@ -118,7 +117,7 @@ class HomeRepository(
             trending = trending.ifEmpty { fallbackTrending },
             recentlyUpdated = recentlyUpdated,
         )
-        Log.d(TAG, "loadHomeState: cachedHomeContent written — " +
+        AppLogger.d(TAG, "loadHomeState: cachedHomeContent written — " +
             "trending=${trending.size}, recentlyUpdated=${recentlyUpdated.size}")
 
         return HomeUiState(
@@ -131,7 +130,7 @@ class HomeRepository(
     }
 
     suspend fun search(query: String): List<Anime> {
-        Log.d(TAG, "search(query=$query)")
+        AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()
         return searchRepository.search(query)
     }
@@ -142,7 +141,7 @@ class HomeRepository(
         limit: Int,
         offset: Int,
     ): List<Anime> {
-        Log.d(TAG, "search(query=$query, filters=$filters, limit=$limit, offset=$offset)")
+        AppLogger.d(TAG, "search(query=$query, filters=$filters, limit=$limit, offset=$offset)")
         ensureInternetConnection()
         return searchRepository.search(
             AnimeSearchRequest(
@@ -194,7 +193,7 @@ class HomeRepository(
 
     private suspend fun loadRecentlyUpdated(): List<Anime> {
         val applicationToken = applicationTokenStore.getEffectiveApplicationToken()
-        Log.d(
+        AppLogger.d(
             TAG,
             "loadRecentlyUpdated: fetching GET /anime/schedule, xApplicationAttached=${!applicationToken.isNullOrBlank()}",
         )
@@ -206,12 +205,12 @@ class HomeRepository(
                 }
             }.bodyOrThrow<YummyScheduleEnvelope>("YummyAnime").response
         }.onFailure { e ->
-            Log.e(TAG, "loadRecentlyUpdated: request failed — ${e::class.simpleName}: ${e.message}")
+            AppLogger.e(TAG, "loadRecentlyUpdated: request failed — ${e::class.simpleName}: ${e.message}", e)
         }.getOrElse {
-            Log.w(TAG, "loadRecentlyUpdated: returning empty list after failure")
+            AppLogger.w(TAG, "loadRecentlyUpdated: returning empty list after failure")
             return emptyList()
         }
-        Log.d(TAG, "loadRecentlyUpdated: raw response has ${response.size} items")
+        AppLogger.d(TAG, "loadRecentlyUpdated: raw response has ${response.size} items")
 
         val result = response
             .asSequence()
@@ -222,7 +221,7 @@ class HomeRepository(
                 val pass = prev > 0L || (aired <= 0 && next > 0L)
                 if (!pass) {
                     val id = anime.animeId
-                    Log.v(TAG, "loadRecentlyUpdated: filtered out anime_id=$id, prevDate=$prev, nextDate=$next")
+                    AppLogger.v(TAG, "loadRecentlyUpdated: filtered out anime_id=$id, prevDate=$prev, nextDate=$next")
                 }
                 pass
             }
@@ -234,7 +233,7 @@ class HomeRepository(
             .take(HOME_SECTION_LIMIT)
             .map(::toScheduledHomeAnime)
             .toList()
-        Log.d(TAG, "loadRecentlyUpdated: after filter/sort/distinct/take — ${result.size} items")
+        AppLogger.d(TAG, "loadRecentlyUpdated: after filter/sort/distinct/take — ${result.size} items")
         return result
     }
 
@@ -243,14 +242,14 @@ class HomeRepository(
         limit: Int = HOME_FULL_SECTION_LIMIT,
         filter: TrendingFilter = TrendingFilter.All,
     ): List<Anime> {
-        Log.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
+        AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
         val catalog = yummySource.getCatalog(
             limit = limit,
             offset = offset,
             sort = "top",
             type = filter.yummyType,
         )
-        Log.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
+        AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
         return catalog.map(::toHomeAnime)
     }
 
