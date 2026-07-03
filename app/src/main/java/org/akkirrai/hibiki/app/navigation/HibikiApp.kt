@@ -1,14 +1,5 @@
 package org.akkirrai.hibiki.app.navigation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,13 +12,13 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
@@ -58,7 +50,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.core.design.component.AppBottomScrim
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -79,6 +70,8 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 fun HibikiApp(
     appPreferences: AppPreferences? = null,
 ) {
+    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
     val navController = rememberNavController()
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
@@ -106,58 +99,9 @@ fun HibikiApp(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
-            bottomBar = {},
-        ) { innerPadding ->
-            HibikiNavHost(
-                modifier = Modifier.fillMaxSize(),
-                navController = navController,
-                contentPadding = innerPadding,
-                appPreferences = appPreferences,
-                showBottomBar = isTopLevelDestination,
-                currentTopLevel = currentTopLevel,
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isTopLevelDestination,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            enter = slideInHorizontally(
-                animationSpec = tween(
-                    durationMillis = BottomBarTransitionDurationMs,
-                    easing = BottomBarSlideEasing,
-                ),
-                initialOffsetX = { fullWidth -> -fullWidth },
-            ) + fadeIn(
-                animationSpec = tween(
-                    durationMillis = BottomBarFadeDurationMs,
-                    easing = FastOutSlowInEasing,
-                ),
-            ),
-            exit = slideOutHorizontally(
-                animationSpec = tween(
-                    durationMillis = BottomBarTransitionDurationMs,
-                    easing = BottomBarSlideEasing,
-                ),
-                targetOffsetX = { fullWidth -> -fullWidth },
-            ) + fadeOut(
-                animationSpec = tween(
-                    durationMillis = BottomBarFadeDurationMs,
-                    easing = FastOutSlowInEasing,
-                ),
-            ),
-        ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                AppBottomScrim(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                ) {
-                    CompactBottomBar(
+            bottomBar = {
+                if (isTopLevelDestination) {
+                    AppBottomBar(
                         destinations = destinations,
                         currentTopLevel = currentTopLevel,
                         onDestinationClick = { destination ->
@@ -165,10 +109,20 @@ fun HibikiApp(
                                 currentTopLevel = currentTopLevel,
                                 destination = destination,
                             )
-                        }
+                        },
                     )
                 }
-            }
+            },
+        ) { innerPadding ->
+            HibikiNavHost(
+                modifier = Modifier.fillMaxSize(),
+                navController = navController,
+                contentPadding = innerPadding,
+                topLevelBottomContentPadding = topLevelBottomContentPadding,
+                appPreferences = appPreferences,
+                showBottomBar = isTopLevelDestination,
+                currentTopLevel = currentTopLevel,
+            )
         }
     }
 }
@@ -178,6 +132,7 @@ private fun HibikiNavHost(
     navController: androidx.navigation.NavHostController,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
     appPreferences: AppPreferences? = null,
     showBottomBar: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
@@ -189,7 +144,7 @@ private fun HibikiNavHost(
             top = contentPadding.calculateTopPadding(),
             bottom = contentPadding.calculateBottomPadding() +
                 if (showBottomBar) {
-                    BottomBarHeight - BottomBarDropY + BottomBarContentExtraPadding
+                    BottomBarContentExtraPadding
                 } else {
                     0.dp
                 }
@@ -258,7 +213,7 @@ private fun HibikiNavHost(
                     navController.navigateSingleTopTo(AnimeNavType.SEARCH_FILTERS_ROUTE)
                 },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
-                bottomContentPadding = TopLevelBottomContentPadding,
+                bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
             )
         }
@@ -330,7 +285,7 @@ private fun HibikiNavHost(
                     navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
                 },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
-                bottomContentPadding = TopLevelBottomContentPadding,
+                bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
             )
         }
@@ -363,7 +318,7 @@ private fun HibikiNavHost(
         ) {
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
-                bottomContentPadding = TopLevelBottomContentPadding,
+                bottomContentPadding = topLevelBottomContentPadding,
                 appPreferences = appPreferences,
             )
         }
@@ -524,65 +479,56 @@ private fun HibikiNavHost(
     }
 }
 
-private val BottomBarHeight = 62.dp
-private val BottomBarOuterHorizontalPadding = 16.dp
-private val BottomBarInnerHorizontalPadding = 8.dp
-private val BottomBarInnerVerticalPadding = 4.dp
-private val BottomBarCornerRadius = 24.dp
-
+private val BottomBarHeight = 64.dp
+private val BottomBarHorizontalPadding = 14.dp
+private val BottomBarVerticalPadding = 6.dp
 private val BottomBarItemHeight = 48.dp
-private val BottomBarActivePillHeight = 46.dp
-private val BottomBarIconSlotHeight = 24.dp
-private val BottomBarLabelSlotHeight = 16.dp
-private val BottomBarIconSize = 21.dp
-private val BottomBarIconLabelGap = 1.dp
+private val BottomBarActivePillWidth = 68.dp
+private val BottomBarActivePillHeight = 30.dp
+private val BottomBarIconSize = 22.dp
 private val BottomBarLabelSize = 11.sp
-private val BottomBarDropY = 6.dp
 private val BottomBarContentExtraPadding = 12.dp
-private val TopLevelBottomContentPadding = BottomBarHeight - BottomBarDropY + 24.dp
-private val BottomBarSlideEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
-private const val BottomBarTransitionDurationMs = 360
-private const val BottomBarFadeDurationMs = 260
 
 @Composable
-private fun CompactBottomBar(
+private fun AppBottomBar(
     destinations: List<TopLevelDestination>,
     currentTopLevel: TopLevelDestination,
     onDestinationClick: (TopLevelDestination) -> Unit,
 ) {
-    Box(
+    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(BottomBarHeight)
-            .offset(y = BottomBarDropY)
-            .padding(horizontal = BottomBarOuterHorizontalPadding),
-        contentAlignment = Alignment.Center,
+            .fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 3.dp,
+        shadowElevation = 0.dp,
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(BottomBarCornerRadius),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.73f),
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f),
-            ),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = navigationBarBottomPadding),
         ) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 52.dp)
+                    .height(BottomBarHeight)
                     .padding(
-                        horizontal = BottomBarInnerHorizontalPadding,
-                        vertical = BottomBarInnerVerticalPadding,
+                        horizontal = BottomBarHorizontalPadding,
+                        vertical = BottomBarVerticalPadding,
                     ),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 destinations.forEach { destination ->
-                    CompactBottomBarItem(
+                    AppBottomBarItem(
                         destination = destination,
                         selected = currentTopLevel == destination,
                         onClick = { onDestinationClick(destination) },
@@ -595,49 +541,49 @@ private fun CompactBottomBar(
 }
 
 @Composable
-private fun CompactBottomBarItem(
+private fun AppBottomBarItem(
     destination: TopLevelDestination,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onSurface
+        MaterialTheme.colorScheme.onPrimaryContainer
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
     }
     val interactionSource = remember { MutableInteractionSource() }
-    val itemShape = RoundedCornerShape(22.dp)
+    val pillShape = RoundedCornerShape(18.dp)
 
-    Box(
+    Column(
         modifier = modifier
             .height(BottomBarItemHeight)
-            .clip(itemShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
             ),
-        contentAlignment = Alignment.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        if (selected) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(0.94f)
-                    .height(BottomBarActivePillHeight),
-                shape = itemShape,
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f),
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                tonalElevation = 2.dp,
-            ) {}
-        }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        Surface(
+            modifier = Modifier
+                .size(
+                    width = BottomBarActivePillWidth,
+                    height = BottomBarActivePillHeight,
+                )
+                .clip(pillShape),
+            shape = pillShape,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                Color.Transparent
+            },
+            contentColor = contentColor,
+            tonalElevation = if (selected) 2.dp else 0.dp,
         ) {
             Box(
-                modifier = Modifier.height(BottomBarIconSlotHeight),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -647,23 +593,22 @@ private fun CompactBottomBarItem(
                     tint = contentColor,
                 )
             }
-
-            Spacer(modifier = Modifier.height(BottomBarIconLabelGap))
-
-            Box(
-                modifier = Modifier.height(BottomBarLabelSlotHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(destination.labelRes),
-                    fontSize = BottomBarLabelSize,
-                    lineHeight = BottomBarLabelSize,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = contentColor,
-                    maxLines = 1,
-                )
-            }
         }
+
+        Spacer(modifier = Modifier.height(3.dp))
+
+        Text(
+            text = stringResource(destination.labelRes),
+            fontSize = BottomBarLabelSize,
+            lineHeight = BottomBarLabelSize,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                contentColor
+            },
+            maxLines = 1,
+        )
     }
 }
 
