@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.PlayerType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnimeWatchRepositoryTest {
@@ -49,10 +50,70 @@ class AnimeWatchRepositoryTest {
         assertEquals(12_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Kodik"))
     }
 
-    private fun playerLink(playerName: String) = PlayerLink(
+    @Test
+    fun `preferred quality is sorted before higher automatic quality`() {
+        val sorted = repository.prioritizeLinks(
+            links = listOf(
+                playerLink(playerName = "Kodik", quality = "1080p"),
+                playerLink(playerName = "Kodik", quality = "720p"),
+            ),
+            preferredPlayerName = null,
+            preferredQuality = "720p",
+        )
+
+        assertEquals(listOf("720p", "1080p"), sorted.map { it.quality })
+    }
+
+    @Test
+    fun `clearCaches removes all repository cache state`() {
+        repository.cachedSources()["title"] = Any()
+        repository.sourcePayloads()["source"] = Any()
+        repository.cachedStreams()["stream"] = Any()
+        repository.inFlightLoads()["load"] = Any()
+
+        repository.clearCaches()
+
+        assertTrue(repository.cachedSources().isEmpty())
+        assertTrue(repository.sourcePayloads().isEmpty())
+        assertTrue(repository.cachedStreams().isEmpty())
+        assertTrue(repository.inFlightLoads().isEmpty())
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.cachedSources(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("cachedSources")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.sourcePayloads(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("sourcePayloads")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.cachedStreams(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("cachedStreams")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.inFlightLoads(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("inFlightLoads")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    private fun playerLink(
+        playerName: String,
+        quality: String = "720p",
+    ) = PlayerLink(
         url = "https://example.test/$playerName",
         type = PlayerType.EMBED,
-        quality = "720p",
+        quality = quality,
         headers = emptyMap(),
         playerName = playerName,
         translation = "AniLibria",

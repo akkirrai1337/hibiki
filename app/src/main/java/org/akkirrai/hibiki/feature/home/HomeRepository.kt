@@ -30,6 +30,12 @@ class HomeRepository(
     context: Context,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
 ) {
+    @Volatile
+    private var cachedHomeContent: CachedHomeContent? = null
+
+    @Volatile
+    private var manualTrendingRotationSlotOverride: Long? = null
+
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
     private val applicationTokenStore = AndroidKeystoreYummyApplicationTokenStore(appContext)
@@ -405,12 +411,6 @@ class HomeRepository(
         const val TRENDING_ROTATION_WINDOW_MS = 5 * 60 * 60 * 1000L
         const val FEATURED_ROTATION_SEED_SALT = 0x51A7L
         const val TRENDING_ROTATION_SEED_SALT = 0x7E4DL
-
-        @Volatile
-        var cachedHomeContent: CachedHomeContent? = null
-
-        @Volatile
-        var manualTrendingRotationSlotOverride: Long? = null
     }
 
     private data class CachedHomeContent(

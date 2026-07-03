@@ -1,19 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <include domain="sharedpref" path="hibiki_app_preferences.xml" />
+        <include domain="sharedpref" path="hibiki_library.xml" />
+        <include domain="sharedpref" path="hibiki_watch_state.xml" />
+
+        <exclude domain="sharedpref" path="hibiki_yummy_account_tokens.xml" />
+        <exclude domain="sharedpref" path="hibiki_yummy_application_token.xml" />
+        <exclude domain="sharedpref" path="yummy_profile_cache.xml" />
+        <exclude domain="sharedpref" path="hibiki_offline_downloads.xml" />
+        <exclude domain="sharedpref" path="hibiki_offline_title_metadata.xml" />
+        <exclude domain="cache" path="logs/" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="sharedpref" path="hibiki_app_preferences.xml" />
+        <include domain="sharedpref" path="hibiki_library.xml" />
+        <include domain="sharedpref" path="hibiki_watch_state.xml" />
+
+        <exclude domain="sharedpref" path="hibiki_yummy_account_tokens.xml" />
+        <exclude domain="sharedpref" path="hibiki_yummy_application_token.xml" />
+        <exclude domain="sharedpref" path="yummy_profile_cache.xml" />
+        <exclude domain="sharedpref" path="hibiki_offline_downloads.xml" />
+        <exclude domain="sharedpref" path="hibiki_offline_title_metadata.xml" />
+        <exclude domain="cache" path="logs/" />
     </device-transfer>
-    -->
 </data-extraction-rules>

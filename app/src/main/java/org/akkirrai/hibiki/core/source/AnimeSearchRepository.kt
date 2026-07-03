@@ -26,6 +26,8 @@ class AnimeSearchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
 ) {
+    private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
+    private val detailsCache = ConcurrentHashMap<String, CachedAnime>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val applicationTokenStore = appContext?.let(::AndroidKeystoreYummyApplicationTokenStore)
@@ -120,7 +122,13 @@ class AnimeSearchRepository(
         }
     }
 
+    fun clearCaches() {
+        searchCache.clear()
+        detailsCache.clear()
+    }
+
     fun close() {
+        clearCaches()
         client.close()
     }
 
@@ -406,8 +414,5 @@ class AnimeSearchRepository(
         const val SEARCH_PAGE_SIZE = 20
         const val DETAILS_CACHE_VERSION = 1
         const val LEGACY_ID_MATCH_CONFIDENCE = 0.72
-
-        val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
-        val detailsCache = ConcurrentHashMap<String, CachedAnime>()
     }
 }

@@ -56,6 +56,10 @@ class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
 ) {
+    private val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
+    private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
+    private val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
+    private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     private val appContext = context?.applicationContext
     private val applicationTokenStore = appContext?.let(::AndroidKeystoreYummyApplicationTokenStore)
     private val metadataSource = YummyMetadataSource(
@@ -321,7 +325,15 @@ class AnimeWatchRepository(
         )
     }
 
+    fun clearCaches() {
+        cachedSources.clear()
+        sourcePayloads.clear()
+        cachedStreams.clear()
+        inFlightLoads.clear()
+    }
+
     fun close() {
+        clearCaches()
         client.close()
     }
 
@@ -565,10 +577,5 @@ class AnimeWatchRepository(
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val AUTO_RESOLVE_TIMEOUT_MS = 8_000L
         const val PREFERRED_RESOLVE_TIMEOUT_MS = 12_000L
-
-        val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
-        val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
-        val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
-        val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     }
 }
