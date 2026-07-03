@@ -3,11 +3,4 @@
     <include domain="sharedpref" path="hibiki_app_preferences.xml" />
     <include domain="sharedpref" path="hibiki_library.xml" />
     <include domain="sharedpref" path="hibiki_watch_state.xml" />
-
-    <exclude domain="sharedpref" path="hibiki_yummy_account_tokens.xml" />
-    <exclude domain="sharedpref" path="hibiki_yummy_application_token.xml" />
-    <exclude domain="sharedpref" path="yummy_profile_cache.xml" />
-    <exclude domain="sharedpref" path="hibiki_offline_downloads.xml" />
-    <exclude domain="sharedpref" path="hibiki_offline_title_metadata.xml" />
-    <exclude domain="cache" path="logs/" />
 </full-backup-content>

@@ -4,23 +4,25 @@ plugins {
     kotlin("plugin.serialization")
 }
 
+import org.gradle.api.GradleException
+
+fun releaseSigningValue(name: String): String? =
+    System.getenv(name)
+        ?: providers.gradleProperty(name).orNull
+
+val releaseStoreFile = releaseSigningValue("HIBIKI_RELEASE_STORE_FILE")
+val releaseStorePassword = releaseSigningValue("HIBIKI_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = releaseSigningValue("HIBIKI_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningValue("HIBIKI_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "org.akkirrai.hibiki"
-
-    fun releaseSigningValue(name: String): String? =
-        System.getenv(name)
-            ?: providers.gradleProperty(name).orNull
-
-    val releaseStoreFile = releaseSigningValue("HIBIKI_RELEASE_STORE_FILE")
-    val releaseStorePassword = releaseSigningValue("HIBIKI_RELEASE_STORE_PASSWORD")
-    val releaseKeyAlias = releaseSigningValue("HIBIKI_RELEASE_KEY_ALIAS")
-    val releaseKeyPassword = releaseSigningValue("HIBIKI_RELEASE_KEY_PASSWORD")
-    val hasReleaseSigning = listOf(
-        releaseStoreFile,
-        releaseStorePassword,
-        releaseKeyAlias,
-        releaseKeyPassword
-    ).all { !it.isNullOrBlank() }
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -67,6 +69,25 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+val requestedTasks = gradle.startParameter.taskNames.map(String::lowercase)
+val requiresSignedReleaseArtifact = requestedTasks.any { task ->
+    task.contains("release") && (
+        task.contains("assemble") ||
+            task.contains("bundle") ||
+            task.contains("package") ||
+            task.contains("install")
+        )
+}
+
+if (requiresSignedReleaseArtifact && !hasReleaseSigning) {
+    throw GradleException(
+        "Release build requires signing credentials. " +
+            "Set HIBIKI_RELEASE_STORE_FILE, HIBIKI_RELEASE_STORE_PASSWORD, " +
+            "HIBIKI_RELEASE_KEY_ALIAS, and HIBIKI_RELEASE_KEY_PASSWORD via environment variables " +
+            "or Gradle properties, or build a debug APK for local installs."
+    )
 }
 
 kotlin {
