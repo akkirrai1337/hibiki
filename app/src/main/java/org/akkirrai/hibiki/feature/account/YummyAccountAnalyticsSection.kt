@@ -63,7 +63,7 @@ internal fun AnalyticsCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         Column(
@@ -107,23 +107,34 @@ internal fun AnalyticsCard(
                 )
                 Surface(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.1f),
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
+                            .padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        ActivityHeatmap(
-                            days = snapshot.activityDays,
-                            rows = 7,
-                            columns = 18,
-                            cellSize = 6,
-                            gap = 2,
-                            muted = !hasActivity,
+                        Text(
+                            text = stringResource(R.string.yummy_account_activity_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ActivityHeatmap(
+                                days = snapshot.activityDays,
+                                rows = 7,
+                                columns = 18,
+                                cellSize = 6,
+                                gap = 2,
+                                muted = !hasActivity,
+                            )
+                        }
                     }
                 }
             }
@@ -341,8 +352,16 @@ private fun ActivityHeatmap(
     gap: Int = 2,
     muted: Boolean = false,
 ) {
-    val emptyColor = Color(0xFF252A33).copy(alpha = 0.78f)
-    val activeColor = Color(0xFF8E96A3)
+    val emptyColor = if (muted) {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.18f)
+    } else {
+        Color(0xFF343B49)
+    }
+    val activeColor = if (muted) {
+        Color(0xFF687487)
+    } else {
+        Color(0xFFFF7A86)
+    }
     val paddedDays = buildList<ActivityDay?> {
         addAll(days.takeLast(rows * columns))
         repeat((rows * columns) - size) { add(null) }
@@ -375,13 +394,13 @@ private fun ActivityDay.color(
     muted: Boolean = false,
 ): Color {
     if (muted) {
-        return base.copy(alpha = 0.24f)
+        return base.copy(alpha = 0.3f)
     }
     return when (intensity) {
-        0 -> base.copy(alpha = 0.12f)
-        1 -> base.copy(alpha = 0.28f)
-        2 -> base.copy(alpha = 0.48f)
-        3 -> base.copy(alpha = 0.7f)
-        else -> base
+        0 -> base.copy(alpha = 0.2f)
+        1 -> base.copy(alpha = 0.4f)
+        2 -> base.copy(alpha = 0.62f)
+        3 -> base.copy(alpha = 0.82f)
+        else -> Color(0xFFFFA15F)
     }
 }

@@ -110,9 +110,13 @@ class YummyAccountApi(
         val response = client.get("$baseUrl/profile") {
             addHeaders(resolveAccessToken(accessToken))
         }
-        return response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
-            .response
-            .toModel()
+        val body = response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
+        debugLogger?.invoke(
+            "Yummy profile payload: source=/profile, userId=${body.response.id}, " +
+                "bannerFull=${body.response.banner?.full.orEmpty().take(160)}, " +
+                "bannerCropped=${body.response.banner?.cropped.orEmpty().take(160)}",
+        )
+        return body.response.toModel()
     }
 
     suspend fun getUserProfile(userId: Long): YummyProfile {
@@ -120,9 +124,13 @@ class YummyAccountApi(
             addHeaders(resolveAccessToken(null))
             parameter("need_counts", true)
         }
-        return response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
-            .response
-            .toModel()
+        val body = response.bodyOrThrow<YummyAccountEnvelope<YummyProfileResponse>>(SOURCE)
+        debugLogger?.invoke(
+            "Yummy profile payload: source=/users/id$userId, userId=${body.response.id}, " +
+                "bannerFull=${body.response.banner?.full.orEmpty().take(160)}, " +
+                "bannerCropped=${body.response.banner?.cropped.orEmpty().take(160)}",
+        )
+        return body.response.toModel()
     }
 
     suspend fun getUserStatsLists(userId: Long): List<YummyUserListWatchStat> {

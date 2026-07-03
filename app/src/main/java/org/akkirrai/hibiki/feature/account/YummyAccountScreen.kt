@@ -335,5 +335,5 @@ private fun CheckingContent() {
     }
 }
 
-private val AccountHeaderContentTopPadding = 48.dp
+private val AccountHeaderContentTopPadding = 72.dp
 private val AccountSettingsHeaderContentTopPadding = 72.dp

@@ -86,7 +86,12 @@ internal fun buildProfileSnapshot(
 }
 
 internal fun normalizeYummyAssetUrl(rawUrl: String?): String? {
-    val value = rawUrl?.trim()?.takeIf(String::isNotBlank) ?: return null
+    val value = rawUrl
+        ?.trim()
+        ?.trim('"')
+        ?.replace("\\/", "/")
+        ?.takeIf(String::isNotBlank)
+        ?: return null
     return when {
         value.startsWith("http://", ignoreCase = true) ||
             value.startsWith("https://", ignoreCase = true) -> value

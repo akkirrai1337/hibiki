@@ -88,7 +88,15 @@ class YummyAccountRepository(
     }
 
     suspend fun getProfile(): YummyProfile {
-        return api.getProfile().also(profileCacheStore::saveProfile)
+        return api.getProfile().also { profile ->
+            AppLogger.d(
+                LOG_TAG,
+                "Profile loaded: source=getProfile, userId=${profile.id}, " +
+                    "bannerFull=${profile.banner?.full.orEmpty().take(160)}, " +
+                    "bannerCropped=${profile.banner?.cropped.orEmpty().take(160)}",
+            )
+            profileCacheStore.saveProfile(profile)
+        }
     }
 
     suspend fun getUserProfile(userId: Long): YummyProfile {
@@ -99,6 +107,13 @@ class YummyAccountRepository(
         val profile = api.getProfile()
         val detailedProfile = runCatching { api.getUserProfile(userId = profile.id) }
             .getOrDefault(profile)
+        AppLogger.d(
+            LOG_TAG,
+            "Profile cache refresh: baseBannerFull=${profile.banner?.full.orEmpty().take(160)}, " +
+                "baseBannerCropped=${profile.banner?.cropped.orEmpty().take(160)}, " +
+                "detailedBannerFull=${detailedProfile.banner?.full.orEmpty().take(160)}, " +
+                "detailedBannerCropped=${detailedProfile.banner?.cropped.orEmpty().take(160)}",
+        )
         profileCacheStore.saveProfile(detailedProfile)
         return detailedProfile
     }
