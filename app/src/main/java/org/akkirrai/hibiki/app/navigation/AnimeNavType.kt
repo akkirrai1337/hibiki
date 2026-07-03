@@ -8,6 +8,7 @@ object AnimeNavType {
     const val WATCH_SOURCES_ROUTE = "watch_sources"
     const val TRENDING_ROUTE = "trending"
     const val ACCOUNT_ROUTE = "account"
+    const val ACCOUNT_SETTINGS_ROUTE = "account_settings"
     const val SEARCH_FILTERS_ROUTE = "search_filters"
     const val EPISODES_ROUTE = "episodes"
     const val PLAYER_ROUTE = "player"

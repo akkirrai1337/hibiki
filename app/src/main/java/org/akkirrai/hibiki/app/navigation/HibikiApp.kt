@@ -55,6 +55,8 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.account.YummyAccountScreen
+import org.akkirrai.hibiki.feature.account.YummyAccountSettingsScreen
+import org.akkirrai.hibiki.feature.account.YummyAccountViewModel
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
 import org.akkirrai.hibiki.feature.home.HomeSearchFiltersScreen
@@ -247,10 +249,40 @@ private fun HibikiNavHost(
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
-        ) {
+        ) { backStackEntry ->
+            val context = LocalContext.current
+            val accountViewModel: YummyAccountViewModel = viewModel(
+                viewModelStoreOwner = backStackEntry,
+                factory = YummyAccountViewModel.Factory(context),
+            )
             YummyAccountScreen(
                 onBackClick = navController::navigateUp,
+                onSettingsClick = {
+                    navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_SETTINGS_ROUTE)
+                },
                 modifier = screenModifier,
+                viewModel = accountViewModel,
+            )
+        }
+        composable(
+            route = AnimeNavType.ACCOUNT_SETTINGS_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() }
+        ) {
+            val context = LocalContext.current
+            val accountEntry = remember(navController) {
+                navController.getBackStackEntry(AnimeNavType.ACCOUNT_ROUTE)
+            }
+            val accountViewModel: YummyAccountViewModel = viewModel(
+                viewModelStoreOwner = accountEntry,
+                factory = YummyAccountViewModel.Factory(context),
+            )
+            YummyAccountSettingsScreen(
+                onBackClick = navController::navigateUp,
+                modifier = screenModifier,
+                viewModel = accountViewModel,
             )
         }
         composable(

@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.message, '[update]')
+      contains(github.event.head_commit.message, '[update]') ||
+      contains(github.event.head_commit.message, '[prerelease]')
 
     steps:
       - name: Checkout repository
@@ -83,34 +84,104 @@ jobs:
           HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease
 
-      - name: Read app version
-        id: version
-        shell: bash
-        run: |
-          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
-          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -n 1)
-          echo "name=${VERSION_NAME:-0.0}" >> "$GITHUB_OUTPUT"
-          echo "code=${VERSION_CODE:-0}" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare release metadata
+      - name: Determine release version
         id: release
         shell: bash
+        env:
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          SAFE_SHA="${GITHUB_SHA::7}"
-          TAG="v${{ steps.version.outputs.name }}-${{ github.run_number }}-${SAFE_SHA}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          normalize_version() {
+            local value="$1"
+            if [[ "$value" =~ ^[0-9]+\.[0-9]+$ ]]; then
+              echo "${value}.0"
+            else
+              echo "$value"
+            fi
+          }
+
+          next_stable_version() {
+            local current="$1"
+            local major minor patch
+            IFS='.' read -r major minor patch <<< "$current"
+            if (( patch >= 9 )); then
+              minor=$((minor + 1))
+              patch=0
+            else
+              patch=$((patch + 1))
+            fi
+            echo "${major}.${minor}.${patch}"
+          }
+
+          BASE_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
+          DEFAULT_STABLE_VERSION=$(normalize_version "${BASE_VERSION:-1.0}")
+          LATEST_STABLE_TAG=$(
+            git tag --list 'v*' --sort=-v:refname |
+              grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+              head -n 1 ||
+              true
+          )
+
+          if [ -n "$LATEST_STABLE_TAG" ]; then
+            LATEST_STABLE_VERSION="${LATEST_STABLE_TAG#v}"
+            HAS_STABLE_RELEASE=true
+          else
+            LATEST_STABLE_VERSION="$DEFAULT_STABLE_VERSION"
+            HAS_STABLE_RELEASE=false
+          fi
+
+          NEXT_STABLE_VERSION=$(next_stable_version "$LATEST_STABLE_VERSION")
+          IS_PRERELEASE=false
+          if [[ "${HEAD_COMMIT_MESSAGE:-}" == *"[prerelease]"* ]]; then
+            IS_PRERELEASE=true
+          fi
+
+          if [ "$IS_PRERELEASE" = true ]; then
+            TARGET_VERSION="$NEXT_STABLE_VERSION"
+            LAST_PRERELEASE_NUMBER=$(
+              git tag --list "v${TARGET_VERSION}-prerelease.*" |
+                sed -nE "s/^v${TARGET_VERSION//./\\.}-prerelease\\.([0-9]+)$/\\1/p" |
+                sort -nr |
+                head -n 1 ||
+                true
+            )
+            if [ -n "${LAST_PRERELEASE_NUMBER:-}" ]; then
+              PRERELEASE_NUMBER=$((LAST_PRERELEASE_NUMBER + 1))
+            else
+              PRERELEASE_NUMBER=1
+            fi
+            RELEASE_VERSION="${TARGET_VERSION}-prerelease.${PRERELEASE_NUMBER}"
+          else
+            if [ "$HAS_STABLE_RELEASE" = true ]; then
+              RELEASE_VERSION="$NEXT_STABLE_VERSION"
+            else
+              RELEASE_VERSION="$DEFAULT_STABLE_VERSION"
+            fi
+          fi
+
+          TAG="v${RELEASE_VERSION}"
+          PREVIOUS_TAG=$(
+            git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags |
+              grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-prerelease\.[0-9]+)?$' |
+              head -n 1 ||
+              true
+          )
+
           if [ -n "$PREVIOUS_TAG" ]; then
-            COMMIT_RANGE="$PREVIOUS_TAG..HEAD"
+            COMMIT_RANGE="${PREVIOUS_TAG}..HEAD"
           else
             COMMIT_RANGE="HEAD"
           fi
 
+          echo "version=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+
           {
             echo "## Fixes"
             echo
-            git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE" | sed 's/\[update\][[:space:]]*//Ig'
+            git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE" | sed -E 's/\[(update|prerelease)\][[:space:]]*//Ig'
             echo
           } > release-notes.md
 
@@ -118,13 +189,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk "release/hibiki-v${{ steps.version.outputs.name }}.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "release/hibiki-v${{ steps.release.outputs.version }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag }}
-          name: v${{ steps.version.outputs.name }}.${{ github.run_number }}
+          name: v${{ steps.release.outputs.version }}
           body_path: release-notes.md
           files: release/*.apk
-          prerelease: false
+          prerelease: ${{ steps.release.outputs.is_prerelease }}

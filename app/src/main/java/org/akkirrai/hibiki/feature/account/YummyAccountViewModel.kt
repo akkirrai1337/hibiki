@@ -72,10 +72,6 @@ class YummyAccountViewModel(
         }
     }
 
-    fun setPage(page: AccountPage) {
-        _uiState.update { it.copy(page = page) }
-    }
-
     fun setApplicationTokenEnabled(enabled: Boolean) {
         repository.setApplicationTokenEnabled(enabled)
         _uiState.update { it.copy(apiKeyEnabled = enabled) }
@@ -99,7 +95,6 @@ class YummyAccountViewModel(
                 it.copy(
                     screenState = YummyAccountScreenState.SignedOut,
                     busy = false,
-                    page = AccountPage.Profile,
                 )
             }
         }
@@ -183,13 +178,7 @@ data class YummyAccountUiState(
     val busy: Boolean = false,
     val apiKeyEnabled: Boolean = false,
     val apiKeyAvailable: Boolean = false,
-    val page: AccountPage = AccountPage.Profile,
 )
-
-enum class AccountPage {
-    Profile,
-    Settings,
-}
 
 sealed interface YummyAccountScreenState {
     data object Checking : YummyAccountScreenState

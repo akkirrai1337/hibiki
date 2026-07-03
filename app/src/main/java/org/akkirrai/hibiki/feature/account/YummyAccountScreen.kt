@@ -50,13 +50,12 @@ import org.akkirrai.hibiki.core.design.component.YummySignInForm
 @Composable
 fun YummyAccountScreen(
     onBackClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: YummyAccountViewModel = viewModel(factory = YummyAccountViewModel.Factory(LocalContext.current)),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val state = uiState.screenState
-    val page = uiState.page
-    var apiKeyHelpVisible by remember { mutableStateOf(false) }
     val notificationCount = 0
 
     Box(
@@ -86,38 +85,26 @@ fun YummyAccountScreen(
                 onInputChanged = viewModel::clearSignInError,
             )
 
-            is YummyAccountScreenState.SignedIn -> SignedInScreen(
-                page = page,
+            is YummyAccountScreenState.SignedIn -> SignedInProfileScreen(
                 profile = current.profile,
                 libraryItems = current.libraryItems,
                 listWatchStats = current.listWatchStats,
                 busy = uiState.busy,
-                apiKeyEnabled = uiState.apiKeyEnabled,
-                apiKeyAvailable = uiState.apiKeyAvailable,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
-                onApiKeyEnabledChange = viewModel::setApplicationTokenEnabled,
-                onApiKeyHelpClick = { apiKeyHelpVisible = true },
                 onExit = viewModel::signOut,
             )
         }
 
         AppFloatingHeader(
-            title = when {
-                page == AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
-                state is YummyAccountScreenState.SignedIn -> stringResource(R.string.yummy_account_title)
+            title = when (state) {
+                is YummyAccountScreenState.SignedIn -> stringResource(R.string.yummy_account_title)
                 else -> stringResource(R.string.yummy_account_auth_title)
             },
-            onBackClick = {
-                if (page == AccountPage.Settings) {
-                    viewModel.setPage(AccountPage.Profile)
-                } else {
-                    onBackClick()
-                }
-            },
+            onBackClick = onBackClick,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth(),
-            actions = if (state is YummyAccountScreenState.SignedIn && page == AccountPage.Profile) {
+            actions = if (state is YummyAccountScreenState.SignedIn) {
                 {
                     NotificationActionIcon(
                         notificationCount = notificationCount,
@@ -126,12 +113,70 @@ fun YummyAccountScreen(
                     AppFloatingIconButton(
                         imageVector = Icons.Outlined.Settings,
                         contentDescription = stringResource(R.string.yummy_account_settings_title),
-                        onClick = { viewModel.setPage(AccountPage.Settings) },
+                        onClick = onSettingsClick,
                     )
                 }
             } else {
                 null
             },
+        )
+    }
+}
+
+@Composable
+fun YummyAccountSettingsScreen(
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: YummyAccountViewModel = viewModel(factory = YummyAccountViewModel.Factory(LocalContext.current)),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val state = uiState.screenState
+    var apiKeyHelpVisible by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when (val current = state) {
+            YummyAccountScreenState.Checking -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CheckingContent()
+            }
+
+            YummyAccountScreenState.SignedOut -> SignedOutScreen(
+                busy = uiState.busy,
+                errorMessage = null,
+                paddingValues = PaddingValues(top = AccountSettingsHeaderContentTopPadding),
+                onSubmit = viewModel::submitCredentials,
+                onInputChanged = viewModel::clearSignInError,
+            )
+
+            is YummyAccountScreenState.Error -> SignedOutScreen(
+                busy = uiState.busy,
+                errorMessage = current.message,
+                paddingValues = PaddingValues(top = AccountSettingsHeaderContentTopPadding),
+                onSubmit = viewModel::submitCredentials,
+                onInputChanged = viewModel::clearSignInError,
+            )
+
+            is YummyAccountScreenState.SignedIn -> SignedInSettingsScreen(
+                busy = uiState.busy,
+                apiKeyEnabled = uiState.apiKeyEnabled,
+                apiKeyAvailable = uiState.apiKeyAvailable,
+                paddingValues = PaddingValues(top = AccountSettingsHeaderContentTopPadding),
+                onApiKeyEnabledChange = viewModel::setApplicationTokenEnabled,
+                onApiKeyHelpClick = { apiKeyHelpVisible = true },
+                onExit = viewModel::signOut,
+            )
+        }
+
+        AppFloatingHeader(
+            title = stringResource(R.string.yummy_account_settings_title),
+            onBackClick = onBackClick,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth(),
         )
     }
 
@@ -213,17 +258,12 @@ private fun SignedOutScreen(
 }
 
 @Composable
-private fun SignedInScreen(
-    page: AccountPage,
+private fun SignedInProfileScreen(
     profile: YummyProfile,
     libraryItems: List<YummyUserAnimeListItem>,
     listWatchStats: List<YummyUserListWatchStat>,
     busy: Boolean,
-    apiKeyEnabled: Boolean,
-    apiKeyAvailable: Boolean,
     paddingValues: PaddingValues,
-    onApiKeyEnabledChange: (Boolean) -> Unit,
-    onApiKeyHelpClick: () -> Unit,
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -237,31 +277,46 @@ private fun SignedInScreen(
             .verticalScroll(rememberScrollState())
             .padding(paddingValues)
             .padding(horizontal = UiDimens.ScreenPadding, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        when (page) {
-            AccountPage.Profile -> {
-                ProfileCard(
-                    profile = profile,
-                    busy = busy,
-                    onExit = onExit,
-                )
-                AnalyticsCard(snapshot = snapshot)
-                RecentLibraryCard(items = snapshot.recentLibraryItems)
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-            AccountPage.Settings -> {
-                AccountSettingsScreenContent(
-                    busy = busy,
-                    enabled = apiKeyEnabled,
-                    available = apiKeyAvailable,
-                    onEnabledChange = onApiKeyEnabledChange,
-                    onHelpClick = onApiKeyHelpClick,
-                    onExit = onExit,
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
+        ProfileCard(
+            profile = profile,
+            busy = busy,
+            onExit = onExit,
+        )
+        AnalyticsCard(snapshot = snapshot)
+        RecentLibraryCard(items = snapshot.recentLibraryItems)
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SignedInSettingsScreen(
+    busy: Boolean,
+    apiKeyEnabled: Boolean,
+    apiKeyAvailable: Boolean,
+    paddingValues: PaddingValues,
+    onApiKeyEnabledChange: (Boolean) -> Unit,
+    onApiKeyHelpClick: () -> Unit,
+    onExit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(paddingValues)
+            .padding(horizontal = UiDimens.ScreenPadding, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AccountSettingsScreenContent(
+            busy = busy,
+            enabled = apiKeyEnabled,
+            available = apiKeyAvailable,
+            onEnabledChange = onApiKeyEnabledChange,
+            onHelpClick = onApiKeyHelpClick,
+            onExit = onExit,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -281,3 +336,4 @@ private fun CheckingContent() {
 }
 
 private val AccountHeaderContentTopPadding = 48.dp
+private val AccountSettingsHeaderContentTopPadding = 72.dp
