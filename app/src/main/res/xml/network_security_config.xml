@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <!-- Legacy Alloha/CDN mirrors may still redirect HLS chunks through this host over HTTP. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">solodcdn.com</domain>
     </domain-config>
