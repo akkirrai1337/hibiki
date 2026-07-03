@@ -15,20 +15,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
@@ -59,7 +69,27 @@ internal fun AnalyticsCard(
             color = yummyFavoriteListColor(),
         )
     }
-    val hasDurationData = durationSegments.any { it.value > 0L }
+    val pages = remember(
+        durationSegments,
+        snapshot.siteWatchSegments,
+        snapshot.siteWatchTimeLabel,
+        snapshot.watchTimeLabel,
+        snapshot.ratingSegments,
+        snapshot.ratingAverageLabel,
+        snapshot.ratedTitlesCount,
+        snapshot.genreSegments,
+        snapshot.genreTrackedTitlesCount,
+    ) {
+        buildAnalyticsPages(
+            snapshot = snapshot,
+            durationSegments = durationSegments,
+        )
+    }
+    var currentPage by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(pages.size) {
+        currentPage = currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+    }
+    val page = pages[currentPage]
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -70,32 +100,13 @@ internal fun AnalyticsCard(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.yummy_account_watch_by_lists_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+            AnalyticsDonutPager(
+                page = page,
+                canGoBack = currentPage > 0,
+                canGoForward = currentPage < pages.lastIndex,
+                onBack = { if (currentPage > 0) currentPage -= 1 },
+                onForward = { if (currentPage < pages.lastIndex) currentPage += 1 },
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DistributionDonut(
-                    segments = durationSegments,
-                    centerLabel = snapshot.watchTimeLabel,
-                    modifier = Modifier.size(132.dp),
-                    muted = !hasDurationData,
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    durationSegments.forEach { segment ->
-                        DurationLegendRow(segment = segment, muted = !hasDurationData)
-                    }
-                }
-            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
@@ -140,6 +151,156 @@ internal fun AnalyticsCard(
             }
             StatusTilesGrid(segments = statusSegments)
         }
+    }
+}
+
+@Composable
+private fun AnalyticsDonutPager(
+    page: AnalyticsPage,
+    canGoBack: Boolean,
+    canGoForward: Boolean,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            text = page.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PageArrowButton(
+                enabled = canGoBack,
+                onClick = onBack,
+                isBack = true,
+            )
+            LegendGrid(
+                items = page.segments,
+                modifier = Modifier.weight(1f),
+                columns = page.legendColumns,
+            )
+            PageArrowButton(
+                enabled = canGoForward,
+                onClick = onForward,
+                isBack = false,
+            )
+            SegmentDonut(
+                segments = page.segments,
+                centerPrimary = page.centerPrimary,
+                centerSecondary = page.centerSecondary,
+                modifier = Modifier.size(132.dp),
+                muted = page.segments.all { it.weight <= 0f },
+            )
+        }
+        page.supportingText?.let { text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageArrowButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    isBack: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.22f else 0.12f),
+    ) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.size(34.dp),
+        ) {
+            Icon(
+                imageVector = if (isBack) {
+                    Icons.AutoMirrored.Outlined.KeyboardArrowLeft
+                } else {
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight
+                },
+                contentDescription = null,
+                tint = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.46f)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegendGrid(
+    items: List<AnalyticsSegment>,
+    columns: Int,
+    modifier: Modifier = Modifier,
+) {
+    val safeColumns = columns.coerceAtLeast(1)
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items.chunked(safeColumns).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                row.forEach { item ->
+                    LegendItem(
+                        item = item,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                repeat((safeColumns - row.size).coerceAtLeast(0)) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(
+    item: AnalyticsSegment,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(item.color),
+        )
+        Text(
+            text = item.label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = item.valueLabel,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (item.weight > 0f) AccountWarmAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 
@@ -242,9 +403,10 @@ private fun StatusTile(
 }
 
 @Composable
-private fun DistributionDonut(
-    segments: List<DurationSegment>,
-    centerLabel: String,
+private fun SegmentDonut(
+    segments: List<AnalyticsSegment>,
+    centerPrimary: String,
+    centerSecondary: String,
     modifier: Modifier = Modifier,
     muted: Boolean = false,
 ) {
@@ -267,9 +429,9 @@ private fun DistributionDonut(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
             )
             var startAngle = -90f
-            val safeTotal = segments.sumOf(DurationSegment::value).coerceAtLeast(1L)
-            segments.filter { it.value > 0L }.forEach { segment ->
-                val sweep = segment.value / safeTotal.toFloat() * 360f
+            val safeTotal = segments.sumOf { it.weight.toDouble() }.toFloat().coerceAtLeast(1f)
+            segments.filter { it.weight > 0f }.forEach { segment ->
+                val sweep = segment.weight / safeTotal * 360f
                 drawArc(
                     color = if (muted) segment.color.copy(alpha = 0.4f) else segment.color,
                     startAngle = startAngle,
@@ -282,64 +444,17 @@ private fun DistributionDonut(
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = centerLabel,
+                text = centerPrimary,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (muted) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.yummy_account_total_duration_center),
+                text = centerSecondary,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
             )
         }
-    }
-}
-
-@Composable
-private fun DurationLegendRow(
-    segment: DurationSegment,
-    muted: Boolean = false,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(segment.color),
-        )
-        Text(
-            text = segment.label,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (muted) {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f)
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = segment.hoursLabel,
-            modifier = Modifier.width(42.dp),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            color = if (muted) {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f)
-            } else {
-                AccountWarmAccent
-            },
-        )
     }
 }
 
@@ -404,3 +519,113 @@ private fun ActivityDay.color(
         else -> Color(0xFFFFA15F)
     }
 }
+
+private fun buildAnalyticsPages(
+    snapshot: YummyProfileSnapshot,
+    durationSegments: List<DurationSegment>,
+): List<AnalyticsPage> {
+    return listOf(
+        AnalyticsPage(
+            title = "Время просмотра на сайте",
+            centerPrimary = snapshot.siteWatchTimeLabel,
+            centerSecondary = "всего",
+            segments = snapshot.siteWatchSegments.map { segment ->
+                AnalyticsSegment(
+                    label = segment.label,
+                    valueLabel = segment.hoursLabel,
+                    weight = segment.value.toFloat(),
+                    color = segment.color,
+                )
+            },
+            legendColumns = 2,
+            supportingText = if (snapshot.siteWatchSegments.all { it.value <= 0L }) {
+                "Разбивка строится из server watch sums Yummy. Если API не вернул типизированные bucket'ы, круг останется пустым."
+            } else {
+                null
+            },
+        ),
+        AnalyticsPage(
+            title = "Продолжительность по спискам",
+            centerPrimary = snapshot.watchTimeLabel,
+            centerSecondary = "всего",
+            segments = durationSegments.map { segment ->
+                AnalyticsSegment(
+                    label = segment.label,
+                    valueLabel = segment.hoursLabel,
+                    weight = segment.value.toFloat(),
+                    color = segment.color,
+                )
+            },
+            legendColumns = 2,
+        ),
+        AnalyticsPage(
+            title = "Время продолжительности эпизодов",
+            centerPrimary = "0 ч",
+            centerSecondary = "runtime",
+            segments = snapshot.siteWatchSegments.map { segment ->
+                AnalyticsSegment(
+                    label = segment.label,
+                    valueLabel = "0 ч",
+                    weight = 0f,
+                    color = segment.color,
+                )
+            },
+            legendColumns = 2,
+            supportingText = "Для этой страницы нужны duration/runtime эпизодов по тайтлам из списка. Текущий Yummy API и локальный кэш Hibiki такую длительность пока не дают, поэтому страница пока placeholder.",
+        ),
+        AnalyticsPage(
+            title = "Поставленные оценки",
+            centerPrimary = snapshot.ratedTitlesCount.toString(),
+            centerSecondary = "avg ${snapshot.ratingAverageLabel}",
+            segments = snapshot.ratingSegments.map { segment ->
+                AnalyticsSegment(
+                    label = segment.label,
+                    valueLabel = segment.count.toString(),
+                    weight = segment.count.toFloat(),
+                    color = segment.color,
+                )
+            },
+            legendColumns = 5,
+            supportingText = if (snapshot.ratedTitlesCount == 0) {
+                "Оценки читаются из Yummy API, но в текущем API-слое нет подтверждённой записи рейтинга обратно."
+            } else {
+                "Оценки уже парсятся из Yummy API. Запись рейтинга обратно пока не подтверждена."
+            },
+        ),
+        AnalyticsPage(
+            title = "Жанры",
+            centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
+            centerSecondary = "тегов",
+            segments = snapshot.genreSegments.map { segment ->
+                AnalyticsSegment(
+                    label = segment.label,
+                    valueLabel = segment.count.toString(),
+                    weight = segment.count.toFloat(),
+                    color = segment.color,
+                )
+            },
+            legendColumns = 3,
+            supportingText = if (snapshot.genreTrackedTitlesCount == 0) {
+                "Жанры доступны только для тайтлов, чьи метаданные уже были сохранены локально в Hibiki."
+            } else {
+                "Жанры собираются из локального кэша метаданных Hibiki и могут быть неполными."
+            },
+        ),
+    )
+}
+
+private data class AnalyticsPage(
+    val title: String,
+    val centerPrimary: String,
+    val centerSecondary: String,
+    val segments: List<AnalyticsSegment>,
+    val legendColumns: Int,
+    val supportingText: String? = null,
+)
+
+private data class AnalyticsSegment(
+    val label: String,
+    val valueLabel: String,
+    val weight: Float,
+    val color: Color,
+)

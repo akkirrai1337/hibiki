@@ -46,6 +46,7 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
 import org.akkirrai.hibiki.core.design.component.YummySignInForm
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 
 @Composable
 fun YummyAccountScreen(
@@ -267,8 +268,20 @@ private fun SignedInProfileScreen(
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
-    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats) {
-        buildProfileSnapshot(context.resources, profile, libraryItems, listWatchStats)
+    val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context) }
+    val cachedLibraryMetadata = remember(libraryItems, offlineTitleMetadataRepository) {
+        libraryItems.mapNotNull { item ->
+            offlineTitleMetadataRepository.get(item.animeId.toString())
+        }
+    }
+    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, cachedLibraryMetadata) {
+        buildProfileSnapshot(
+            resources = context.resources,
+            profile = profile,
+            libraryItems = libraryItems,
+            listWatchStats = listWatchStats,
+            cachedLibraryMetadata = cachedLibraryMetadata,
+        )
     }
 
     Column(
