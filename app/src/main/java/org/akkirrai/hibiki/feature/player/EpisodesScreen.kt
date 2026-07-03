@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
@@ -81,11 +82,12 @@ fun EpisodesScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val watchStateRepository = remember(context) { WatchStateRepository(context.applicationContext) }
-    val offlineDownloadRepository = remember(context) { OfflineDownloadRepository(context.applicationContext) }
-    val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context.applicationContext) }
-    val libraryRepository = remember(context) { LibraryRepository(context.applicationContext) }
+    val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
+    val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
+    val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
+    val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val titleId = remember(sourceId) { sourceId.substringBefore(':') }
     val savedProgress = remember(state, titleId) { watchStateRepository.getEpisodeProgress(titleId) }
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)

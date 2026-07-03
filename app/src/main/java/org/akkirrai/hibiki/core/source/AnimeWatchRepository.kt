@@ -48,8 +48,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 data class WatchSourcesCacheSnapshot(
     val sources: List<WatchSource>,
-    val priorityLoadCompleted: Boolean,
-    val allSourcesLoaded: Boolean,
 )
 
 class AnimeWatchRepository(
@@ -90,16 +88,11 @@ class AnimeWatchRepository(
     fun getCachedSources(animeId: String): WatchSourcesCacheSnapshot? {
         val canonicalId = extractTitleId(animeId)
         val cached = cachedSources[canonicalId] ?: return null
-        return WatchSourcesCacheSnapshot(
-            sources = cached.sources,
-            priorityLoadCompleted = true,
-            allSourcesLoaded = true,
-        )
+        return WatchSourcesCacheSnapshot(sources = cached.sources)
     }
 
     suspend fun loadSources(
         animeId: String,
-        includeNonPriority: Boolean,
         onUpdate: (List<WatchSource>) -> Unit,
     ): List<WatchSource> {
         val canonicalId = resolveAnimeId(animeId)
@@ -172,7 +165,6 @@ class AnimeWatchRepository(
         episodeId: String,
         forceRefresh: Boolean = false,
         excludedStreamUrls: Set<String> = emptySet(),
-        preferredProviderId: String? = null,
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
     ): PlaybackStream {
@@ -291,7 +283,6 @@ class AnimeWatchRepository(
     suspend fun getPlaybackSettingsOptions(
         sourceId: String,
         episodeId: String,
-        preferredProviderId: String? = null,
     ): PlaybackSettingsOptions {
         val titleId = extractTitleId(sourceId)
         if (titleId.isBlank()) return PlaybackSettingsOptions()
@@ -299,7 +290,7 @@ class AnimeWatchRepository(
         ensureInternetConnection()
 
         val voiceovers = cachedSources[titleId]?.sources
-            ?: loadSources(titleId, includeNonPriority = true, onUpdate = {})
+            ?: loadSources(titleId, onUpdate = {})
         val payload = ensureSourcePayload(sourceId) ?: return PlaybackSettingsOptions(voiceovers = voiceovers)
         val episode = payload.episodes.firstOrNull { it.id == episodeId }
             ?: return PlaybackSettingsOptions(
@@ -367,7 +358,7 @@ class AnimeWatchRepository(
         sourcePayloads[sourceId]?.let { return it }
         val titleId = extractTitleId(sourceId)
         if (titleId.isBlank()) return null
-        loadSources(titleId, includeNonPriority = true, onUpdate = {})
+        loadSources(titleId, onUpdate = {})
         return sourcePayloads[sourceId]
     }
 

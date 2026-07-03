@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
@@ -317,8 +318,9 @@ class TrendingAnimeViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return TrendingAnimeViewModel(
-                repository = HomeRepository(context = context.applicationContext),
+                repository = dependencies.homeRepository(),
                 context = context.applicationContext,
             ) as T
         }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
@@ -28,19 +29,27 @@ class WatchSourcesViewModel(
     }
 
     fun load() {
-        loadPrioritySources(forceRefresh = false)
+        loadSources(forceRefresh = false)
     }
 
     fun retry() {
         val current = _uiState.value
-        when {
-            current.items.isEmpty() -> loadPrioritySources(forceRefresh = true)
-            current.priorityLoadCompleted -> loadMore(forceRefresh = true)
-            else -> loadPrioritySources(forceRefresh = true)
+        if (current.items.isEmpty()) {
+            loadSources(forceRefresh = true)
+        } else {
+            _uiState.update {
+                it.copy(
+                    showAllItems = true,
+                    items = it.allItems,
+                    hasMoreItems = false,
+                    isLoadingMore = false,
+                    errorMessage = null,
+                )
+            }
         }
     }
 
-    private fun loadPrioritySources(forceRefresh: Boolean) {
+    private fun loadSources(forceRefresh: Boolean) {
         val cached = repository.getCachedSources(animeId)
         val cachedSources = mergeSources(
             primary = cached?.sources.orEmpty(),
@@ -55,35 +64,30 @@ class WatchSourcesViewModel(
                 isLoadingMore = false,
                 hasMoreItems = false,
                 showAllItems = false,
-                priorityLoadCompleted = false,
-                allSourcesLoaded = false,
                 errorMessage = null,
             )
         } else {
-        _uiState.value = WatchSourcesScreenState(
-            allItems = cachedSources,
-            items = cachedVisibleItems,
-            isLoading = cached?.priorityLoadCompleted != true,
-            isLoadingMore = false,
-            hasMoreItems = hasMoreItems(
+            _uiState.value = WatchSourcesScreenState(
                 allItems = cachedSources,
-                visibleItems = cachedVisibleItems,
+                items = cachedVisibleItems,
+                isLoading = cached == null,
+                isLoadingMore = false,
+                hasMoreItems = hasMoreItems(
+                    allItems = cachedSources,
+                    visibleItems = cachedVisibleItems,
+                    showAllItems = false,
+                ),
                 showAllItems = false,
-                allSourcesLoaded = cached?.allSourcesLoaded == true,
-            ),
-            showAllItems = false,
-            priorityLoadCompleted = cached?.priorityLoadCompleted == true,
-            allSourcesLoaded = cached?.allSourcesLoaded == true,
-            errorMessage = null,
-        )
+                errorMessage = null,
+            )
         }
-        if (!forceRefresh && cached?.priorityLoadCompleted == true) {
+        if (!forceRefresh && cached != null) {
             return
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                repository.loadSources(animeId = animeId, includeNonPriority = false) { updated ->
+                repository.loadSources(animeId = animeId) { updated ->
                     val merged = mergeSources(
                         primary = updated,
                         secondary = offlineDownloadRepository.getOfflineSources(animeId),
@@ -94,7 +98,6 @@ class WatchSourcesViewModel(
                             isLoading = true,
                             isLoadingMore = false,
                             showAllItems = false,
-                            allSourcesLoaded = false,
                         )
                     }
                 }
@@ -109,7 +112,6 @@ class WatchSourcesViewModel(
                         isLoading = false,
                         isLoadingMore = false,
                         showAllItems = false,
-                        allSourcesLoaded = false,
                     )
                 }
             }.onFailure { throwable ->
@@ -125,81 +127,14 @@ class WatchSourcesViewModel(
     }
 
     fun loadMore() {
-        loadAllSources(forceRefresh = false)
-    }
-
-    private fun loadMore(forceRefresh: Boolean) {
-        loadAllSources(forceRefresh = forceRefresh)
-    }
-
-    private fun loadAllSources(
-        forceRefresh: Boolean,
-    ) {
-        val current = _uiState.value
-        if (current.isLoadingMore) {
-            return
-        }
-        if (!forceRefresh && current.allSourcesLoaded) {
-            _uiState.update {
-                it.copy(
-                    showAllItems = true,
-                    items = it.allItems,
-                    hasMoreItems = false,
-                    isLoadingMore = false,
-                )
-            }
-            return
-        }
-
         _uiState.update {
             it.copy(
-                isLoading = false,
-                isLoadingMore = true,
                 showAllItems = true,
+                items = it.allItems,
+                hasMoreItems = false,
+                isLoadingMore = false,
                 errorMessage = null,
             )
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                repository.loadSources(animeId = animeId, includeNonPriority = true) { updated ->
-                    val merged = mergeSources(
-                        primary = updated,
-                        secondary = offlineDownloadRepository.getOfflineSources(animeId),
-                    )
-                    _uiState.update { state ->
-                        state.withSources(
-                            sources = merged,
-                            isLoading = false,
-                            isLoadingMore = true,
-                            showAllItems = true,
-                            allSourcesLoaded = false,
-                        )
-                    }
-                }
-            }.onSuccess { sources ->
-                val merged = mergeSources(
-                    primary = sources,
-                    secondary = offlineDownloadRepository.getOfflineSources(animeId),
-                )
-                _uiState.update { state ->
-                    state.withSources(
-                        sources = merged,
-                        isLoading = false,
-                        isLoadingMore = false,
-                        showAllItems = true,
-                        allSourcesLoaded = true,
-                    )
-                }
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isLoadingMore = false,
-                        errorMessage = throwable.toUiMessage().takeIf { _ -> it.items.isEmpty() }
-                    )
-                }
-            }
         }
     }
 
@@ -213,7 +148,6 @@ class WatchSourcesViewModel(
         isLoading: Boolean,
         isLoadingMore: Boolean,
         showAllItems: Boolean,
-        allSourcesLoaded: Boolean,
     ): WatchSourcesScreenState {
         val visibleItems = visibleItems(sources, showAllItems)
         return copy(
@@ -225,11 +159,8 @@ class WatchSourcesViewModel(
                 allItems = sources,
                 visibleItems = visibleItems,
                 showAllItems = showAllItems,
-                allSourcesLoaded = allSourcesLoaded,
             ),
             showAllItems = showAllItems,
-            priorityLoadCompleted = !isLoading,
-            allSourcesLoaded = allSourcesLoaded,
             errorMessage = null,
         )
     }
@@ -248,10 +179,9 @@ class WatchSourcesViewModel(
         allItems: List<WatchSource>,
         visibleItems: List<WatchSource>,
         showAllItems: Boolean,
-        allSourcesLoaded: Boolean,
     ): Boolean {
         if (showAllItems) return false
-        return allItems.size > visibleItems.size || !allSourcesLoaded
+        return allItems.size > visibleItems.size
     }
 
     private fun mergeSources(
@@ -270,10 +200,11 @@ class WatchSourcesViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return WatchSourcesViewModel(
                 animeId = animeId,
-                repository = AnimeWatchRepository(context.applicationContext),
-                offlineDownloadRepository = OfflineDownloadRepository(context.applicationContext),
+                repository = dependencies.animeWatchRepository(),
+                offlineDownloadRepository = dependencies.offlineDownloadRepository(),
             ) as T
         }
     }
@@ -290,8 +221,6 @@ data class WatchSourcesScreenState(
     val isLoadingMore: Boolean = false,
     val hasMoreItems: Boolean = false,
     val showAllItems: Boolean = false,
-    val priorityLoadCompleted: Boolean = false,
-    val allSourcesLoaded: Boolean = false,
     val errorMessage: String? = null,
 )
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
@@ -219,7 +220,14 @@ class LibraryViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return LibraryViewModel(context = context) as T
+            val dependencies = context.applicationContext.hibikiDependencies()
+            return LibraryViewModel(
+                context = context.applicationContext,
+                libraryRepository = dependencies.libraryRepository(),
+                searchRepository = dependencies.animeSearchRepository(),
+                offlineDownloadRepository = dependencies.offlineDownloadRepository(),
+                offlineTitleMetadataRepository = dependencies.offlineTitleMetadataRepository(),
+            ) as T
         }
     }
 }

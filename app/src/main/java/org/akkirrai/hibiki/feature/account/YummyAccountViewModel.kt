@@ -16,6 +16,7 @@ import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
 import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.account.YummyAccountSessionState
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -142,7 +143,11 @@ class YummyAccountViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return YummyAccountViewModel(context = context.applicationContext) as T
+            val dependencies = context.applicationContext.hibikiDependencies()
+            return YummyAccountViewModel(
+                context = context.applicationContext,
+                repository = dependencies.accountRepository(),
+            ) as T
         }
     }
 

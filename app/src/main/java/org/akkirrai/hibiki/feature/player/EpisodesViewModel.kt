@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
@@ -90,10 +91,11 @@ class EpisodesViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return EpisodesViewModel(
                 sourceId = sourceId,
-                repository = AnimeWatchRepository(context.applicationContext),
-                offlineDownloadRepository = OfflineDownloadRepository(context.applicationContext),
+                repository = dependencies.animeWatchRepository(),
+                offlineDownloadRepository = dependencies.offlineDownloadRepository(),
             ) as T
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import java.util.Locale
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
@@ -30,7 +31,7 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val accountRepository by lazy(LazyThreadSafetyMode.NONE) {
-        YummyAccountRepository(applicationContext)
+        applicationContext.hibikiDependencies().accountRepository()
     }
     private var profileWarmupJob: Job? = null
 

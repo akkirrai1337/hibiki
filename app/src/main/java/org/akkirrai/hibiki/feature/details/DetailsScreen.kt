@@ -108,6 +108,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -148,17 +149,16 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val savedScreenState = remember(anime.id) { detailsScreenStateCache[anime.id] }
-    val searchRepository = remember { AnimeSearchRepository(context.applicationContext) }
-    val watchRepository = remember { AnimeWatchRepository(context.applicationContext) }
-    val watchStateRepository = remember { WatchStateRepository(context.applicationContext) }
-    val libraryRepository = remember { LibraryRepository(context.applicationContext) }
-    val offlineTitleMetadataRepository = remember { OfflineTitleMetadataRepository(context.applicationContext) }
-    val offlineDownloadRepository = remember {
-        OfflineDownloadRepository(context = context.applicationContext)
-    }
+    val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
+    val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
+    val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
+    val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
+    val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
+    val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
     var currentAnime by remember(anime.id) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDescriptionExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isDescriptionExpanded ?: false) }
     var isAlternativeTitlesExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isAlternativeTitlesExpanded ?: false) }
@@ -223,9 +223,9 @@ fun DetailsScreen(
         val cached = watchRepository.getCachedSources(anime.id)
         watchSources.clear()
         watchSources.addAll(cached?.sources.orEmpty())
-        if (cached?.priorityLoadCompleted != true) {
+        if (cached == null) {
             runCatching {
-                watchRepository.loadSources(anime.id, includeNonPriority = false) { updated ->
+                watchRepository.loadSources(anime.id) { updated ->
                     watchSources.clear()
                     watchSources.addAll(updated)
                 }
@@ -484,7 +484,7 @@ fun DetailsScreen(
                     try {
                         val loadedSources = if (watchSources.isEmpty()) {
                             runCatching {
-                                watchRepository.loadSources(currentAnime.id, includeNonPriority = false) { updated ->
+                                watchRepository.loadSources(currentAnime.id) { updated ->
                                     watchSources.clear()
                                     watchSources.addAll(updated)
                                 }

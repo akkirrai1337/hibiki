@@ -49,6 +49,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
@@ -194,6 +195,7 @@ private fun HibikiNavHost(
             },
         ) { backStackEntry ->
             val context = LocalContext.current
+            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
             val homeViewModel: HomeViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
                 factory = HomeViewModel.Factory(context),
@@ -225,6 +227,7 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() },
         ) {
             val context = LocalContext.current
+            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
             val homeEntry = remember(navController) {
                 navController.getBackStackEntry(TopLevelDestination.Home.route)
             }
@@ -405,7 +408,8 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             val context = LocalContext.current
-            val watchStateRepository = WatchStateRepository(context.applicationContext)
+            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
+            val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
             val animeId = backStackEntry.arguments?.getString(AnimeNavType.ID_ARG).orEmpty()
             val downloadMode = backStackEntry.arguments?.getBoolean(AnimeNavType.DOWNLOAD_MODE_ARG) ?: false
             WatchSourcesScreen(

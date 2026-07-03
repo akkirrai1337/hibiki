@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.core.model.WatchEpisode
@@ -25,11 +26,11 @@ class PlayerViewModel(
     sourceId: String,
     episodeId: String,
     context: Context,
-    private val repository: AnimeWatchRepository = AnimeWatchRepository(context.applicationContext),
+    private val repository: AnimeWatchRepository,
+    private val watchStateRepository: WatchStateRepository,
+    private val offlineDownloadRepository: OfflineDownloadRepository,
 ) : ViewModel() {
     private val titleId = sourceId.substringBefore(':')
-    private val watchStateRepository = WatchStateRepository(context.applicationContext)
-    private val offlineDownloadRepository = OfflineDownloadRepository(context = context.applicationContext)
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
     private val _uiState = MutableStateFlow(
@@ -80,7 +81,6 @@ class PlayerViewModel(
                         episodeId = state.currentEpisodeId,
                         forceRefresh = forceRefresh,
                         excludedStreamUrls = excludedStreamUrls,
-                        preferredProviderId = state.selectedProviderId,
                         preferredPlayerName = state.selectedPlayerName,
                         preferredQuality = state.selectedQualityLabel,
                     )
@@ -171,7 +171,6 @@ class PlayerViewModel(
                 repository.getPlaybackSettingsOptions(
                     sourceId = state.currentSourceId,
                     episodeId = state.currentEpisodeId,
-                    preferredProviderId = state.selectedProviderId,
                 )
             }
             val updatedState = _uiState.value
@@ -353,10 +352,14 @@ class PlayerViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return PlayerViewModel(
                 sourceId = sourceId,
                 episodeId = episodeId,
                 context = context,
+                repository = dependencies.animeWatchRepository(),
+                watchStateRepository = dependencies.watchStateRepository(),
+                offlineDownloadRepository = dependencies.offlineDownloadRepository(),
             ) as T
         }
     }

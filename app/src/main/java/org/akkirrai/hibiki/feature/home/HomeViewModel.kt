@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.log.PerfLogger
@@ -365,9 +366,10 @@ class HomeViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return HomeViewModel(
-                repository = HomeRepository(context = context),
-                accountRepository = YummyAccountRepository(context = context.applicationContext),
+                repository = dependencies.homeRepository(),
+                accountRepository = dependencies.accountRepository(),
                 context = context.applicationContext,
             ) as T
         }

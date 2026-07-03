@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 
@@ -161,8 +162,9 @@ class SearchViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val dependencies = context.applicationContext.hibikiDependencies()
             return SearchViewModel(
-                repository = AnimeSearchRepository(context = context.applicationContext),
+                repository = dependencies.animeSearchRepository(),
                 context = context.applicationContext,
             ) as T
         }
