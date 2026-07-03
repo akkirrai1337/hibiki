@@ -199,6 +199,7 @@
     <string name="trending_filter_ona">ONA</string>
 
     <string name="yummy_account_title">Profile</string>
+    <string name="yummy_account_auth_title">Sign in</string>
     <string name="yummy_account_subtitle">YummyAnime account for sync</string>
     <string name="yummy_account_auth_subtitle">Sign in to your YummyAnime account</string>
     <string name="yummy_account_login_error">Failed to sign in to YummyAnime</string>

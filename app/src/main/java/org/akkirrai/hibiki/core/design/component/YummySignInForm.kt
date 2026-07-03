@@ -1,17 +1,19 @@
 package org.akkirrai.hibiki.core.design.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -44,60 +47,101 @@ fun YummySignInForm(
     var localError by remember { mutableStateOf<String?>(null) }
     val loginRequiredMessage = stringResource(R.string.yummy_account_login_required)
 
-    Surface(
+    Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        modifier = Modifier.size(48.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.yummy_account_sign_in_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+                SignInErrorMessage(message = message)
             }
             localError?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                SignInErrorMessage(message = message)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = loginValue,
+                    onValueChange = {
+                        loginValue = it
+                        localError = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = {
+                        Text(text = stringResource(R.string.yummy_account_login_label))
+                    },
+                    placeholder = {
+                        Text(text = stringResource(R.string.yummy_account_login_label))
+                    },
+                    enabled = !busy,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = yummySignInTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = secretValue,
+                    onValueChange = {
+                        secretValue = it
+                        localError = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = {
+                        Text(text = stringResource(R.string.yummy_account_password_label))
+                    },
+                    placeholder = {
+                        Text(text = stringResource(R.string.yummy_account_password_label))
+                    },
+                    enabled = !busy,
+                    visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = yummySignInTextFieldColors(),
                 )
             }
-            OutlinedTextField(
-                value = loginValue,
-                onValueChange = {
-                    loginValue = it
-                    localError = null
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = {
-                    Text(text = stringResource(R.string.yummy_account_login_label))
-                },
-                enabled = !busy,
-                shape = RoundedCornerShape(14.dp),
-                colors = yummySignInTextFieldColors(),
-            )
-            OutlinedTextField(
-                value = secretValue,
-                onValueChange = {
-                    secretValue = it
-                    localError = null
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = {
-                    Text(text = stringResource(R.string.yummy_account_password_label))
-                },
-                enabled = !busy,
-                visualTransformation = PasswordVisualTransformation(),
-                shape = RoundedCornerShape(14.dp),
-                colors = yummySignInTextFieldColors(),
-            )
+
             Button(
                 onClick = {
                     val normalizedLogin = loginValue.trim()
@@ -109,8 +153,8 @@ fun YummySignInForm(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy,
-                shape = RoundedCornerShape(16.dp),
-                contentPadding = PaddingValues(vertical = 14.dp),
+                shape = RoundedCornerShape(18.dp),
+                contentPadding = PaddingValues(vertical = 15.dp),
             ) {
                 if (busy) {
                     CircularProgressIndicator(
@@ -118,29 +162,30 @@ fun YummySignInForm(
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(stringResource(R.string.action_sign_in))
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = stringResource(R.string.yummy_account_password_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = stringResource(R.string.action_sign_in),
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SignInErrorMessage(message: String) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.72f),
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
     }
 }
 

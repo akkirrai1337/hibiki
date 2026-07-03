@@ -201,6 +201,7 @@
     <string name="trending_filter_ona">ONA</string>
 
     <string name="yummy_account_title">Профиль</string>
+    <string name="yummy_account_auth_title">Вход</string>
     <string name="yummy_account_subtitle">Аккаунт YummyAnime для синхронизации</string>
     <string name="yummy_account_auth_subtitle">Войти в аккаунт YummyAnime</string>
     <string name="yummy_account_login_error">Не удалось войти в YummyAnime</string>

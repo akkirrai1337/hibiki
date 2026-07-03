@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -99,9 +100,10 @@ fun YummyAccountScreen(
         }
 
         AppFloatingHeader(
-            title = when (page) {
-                AccountPage.Profile -> stringResource(R.string.yummy_account_title)
-                AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
+            title = when {
+                page == AccountPage.Settings -> stringResource(R.string.yummy_account_settings_title)
+                state is YummyAccountScreenState.SignedIn -> stringResource(R.string.yummy_account_title)
+                else -> stringResource(R.string.yummy_account_auth_title)
             },
             onBackClick = {
                 if (page == AccountPage.Settings) {
@@ -193,30 +195,16 @@ private fun SignedOutScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(paddingValues)
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = UiDimens.ScreenPadding)
+            .wrapContentHeight(align = Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = stringResource(R.string.yummy_account_auth_subtitle),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.yummy_account_sign_in_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         YummySignInForm(
             busy = busy,
             errorMessage = errorMessage,
             onSubmit = onSubmit,
         )
-        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
