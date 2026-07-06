@@ -207,6 +207,8 @@
     <string name="yummy_account_sign_in_title">Sign in to YummyAnime</string>
     <string name="yummy_account_linked_description">Your local Hibiki profile remains primary. YummyAnime is used only as a linked account.</string>
     <string name="yummy_account_sign_in_hint">Password is not stored. Hibiki keeps only the session token.</string>
+    <string name="yummy_account_sign_in_subtitle">Synchronisation of lists, favourites and watch history</string>
+    <string name="yummy_account_sign_in_footer">Data is used only for signing into YummyAnime</string>
     <string name="yummy_account_login_label">Login / email</string>
     <string name="yummy_account_password_label">Password</string>
     <string name="yummy_account_login_required">Enter login and password</string>

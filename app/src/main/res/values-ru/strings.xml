@@ -209,6 +209,8 @@
     <string name="yummy_account_sign_in_title">Войти в YummyAnime</string>
     <string name="yummy_account_linked_description">Локальный профиль Hibiki остаётся основным. YummyAnime используется только как привязанный аккаунт.</string>
     <string name="yummy_account_sign_in_hint">Пароль не сохраняется. Hibiki хранит только токен сессии.</string>
+    <string name="yummy_account_sign_in_subtitle">Синхронизация списков, избранного и истории просмотра</string>
+    <string name="yummy_account_sign_in_footer">Данные используются только для входа в YummyAnime</string>
     <string name="yummy_account_login_label">Логин / email</string>
     <string name="yummy_account_password_label">Пароль</string>
     <string name="yummy_account_login_required">Введите логин и пароль</string>

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,7 @@ import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
 import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
 import org.akkirrai.hibiki.core.design.component.YummySignInForm
@@ -73,7 +75,7 @@ fun YummyAccountScreen(
             YummyAccountScreenState.SignedOut -> SignedOutScreen(
                 busy = uiState.busy,
                 errorMessage = null,
-                paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
+                paddingValues = PaddingValues(0.dp),
                 onSubmit = viewModel::submitCredentials,
                 onInputChanged = viewModel::clearSignInError,
             )
@@ -81,7 +83,7 @@ fun YummyAccountScreen(
             is YummyAccountScreenState.Error -> SignedOutScreen(
                 busy = uiState.busy,
                 errorMessage = current.message,
-                paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
+                paddingValues = PaddingValues(0.dp),
                 onSubmit = viewModel::submitCredentials,
                 onInputChanged = viewModel::clearSignInError,
             )
@@ -96,31 +98,37 @@ fun YummyAccountScreen(
             )
         }
 
-        AppFloatingHeader(
-            title = when (state) {
-                is YummyAccountScreenState.SignedIn -> stringResource(R.string.yummy_account_title)
-                else -> stringResource(R.string.yummy_account_auth_title)
-            },
-            onBackClick = onBackClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth(),
-            actions = if (state is YummyAccountScreenState.SignedIn) {
-                {
-                    NotificationActionIcon(
-                        notificationCount = notificationCount,
-                        onClick = {},
-                    )
-                    AppFloatingIconButton(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = stringResource(R.string.yummy_account_settings_title),
-                        onClick = onSettingsClick,
-                    )
-                }
-            } else {
-                null
-            },
-        )
+        when (state) {
+            is YummyAccountScreenState.SignedIn -> {
+                AppFloatingHeader(
+                    title = stringResource(R.string.yummy_account_title),
+                    onBackClick = onBackClick,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth(),
+                    actions = {
+                        NotificationActionIcon(
+                            notificationCount = notificationCount,
+                            onClick = {},
+                        )
+                        AppFloatingIconButton(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.yummy_account_settings_title),
+                            onClick = onSettingsClick,
+                        )
+                    },
+                )
+            }
+            else -> {
+                AppFloatingBackButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = UiDimens.ScreenPadding, top = 14.dp)
+                        .statusBarsPadding(),
+                )
+            }
+        }
     }
 }
 
@@ -245,8 +253,9 @@ private fun SignedOutScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
-            .padding(horizontal = UiDimens.ScreenPadding)
-            .wrapContentHeight(align = Alignment.CenterVertically),
+            .padding(horizontal = 24.dp)
+            .wrapContentHeight(align = Alignment.CenterVertically)
+            .padding(bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         YummySignInForm(
