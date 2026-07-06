@@ -200,6 +200,10 @@ fun PlayerScreen(
     var handledEndedEpisodeId by remember { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     var hiddenSkipSegmentKey by remember { mutableStateOf<String?>(null) }
+    var lastDoubleTapAtMs by remember { mutableLongStateOf(0L) }
+    var lastDoubleTapDirection by remember { mutableIntStateOf(0) }
+    var accumulatedDoubleTapSteps by remember { mutableIntStateOf(0) }
+    var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context)
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
@@ -273,7 +277,51 @@ fun PlayerScreen(
         )
     }
 
+    fun resetAccumulatedDoubleTapSeek() {
+        lastDoubleTapAtMs = 0L
+        lastDoubleTapDirection = 0
+        accumulatedDoubleTapSteps = 0
+        accumulatedDoubleTapBasePositionMs = 0L
+    }
+
+    fun performAccumulatedDoubleTapSeek(direction: Int, eventTimeMs: Long) {
+        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val currentBasePositionMs = when {
+            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
+            positionMs > 0L -> positionMs
+            else -> sliderPositionMs.coerceAtLeast(0L)
+        }
+        val isAccumulating =
+            direction == lastDoubleTapDirection &&
+                accumulatedDoubleTapSteps > 0 &&
+                eventTimeMs - lastDoubleTapAtMs <= DOUBLE_TAP_ACCUMULATION_WINDOW_MS
+        val nextSteps = if (isAccumulating) accumulatedDoubleTapSteps + 1 else 1
+        val basePositionMs = if (isAccumulating) {
+            accumulatedDoubleTapBasePositionMs
+        } else {
+            currentBasePositionMs
+        }
+        val deltaMs = SEEK_INCREMENT_MS * nextSteps
+        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val targetPositionMs = if (direction < 0) {
+            (basePositionMs - deltaMs).coerceAtLeast(0L)
+        } else if (safeDurationMs > 0L) {
+            (basePositionMs + deltaMs).coerceAtMost(safeDurationMs)
+        } else {
+            basePositionMs + deltaMs
+        }
+
+        exoPlayer.seekTo(targetPositionMs)
+        positionMs = targetPositionMs
+        sliderPositionMs = targetPositionMs
+        lastDoubleTapAtMs = eventTimeMs
+        lastDoubleTapDirection = direction
+        accumulatedDoubleTapSteps = nextSteps
+        accumulatedDoubleTapBasePositionMs = basePositionMs
+    }
+
     fun skipToSegmentEnd(segment: PlaybackSegment) {
+        resetAccumulatedDoubleTapSeek()
         keepControlsVisible()
         exoPlayer.seekTo(segment.endMs)
         positionMs = segment.endMs
@@ -284,6 +332,7 @@ fun PlayerScreen(
         {
             if (isClosing) return@remember
             isClosing = true
+            resetAccumulatedDoubleTapSeek()
             controlsVisible = false
             playlistVisible = false
             settingsVisible = false
@@ -633,6 +682,7 @@ fun PlayerScreen(
                         } else if (!controlsLocked && gestureSeekStartedWithControlsVisible) {
                             keepControlsVisible()
                         }
+                        resetAccumulatedDoubleTapSeek()
                         exoPlayer.seekTo(gestureSeekPreviewMs)
                         positionMs = gestureSeekPreviewMs
                         sliderPositionMs = gestureSeekPreviewMs
@@ -666,12 +716,12 @@ fun PlayerScreen(
                         } else if (controlsVisible) {
                             keepControlsVisible()
                         }
-                        if (tapOffset.x < size.width / 2f) {
-                            exoPlayer.seekBack()
-                        } else {
-                            exoPlayer.seekForward()
-                        }
+                        performAccumulatedDoubleTapSeek(
+                            direction = if (tapOffset.x < size.width / 2f) -1 else 1,
+                            eventTimeMs = secondDown.uptimeMillis,
+                        )
                     } else {
+                        resetAccumulatedDoubleTapSeek()
                         if (!isInGestureArea(upPosition.y, size.height)) return@awaitEachGesture
                         if (controlsLocked) {
                             unlockButtonVisible = !unlockButtonVisible
@@ -795,11 +845,13 @@ fun PlayerScreen(
                         },
                         onPreviousEpisode = {
                             keepControlsVisible()
+                            resetAccumulatedDoubleTapSeek()
                             saveCurrentPlaybackProgress()
                             viewModel.playPreviousEpisode()
                         },
                         onNextEpisode = {
                             keepControlsVisible()
+                            resetAccumulatedDoubleTapSeek()
                             saveCurrentPlaybackProgress()
                             viewModel.playNextEpisode()
                         },
@@ -817,6 +869,7 @@ fun PlayerScreen(
                     },
                     onSliderValueChangeFinished = {
                         keepControlsVisible()
+                        resetAccumulatedDoubleTapSeek()
                         exoPlayer.seekTo(sliderPositionMs)
                         positionMs = sliderPositionMs
                         isSeeking = false
@@ -929,6 +982,7 @@ fun PlayerScreen(
                     onDismiss = dismissPanel,
                     onEpisodeClick = { episodeId ->
                         dismissPanel()
+                        resetAccumulatedDoubleTapSeek()
                         saveCurrentPlaybackProgress()
                         viewModel.selectEpisode(episodeId)
                     }
@@ -974,6 +1028,7 @@ fun PlayerScreen(
                     },
                     onSelectVoiceover = {
                         keepControlsVisible()
+                        resetAccumulatedDoubleTapSeek()
                         saveCurrentPlaybackProgress()
                         viewModel.selectVoiceover(it)
                     },
@@ -2171,6 +2226,7 @@ private fun buildSkipSegmentKey(
 
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 260L
+private const val DOUBLE_TAP_ACCUMULATION_WINDOW_MS = 700L
 private const val MIN_BUFFER_MS = 30_000
 private const val MAX_BUFFER_MS = 90_000
 private const val BUFFER_FOR_PLAYBACK_MS = 1_500
