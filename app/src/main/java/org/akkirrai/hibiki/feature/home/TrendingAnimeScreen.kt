@@ -17,20 +17,24 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -52,7 +56,6 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
-import org.akkirrai.hibiki.core.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.PosterCard
 import org.akkirrai.hibiki.core.model.Anime
@@ -68,6 +71,22 @@ fun TrendingAnimeScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val gridState = rememberLazyGridState()
+
+    LaunchedEffect(gridState) {
+        snapshotFlow {
+            val layoutInfo = gridState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val isNearEnd = lastVisibleItem >= totalItems - TRENDING_SCROLL_THRESHOLD
+            val canTrigger = !state.isLoading && !state.isLoadingMore && state.canLoadMore && state.loadMoreError == null
+            isNearEnd && canTrigger
+        }.collect { shouldLoadMore ->
+            if (shouldLoadMore) {
+                viewModel.loadMore()
+            }
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -87,6 +106,7 @@ fun TrendingAnimeScreen(
 
             else -> {
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Adaptive(minSize = 118.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
@@ -107,19 +127,54 @@ fun TrendingAnimeScreen(
                         )
                     }
 
-                    if (state.canLoadMore || state.isLoadingMore || state.loadMoreError != null) {
+                    if (state.isLoadingMore) {
                         item(
                             span = { GridItemSpan(maxLineSpan) },
-                            key = "trending_load_more",
+                            key = "trending_loading_more",
                         ) {
-                            AppLoadMoreBlock(
-                                label = stringResource(R.string.action_more),
-                                loadingLabel = stringResource(R.string.state_loading),
-                                isLoading = state.isLoadingMore,
-                                errorMessage = state.loadMoreError,
-                                onClick = viewModel::loadMore,
-                                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.loadMoreError != null) {
+                        item(
+                            span = { GridItemSpan(maxLineSpan) },
+                            key = "trending_load_more_error",
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.loadMore() }
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.WarningAmber,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                    Text(
+                                        text = state.loadMoreError.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -349,3 +404,5 @@ private fun buildTrendingMeta(anime: Anime): String {
         separator = " · ",
     )
 }
+
+private const val TRENDING_SCROLL_THRESHOLD = 3

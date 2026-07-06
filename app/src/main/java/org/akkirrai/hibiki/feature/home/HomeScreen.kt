@@ -623,7 +623,8 @@ private fun FeaturedAnimeCard(
                         )
                     ),
                     color = Color.White,
-                    baseMaxLines = 2,
+                    baseMaxLines = 3,
+                    extraLongTitleLines = 0,
                 )
 
                 val meta = buildHomeMeta(

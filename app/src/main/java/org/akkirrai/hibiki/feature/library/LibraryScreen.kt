@@ -535,7 +535,7 @@ private fun LibraryAnimeCard(
                 .fillMaxWidth()
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             AnimePoster(
                 anime = anime,
@@ -554,7 +554,8 @@ private fun LibraryAnimeCard(
                         fontWeight = FontWeight.SemiBold,
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
-                    baseMaxLines = 2,
+                    baseMaxLines = 3,
+                    extraLongTitleLines = 1,
                 )
 
                 val meta = anime.buildLibraryMeta()
