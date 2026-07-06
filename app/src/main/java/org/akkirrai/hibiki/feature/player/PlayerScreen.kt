@@ -552,6 +552,7 @@ fun PlayerScreen(
                     var lastPosition = firstDown.position
                     var upPosition = firstDown.position
                     var handledAsSeek = false
+                    var holdSpeedActive = false
                     val canSeekByGesture = isInGestureArea(firstDown.position.y, size.height) && durationMs > 0L
 
                     gestureSeekInProgress = false
@@ -578,6 +579,25 @@ fun PlayerScreen(
                         val totalDragY = change.position.y - firstDown.position.y
                         val absoluteDragX = kotlin.math.abs(totalDragX)
                         val absoluteDragY = kotlin.math.abs(totalDragY)
+                        val movedTooFarForHold =
+                            absoluteDragX >= seekGestureTouchSlopPx ||
+                                absoluteDragY >= seekGestureTouchSlopPx
+
+                        if (
+                            !holdSpeedActive &&
+                            !controlsLocked &&
+                            !handledAsSeek &&
+                            canSeekByGesture &&
+                            !movedTooFarForHold &&
+                            change.uptimeMillis - firstDown.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
+                        ) {
+                            holdSpeedActive = true
+                            applyPlaybackSpeed(2f)
+                            continue
+                        }
+
+                        if (holdSpeedActive) continue
+
                         val isClearHorizontalSeek =
                             absoluteDragX >= seekGestureTouchSlopPx &&
                                 absoluteDragX > absoluteDragY * SEEK_GESTURE_HORIZONTAL_DOMINANCE
@@ -629,6 +649,11 @@ fun PlayerScreen(
                     gestureSeekStartedWithControlsVisible = false
                     gestureSeekDeltaMs = 0L
                     gestureSeekDragPx = 0f
+
+                    if (holdSpeedActive) {
+                        applyPlaybackSpeed(playbackSpeed)
+                        return@awaitEachGesture
+                    }
 
                     val secondDown = withTimeoutOrNull(DOUBLE_TAP_TIMEOUT_MS) {
                         awaitFirstDown(requireUnconsumed = true)
