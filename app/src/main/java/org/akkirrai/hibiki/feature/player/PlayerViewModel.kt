@@ -265,7 +265,8 @@ class PlayerViewModel(
         positionMs: Long,
         durationMs: Long,
     ) {
-        if (durationMs <= 0L) {
+        val safePositionMs = positionMs.coerceAtLeast(0L)
+        if (durationMs <= 0L || safePositionMs <= 0L) {
             return
         }
         val state = _uiState.value
@@ -286,7 +287,7 @@ class PlayerViewModel(
             voiceoverId = state.currentSourceId,
             sourceTitle = playback.sourceTitle,
             quality = playback.qualityLabel,
-            positionMs = positionMs,
+            positionMs = safePositionMs,
             durationMs = durationMs,
         )
     }

@@ -100,6 +100,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -151,6 +154,7 @@ fun PlayerScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val density = LocalDensity.current
     val view = LocalView.current
     val viewConfiguration = LocalViewConfiguration.current
@@ -256,9 +260,16 @@ fun PlayerScreen(
     }
 
     fun saveCurrentPlaybackProgress() {
+        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val safePositionMs = when {
+            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
+            positionMs > 0L -> positionMs
+            else -> sliderPositionMs.coerceAtLeast(0L)
+        }
         viewModel.savePlaybackProgress(
-            positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+            positionMs = safePositionMs,
+            durationMs = safeDurationMs,
         )
     }
 
@@ -353,6 +364,18 @@ fun PlayerScreen(
             )
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, exoPlayer, durationMs, positionMs, sliderPositionMs) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                saveCurrentPlaybackProgress()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
