@@ -1,12 +1,17 @@
 package org.akkirrai.hibiki
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -35,6 +40,19 @@ class MainActivity : ComponentActivity() {
     }
     private var profileWarmupJob: Job? = null
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { _: Boolean -> }
+
+    private fun requestNotificationPermissionOnFirstLaunch() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        val prefs = getPreferences(Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_NOTIFICATIONS_ASKED, false)) return
+        prefs.edit().putBoolean(KEY_NOTIFICATIONS_ASKED, true).apply()
+        requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
@@ -57,6 +75,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        requestNotificationPermissionOnFirstLaunch()
     }
 
     override fun onStart() {
@@ -73,6 +93,10 @@ class MainActivity : ComponentActivity() {
         profileWarmupJob?.cancel()
         accountRepository.close()
         super.onDestroy()
+    }
+
+    private companion object {
+        private const val KEY_NOTIFICATIONS_ASKED = "notifications_permission_asked"
     }
 }
 
