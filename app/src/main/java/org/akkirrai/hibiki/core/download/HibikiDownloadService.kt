@@ -29,20 +29,43 @@ class HibikiDownloadService : DownloadService(
         downloads: MutableList<Download>,
         notMetRequirements: Int,
     ): Notification {
-        val activeCount = downloads.count { it.state == Download.STATE_DOWNLOADING || it.state == Download.STATE_QUEUED }
+        val activeDownload = downloads.firstOrNull { it.state == Download.STATE_DOWNLOADING }
+        val activeQueuedCount = downloads.count {
+            it.state == Download.STATE_DOWNLOADING || it.state == Download.STATE_QUEUED
+        }
+
+        val titleText: String
+        val contentText: String
+        val isOngoing: Boolean
+
+        if (activeDownload != null) {
+            val meta = parseDownloadNotificationMeta(activeDownload.request.data)
+            val (sessionCompleted, sessionTotal) = OfflineDownloadQueue.getNotificationProgress(this)
+
+            titleText = meta?.displayTitle ?: getString(R.string.download_notification_channel_name)
+            contentText = getString(
+                R.string.download_notification_progress,
+                sessionCompleted,
+                sessionTotal,
+            )
+            isOngoing = true
+        } else if (activeQueuedCount > 0) {
+            titleText = getString(R.string.download_notification_channel_name)
+            contentText = getString(R.string.download_notification_active, activeQueuedCount)
+            isOngoing = true
+        } else {
+            titleText = getString(R.string.download_notification_channel_name)
+            contentText = getString(R.string.download_notification_waiting)
+            isOngoing = false
+        }
+
         return NotificationCompat.Builder(this, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.download_notification_channel_name))
-            .setContentText(
-                if (activeCount > 0) {
-                    getString(R.string.download_notification_active, activeCount)
-                } else {
-                    getString(R.string.download_notification_waiting)
-                }
-            )
-            .setOngoing(activeCount > 0)
+            .setContentTitle(titleText)
+            .setContentText(contentText)
+            .setOngoing(isOngoing)
             .setOnlyAlertOnce(true)
-            .setProgress(0, 0, activeCount > 0)
+            .setProgress(0, 0, activeQueuedCount > 0 || activeDownload != null)
             .build()
     }
 

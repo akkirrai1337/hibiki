@@ -1666,7 +1666,7 @@ private fun RelatedAnimeSheet(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = "$subtitle • $countLabel",
+                            text = countLabel,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,

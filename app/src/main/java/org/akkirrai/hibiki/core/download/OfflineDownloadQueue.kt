@@ -28,6 +28,9 @@ object OfflineDownloadQueue {
     private const val QUEUE_KEY = "pending_queue"
     private const val STORED_EPISODES_KEY = "stored_episodes"
     private const val FAILED_EPISODES_KEY = "failed_episodes"
+    private const val SESSION_TOTAL_KEY = "session_total"
+    private const val SESSION_COMPLETED_KEY = "session_completed"
+    private const val SESSION_COMPLETED_IDS_KEY = "session_completed_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
 
@@ -59,8 +62,14 @@ object OfflineDownloadQueue {
                         download: Download,
                         finalException: Exception?,
                     ) {
+                        if (download.state == Download.STATE_COMPLETED) {
+                            incrementSessionCompleted(context.applicationContext, download.request.id)
+                        }
                         if (download.state == Download.STATE_COMPLETED || download.state == Download.STATE_FAILED) {
                             drain(context.applicationContext, downloadManager)
+                        }
+                        if (shouldResetSessionProgress(context.applicationContext, downloadManager)) {
+                            resetSessionProgress(context.applicationContext)
                         }
                     }
 
@@ -70,6 +79,9 @@ object OfflineDownloadQueue {
 
                     override fun onIdle(downloadManager: DownloadManager) {
                         drain(context.applicationContext, downloadManager)
+                        if (shouldResetSessionProgress(context.applicationContext, downloadManager)) {
+                            resetSessionProgress(context.applicationContext)
+                        }
                     }
                 }
             )
@@ -104,6 +116,7 @@ object OfflineDownloadQueue {
         clearFailedEntries(appContext, entries.map { it.downloadId }.toSet())
         savePendingEntries(appContext, pendingEntries(appContext) + entries)
         saveStoredEntries(appContext, mergeStoredEntries(storedEntries(appContext), entries))
+        addToSessionTotal(appContext, entries.size)
         val manager = OfflineMediaCache.getDownloadManager(appContext)
         install(appContext, manager)
         drain(appContext, manager)
@@ -453,6 +466,7 @@ object OfflineDownloadQueue {
             .setMimeType(streamType.toMimeType())
             .setData(
                 JSONObject()
+                    .put("animeTitle", this.animeTitle)
                     .put("sourceTitle", source.title)
                     .put("episodeId", episode.id)
                     .put("episodeNumber", episode.number)
@@ -539,6 +553,51 @@ object OfflineDownloadQueue {
     private fun playbackKey(sourceId: String, episodeId: String): String =
         "offline_playback:${downloadId(sourceId, episodeId)}"
 
+    fun getPendingCount(context: Context): Int = pendingEntries(context).size
+
+    fun getTotalQueuedCount(context: Context): Int = storedEntries(context).size
+
+    fun getNotificationProgress(context: Context): Pair<Int, Int> {
+        val total = prefs(context).getInt(SESSION_TOTAL_KEY, 0)
+        val completed = prefs(context).getInt(SESSION_COMPLETED_KEY, 0)
+        return Pair(completed, total.coerceAtLeast(completed))
+    }
+
+    private fun addToSessionTotal(context: Context, addition: Int) {
+        val current = prefs(context).getInt(SESSION_TOTAL_KEY, 0)
+        prefs(context).edit().putInt(SESSION_TOTAL_KEY, current + addition).apply()
+    }
+
+    private fun incrementSessionCompleted(context: Context, downloadId: String) {
+        val prefs = prefs(context)
+        val completedIds = prefs.getStringSet(SESSION_COMPLETED_IDS_KEY, emptySet()) ?: emptySet()
+        if (downloadId in completedIds) return
+
+        val currentCompleted = prefs.getInt(SESSION_COMPLETED_KEY, 0)
+
+        prefs.edit()
+            .putStringSet(SESSION_COMPLETED_IDS_KEY, completedIds + downloadId)
+            .putInt(SESSION_COMPLETED_KEY, currentCompleted + 1)
+            .apply()
+    }
+
+    private fun resetSessionProgress(context: Context) {
+        prefs(context).edit()
+            .putInt(SESSION_TOTAL_KEY, 0)
+            .putInt(SESSION_COMPLETED_KEY, 0)
+            .putStringSet(SESSION_COMPLETED_IDS_KEY, emptySet())
+            .apply()
+    }
+
+    private fun shouldResetSessionProgress(context: Context, manager: DownloadManager): Boolean {
+        if (pendingEntries(context).isNotEmpty()) return false
+        return manager.currentDownloads.none { download ->
+            download.state == Download.STATE_DOWNLOADING ||
+            download.state == Download.STATE_QUEUED ||
+            download.state == Download.STATE_RESTARTING
+        }
+    }
+
     private fun downloadId(sourceId: String, episodeId: String): String =
         "$sourceId:$episodeId"
 
@@ -614,4 +673,28 @@ sealed interface OfflineEpisodeDownloadState {
     data object Paused : OfflineEpisodeDownloadState
     data object Completed : OfflineEpisodeDownloadState
     data object Failed : OfflineEpisodeDownloadState
+}
+
+data class DownloadNotificationMeta(
+    val animeTitle: String?,
+    val sourceTitle: String,
+    val episodeId: String,
+    val episodeNumber: Double,
+    val episodeTitle: String?,
+) {
+    val displayTitle: String
+        get() = animeTitle?.takeIf(String::isNotBlank) ?: sourceTitle
+}
+
+fun parseDownloadNotificationMeta(data: ByteArray): DownloadNotificationMeta? {
+    return runCatching {
+        val json = org.json.JSONObject(String(data, Charsets.UTF_8))
+        DownloadNotificationMeta(
+            animeTitle = json.optString("animeTitle").ifBlank { null },
+            sourceTitle = json.optString("sourceTitle").ifBlank { "Озвучка" },
+            episodeId = json.optString("episodeId").orEmpty(),
+            episodeNumber = json.optDouble("episodeNumber", 0.0),
+            episodeTitle = json.optString("episodeTitle").ifBlank { null },
+        )
+    }.getOrNull()
 }
