@@ -120,6 +120,7 @@ import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
+import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterCard
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
@@ -611,7 +612,7 @@ private fun FeaturedAnimeCard(
                     color = Color.White
                 )
 
-                Text(
+                AnimeTitleText(
                     text = anime.title,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.SemiBold,
@@ -622,8 +623,7 @@ private fun FeaturedAnimeCard(
                         )
                     ),
                     color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    baseMaxLines = 2,
                 )
 
                 val meta = buildHomeMeta(
@@ -720,13 +720,13 @@ private fun ContinueWatchingCard(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
+                        AnimeTitleText(
                             text = anime.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            baseMaxLines = 2,
                         )
 
                         val meta = buildHomeMeta(

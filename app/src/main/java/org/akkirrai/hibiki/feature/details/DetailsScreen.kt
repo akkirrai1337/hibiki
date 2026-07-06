@@ -117,6 +117,7 @@ import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppSection
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.Anime
@@ -977,7 +978,7 @@ private fun TitleCluster(
             }
         }
 
-        Text(
+        AnimeTitleText(
             text = titleText,
             inlineContent = titleInlineContent,
             modifier = Modifier.fillMaxWidth(),
@@ -988,8 +989,7 @@ private fun TitleCluster(
             ),
             color = contentColor,
             textAlign = TextAlign.Start,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            baseMaxLines = 2,
         )
         if (alternativeTitles.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
@@ -1785,16 +1785,17 @@ private fun RelatedAnimeSheetRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    Text(
+                    AnimeTitleText(
                         text = anime.title,
                         modifier = Modifier.weight(1f),
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
-                        fontWeight = if (isCurrentAnime) FontWeight.SemiBold else FontWeight.Medium,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
+                            fontWeight = if (isCurrentAnime) FontWeight.SemiBold else FontWeight.Medium,
+                        ),
                         color = if (isCurrentAnime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Start,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
+                        baseMaxLines = 3,
                     )
                     if (isCurrentAnime) {
                         Surface(

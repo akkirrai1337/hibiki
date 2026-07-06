@@ -46,13 +46,12 @@ fun PosterCard(
     ) {
         PosterArtwork(anime = anime)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
+            AnimeTitleText(
                 text = anime.title,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 minLines = 1,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                baseMaxLines = 2,
             )
             if (metaText.isNotBlank()) {
                 Text(
