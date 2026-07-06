@@ -175,6 +175,8 @@ object OfflineDownloadQueue {
     ) {
         val appContext = context.applicationContext
         val id = downloadId(sourceId, episodeId)
+        val manager = OfflineMediaCache.getDownloadManager(appContext)
+        install(appContext, manager)
         savePendingEntries(
             appContext,
             pendingEntries(appContext).filterNot { it.downloadId == id },
@@ -184,12 +186,21 @@ object OfflineDownloadQueue {
             storedEntries(appContext).filterNot { it.downloadId == id },
         )
         clearFailedEntries(appContext, setOf(id))
-        DownloadService.sendRemoveDownload(
-            appContext,
-            HibikiDownloadService::class.java,
-            id,
-            false,
-        )
+        prefs(appContext).edit()
+            .remove(playbackKey(sourceId, episodeId))
+            .apply()
+        val removedDirectly = runCatching {
+            manager.removeDownload(id)
+        }.isSuccess
+        if (!removedDirectly) {
+            DownloadService.sendRemoveDownload(
+                appContext,
+                HibikiDownloadService::class.java,
+                id,
+                false,
+            )
+        }
+        drain(appContext, manager)
     }
 
     fun getOfflinePlayback(
