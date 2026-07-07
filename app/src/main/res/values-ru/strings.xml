@@ -292,9 +292,6 @@
     <string name="settings_language_russian_summary">Принудительно использовать русский интерфейс</string>
     <string name="settings_language_english">Английский</string>
     <string name="settings_language_english_summary">Принудительно использовать английский интерфейс</string>
-    <string name="settings_force_trending_slot_on_refresh">Форсировать новый трендинг при pull-to-refresh</string>
-    <string name="settings_force_trending_slot_on_refresh_enabled_summary">Обновление главной сразу переключит тренды на следующий 5-часовой слот.</string>
-    <string name="settings_force_trending_slot_on_refresh_disabled_summary">Обновление главной оставит текущий 5-часовой слот, пока он не сменится сам.</string>
     <string name="settings_parser_storage">Хранилище парсеров</string>
     <string name="settings_parser_storage_summary">Зарезервированная точка для интеграции ваших источников</string>
     <string name="settings_language_sheet_description">Выберите язык интерфейса приложения.</string>

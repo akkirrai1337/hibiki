@@ -25,7 +25,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -107,24 +106,6 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_language),
                     subtitle = languageModeLabel(preferencesState.languageMode),
                     onClick = { showLanguageSheet = true }
-                )
-
-                SettingsDivider()
-
-                SettingsSwitchItem(
-                    icon = Icons.Outlined.Refresh,
-                    title = stringResource(R.string.settings_force_trending_slot_on_refresh),
-                    subtitle = stringResource(
-                        if (preferencesState.forceAdvanceTrendingSlotOnRefresh) {
-                            R.string.settings_force_trending_slot_on_refresh_enabled_summary
-                        } else {
-                            R.string.settings_force_trending_slot_on_refresh_disabled_summary
-                        }
-                    ),
-                    checked = preferencesState.forceAdvanceTrendingSlotOnRefresh,
-                    onCheckedChange = { enabled ->
-                        appPreferences.setForceAdvanceTrendingSlotOnRefresh(enabled)
-                    }
                 )
             }
         }

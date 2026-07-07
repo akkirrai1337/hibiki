@@ -291,9 +291,6 @@
     <string name="settings_language_russian_summary">Force the app interface to Russian</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_english_summary">Force the app interface to English</string>
-    <string name="settings_force_trending_slot_on_refresh">Force new trending on pull-to-refresh</string>
-    <string name="settings_force_trending_slot_on_refresh_enabled_summary">Refreshing Home will jump to the next 5-hour trending slot immediately.</string>
-    <string name="settings_force_trending_slot_on_refresh_disabled_summary">Refreshing Home keeps the current 5-hour trending slot until it changes naturally.</string>
     <string name="settings_parser_storage">Parser storage</string>
     <string name="settings_parser_storage_summary">Reserved entry point for your source integration</string>
     <string name="settings_player">Player</string>

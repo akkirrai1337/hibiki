@@ -23,7 +23,6 @@ data class AppPreferencesState(
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
-    val forceAdvanceTrendingSlotOnRefresh: Boolean = false,
 )
 
 class AppPreferences(context: Context) {
@@ -33,8 +32,7 @@ class AppPreferences(context: Context) {
             KEY_THEME_MODE,
             KEY_LANGUAGE_MODE,
             KEY_AUTO_SKIP_SEGMENTS,
-            KEY_AUTO_PLAY_NEXT_EPISODE,
-            KEY_FORCE_ADVANCE_TRENDING_SLOT_ON_REFRESH -> {
+            KEY_AUTO_PLAY_NEXT_EPISODE -> {
                 _state.value = readState(prefs)
             }
         }
@@ -63,10 +61,6 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, enabled).apply()
     }
 
-    fun setForceAdvanceTrendingSlotOnRefresh(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_FORCE_ADVANCE_TRENDING_SLOT_ON_REFRESH, enabled).apply()
-    }
-
     fun close() {
         prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
@@ -75,7 +69,6 @@ class AppPreferences(context: Context) {
         const val PREFS_NAME = "hibiki_app_preferences"
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
-        const val KEY_FORCE_ADVANCE_TRENDING_SLOT_ON_REFRESH = "force_advance_trending_slot_on_refresh"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_LANGUAGE_MODE = "language_mode"
 
@@ -95,10 +88,6 @@ class AppPreferences(context: Context) {
                     ?: LanguageMode.SYSTEM,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
-                forceAdvanceTrendingSlotOnRefresh = prefs.getBoolean(
-                    KEY_FORCE_ADVANCE_TRENDING_SLOT_ON_REFRESH,
-                    false,
-                ),
             )
         }
     }

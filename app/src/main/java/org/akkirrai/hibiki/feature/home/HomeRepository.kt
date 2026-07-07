@@ -62,10 +62,8 @@ class HomeRepository(
         AppLogger.d(TAG, "refreshHomeState: clearing cache")
         ensureInternetConnection()
         cachedHomeContent = null
-        if (appPreferences.state.value.forceAdvanceTrendingSlotOnRefresh || currentHomeSelectionSeed == null) {
-            currentHomeSelectionSeed = Random.nextLong()
-            AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
-        }
+        currentHomeSelectionSeed = Random.nextLong()
+        AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
         return loadHomeState()
     }
 
