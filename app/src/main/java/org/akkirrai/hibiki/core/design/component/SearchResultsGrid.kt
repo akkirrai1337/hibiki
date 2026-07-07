@@ -41,7 +41,7 @@ fun LazyGridScope.animeSearchResultsContent(
         items = items,
         key = { it.id }
     ) { anime ->
-        PosterCard(
+        AnimePosterCardItem(
             anime = anime,
             metaText = metaText(anime),
             onClick = { onAnimeClick(anime) },

@@ -3,28 +3,21 @@ package org.akkirrai.hibiki
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import java.util.Locale
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.LanguageMode
+import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
+import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -37,6 +30,9 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     private val accountRepository by lazy(LazyThreadSafetyMode.NONE) {
         applicationContext.hibikiDependencies().accountRepository()
+    }
+    private val appPreferences by lazy(LazyThreadSafetyMode.NONE) {
+        AppPreferences(this)
     }
     private var profileWarmupJob: Job? = null
 
@@ -58,20 +54,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppLogger.install(applicationContext)
 
-        val appPreferences = AppPreferences(this)
-
         enableEdgeToEdge()
 
         setContent {
-            val preferences by appPreferences.state.collectAsState()
-
-            LocalizedAppContext(languageMode = preferences.languageMode) {
+            HibikiSettingsProvider(appPreferences = appPreferences) {
                 HibikiTheme(
-                    themeMode = preferences.themeMode
+                    themeMode = LocalThemeMode.current
                 ) {
-                    HibikiApp(
-                        appPreferences = appPreferences,
-                    )
+                    HibikiApp()
                 }
             }
         }
@@ -91,6 +81,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         profileWarmupJob?.cancel()
+        appPreferences.close()
         accountRepository.close()
         super.onDestroy()
     }
@@ -98,34 +89,6 @@ class MainActivity : ComponentActivity() {
     private companion object {
         private const val KEY_NOTIFICATIONS_ASKED = "notifications_permission_asked"
     }
-}
-
-@Composable
-private fun LocalizedAppContext(
-    languageMode: LanguageMode,
-    content: @Composable () -> Unit
-) {
-    val baseContext = LocalContext.current
-
-    val localizedContext = remember(baseContext, languageMode) {
-        baseContext.withLanguage(languageMode)
-    }
-
-    CompositionLocalProvider(
-        LocalContext provides localizedContext,
-        content = content
-    )
-}
-
-private fun Context.withLanguage(languageMode: LanguageMode): Context {
-    val languageTag = languageMode.tag ?: return this
-    val locale = Locale.forLanguageTag(languageTag)
-
-    val configuration = Configuration(resources.configuration)
-    configuration.setLocale(locale)
-    configuration.setLocales(LocaleList(locale))
-
-    return createConfigurationContext(configuration)
 }
 
 @Preview

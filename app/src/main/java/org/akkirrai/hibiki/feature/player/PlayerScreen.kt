@@ -50,6 +50,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PauseCircle
@@ -124,7 +126,8 @@ import kotlinx.coroutines.launch
 import java.net.URI
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
-import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.LocalAppPreferences
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
@@ -154,6 +157,8 @@ fun PlayerScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val appPreferences = LocalAppPreferences.current
+    val preferencesState = LocalAppPreferencesState.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val density = LocalDensity.current
     val view = LocalView.current
@@ -188,15 +193,8 @@ fun PlayerScreen(
     var isClosing by remember { mutableStateOf(false) }
     var attachedPlayerView by remember { mutableStateOf<PlayerView?>(null) }
     var restoreWindowUi by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val playerPreferences = remember(context) {
-        context.applicationContext.getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE)
-    }
-    var autoSkipSegments by remember {
-        mutableStateOf(playerPreferences.getBoolean(AppPreferences.KEY_AUTO_SKIP_SEGMENTS, false))
-    }
-    var autoPlayNextEpisode by remember {
-        mutableStateOf(playerPreferences.getBoolean(AppPreferences.KEY_AUTO_PLAY_NEXT_EPISODE, true))
-    }
+    val autoSkipSegments = preferencesState.autoSkipSegments
+    val autoPlayNextEpisode = preferencesState.autoPlayNextEpisode
     var handledEndedEpisodeId by remember { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     var hiddenSkipSegmentKey by remember { mutableStateOf<String?>(null) }
@@ -247,20 +245,6 @@ fun PlayerScreen(
         if (!controlsVisible) return true
         val safeHeight = height.toFloat()
         return y in gestureBlockedTopPx..(safeHeight - gestureBlockedBottomPx)
-    }
-
-    fun setAutoSkipSegments(enabled: Boolean) {
-        autoSkipSegments = enabled
-        playerPreferences.edit()
-            .putBoolean(AppPreferences.KEY_AUTO_SKIP_SEGMENTS, enabled)
-            .apply()
-    }
-
-    fun setAutoPlayNextEpisode(enabled: Boolean) {
-        autoPlayNextEpisode = enabled
-        playerPreferences.edit()
-            .putBoolean(AppPreferences.KEY_AUTO_PLAY_NEXT_EPISODE, enabled)
-            .apply()
     }
 
     fun saveCurrentPlaybackProgress() {
@@ -1046,11 +1030,11 @@ fun PlayerScreen(
                     },
                     onAutoSkipSegmentsChange = { enabled ->
                         keepControlsVisible()
-                        setAutoSkipSegments(enabled)
+                        appPreferences.setAutoSkipSegments(enabled)
                     },
                     onAutoPlayNextEpisodeChange = { enabled ->
                         keepControlsVisible()
-                        setAutoPlayNextEpisode(enabled)
+                        appPreferences.setAutoPlayNextEpisode(enabled)
                     },
                 )
             }
@@ -1470,6 +1454,80 @@ private fun PlayerSettingsSheet(
         )
     }.distinctBy { it.id }
         .sortedByDescending { value -> value.label.filter(Char::isDigit).toIntOrNull() ?: 0 }
+    val rootEntries = buildList {
+        if (voiceoverValues.size > 1) {
+            add(
+                PlayerSettingsEntryItem(
+                    id = PlayerSettingsDestination.Voiceover.name,
+                    title = stringResource(R.string.watch_player_settings_voiceover),
+                    value = voiceoverValues.firstSelectedLabelOrDefault(),
+                    onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
+                )
+            )
+        }
+        if (qualityValues.isNotEmpty()) {
+            add(
+                PlayerSettingsEntryItem(
+                    id = PlayerSettingsDestination.Quality.name,
+                    title = stringResource(R.string.watch_player_settings_quality),
+                    value = qualityValues.firstSelectedLabelOrDefault(),
+                    onClick = { onNavigate(PlayerSettingsDestination.Quality) },
+                )
+            )
+        }
+        add(
+            PlayerSettingsEntryItem(
+                id = PlayerSettingsDestination.Speed.name,
+                title = stringResource(R.string.watch_player_settings_speed),
+                value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
+                onClick = { onNavigate(PlayerSettingsDestination.Speed) },
+            )
+        )
+        add(
+            PlayerSettingsEntryItem(
+                id = "auto_skip",
+                title = stringResource(R.string.watch_player_settings_auto_skip),
+                value = if (autoSkipSegments) {
+                    stringResource(R.string.watch_player_settings_on)
+                } else {
+                    stringResource(R.string.watch_player_settings_off)
+                },
+                onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
+            )
+        )
+        add(
+            PlayerSettingsEntryItem(
+                id = "auto_play_next",
+                title = stringResource(R.string.watch_player_settings_auto_play_next),
+                value = if (autoPlayNextEpisode) {
+                    stringResource(R.string.watch_player_settings_on)
+                } else {
+                    stringResource(R.string.watch_player_settings_off)
+                },
+                onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
+            )
+        )
+        if (backendValues.isNotEmpty()) {
+            add(
+                PlayerSettingsEntryItem(
+                    id = PlayerSettingsDestination.Backend.name,
+                    title = stringResource(R.string.watch_player_settings_backend),
+                    value = backendValues.firstSelectedLabelOrDefault(),
+                    onClick = { onNavigate(PlayerSettingsDestination.Backend) },
+                )
+            )
+        }
+        if (playerValues.isNotEmpty()) {
+            add(
+                PlayerSettingsEntryItem(
+                    id = PlayerSettingsDestination.Player.name,
+                    title = stringResource(R.string.watch_player_settings_player),
+                    value = playerValues.firstSelectedLabelOrDefault(),
+                    onClick = { onNavigate(PlayerSettingsDestination.Player) },
+                )
+            )
+        }
+    }
 
     BackHandler(enabled = destination != PlayerSettingsDestination.Root) {
         onBack()
@@ -1506,62 +1564,12 @@ private fun PlayerSettingsSheet(
                 ) {
                     when (targetDestination) {
                         PlayerSettingsDestination.Root -> {
-                            if (voiceoverValues.size > 1) {
-                                item {
-                                    PlayerSettingsEntry(
-                                        title = stringResource(R.string.watch_player_settings_voiceover),
-                                        value = voiceoverValues.firstOrNull { it.selected }?.label ?: voiceoverValues.first().label,
-                                        onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
-                                    )
-                                }
-                            }
-                            if (qualityValues.isNotEmpty()) {
-                                item {
-                                    PlayerSettingsEntry(
-                                        title = stringResource(R.string.watch_player_settings_quality),
-                                        value = qualityValues.firstOrNull { it.selected }?.label ?: qualityValues.first().label,
-                                        onClick = { onNavigate(PlayerSettingsDestination.Quality) },
-                                    )
-                                }
-                            }
-                            item {
+                            items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
                                 PlayerSettingsEntry(
-                                    title = stringResource(R.string.watch_player_settings_speed),
-                                    value = speedValues.firstOrNull { it.selected }?.label ?: "1x",
-                                    onClick = { onNavigate(PlayerSettingsDestination.Speed) },
+                                    title = entry.title,
+                                    value = entry.value,
+                                    onClick = entry.onClick,
                                 )
-                            }
-                            item {
-                                PlayerSettingsEntry(
-                                    title = stringResource(R.string.watch_player_settings_auto_skip),
-                                    value = if (autoSkipSegments) stringResource(R.string.watch_player_settings_on) else stringResource(R.string.watch_player_settings_off),
-                                    onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
-                                )
-                            }
-                            item {
-                                PlayerSettingsEntry(
-                                    title = stringResource(R.string.watch_player_settings_auto_play_next),
-                                    value = if (autoPlayNextEpisode) stringResource(R.string.watch_player_settings_on) else stringResource(R.string.watch_player_settings_off),
-                                    onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
-                                )
-                            }
-                            if (backendValues.isNotEmpty()) {
-                                item {
-                                    PlayerSettingsEntry(
-                                        title = stringResource(R.string.watch_player_settings_backend),
-                                        value = backendValues.firstOrNull { it.selected }?.label ?: backendValues.first().label,
-                                        onClick = { onNavigate(PlayerSettingsDestination.Backend) },
-                                    )
-                                }
-                            }
-                            if (playerValues.isNotEmpty()) {
-                                item {
-                                    PlayerSettingsEntry(
-                                        title = stringResource(R.string.watch_player_settings_player),
-                                        value = playerValues.firstOrNull { it.selected }?.label ?: playerValues.first().label,
-                                        onClick = { onNavigate(PlayerSettingsDestination.Player) },
-                                    )
-                                }
                             }
                         }
 
@@ -1672,10 +1680,10 @@ private fun PlayerSettingsEntry(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = "›",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White.copy(alpha = 0.52f),
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.52f),
             )
         }
     }
@@ -1722,11 +1730,10 @@ private fun PlayerSettingsChoiceRow(
                 )
             }
             if (value.selected) {
-                Text(
-                    text = "✓",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = null,
+                    tint = Color.White,
                 )
             }
         }
@@ -1756,6 +1763,17 @@ private data class SelectableValue(
     val selected: Boolean,
     val onClick: () -> Unit,
 )
+
+private data class PlayerSettingsEntryItem(
+    val id: String,
+    val title: String,
+    val value: String,
+    val onClick: () -> Unit,
+)
+
+private fun List<SelectableValue>.firstSelectedLabelOrDefault(defaultLabel: String = first().label): String {
+    return firstOrNull { it.selected }?.label ?: defaultLabel
+}
 
 private enum class PlayerSettingsDestination(@param:StringRes val titleResId: Int) {
     Root(R.string.watch_player_settings_root),

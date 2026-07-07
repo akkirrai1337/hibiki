@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -73,6 +76,25 @@ fun PosterCard(
             }
         }
     }
+}
+
+@Composable
+fun AnimePosterCardItem(
+    anime: Anime,
+    metaText: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    width: Dp? = null,
+    height: Dp? = null,
+) {
+    PosterCard(
+        anime = anime,
+        metaText = metaText,
+        onClick = onClick,
+        modifier = modifier
+            .then(if (width != null) Modifier.width(width) else Modifier)
+            .then(if (height != null) Modifier.height(height) else Modifier),
+    )
 }
 
 @Composable

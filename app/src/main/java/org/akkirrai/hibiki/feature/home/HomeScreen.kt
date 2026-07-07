@@ -121,7 +121,7 @@ import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
-import org.akkirrai.hibiki.core.design.component.PosterCard
+import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.searchStateGridContent
@@ -835,16 +835,15 @@ private fun AnimeSection(
             contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding)
         ) {
             items(items, key = { it.id }) { anime ->
-                PosterCard(
+                AnimePosterCardItem(
                     anime = anime,
                     metaText = buildHomeMeta(
                         anime = anime,
                         announcementLabel = stringResource(R.string.anime_meta_announcement),
                     ),
                     onClick = { onAnimeClick(anime) },
-                    modifier = Modifier
-                        .width(118.dp)
-                        .height(HOME_SECTION_POSTER_CARD_HEIGHT)
+                    width = 118.dp,
+                    height = HOME_SECTION_POSTER_CARD_HEIGHT,
                 )
             }
         }

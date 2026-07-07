@@ -56,8 +56,8 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
+import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.PosterCard
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
 
@@ -119,11 +119,11 @@ fun TrendingAnimeScreen(
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
                     items(state.items, key = Anime::id) { anime ->
-                        PosterCard(
+                        AnimePosterCardItem(
                             anime = anime,
                             metaText = buildTrendingMeta(anime),
                             onClick = { onAnimeClick(anime) },
-                            modifier = Modifier.width(118.dp),
+                            width = 118.dp,
                         )
                     }
 

@@ -43,6 +43,7 @@ import androidx.navigation.NavType
 import androidx.navigation.NavHostController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -50,7 +51,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -70,9 +70,7 @@ import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 @Composable
-fun HibikiApp(
-    appPreferences: AppPreferences? = null,
-) {
+fun HibikiApp() {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
     val navController = rememberNavController()
@@ -122,7 +120,6 @@ fun HibikiApp(
                 navController = navController,
                 contentPadding = innerPadding,
                 topLevelBottomContentPadding = topLevelBottomContentPadding,
-                appPreferences = appPreferences,
                 showBottomBar = isTopLevelDestination,
                 currentTopLevel = currentTopLevel,
             )
@@ -136,7 +133,6 @@ private fun HibikiNavHost(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
     topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
-    appPreferences: AppPreferences? = null,
     showBottomBar: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
 ) {
@@ -197,7 +193,6 @@ private fun HibikiNavHost(
             },
         ) { backStackEntry ->
             val context = LocalContext.current
-            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
             val homeViewModel: HomeViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
                 factory = HomeViewModel.Factory(context),
@@ -229,7 +224,6 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() },
         ) {
             val context = LocalContext.current
-            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
             val homeEntry = remember(navController) {
                 navController.getBackStackEntry(TopLevelDestination.Home.route)
             }
@@ -285,33 +279,7 @@ private fun HibikiNavHost(
                 viewModel = accountViewModel,
             )
         }
-        composable(
-            route = TopLevelDestination.Library.route,
-            enterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            exitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popEnterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popExitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-        ) {
+        topLevelComposable(route = TopLevelDestination.Library.route) {
             LibraryScreen(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
@@ -324,37 +292,10 @@ private fun HibikiNavHost(
                 modifier = topLevelScreenModifier
             )
         }
-        composable(
-            route = TopLevelDestination.Settings.route,
-            enterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            exitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popEnterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popExitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-        ) {
+        topLevelComposable(route = TopLevelDestination.Settings.route) {
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
                 bottomContentPadding = topLevelBottomContentPadding,
-                appPreferences = appPreferences,
             )
         }
         composable(
@@ -442,11 +383,12 @@ private fun HibikiNavHost(
             val context = LocalContext.current
             val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
             val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
-            val animeId = backStackEntry.arguments?.getString(AnimeNavType.ID_ARG).orEmpty()
-            val downloadMode = backStackEntry.arguments?.getBoolean(AnimeNavType.DOWNLOAD_MODE_ARG) ?: false
+            val routeArgs = backStackEntry.arguments
+            val animeId = routeArgs.stringArg(AnimeNavType.ID_ARG)
+            val downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG)
             WatchSourcesScreen(
                 animeId = animeId,
-                animeTitle = backStackEntry.arguments?.getString(AnimeNavType.TITLE_ARG).orEmpty(),
+                animeTitle = routeArgs.stringArg(AnimeNavType.TITLE_ARG),
                 onBackClick = navController::navigateUp,
                 onSourceClick = { source ->
                     watchStateRepository.saveSelectedSource(
@@ -479,13 +421,14 @@ private fun HibikiNavHost(
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
+            val routeArgs = backStackEntry.arguments
             EpisodesScreen(
-                sourceId = backStackEntry.arguments?.getString(AnimeNavType.SOURCE_ID_ARG).orEmpty(),
-                sourceTitle = backStackEntry.arguments?.getString(AnimeNavType.SOURCE_TITLE_ARG).orEmpty(),
-                downloadMode = backStackEntry.arguments?.getBoolean(AnimeNavType.DOWNLOAD_MODE_ARG) ?: false,
+                sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
+                sourceTitle = routeArgs.stringArg(AnimeNavType.SOURCE_TITLE_ARG),
+                downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG),
                 onBackClick = navController::navigateUp,
                 onEpisodeClick = { episode ->
-                    val sourceId = backStackEntry.arguments?.getString(AnimeNavType.SOURCE_ID_ARG).orEmpty()
+                    val sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG)
                     navController.navigateSingleTopTo(AnimeNavType.createPlayerRoute(sourceId, episode.id))
                 },
                 modifier = screenModifier
@@ -505,9 +448,10 @@ private fun HibikiNavHost(
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
+            val routeArgs = backStackEntry.arguments
             PlayerScreen(
-                sourceId = backStackEntry.arguments?.getString(AnimeNavType.SOURCE_ID_ARG).orEmpty(),
-                episodeId = backStackEntry.arguments?.getString(AnimeNavType.EPISODE_ID_ARG).orEmpty(),
+                sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
+                episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
                 onBackClick = navController::navigateUp,
                 modifier = Modifier.fillMaxSize()
             )
@@ -654,6 +598,40 @@ private fun NavHostController.navigateSingleTopTo(route: String) {
     }
 }
 
+private fun NavGraphBuilder.topLevelComposable(
+    route: String,
+    content: @Composable () -> Unit,
+) {
+    composable(
+        route = route,
+        enterTransition = {
+            topLevelEnterTransition(
+                initialRoute = initialState.destination.route,
+                targetRoute = targetState.destination.route,
+            )
+        },
+        exitTransition = {
+            topLevelExitTransition(
+                initialRoute = initialState.destination.route,
+                targetRoute = targetState.destination.route,
+            )
+        },
+        popEnterTransition = {
+            topLevelEnterTransition(
+                initialRoute = initialState.destination.route,
+                targetRoute = targetState.destination.route,
+            )
+        },
+        popExitTransition = {
+            topLevelExitTransition(
+                initialRoute = initialState.destination.route,
+                targetRoute = targetState.destination.route,
+            )
+        },
+        content = { content() },
+    )
+}
+
 private fun NavHostController.navigateTopLevelDestination(
     currentTopLevel: TopLevelDestination,
     destination: TopLevelDestination,
@@ -671,12 +649,18 @@ private fun NavHostController.navigateTopLevelDestination(
 
 private fun animeFromArguments(arguments: android.os.Bundle?): Anime {
     return Anime(
-        id = arguments?.getString(AnimeNavType.ID_ARG).orEmpty(),
-        title = arguments?.getString(AnimeNavType.TITLE_ARG).orEmpty(),
-        subtitle = arguments?.getString(AnimeNavType.SUBTITLE_ARG).orEmpty(),
-        episodesLabel = arguments?.getString(AnimeNavType.EPISODES_ARG).orEmpty(),
-        status = arguments?.getString(AnimeNavType.STATUS_ARG).orEmpty(),
-        posterUrl = arguments?.getString(AnimeNavType.POSTER_ARG).orEmpty().ifBlank { null },
-        posterFallbackUrl = arguments?.getString(AnimeNavType.POSTER_FALLBACK_ARG).orEmpty().ifBlank { null }
+        id = arguments.stringArg(AnimeNavType.ID_ARG),
+        title = arguments.stringArg(AnimeNavType.TITLE_ARG),
+        subtitle = arguments.stringArg(AnimeNavType.SUBTITLE_ARG),
+        episodesLabel = arguments.stringArg(AnimeNavType.EPISODES_ARG),
+        status = arguments.stringArg(AnimeNavType.STATUS_ARG),
+        posterUrl = arguments.stringArg(AnimeNavType.POSTER_ARG).ifBlank { null },
+        posterFallbackUrl = arguments.stringArg(AnimeNavType.POSTER_FALLBACK_ARG).ifBlank { null }
     )
+}
+
+private fun android.os.Bundle?.stringArg(key: String): String = this?.getString(key).orEmpty()
+
+private fun android.os.Bundle?.booleanArg(key: String, defaultValue: Boolean = false): Boolean {
+    return this?.getBoolean(key) ?: defaultValue
 }

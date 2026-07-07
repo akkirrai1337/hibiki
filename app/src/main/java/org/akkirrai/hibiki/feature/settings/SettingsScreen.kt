@@ -39,7 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,9 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.pm.PackageInfoCompat
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.AppPreferencesState
 import org.akkirrai.hibiki.app.settings.LanguageMode
+import org.akkirrai.hibiki.app.settings.LocalAppPreferences
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
@@ -69,23 +68,12 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
-    appPreferences: AppPreferences? = null,
 ) {
     val context = LocalContext.current
-    val preferencesState = if (appPreferences != null) {
-        val state by appPreferences.state.collectAsState()
-        state
-    } else {
-        AppPreferencesState()
-    }
+    val appPreferences = LocalAppPreferences.current
+    val preferencesState = LocalAppPreferencesState.current
 
-    val systemDarkTheme = isSystemInDarkTheme()
-    val darkThemeEnabled = when (preferencesState.themeMode) {
-        ThemeMode.SYSTEM -> systemDarkTheme
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
-
+    var showThemeSheet by remember { mutableStateOf(false) }
     var showLanguageSheet by remember { mutableStateOf(false) }
     val appVersionText = remember(context) { appVersionLabel(context) }
     LaunchedEffect(Unit) {
@@ -105,22 +93,11 @@ fun SettingsScreen(
             SettingsGroupCard(
                 title = stringResource(R.string.settings_general)
             ) {
-                SettingsSwitchItem(
+                SettingsClickableItem(
                     icon = Icons.Outlined.DarkMode,
-                    title = stringResource(R.string.settings_dark_theme),
-                    subtitle = stringResource(
-                        if (darkThemeEnabled) {
-                            R.string.settings_theme_dark_summary
-                        } else {
-                            R.string.settings_theme_light_summary
-                        }
-                    ),
-                    checked = darkThemeEnabled,
-                    onCheckedChange = { enabled ->
-                        appPreferences?.setThemeMode(
-                            if (enabled) ThemeMode.DARK else ThemeMode.LIGHT
-                        )
-                    }
+                    title = stringResource(R.string.settings_theme),
+                    subtitle = themeModeLabel(preferencesState.themeMode),
+                    onClick = { showThemeSheet = true }
                 )
 
                 SettingsDivider()
@@ -146,7 +123,7 @@ fun SettingsScreen(
                     ),
                     checked = preferencesState.forceAdvanceTrendingSlotOnRefresh,
                     onCheckedChange = { enabled ->
-                        appPreferences?.setForceAdvanceTrendingSlotOnRefresh(enabled)
+                        appPreferences.setForceAdvanceTrendingSlotOnRefresh(enabled)
                     }
                 )
             }
@@ -168,7 +145,7 @@ fun SettingsScreen(
                     ),
                     checked = preferencesState.autoSkipSegments,
                     onCheckedChange = { enabled ->
-                        appPreferences?.setAutoSkipSegments(enabled)
+                        appPreferences.setAutoSkipSegments(enabled)
                     }
                 )
             }
@@ -200,15 +177,48 @@ fun SettingsScreen(
         }
     }
 
+    if (showThemeSheet) {
+        ThemeBottomSheet(
+            selectedMode = preferencesState.themeMode,
+            onSelect = { mode ->
+                appPreferences.setThemeMode(mode)
+                showThemeSheet = false
+            },
+            onDismiss = { showThemeSheet = false }
+        )
+    }
+
     if (showLanguageSheet) {
         LanguageBottomSheet(
             selectedMode = preferencesState.languageMode,
             onSelect = { mode ->
-                appPreferences?.setLanguageMode(mode)
+                appPreferences.setLanguageMode(mode)
                 showLanguageSheet = false
             },
             onDismiss = { showLanguageSheet = false }
         )
+    }
+}
+
+@Composable
+private fun ThemeBottomSheet(
+    selectedMode: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    SettingsOptionsBottomSheet(
+        title = stringResource(R.string.settings_theme),
+        description = stringResource(R.string.settings_theme_sheet_description),
+        onDismiss = onDismiss
+    ) {
+        ThemeMode.entries.forEach { mode ->
+            SettingsOptionRow(
+                title = themeModeLabel(mode),
+                description = themeModeDescription(mode),
+                selected = mode == selectedMode,
+                onClick = { onSelect(mode) }
+            )
+        }
     }
 }
 
@@ -536,6 +546,38 @@ private fun languageModeTexts(mode: LanguageMode): LanguageModeText {
 }
 
 private data class LanguageModeText(
+    val titleResId: Int,
+    val descriptionResId: Int,
+)
+
+@Composable
+private fun themeModeLabel(mode: ThemeMode): String {
+    return stringResource(themeModeTexts(mode).titleResId)
+}
+
+@Composable
+private fun themeModeDescription(mode: ThemeMode): String {
+    return stringResource(themeModeTexts(mode).descriptionResId)
+}
+
+private fun themeModeTexts(mode: ThemeMode): ThemeModeText {
+    return when (mode) {
+        ThemeMode.SYSTEM -> ThemeModeText(
+            titleResId = R.string.settings_theme_system,
+            descriptionResId = R.string.settings_theme_system_summary,
+        )
+        ThemeMode.LIGHT -> ThemeModeText(
+            titleResId = R.string.settings_theme_light,
+            descriptionResId = R.string.settings_theme_light_summary,
+        )
+        ThemeMode.DARK -> ThemeModeText(
+            titleResId = R.string.settings_theme_dark,
+            descriptionResId = R.string.settings_theme_dark_summary,
+        )
+    }
+}
+
+private data class ThemeModeText(
     val titleResId: Int,
     val descriptionResId: Int,
 )

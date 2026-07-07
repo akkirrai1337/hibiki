@@ -92,7 +92,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -107,6 +106,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
@@ -417,13 +417,9 @@ fun DetailsScreen(
             }
         }
 
-        AppBackButton(
+        HeroOverlayBackButton(
             onClick = onBackClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(start = UiDimens.ScreenPadding, top = 8.dp),
-            style = AppBackButtonStyle.HeroOverlay
+            modifier = Modifier.align(Alignment.TopStart),
         )
     }
 
@@ -1215,15 +1211,25 @@ private fun PosterPreviewOverlay(
             placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) }
         )
 
-        AppBackButton(
+        HeroOverlayBackButton(
             onClick = ::dismissAnimated,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(start = UiDimens.ScreenPadding, top = 8.dp),
-            style = AppBackButtonStyle.HeroOverlay,
+            modifier = Modifier.align(Alignment.TopStart),
         )
     }
+}
+
+@Composable
+private fun HeroOverlayBackButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppBackButton(
+        onClick = onClick,
+        modifier = modifier
+            .statusBarsPadding()
+            .padding(start = UiDimens.ScreenPadding, top = 8.dp),
+        style = AppBackButtonStyle.HeroOverlay,
+    )
 }
 
 @Composable

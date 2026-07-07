@@ -312,8 +312,10 @@
     <string name="details_type_special">Спешл</string>
 
     <string name="settings_general">Общие</string>
+    <string name="settings_theme">Тема</string>
     <string name="settings_dark_theme">Темная тема</string>
     <string name="settings_dark_theme_summary">Позже будет следование системе, пока оставлен ручной переключатель</string>
+    <string name="settings_theme_sheet_description">Выберите, как приложение должно применять тему.</string>
     <string name="settings_theme_system">Системная тема</string>
     <string name="settings_theme_system_summary">Автоматически использовать светлую или темную тему устройства</string>
     <string name="settings_theme_light">Светлая тема</string>

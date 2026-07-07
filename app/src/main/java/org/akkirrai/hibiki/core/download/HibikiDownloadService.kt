@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.download
 
 import android.app.Notification
+import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.offline.Download
@@ -8,6 +9,7 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.Scheduler
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 
 @UnstableApi
 class HibikiDownloadService : DownloadService(
@@ -17,6 +19,10 @@ class HibikiDownloadService : DownloadService(
     R.string.download_notification_channel_name,
     R.string.download_notification_channel_description,
 ) {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withAppPreferencesLanguage())
+    }
+
     override fun getDownloadManager(): DownloadManager {
         val manager = OfflineMediaCache.getDownloadManager(this)
         OfflineDownloadQueue.install(this, manager)

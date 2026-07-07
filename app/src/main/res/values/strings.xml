@@ -310,8 +310,10 @@
     <string name="details_type_special">Special</string>
 
     <string name="settings_general">General</string>
+    <string name="settings_theme">Theme</string>
     <string name="settings_dark_theme">Dark theme</string>
     <string name="settings_dark_theme_summary">Follow system later, manual toggle for now</string>
+    <string name="settings_theme_sheet_description">Choose how the app theme should be applied.</string>
     <string name="settings_theme_system">System theme</string>
     <string name="settings_theme_system_summary">Use the device light or dark theme automatically</string>
     <string name="settings_theme_light">Light theme</string>

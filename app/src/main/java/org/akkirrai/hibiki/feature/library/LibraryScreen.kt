@@ -317,12 +317,9 @@ private fun LibrarySearchFiltersDialog(
                         .heightIn(max = 520.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    item {
-                        SectionHeader(
-                            title = stringResource(R.string.search_filters_type),
-                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            titleColor = MaterialTheme.colorScheme.onBackground,
-                        )
+                    filterSection(
+                        titleResId = R.string.search_filters_type
+                    ) {
                         LibrarySingleChoiceOptions(
                             options = catalog.typeOptions,
                             selected = pendingFilters.type,
@@ -330,12 +327,9 @@ private fun LibrarySearchFiltersDialog(
                         )
                     }
                     item { HorizontalDivider() }
-                    item {
-                        SectionHeader(
-                            title = stringResource(R.string.search_filters_status),
-                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            titleColor = MaterialTheme.colorScheme.onBackground,
-                        )
+                    filterSection(
+                        titleResId = R.string.search_filters_status
+                    ) {
                         LibrarySingleChoiceOptions(
                             options = catalog.statusOptions,
                             selected = pendingFilters.status,
@@ -343,13 +337,9 @@ private fun LibrarySearchFiltersDialog(
                         )
                     }
                     item { HorizontalDivider() }
-                    item {
-                        SectionHeader(
-                            title = stringResource(R.string.search_filters_genres),
-                            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            titleColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    }
+                    filterSection(
+                        titleResId = R.string.search_filters_genres
+                    )
                     items(catalog.genreOptions, key = { it }) { genre ->
                         LibraryGenreFilterRow(
                             label = genre,
@@ -397,6 +387,20 @@ private fun LibrarySearchFiltersDialog(
                 }
             }
         }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.filterSection(
+    @androidx.annotation.StringRes titleResId: Int,
+    content: (@Composable () -> Unit)? = null,
+) {
+    item {
+        SectionHeader(
+            title = stringResource(titleResId),
+            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            titleColor = MaterialTheme.colorScheme.onBackground,
+        )
+        content?.invoke()
     }
 }
 
