@@ -95,6 +95,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
@@ -208,6 +209,10 @@ fun PlayerScreen(
     var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
     var pendingDoubleTapSeekJob by remember { mutableStateOf<Job?>(null) }
     var doubleTapSeekOverlayVisible by remember { mutableStateOf(false) }
+    val seekOverlayActive = gestureSeekInProgress ||
+        gestureSeekActive ||
+        isSeeking ||
+        (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0)
     val coroutineScope = rememberCoroutineScope()
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context)
@@ -867,7 +872,7 @@ fun PlayerScreen(
                 )
 
                 AnimatedVisibility(
-                    visible = !gestureSeekInProgress && !gestureSeekActive && !isSeeking,
+                    visible = !seekOverlayActive,
                     modifier = Modifier.align(Alignment.Center),
                     enter = fadeIn(animationSpec = tween(120)),
                     exit = fadeOut(animationSpec = tween(90)),
@@ -1415,6 +1420,7 @@ private fun PlayerTopOverlay(
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )

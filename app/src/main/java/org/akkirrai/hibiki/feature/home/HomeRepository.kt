@@ -34,7 +34,7 @@ class HomeRepository(
     private var cachedHomeContent: CachedHomeContent? = null
 
     @Volatile
-    private var manualTrendingRotationSlotOverride: Long? = null
+    private var currentHomeSelectionSeed: Long? = null
 
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
@@ -62,21 +62,23 @@ class HomeRepository(
         AppLogger.d(TAG, "refreshHomeState: clearing cache")
         ensureInternetConnection()
         cachedHomeContent = null
-        if (appPreferences.state.value.forceAdvanceTrendingSlotOnRefresh) {
-            manualTrendingRotationSlotOverride = effectiveTrendingRotationSlot() + 1
-            AppLogger.d(TAG, "refreshHomeState: advanced trending slot override to $manualTrendingRotationSlotOverride")
+        if (appPreferences.state.value.forceAdvanceTrendingSlotOnRefresh || currentHomeSelectionSeed == null) {
+            currentHomeSelectionSeed = Random.nextLong()
+            AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
         }
         return loadHomeState()
     }
 
     suspend fun loadHomeState(): HomeUiState {
         AppLogger.d(TAG, "loadHomeState: called")
-        val rotationSlot = effectiveTrendingRotationSlot()
+        val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
+            currentHomeSelectionSeed = it
+        }
         val languageKey = yummyLanguage()
         cachedHomeContent?.let { cached ->
-            if (cached.rotationSlot == rotationSlot && cached.languageKey == languageKey) {
+            if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
-                    "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, slot=$rotationSlot, lang=$languageKey")
+                    "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, seed=$selectionSeed, lang=$languageKey")
                 return HomeUiState(
                     featuredAnime = cached.featuredAnime,
                     continueAnime = loadContinueAnime(),
@@ -89,7 +91,7 @@ class HomeRepository(
 
         ensureInternetConnection()
 
-        val trendingOffset = trendingOffsetForSlot(rotationSlot)
+        val trendingOffset = trendingOffsetForSeed(selectionSeed)
         AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
         val catalog = yummySource.getCatalog(
             limit = HOME_TRENDING_WINDOW_SIZE,
@@ -105,18 +107,18 @@ class HomeRepository(
 
         val homeWindow = catalog.map(::toHomeAnime)
         val featuredAnime = homeWindow
-            .shuffled(Random(rotationSlot xor FEATURED_ROTATION_SEED_SALT))
+            .shuffled(Random(selectionSeed xor FEATURED_ROTATION_SEED_SALT))
             .take(FEATURED_COUNT)
         val featuredIds = featuredAnime.mapTo(mutableSetOf()) { it.id }
         val trending = homeWindow
-            .shuffled(Random(rotationSlot xor TRENDING_ROTATION_SEED_SALT))
+            .shuffled(Random(selectionSeed xor TRENDING_ROTATION_SEED_SALT))
             .filterNot { it.id in featuredIds }
             .take(HOME_SECTION_LIMIT)
         AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
         val recentlyUpdated = loadRecentlyUpdated()
         AppLogger.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
         cachedHomeContent = CachedHomeContent(
-            rotationSlot = rotationSlot,
+            selectionSeed = selectionSeed,
             languageKey = languageKey,
             featuredAnime = featuredAnime,
             trending = trending,
@@ -377,23 +379,8 @@ class HomeRepository(
         )
     }
 
-    private fun currentTrendingRotationSlot(): Long {
-        return System.currentTimeMillis() / TRENDING_ROTATION_WINDOW_MS
-    }
-
-    private fun effectiveTrendingRotationSlot(): Long {
-        val currentSlot = currentTrendingRotationSlot()
-        val manualSlot = manualTrendingRotationSlotOverride
-        if (manualSlot == null) return currentSlot
-        if (currentSlot >= manualSlot) {
-            manualTrendingRotationSlotOverride = null
-            return currentSlot
-        }
-        return manualSlot
-    }
-
-    private fun trendingOffsetForSlot(rotationSlot: Long): Int {
-        return Random(rotationSlot).nextInt(
+    private fun trendingOffsetForSeed(selectionSeed: Long): Int {
+        return Random(selectionSeed).nextInt(
             from = 0,
             until = HOME_TRENDING_MAX_OFFSET_EXCLUSIVE,
         )
@@ -405,15 +392,14 @@ class HomeRepository(
         const val HOME_SECTION_LIMIT = 12
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
-        const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 97
+        const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
         const val FEATURED_COUNT = 5
-        const val TRENDING_ROTATION_WINDOW_MS = 5 * 60 * 60 * 1000L
         const val FEATURED_ROTATION_SEED_SALT = 0x51A7L
         const val TRENDING_ROTATION_SEED_SALT = 0x7E4DL
     }
 
     private data class CachedHomeContent(
-        val rotationSlot: Long,
+        val selectionSeed: Long,
         val languageKey: String,
         val featuredAnime: List<Anime>,
         val trending: List<Anime>,
