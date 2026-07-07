@@ -683,13 +683,9 @@ private fun ContinueWatchingCard(
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        SectionHeader(
+        HomeSectionHeader(
             title = stringResource(R.string.home_continue_title),
             icon = Icons.Outlined.History,
-            titleStyle = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            titleColor = MaterialTheme.colorScheme.onBackground,
         )
 
         Card(
@@ -818,16 +814,12 @@ private fun AnimeSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SectionHeader(
+        HomeSectionHeader(
             title = title,
             modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
             actionLabel = actionLabel,
             icon = icon,
             onActionClick = onActionClick,
-            titleStyle = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            titleColor = MaterialTheme.colorScheme.onBackground,
         )
 
         LazyRow(
@@ -848,6 +840,27 @@ private fun AnimeSection(
             }
         }
     }
+}
+
+@Composable
+private fun HomeSectionHeader(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onActionClick: (() -> Unit)? = null,
+) {
+    SectionHeader(
+        title = title,
+        modifier = modifier,
+        actionLabel = actionLabel,
+        icon = icon,
+        onActionClick = onActionClick,
+        titleStyle = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.SemiBold
+        ),
+        titleColor = MaterialTheme.colorScheme.onBackground,
+    )
 }
 
 @Composable

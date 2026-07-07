@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +24,7 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 class PlayerViewModel(
     sourceId: String,
     episodeId: String,
+    initialEpisodeNumber: Double?,
     context: Context,
     private val repository: AnimeWatchRepository,
     private val watchStateRepository: WatchStateRepository,
@@ -37,6 +37,7 @@ class PlayerViewModel(
         PlayerUiState(
             currentSourceId = sourceId,
             currentEpisodeId = episodeId,
+            currentEpisodeNumber = initialEpisodeNumber,
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -62,40 +63,45 @@ class PlayerViewModel(
         }
         loadSettingsOptions()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-            val episodesDeferred = async {
-                runCatching {
-                    offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
-                        .takeIf { it.isNotEmpty() }
-                        ?: repository.getEpisodes(state.currentSourceId)
-                }
+            val episodesResult = runCatching {
+                offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
+                    .takeIf { it.isNotEmpty() }
+                    ?: repository.getEpisodes(state.currentSourceId)
             }
+            val currentState = _uiState.value
+            if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
+                return@launch
+            }
+            val episodes = episodesResult.getOrDefault(currentState.episodes)
+            val effectiveEpisode = resolveCurrentEpisode(
+                requestedEpisodeId = state.currentEpisodeId,
+                requestedEpisodeNumber = state.currentEpisodeNumber,
+                episodes = episodes,
+                currentEpisodes = currentState.episodes,
+            )
+            val effectiveEpisodeId = effectiveEpisode?.id ?: state.currentEpisodeId
+            val effectiveEpisodeNumber = effectiveEpisode?.number ?: state.currentEpisodeNumber
             val playbackResult = runCatching {
                 val offlinePlayback = offlineDownloadRepository.getOfflinePlayback(
                     sourceId = state.currentSourceId,
-                    episodeId = state.currentEpisodeId,
+                    episodeId = effectiveEpisodeId,
                 )
                 offlinePlayback
                     ?.takeIf { it.streamUrl !in excludedStreamUrls }
                     ?: repository.resolveStream(
                         sourceId = state.currentSourceId,
-                        episodeId = state.currentEpisodeId,
+                        episodeId = effectiveEpisodeId,
                         forceRefresh = forceRefresh,
                         excludedStreamUrls = excludedStreamUrls,
                         preferredPlayerName = state.selectedPlayerName,
                         preferredQuality = state.selectedQualityLabel,
                     )
             }
-            val episodesResult = episodesDeferred.await()
-            val currentState = _uiState.value
-            if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
-                return@launch
-            }
-            val episodes = episodesResult.getOrDefault(currentState.episodes)
 
             playbackResult
                 .onSuccess { stream ->
                     val savedSeekMs = findSavedSeekMs(
-                        episodeId = state.currentEpisodeId,
+                        episodeId = effectiveEpisodeId,
                         episodes = episodes,
                     )
                     _uiState.update {
@@ -104,6 +110,8 @@ class PlayerViewModel(
                             playback = stream,
                             errorMessage = null,
                             episodes = episodes,
+                            currentEpisodeId = effectiveEpisodeId,
+                            currentEpisodeNumber = effectiveEpisodeNumber,
                             pendingSeekMs = savedSeekMs ?: it.pendingSeekMs,
                             failedStreamUrls = it.failedStreamUrls - stream.streamUrl,
                             recoveryAttempted = false,
@@ -124,6 +132,8 @@ class PlayerViewModel(
                             playback = null,
                             errorMessage = throwable.toUiMessage(),
                             episodes = episodes,
+                            currentEpisodeId = effectiveEpisodeId,
+                            currentEpisodeNumber = effectiveEpisodeNumber,
                             recoveryAttempted = false,
                         )
                     }
@@ -131,21 +141,28 @@ class PlayerViewModel(
         }
     }
 
-    fun selectEpisode(episodeId: String, resumePositionMs: Long = 0L) {
+    fun selectEpisode(
+        episodeId: String,
+        resumePositionMs: Long = 0L,
+        episodeNumberHint: Double? = null,
+    ) {
         if (episodeId == _uiState.value.currentEpisodeId && _uiState.value.playback != null) {
             return
         }
         settingsLoadJob?.cancel()
-            _uiState.update {
-                it.copy(
-                    currentEpisodeId = episodeId,
-                    playback = null,
-                    pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
-                    settingsOptionsKey = null,
-                    failedStreamUrls = emptySet(),
-                    recoveryAttempted = false,
-                )
-            }
+        _uiState.update { currentState ->
+            currentState.copy(
+                currentEpisodeId = episodeId,
+                currentEpisodeNumber = episodeNumberHint
+                    ?: currentState.episodes.firstOrNull { it.id == episodeId }?.number
+                    ?: currentState.currentEpisodeNumber,
+                playback = null,
+                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
+                settingsOptionsKey = null,
+                failedStreamUrls = emptySet(),
+                recoveryAttempted = false,
+            )
+        }
         load()
     }
 
@@ -297,11 +314,11 @@ class PlayerViewModel(
     }
 
     fun playPreviousEpisode() {
-        adjacentEpisode(offset = -1)?.let { selectEpisode(it.id) }
+        adjacentEpisode(offset = -1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     fun playNextEpisode() {
-        adjacentEpisode(offset = 1)?.let { selectEpisode(it.id) }
+        adjacentEpisode(offset = 1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     override fun onCleared() {
@@ -340,15 +357,42 @@ class PlayerViewModel(
     private fun adjacentEpisode(offset: Int): WatchEpisode? {
         val state = _uiState.value
         val currentIndex = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-        if (currentIndex == -1) {
-            return null
+        if (currentIndex != -1) {
+            return state.episodes.getOrNull(currentIndex + offset)
         }
-        return state.episodes.getOrNull(currentIndex + offset)
+        val currentEpisodeNumber = state.currentEpisodeNumber ?: return null
+        return if (offset < 0) {
+            state.episodes
+                .filter { it.number < currentEpisodeNumber }
+                .maxByOrNull { it.number }
+        } else {
+            state.episodes
+                .filter { it.number > currentEpisodeNumber }
+                .minByOrNull { it.number }
+        }
+    }
+
+    private fun resolveCurrentEpisode(
+        requestedEpisodeId: String,
+        requestedEpisodeNumber: Double?,
+        episodes: List<WatchEpisode>,
+        currentEpisodes: List<WatchEpisode>,
+    ): WatchEpisode? {
+        episodes.firstOrNull { it.id == requestedEpisodeId }?.let { return it }
+
+        val knownEpisodeNumber = requestedEpisodeNumber
+            ?: currentEpisodes.firstOrNull { it.id == requestedEpisodeId }?.number
+            ?: watchStateRepository.getEpisodeProgress(titleId, requestedEpisodeId)?.episodeNumber
+
+        return knownEpisodeNumber?.let { episodeNumber ->
+            episodes.firstOrNull { it.number == episodeNumber }
+        }
     }
 
     class Factory(
         private val sourceId: String,
         private val episodeId: String,
+        private val initialEpisodeNumber: Double?,
         private val context: Context,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -357,6 +401,7 @@ class PlayerViewModel(
             return PlayerViewModel(
                 sourceId = sourceId,
                 episodeId = episodeId,
+                initialEpisodeNumber = initialEpisodeNumber,
                 context = context,
                 repository = dependencies.animeWatchRepository(),
                 watchStateRepository = dependencies.watchStateRepository(),
@@ -372,6 +417,7 @@ data class PlayerUiState(
     val episodes: List<WatchEpisode> = emptyList(),
     val currentSourceId: String = "",
     val currentEpisodeId: String = "",
+    val currentEpisodeNumber: Double? = null,
     val pendingSeekMs: Long = 0L,
     val errorMessage: String? = null,
     val failedStreamUrls: Set<String> = emptySet(),

@@ -15,6 +15,7 @@ object AnimeNavType {
     const val ID_ARG = "id"
     const val SOURCE_ID_ARG = "sourceId"
     const val EPISODE_ID_ARG = "episodeId"
+    const val EPISODE_NUMBER_ARG = "episodeNumber"
     const val TITLE_ARG = "title"
     const val SUBTITLE_ARG = "subtitle"
     const val EPISODES_ARG = "episodes"
@@ -34,7 +35,7 @@ object AnimeNavType {
         "$EPISODES_ROUTE/{$SOURCE_ID_ARG}?$SOURCE_TITLE_ARG={$SOURCE_TITLE_ARG}&$DOWNLOAD_MODE_ARG={$DOWNLOAD_MODE_ARG}"
 
     const val PLAYER_PATTERN =
-        "$PLAYER_ROUTE/{$SOURCE_ID_ARG}?$EPISODE_ID_ARG={$EPISODE_ID_ARG}"
+        "$PLAYER_ROUTE/{$SOURCE_ID_ARG}?$EPISODE_ID_ARG={$EPISODE_ID_ARG}&$EPISODE_NUMBER_ARG={$EPISODE_NUMBER_ARG}"
 
     fun createDetailsRoute(anime: Anime): String {
         return buildString {
@@ -67,10 +68,11 @@ object AnimeNavType {
         }
     }
 
-    fun createPlayerRoute(sourceId: String, episodeId: String): String {
+    fun createPlayerRoute(sourceId: String, episodeId: String, episodeNumber: Double? = null): String {
         return buildString {
             append("$PLAYER_ROUTE/${Uri.encode(sourceId)}")
             append("?$EPISODE_ID_ARG=${Uri.encode(episodeId)}")
+            append("&$EPISODE_NUMBER_ARG=${Uri.encode(episodeNumber?.toString().orEmpty())}")
         }
     }
 }

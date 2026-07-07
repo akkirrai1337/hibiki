@@ -429,7 +429,13 @@ private fun HibikiNavHost(
                 onBackClick = navController::navigateUp,
                 onEpisodeClick = { episode ->
                     val sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG)
-                    navController.navigateSingleTopTo(AnimeNavType.createPlayerRoute(sourceId, episode.id))
+                    navController.navigateSingleTopTo(
+                        AnimeNavType.createPlayerRoute(
+                            sourceId = sourceId,
+                            episodeId = episode.id,
+                            episodeNumber = episode.number,
+                        )
+                    )
                 },
                 modifier = screenModifier
             )
@@ -439,6 +445,10 @@ private fun HibikiNavHost(
             arguments = listOf(
                 navArgument(AnimeNavType.SOURCE_ID_ARG) { type = NavType.StringType },
                 navArgument(AnimeNavType.EPISODE_ID_ARG) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(AnimeNavType.EPISODE_NUMBER_ARG) {
                     type = NavType.StringType
                     defaultValue = ""
                 }
@@ -452,6 +462,7 @@ private fun HibikiNavHost(
             PlayerScreen(
                 sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
                 episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
+                episodeNumberHint = routeArgs.doubleArg(AnimeNavType.EPISODE_NUMBER_ARG),
                 onBackClick = navController::navigateUp,
                 modifier = Modifier.fillMaxSize()
             )
@@ -663,4 +674,8 @@ private fun android.os.Bundle?.stringArg(key: String): String = this?.getString(
 
 private fun android.os.Bundle?.booleanArg(key: String, defaultValue: Boolean = false): Boolean {
     return this?.getBoolean(key) ?: defaultValue
+}
+
+private fun android.os.Bundle?.doubleArg(key: String): Double? {
+    return this?.getString(key)?.toDoubleOrNull()
 }

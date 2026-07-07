@@ -145,12 +145,14 @@ import androidx.compose.foundation.layout.offset
 fun PlayerScreen(
     sourceId: String,
     episodeId: String,
+    episodeNumberHint: Double? = null,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(
         factory = PlayerViewModel.Factory(
             sourceId = sourceId,
             episodeId = episodeId,
+            initialEpisodeNumber = episodeNumberHint,
             context = LocalContext.current,
         )
     ),

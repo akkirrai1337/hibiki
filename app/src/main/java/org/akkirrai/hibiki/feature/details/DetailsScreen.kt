@@ -188,6 +188,37 @@ fun DetailsScreen(
     val alternativeTitlesExpandedState by rememberUpdatedState(isAlternativeTitlesExpanded)
     val metaExpandedState by rememberUpdatedState(isMetaExpanded)
 
+    fun refreshWatchStateSnapshot() {
+        libraryCategory = libraryRepository.getLibraryCategory(anime.id)
+        watchProgress = watchStateRepository.getTitleWatchState(anime.id)
+        episodeProgressItems = watchStateRepository.getEpisodeProgress(anime.id)
+        sourceSelection = watchStateRepository.getSelectedSource(anime.id)
+    }
+
+    fun updateWatchSources(sources: List<WatchSource>) {
+        watchSources.clear()
+        watchSources.addAll(sources)
+    }
+
+    suspend fun loadSourcesIntoState(): List<WatchSource> {
+        return watchRepository.loadSources(anime.id) { updated ->
+            updateWatchSources(updated)
+        }
+    }
+
+    suspend fun ensureWatchSourcesLoaded(): List<WatchSource> {
+        if (watchSources.isNotEmpty()) return watchSources.toList()
+        return runCatching { loadSourcesIntoState() }.getOrDefault(emptyList())
+    }
+
+    fun showToast(@StringRes messageResId: Int) {
+        Toast.makeText(context, context.getString(messageResId), Toast.LENGTH_SHORT).show()
+    }
+
+    fun showToast(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
     DisposableEffect(searchRepository, watchRepository) {
         onDispose {
             searchRepository.close()
@@ -217,30 +248,18 @@ fun DetailsScreen(
                 currentAnime = it
                 offlineTitleMetadataRepository.save(it)
             }
-        libraryCategory = libraryRepository.getLibraryCategory(anime.id)
-        watchProgress = watchStateRepository.getTitleWatchState(anime.id)
-        episodeProgressItems = watchStateRepository.getEpisodeProgress(anime.id)
-        sourceSelection = watchStateRepository.getSelectedSource(anime.id)
+        refreshWatchStateSnapshot()
         val cached = watchRepository.getCachedSources(anime.id)
-        watchSources.clear()
-        watchSources.addAll(cached?.sources.orEmpty())
+        updateWatchSources(cached?.sources.orEmpty())
         if (cached == null) {
-            runCatching {
-                watchRepository.loadSources(anime.id) { updated ->
-                    watchSources.clear()
-                    watchSources.addAll(updated)
-                }
-            }
+            runCatching { loadSourcesIntoState() }
         }
     }
 
     DisposableEffect(lifecycleOwner, anime.id) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                libraryCategory = libraryRepository.getLibraryCategory(anime.id)
-                watchProgress = watchStateRepository.getTitleWatchState(anime.id)
-                episodeProgressItems = watchStateRepository.getEpisodeProgress(anime.id)
-                sourceSelection = watchStateRepository.getSelectedSource(anime.id)
+                refreshWatchStateSnapshot()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -479,21 +498,12 @@ fun DetailsScreen(
                 coroutineScope.launch {
                     isDownloadEnqueueing = true
                     try {
-                        val loadedSources = if (watchSources.isEmpty()) {
-                            runCatching {
-                                watchRepository.loadSources(currentAnime.id) { updated ->
-                                    watchSources.clear()
-                                    watchSources.addAll(updated)
-                                }
-                            }.getOrDefault(emptyList())
-                        } else {
-                            emptyList()
-                        }
+                        val loadedSources = ensureWatchSourcesLoaded()
                         val source = selectedSource
                             ?: watchSources.firstOrNull()
                             ?: loadedSources.firstOrNull()
                         if (source == null) {
-                            Toast.makeText(context, context.getString(R.string.details_voiceovers_not_found), Toast.LENGTH_SHORT).show()
+                            showToast(R.string.details_voiceovers_not_found)
                             return@launch
                         }
 
@@ -503,7 +513,7 @@ fun DetailsScreen(
                         }.getOrDefault(emptyList())
                             .sortedBy { it.number }
                         if (episodes.isEmpty()) {
-                            Toast.makeText(context, context.getString(R.string.details_episodes_not_found), Toast.LENGTH_SHORT).show()
+                            showToast(R.string.details_episodes_not_found)
                             return@launch
                         }
 
@@ -520,7 +530,7 @@ fun DetailsScreen(
                             DownloadEpisodeSelection.All -> episodes
                         }
                         if (episodesToDownload.isEmpty()) {
-                            Toast.makeText(context, context.getString(R.string.details_no_episodes_for_download), Toast.LENGTH_SHORT).show()
+                            showToast(R.string.details_no_episodes_for_download)
                             return@launch
                         }
 
@@ -528,14 +538,12 @@ fun DetailsScreen(
                             source = source,
                             episodes = episodesToDownload,
                         )
-                        Toast.makeText(context, context.getString(R.string.details_downloads_added, count), Toast.LENGTH_SHORT).show()
+                        showToast(context.getString(R.string.details_downloads_added, count))
                         isDownloadSheetOpen = false
                     } catch (throwable: Throwable) {
-                        Toast.makeText(
-                            context,
-                            throwable.message ?: context.getString(R.string.details_downloads_add_failed),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        showToast(
+                            throwable.message ?: context.getString(R.string.details_downloads_add_failed)
+                        )
                     } finally {
                         isDownloadEnqueueing = false
                     }
@@ -673,6 +681,20 @@ private fun DetailHeroSection(
         isUserLibraryCategorySelected -> stringResource(libraryCategory!!.labelResId)
         else -> stringResource(R.string.library_button_title)
     }
+    val secondaryActions = listOf(
+        DetailSecondaryActionItem(
+            text = libraryButtonText,
+            icon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+            active = isUserLibraryCategorySelected,
+            onClick = onLibraryClick,
+        ),
+        DetailSecondaryActionItem(
+            text = stringResource(R.string.watch_download),
+            icon = Icons.Outlined.Download,
+            active = false,
+            onClick = onDownloadClick,
+        ),
+    )
 
     Column(
         modifier = Modifier
@@ -761,20 +783,15 @@ private fun DetailHeroSection(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    DetailsSecondaryActionButton(
-                        text = libraryButtonText,
-                        icon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        active = isUserLibraryCategorySelected,
-                        onClick = onLibraryClick,
-                        modifier = Modifier.weight(1f),
-                    )
-                    DetailsSecondaryActionButton(
-                        text = stringResource(R.string.watch_download),
-                        icon = Icons.Outlined.Download,
-                        active = false,
-                        onClick = onDownloadClick,
-                        modifier = Modifier.weight(1f),
-                    )
+                    secondaryActions.forEach { action ->
+                        DetailsSecondaryActionButton(
+                            text = action.text,
+                            icon = action.icon,
+                            active = action.active,
+                            onClick = action.onClick,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             } else {
                 Button(
@@ -855,6 +872,13 @@ private fun DetailsSecondaryActionButton(
         )
     }
 }
+
+private data class DetailSecondaryActionItem(
+    val text: String,
+    val icon: ImageVector,
+    val active: Boolean,
+    val onClick: () -> Unit,
+)
 
 @Composable
 private fun DetailContentCard(
@@ -1392,28 +1416,74 @@ private fun OverviewFacts(
     anime: Anime,
     heroInfo: HeroInfo,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        FactsLine(label = stringResource(R.string.details_type), value = localizedType(heroInfo.type))
-        if (heroInfo.releaseDate.isNotBlank()) {
-            FactsLine(label = stringResource(R.string.details_release_date), value = heroInfo.releaseDate)
+    val factItems = buildList {
+        add(
+            DetailFactItem(
+                label = stringResource(R.string.details_type),
+                value = localizedType(heroInfo.type),
+            )
+        )
+        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_release_date),
+                    value = releaseDate,
+                )
+            )
         }
-        if (heroInfo.status.isNotBlank()) {
-            FactsLine(label = stringResource(R.string.details_status), value = heroInfo.status)
+        heroInfo.status.takeIf(String::isNotBlank)?.let { status ->
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_status),
+                    value = status,
+                )
+            )
         }
         formatNextEpisodeEta(anime.nextEpisodeAt)?.let { eta ->
-            FactsLine(label = stringResource(R.string.details_eta_label), value = eta)
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_eta_label),
+                    value = eta,
+                )
+            )
         }
-        if (!anime.sourceMaterial.isNullOrBlank()) {
-            FactsLine(label = stringResource(R.string.details_source_material), value = anime.sourceMaterial)
+        anime.sourceMaterial?.takeIf(String::isNotBlank)?.let { sourceMaterial ->
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_source_material),
+                    value = sourceMaterial,
+                )
+            )
         }
-        if (heroInfo.studio.isNotBlank()) {
-            FactsLine(label = stringResource(R.string.details_studio), value = heroInfo.studio)
+        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_studio),
+                    value = studio,
+                )
+            )
         }
-        if (heroInfo.episodes.isNotBlank()) {
-            FactsLine(label = stringResource(R.string.details_episodes_released), value = heroInfo.episodes)
+        heroInfo.episodes.takeIf(String::isNotBlank)?.let { episodes ->
+            add(
+                DetailFactItem(
+                    label = stringResource(R.string.details_episodes_released),
+                    value = episodes,
+                )
+            )
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        factItems.forEach { item ->
+            FactsLine(label = item.label, value = item.value)
         }
     }
 }
+
+private data class DetailFactItem(
+    val label: String,
+    val value: String,
+)
 
 @Composable
 private fun DescriptionContent(
