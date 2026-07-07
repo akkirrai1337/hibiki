@@ -64,7 +64,7 @@ fun YummyAccountScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        when (val current = state) {
+        when (state) {
             YummyAccountScreenState.Checking -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
@@ -82,16 +82,16 @@ fun YummyAccountScreen(
 
             is YummyAccountScreenState.Error -> SignedOutScreen(
                 busy = uiState.busy,
-                errorMessage = current.message,
+                errorMessage = state.message,
                 paddingValues = PaddingValues(0.dp),
                 onSubmit = viewModel::submitCredentials,
                 onInputChanged = viewModel::clearSignInError,
             )
 
             is YummyAccountScreenState.SignedIn -> SignedInProfileScreen(
-                profile = current.profile,
-                libraryItems = current.libraryItems,
-                listWatchStats = current.listWatchStats,
+                profile = state.profile,
+                libraryItems = state.libraryItems,
+                listWatchStats = state.listWatchStats,
                 busy = uiState.busy,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
                 onExit = viewModel::signOut,
@@ -145,7 +145,7 @@ fun YummyAccountSettingsScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        when (val current = state) {
+        when (state) {
             YummyAccountScreenState.Checking -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
@@ -163,7 +163,7 @@ fun YummyAccountSettingsScreen(
 
             is YummyAccountScreenState.Error -> SignedOutScreen(
                 busy = uiState.busy,
-                errorMessage = current.message,
+                errorMessage = state.message,
                 paddingValues = PaddingValues(top = AccountSettingsHeaderContentTopPadding),
                 onSubmit = viewModel::submitCredentials,
                 onInputChanged = viewModel::clearSignInError,

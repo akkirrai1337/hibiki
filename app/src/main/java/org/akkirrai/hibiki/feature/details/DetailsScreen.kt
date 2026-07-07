@@ -3,13 +3,7 @@ package org.akkirrai.hibiki.feature.details
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -26,7 +20,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -45,7 +38,6 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
@@ -54,8 +46,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ButtonDefaults
@@ -103,7 +93,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -114,12 +103,9 @@ import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
-import org.akkirrai.hibiki.core.design.component.AppSection
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
@@ -150,6 +136,7 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val resources = context.resources
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
@@ -212,7 +199,7 @@ fun DetailsScreen(
     }
 
     fun showToast(@StringRes messageResId: Int) {
-        Toast.makeText(context, context.getString(messageResId), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, messageResId, Toast.LENGTH_SHORT).show()
     }
 
     fun showToast(message: String) {
@@ -454,10 +441,6 @@ fun DetailsScreen(
             items = relatedItems,
             currentAnime = currentAnime,
             title = stringResource(R.string.details_related_titles),
-            subtitle = stringResource(
-                R.string.details_related_franchise,
-                remember(currentAnime.title) { buildCompactFranchiseTitle(currentAnime.title) },
-            ),
             countLabel = stringResource(R.string.details_related_count_label, relatedItems.size),
             currentLabel = stringResource(R.string.details_current),
             episodeLabel = localizedEpisodeWord,
@@ -538,11 +521,11 @@ fun DetailsScreen(
                             source = source,
                             episodes = episodesToDownload,
                         )
-                        showToast(context.getString(R.string.details_downloads_added, count))
+                        showToast(resources.getString(R.string.details_downloads_added, count))
                         isDownloadSheetOpen = false
                     } catch (throwable: Throwable) {
                         showToast(
-                            throwable.message ?: context.getString(R.string.details_downloads_add_failed)
+                            throwable.message ?: resources.getString(R.string.details_downloads_add_failed)
                         )
                     } finally {
                         isDownloadEnqueueing = false
@@ -1417,60 +1400,40 @@ private fun OverviewFacts(
     heroInfo: HeroInfo,
 ) {
     val factItems = buildList {
-        add(
-            DetailFactItem(
-                label = stringResource(R.string.details_type),
-                value = localizedType(heroInfo.type),
-            )
+        fun addFact(label: String, value: String?) {
+            value?.takeIf(String::isNotBlank)?.let {
+                add(DetailFactItem(label = label, value = it))
+            }
+        }
+
+        addFact(
+            label = stringResource(R.string.details_type),
+            value = localizedType(heroInfo.type),
         )
-        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_release_date),
-                    value = releaseDate,
-                )
-            )
-        }
-        heroInfo.status.takeIf(String::isNotBlank)?.let { status ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_status),
-                    value = status,
-                )
-            )
-        }
-        formatNextEpisodeEta(anime.nextEpisodeAt)?.let { eta ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_eta_label),
-                    value = eta,
-                )
-            )
-        }
-        anime.sourceMaterial?.takeIf(String::isNotBlank)?.let { sourceMaterial ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_source_material),
-                    value = sourceMaterial,
-                )
-            )
-        }
-        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_studio),
-                    value = studio,
-                )
-            )
-        }
-        heroInfo.episodes.takeIf(String::isNotBlank)?.let { episodes ->
-            add(
-                DetailFactItem(
-                    label = stringResource(R.string.details_episodes_released),
-                    value = episodes,
-                )
-            )
-        }
+        addFact(
+            label = stringResource(R.string.details_release_date),
+            value = heroInfo.releaseDate,
+        )
+        addFact(
+            label = stringResource(R.string.details_status),
+            value = heroInfo.status,
+        )
+        addFact(
+            label = stringResource(R.string.details_eta_label),
+            value = formatNextEpisodeEta(anime.nextEpisodeAt),
+        )
+        addFact(
+            label = stringResource(R.string.details_source_material),
+            value = anime.sourceMaterial,
+        )
+        addFact(
+            label = stringResource(R.string.details_studio),
+            value = heroInfo.studio,
+        )
+        addFact(
+            label = stringResource(R.string.details_episodes_released),
+            value = heroInfo.episodes,
+        )
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1696,7 +1659,6 @@ private fun RelatedAnimeSheet(
     items: List<RelatedAnime>,
     currentAnime: Anime,
     title: String,
-    subtitle: String,
     countLabel: String,
     currentLabel: String,
     episodeLabel: String,
@@ -2158,7 +2120,7 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
     return HeroInfo(
         type = type,
         releaseDate = anime.releaseDate
-            ?.takeIf { it.isNotBlank() && it != DEFAULT_YEAR && it != UNKNOWN_VALUE }
+            ?.takeIf { it.isNotBlank() && it != DEFAULT_YEAR }
             ?: year.takeUnless { it == DEFAULT_YEAR || it == UNKNOWN_VALUE }.orEmpty(),
         episodes = episodes,
         status = status,

@@ -145,11 +145,10 @@ class HomeViewModel(
             _uiState.update { it.copy(searchResult = SearchUiState.Loading) }
 
             try {
-                val filters = activeFilters
                 val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.search(
                         query = activeQuery,
-                        filters = filters,
+                        filters = activeFilters,
                         limit = SEARCH_PAGE_SIZE + 1,
                         offset = 0,
                     )

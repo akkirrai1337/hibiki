@@ -25,7 +25,6 @@ class PlayerViewModel(
     sourceId: String,
     episodeId: String,
     initialEpisodeNumber: Double?,
-    context: Context,
     private val repository: AnimeWatchRepository,
     private val watchStateRepository: WatchStateRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
@@ -393,16 +392,15 @@ class PlayerViewModel(
         private val sourceId: String,
         private val episodeId: String,
         private val initialEpisodeNumber: Double?,
-        private val context: Context,
+        private val appContext: Context,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            val dependencies = context.applicationContext.hibikiDependencies()
+            val dependencies = appContext.applicationContext.hibikiDependencies()
             return PlayerViewModel(
                 sourceId = sourceId,
                 episodeId = episodeId,
                 initialEpisodeNumber = initialEpisodeNumber,
-                context = context,
                 repository = dependencies.animeWatchRepository(),
                 watchStateRepository = dependencies.watchStateRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),

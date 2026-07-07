@@ -112,7 +112,6 @@ class HomeRepository(
             .shuffled(Random(rotationSlot xor TRENDING_ROTATION_SEED_SALT))
             .filterNot { it.id in featuredIds }
             .take(HOME_SECTION_LIMIT)
-        val fallbackTrending = trending
         AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
         val recentlyUpdated = loadRecentlyUpdated()
         AppLogger.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
@@ -120,7 +119,7 @@ class HomeRepository(
             rotationSlot = rotationSlot,
             languageKey = languageKey,
             featuredAnime = featuredAnime,
-            trending = trending.ifEmpty { fallbackTrending },
+            trending = trending,
             recentlyUpdated = recentlyUpdated,
         )
         AppLogger.d(TAG, "loadHomeState: cachedHomeContent written — " +
@@ -130,7 +129,7 @@ class HomeRepository(
             featuredAnime = featuredAnime,
             continueAnime = loadContinueAnime(),
             popular = emptyList(),
-            trending = trending.ifEmpty { fallbackTrending },
+            trending = trending,
             recentlyUpdated = recentlyUpdated,
         )
     }

@@ -217,7 +217,6 @@ private fun AccountDangerZoneCard(
                 } else {
                     OutlinedButton(
                         onClick = onExit,
-                        enabled = !busy,
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.22f)),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 5.dp),

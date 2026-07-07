@@ -245,7 +245,7 @@ class YummyMetadataSource(
 
     private fun AnimeSearchSort.toYummySortParam(query: String): String? {
         return when (this) {
-            AnimeSearchSort.RELEVANCE -> query.trim().takeIf(String::isNotBlank)?.let { null } ?: "top"
+            AnimeSearchSort.RELEVANCE -> if (query.isBlank()) "top" else null
             AnimeSearchSort.RATING -> "top"
             AnimeSearchSort.TITLE -> "title"
             AnimeSearchSort.YEAR -> "year"

@@ -144,10 +144,11 @@ fun EpisodesScreen(
 
             is EpisodesUiState.Content -> {
                 val nextEpisodeId = nextEpisodeId(result.items, savedProgress)
+                val watchSourceFallback = stringResource(R.string.watch_source_fallback)
                 val downloadSource = remember(sourceId, sourceTitle, result.items.size) {
                     WatchSource(
                         sourceId = sourceId,
-                        title = sourceTitle.ifBlank { context.getString(R.string.watch_source_fallback) },
+                        title = sourceTitle.ifBlank { watchSourceFallback },
                         episodeCount = result.items.size,
                     )
                 }

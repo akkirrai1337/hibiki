@@ -67,7 +67,6 @@ import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
-import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 @Composable
 fun HibikiApp() {
@@ -388,7 +387,6 @@ private fun HibikiNavHost(
             val downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG)
             WatchSourcesScreen(
                 animeId = animeId,
-                animeTitle = routeArgs.stringArg(AnimeNavType.TITLE_ARG),
                 onBackClick = navController::navigateUp,
                 onSourceClick = { source ->
                     watchStateRepository.saveSelectedSource(

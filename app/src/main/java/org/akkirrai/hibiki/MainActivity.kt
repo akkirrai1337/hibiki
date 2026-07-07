@@ -19,7 +19,6 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers

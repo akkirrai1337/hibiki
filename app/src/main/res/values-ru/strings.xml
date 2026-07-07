@@ -2,7 +2,6 @@
     <string name="app_name">hibiki</string>
 
     <string name="nav_home">Главная</string>
-    <string name="nav_search">Поиск</string>
     <string name="nav_library">Библиотека</string>
     <string name="nav_settings">Настройки</string>
     <string name="cd_back">Назад</string>
@@ -10,21 +9,16 @@
     <string name="cd_search">Искать</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_ok">ОК</string>
-    <string name="action_export">Экспорт</string>
     <string name="action_sign_in">Войти</string>
     <string name="action_sign_out">Выйти</string>
     <string name="action_more">Ещё</string>
-    <string name="state_loading">Загрузка</string>
 
     <string name="home_continue_title">Продолжить просмотр</string>
-    <string name="home_continue_body">Сначала собираем стабильную оболочку: главная, поиск, библиотека, настройки. Парсеры подключаются после устойчивого UI.</string>
     <string name="home_trending">Сейчас в тренде</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>
-    <string name="home_refresh">Обновить</string>
     <string name="home_search_empty_title">Ничего не найдено</string>
     <string name="home_search_empty_message">Попробуйте изменить запрос</string>
-    <string name="home_results_count">Результатов: %1$d</string>
     <string name="home_error_title">Не удалось загрузить главную</string>
     <string name="home_error_no_internet">Нет подключения к интернету</string>
     <string name="home_error_load_failed">Не удалось загрузить главный экран</string>
@@ -37,8 +31,6 @@
     <string name="home_profile">Профиль</string>
     <string name="search_filters">Фильтры</string>
 
-    <string name="library_saved_anime">Сохраненное аниме</string>
-    <string name="library_item_meta">%1$s • %2$s</string>
     <string name="library_add_title">Добавить в библиотеку</string>
     <string name="library_button_title">В библиотеку</string>
     <string name="library_saved_note">Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии.</string>
@@ -63,7 +55,6 @@
 
     <string name="search_placeholder">Поиск аниме</string>
     <string name="search_filters_title">Фильтры</string>
-    <string name="search_filters_subtitle">Уточните результаты поиска</string>
     <string name="search_filters_unavailable">Фильтры временно недоступны.</string>
     <string name="search_filters_sort">Сортировка</string>
     <string name="search_filters_type">Тип</string>
@@ -98,28 +89,16 @@
 
     <string name="details_watch">Смотреть</string>
     <string name="details_favorite">В избранное</string>
-    <string name="details_description">Описание</string>
-    <string name="details_information">Информация</string>
-    <string name="details_highlights">Акценты</string>
-    <string name="details_ratings">Рейтинги</string>
     <string name="details_screenshots">Кадры</string>
     <string name="details_type">Тип</string>
-    <string name="details_episodes">Эпизоды</string>
     <string name="details_episodes_released">Серий вышло</string>
     <string name="details_release_date">Дата выхода</string>
     <string name="details_status">Статус</string>
     <string name="details_studio">Студия</string>
     <string name="details_source_material">Первоисточник</string>
-    <string name="details_age_rating">Возраст</string>
-    <string name="details_genres">Жанры</string>
-    <string name="details_characters">Главные герои</string>
     <string name="details_related">Связанное</string>
     <string name="details_related_titles">Связанные тайтлы</string>
-    <string name="details_related_franchise">Франшиза: %1$s</string>
-    <string name="details_related_preview_subtitle">Сезоны, OVA, спешлы и другие тайтлы</string>
-    <string name="details_related_sheet_subtitle">Сезоны, OVA, спешлы и другие тайтлы этой франшизы</string>
     <string name="details_related_count_label">%1$d тайтлов</string>
-    <string name="details_related_open_hint">Нажмите на тайтл, чтобы открыть его страницу</string>
     <string name="details_related_show_all_count">Показать все %1$d</string>
     <string name="details_current">Текущий</string>
     <string name="details_expand">Показать больше</string>
@@ -127,21 +106,14 @@
     <string name="details_hide">Скрыть</string>
     <string name="details_rating_votes_compact">%1$s оценок</string>
     <string name="details_views_compact">%1$s просмотров</string>
-    <string name="details_characters_placeholder">Главные герои появятся после загрузки деталей</string>
     <string name="details_description_fallback_a">пока описание еще не загружено.</string>
     <string name="details_description_fallback_b">Полные детали тайтла будут догружаться из источника.</string>
-    <string name="details_studio_prefix">Студия: </string>
     <string name="details_episode_label">серий</string>
-    <string name="watch_sources_title">Смотреть</string>
     <string name="watch_sources_empty_title">Озвучки не найдены</string>
     <string name="watch_sources_empty_message">Для этого тайтла пока нет доступных источников.</string>
     <string name="watch_sources_load_more">Загрузить ещё</string>
-    <string name="watch_source_sheet_title">Озвучка и источник</string>
     <string name="watch_source_auto_title">Автовыбор</string>
-    <string name="watch_source_auto_subtitle">Приложение само выберет лучший доступный источник</string>
-    <string name="watch_episodes_title">Серии</string>
     <string name="watch_episodes_empty_title">Серии не найдены</string>
-    <string name="watch_episodes_empty_message">Выбранная озвучка не вернула список серий.</string>
     <string name="watch_episodes_short">эп.</string>
     <string name="watch_source_fallback">Озвучка</string>
     <string name="watch_download">Скачать</string>
@@ -202,39 +174,25 @@
     <string name="trending_filter_ona">ONA</string>
 
     <string name="yummy_account_title">Профиль</string>
-    <string name="yummy_account_auth_title">Вход</string>
-    <string name="yummy_account_subtitle">Аккаунт YummyAnime для синхронизации</string>
-    <string name="yummy_account_auth_subtitle">Войти в аккаунт YummyAnime</string>
     <string name="yummy_account_login_error">Не удалось войти в YummyAnime</string>
     <string name="yummy_account_checking">Проверяю состояние аккаунта...</string>
     <string name="yummy_account_sign_in_title">Войти в YummyAnime</string>
-    <string name="yummy_account_linked_description">Локальный профиль Hibiki остаётся основным. YummyAnime используется только как привязанный аккаунт.</string>
-    <string name="yummy_account_sign_in_hint">Пароль не сохраняется. Hibiki хранит только токен сессии.</string>
     <string name="yummy_account_sign_in_subtitle">Синхронизация списков, избранного и истории просмотра</string>
     <string name="yummy_account_sign_in_footer">Данные используются только для входа в YummyAnime</string>
     <string name="yummy_account_login_label">Логин / email</string>
     <string name="yummy_account_password_label">Пароль</string>
     <string name="yummy_account_login_required">Введите логин и пароль</string>
-    <string name="yummy_account_password_note">Пароль не сохраняется</string>
     <string name="yummy_account_error_invalid_credentials">Неверный логин или пароль</string>
     <string name="yummy_account_error_missing_access_token">YummyAnime не вернул токен доступа</string>
     <string name="yummy_account_error_captcha_required">YummyAnime запросил captcha-проверку. Такой сценарий входа приложение пока не поддерживает.</string>
     <string name="yummy_account_error_temporarily_unavailable">YummyAnime временно недоступен. Попробуйте позже.</string>
     <string name="yummy_account_profile_fallback">Профиль YummyAnime</string>
-    <string name="yummy_account_profile_header">Профиль %1$s</string>
     <string name="yummy_account_profile_id">ID: %1$d</string>
     <string name="yummy_account_connected_message">Аккаунт подключён. Синхронизацию списков и избранного можно включить следующим шагом.</string>
-    <string name="yummy_account_connected_short">Аккаунт подключён</string>
     <string name="yummy_account_profile_registered">Регистрация</string>
     <string name="yummy_account_profile_birthdate">Дата рождения</string>
     <string name="yummy_account_profile_gender">Пол</string>
-    <string name="yummy_account_profile_online_days">Онлайн-дни</string>
     <string name="yummy_account_profile_unknown">Не указано</string>
-    <string name="yummy_account_stat_watch_time">Время просмотра</string>
-    <string name="yummy_account_stat_episodes">Серий: %1$d</string>
-    <string name="yummy_account_stat_streak">Серия дней</string>
-    <string name="yummy_account_stat_active_days">Активных дней: %1$d</string>
-    <string name="yummy_account_stat_library">Библиотека</string>
     <string name="yummy_account_stat_favorites">Избранное: %1$d</string>
     <string name="yummy_account_streak_site_days">день подряд</string>
     <string name="yummy_account_segment_stats">Статистика</string>

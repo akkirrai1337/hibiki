@@ -39,7 +39,6 @@ import org.akkirrai.hibiki.core.model.WatchSource
 @Composable
 fun WatchSourcesScreen(
     animeId: String,
-    animeTitle: String,
     onBackClick: () -> Unit,
     onSourceClick: (WatchSource) -> Unit,
     modifier: Modifier = Modifier,

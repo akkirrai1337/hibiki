@@ -163,7 +163,7 @@ fun SettingsScreen(
                         AppLogger.shareLogs(context).onFailure {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.settings_export_logs_failed),
+                                R.string.settings_export_logs_failed,
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }

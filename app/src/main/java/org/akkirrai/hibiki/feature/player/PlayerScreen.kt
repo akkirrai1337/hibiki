@@ -74,6 +74,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,6 +122,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -153,7 +155,7 @@ fun PlayerScreen(
             sourceId = sourceId,
             episodeId = episodeId,
             initialEpisodeNumber = episodeNumberHint,
-            context = LocalContext.current,
+            appContext = LocalContext.current,
         )
     ),
 ) {
@@ -204,6 +206,9 @@ fun PlayerScreen(
     var lastDoubleTapDirection by remember { mutableIntStateOf(0) }
     var accumulatedDoubleTapSteps by remember { mutableIntStateOf(0) }
     var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
+    var pendingDoubleTapSeekJob by remember { mutableStateOf<Job?>(null) }
+    var doubleTapSeekOverlayVisible by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context)
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
@@ -264,19 +269,51 @@ fun PlayerScreen(
     }
 
     fun resetAccumulatedDoubleTapSeek() {
+        pendingDoubleTapSeekJob?.cancel()
+        pendingDoubleTapSeekJob = null
         lastDoubleTapAtMs = 0L
         lastDoubleTapDirection = 0
         accumulatedDoubleTapSteps = 0
         accumulatedDoubleTapBasePositionMs = 0L
+        doubleTapSeekOverlayVisible = false
     }
 
-    fun performAccumulatedDoubleTapSeek(direction: Int, eventTimeMs: Long) {
+    fun currentPlaybackPositionMs(): Long {
         val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-        val currentBasePositionMs = when {
+        return when {
             currentPlayerPositionMs > 0L -> currentPlayerPositionMs
             positionMs > 0L -> positionMs
             else -> sliderPositionMs.coerceAtLeast(0L)
         }
+    }
+
+    fun commitAccumulatedDoubleTapSeek() {
+        val direction = lastDoubleTapDirection
+        val steps = accumulatedDoubleTapSteps
+        if (direction == 0 || steps <= 0) return
+
+        val deltaMs = SEEK_INCREMENT_MS * steps
+        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val targetPositionMs = if (direction < 0) {
+            (accumulatedDoubleTapBasePositionMs - deltaMs).coerceAtLeast(0L)
+        } else if (safeDurationMs > 0L) {
+            (accumulatedDoubleTapBasePositionMs + deltaMs).coerceAtMost(safeDurationMs)
+        } else {
+            accumulatedDoubleTapBasePositionMs + deltaMs
+        }
+
+        exoPlayer.seekTo(targetPositionMs)
+        positionMs = targetPositionMs
+        sliderPositionMs = targetPositionMs
+        lastDoubleTapAtMs = 0L
+        lastDoubleTapDirection = 0
+        accumulatedDoubleTapSteps = 0
+        accumulatedDoubleTapBasePositionMs = 0L
+        pendingDoubleTapSeekJob = null
+        doubleTapSeekOverlayVisible = false
+    }
+
+    fun scheduleAccumulatedDoubleTapSeek(direction: Int, eventTimeMs: Long) {
         val isAccumulating =
             direction == lastDoubleTapDirection &&
                 accumulatedDoubleTapSteps > 0 &&
@@ -285,25 +322,19 @@ fun PlayerScreen(
         val basePositionMs = if (isAccumulating) {
             accumulatedDoubleTapBasePositionMs
         } else {
-            currentBasePositionMs
-        }
-        val deltaMs = SEEK_INCREMENT_MS * nextSteps
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
-        val targetPositionMs = if (direction < 0) {
-            (basePositionMs - deltaMs).coerceAtLeast(0L)
-        } else if (safeDurationMs > 0L) {
-            (basePositionMs + deltaMs).coerceAtMost(safeDurationMs)
-        } else {
-            basePositionMs + deltaMs
+            currentPlaybackPositionMs()
         }
 
-        exoPlayer.seekTo(targetPositionMs)
-        positionMs = targetPositionMs
-        sliderPositionMs = targetPositionMs
+        pendingDoubleTapSeekJob?.cancel()
         lastDoubleTapAtMs = eventTimeMs
         lastDoubleTapDirection = direction
         accumulatedDoubleTapSteps = nextSteps
         accumulatedDoubleTapBasePositionMs = basePositionMs
+        doubleTapSeekOverlayVisible = true
+        pendingDoubleTapSeekJob = coroutineScope.launch {
+            delay(DOUBLE_TAP_ACCUMULATION_WINDOW_MS)
+            commitAccumulatedDoubleTapSeek()
+        }
     }
 
     fun skipToSegmentEnd(segment: PlaybackSegment) {
@@ -312,6 +343,13 @@ fun PlayerScreen(
         exoPlayer.seekTo(segment.endMs)
         positionMs = segment.endMs
         sliderPositionMs = segment.endMs
+    }
+
+    fun runPlaybackSwitch(action: () -> Unit) {
+        keepControlsVisible()
+        resetAccumulatedDoubleTapSeek()
+        saveCurrentPlaybackProgress()
+        action()
     }
 
     val handleBackClick = remember(exoPlayer, onBackClick) {
@@ -393,6 +431,8 @@ fun PlayerScreen(
         }
         exoPlayer.addListener(listener)
         onDispose {
+            pendingDoubleTapSeekJob?.cancel()
+            pendingDoubleTapSeekJob = null
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
                 durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
@@ -584,7 +624,6 @@ fun PlayerScreen(
                 if (settingsVisible || playlistVisible) return@pointerInput
                 awaitEachGesture {
                     val firstDown = awaitFirstDown(requireUnconsumed = true)
-                    var lastPosition = firstDown.position
                     var upPosition = firstDown.position
                     var handledAsSeek = false
                     var holdSpeedActive = false
@@ -605,8 +644,6 @@ fun PlayerScreen(
                             upPosition = change.position
                             break
                         }
-
-                        lastPosition = change.position
                         if (!canSeekByGesture) continue
                         if (!gestureSeekActive && !isInGestureArea(change.position.y, size.height)) continue
 
@@ -622,7 +659,6 @@ fun PlayerScreen(
                             !holdSpeedActive &&
                             !controlsLocked &&
                             !handledAsSeek &&
-                            canSeekByGesture &&
                             !movedTooFarForHold &&
                             change.uptimeMillis - firstDown.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
                         ) {
@@ -695,19 +731,20 @@ fun PlayerScreen(
                         awaitFirstDown(requireUnconsumed = true)
                     }
                     if (secondDown != null) {
-                        waitForUpOrCancellation()
+                        val secondUp = waitForUpOrCancellation()
+                        if (secondUp == null) return@awaitEachGesture
                         val tapOffset = secondDown.position
                         if (controlsLocked) {
                             keepUnlockButtonVisible()
                         } else if (controlsVisible) {
                             keepControlsVisible()
                         }
-                        performAccumulatedDoubleTapSeek(
+                        scheduleAccumulatedDoubleTapSeek(
                             direction = if (tapOffset.x < size.width / 2f) -1 else 1,
-                            eventTimeMs = secondDown.uptimeMillis,
+                            eventTimeMs = secondUp.uptimeMillis,
                         )
                     } else {
-                        resetAccumulatedDoubleTapSeek()
+                        if (accumulatedDoubleTapSteps > 0) return@awaitEachGesture
                         if (!isInGestureArea(upPosition.y, size.height)) return@awaitEachGesture
                         if (controlsLocked) {
                             unlockButtonVisible = !unlockButtonVisible
@@ -769,6 +806,22 @@ fun PlayerScreen(
             }
         }
 
+        if (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0 && !gestureSeekActive) {
+            Surface(
+                modifier = Modifier.align(Alignment.Center),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Black.copy(alpha = 0.62f)
+            ) {
+                Text(
+                    text = buildSeekDeltaLabel(SEEK_INCREMENT_MS * accumulatedDoubleTapSteps * lastDoubleTapDirection),
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
         activeSkipSegment?.let { skipSegment ->
             AnimatedVisibility(
                 visible = true,
@@ -782,7 +835,6 @@ fun PlayerScreen(
                 exit = fadeOut(animationSpec = tween(140)),
             ) {
                 PlayerSkipSegmentOverlay(
-                    segment = skipSegment,
                     countdownSeconds = skipCountdownSeconds,
                     autoSkipEnabled = autoSkipSegments,
                     onSkipClick = {
@@ -830,16 +882,10 @@ fun PlayerScreen(
                             if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
                         },
                         onPreviousEpisode = {
-                            keepControlsVisible()
-                            resetAccumulatedDoubleTapSeek()
-                            saveCurrentPlaybackProgress()
-                            viewModel.playPreviousEpisode()
+                            runPlaybackSwitch(viewModel::playPreviousEpisode)
                         },
                         onNextEpisode = {
-                            keepControlsVisible()
-                            resetAccumulatedDoubleTapSeek()
-                            saveCurrentPlaybackProgress()
-                            viewModel.playNextEpisode()
+                            runPlaybackSwitch(viewModel::playNextEpisode)
                         },
                     )
                 }
@@ -965,12 +1011,9 @@ fun PlayerScreen(
                 PlaylistBottomSheet(
                     currentEpisodeId = state.currentEpisodeId,
                     episodes = state.episodes,
-                    onDismiss = dismissPanel,
                     onEpisodeClick = { episodeId ->
                         dismissPanel()
-                        resetAccumulatedDoubleTapSeek()
-                        saveCurrentPlaybackProgress()
-                        viewModel.selectEpisode(episodeId)
+                        runPlaybackSwitch { viewModel.selectEpisode(episodeId) }
                     }
                 )
             }
@@ -998,7 +1041,6 @@ fun PlayerScreen(
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = state.settingsOptions,
-                    onDismiss = dismissPanel,
                     onNavigate = {
                         settingsDestination = it
                         keepControlsVisible()
@@ -1013,10 +1055,7 @@ fun PlayerScreen(
                         applyPlaybackSpeed(speed)
                     },
                     onSelectVoiceover = {
-                        keepControlsVisible()
-                        resetAccumulatedDoubleTapSeek()
-                        saveCurrentPlaybackProgress()
-                        viewModel.selectVoiceover(it)
+                        runPlaybackSwitch { viewModel.selectVoiceover(it) }
                     },
                     onSelectBackend = {
                         keepControlsVisible()
@@ -1128,6 +1167,7 @@ private fun PlayerOverlayPanel(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
+                consumed
                 if (
                     !swipeToDismissEnabled ||
                     dismissing ||
@@ -1273,7 +1313,6 @@ private fun PlayerOverlayHandle(
 
 @Composable
 private fun PlayerSkipSegmentOverlay(
-    segment: PlaybackSegment,
     countdownSeconds: Int,
     autoSkipEnabled: Boolean,
     onSkipClick: () -> Unit,
@@ -1372,7 +1411,7 @@ private fun PlayerTopOverlay(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = title,
+                text = title.preventTrailingOrphanWrap(),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
@@ -1390,6 +1429,17 @@ private fun PlayerTopOverlay(
     }
 }
 
+private fun String.preventTrailingOrphanWrap(): String {
+    val trimmed = trim()
+    val lastSpaceIndex = trimmed.indexOfLast { it.isWhitespace() }
+    if (lastSpaceIndex <= 0 || lastSpaceIndex >= trimmed.lastIndex) return this
+    return buildString(trimmed.length) {
+        append(trimmed, 0, lastSpaceIndex)
+        append('\u00A0')
+        append(trimmed, lastSpaceIndex + 1, trimmed.length)
+    }
+}
+
 @Composable
 private fun PlayerSettingsSheet(
     destination: PlayerSettingsDestination,
@@ -1401,7 +1451,6 @@ private fun PlayerSettingsSheet(
     autoSkipSegments: Boolean,
     autoPlayNextEpisode: Boolean,
     options: org.akkirrai.hibiki.core.model.PlaybackSettingsOptions,
-    onDismiss: () -> Unit,
     onNavigate: (PlayerSettingsDestination) -> Unit,
     onBack: () -> Unit,
     onSelectSpeed: (Float) -> Unit,
@@ -2076,7 +2125,6 @@ private fun PlayerControlButton(
 private fun PlaylistBottomSheet(
     currentEpisodeId: String,
     episodes: List<WatchEpisode>,
-    onDismiss: () -> Unit,
     onEpisodeClick: (String) -> Unit,
 ) {
     Column(
@@ -2302,6 +2350,6 @@ private fun Map<String, String>.safeHeaderNames(): String {
 }
 
 private fun buildSeekDeltaLabel(deltaMs: Long): String {
-    val seconds = kotlin.math.abs(deltaMs / 1000L)
-    return if (deltaMs >= 0L) "+${seconds}s" else "-${seconds}s"
+    val sign = if (deltaMs >= 0L) "+" else "-"
+    return sign + formatDuration(kotlin.math.abs(deltaMs))
 }
