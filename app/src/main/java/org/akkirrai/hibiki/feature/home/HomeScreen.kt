@@ -543,6 +543,9 @@ private fun FeaturedAnimeCard(
     bannerUrl: String?,
     onClick: () -> Unit
 ) {
+    var featuredTitleLineCount by remember(anime.id) { mutableStateOf(0) }
+    val useRaisedTextLayout = featuredTitleLineCount >= 3
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -595,10 +598,15 @@ private fun FeaturedAnimeCard(
 
             Column(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
+                    .align(if (useRaisedTextLayout) Alignment.TopStart else Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 84.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(
+                        start = 18.dp,
+                        end = 18.dp,
+                        top = if (useRaisedTextLayout) 18.dp else 18.dp,
+                        bottom = if (useRaisedTextLayout) 74.dp else 82.dp,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(if (useRaisedTextLayout) 6.dp else 8.dp)
             ) {
                 Text(
                     text = stringResource(R.string.home_featured_label),
@@ -626,6 +634,7 @@ private fun FeaturedAnimeCard(
                     baseMaxLines = 3,
                     extraLongTitleLines = 0,
                     overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { featuredTitleLineCount = it.lineCount },
                 )
 
                 val meta = buildHomeMeta(
@@ -653,7 +662,7 @@ private fun FeaturedAnimeCard(
                 onClick = onClick,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 18.dp, bottom = 35.dp),
+                    .padding(start = 18.dp, bottom = 23.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -848,6 +857,11 @@ private fun AnimeSection(
                     onClick = { onAnimeClick(anime) },
                     width = 118.dp,
                     height = HOME_SECTION_POSTER_CARD_HEIGHT,
+                    titleBaseMaxLines = 2,
+                    titleExtraLongTitleLines = 0,
+                    titleOverflow = TextOverflow.Ellipsis,
+                    textBlockHeight = HOME_SECTION_POSTER_TEXT_HEIGHT,
+                    reserveMetaLine = true,
                 )
             }
         }
@@ -932,6 +946,7 @@ private val HOME_TOP_BAR_HEIGHT = 50.dp
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
+private val HOME_SECTION_POSTER_TEXT_HEIGHT = 52.dp
 
 private fun buildHomeMeta(
     anime: Anime,

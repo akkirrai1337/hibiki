@@ -981,7 +981,7 @@ private fun TitleCluster(
             }
         }
 
-        AnimeTitleText(
+        Text(
             text = titleText,
             inlineContent = titleInlineContent,
             modifier = Modifier.fillMaxWidth(),
@@ -992,7 +992,6 @@ private fun TitleCluster(
             ),
             color = contentColor,
             textAlign = TextAlign.Start,
-            baseMaxLines = 2,
         )
         if (alternativeTitles.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))

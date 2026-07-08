@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,6 +23,7 @@ fun AnimeTitleText(
     baseMaxLines: Int = 2,
     extraLongTitleLines: Int = 2,
     overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
 ) {
     Text(
         text = text,
@@ -36,6 +38,7 @@ fun AnimeTitleText(
             extraLongTitleLines = extraLongTitleLines,
         ),
         overflow = overflow,
+        onTextLayout = onTextLayout ?: {},
     )
 }
 
@@ -50,6 +53,7 @@ fun AnimeTitleText(
     baseMaxLines: Int = 2,
     extraLongTitleLines: Int = 2,
     overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     inlineContent: Map<String, InlineTextContent> = mapOf(),
 ) {
     Text(
@@ -66,6 +70,7 @@ fun AnimeTitleText(
             extraLongTitleLines = extraLongTitleLines,
         ),
         overflow = overflow,
+        onTextLayout = onTextLayout ?: {},
     )
 }
 

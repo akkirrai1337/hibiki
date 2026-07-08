@@ -45,7 +45,10 @@ fun LazyGridScope.animeSearchResultsContent(
             anime = anime,
             metaText = metaText(anime),
             onClick = { onAnimeClick(anime) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            titleBaseMaxLines = 6,
+            titleExtraLongTitleLines = 2,
+            titleOverflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 

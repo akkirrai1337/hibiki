@@ -35,7 +35,12 @@ fun PosterCard(
     anime: Anime,
     metaText: String = anime.subtitle,
     onClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    titleBaseMaxLines: Int = 2,
+    titleExtraLongTitleLines: Int = 2,
+    titleOverflow: TextOverflow = TextOverflow.Clip,
+    textBlockHeight: Dp? = null,
+    reserveMetaLine: Boolean = false,
 ) {
     Column(
         modifier = modifier.then(
@@ -48,13 +53,18 @@ fun PosterCard(
         verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)
     ) {
         PosterArtwork(anime = anime)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            modifier = if (textBlockHeight != null) Modifier.height(textBlockHeight) else Modifier,
+            verticalArrangement = if (reserveMetaLine) Arrangement.SpaceBetween else Arrangement.spacedBy(4.dp)
+        ) {
             AnimeTitleText(
                 text = anime.title,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 minLines = 1,
-                baseMaxLines = 2,
+                baseMaxLines = titleBaseMaxLines,
+                extraLongTitleLines = titleExtraLongTitleLines,
+                overflow = titleOverflow,
             )
             if (metaText.isNotBlank()) {
                 Text(
@@ -86,11 +96,21 @@ fun AnimePosterCardItem(
     modifier: Modifier = Modifier,
     width: Dp? = null,
     height: Dp? = null,
+    titleBaseMaxLines: Int = 2,
+    titleExtraLongTitleLines: Int = 2,
+    titleOverflow: TextOverflow = TextOverflow.Clip,
+    textBlockHeight: Dp? = null,
+    reserveMetaLine: Boolean = false,
 ) {
     PosterCard(
         anime = anime,
         metaText = metaText,
         onClick = onClick,
+        titleBaseMaxLines = titleBaseMaxLines,
+        titleExtraLongTitleLines = titleExtraLongTitleLines,
+        titleOverflow = titleOverflow,
+        textBlockHeight = textBlockHeight,
+        reserveMetaLine = reserveMetaLine,
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier)
             .then(if (height != null) Modifier.height(height) else Modifier),
