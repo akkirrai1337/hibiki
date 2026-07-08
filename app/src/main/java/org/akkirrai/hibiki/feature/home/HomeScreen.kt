@@ -860,7 +860,6 @@ private fun AnimeSection(
                     titleBaseMaxLines = 2,
                     titleExtraLongTitleLines = 0,
                     titleOverflow = TextOverflow.Ellipsis,
-                    textBlockHeight = HOME_SECTION_POSTER_TEXT_HEIGHT,
                     reserveMetaLine = true,
                 )
             }
@@ -946,7 +945,6 @@ private val HOME_TOP_BAR_HEIGHT = 50.dp
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
-private val HOME_SECTION_POSTER_TEXT_HEIGHT = 52.dp
 
 private fun buildHomeMeta(
     anime: Anime,

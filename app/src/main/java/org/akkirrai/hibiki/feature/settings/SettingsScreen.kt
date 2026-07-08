@@ -47,11 +47,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.pm.PackageInfoCompat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
@@ -74,7 +72,6 @@ fun SettingsScreen(
 
     var showThemeSheet by remember { mutableStateOf(false) }
     var showLanguageSheet by remember { mutableStateOf(false) }
-    val appVersionText = remember(context) { appVersionLabel(context) }
     LaunchedEffect(Unit) {
         PerfLogger.mark("SettingsScreen composed")
     }
@@ -153,9 +150,6 @@ fun SettingsScreen(
             }
         }
 
-        item {
-            AppVersionText(text = appVersionText)
-        }
     }
 
     if (showThemeSheet) {
@@ -201,30 +195,6 @@ private fun ThemeBottomSheet(
             )
         }
     }
-}
-
-@Composable
-private fun AppVersionText(
-    text: String,
-) {
-    Text(
-        text = text,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 4.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
-        textAlign = TextAlign.Center,
-    )
-}
-
-private fun appVersionLabel(context: Context): String {
-    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-    return context.getString(
-        R.string.settings_app_version,
-        packageInfo.versionName.orEmpty().ifBlank { "unknown" },
-        PackageInfoCompat.getLongVersionCode(packageInfo),
-    )
 }
 
 @Composable

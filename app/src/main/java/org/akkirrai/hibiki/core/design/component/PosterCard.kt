@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,24 +41,35 @@ fun PosterCard(
     titleBaseMaxLines: Int = 2,
     titleExtraLongTitleLines: Int = 2,
     titleOverflow: TextOverflow = TextOverflow.Clip,
-    textBlockHeight: Dp? = null,
     reserveMetaLine: Boolean = false,
 ) {
-    Column(
+    BoxWithConstraints(
         modifier = modifier.then(
             if (onClick != null) {
                 Modifier.clickable(onClick = onClick)
             } else {
                 Modifier
             }
-        ),
-        verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)
+        )
     ) {
-        PosterArtwork(anime = anime)
+        val hasBoundedHeight = maxHeight != Dp.Infinity
         Column(
-            modifier = if (textBlockHeight != null) Modifier.height(textBlockHeight) else Modifier,
-            verticalArrangement = if (reserveMetaLine) Arrangement.SpaceBetween else Arrangement.spacedBy(4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (reserveMetaLine && hasBoundedHeight) Modifier.fillMaxHeight() else Modifier
+                ),
+            verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)
         ) {
+            PosterArtwork(anime = anime)
+            Column(
+                modifier = if (reserveMetaLine && hasBoundedHeight) {
+                    Modifier.fillMaxWidth().weight(1f, fill = true)
+                } else {
+                    Modifier.fillMaxWidth()
+                },
+                verticalArrangement = if (reserveMetaLine) Arrangement.SpaceBetween else Arrangement.spacedBy(4.dp)
+            ) {
             AnimeTitleText(
                 text = anime.title,
                 style = MaterialTheme.typography.bodySmall,
@@ -84,6 +97,7 @@ fun PosterCard(
                     maxLines = 1,
                 )
             }
+            }
         }
     }
 }
@@ -99,7 +113,6 @@ fun AnimePosterCardItem(
     titleBaseMaxLines: Int = 2,
     titleExtraLongTitleLines: Int = 2,
     titleOverflow: TextOverflow = TextOverflow.Clip,
-    textBlockHeight: Dp? = null,
     reserveMetaLine: Boolean = false,
 ) {
     PosterCard(
@@ -109,7 +122,6 @@ fun AnimePosterCardItem(
         titleBaseMaxLines = titleBaseMaxLines,
         titleExtraLongTitleLines = titleExtraLongTitleLines,
         titleOverflow = titleOverflow,
-        textBlockHeight = textBlockHeight,
         reserveMetaLine = reserveMetaLine,
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier)

@@ -2,6 +2,7 @@
     <string name="app_name">hibiki</string>
 
     <string name="nav_home">Главная</string>
+    <string name="nav_catalog">Каталог</string>
     <string name="nav_library">Библиотека</string>
     <string name="nav_settings">Настройки</string>
     <string name="cd_back">Назад</string>
@@ -30,6 +31,11 @@
     <string name="home_search_clear">Очистить поиск</string>
     <string name="home_profile">Профиль</string>
     <string name="search_filters">Фильтры</string>
+    <string name="catalog_error_title">Не удалось загрузить каталог</string>
+    <string name="catalog_load_more_error">Не удалось загрузить ещё тайтлы</string>
+    <string name="catalog_all_categories">Все категории</string>
+    <string name="catalog_categories_title">Категории</string>
+    <string name="catalog_categories_subtitle">Выберите жанры для фильтрации каталога.</string>
 
     <string name="library_add_title">Добавить в библиотеку</string>
     <string name="library_button_title">В библиотеку</string>

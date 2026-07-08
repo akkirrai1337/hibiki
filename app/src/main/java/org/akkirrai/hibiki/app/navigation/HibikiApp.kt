@@ -57,6 +57,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.account.YummyAccountScreen
 import org.akkirrai.hibiki.feature.account.YummyAccountSettingsScreen
 import org.akkirrai.hibiki.feature.account.YummyAccountViewModel
+import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
 import org.akkirrai.hibiki.feature.home.HomeSearchFiltersScreen
@@ -289,6 +290,15 @@ private fun HibikiNavHost(
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
+            )
+        }
+        topLevelComposable(route = TopLevelDestination.Catalog.route) {
+            CatalogScreen(
+                onAnimeClick = { anime ->
+                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                },
+                bottomContentPadding = topLevelBottomContentPadding,
+                modifier = topLevelScreenModifier.statusBarsPadding(),
             )
         }
         topLevelComposable(route = TopLevelDestination.Settings.route) {
