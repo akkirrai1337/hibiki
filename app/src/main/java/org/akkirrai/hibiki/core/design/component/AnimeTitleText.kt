@@ -21,6 +21,7 @@ fun AnimeTitleText(
     minLines: Int = 1,
     baseMaxLines: Int = 2,
     extraLongTitleLines: Int = 2,
+    overflow: TextOverflow = TextOverflow.Clip,
 ) {
     Text(
         text = text,
@@ -34,7 +35,7 @@ fun AnimeTitleText(
             baseMaxLines = baseMaxLines,
             extraLongTitleLines = extraLongTitleLines,
         ),
-        overflow = TextOverflow.Clip,
+        overflow = overflow,
     )
 }
 
@@ -48,6 +49,7 @@ fun AnimeTitleText(
     minLines: Int = 1,
     baseMaxLines: Int = 2,
     extraLongTitleLines: Int = 2,
+    overflow: TextOverflow = TextOverflow.Clip,
     inlineContent: Map<String, InlineTextContent> = mapOf(),
 ) {
     Text(
@@ -63,7 +65,7 @@ fun AnimeTitleText(
             baseMaxLines = baseMaxLines,
             extraLongTitleLines = extraLongTitleLines,
         ),
-        overflow = TextOverflow.Clip,
+        overflow = overflow,
     )
 }
 

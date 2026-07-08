@@ -539,7 +539,7 @@ private fun LibraryAnimeCard(
                 .fillMaxWidth()
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
             AnimePoster(
                 anime = anime,
@@ -549,7 +549,9 @@ private fun LibraryAnimeCard(
             )
 
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .align(Alignment.CenterVertically),
                 verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 AnimeTitleText(
@@ -595,7 +597,8 @@ private fun LibraryAnimeCard(
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Top)
             )
         }
     }

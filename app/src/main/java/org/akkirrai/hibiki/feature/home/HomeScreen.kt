@@ -595,9 +595,9 @@ private fun FeaturedAnimeCard(
 
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 12.dp),
+                    .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 84.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
@@ -625,6 +625,7 @@ private fun FeaturedAnimeCard(
                     color = Color.White,
                     baseMaxLines = 3,
                     extraLongTitleLines = 0,
+                    overflow = TextOverflow.Ellipsis,
                 )
 
                 val meta = buildHomeMeta(
@@ -646,30 +647,33 @@ private fun FeaturedAnimeCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
 
-                Button(
-                    onClick = onClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 2.dp,
-                        pressedElevation = 1.dp
-                    ),
-                    contentPadding = PaddingValues(
-                        horizontal = 18.dp,
-                        vertical = 10.dp
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.details_watch))
-                }
+            Button(
+                onClick = onClick,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 18.dp, bottom = 35.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 2.dp,
+                    pressedElevation = 1.dp
+                ),
+                contentPadding = PaddingValues(
+                    horizontal = 18.dp,
+                    vertical = 10.dp
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.details_watch))
             }
         }
     }
@@ -714,8 +718,10 @@ private fun ContinueWatchingCard(
                     )
 
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(108.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         AnimeTitleText(
                             text = anime.title,
@@ -723,28 +729,34 @@ private fun ContinueWatchingCard(
                                 fontWeight = FontWeight.SemiBold,
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
-                            baseMaxLines = 2,
+                            baseMaxLines = 3,
+                            extraLongTitleLines = 0,
+                            overflow = TextOverflow.Ellipsis,
                         )
 
-                        val meta = buildHomeMeta(
-                            anime = anime,
-                            announcementLabel = stringResource(R.string.anime_meta_announcement),
-                        )
-                        if (meta.isNotBlank()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val meta = buildHomeMeta(
+                                anime = anime,
+                                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                            )
+                            if (meta.isNotBlank()) {
+                                Text(
+                                    text = meta,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
                             Text(
-                                text = meta,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = stringResource(R.string.home_open_title_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        Text(
-                            text = stringResource(R.string.home_open_title_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
                     AppFilledIconButton(
