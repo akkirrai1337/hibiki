@@ -74,9 +74,6 @@ internal fun AnalyticsCard(
         snapshot.siteWatchSegments,
         snapshot.siteWatchTimeLabel,
         snapshot.watchTimeLabel,
-        snapshot.ratingSegments,
-        snapshot.ratingAverageLabel,
-        snapshot.ratedTitlesCount,
         snapshot.genreSegments,
         snapshot.genreTrackedTitlesCount,
     ) {
@@ -171,7 +168,7 @@ private fun AnalyticsDonutPager(
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PageArrowButton(
@@ -179,31 +176,26 @@ private fun AnalyticsDonutPager(
                 onClick = onBack,
                 isBack = true,
             )
-            LegendGrid(
-                items = page.segments,
-                modifier = Modifier.weight(1f),
-                columns = page.legendColumns,
+            Spacer(modifier = Modifier.width(18.dp))
+            SegmentDonut(
+                segments = page.segments,
+                centerPrimary = page.centerPrimary,
+                centerSecondary = page.centerSecondary,
+                modifier = Modifier.size(148.dp),
+                muted = page.segments.all { it.weight <= 0f },
             )
+            Spacer(modifier = Modifier.width(18.dp))
             PageArrowButton(
                 enabled = canGoForward,
                 onClick = onForward,
                 isBack = false,
             )
-            SegmentDonut(
-                segments = page.segments,
-                centerPrimary = page.centerPrimary,
-                centerSecondary = page.centerSecondary,
-                modifier = Modifier.size(132.dp),
-                muted = page.segments.all { it.weight <= 0f },
-            )
         }
-        page.supportingText?.let { text ->
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        LegendGrid(
+            items = page.segments,
+            modifier = Modifier.fillMaxWidth(),
+            columns = page.legendColumns,
+        )
     }
 }
 
@@ -298,7 +290,7 @@ private fun LegendItem(
             text = item.valueLabel,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (item.weight > 0f) AccountWarmAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
     }
@@ -526,7 +518,7 @@ private fun buildAnalyticsPages(
 ): List<AnalyticsPage> {
     return listOf(
         AnalyticsPage(
-            title = "Время просмотра на сайте",
+            title = "Время просмотра",
             centerPrimary = snapshot.siteWatchTimeLabel,
             centerSecondary = "всего",
             segments = snapshot.siteWatchSegments.map { segment ->
@@ -538,14 +530,9 @@ private fun buildAnalyticsPages(
                 )
             },
             legendColumns = 2,
-            supportingText = if (snapshot.siteWatchSegments.all { it.value <= 0L }) {
-                "Разбивка строится из server watch sums Yummy. Если API не вернул типизированные bucket'ы, круг останется пустым."
-            } else {
-                null
-            },
         ),
         AnalyticsPage(
-            title = "Продолжительность по спискам",
+            title = "Время просмотра по спискам",
             centerPrimary = snapshot.watchTimeLabel,
             centerSecondary = "всего",
             segments = durationSegments.map { segment ->
@@ -559,43 +546,9 @@ private fun buildAnalyticsPages(
             legendColumns = 2,
         ),
         AnalyticsPage(
-            title = "Время продолжительности эпизодов",
-            centerPrimary = "0 ч",
-            centerSecondary = "runtime",
-            segments = snapshot.siteWatchSegments.map { segment ->
-                AnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = "0 ч",
-                    weight = 0f,
-                    color = segment.color,
-                )
-            },
-            legendColumns = 2,
-            supportingText = "Для этой страницы нужны duration/runtime эпизодов по тайтлам из списка. Текущий Yummy API и локальный кэш Hibiki такую длительность пока не дают, поэтому страница пока placeholder.",
-        ),
-        AnalyticsPage(
-            title = "Поставленные оценки",
-            centerPrimary = snapshot.ratedTitlesCount.toString(),
-            centerSecondary = "avg ${snapshot.ratingAverageLabel}",
-            segments = snapshot.ratingSegments.map { segment ->
-                AnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = segment.count.toString(),
-                    weight = segment.count.toFloat(),
-                    color = segment.color,
-                )
-            },
-            legendColumns = 5,
-            supportingText = if (snapshot.ratedTitlesCount == 0) {
-                "Оценки читаются из Yummy API, но в текущем API-слое нет подтверждённой записи рейтинга обратно."
-            } else {
-                "Оценки уже парсятся из Yummy API. Запись рейтинга обратно пока не подтверждена."
-            },
-        ),
-        AnalyticsPage(
             title = "Жанры",
             centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
-            centerSecondary = "тегов",
+            centerSecondary = "жанров",
             segments = snapshot.genreSegments.map { segment ->
                 AnalyticsSegment(
                     label = segment.label,
@@ -605,11 +558,6 @@ private fun buildAnalyticsPages(
                 )
             },
             legendColumns = 3,
-            supportingText = if (snapshot.genreTrackedTitlesCount == 0) {
-                "Жанры доступны только для тайтлов, чьи метаданные уже были сохранены локально в Hibiki."
-            } else {
-                "Жанры собираются из локального кэша метаданных Hibiki и могут быть неполными."
-            },
         ),
     )
 }
@@ -620,7 +568,6 @@ private data class AnalyticsPage(
     val centerSecondary: String,
     val segments: List<AnalyticsSegment>,
     val legendColumns: Int,
-    val supportingText: String? = null,
 )
 
 private data class AnalyticsSegment(

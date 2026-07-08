@@ -8,7 +8,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import kotlin.math.roundToInt
 import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.animeresolver.metadata.YummyProfileWatchSum
 import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
@@ -68,18 +67,9 @@ internal fun buildProfileSnapshot(
         }
         .toList()
 
-    val ratingSegments = buildRatingSegments(libraryItems)
-    val ratedTitlesCount = ratingSegments.sumOf(DistributionSegment::count)
-    val ratingAverageLabel = libraryItems
-        .mapNotNull { it.yummyRating }
-        .takeIf { it.isNotEmpty() }
-        ?.average()
-        ?.let(::formatRatingAverage)
-        ?: "0"
-
     val genreSegments = buildGenreSegments(cachedLibraryMetadata)
     val genreTrackedTitlesCount = cachedLibraryMetadata.count { it.genres.isNotEmpty() }
-    val siteWatchSegments = buildSiteWatchSegments(watchSums)
+    val siteWatchSegments = buildSiteWatchSegments(resources, watchSums)
     val siteWatchTotal = siteWatchSegments.sumOf(DurationSegment::value)
 
     return YummyProfileSnapshot(
@@ -100,9 +90,6 @@ internal fun buildProfileSnapshot(
         activityDays = activityDays,
         recentLibraryItems = recentItems,
         onlineDaysLabel = profile.daysOnline?.toString() ?: "-",
-        ratingSegments = ratingSegments,
-        ratingAverageLabel = ratingAverageLabel,
-        ratedTitlesCount = ratedTitlesCount,
         genreSegments = genreSegments,
         genreTrackedTitlesCount = genreTrackedTitlesCount,
     )
@@ -210,24 +197,8 @@ private fun buildDurationSegments(
     }
 }
 
-private fun buildRatingSegments(
-    libraryItems: List<YummyUserAnimeListItem>,
-): List<DistributionSegment> {
-    val counts = libraryItems
-        .mapNotNull { it.yummyRating?.roundToInt()?.coerceIn(1, 10) }
-        .groupingBy { it }
-        .eachCount()
-
-    return (10 downTo 1).map { score ->
-        DistributionSegment(
-            label = score.toString(),
-            count = counts[score] ?: 0,
-            color = ratingColor(score),
-        )
-    }
-}
-
 private fun buildSiteWatchSegments(
+    resources: Resources,
     watchSums: List<YummyProfileWatchSum>,
 ): List<DurationSegment> {
     val totals = linkedMapOf(
@@ -253,12 +224,21 @@ private fun buildSiteWatchSegments(
         "Special" to Color(0xFF737373),
     )
 
-    return totals.map { (label, value) ->
+    val labels = mapOf(
+        "Serials" to "TV-Сериалы",
+        "S.Films" to "К.фильмы",
+        "ONA" to "ONA",
+        "OVA" to "OVA",
+        "Movie" to resources.getString(R.string.details_type_movie),
+        "Special" to resources.getString(R.string.details_type_special),
+    )
+
+    return totals.map { (bucket, value) ->
         DurationSegment(
-            label = label,
+            label = labels.getValue(bucket),
             hoursLabel = formatDurationLabelForUi(value),
             value = value,
-            color = colors.getValue(label),
+            color = colors.getValue(bucket),
         )
     }
 }
@@ -361,10 +341,6 @@ private fun formatYummyRating(value: Double): String {
     }
 }
 
-private fun formatRatingAverage(value: Double): String {
-    return if (value <= 0.0) "0" else String.format(Locale.US, "%.1f", value)
-}
-
 private fun YummyProfileWatchSum.resolveSiteWatchBucket(): String? {
     val bucket = listOf(alias, shortName, name)
         .filterNotNull()
@@ -386,16 +362,6 @@ private fun YummyProfileWatchSum.resolveSiteWatchBucket(): String? {
     }
 }
 
-private fun ratingColor(score: Int): Color {
-    return when (score) {
-        9, 10 -> Color(0xFF5AD267)
-        7, 8 -> Color(0xFF96CC41)
-        5, 6 -> Color(0xFFF0C419)
-        3, 4 -> Color(0xFFFF944D)
-        else -> Color(0xFFFF646B)
-    }
-}
-
 internal data class YummyProfileSnapshot(
     val watchTimeLabel: String,
     val siteWatchTimeLabel: String,
@@ -413,9 +379,6 @@ internal data class YummyProfileSnapshot(
     val activityDays: List<ActivityDay>,
     val recentLibraryItems: List<RecentLibraryItem>,
     val onlineDaysLabel: String,
-    val ratingSegments: List<DistributionSegment>,
-    val ratingAverageLabel: String,
-    val ratedTitlesCount: Int,
     val genreSegments: List<DistributionSegment>,
     val genreTrackedTitlesCount: Int,
 )

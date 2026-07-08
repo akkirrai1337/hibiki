@@ -20,7 +20,10 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.account.YummyAccountSessionState
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
+import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 
 class YummyAccountViewModel(
     context: Context,
@@ -45,6 +48,7 @@ class YummyAccountViewModel(
             val nextState = runCatching {
                 val profile = repository.signIn(login = login, secret = secret)
                 loadSignedInState(
+                    context = appContext,
                     repository = repository,
                     profile = profile,
                     refreshDetailedProfile = false,
@@ -110,6 +114,7 @@ class YummyAccountViewModel(
                             profile = cachedProfile,
                             libraryItems = emptyList(),
                             listWatchStats = emptyList(),
+                            libraryMetadata = emptyList(),
                         )
                     )
                 }
@@ -118,6 +123,7 @@ class YummyAccountViewModel(
             val nextState = when (val result = repository.validateSession()) {
                 YummyAccountSessionState.LoggedOut -> YummyAccountScreenState.SignedOut
                 is YummyAccountSessionState.LoggedIn -> loadSignedInState(
+                    context = appContext,
                     repository = repository,
                     profile = result.profile,
                     refreshDetailedProfile = false,
@@ -187,12 +193,14 @@ sealed interface YummyAccountScreenState {
         val profile: YummyProfile,
         val libraryItems: List<YummyUserAnimeListItem>,
         val listWatchStats: List<YummyUserListWatchStat>,
+        val libraryMetadata: List<Anime>,
     ) : YummyAccountScreenState
 
     data class Error(val message: String) : YummyAccountScreenState
 }
 
 private suspend fun loadSignedInState(
+    context: Context,
     repository: YummyAccountRepository,
     profile: YummyProfile,
     refreshDetailedProfile: Boolean = true,
@@ -217,5 +225,34 @@ private suspend fun loadSignedInState(
 
         Triple(detailedProfile.await(), libraryItems.await(), listWatchStats.await())
     }
-    return YummyAccountScreenState.SignedIn(detailedProfile, libraryItems, listWatchStats)
+    val libraryMetadata = loadLibraryMetadata(context = context, libraryItems = libraryItems)
+    return YummyAccountScreenState.SignedIn(detailedProfile, libraryItems, listWatchStats, libraryMetadata)
+}
+
+private suspend fun loadLibraryMetadata(
+    context: Context,
+    libraryItems: List<YummyUserAnimeListItem>,
+): List<Anime> {
+    val metadataRepository = OfflineTitleMetadataRepository(context)
+    val searchRepository = AnimeSearchRepository(context)
+    return try {
+        libraryItems.mapNotNull { item ->
+            val id = item.animeId.toString()
+            metadataRepository.get(id)
+                ?: runCatching {
+                    val fallback = Anime(
+                        id = id,
+                        title = item.title,
+                        subtitle = "",
+                        episodesLabel = "",
+                        status = "",
+                        posterUrl = item.posterUrl,
+                    )
+                    searchRepository.getDetails(id = id, fallback = fallback)
+                        .also(metadataRepository::save)
+                }.getOrNull()
+        }
+    } finally {
+        searchRepository.close()
+    }
 }

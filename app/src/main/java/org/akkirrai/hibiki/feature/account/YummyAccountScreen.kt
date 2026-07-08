@@ -48,7 +48,7 @@ import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
 import org.akkirrai.hibiki.core.design.component.YummySignInForm
-import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.model.Anime
 
 @Composable
 fun YummyAccountScreen(
@@ -92,6 +92,7 @@ fun YummyAccountScreen(
                 profile = state.profile,
                 libraryItems = state.libraryItems,
                 listWatchStats = state.listWatchStats,
+                libraryMetadata = state.libraryMetadata,
                 busy = uiState.busy,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
                 onExit = viewModel::signOut,
@@ -272,24 +273,19 @@ private fun SignedInProfileScreen(
     profile: YummyProfile,
     libraryItems: List<YummyUserAnimeListItem>,
     listWatchStats: List<YummyUserListWatchStat>,
+    libraryMetadata: List<Anime>,
     busy: Boolean,
     paddingValues: PaddingValues,
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
-    val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context) }
-    val cachedLibraryMetadata = remember(libraryItems, offlineTitleMetadataRepository) {
-        libraryItems.mapNotNull { item ->
-            offlineTitleMetadataRepository.get(item.animeId.toString())
-        }
-    }
-    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, cachedLibraryMetadata) {
+    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, libraryMetadata) {
         buildProfileSnapshot(
             resources = context.resources,
             profile = profile,
             libraryItems = libraryItems,
             listWatchStats = listWatchStats,
-            cachedLibraryMetadata = cachedLibraryMetadata,
+            cachedLibraryMetadata = libraryMetadata,
         )
     }
 
