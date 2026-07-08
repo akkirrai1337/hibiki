@@ -856,10 +856,10 @@ private fun AnimeSection(
                     ),
                     onClick = { onAnimeClick(anime) },
                     width = 118.dp,
-                    height = HOME_SECTION_POSTER_CARD_HEIGHT,
                     titleBaseMaxLines = 2,
                     titleExtraLongTitleLines = 0,
                     titleOverflow = TextOverflow.Ellipsis,
+                    reservedTitleLines = 3,
                     reserveMetaLine = true,
                 )
             }
@@ -944,7 +944,6 @@ private const val FEATURED_AUTO_ADVANCE_MS = 5000
 private val HOME_TOP_BAR_HEIGHT = 50.dp
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
-private val HOME_SECTION_POSTER_CARD_HEIGHT = 244.dp
 
 private fun buildHomeMeta(
     anime: Anime,
