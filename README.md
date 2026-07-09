@@ -1,21 +1,19 @@
-<div align="center">
+<p align="center">
+  <img src="./docs/hibiki-round.svg" alt="hibiki icon" width="120" height="120"/>
+</p>
 
-<img src="./docs/hibiki-round.svg" alt="Hibiki icon" width="120" height="120"/>
-
-# [Hibiki](https://github.com/akkirrai1337/hibiki)
+# hibiki
 
 [English version](README_EN.md)
 
-**[Hibiki](https://github.com/akkirrai1337/hibiki) — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
+**hibiki — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
 
 ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
 ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
 ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-### Основные возможности
-
-<div align="left">
+### 📚 Основные возможности
 
 * Каталог аниме с подборками, трендами и недавними обновлениями
 * Поиск по названию с фильтрами
@@ -29,9 +27,7 @@
 * Экран аккаунта и вход; функции профиля ещё в разработке
 * Русская и английская локализация интерфейса
 
-</div>
-
-### Скриншоты
+### 🖼️ Скриншоты
 
 <div align="center">
     <img src="./docs/screenshots/ru/mainscreen.jpg" alt="Главная" width="250"/>
@@ -41,36 +37,18 @@
     <img src="./docs/screenshots/ru/library.jpg" alt="Библиотека" width="250"/>
 </div>
 
-### Credits
+### 🎬 Credits
 
-<div align="left">
+- 🎬 [anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
 
-[anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
-
-</div>
-
-### Связь
-
-<div align="left">
+### 💬 Связь
 
 По вопросам, предложениям или баг-репортам можно написать мне в Discord: `akkirrai`
 
-</div>
+### 📄 Лицензия
 
-### Лицензия
+hibiki распространяется под лицензией [GNU General Public License v3.0](LICENSE).
 
-<div align="left">
-
-Hibiki распространяется под лицензией [GNU General Public License v3.0](LICENSE).
-
-</div>
-
-### DMCA Disclaimer
-
-<div align="left">
+### ⚖️ DMCA Disclaimer
 
 Разработчик этого приложения не аффилирован с контентом, доступным в приложении, и не хранит и не распространяет этот контент. Приложение следует рассматривать как веб-браузер: всё содержимое, доступное через него, свободно доступно в интернете. Все запросы на удаление контента по DMCA следует направлять владельцам сайта, на котором этот контент размещён.
-
-</div>
-
-</div>

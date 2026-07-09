@@ -733,8 +733,8 @@ private fun ContinueWatchingCard(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 108.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
+                            .align(Alignment.CenterVertically),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         AnimeTitleText(
                             text = anime.title,
@@ -747,29 +747,25 @@ private fun ContinueWatchingCard(
                             overflow = TextOverflow.Ellipsis,
                         )
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            val meta = buildHomeMeta(
-                                anime = anime,
-                                announcementLabel = stringResource(R.string.anime_meta_announcement),
-                            )
-                            if (meta.isNotBlank()) {
-                                Text(
-                                    text = meta,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
+                        val meta = buildHomeMeta(
+                            anime = anime,
+                            announcementLabel = stringResource(R.string.anime_meta_announcement),
+                        )
+                        if (meta.isNotBlank()) {
                             Text(
-                                text = stringResource(R.string.home_open_title_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = meta,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
+
+                        Text(
+                            text = stringResource(R.string.home_open_title_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     AppFilledIconButton(
