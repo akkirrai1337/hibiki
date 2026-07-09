@@ -209,6 +209,8 @@ fun PlayerScreen(
     var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
     var pendingDoubleTapSeekJob by remember { mutableStateOf<Job?>(null) }
     var doubleTapSeekOverlayVisible by remember { mutableStateOf(false) }
+    val watchedSeconds = remember(state.currentSourceId, state.currentEpisodeId) { mutableSetOf<Long>() }
+    var lastTrackedPlaybackPositionMs by remember(state.currentSourceId, state.currentEpisodeId) { mutableLongStateOf(-1L) }
     val seekOverlayActive = gestureSeekInProgress ||
         gestureSeekActive ||
         isSeeking ||
@@ -259,6 +261,8 @@ fun PlayerScreen(
         return y in gestureBlockedTopPx..(safeHeight - gestureBlockedBottomPx)
     }
 
+    fun watchedSecondsSnapshot(): List<Long> = watchedSeconds.sorted()
+
     fun saveCurrentPlaybackProgress() {
         val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
         val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
@@ -270,6 +274,7 @@ fun PlayerScreen(
         viewModel.savePlaybackProgress(
             positionMs = safePositionMs,
             durationMs = safeDurationMs,
+            watchedSeconds = watchedSecondsSnapshot(),
         )
     }
 
@@ -368,6 +373,7 @@ fun PlayerScreen(
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
                 durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.playWhenReady = false
             attachedPlayerView?.player = null
@@ -406,6 +412,7 @@ fun PlayerScreen(
                         viewModel.savePlaybackProgress(
                             positionMs = exoPlayer.duration.takeIf { it > 0 } ?: exoPlayer.currentPosition.coerceAtLeast(0L),
                             durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                            watchedSeconds = watchedSecondsSnapshot(),
                         )
                         viewModel.playNextEpisode()
                     }
@@ -441,6 +448,7 @@ fun PlayerScreen(
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
                 durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.removeListener(listener)
             exoPlayer.release()
@@ -562,6 +570,39 @@ fun PlayerScreen(
                 sliderPositionMs = positionMs
             }
             delay(250)
+        }
+    }
+
+    LaunchedEffect(exoPlayer, state.currentSourceId, state.currentEpisodeId) {
+        lastTrackedPlaybackPositionMs = -1L
+        while (true) {
+            val currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+            val currentDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            val trackingAllowed = exoPlayer.isPlaying &&
+                currentDurationMs > 0L &&
+                !isSeeking &&
+                !gestureSeekActive &&
+                !gestureSeekInProgress
+
+            if (trackingAllowed) {
+                val previousPositionMs = lastTrackedPlaybackPositionMs
+                if (previousPositionMs >= 0L) {
+                    val deltaMs = currentPositionMs - previousPositionMs
+                    if (deltaMs in 1L..WATCHED_SECONDS_TRACKING_MAX_DELTA_MS) {
+                        val startSecond = previousPositionMs / 1_000L
+                        val endSecond = currentPositionMs / 1_000L
+                        for (second in startSecond..endSecond) {
+                            if (second * 1_000L < currentDurationMs) {
+                                watchedSeconds += second
+                            }
+                        }
+                    }
+                }
+                lastTrackedPlaybackPositionMs = currentPositionMs
+            } else {
+                lastTrackedPlaybackPositionMs = -1L
+            }
+            delay(1_000L)
         }
     }
 
@@ -2310,6 +2351,7 @@ private const val SEEK_GESTURE_THRESHOLD_MS = 2_000L
 private const val SEEK_GESTURE_TOUCH_SLOP_MULTIPLIER = 1.8f
 private const val SEEK_GESTURE_HORIZONTAL_DOMINANCE = 1.35f
 private const val SEEK_GESTURE_FULL_WIDTH_MS = 90_000L
+private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
 private val PLAYER_TOP_GESTURE_EXCLUSION_HEIGHT = 116.dp

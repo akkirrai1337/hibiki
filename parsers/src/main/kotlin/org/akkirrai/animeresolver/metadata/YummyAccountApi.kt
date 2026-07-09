@@ -226,6 +226,26 @@ class YummyAccountApi(
         }.bodyOrThrow<YummyAccountEnvelope<Unit?>>(SOURCE)
     }
 
+    suspend fun markVideoWatched(
+        videoId: Long,
+        timeSeconds: Long,
+        durationSeconds: Long,
+        watchedSeconds: List<Long> = emptyList(),
+        accessToken: String? = null,
+    ) {
+        client.put("$baseUrl/video/$videoId") {
+            addHeaders(resolveAccessToken(accessToken))
+            contentType(ContentType.Application.Json)
+            setBody(
+                YummyVideoWatchUpdateRequest(
+                    time = timeSeconds.coerceAtLeast(0L),
+                    duration = durationSeconds.coerceAtLeast(0L),
+                    times = watchedSeconds.map { it.coerceAtLeast(0L) },
+                )
+            )
+        }.bodyOrThrow<YummyAccountEnvelope<Boolean>>(SOURCE)
+    }
+
     private fun resolveAccessToken(explicitToken: String?): String? {
         return explicitToken?.takeIf(String::isNotBlank)
             ?: accessTokenProvider?.invoke()?.takeIf(String::isNotBlank)
@@ -280,7 +300,6 @@ private data class YummyProfileResponse(
     val texts: YummyProfileTextsResponse? = null,
     val banner: YummyProfileBannerResponse? = null,
     val watches: YummyProfileWatchesResponse? = null,
-    @SerialName("days_online") val daysOnline: Int? = null,
     val counts: Map<String, Int>? = null,
     val friends: YummyProfileFriendsResponse? = null,
     @SerialName("reviewsCount") val reviewsCount: Int? = null,
@@ -307,7 +326,6 @@ private data class YummyProfileResponse(
             texts = texts?.toModel(),
             banner = banner?.toModel(),
             watches = watches?.toModel(),
-            daysOnline = daysOnline,
             counts = counts.orEmpty().toProfileCounts(),
             socialCounts = YummyProfileSocialCounts(
                 friends = friends?.friends ?: 0,
@@ -472,6 +490,13 @@ private data class YummyAnimeListStateResponse(
 @Serializable
 private data class YummyAnimeListUpdateRequest(
     val list: Int,
+)
+
+@Serializable
+private data class YummyVideoWatchUpdateRequest(
+    val times: List<Long> = emptyList(),
+    val duration: Long,
+    val time: Long,
 )
 
 @Serializable
@@ -755,7 +780,6 @@ data class YummyProfile(
     val texts: YummyProfileTexts? = null,
     val banner: YummyProfileBanner? = null,
     val watches: YummyProfileWatches? = null,
-    val daysOnline: Int? = null,
     val counts: YummyProfileCounts = YummyProfileCounts(),
     val socialCounts: YummyProfileSocialCounts = YummyProfileSocialCounts(),
     val oldNicknames: List<YummyOldNickname> = emptyList(),

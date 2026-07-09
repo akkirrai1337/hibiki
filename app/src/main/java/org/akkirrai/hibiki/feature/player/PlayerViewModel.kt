@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
+import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.core.model.WatchEpisode
@@ -28,10 +29,13 @@ class PlayerViewModel(
     private val repository: AnimeWatchRepository,
     private val watchStateRepository: WatchStateRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
+    private val accountRepository: YummyAccountRepository,
 ) : ViewModel() {
     private val titleId = sourceId.substringBefore(':')
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
+    private var lastSyncedVideoId: Long? = null
+    private var lastSyncedPositionMs: Long = 0L
     private val _uiState = MutableStateFlow(
         PlayerUiState(
             currentSourceId = sourceId,
@@ -280,6 +284,7 @@ class PlayerViewModel(
     fun savePlaybackProgress(
         positionMs: Long,
         durationMs: Long,
+        watchedSeconds: List<Long> = emptyList(),
     ) {
         val safePositionMs = positionMs.coerceAtLeast(0L)
         if (durationMs <= 0L || safePositionMs <= 0L) {
@@ -306,6 +311,47 @@ class PlayerViewModel(
             positionMs = safePositionMs,
             durationMs = durationMs,
         )
+        syncPlaybackProgress(
+            videoId = playback.videoId,
+            positionMs = safePositionMs,
+            durationMs = durationMs,
+            watchedSeconds = watchedSeconds,
+        )
+    }
+
+    private fun syncPlaybackProgress(
+        videoId: Long?,
+        positionMs: Long,
+        durationMs: Long,
+        watchedSeconds: List<Long>,
+    ) {
+        if (videoId == null || !accountRepository.isLoggedIn()) {
+            return
+        }
+        val isSameVideo = lastSyncedVideoId == videoId
+        val positionDelta = positionMs - lastSyncedPositionMs
+        val watchedToEnd = durationMs > 0L && positionMs >= durationMs * 0.9
+        if (isSameVideo && positionDelta in 0 until WATCH_SYNC_POSITION_STEP_MS && !watchedToEnd) {
+            return
+        }
+
+        lastSyncedVideoId = videoId
+        lastSyncedPositionMs = positionMs
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                accountRepository.markVideoWatched(
+                    videoId = videoId,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    watchedSeconds = watchedSeconds,
+                )
+            }.onFailure { error ->
+                AppLogger.w(
+                    PLAYBACK_LOG_TAG,
+                    "Failed to sync Yummy watch progress: videoId=$videoId, message=${error.message}",
+                )
+            }
+        }
     }
 
     fun consumePendingSeek() {
@@ -404,6 +450,7 @@ class PlayerViewModel(
                 repository = dependencies.animeWatchRepository(),
                 watchStateRepository = dependencies.watchStateRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),
+                accountRepository = dependencies.accountRepository(),
             ) as T
         }
     }
@@ -442,3 +489,4 @@ private fun PlayerUiState.settingsOptionsKey(): String =
     }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
+private const val WATCH_SYNC_POSITION_STEP_MS = 30_000L

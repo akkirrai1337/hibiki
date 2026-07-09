@@ -108,78 +108,6 @@ internal fun ProfileCard(
                     )
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SocialLinksRow(
-                    profile = profile,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SocialLinksRow(
-    profile: YummyProfile,
-    modifier: Modifier = Modifier,
-) {
-    val ids = profile.ids
-    val badges = listOf(
-        SocialBadge("VK", ids?.vkId != null, Color(0xFF2F7BF7)),
-        SocialBadge("TG", !ids?.telegramNickname.isNullOrBlank(), Color(0xFF2AA7E8)),
-        SocialBadge("SH", ids?.shikimoriId != null || !ids?.shikimoriNickname.isNullOrBlank(), Color(0xFF8F7CFF)),
-    )
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        badges.forEach { badge ->
-            ProfileSocialBadge(badge = badge)
-        }
-    }
-}
-
-@Composable
-private fun ProfileSocialBadge(
-    badge: SocialBadge,
-) {
-    val active = badge.connected
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (active) {
-            badge.color.copy(alpha = 0.18f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.16f)
-        },
-        tonalElevation = 0.dp,
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (active) {
-                        badge.color.copy(alpha = 0.36f)
-                    } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = badge.label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (active) badge.color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.68f),
-            )
         }
     }
 }
@@ -272,9 +200,3 @@ private fun YummyProfileSex?.toLabel(): String {
         else -> stringResource(R.string.yummy_account_profile_unknown)
     }
 }
-
-private data class SocialBadge(
-    val label: String,
-    val connected: Boolean,
-    val color: Color,
-)

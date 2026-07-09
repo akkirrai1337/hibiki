@@ -43,7 +43,6 @@ internal fun buildProfileSnapshot(
             )
         }
 
-    val streakDays = profile.daysOnline ?: 0
     val totalDuration = listWatchStats.sumOf { it.seconds }
         .takeIf { it > 0L }
         ?: watchSums.sumOf { it.spentTime ?: 0L }
@@ -75,8 +74,6 @@ internal fun buildProfileSnapshot(
     return YummyProfileSnapshot(
         watchTimeLabel = formatDurationLabel(resources, totalDuration),
         siteWatchTimeLabel = formatDurationLabel(resources, siteWatchTotal),
-        streakDays = streakDays,
-        streakLabel = streakDays.toString(),
         activeDaysCount = activityCounts.size,
         totalEpisodes = history.sumOf { it.episodeCount ?: 0 },
         favoriteCount = profile.counts.favorite.takeIf { profile.counts.hasAny }
@@ -89,7 +86,6 @@ internal fun buildProfileSnapshot(
         durationSegments = buildDurationSegments(resources, watchSums, listWatchStats),
         activityDays = activityDays,
         recentLibraryItems = recentItems,
-        onlineDaysLabel = profile.daysOnline?.toString() ?: "-",
         genreSegments = genreSegments,
         genreTrackedTitlesCount = genreTrackedTitlesCount,
     )
@@ -365,8 +361,6 @@ private fun YummyProfileWatchSum.resolveSiteWatchBucket(): String? {
 internal data class YummyProfileSnapshot(
     val watchTimeLabel: String,
     val siteWatchTimeLabel: String,
-    val streakDays: Int,
-    val streakLabel: String,
     val activeDaysCount: Int,
     val totalEpisodes: Int,
     val favoriteCount: Int,
@@ -378,7 +372,6 @@ internal data class YummyProfileSnapshot(
     val durationSegments: List<DurationSegment>,
     val activityDays: List<ActivityDay>,
     val recentLibraryItems: List<RecentLibraryItem>,
-    val onlineDaysLabel: String,
     val genreSegments: List<DistributionSegment>,
     val genreTrackedTitlesCount: Int,
 )

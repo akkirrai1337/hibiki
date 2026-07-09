@@ -198,7 +198,6 @@
     <string name="yummy_account_profile_gender">Gender</string>
     <string name="yummy_account_profile_unknown">Unknown</string>
     <string name="yummy_account_stat_favorites">Favorites: %1$d</string>
-    <string name="yummy_account_streak_site_days">day streak</string>
     <string name="yummy_account_segment_stats">Stats</string>
     <string name="yummy_account_segment_activity">Activity</string>
     <string name="yummy_account_segment_library">Library</string>
@@ -215,7 +214,6 @@
     <string name="yummy_account_recent_library_empty">No recent additions</string>
     <string name="yummy_account_recent_additions_title">Recent additions</string>
     <string name="yummy_account_watch_by_lists_title">Watch time by list</string>
-    <string name="yummy_account_site_days_label">days on site</string>
     <string name="yummy_account_total_duration_center">total</string>
     <string name="yummy_account_notifications_cd">Notifications</string>
     <string name="yummy_account_profile_gender_male">Male</string>

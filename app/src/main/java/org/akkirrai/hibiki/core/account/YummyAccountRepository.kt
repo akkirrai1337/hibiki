@@ -209,6 +209,20 @@ class YummyAccountRepository(
         api.setUserOnline()
     }
 
+    suspend fun markVideoWatched(
+        videoId: Long,
+        positionMs: Long,
+        durationMs: Long,
+        watchedSeconds: List<Long> = emptyList(),
+    ) {
+        api.markVideoWatched(
+            videoId = videoId,
+            timeSeconds = positionMs / 1_000L,
+            durationSeconds = durationMs / 1_000L,
+            watchedSeconds = watchedSeconds,
+        )
+    }
+
     fun close() {
         createdClient?.close()
     }

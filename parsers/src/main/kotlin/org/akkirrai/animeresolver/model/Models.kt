@@ -139,6 +139,7 @@ data class PlayerLink(
     val playerName: String? = null,
     val translation: String? = null,
     val segments: List<VideoSegment> = emptyList(),
+    val videoId: Long? = null,
 )
 
 enum class StreamType {

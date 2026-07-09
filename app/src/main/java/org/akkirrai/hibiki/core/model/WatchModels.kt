@@ -23,6 +23,7 @@ data class PlaybackStream(
     val qualityLabel: String? = null,
     val headers: Map<String, String> = emptyMap(),
     val segments: List<PlaybackSegment> = emptyList(),
+    val videoId: Long? = null,
 )
 
 data class PlaybackSegment(

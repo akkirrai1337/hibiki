@@ -254,6 +254,7 @@ class AnimeWatchRepository(
                                 apiSegments = link.segments,
                                 extractedSegments = stream.segments,
                             ).map { segment -> segment.toPlaybackSegment() },
+                            videoId = link.videoId,
                         )
                     } ?: throw SourceException(appString(R.string.watch_error_stream_unavailable))
                 }

@@ -87,6 +87,7 @@ class YummyAnimeProvider(
                 playerName = video.data.player.removePrefix("Плеер ").trim(),
                 translation = video.data.dubbing.removePrefix("Озвучка ").trim(),
                 segments = video.skips.toVideoSegments(),
+                videoId = video.videoId,
             )
         }.sortedBy { playerPriority(it.playerName) }
     }

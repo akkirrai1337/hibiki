@@ -109,12 +109,8 @@ internal fun AnalyticsCard(
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                StreakBlock(
-                    value = snapshot.streakDays.toString(),
-                    modifier = Modifier.width(88.dp),
-                )
                 Surface(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.1f),
                 ) {
@@ -292,31 +288,6 @@ private fun LegendItem(
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun StreakBlock(
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFFFF6670),
-        )
-        Text(
-            text = stringResource(R.string.yummy_account_site_days_label),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

@@ -200,7 +200,6 @@
     <string name="yummy_account_profile_gender">Пол</string>
     <string name="yummy_account_profile_unknown">Не указано</string>
     <string name="yummy_account_stat_favorites">Избранное: %1$d</string>
-    <string name="yummy_account_streak_site_days">день подряд</string>
     <string name="yummy_account_segment_stats">Статистика</string>
     <string name="yummy_account_segment_activity">Активность</string>
     <string name="yummy_account_segment_library">Библиотека</string>
@@ -217,7 +216,6 @@
     <string name="yummy_account_recent_library_empty">Нет недавних добавлений</string>
     <string name="yummy_account_recent_additions_title">Последние добавления</string>
     <string name="yummy_account_watch_by_lists_title">Время по спискам</string>
-    <string name="yummy_account_site_days_label">дней на сайте</string>
     <string name="yummy_account_total_duration_center">всего</string>
     <string name="yummy_account_notifications_cd">Уведомления</string>
     <string name="yummy_account_profile_gender_male">Мужской</string>
