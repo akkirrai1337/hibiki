@@ -54,11 +54,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.PauseCircle
-import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +80,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -93,6 +90,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -913,7 +911,7 @@ fun PlayerScreen(
                 )
 
                 AnimatedVisibility(
-                    visible = !seekOverlayActive,
+                    visible = !seekOverlayActive && !state.isLoading && !isBuffering,
                     modifier = Modifier.align(Alignment.Center),
                     enter = fadeIn(animationSpec = tween(120)),
                     exit = fadeOut(animationSpec = tween(90)),
@@ -1000,7 +998,22 @@ fun PlayerScreen(
                     .background(Color.Black.copy(alpha = 0.34f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                Box(
+                    modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.58f)),
+                    )
+                    CircularProgressIndicator(
+                        modifier = Modifier.matchParentSize(),
+                        color = Color.White,
+                        strokeWidth = 4.dp,
+                    )
+                }
             }
         }
 
@@ -2037,24 +2050,30 @@ private fun PlayerCenterControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayerControlButton(
-            icon = Icons.Outlined.SkipPrevious,
+            painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
             enabled = hasPreviousEpisode,
             onClick = onPreviousEpisode,
         )
         AppFilledIconButton(
             onClick = onTogglePlay,
-            modifier = Modifier.size(72.dp),
+            modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
             style = AppFilledIconButtonStyle.DarkOverlay,
         ) {
             Icon(
-                imageVector = if (isPlaying) Icons.Outlined.PauseCircle else Icons.Outlined.PlayCircle,
+                painter = painterResource(
+                    if (isPlaying) {
+                        R.drawable.ic_player_media_pause_24
+                    } else {
+                        R.drawable.ic_player_media_play_arrow_24
+                    }
+                ),
                 contentDescription = null,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(40.dp),
                 tint = Color.White,
             )
         }
         PlayerControlButton(
-            icon = Icons.Outlined.SkipNext,
+            painter = painterResource(R.drawable.ic_player_media_skip_next_24),
             enabled = hasNextEpisode,
             onClick = onNextEpisode,
         )
@@ -2148,7 +2167,7 @@ private fun PlayerTimeline(
 
 @Composable
 private fun PlayerControlButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    painter: Painter,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
@@ -2161,8 +2180,9 @@ private fun PlayerControlButton(
         style = AppFilledIconButtonStyle.DarkOverlay,
     ) {
         Icon(
-            imageVector = icon,
+            painter = painter,
             contentDescription = null,
+            modifier = Modifier.size(30.dp),
             tint = Color.White
         )
     }
@@ -2371,6 +2391,7 @@ private const val PLAYER_OVERLAY_ANIMATION_MS = 220
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
 private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
+private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_TIMELINE_TRACK_HEIGHT = 4.dp
 private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
 private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp

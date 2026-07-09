@@ -4,7 +4,7 @@
 
 # [Hibiki](https://github.com/akkirrai1337/hibiki)
 
-[Русская версия](README_RU.md)
+[Русская версия](README.md)
 
 **Hibiki is an unofficial YummyAnime client for Android with catalog browsing, search, title pages, watch progress, a local library, a built-in player, and saved episode support. Source switching may be added in the future.**
 
@@ -28,7 +28,6 @@
 * Saved episodes with local playback cache
 * Account screen and sign-in flow; profile-related features are still in progress
 * Russian and English interface localization
-* Sanitized log export for bug reports
 
 </div>
 
@@ -37,56 +36,16 @@
 <div align="center">
     <img src="./docs/screenshots/en/mainscreen.jpg" alt="Home screen" width="250"/>
     <img src="./docs/screenshots/en/search.jpg" alt="Search screen" width="250"/>
+    <br/>
     <img src="./docs/screenshots/en/title.jpg" alt="Title details screen" width="250"/>
-    <br/>
-    <img src="./docs/screenshots/en/voiceover.jpg" alt="Voiceover selection screen" width="250"/>
-    <img src="./docs/screenshots/en/episodes.jpg" alt="Episodes screen" width="250"/>
     <img src="./docs/screenshots/en/library.jpg" alt="Library screen" width="250"/>
-    <br/>
-    <img src="./docs/screenshots/en/player.jpg" alt="Player screen" width="760"/>
 </div>
 
-### Build
+### Credits
 
 <div align="left">
 
-JDK 21 is recommended.
-
-```bash
-./gradlew :app:assembleDebug
-```
-
-Run parser tests:
-
-```bash
-./gradlew :parsers:test
-```
-
-Windows:
-
-```powershell
-.\gradlew.bat :app:assembleDebug
-```
-
-</div>
-
-### Project State
-
-<div align="left">
-
-The current codebase contains a working Compose UI, search, title pages, source and episode flow, player, local library, watch progress, account screen and saved episode pipeline. Some account/profile and source/storage features are still partial integration points.
-
-</div>
-
-### Planned Ideas
-
-<div align="left">
-
-- [ ] Picture-in-picture playback
-- [ ] Video scaling modes: stretch, crop and fit
-- [ ] More useful YummyAnime sign-in with profile data loading
-- [ ] Full anime catalog screen
-- [ ] More ideas later
+Player icons are based on assets from [anilibria-app](https://github.com/anilibria/anilibria-app).
 
 </div>
 
@@ -106,11 +65,11 @@ Hibiki is licensed under the [GNU General Public License v3.0](LICENSE).
 
 </div>
 
-### Disclaimer
+### DMCA Disclaimer
 
 <div align="left">
 
-Hibiki is not affiliated with YummyAnime and is not an official YummyAnime application. The app currently works as a YummyAnime client; source switching may be added in the future. Availability of some features depends on external data sources and local caching.
+The developers of this application do not have any affiliation with the content available in the app and do not store or distribute any content. This application should be considered a web browser, and all content that can be found using this application is freely available on the Internet. All DMCA takedown requests should be sent to the owners of the website where the content is hosted.
 
 </div>
 
