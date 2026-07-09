@@ -43,9 +43,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -125,7 +122,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.searchStateGridContent
+import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
@@ -204,8 +201,7 @@ fun HomeScreen(
             label = "HomeSearchContent",
         ) { searchActive ->
             if (searchActive) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = UiDimens.ScreenPadding,
@@ -213,15 +209,17 @@ fun HomeScreen(
                         end = UiDimens.ScreenPadding,
                         bottom = bottomContentPadding
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    searchStateGridContent(
+                    searchStateVerticalListContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime -> buildHomeMeta(anime, announcementLabel) },
                         onLoadMore = viewModel::loadMoreSearchResults,
                         loadMoreLabel = searchLoadMoreLabel,
+                        resultsCountLabel = { count ->
+                            pluralStringResource(R.plurals.search_results_count, count, count)
+                        },
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = Icons.Outlined.SearchOff,

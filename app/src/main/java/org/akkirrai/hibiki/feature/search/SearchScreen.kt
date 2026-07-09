@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
@@ -36,7 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.searchStateGridContent
+import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
@@ -56,8 +54,7 @@ fun SearchScreen(
     val emptyMessage = stringResource(R.string.search_empty)
     val retryLabel = stringResource(R.string.search_retry)
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+    LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = UiDimens.ScreenPadding,
@@ -65,10 +62,9 @@ fun SearchScreen(
             end = UiDimens.ScreenPadding,
             bottom = UiDimens.ScreenPadding
         ),
-        horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             SearchBar(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
@@ -76,12 +72,15 @@ fun SearchScreen(
             )
         }
 
-        searchStateGridContent(
+        searchStateVerticalListContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
             metaText = { anime -> buildSearchMeta(anime, announcementLabel) },
             onLoadMore = viewModel::loadMore,
             loadMoreLabel = loadMoreLabel,
+            resultsCountLabel = { count ->
+                pluralStringResource(R.plurals.search_results_count, count, count)
+            },
             idleTitle = idleTitle,
             idleMessage = idleMessage,
             idleIcon = Icons.Outlined.Search,
