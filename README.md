@@ -1,17 +1,19 @@
-<p align="center">
+<div align="center">
+
   <img src="./docs/hibiki-round.svg" alt="hibiki icon" width="120" height="120"/>
-</p>
 
-# hibiki
+  # hibiki
 
-[English version](README_EN.md)
+  [English version](README_EN.md)
 
-**hibiki — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
+  **hibiki — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
 
-![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
-![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
-![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+  ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
+  ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
+  ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
+  [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+</div>
 
 ### 📚 Основные возможности
 
