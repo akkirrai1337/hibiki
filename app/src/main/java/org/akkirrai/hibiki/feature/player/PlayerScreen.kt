@@ -179,7 +179,7 @@ fun PlayerScreen(
     var unlockButtonInteractionTick by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(true) }
     var isBuffering by remember { mutableStateOf(false) }
-    var playbackSpeed by remember { mutableFloatStateOf(1f) }
+    var playbackSpeed by remember { mutableFloatStateOf(preferencesState.playbackSpeed) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var positionMs by remember { mutableLongStateOf(0L) }
     var bufferedPositionMs by remember { mutableLongStateOf(0L) }
@@ -198,6 +198,9 @@ fun PlayerScreen(
     var restoreWindowUi by remember { mutableStateOf<(() -> Unit)?>(null) }
     val autoSkipSegments = preferencesState.autoSkipSegments
     val autoPlayNextEpisode = preferencesState.autoPlayNextEpisode
+    LaunchedEffect(preferencesState.playbackSpeed) {
+        playbackSpeed = preferencesState.playbackSpeed
+    }
     var handledEndedEpisodeId by remember { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     var hiddenSkipSegmentKey by remember { mutableStateOf<String?>(null) }
@@ -1112,6 +1115,7 @@ fun PlayerScreen(
                     onSelectSpeed = { speed ->
                         keepControlsVisible()
                         playbackSpeed = speed
+                        appPreferences.setPlaybackSpeed(speed)
                         applyPlaybackSpeed(speed)
                     },
                     onSelectVoiceover = {

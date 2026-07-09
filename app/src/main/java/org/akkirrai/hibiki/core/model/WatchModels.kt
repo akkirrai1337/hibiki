@@ -92,6 +92,8 @@ data class WatchSourceSelection(
     val sourceId: String?,
     val sourceTitle: String?,
     val quality: String? = null,
+    val playerName: String? = null,
+    val backendId: String? = null,
     val autoSelect: Boolean = true,
 )
 

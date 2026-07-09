@@ -15,6 +15,8 @@ class WatchStateRepository(context: Context) {
             sourceId = readString(titleId, ::selectedSourceKey),
             sourceTitle = readString(titleId, ::selectedSourceTitleKey),
             quality = readString(titleId, ::selectedQualityKey),
+            playerName = readString(titleId, ::selectedPlayerKey),
+            backendId = readString(titleId, ::selectedBackendKey),
             autoSelect = readBoolean(titleId, ::selectedAutoKey, true),
         )
     }
@@ -24,6 +26,8 @@ class WatchStateRepository(context: Context) {
         sourceId: String?,
         sourceTitle: String?,
         quality: String?,
+        playerName: String? = null,
+        backendId: String? = null,
         autoSelect: Boolean,
     ) {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
@@ -32,6 +36,8 @@ class WatchStateRepository(context: Context) {
             .putString(selectedSourceKey(normalizedTitleId), sourceId)
             .putString(selectedSourceTitleKey(normalizedTitleId), sourceTitle)
             .putString(selectedQualityKey(normalizedTitleId), quality)
+            .putString(selectedPlayerKey(normalizedTitleId), playerName)
+            .putString(selectedBackendKey(normalizedTitleId), backendId)
             .putBoolean(selectedAutoKey(normalizedTitleId), autoSelect)
             .apply()
     }
@@ -191,6 +197,10 @@ class WatchStateRepository(context: Context) {
 
     private fun selectedQualityKey(titleId: String): String = "selected_source_quality_$titleId"
 
+    private fun selectedPlayerKey(titleId: String): String = "selected_player_$titleId"
+
+    private fun selectedBackendKey(titleId: String): String = "selected_backend_$titleId"
+
     private fun selectedAutoKey(titleId: String): String = "selected_source_auto_$titleId"
 
     private fun normalizedTitleId(titleId: String): String = YummyIdMigration.normalizeTitleId(titleId)
@@ -228,6 +238,8 @@ class WatchStateRepository(context: Context) {
             remove(selectedSourceKey(candidateId))
             remove(selectedSourceTitleKey(candidateId))
             remove(selectedQualityKey(candidateId))
+            remove(selectedPlayerKey(candidateId))
+            remove(selectedBackendKey(candidateId))
             remove(selectedAutoKey(candidateId))
         }
         return this

@@ -36,11 +36,16 @@ class PlayerViewModel(
     private var settingsLoadJob: Job? = null
     private var lastSyncedVideoId: Long? = null
     private var lastSyncedPositionMs: Long = 0L
+    private val savedSelection = watchStateRepository.getSelectedSource(titleId)
+        .takeIf { it.sourceId == sourceId }
     private val _uiState = MutableStateFlow(
         PlayerUiState(
             currentSourceId = sourceId,
             currentEpisodeId = episodeId,
             currentEpisodeNumber = initialEpisodeNumber,
+            selectedProviderId = savedSelection?.backendId,
+            selectedPlayerName = savedSelection?.playerName,
+            selectedQualityLabel = savedSelection?.quality,
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -241,6 +246,15 @@ class PlayerViewModel(
                     recoveryAttempted = false,
                 )
             }
+            watchStateRepository.saveSelectedSource(
+                titleId = titleId,
+                sourceId = source.sourceId,
+                sourceTitle = source.title,
+                quality = source.qualityLabel,
+                playerName = null,
+                backendId = null,
+                autoSelect = false,
+            )
             restoreSavedSeek()
             load(forceRefresh = true)
         }
@@ -257,6 +271,7 @@ class PlayerViewModel(
                 recoveryAttempted = false,
             )
         }
+        persistSelection()
         load(forceRefresh = true)
     }
 
@@ -271,6 +286,7 @@ class PlayerViewModel(
                 recoveryAttempted = false,
             )
         }
+        persistSelection()
         load(forceRefresh = true)
     }
 
@@ -283,6 +299,7 @@ class PlayerViewModel(
                 recoveryAttempted = false,
             )
         }
+        persistSelection()
         load(forceRefresh = true)
     }
 
@@ -303,6 +320,8 @@ class PlayerViewModel(
             sourceId = state.currentSourceId,
             sourceTitle = playback.sourceTitle,
             quality = playback.qualityLabel,
+            playerName = state.selectedPlayerName,
+            backendId = state.selectedProviderId,
             autoSelect = false,
         )
         watchStateRepository.saveEpisodeProgress(
@@ -321,6 +340,20 @@ class PlayerViewModel(
             positionMs = safePositionMs,
             durationMs = durationMs,
             watchedSeconds = watchedSeconds,
+        )
+    }
+
+    private fun persistSelection() {
+        val state = _uiState.value
+        val previousSelection = watchStateRepository.getSelectedSource(titleId)
+        watchStateRepository.saveSelectedSource(
+            titleId = titleId,
+            sourceId = state.currentSourceId,
+            sourceTitle = state.playback?.sourceTitle ?: previousSelection.sourceTitle,
+            quality = state.selectedQualityLabel ?: state.playback?.qualityLabel,
+            playerName = state.selectedPlayerName,
+            backendId = state.selectedProviderId,
+            autoSelect = false,
         )
     }
 

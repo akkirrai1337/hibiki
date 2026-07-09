@@ -23,6 +23,7 @@ data class AppPreferencesState(
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
+    val playbackSpeed: Float = 1f,
 )
 
 class AppPreferences(context: Context) {
@@ -32,7 +33,8 @@ class AppPreferences(context: Context) {
             KEY_THEME_MODE,
             KEY_LANGUAGE_MODE,
             KEY_AUTO_SKIP_SEGMENTS,
-            KEY_AUTO_PLAY_NEXT_EPISODE -> {
+            KEY_AUTO_PLAY_NEXT_EPISODE,
+            KEY_PLAYBACK_SPEED -> {
                 _state.value = readState(prefs)
             }
         }
@@ -61,6 +63,10 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, enabled).apply()
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        prefs.edit().putFloat(KEY_PLAYBACK_SPEED, normalizePlaybackSpeed(speed)).apply()
+    }
+
     fun close() {
         prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
@@ -69,6 +75,7 @@ class AppPreferences(context: Context) {
         const val PREFS_NAME = "hibiki_app_preferences"
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
+        const val KEY_PLAYBACK_SPEED = "playback_speed"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_LANGUAGE_MODE = "language_mode"
 
@@ -88,7 +95,15 @@ class AppPreferences(context: Context) {
                     ?: LanguageMode.SYSTEM,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
+                playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),
             )
+        }
+
+        private fun normalizePlaybackSpeed(speed: Float): Float {
+            return when (speed) {
+                0.75f, 1f, 1.25f, 1.5f, 2f -> speed
+                else -> 1f
+            }
         }
     }
 }
