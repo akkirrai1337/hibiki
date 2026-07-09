@@ -29,6 +29,8 @@ import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.provider.YummyAnimeProvider
 import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.PlaybackBackendOption
 import org.akkirrai.hibiki.core.model.PlaybackLinkOption
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -56,14 +58,17 @@ class AnimeWatchRepository(
 ) {
     private val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
     private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
+    private val sourcePayloadLanguages = ConcurrentHashMap<String, String>()
     private val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
     private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     private val appContext = context?.applicationContext
+    private val appPreferences = appContext?.let(::AppPreferences)
     private val applicationTokenStore = appContext?.let(::AndroidKeystoreYummyApplicationTokenStore)
     private val metadataSource = YummyMetadataSource(
         client = client,
         applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
         debugLogger = { message -> AppLogger.d(TAG, message) },
+        languageProvider = ::yummyLanguage,
     )
     private val provider = YummyAnimeProvider(
         client = client,
@@ -87,7 +92,7 @@ class AnimeWatchRepository(
 
     fun getCachedSources(animeId: String): WatchSourcesCacheSnapshot? {
         val canonicalId = extractTitleId(animeId)
-        val cached = cachedSources[canonicalId] ?: return null
+        val cached = cachedSources[languageCacheKey(canonicalId)] ?: return null
         return WatchSourcesCacheSnapshot(sources = cached.sources)
     }
 
@@ -96,16 +101,17 @@ class AnimeWatchRepository(
         onUpdate: (List<WatchSource>) -> Unit,
     ): List<WatchSource> {
         val canonicalId = resolveAnimeId(animeId)
-        cachedSources[canonicalId]?.let {
+        val cacheKey = languageCacheKey(canonicalId)
+        cachedSources[cacheKey]?.let {
             onUpdate(it.sources)
             return it.sources
         }
 
         val (inFlight, isCreator) = loadMutex.withLock {
-            inFlightLoads[canonicalId]?.let { existing ->
+            inFlightLoads[cacheKey]?.let { existing ->
                 existing to false
             } ?: CompletableDeferred<List<WatchSource>>().also { created ->
-                inFlightLoads[canonicalId] = created
+                inFlightLoads[cacheKey] = created
             }.let { created ->
                 created to true
             }
@@ -115,7 +121,7 @@ class AnimeWatchRepository(
             runCatching {
                 ensureInternetConnection()
                 val sources = performLoadSources(canonicalId)
-                cachedSources[canonicalId] = CachedWatchSources(sources)
+                cachedSources[cacheKey] = CachedWatchSources(sources)
                 onUpdate(sources)
                 inFlight.complete(sources)
                 sources
@@ -123,8 +129,8 @@ class AnimeWatchRepository(
                 inFlight.completeExceptionally(error)
             }
             loadMutex.withLock {
-                if (inFlightLoads[canonicalId] === inFlight) {
-                    inFlightLoads.remove(canonicalId)
+                if (inFlightLoads[cacheKey] === inFlight) {
+                    inFlightLoads.remove(cacheKey)
                 }
             }
         }
@@ -326,6 +332,7 @@ class AnimeWatchRepository(
     fun clearCaches() {
         cachedSources.clear()
         sourcePayloads.clear()
+        sourcePayloadLanguages.clear()
         cachedStreams.clear()
         inFlightLoads.clear()
     }
@@ -357,12 +364,15 @@ class AnimeWatchRepository(
                 match = match,
                 episodes = dubbing.episodes.sortedBy(Episode::number),
             )
+            sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
             source
         }
     }
 
     private suspend fun ensureSourcePayload(sourceId: String): SourcePayload? {
-        sourcePayloads[sourceId]?.let { return it }
+        sourcePayloads[sourceId]
+            ?.takeIf { sourcePayloadLanguages[sourceId] == currentLanguageKey() }
+            ?.let { return it }
         val titleId = extractTitleId(sourceId)
         if (titleId.isBlank()) return null
         loadSources(titleId, onUpdate = {})
@@ -389,7 +399,10 @@ class AnimeWatchRepository(
             providerId = provider.id,
             providerName = provider.name,
             mediaId = animeId,
-            title = title.displayName,
+            title = title.localizedDisplayName(
+                languageMode = appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+                systemLanguage = appContext?.resources?.configuration?.locales?.get(0)?.language,
+            ),
             confidence = 1.0,
             year = title.year,
             type = title.type,
@@ -457,6 +470,16 @@ class AnimeWatchRepository(
         name.containsPlayerToken("aniboom") -> 6
         else -> 10
     }
+
+    private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
+        LanguageMode.ENGLISH -> "en"
+        LanguageMode.RUSSIAN -> "ru"
+        LanguageMode.SYSTEM -> if (appContext?.resources?.configuration?.locales?.get(0)?.language == "ru") "ru" else "en"
+    }
+
+    private fun languageCacheKey(titleId: String): String = "$titleId:${currentLanguageKey()}"
+
+    private fun yummyLanguage(): String = currentLanguageKey()
 
     private fun matchesPreferredPlayer(
         candidatePlayerName: String?,

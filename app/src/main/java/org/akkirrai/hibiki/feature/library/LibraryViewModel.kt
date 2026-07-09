@@ -103,6 +103,11 @@ class LibraryViewModel(
         }
     }
 
+    fun onLanguageChanged() {
+        lastDetailsRefreshAt = 0L
+        syncFromStorage(force = true)
+    }
+
     private fun reconcileSavedDownloads(): Boolean {
         var changed = false
         offlineDownloadRepository.getOfflineTitleIds().forEach { titleId ->
@@ -146,6 +151,7 @@ class LibraryViewModel(
                         currentCategories.sortedBy(LibraryCategory::ordinal).forEach { category ->
                             libraryRepository.saveToLibrary(freshAnime, category)
                         }
+                        offlineTitleMetadataRepository.save(freshAnime)
                     }
                     currentCategories
                         .sortedBy(LibraryCategory::ordinal)

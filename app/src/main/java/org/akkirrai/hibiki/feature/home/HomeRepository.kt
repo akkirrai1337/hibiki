@@ -24,6 +24,7 @@ import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.localizedDisplayName
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 class HomeRepository(
@@ -321,15 +322,10 @@ class HomeRepository(
     private fun yummyLanguage(): String = if (preferEnglish()) "en" else "ru"
 
     private fun displayTitle(title: AnimeTitle): String {
-        return if (preferEnglish()) {
-            title.englishName?.takeIf(String::isNotBlank)
-                ?: title.originalName.takeIf(String::isNotBlank)
-                ?: title.russianName.orEmpty()
-        } else {
-            title.russianName?.takeIf(String::isNotBlank)
-                ?: title.englishName?.takeIf(String::isNotBlank)
-                ?: title.originalName
-        }
+        return title.localizedDisplayName(
+            languageMode = appPreferences.state.value.languageMode,
+            systemLanguage = appContext.resources.configuration.locales[0]?.language,
+        )
     }
 
     private fun isRussianLocale(): Boolean = !preferEnglish()

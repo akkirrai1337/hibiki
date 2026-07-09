@@ -20,6 +20,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 class PlayerViewModel(
@@ -29,6 +30,7 @@ class PlayerViewModel(
     private val repository: AnimeWatchRepository,
     private val watchStateRepository: WatchStateRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
+    private val offlineTitleMetadataRepository: OfflineTitleMetadataRepository,
     private val accountRepository: YummyAccountRepository,
 ) : ViewModel() {
     private val titleId = sourceId.substringBefore(':')
@@ -89,11 +91,11 @@ class PlayerViewModel(
             )
             val effectiveEpisodeId = effectiveEpisode?.id ?: state.currentEpisodeId
             val effectiveEpisodeNumber = effectiveEpisode?.number ?: state.currentEpisodeNumber
-            val playbackResult = runCatching {
-                val offlinePlayback = offlineDownloadRepository.getOfflinePlayback(
+            val offlinePlayback = offlineDownloadRepository.getOfflinePlayback(
                     sourceId = state.currentSourceId,
                     episodeId = effectiveEpisodeId,
                 )
+            val playbackResult = runCatching {
                 offlinePlayback
                     ?.takeIf { it.streamUrl !in excludedStreamUrls }
                     ?: repository.resolveStream(
@@ -107,7 +109,15 @@ class PlayerViewModel(
             }
 
             playbackResult
-                .onSuccess { stream ->
+                .onSuccess { resolvedStream ->
+                    val stream = if (offlinePlayback != null) {
+                        offlineTitleMetadataRepository.get(titleId)?.title
+                            ?.takeIf(String::isNotBlank)
+                            ?.let { resolvedStream.copy(animeTitle = it) }
+                            ?: resolvedStream
+                    } else {
+                        resolvedStream
+                    }
                     val savedSeekMs = findSavedSeekMs(
                         episodeId = effectiveEpisodeId,
                         episodes = episodes,
@@ -488,6 +498,7 @@ class PlayerViewModel(
                 repository = dependencies.animeWatchRepository(),
                 watchStateRepository = dependencies.watchStateRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),
+                offlineTitleMetadataRepository = dependencies.offlineTitleMetadataRepository(),
                 accountRepository = dependencies.accountRepository(),
             ) as T
         }

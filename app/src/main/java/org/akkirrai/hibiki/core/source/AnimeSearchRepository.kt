@@ -163,7 +163,10 @@ class AnimeSearchRepository(
             ?: if (preferEnglish) "Unknown" else "Неизвестно"
         return Anime(
             id = canonicalId,
-            title = displayTitle(preferEnglish),
+            title = localizedDisplayName(
+                languageMode = appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+                systemLanguage = appContext?.resources?.configuration?.locales?.get(0)?.language,
+            ),
             subtitle = buildSubtitle(fallback?.subtitle),
             episodesLabel = if (resolvedStatus.isAnnouncementStatus()) {
                 if (preferEnglish) "announcement" else "анонс"
@@ -202,7 +205,10 @@ class AnimeSearchRepository(
         preferEnglish: Boolean,
         fallbackTitles: List<String>,
     ): List<String> {
-        val primaryTitle = displayTitle(preferEnglish)
+        val primaryTitle = localizedDisplayName(
+            languageMode = appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+            systemLanguage = appContext?.resources?.configuration?.locales?.get(0)?.language,
+        )
         return buildList {
             russianName?.let(::add)
             englishName?.let(::add)
@@ -215,18 +221,6 @@ class AnimeSearchRepository(
             .filter(String::isNotBlank)
             .distinct()
             .filterNot { it.equals(primaryTitle, ignoreCase = true) }
-    }
-
-    private fun AnimeTitle.displayTitle(preferEnglish: Boolean): String {
-        return if (preferEnglish) {
-            englishName?.takeIf(String::isNotBlank)
-                ?: originalName.takeIf(String::isNotBlank)
-                ?: russianName.orEmpty()
-        } else {
-            russianName?.takeIf(String::isNotBlank)
-                ?: englishName?.takeIf(String::isNotBlank)
-                ?: originalName
-        }
     }
 
     private fun AnimeTitle.buildSubtitle(fallbackSubtitle: String?): String {

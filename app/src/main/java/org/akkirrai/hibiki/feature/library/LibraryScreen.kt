@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
@@ -93,6 +94,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(LocalContext.current)),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val languageMode = LocalAppLanguage.current
     val visibleEntries = state.visibleEntries
     var isSearchFocused by remember { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
@@ -101,6 +103,10 @@ fun LibraryScreen(
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("LibraryScreen composed")
+    }
+
+    LaunchedEffect(languageMode) {
+        viewModel.onLanguageChanged()
     }
 
     LaunchedEffect(isActive) {
