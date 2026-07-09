@@ -899,7 +899,7 @@ fun PlayerScreen(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 PlayerTopOverlay(
-                    title = state.playback?.animeTitle.orEmpty(),
+                    title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
                     onBackClick = handleBackClick,
                     onPlaylistClick = {

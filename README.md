@@ -29,6 +29,8 @@
 * Экран аккаунта и вход; функции профиля ещё в разработке
 * Русская и английская локализация интерфейса
 
+<div align="center">
+
 ### 🖼️ Скриншоты
 
 <div align="center">
@@ -37,6 +39,8 @@
     <br/>
     <img src="./docs/screenshots/ru/details.jpg" alt="Страница тайтла" width="250"/>
     <img src="./docs/screenshots/ru/library.jpg" alt="Библиотека" width="250"/>
+</div>
+
 </div>
 
 ### 🎬 Credits

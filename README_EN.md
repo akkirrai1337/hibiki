@@ -29,6 +29,8 @@
 * Account screen and sign-in flow; profile-related features are still in progress
 * Russian and English interface localization
 
+<div align="center">
+
 ### 🖼️ Screenshots
 
 <div align="center">
@@ -37,6 +39,8 @@
     <br/>
     <img src="./docs/screenshots/en/title.jpg" alt="Title details screen" width="250"/>
     <img src="./docs/screenshots/en/library.jpg" alt="Library screen" width="250"/>
+</div>
+
 </div>
 
 ### 🎬 Credits

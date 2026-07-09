@@ -111,6 +111,8 @@ class PlayerViewModel(
                         it.copy(
                             isLoading = false,
                             playback = stream,
+                            animeTitle = stream.animeTitle.trim().takeIf(String::isNotBlank)
+                                ?: it.animeTitle,
                             errorMessage = null,
                             episodes = episodes,
                             currentEpisodeId = effectiveEpisodeId,
@@ -459,6 +461,7 @@ class PlayerViewModel(
 data class PlayerUiState(
     val isLoading: Boolean = true,
     val playback: PlaybackStream? = null,
+    val animeTitle: String = "",
     val episodes: List<WatchEpisode> = emptyList(),
     val currentSourceId: String = "",
     val currentEpisodeId: String = "",
