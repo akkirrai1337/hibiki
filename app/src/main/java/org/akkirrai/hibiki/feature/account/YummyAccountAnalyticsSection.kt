@@ -487,5 +487,5 @@ private data class AnalyticsSegment(
 )
 
 private const val ACTIVITY_CHART_MIN_SCALE_EPISODES = 8
-private val ACTIVITY_CHART_DAY_WIDTH = 52.dp
-private val ACTIVITY_CHART_DAY_GAP = 6.dp
+private val ACTIVITY_CHART_DAY_WIDTH = 42.dp
+private val ACTIVITY_CHART_DAY_GAP = 4.dp
