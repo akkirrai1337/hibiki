@@ -781,6 +781,17 @@ fun PlayerScreen(
                         val secondUp = waitForUpOrCancellation()
                         if (secondUp == null) return@awaitEachGesture
                         val tapOffset = secondDown.position
+                        if (!isInGestureArea(tapOffset.y, size.height)) {
+                            if (controlsLocked) {
+                                keepUnlockButtonVisible()
+                            } else if (controlsVisible) {
+                                controlsVisible = false
+                            } else {
+                                controlsVisible = true
+                                controlsInteractionTick += 1
+                            }
+                            return@awaitEachGesture
+                        }
                         if (controlsLocked) {
                             keepUnlockButtonVisible()
                         } else if (controlsVisible) {
@@ -792,7 +803,6 @@ fun PlayerScreen(
                         )
                     } else {
                         if (accumulatedDoubleTapSteps > 0) return@awaitEachGesture
-                        if (!isInGestureArea(upPosition.y, size.height)) return@awaitEachGesture
                         if (controlsLocked) {
                             unlockButtonVisible = !unlockButtonVisible
                             if (unlockButtonVisible) {
