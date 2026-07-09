@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -401,6 +402,11 @@ private fun FeaturedCarousel(
     val progress = remember { Animatable(0f) }
 
     var indicatorPage by remember { mutableStateOf(0) }
+    val featuredHeight = if (items.getOrNull(pagerState.currentPage)?.title.orEmpty().length >= 42) {
+        280.dp
+    } else {
+        230.dp
+    }
 
     LaunchedEffect(autoAdvanceEnabled) {
         PerfLogger.mark("Home featured carousel active changed", "active=$autoAdvanceEnabled")
@@ -463,7 +469,7 @@ private fun FeaturedCarousel(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp),
+                .height(featuredHeight),
             contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
             pageSpacing = 12.dp,
             beyondViewportPageCount = 1,
@@ -472,6 +478,7 @@ private fun FeaturedCarousel(
             FeaturedAnimeCard(
                 anime = anime,
                 bannerUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                height = featuredHeight,
                 onClick = { onAnimeClick(anime) },
             )
         }
@@ -541,11 +548,9 @@ private fun FeaturedIndicator(
 private fun FeaturedAnimeCard(
     anime: Anime,
     bannerUrl: String?,
+    height: Dp,
     onClick: () -> Unit
 ) {
-    var featuredTitleLineCount by remember(anime.id) { mutableStateOf(0) }
-    val useRaisedTextLayout = featuredTitleLineCount >= 3
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -558,7 +563,7 @@ private fun FeaturedAnimeCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp)
+                .height(height)
         ) {
             AnimeBackground(
                 imageUrl = bannerUrl,
@@ -598,15 +603,15 @@ private fun FeaturedAnimeCard(
 
             Column(
                 modifier = Modifier
-                    .align(if (useRaisedTextLayout) Alignment.TopStart else Alignment.BottomStart)
+                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(
                         start = 18.dp,
                         end = 18.dp,
-                        top = if (useRaisedTextLayout) 18.dp else 18.dp,
-                        bottom = if (useRaisedTextLayout) 74.dp else 82.dp,
+                        top = 18.dp,
+                        bottom = 82.dp,
                     ),
-                verticalArrangement = Arrangement.spacedBy(if (useRaisedTextLayout) 6.dp else 8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = stringResource(R.string.home_featured_label),
@@ -634,7 +639,6 @@ private fun FeaturedAnimeCard(
                     baseMaxLines = 3,
                     extraLongTitleLines = 0,
                     overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { featuredTitleLineCount = it.lineCount },
                 )
 
                 val meta = buildHomeMeta(
@@ -729,7 +733,7 @@ private fun ContinueWatchingCard(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .height(108.dp),
+                            .heightIn(min = 108.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         AnimeTitleText(
