@@ -1097,6 +1097,7 @@ fun PlayerScreen(
                     selectedProviderId = state.selectedProviderId,
                     selectedPlayerName = state.selectedPlayerName,
                     selectedQualityLabel = state.selectedQualityLabel ?: state.playback?.qualityLabel,
+                    availableQualityLabels = state.playback?.availableQualityLabels.orEmpty(),
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = state.settingsOptions,
@@ -1508,6 +1509,7 @@ private fun PlayerSettingsSheet(
     selectedProviderId: String?,
     selectedPlayerName: String?,
     selectedQualityLabel: String?,
+    availableQualityLabels: List<String>,
     autoSkipSegments: Boolean,
     autoPlayNextEpisode: Boolean,
     options: org.akkirrai.hibiki.core.model.PlaybackSettingsOptions,
@@ -1555,16 +1557,18 @@ private fun PlayerSettingsSheet(
             onClick = { onSelectPlayer(name) },
         )
     }.distinctBy { it.id }
-    val qualityValues = options.links.mapNotNull { link ->
-        val quality = link.qualityLabel ?: return@mapNotNull null
-        SelectableValue(
-            id = quality,
-            label = quality,
-            selected = selectedQualityLabel == quality,
-            onClick = { onSelectQuality(quality) },
-        )
-    }.distinctBy { it.id }
-        .sortedByDescending { value -> value.label.filter(Char::isDigit).toIntOrNull() ?: 0 }
+    val qualityValues = (options.links.mapNotNull { it.qualityLabel } + availableQualityLabels)
+        .mapNotNull { it.trim().takeIf(String::isNotBlank) }
+        .distinct()
+        .sortedByDescending { value -> value.filter(Char::isDigit).toIntOrNull() ?: 0 }
+        .map { quality ->
+            SelectableValue(
+                id = quality,
+                label = quality,
+                selected = selectedQualityLabel == quality,
+                onClick = { onSelectQuality(quality) },
+            )
+        }
     val rootEntries = buildList {
         if (voiceoverValues.size > 1) {
             add(
@@ -1576,7 +1580,7 @@ private fun PlayerSettingsSheet(
                 )
             )
         }
-        if (qualityValues.isNotEmpty()) {
+        if (qualityValues.size > 1) {
             add(
                 PlayerSettingsEntryItem(
                     id = PlayerSettingsDestination.Quality.name,
@@ -1780,8 +1784,8 @@ private fun PlayerSettingsEntry(
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 2,
+                overflow = TextOverflow.Clip,
             )
             Text(
                 text = value,
@@ -1789,7 +1793,7 @@ private fun PlayerSettingsEntry(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.62f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,

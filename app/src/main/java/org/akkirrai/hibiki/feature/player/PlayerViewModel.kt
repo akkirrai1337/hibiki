@@ -251,6 +251,7 @@ class PlayerViewModel(
         _uiState.update {
             it.copy(
                 selectedProviderId = providerId,
+                playback = null,
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -264,6 +265,7 @@ class PlayerViewModel(
         _uiState.update {
             it.copy(
                 selectedPlayerName = playerName,
+                playback = null,
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -276,6 +278,7 @@ class PlayerViewModel(
         _uiState.update {
             it.copy(
                 selectedQualityLabel = qualityLabel,
+                playback = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
             )

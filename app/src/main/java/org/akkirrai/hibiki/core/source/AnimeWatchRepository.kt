@@ -217,6 +217,9 @@ class AnimeWatchRepository(
                     if (streams.isEmpty()) {
                         throw SourceException(appString(R.string.watch_error_stream_unavailable))
                     }
+                    val availableQualityLabels = streams
+                        .mapNotNull { it.quality?.trim()?.takeIf(String::isNotBlank) }
+                        .distinct()
                     streams.firstNotNullOfOrNull { stream ->
                         val validation = validator.validate(stream)
                         AppLogger.d(
@@ -249,6 +252,9 @@ class AnimeWatchRepository(
                             streamUrl = validation.finalUrl,
                             streamType = validation.streamType.toPlaybackType(),
                             qualityLabel = validation.quality ?: stream.quality ?: link.quality,
+                            availableQualityLabels = (
+                                availableQualityLabels + (validation.quality ?: stream.quality ?: link.quality)
+                            ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
                             headers = stream.headers.ifEmpty { link.headers },
                             segments = selectPlaybackSegments(
                                 apiSegments = link.segments,
