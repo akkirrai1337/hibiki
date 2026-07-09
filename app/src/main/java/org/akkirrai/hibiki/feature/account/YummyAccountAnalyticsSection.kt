@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.feature.account
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,9 +38,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
@@ -49,13 +53,6 @@ internal fun AnalyticsCard(
 ) {
     val hasActivity = snapshot.activeDaysCount > 0
     val favoriteLabel = stringResource(R.string.library_category_favorite)
-    val statusSegments = remember(snapshot.distributionSegments, snapshot.favoriteCount, favoriteLabel) {
-        snapshot.distributionSegments + DistributionSegment(
-            label = favoriteLabel,
-            count = snapshot.favoriteCount,
-            color = yummyFavoriteListColor(),
-        )
-    }
     val durationSegments = remember(
         snapshot.durationSegments,
         snapshot.favoriteHoursLabel,
@@ -87,6 +84,10 @@ internal fun AnalyticsCard(
         currentPage = currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
     }
     val page = pages[currentPage]
+    val activityScrollState = rememberScrollState()
+    LaunchedEffect(snapshot.activityDays) {
+        activityScrollState.scrollTo(activityScrollState.maxValue)
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -127,22 +128,19 @@ internal fun AnalyticsCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Box(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(activityScrollState),
                             contentAlignment = Alignment.Center,
                         ) {
-                            ActivityHeatmap(
+                            ActivityBarChart(
                                 days = snapshot.activityDays,
-                                rows = 7,
-                                columns = 18,
-                                cellSize = 6,
-                                gap = 2,
                                 muted = !hasActivity,
                             )
                         }
                     }
                 }
             }
-            StatusTilesGrid(segments = statusSegments)
         }
     }
 }
@@ -200,6 +198,7 @@ private fun PageArrowButton(
     enabled: Boolean,
     onClick: () -> Unit,
     isBack: Boolean,
+    size: Dp = 34.dp,
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -208,7 +207,7 @@ private fun PageArrowButton(
         IconButton(
             onClick = onClick,
             enabled = enabled,
-            modifier = Modifier.size(34.dp),
+            modifier = Modifier.size(size),
         ) {
             Icon(
                 imageVector = if (isBack) {
@@ -293,79 +292,6 @@ private fun LegendItem(
 }
 
 @Composable
-private fun StatusTilesGrid(
-    segments: List<DistributionSegment>,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        segments.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { segment ->
-                    StatusTile(
-                        modifier = Modifier.weight(1f),
-                        segment = segment,
-                    )
-                }
-                repeat(2 - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusTile(
-    segment: DistributionSegment,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.height(50.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.18f),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(segment.color.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(9.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(segment.color),
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                Text(
-                    text = segment.count.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = segment.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.86f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun SegmentDonut(
     segments: List<AnalyticsSegment>,
     centerPrimary: String,
@@ -422,64 +348,76 @@ private fun SegmentDonut(
 }
 
 @Composable
-private fun ActivityHeatmap(
+private fun ActivityBarChart(
     days: List<ActivityDay>,
-    rows: Int = 7,
-    columns: Int = 20,
-    cellSize: Int = 14,
-    gap: Int = 2,
     muted: Boolean = false,
 ) {
-    val emptyColor = if (muted) {
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.18f)
-    } else {
-        Color(0xFF343B49)
-    }
+    val maxEpisodes = days.maxOfOrNull(ActivityDay::episodeCount)
+        ?.coerceAtLeast(ACTIVITY_CHART_MIN_SCALE_EPISODES)
+        ?: ACTIVITY_CHART_MIN_SCALE_EPISODES
     val activeColor = if (muted) {
-        Color(0xFF687487)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
     } else {
         Color(0xFFFF7A86)
     }
-    val paddedDays = buildList<ActivityDay?> {
-        addAll(days.takeLast(rows * columns))
-        repeat((rows * columns) - size) { add(null) }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(gap.dp)) {
-        repeat(rows) { rowIndex ->
-            Row(horizontalArrangement = Arrangement.spacedBy(gap.dp)) {
-                repeat(columns) { columnIndex ->
-                    val itemIndex = columnIndex * rows + rowIndex
-                    val day = paddedDays.getOrNull(itemIndex)
-                    Box(
-                        modifier = Modifier
-                            .size(cellSize.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(
-                                when {
-                                    day == null || day.intensity <= 0 -> emptyColor
-                                    else -> day.color(base = activeColor, muted = muted)
-                                },
-                            ),
-                    )
+    val inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f)
+
+    Row(
+        modifier = Modifier
+            .width((ACTIVITY_CHART_DAY_WIDTH * days.size) + (ACTIVITY_CHART_DAY_GAP * (days.size - 1).coerceAtLeast(0)))
+            .height(142.dp),
+        horizontalArrangement = Arrangement.spacedBy(ACTIVITY_CHART_DAY_GAP),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        days.forEach { day ->
+            val barHeight = if (day.episodeCount > 0) {
+                (18 + (66 * day.episodeCount / maxEpisodes)).dp
+            } else {
+                10.dp
+            }
+            Column(
+                modifier = Modifier.width(ACTIVITY_CHART_DAY_WIDTH),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height(114.dp)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = day.episodeCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height(barHeight)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(if (day.episodeCount > 0) activeColor else inactiveColor),
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = day.dateLabel,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                    maxLines = 1,
+                    softWrap = false,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
-    }
-}
-
-private fun ActivityDay.color(
-    base: Color,
-    muted: Boolean = false,
-): Color {
-    if (muted) {
-        return base.copy(alpha = 0.3f)
-    }
-    return when (intensity) {
-        0 -> base.copy(alpha = 0.2f)
-        1 -> base.copy(alpha = 0.4f)
-        2 -> base.copy(alpha = 0.62f)
-        3 -> base.copy(alpha = 0.82f)
-        else -> Color(0xFFFFA15F)
     }
 }
 
@@ -547,3 +485,7 @@ private data class AnalyticsSegment(
     val weight: Float,
     val color: Color,
 )
+
+private const val ACTIVITY_CHART_MIN_SCALE_EPISODES = 8
+private val ACTIVITY_CHART_DAY_WIDTH = 52.dp
+private val ACTIVITY_CHART_DAY_GAP = 6.dp

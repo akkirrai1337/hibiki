@@ -30,16 +30,20 @@ internal fun buildProfileSnapshot(
     val watchSums = profile.watches?.sum.orEmpty()
     val activityCounts = history
         .filter { (it.duration ?: 0L) > 0L || (it.episodeCount ?: 0) > 0 }
-        .mapNotNull { it.date?.let(::epochToLocalDate) }
-        .groupingBy { it }
-        .eachCount()
+        .mapNotNull { item ->
+            val date = item.date?.let(::epochToLocalDate) ?: return@mapNotNull null
+            date to (item.episodeCount ?: 1).coerceAtLeast(1)
+        }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (_, values) -> values.sum() }
 
     val today = LocalDate.now()
-    val activityDays = (0 until HEATMAP_DAYS)
-        .map { today.minusDays((HEATMAP_DAYS - 1 - it).toLong()) }
+    val activityDays = (0 until ACTIVITY_HISTORY_DAYS)
+        .map { today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - it).toLong()) }
         .map { date ->
             ActivityDay(
-                intensity = (activityCounts[date] ?: 0).coerceAtMost(4),
+                dateLabel = date.format(ACTIVITY_DATE_FORMATTER),
+                episodeCount = activityCounts[date] ?: 0,
             )
         }
 
@@ -76,12 +80,9 @@ internal fun buildProfileSnapshot(
         siteWatchTimeLabel = formatDurationLabel(resources, siteWatchTotal),
         activeDaysCount = activityCounts.size,
         totalEpisodes = history.sumOf { it.episodeCount ?: 0 },
-        favoriteCount = profile.counts.favorite.takeIf { profile.counts.hasAny }
-            ?: libraryItems.count(YummyUserAnimeListItem::isFavorite),
         favoriteHoursLabel = formatDurationLabel(resources, listWatchStats.sumForRawListId(YUMMY_FAVORITE_LIST_ID)),
         favoriteDurationSeconds = listWatchStats.sumForRawListId(YUMMY_FAVORITE_LIST_ID),
         libraryTotal = libraryItems.size,
-        distributionSegments = buildDistributionSegments(resources, profile, libraryItems),
         siteWatchSegments = siteWatchSegments,
         durationSegments = buildDurationSegments(resources, watchSums, listWatchStats),
         activityDays = activityDays,
@@ -110,31 +111,6 @@ internal fun normalizeYummyAssetUrl(rawUrl: String?): String? {
 internal fun YummyProfile.resolvedAvatarUrl(): String? {
     return normalizeYummyAssetUrl(
         avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
-    )
-}
-
-private fun buildDistributionSegments(
-    resources: Resources,
-    profile: YummyProfile,
-    libraryItems: List<YummyUserAnimeListItem>,
-): List<DistributionSegment> {
-    if (profile.counts.hasAny) {
-        return listOf(
-            DistributionSegment(YummyUserList.Watching.yummyListLabel(resources), profile.counts.watching, YummyUserList.Watching.yummyListColor()),
-            DistributionSegment(YummyUserList.Planned.yummyListLabel(resources), profile.counts.planned, YummyUserList.Planned.yummyListColor()),
-            DistributionSegment(YummyUserList.Completed.yummyListLabel(resources), profile.counts.completed, YummyUserList.Completed.yummyListColor()),
-            DistributionSegment(YummyUserList.Dropped.yummyListLabel(resources), profile.counts.dropped, YummyUserList.Dropped.yummyListColor()),
-            DistributionSegment(YummyUserList.OnHold.yummyListLabel(resources), profile.counts.onHold, YummyUserList.OnHold.yummyListColor()),
-        )
-    }
-
-    val counts = libraryItems.groupingBy { it.list }.eachCount()
-    return listOf(
-        DistributionSegment(YummyUserList.Watching.yummyListLabel(resources), counts[YummyUserList.Watching] ?: 0, YummyUserList.Watching.yummyListColor()),
-        DistributionSegment(YummyUserList.Planned.yummyListLabel(resources), counts[YummyUserList.Planned] ?: 0, YummyUserList.Planned.yummyListColor()),
-        DistributionSegment(YummyUserList.Completed.yummyListLabel(resources), counts[YummyUserList.Completed] ?: 0, YummyUserList.Completed.yummyListColor()),
-        DistributionSegment(YummyUserList.Dropped.yummyListLabel(resources), counts[YummyUserList.Dropped] ?: 0, YummyUserList.Dropped.yummyListColor()),
-        DistributionSegment(YummyUserList.OnHold.yummyListLabel(resources), counts[YummyUserList.OnHold] ?: 0, YummyUserList.OnHold.yummyListColor()),
     )
 }
 
@@ -363,11 +339,9 @@ internal data class YummyProfileSnapshot(
     val siteWatchTimeLabel: String,
     val activeDaysCount: Int,
     val totalEpisodes: Int,
-    val favoriteCount: Int,
     val favoriteHoursLabel: String,
     val favoriteDurationSeconds: Long,
     val libraryTotal: Int,
-    val distributionSegments: List<DistributionSegment>,
     val siteWatchSegments: List<DurationSegment>,
     val durationSegments: List<DurationSegment>,
     val activityDays: List<ActivityDay>,
@@ -390,7 +364,8 @@ internal data class DurationSegment(
 )
 
 internal data class ActivityDay(
-    val intensity: Int,
+    val dateLabel: String,
+    val episodeCount: Int,
 )
 
 internal data class RecentLibraryItem(
@@ -402,8 +377,9 @@ internal data class RecentLibraryItem(
     val color: Color,
 )
 
-private const val HEATMAP_DAYS = 140
+private const val ACTIVITY_HISTORY_DAYS = 90
 private const val YUMMY_WEB_BASE = "https://ru.yummyani.me"
+private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
 private val genrePalette = listOf(
     Color(0xFF48D67B),
     Color(0xFFF7BC16),
