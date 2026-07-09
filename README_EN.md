@@ -45,7 +45,7 @@
 
 <div align="left">
 
-Player icons are based on assets from [anilibria-app](https://github.com/anilibria/anilibria-app).
+[anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
 
 </div>
 
@@ -69,7 +69,7 @@ Hibiki is licensed under the [GNU General Public License v3.0](LICENSE).
 
 <div align="left">
 
-The developers of this application do not have any affiliation with the content available in the app and do not store or distribute any content. This application should be considered a web browser, and all content that can be found using this application is freely available on the Internet. All DMCA takedown requests should be sent to the owners of the website where the content is hosted.
+The developer of this application does not have any affiliation with the content available in the app and does not store or distribute any content. This application should be considered a web browser, and all content that can be found using this application is freely available on the Internet. All DMCA takedown requests should be sent to the owners of the website where the content is hosted.
 
 </div>
 
