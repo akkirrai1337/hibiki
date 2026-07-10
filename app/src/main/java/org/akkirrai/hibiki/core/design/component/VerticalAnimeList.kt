@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,8 @@ fun VerticalAnimeListItem(
     posterWidth: Dp = 104.dp,
     descriptionMaxLines: Int = 5,
     trailingContent: (@Composable () -> Unit)? = null,
+    supportingContent: (@Composable () -> Unit)? = null,
+    posterFooterContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -83,6 +87,28 @@ fun VerticalAnimeListItem(
                     }
                 },
             )
+            posterFooterContent?.let { content ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.Transparent,
+                                    0.48f to Color.Black.copy(alpha = 0.04f),
+                                    0.76f to Color.Black.copy(alpha = 0.32f),
+                                    1f to Color.Black.copy(alpha = 0.68f),
+                                ),
+                            )
+                        )
+                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.BottomStart,
+                ) {
+                    content()
+                }
+            }
         }
 
         var titleLineCount by remember(anime.id, anime.title) { mutableIntStateOf(1) }
@@ -136,6 +162,7 @@ fun VerticalAnimeListItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            supportingContent?.invoke()
         }
     }
 }
@@ -161,6 +188,7 @@ fun LazyListScope.searchStateVerticalListContent(
     onErrorActionClick: (() -> Unit)? = null,
     loadMoreLoadingLabel: String? = null,
     loadMoreModifier: Modifier = Modifier,
+    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
 ) {
     when (state) {
         SearchUiState.Idle -> if (idleTitle != null && idleMessage != null && idleIcon != null) {
@@ -213,6 +241,7 @@ fun LazyListScope.searchStateVerticalListContent(
                     metaText = metaText(anime),
                     onClick = { onAnimeClick(anime) },
                     modifier = Modifier.fillMaxWidth(),
+                    posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
                 )
             }
             if (state.canLoadMore || state.isLoadingMore || state.loadMoreError != null) {
@@ -237,6 +266,7 @@ fun LazyListScope.verticalAnimeListContent(
     metaText: @Composable (Anime) -> String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
+    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
 ) {
     items(items, key = Anime::id) { anime ->
         VerticalAnimeListItem(
@@ -244,6 +274,7 @@ fun LazyListScope.verticalAnimeListContent(
             metaText = metaText(anime),
             onClick = { onAnimeClick(anime) },
             modifier = modifier.fillMaxWidth(),
+            posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
         )
     }
 }

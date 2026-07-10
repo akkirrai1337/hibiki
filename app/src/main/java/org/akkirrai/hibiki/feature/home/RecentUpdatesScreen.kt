@@ -20,6 +20,8 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
 
@@ -31,6 +33,7 @@ fun RecentUpdatesScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     LaunchedEffect(Unit) {
         if (state.recentlyUpdated.isEmpty()) viewModel.refresh()
     }
@@ -60,6 +63,11 @@ fun RecentUpdatesScreen(
                     },
                     onAnimeClick = onAnimeClick,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                    posterFooterContent = { anime ->
+                        libraryStatusByAnimeId[anime.id]?.let { category ->
+                            LibraryStatusPosterFooter(category)
+                        }
+                    },
                 )
             }
         }

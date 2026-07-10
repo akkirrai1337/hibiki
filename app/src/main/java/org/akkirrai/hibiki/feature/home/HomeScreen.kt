@@ -127,6 +127,8 @@ import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
@@ -170,6 +172,7 @@ fun HomeScreen(
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
+    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val homeListState = rememberLazyListState()
 
     LaunchedEffect(homeListState, state.trending.size, state.isTrendingLoadingMore) {
@@ -246,6 +249,11 @@ fun HomeScreen(
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = Icons.Outlined.SearchOff,
+                        posterFooterContent = { anime ->
+                            libraryStatusByAnimeId[anime.id]?.let { category ->
+                                LibraryStatusPosterFooter(category)
+                            }
+                        },
                     )
                 }
             } else {
@@ -314,6 +322,11 @@ fun HomeScreen(
                 metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                 onAnimeClick = onAnimeClick,
                 modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                posterFooterContent = { anime ->
+                    libraryStatusByAnimeId[anime.id]?.let { category ->
+                        LibraryStatusPosterFooter(category)
+                    }
+                },
             )
 
             if (state.isTrendingLoadingMore) {

@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.R
@@ -77,9 +78,12 @@ import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
+import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
+import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
@@ -531,83 +535,23 @@ private fun LibraryAnimeCard(
     onClick: () -> Unit
 ) {
     val anime = entry.anime
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AnimePoster(
-                anime = anime,
-                modifier = Modifier
-                    .width(76.dp)
-                    .aspectRatio(2f / 3f)
-            )
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .align(Alignment.CenterVertically),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                AnimeTitleText(
-                    text = anime.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    baseMaxLines = 3,
-                    extraLongTitleLines = 1,
-                )
-
-                val meta = anime.buildLibraryMeta()
-                if (meta.isNotBlank()) {
-                    Text(
-                        text = meta,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = entry.category.icon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-
-                    Text(
-                        text = stringResource(entry.category.labelResId),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
+    VerticalAnimeListItem(
+        anime = anime,
+        metaText = anime.buildCardMeta(
+            announcementLabel = stringResource(R.string.anime_meta_announcement),
+            movieLabel = stringResource(R.string.anime_meta_movie),
+        ),
+        onClick = onClick,
+        modifier = modifier,
+        trailingContent = {
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.Top)
             )
-        }
-    }
+        },
+        posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
+    )
 }
 
 @Composable

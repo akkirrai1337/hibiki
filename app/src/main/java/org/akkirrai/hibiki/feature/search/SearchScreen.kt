@@ -35,6 +35,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
@@ -54,6 +56,7 @@ fun SearchScreen(
     val emptyTitle = stringResource(R.string.home_search_empty_title)
     val emptyMessage = stringResource(R.string.search_empty)
     val retryLabel = stringResource(R.string.search_retry)
+    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -93,6 +96,11 @@ fun SearchScreen(
             errorActionLabel = retryLabel,
             onErrorActionClick = viewModel::search,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+            posterFooterContent = { anime ->
+                libraryStatusByAnimeId[anime.id]?.let { category ->
+                    LibraryStatusPosterFooter(category)
+                }
+            },
         )
     }
 }
