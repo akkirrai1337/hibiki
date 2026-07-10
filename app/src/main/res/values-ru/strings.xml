@@ -103,6 +103,7 @@
     <string name="details_type">Тип</string>
     <string name="details_episodes_released">Серий вышло</string>
     <string name="details_release_date">Дата выхода</string>
+    <string name="details_release_date_unknown">Неизвестно</string>
     <string name="details_status">Статус</string>
     <string name="details_studio">Студия</string>
     <string name="details_source_material">Первоисточник</string>

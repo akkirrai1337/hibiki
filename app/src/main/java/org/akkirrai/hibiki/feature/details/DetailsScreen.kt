@@ -167,8 +167,6 @@ fun DetailsScreen(
     var watchProgress by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
     var episodeProgressItems by remember(anime.id) { mutableStateOf<List<EpisodeWatchProgress>>(emptyList()) }
     var sourceSelection by remember(anime.id) { mutableStateOf(watchStateRepository.getSelectedSource(anime.id)) }
-    val fallbackDescriptionA = stringResource(R.string.details_description_fallback_a)
-    val fallbackDescriptionB = stringResource(R.string.details_description_fallback_b)
     val localizedEpisodeWord = stringResource(R.string.details_episode_label)
     val currentAnimeState by rememberUpdatedState(currentAnime)
     val descriptionExpandedState by rememberUpdatedState(isDescriptionExpanded)
@@ -258,8 +256,8 @@ fun DetailsScreen(
     val heroInfo = remember(currentAnime, localizedEpisodeWord) {
         buildHeroInfo(currentAnime, localizedEpisodeWord)
     }
-    val description = remember(currentAnime, fallbackDescriptionA, fallbackDescriptionB) {
-        buildDescription(currentAnime, fallbackDescriptionA, fallbackDescriptionB)
+    val description = remember(currentAnime) {
+        buildDescription(currentAnime)
     }
     val uiModel = remember(
         currentAnime,
@@ -890,12 +888,14 @@ private fun DetailContentCard(
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             OverviewFacts(anime = anime, heroInfo = heroInfo)
-            Spacer(modifier = Modifier.height(14.dp))
-            DescriptionContent(
-                description = description,
-                expanded = descriptionExpanded,
-                onToggleExpanded = onToggleDescription,
-            )
+            if (description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                DescriptionContent(
+                    description = description,
+                    expanded = descriptionExpanded,
+                    onToggleExpanded = onToggleDescription,
+                )
+            }
         }
     }
 }
@@ -1416,7 +1416,9 @@ private fun OverviewFacts(
         )
         addFact(
             label = stringResource(R.string.details_release_date),
-            value = heroInfo.releaseDate,
+            value = heroInfo.releaseDate.ifBlank {
+                stringResource(R.string.details_release_date_unknown)
+            },
         )
         addFact(
             label = stringResource(R.string.details_status),
@@ -1458,19 +1460,25 @@ private fun DescriptionContent(
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
 ) {
+    var hasOverflow by remember(description) { mutableStateOf(false) }
     Text(
         text = description,
         style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (expanded) Int.MAX_VALUE else 5,
-        overflow = TextOverflow.Ellipsis
+        maxLines = if (expanded) Int.MAX_VALUE else 3,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout ->
+            if (!expanded) hasOverflow = layout.hasVisualOverflow
+        },
     )
-    Text(
-        text = stringResource(if (expanded) R.string.details_hide else R.string.details_expand),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clickable(onClick = onToggleExpanded)
-    )
+    if (hasOverflow) {
+        Text(
+            text = stringResource(if (expanded) R.string.details_hide else R.string.details_expand),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable(onClick = onToggleExpanded)
+        )
+    }
 }
 
 @Composable
@@ -2124,17 +2132,26 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
     return HeroInfo(
         type = type,
         releaseDate = anime.releaseDate
-            ?.takeIf { it.isNotBlank() && it != DEFAULT_YEAR }
-            ?: year.takeUnless { it == DEFAULT_YEAR || it == UNKNOWN_VALUE }.orEmpty(),
+            ?.takeIf(::isKnownReleaseDate)
+            ?: year.takeIf(::isKnownReleaseDate).orEmpty(),
         episodes = episodes,
         status = status,
         studio = anime.studios.joinToString(", "),
     )
 }
 
-private fun buildDescription(anime: Anime, fallbackA: String, fallbackB: String): String {
-    return anime.description?.takeIf(String::isNotBlank) ?: "${anime.title} $fallbackA $fallbackB"
+private fun buildDescription(anime: Anime): String {
+    return anime.description?.takeIf(String::isNotBlank).orEmpty()
 }
+
+private fun String.isKnownValue(): Boolean {
+    val normalized = trim()
+    return normalized.isNotEmpty() &&
+        !normalized.equals(UNKNOWN_VALUE, ignoreCase = true) &&
+        normalized != "0"
+}
+
+private fun isKnownReleaseDate(value: String): Boolean = value.isKnownValue()
 
 private fun rememberMetaChips(
     anime: Anime,
@@ -2147,7 +2164,7 @@ private fun rememberMetaChips(
                 add(MetaChipUi(label = status, kind = MetaChipKind.Status))
             }
         }
-        anime.ageRating?.takeIf(String::isNotBlank)?.let { ageRating ->
+        anime.ageRating?.takeIf { it.isKnownValue() }?.let { ageRating ->
             if (dedupe.add(ageRating.lowercase(Locale.getDefault()))) {
                 add(MetaChipUi(label = ageRating, kind = MetaChipKind.AgeRating))
             }
