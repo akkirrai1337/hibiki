@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.snapshotFlow
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
@@ -123,6 +125,8 @@ import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
+import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
+import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
@@ -134,6 +138,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
     onShowAllTrendingClick: () -> Unit,
+    onCatalogClick: () -> Unit,
+    onRecentUpdatesClick: () -> Unit,
+    onRandomAnimeClick: (Anime) -> Unit,
     onProfileClick: () -> Unit,
     onFilterClick: () -> Unit,
     isActive: Boolean = true,
@@ -154,10 +161,26 @@ fun HomeScreen(
     val isSearchActive = state.searchQuery.isNotBlank() ||
         state.searchResult !is SearchUiState.Idle
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
+    val randomPool = remember(state) {
+        (featuredAnime + state.trending + state.recentlyUpdated + listOfNotNull(continueAnime))
+            .distinctBy(Anime::id)
+    }
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
+    val homeListState = rememberLazyListState()
+
+    LaunchedEffect(homeListState, state.trending.size, state.isTrendingLoadingMore) {
+        snapshotFlow {
+            val layout = homeListState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= layout.totalItemsCount - 4
+        }.collect { nearEnd ->
+            if (nearEnd && !isSearchActive) viewModel.loadMoreTrending()
+        }
+    }
 
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -214,7 +237,7 @@ fun HomeScreen(
                     searchStateVerticalListContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
-                        metaText = { anime -> buildHomeMeta(anime, announcementLabel) },
+                        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                         onLoadMore = viewModel::loadMoreSearchResults,
                         loadMoreLabel = searchLoadMoreLabel,
                         resultsCountLabel = { count ->
@@ -242,13 +265,14 @@ fun HomeScreen(
                     },
                 ) {
                     LazyColumn(
+                        state = homeListState,
                         contentPadding = PaddingValues(
                             start = 0.dp,
                             top = HOME_TOP_BAR_HEIGHT + UiDimens.ScreenPadding,
                             end = 0.dp,
                             bottom = bottomContentPadding
                         ),
-                        verticalArrangement = Arrangement.spacedBy(22.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
 
             item {
@@ -273,24 +297,33 @@ fun HomeScreen(
             }
 
             item {
-                AnimeSection(
-                    title = stringResource(R.string.home_trending),
-                    actionLabel = stringResource(R.string.home_see_all),
-                    icon = Icons.AutoMirrored.Outlined.TrendingUp,
-                    items = state.trending,
-                    onAnimeClick = onAnimeClick,
-                    onActionClick = onShowAllTrendingClick,
+                HomeQuickActions(
+                    canRandom = randomPool.isNotEmpty(),
+                    onPopularClick = onShowAllTrendingClick,
+                    onCatalogClick = onCatalogClick,
+                    onRecentUpdatesClick = onRecentUpdatesClick,
+                    onRandomClick = {
+                        randomPool.randomOrNull()?.let(onRandomAnimeClick)
+                    },
+                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                 )
             }
 
-            if (state.recentlyUpdated.isNotEmpty()) {
+            verticalAnimeListContent(
+                items = state.trending,
+                metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+                onAnimeClick = onAnimeClick,
+                modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+            )
+
+            if (state.isTrendingLoadingMore) {
                 item {
-                    AnimeSection(
-                        title = stringResource(R.string.home_recent_updates),
-                        icon = Icons.Outlined.Refresh,
-                        items = state.recentlyUpdated,
-                        onAnimeClick = onAnimeClick
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
                 }
             }
                     }
@@ -400,11 +433,7 @@ private fun FeaturedCarousel(
     val progress = remember { Animatable(0f) }
 
     var indicatorPage by remember { mutableStateOf(0) }
-    val featuredHeight = if (items.getOrNull(pagerState.currentPage)?.title.orEmpty().length >= 42) {
-        280.dp
-    } else {
-        230.dp
-    }
+    val featuredHeight = 240.dp
 
     LaunchedEffect(autoAdvanceEnabled) {
         PerfLogger.mark("Home featured carousel active changed", "active=$autoAdvanceEnabled")
@@ -607,7 +636,7 @@ private fun FeaturedAnimeCard(
                         start = 18.dp,
                         end = 18.dp,
                         top = 18.dp,
-                        bottom = 82.dp,
+                        bottom = 42.dp,
                     ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -642,6 +671,7 @@ private fun FeaturedAnimeCard(
                 val meta = buildHomeMeta(
                     anime = anime,
                     announcementLabel = stringResource(R.string.anime_meta_announcement),
+                    movieLabel = stringResource(R.string.anime_meta_movie),
                 )
                 if (meta.isNotBlank()) {
                     Text(
@@ -660,32 +690,6 @@ private fun FeaturedAnimeCard(
                 }
             }
 
-            Button(
-                onClick = onClick,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 18.dp, bottom = 23.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 2.dp,
-                    pressedElevation = 1.dp
-                ),
-                contentPadding = PaddingValues(
-                    horizontal = 18.dp,
-                    vertical = 10.dp
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.details_watch))
-            }
         }
     }
 }
@@ -748,6 +752,7 @@ private fun ContinueWatchingCard(
                         val meta = buildHomeMeta(
                             anime = anime,
                             announcementLabel = stringResource(R.string.anime_meta_announcement),
+                            movieLabel = stringResource(R.string.anime_meta_movie),
                         )
                         if (meta.isNotBlank()) {
                             Text(
@@ -766,15 +771,6 @@ private fun ContinueWatchingCard(
                         )
                     }
 
-                    AppFilledIconButton(
-                        onClick = onClick,
-                        style = AppFilledIconButtonStyle.PrimaryContainer,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null
-                        )
-                    }
                 }
             }
         }
@@ -822,6 +818,67 @@ private fun EmptyContinueContent() {
 }
 
 @Composable
+private fun HomeQuickActions(
+    canRandom: Boolean,
+    onPopularClick: () -> Unit,
+    onCatalogClick: () -> Unit,
+    onRecentUpdatesClick: () -> Unit,
+    onRandomClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HomeQuickActionPill(
+            label = stringResource(R.string.home_quick_popular),
+            icon = Icons.AutoMirrored.Outlined.TrendingUp,
+            onClick = onPopularClick,
+        )
+        HomeQuickActionPill(
+            label = stringResource(R.string.nav_catalog),
+            icon = Icons.Outlined.GridView,
+            onClick = onCatalogClick,
+        )
+        HomeQuickActionPill(
+            label = stringResource(R.string.home_quick_recent_updates),
+            icon = Icons.Outlined.Refresh,
+            onClick = onRecentUpdatesClick,
+        )
+        HomeQuickActionPill(
+            label = stringResource(R.string.home_quick_random),
+            icon = Icons.Filled.PlayArrow,
+            onClick = onRandomClick,
+            enabled = canRandom,
+        )
+    }
+}
+
+@Composable
+private fun HomeQuickActionPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    Surface(
+        modifier = Modifier.clip(RoundedCornerShape(50)).clickable(enabled = enabled, onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(text = label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
 private fun AnimeSection(
     title: String,
     actionLabel: String? = null,
@@ -851,6 +908,7 @@ private fun AnimeSection(
                     metaText = buildHomeMeta(
                         anime = anime,
                         announcementLabel = stringResource(R.string.anime_meta_announcement),
+                        movieLabel = stringResource(R.string.anime_meta_movie),
                     ),
                     onClick = { onAnimeClick(anime) },
                     width = 118.dp,
@@ -946,8 +1004,10 @@ private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
 private fun buildHomeMeta(
     anime: Anime,
     announcementLabel: String,
+    movieLabel: String,
 ): String {
     return anime.buildCardMeta(
         announcementLabel = announcementLabel,
+        movieLabel = movieLabel,
     )
 }

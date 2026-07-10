@@ -400,6 +400,7 @@ data class TrendingAnimeUiState(
 private fun buildTrendingMeta(anime: Anime): String {
     return anime.buildCardMeta(
         announcementLabel = stringResource(R.string.anime_meta_announcement),
+        movieLabel = stringResource(R.string.anime_meta_movie),
         maxSubtitleParts = Int.MAX_VALUE,
         separator = " · ",
     )

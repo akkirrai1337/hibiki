@@ -17,6 +17,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.MockAnimeData
@@ -259,6 +260,17 @@ class HomeRepository(
         return catalog.map(::toHomeAnime)
     }
 
+    suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
+        return items.map { anime ->
+            runCatching { yummySource.getById(anime.id) }
+                .getOrNull()
+                ?.description
+                ?.takeIf(String::isNotBlank)
+                ?.let { description -> anime.copy(description = description) }
+                ?: anime
+        }
+    }
+
     private fun toHomeAnime(title: AnimeTitle): Anime {
         val subtitle = buildList {
             title.type?.toDisplayType()?.let(::add)
@@ -275,6 +287,10 @@ class HomeRepository(
             status = status,
             nextEpisodeAt = title.nextEpisodeAt,
             posterUrl = title.posterUrl,
+            description = title.description,
+            ratings = title.ratings.map { rating ->
+                AnimeRating(source = rating.source, value = rating.value, votes = rating.votes)
+            },
             genres = title.genres,
             studios = title.studios,
         )

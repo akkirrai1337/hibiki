@@ -47,6 +47,7 @@ fun SearchScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
     val loadMoreLabel = stringResource(R.string.action_more)
     val idleTitle = stringResource(R.string.search_start_title)
     val idleMessage = stringResource(R.string.search_idle)
@@ -75,7 +76,7 @@ fun SearchScreen(
         searchStateVerticalListContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
-            metaText = { anime -> buildSearchMeta(anime, announcementLabel) },
+            metaText = { anime -> buildSearchMeta(anime, announcementLabel, movieLabel) },
             onLoadMore = viewModel::loadMore,
             loadMoreLabel = loadMoreLabel,
             resultsCountLabel = { count ->
@@ -149,8 +150,10 @@ private fun SearchBar(
 private fun buildSearchMeta(
     anime: Anime,
     announcementLabel: String,
+    movieLabel: String,
 ): String {
     return anime.buildCardMeta(
         announcementLabel = announcementLabel,
+        movieLabel = movieLabel,
     )
 }

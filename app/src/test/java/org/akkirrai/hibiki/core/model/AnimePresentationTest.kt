@@ -23,7 +23,7 @@ class AnimePresentationTest {
             episodesLabel = "24 episodes",
         )
 
-        assertEquals("TV • 2025", anime.buildCardMeta(announcementLabel = "Announced"))
+        assertEquals("2025", anime.buildCardMeta(announcementLabel = "Announced"))
     }
 
     @Test
@@ -33,7 +33,7 @@ class AnimePresentationTest {
             episodesLabel = "1 episode",
         )
 
-        assertEquals("Movie • 2024 • 1 episode", anime.buildLibraryMeta())
+        assertEquals("Movie • 2024", anime.buildLibraryMeta())
     }
 
     @Test

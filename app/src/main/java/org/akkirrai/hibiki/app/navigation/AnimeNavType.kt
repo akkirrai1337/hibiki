@@ -7,6 +7,8 @@ object AnimeNavType {
     const val DETAILS_ROUTE = "details"
     const val WATCH_SOURCES_ROUTE = "watch_sources"
     const val TRENDING_ROUTE = "trending"
+    const val CATALOG_ROUTE = "catalog"
+    const val RECENT_UPDATES_ROUTE = "recent_updates"
     const val ACCOUNT_ROUTE = "account"
     const val ACCOUNT_SETTINGS_ROUTE = "account_settings"
     const val SEARCH_FILTERS_ROUTE = "search_filters"

@@ -18,6 +18,9 @@
     <string name="home_trending">Trending now</string>
     <string name="home_see_all">See all</string>
     <string name="home_recent_updates">Recent updates</string>
+    <string name="home_quick_popular">Popular</string>
+    <string name="home_quick_recent_updates">Recent updates</string>
+    <string name="home_quick_random">Random</string>
     <string name="home_search_empty_title">Nothing found</string>
     <string name="home_search_empty_message">Try changing your query</string>
     <string name="home_error_title">Failed to load home</string>
@@ -90,6 +93,7 @@
 
     <string name="poster_placeholder">No poster</string>
     <string name="anime_meta_announcement">announcement</string>
+    <string name="anime_meta_movie">Movie</string>
 
     <string name="details_watch">Watch</string>
     <string name="details_favorite">Add to favorites</string>

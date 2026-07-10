@@ -87,6 +87,7 @@ fun CatalogScreen(
     val gridState = rememberLazyGridState()
     var isCategorySheetOpen by remember { mutableStateOf(false) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
     val baseContext = LocalContext.current
     val appLanguage = LocalAppLanguage.current
     val localizedContext = remember(baseContext, appLanguage) {
@@ -171,6 +172,7 @@ fun CatalogScreen(
                             anime = item.anime,
                             metaText = item.anime.buildCardMeta(
                                 announcementLabel = announcementLabel,
+                                movieLabel = movieLabel,
                                 maxSubtitleParts = 2,
                                 separator = " • ",
                             ),

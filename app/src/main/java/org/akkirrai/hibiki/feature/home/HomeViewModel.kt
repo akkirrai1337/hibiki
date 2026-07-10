@@ -65,6 +65,7 @@ class HomeViewModel(
                         searchFilters = current.searchFilters,
                         profileAvatarUrl = current.profileAvatarUrl,
                     )
+                    enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -87,6 +88,7 @@ class HomeViewModel(
 
     private var searchJob: Job? = null
     private var profileAvatarJob: Job? = null
+    private var recentDescriptionsJob: Job? = null
     private var lastProfileAvatarReadAt = 0L
 
     fun onSearchQueryChange(value: String) {
@@ -249,6 +251,25 @@ class HomeViewModel(
         }
     }
 
+    fun loadMoreTrending() {
+        val current = uiState.value
+        if (current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isTrendingLoadingMore = true) }
+            val page = runCatching {
+                repository.loadTrendingPage(offset = current.trendingNextOffset, limit = TRENDING_PAGE_SIZE)
+            }.getOrElse { emptyList() }
+            _uiState.update { state ->
+                state.copy(
+                    trending = (state.trending + page).distinctBy { it.id },
+                    isTrendingLoadingMore = false,
+                    canLoadMoreTrending = page.size >= TRENDING_PAGE_SIZE,
+                    trendingNextOffset = current.trendingNextOffset + page.size,
+                )
+            }
+        }
+    }
+
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
@@ -267,6 +288,7 @@ class HomeViewModel(
                         searchFilters = current.searchFilters,
                         profileAvatarUrl = current.profileAvatarUrl,
                     )
+                    enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -314,9 +336,23 @@ class HomeViewModel(
         }
     }
 
+    private fun enrichRecentDescriptions() {
+        recentDescriptionsJob?.cancel()
+        val ids = _uiState.value.recentlyUpdated.map { it.id }
+        if (ids.isEmpty()) return
+        recentDescriptionsJob = viewModelScope.launch(Dispatchers.IO) {
+            val enriched = repository.enrichDescriptions(_uiState.value.recentlyUpdated)
+            _uiState.update { current ->
+                if (current.recentlyUpdated.map { it.id } != ids) current
+                else current.copy(recentlyUpdated = enriched)
+            }
+        }
+    }
+
     override fun onCleared() {
         searchJob?.cancel()
         profileAvatarJob?.cancel()
+        recentDescriptionsJob?.cancel()
         repository.close()
         accountRepository.close()
         super.onCleared()
@@ -357,6 +393,7 @@ class HomeViewModel(
         const val SEARCH_DEBOUNCE_MS = 450L
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
+        const val TRENDING_PAGE_SIZE = 20
         const val PROFILE_AVATAR_CACHE_READ_THROTTLE_MS = 5_000L
     }
 

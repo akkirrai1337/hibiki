@@ -179,7 +179,7 @@ class YummyMetadataSourceTest {
                 "year": 2024,
                 "type": {"alias": "tv"},
                 "episodes": {
-                  "count": 12,
+                  "count": 24,
                   "aired": 12
                 },
                 "poster": {

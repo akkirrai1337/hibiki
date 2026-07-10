@@ -18,6 +18,9 @@
     <string name="home_trending">Сейчас в тренде</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>
+    <string name="home_quick_popular">Популярное</string>
+    <string name="home_quick_recent_updates">Недавние обновления</string>
+    <string name="home_quick_random">Рандом</string>
     <string name="home_search_empty_title">Ничего не найдено</string>
     <string name="home_search_empty_message">Попробуйте изменить запрос</string>
     <string name="home_error_title">Не удалось загрузить главную</string>
@@ -92,6 +95,7 @@
 
     <string name="poster_placeholder">Нет постера</string>
     <string name="anime_meta_announcement">анонс</string>
+    <string name="anime_meta_movie">Фильм</string>
 
     <string name="details_watch">Смотреть</string>
     <string name="details_favorite">В избранное</string>

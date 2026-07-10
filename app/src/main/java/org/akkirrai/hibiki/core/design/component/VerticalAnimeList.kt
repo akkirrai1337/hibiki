@@ -230,3 +230,20 @@ fun LazyListScope.searchStateVerticalListContent(
         }
     }
 }
+
+/** Shared list content for every screen that presents anime as vertical cards. */
+fun LazyListScope.verticalAnimeListContent(
+    items: List<Anime>,
+    metaText: @Composable (Anime) -> String,
+    onAnimeClick: (Anime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    items(items, key = Anime::id) { anime ->
+        VerticalAnimeListItem(
+            anime = anime,
+            metaText = metaText(anime),
+            onClick = { onAnimeClick(anime) },
+            modifier = modifier.fillMaxWidth(),
+        )
+    }
+}

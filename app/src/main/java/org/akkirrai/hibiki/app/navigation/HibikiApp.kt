@@ -62,6 +62,7 @@ import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
 import org.akkirrai.hibiki.feature.home.HomeSearchFiltersScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
+import org.akkirrai.hibiki.feature.home.RecentUpdatesScreen
 import org.akkirrai.hibiki.feature.home.TrendingAnimeScreen
 import org.akkirrai.hibiki.feature.library.LibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
@@ -205,6 +206,15 @@ private fun HibikiNavHost(
                 onShowAllTrendingClick = {
                     navController.navigateSingleTopTo(AnimeNavType.TRENDING_ROUTE)
                 },
+                onCatalogClick = {
+                    navController.navigateSingleTopTo(AnimeNavType.CATALOG_ROUTE)
+                },
+                onRecentUpdatesClick = {
+                    navController.navigateSingleTopTo(AnimeNavType.RECENT_UPDATES_ROUTE)
+                },
+                onRandomAnimeClick = { anime ->
+                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                },
                 onProfileClick = {
                     navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
                 },
@@ -292,13 +302,18 @@ private fun HibikiNavHost(
                 modifier = topLevelScreenModifier
             )
         }
-        topLevelComposable(route = TopLevelDestination.Catalog.route) {
+        composable(
+            route = AnimeNavType.CATALOG_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) {
             CatalogScreen(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                bottomContentPadding = topLevelBottomContentPadding,
-                modifier = topLevelScreenModifier.statusBarsPadding(),
+                modifier = screenModifier.statusBarsPadding(),
             )
         }
         topLevelComposable(route = TopLevelDestination.Settings.route) {
@@ -320,6 +335,28 @@ private fun HibikiNavHost(
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
                 modifier = screenModifier,
+            )
+        }
+        composable(
+            route = AnimeNavType.RECENT_UPDATES_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) {
+            val context = LocalContext.current
+            val homeEntry = remember(navController) {
+                navController.getBackStackEntry(TopLevelDestination.Home.route)
+            }
+            val homeViewModel: HomeViewModel = viewModel(
+                viewModelStoreOwner = homeEntry,
+                factory = HomeViewModel.Factory(context),
+            )
+            RecentUpdatesScreen(
+                viewModel = homeViewModel,
+                onBackClick = navController::navigateUp,
+                onAnimeClick = { anime -> navController.navigate(AnimeNavType.createDetailsRoute(anime)) },
+                modifier = screenModifier.statusBarsPadding(),
             )
         }
         composable(

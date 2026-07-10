@@ -1,9 +1,12 @@
 package org.akkirrai.hibiki.core.model
 
+import java.util.Locale
+
 private val META_SPLIT_REGEX = Regex("\\s*[•·|]\\s*")
 
 fun Anime.buildCardMeta(
     announcementLabel: String,
+    movieLabel: String = "Movie",
     maxSubtitleParts: Int = 2,
     separator: String = " • ",
 ): String {
@@ -15,13 +18,17 @@ fun Anime.buildCardMeta(
         .filter { it.isNotEmpty() && it != UNKNOWN_META_VALUE }
         .take(maxSubtitleParts)
 
-    if (subtitleParts.isNotEmpty()) {
-        return subtitleParts.joinToString(separator)
-    }
+    val type = subtitleParts.firstOrNull()?.lowercase(Locale.getDefault()).orEmpty()
+    val year = subtitleParts.firstOrNull { it.matches(YEAR_REGEX) }
+    val contentLabel = movieLabel.takeIf { type in MOVIE_TYPES }
+    val rating = ratings
+        .firstOrNull { it.source.contains("yummy", ignoreCase = true) }
+        ?.value
+        ?.takeIf { it.isFinite() && it > 0.0 }
+        ?: ratings.firstOrNull()?.value?.takeIf { it.isFinite() && it > 0.0 }
+    val ratingLabel = rating?.let { String.format(Locale.US, "%.1f ★", it) }
 
-    return episodesLabel
-        .takeIf { it.isNotBlank() && it != UNKNOWN_META_VALUE }
-        .orEmpty()
+    return listOfNotNull(contentLabel, year, ratingLabel).joinToString(separator)
 }
 
 fun Anime.buildLibraryMeta(
@@ -34,11 +41,7 @@ fun Anime.buildLibraryMeta(
         .filter { it.isNotEmpty() && it != UNKNOWN_META_VALUE }
         .take(maxSubtitleParts)
 
-    val episodes = episodesLabel
-        .takeIf { it.isNotBlank() && it != UNKNOWN_META_VALUE }
-        .orEmpty()
-
-    return (subtitleParts + episodes)
+    return subtitleParts
         .filter { it.isNotBlank() }
         .joinToString(separator)
 }
@@ -49,3 +52,5 @@ fun Anime.isAnnouncement(): Boolean {
 }
 
 private const val UNKNOWN_META_VALUE = "Unknown"
+private val YEAR_REGEX = Regex("\\d{4}")
+private val MOVIE_TYPES = setOf("movie", "short movie", "film", "полнометражный фильм")

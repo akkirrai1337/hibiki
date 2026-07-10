@@ -574,10 +574,10 @@ private fun String?.normalizeUrl(): String? {
 private fun JsonElement?.extractEpisodeCount(): Int? {
     return when (this) {
         is JsonPrimitive -> content.toIntOrNull()
-        is JsonObject -> get("count")
-            ?.jsonPrimitive
-            ?.content
-            ?.toIntOrNull()
+        is JsonObject -> listOf("aired", "count")
+            .firstNotNullOfOrNull { key ->
+                get(key)?.jsonPrimitive?.content?.toIntOrNull()
+            }
         else -> null
     }
 }
