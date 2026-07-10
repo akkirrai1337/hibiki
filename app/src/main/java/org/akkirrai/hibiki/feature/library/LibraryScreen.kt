@@ -543,13 +543,6 @@ private fun LibraryAnimeCard(
         ),
         onClick = onClick,
         modifier = modifier,
-        trailingContent = {
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
     )
 }

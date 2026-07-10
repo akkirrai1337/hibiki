@@ -52,7 +52,7 @@ fun LibraryStatusPosterFooter(category: LibraryCategory) {
     val isLongLabel = label.length > 8
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = if (isLongLabel) Arrangement.Center else Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!isLongLabel) {
