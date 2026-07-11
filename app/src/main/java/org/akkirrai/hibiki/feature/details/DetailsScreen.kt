@@ -125,6 +125,8 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 @Composable
 fun DetailsScreen(
@@ -275,6 +277,23 @@ fun DetailsScreen(
     }
     val relatedItems = remember(uiModel.sections) {
         uiModel.sections.filterIsInstance<RelatedSection>().firstOrNull()?.items.orEmpty()
+    }
+    var relatedRatings by remember(anime.id) { mutableStateOf<Map<String, Double?>>(emptyMap()) }
+    LaunchedEffect(isRelatedSheetOpen, relatedItems) {
+        if (!isRelatedSheetOpen) return@LaunchedEffect
+        val itemsWithoutRating = relatedItems.filterNot { it.id in relatedRatings }
+        if (itemsWithoutRating.isEmpty()) return@LaunchedEffect
+        val loadedRatings = itemsWithoutRating.map { related ->
+            async {
+                related.id to runCatching {
+                    searchRepository.getDetails(related.id, related.toAnime())
+                        .ratings
+                        .firstOrNull()
+                        ?.value
+                }.getOrNull()
+            }
+        }.awaitAll().toMap()
+        relatedRatings += loadedRatings
     }
     val selectedSource = remember(watchSources.toList(), sourceSelection) {
         resolveSelectedSource(
@@ -438,6 +457,7 @@ fun DetailsScreen(
     if (isRelatedSheetOpen && relatedItems.isNotEmpty()) {
         RelatedAnimeSheet(
             items = relatedItems,
+            ratings = relatedRatings,
             currentAnime = currentAnime,
             title = stringResource(R.string.details_related_titles),
             countLabel = stringResource(R.string.details_related_count_label, relatedItems.size),
@@ -1670,6 +1690,7 @@ private fun RelatedAnimeList(
 @Composable
 private fun RelatedAnimeSheet(
     items: List<RelatedAnime>,
+    ratings: Map<String, Double?>,
     currentAnime: Anime,
     title: String,
     countLabel: String,
@@ -1680,6 +1701,13 @@ private fun RelatedAnimeSheet(
 ) {
     val normalizedCurrentAnimeId = YummyIdMigration.normalizeTitleId(currentAnime.id)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    fun dismissFromCloseButton() {
+        coroutineScope.launch {
+            sheetState.hide()
+            if (!sheetState.isVisible) onDismiss()
+        }
+    }
     BackHandler(onBack = onDismiss)
 
     ModalBottomSheet(
@@ -1687,7 +1715,17 @@ private fun RelatedAnimeSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        dragHandle = null,
+        sheetGesturesEnabled = false,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 10.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)),
+            )
+        },
     ) {
         Column(
             modifier = Modifier
@@ -1697,8 +1735,8 @@ private fun RelatedAnimeSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1712,8 +1750,8 @@ private fun RelatedAnimeSheet(
                         Text(
                             text = title,
                             modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 21.sp),
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -1726,7 +1764,7 @@ private fun RelatedAnimeSheet(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    RelatedSheetCloseButton(onClick = onDismiss)
+                    RelatedSheetCloseButton(onClick = ::dismissFromCloseButton)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             }
@@ -1742,6 +1780,7 @@ private fun RelatedAnimeSheet(
                     val isCurrentAnime = YummyIdMigration.normalizeTitleId(related.id) == normalizedCurrentAnimeId
                     RelatedAnimeSheetRow(
                         anime = related,
+                        rating = ratings[related.id],
                         isCurrentAnime = isCurrentAnime,
                         currentLabel = currentLabel,
                         episodeLabel = episodeLabel,
@@ -1778,6 +1817,7 @@ private fun RelatedSheetCloseButton(
 @Composable
 private fun RelatedAnimeSheetRow(
     anime: RelatedAnime,
+    rating: Double?,
     isCurrentAnime: Boolean,
     currentLabel: String,
     episodeLabel: String,
@@ -1795,8 +1835,8 @@ private fun RelatedAnimeSheetRow(
         animationSpec = tween(durationMillis = 130),
         label = "Related anime sheet row color",
     )
-    val meta = remember(anime.id, anime.type, anime.year, anime.episodeCount, episodeLabel) {
-        buildRelatedAnimeMeta(anime = anime, episodeLabel = episodeLabel)
+    val meta = remember(anime.id, anime.year, rating) {
+        buildRelatedAnimeMeta(anime = anime, rating = rating)
     }
 
     Surface(
@@ -1812,13 +1852,13 @@ private fun RelatedAnimeSheetRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppTonalSurface(
                 modifier = Modifier
-                    .size(width = 48.dp, height = 68.dp)
+                    .size(width = 44.dp, height = 62.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -1842,13 +1882,13 @@ private fun RelatedAnimeSheetRow(
                         text = anime.title,
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 16.sp,
-                            lineHeight = 20.sp,
+                            fontSize = 15.sp,
+                            lineHeight = 19.sp,
                             fontWeight = if (isCurrentAnime) FontWeight.SemiBold else FontWeight.Medium,
                         ),
                         color = if (isCurrentAnime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Start,
-                        baseMaxLines = 3,
+                        baseMaxLines = 2,
                     )
                     if (isCurrentAnime) {
                         Surface(
@@ -1903,20 +1943,14 @@ private fun buildCompactFranchiseTitle(title: String): String {
 
 private fun buildRelatedAnimeMeta(
     anime: RelatedAnime,
-    episodeLabel: String,
+    rating: Double?,
 ): String? {
     val parts = buildList {
-        anime.type
-            ?.toRelatedAnimeTypeLabel()
-            ?.takeIf(String::isNotBlank)
-            ?.let(::add)
         anime.year
             ?.takeIf { it > 0 }
             ?.toString()
             ?.let(::add)
-        anime.episodeCount
-            ?.takeIf { it > 0 }
-            ?.let { count -> add("$count $episodeLabel") }
+        rating?.let { add("★ ${formatRating(it)}") }
     }
     return parts.joinToString(" · ").takeIf(String::isNotBlank)
 }
