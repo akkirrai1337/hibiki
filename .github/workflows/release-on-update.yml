@@ -76,14 +76,6 @@ jobs:
             exit 1
           fi
 
-      - name: Build signed release APK
-        env:
-          HIBIKI_RELEASE_STORE_FILE: hibiki
-          HIBIKI_RELEASE_STORE_PASSWORD: ${{ secrets.HIBIKI_RELEASE_STORE_PASSWORD }}
-          HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
-          HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
-
       - name: Determine release version
         id: release
         shell: bash
@@ -92,53 +84,26 @@ jobs:
         run: |
           set -euo pipefail
 
-          normalize_version() {
-            local value="$1"
-            if [[ "$value" =~ ^[0-9]+\.[0-9]+$ ]]; then
-              echo "${value}.0"
-            else
-              echo "$value"
-            fi
-          }
-
-          next_stable_version() {
-            local current="$1"
-            local major minor patch
-            IFS='.' read -r major minor patch <<< "$current"
-            if (( patch >= 9 )); then
-              minor=$((minor + 1))
-              patch=0
-            else
-              patch=$((patch + 1))
-            fi
-            echo "${major}.${minor}.${patch}"
-          }
-
           BASE_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
-          DEFAULT_STABLE_VERSION=$(normalize_version "${BASE_VERSION:-1.0}")
-          LATEST_STABLE_TAG=$(
-            git tag --list 'v*' --sort=-v:refname |
-              grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
-              head -n 1 ||
-              true
-          )
-
-          if [ -n "$LATEST_STABLE_TAG" ]; then
-            LATEST_STABLE_VERSION="${LATEST_STABLE_TAG#v}"
-            HAS_STABLE_RELEASE=true
-          else
-            LATEST_STABLE_VERSION="$DEFAULT_STABLE_VERSION"
-            HAS_STABLE_RELEASE=false
+          if [ -z "${BASE_VERSION:-}" ]; then
+            echo "Could not read versionName from app/build.gradle.kts"
+            exit 1
           fi
 
-          NEXT_STABLE_VERSION=$(next_stable_version "$LATEST_STABLE_VERSION")
+          if [[ ! "$BASE_VERSION" =~ ^[0-9][0-9A-Za-z.+-]*$ ]]; then
+            echo "Invalid versionName: $BASE_VERSION"
+            echo "Set a valid versionName in app/build.gradle.kts before using [update]."
+            exit 1
+          fi
+
+          TARGET_VERSION="$BASE_VERSION"
+
           IS_PRERELEASE=false
           if [[ "${HEAD_COMMIT_MESSAGE:-}" == *"[prerelease]"* ]]; then
             IS_PRERELEASE=true
           fi
 
           if [ "$IS_PRERELEASE" = true ]; then
-            TARGET_VERSION="$NEXT_STABLE_VERSION"
             LAST_PRERELEASE_NUMBER=$(
               git tag --list "v${TARGET_VERSION}-prerelease.*" |
                 sed -nE "s/^v${TARGET_VERSION//./\\.}-prerelease\\.([0-9]+)$/\\1/p" |
@@ -153,17 +118,17 @@ jobs:
             fi
             RELEASE_VERSION="${TARGET_VERSION}-prerelease.${PRERELEASE_NUMBER}"
           else
-            if [ "$HAS_STABLE_RELEASE" = true ]; then
-              RELEASE_VERSION="$NEXT_STABLE_VERSION"
-            else
-              RELEASE_VERSION="$DEFAULT_STABLE_VERSION"
-            fi
+            RELEASE_VERSION="$TARGET_VERSION"
           fi
 
           TAG="v${RELEASE_VERSION}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Release tag ${TAG} already exists. Bump versionName before using [update]."
+            exit 1
+          fi
           PREVIOUS_TAG=$(
             git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags |
-              grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-prerelease\.[0-9]+)?$' |
+              grep -E '^v[0-9][0-9A-Za-z.+-]*$' |
               head -n 1 ||
               true
           )
@@ -184,6 +149,14 @@ jobs:
             git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE" | sed -E 's/\[(update|prerelease)\][[:space:]]*//Ig'
             echo
           } > release-notes.md
+
+      - name: Build signed release APK
+        env:
+          HIBIKI_RELEASE_STORE_FILE: hibiki
+          HIBIKI_RELEASE_STORE_PASSWORD: ${{ secrets.HIBIKI_RELEASE_STORE_PASSWORD }}
+          HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
+          HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
 
       - name: Rename APK
         shell: bash
