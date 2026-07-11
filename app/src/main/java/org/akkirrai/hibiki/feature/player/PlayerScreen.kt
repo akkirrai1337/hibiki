@@ -1,9 +1,17 @@
 package org.akkirrai.hibiki.feature.player
 
 import android.app.Activity
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.SystemClock
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -102,6 +110,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
@@ -121,6 +130,7 @@ import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -170,6 +180,8 @@ fun PlayerScreen(
     val activity = remember(context, view) {
         context.findActivity() ?: view.context.findActivity()
     }
+    val pictureInPictureSupported = activity?.packageManager
+        ?.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
     var controlsVisible by remember { mutableStateOf(true) }
     var controlsLocked by remember { mutableStateOf(false) }
     var unlockButtonVisible by remember { mutableStateOf(false) }
@@ -188,6 +200,9 @@ fun PlayerScreen(
     var pendingSeekMs by remember { mutableLongStateOf(0L) }
     var lifecycleResumePositionMs by remember { mutableLongStateOf(0L) }
     var resumePlaybackAfterLifecyclePause by remember { mutableStateOf(false) }
+    var isEnteringPictureInPicture by remember { mutableStateOf(false) }
+    var isPictureInPictureActive by remember { mutableStateOf(false) }
+    var isAudioOnly by remember { mutableStateOf(false) }
     var gestureSeekPreviewMs by remember { mutableLongStateOf(0L) }
     var gestureSeekDeltaMs by remember { mutableLongStateOf(0L) }
     var gestureSeekStartMs by remember { mutableLongStateOf(0L) }
@@ -242,6 +257,12 @@ fun PlayerScreen(
                 playWhenReady = true
             }
     }
+    val mediaSession = remember(exoPlayer) {
+        MediaSession.Builder(context, exoPlayer).build()
+    }
+    val hasNextEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
+        .let { it != -1 && it < state.episodes.lastIndex }
+    val hasPreviousEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId } > 0
     val seekGestureTouchSlopPx = viewConfiguration.touchSlop * SEEK_GESTURE_TOUCH_SLOP_MULTIPLIER
 
     fun keepControlsVisible() {
@@ -369,6 +390,109 @@ fun PlayerScreen(
         action()
     }
 
+    fun pictureInPictureParams(): PictureInPictureParams {
+        val actions = buildList {
+            add(
+                createPictureInPictureAction(
+                    context = context,
+                    action = PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY,
+                    requestCode = PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE,
+                    iconResId = R.drawable.ic_player_headphones_24,
+                    titleResId = if (isAudioOnly) {
+                        R.string.watch_player_show_video
+                    } else {
+                        R.string.watch_player_audio_only
+                    },
+                )
+            )
+            add(
+                createPictureInPictureAction(
+                    context = context,
+                    action = PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK,
+                    requestCode = PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE,
+                    iconResId = if (isPlaying) {
+                        R.drawable.ic_player_media_pause_24
+                    } else {
+                        R.drawable.ic_player_media_play_arrow_24
+                    },
+                    titleResId = if (isPlaying) {
+                        R.string.watch_player_pause
+                    } else {
+                        R.string.watch_player_play
+                    },
+                )
+            )
+            if (hasPreviousEpisode) {
+                add(
+                    createPictureInPictureAction(
+                        context = context,
+                        action = PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE,
+                        requestCode = PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE,
+                        iconResId = R.drawable.ic_player_media_skip_previous_24,
+                        titleResId = R.string.watch_player_previous_episode,
+                    )
+                )
+            }
+            if (hasNextEpisode) {
+                add(
+                    createPictureInPictureAction(
+                        context = context,
+                        action = PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE,
+                        requestCode = PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE,
+                        iconResId = R.drawable.ic_player_media_skip_next_24,
+                        titleResId = R.string.watch_player_next_episode,
+                    )
+                )
+            }
+        }
+        return PictureInPictureParams.Builder().setActions(actions).build()
+    }
+
+    DisposableEffect(context, state.currentEpisodeId, hasNextEpisode) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context, intent: Intent) {
+                when (intent.action) {
+                    PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY -> {
+                        exoPlayer.play()
+                        isAudioOnly = true
+                        isPictureInPictureActive = false
+                        activity?.moveTaskToBack(true)
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK -> {
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE -> {
+                        if (hasPreviousEpisode) runPlaybackSwitch(viewModel::playPreviousEpisode)
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE -> {
+                        if (hasNextEpisode) runPlaybackSwitch(viewModel::playNextEpisode)
+                    }
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter().apply {
+                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY)
+                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK)
+                addAction(PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE)
+                addAction(PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    LaunchedEffect(state.currentEpisodeId, hasPreviousEpisode, hasNextEpisode, isPlaying) {
+        if (isPictureInPictureActive) {
+            activity?.setPictureInPictureParams(pictureInPictureParams())
+        }
+    }
+
     val handleBackClick = remember(exoPlayer, onBackClick) {
         {
             if (isClosing) return@remember
@@ -458,6 +582,7 @@ fun PlayerScreen(
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.removeListener(listener)
+            mediaSession.release()
             exoPlayer.release()
         }
     }
@@ -466,15 +591,21 @@ fun PlayerScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
+                    saveCurrentPlaybackProgress()
+                    if (isEnteringPictureInPicture || isPictureInPictureActive || isAudioOnly) {
+                        return@LifecycleEventObserver
+                    }
                     lifecycleResumePositionMs = currentPlaybackPositionMs()
                     resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
-                    saveCurrentPlaybackProgress()
                     exoPlayer.pause()
                 }
 
                 Lifecycle.Event.ON_STOP -> saveCurrentPlaybackProgress()
 
                 Lifecycle.Event.ON_RESUME -> {
+                    isEnteringPictureInPicture = false
+                    isPictureInPictureActive = false
+                    isAudioOnly = false
                     val resumePositionMs = lifecycleResumePositionMs
                     if (resumePositionMs > 0L) {
                         exoPlayer.seekTo(resumePositionMs)
@@ -866,7 +997,7 @@ fun PlayerScreen(
             },
             update = { playerView ->
                 attachedPlayerView = playerView
-                playerView.player = exoPlayer
+                playerView.player = if (isAudioOnly) null else exoPlayer
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -943,7 +1074,7 @@ fun PlayerScreen(
 
         activeSkipSegment?.let { skipSegment ->
             AnimatedVisibility(
-                visible = true,
+                visible = !isPictureInPictureActive,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(
@@ -967,7 +1098,9 @@ fun PlayerScreen(
         }
 
         AnimatedVisibility(
-            visible = !controlsLocked && (controlsVisible || state.isLoading || state.errorMessage != null),
+            visible = !isPictureInPictureActive &&
+                !controlsLocked &&
+                (controlsVisible || state.isLoading || state.errorMessage != null),
             modifier = Modifier.fillMaxSize(),
             enter = fadeIn(animationSpec = tween(160)),
             exit = fadeOut(animationSpec = tween(180)),
@@ -993,9 +1126,8 @@ fun PlayerScreen(
                 ) {
                     PlayerCenterControls(
                         isPlaying = isPlaying,
-                        hasPreviousEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId } > 0,
-                        hasNextEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-                            .let { it != -1 && it < state.episodes.lastIndex },
+                        hasPreviousEpisode = hasPreviousEpisode,
+                        hasNextEpisode = hasNextEpisode,
                         onTogglePlay = {
                             keepControlsVisible()
                             if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
@@ -1031,6 +1163,18 @@ fun PlayerScreen(
                         settingsDestination = PlayerSettingsDestination.Root
                         settingsVisible = true
                         viewModel.loadSettingsOptions()
+                    },
+                    pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
+                    onPictureInPictureClick = {
+                        isEnteringPictureInPicture = true
+                        controlsVisible = false
+                        val entered = runCatching {
+                            activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
+                        }.getOrDefault(false)
+                        isPictureInPictureActive = entered
+                        if (!entered) {
+                            isEnteringPictureInPicture = false
+                        }
                     },
                     onLockClick = {
                         controlsLocked = true
@@ -1984,6 +2128,8 @@ private fun PlayerBottomOverlay(
     onSliderValueChangeFinished: () -> Unit,
     settingsEnabled: Boolean,
     onSettingsClick: () -> Unit,
+    pictureInPictureEnabled: Boolean,
+    onPictureInPictureClick: () -> Unit,
     onLockClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -2046,6 +2192,18 @@ private fun PlayerBottomOverlay(
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = stringResource(R.string.watch_player_lock),
+                            tint = Color.White,
+                        )
+                    }
+                    AppFilledIconButton(
+                        onClick = onPictureInPictureClick,
+                        enabled = pictureInPictureEnabled,
+                        modifier = Modifier.size(46.dp),
+                        style = AppFilledIconButtonStyle.DarkOverlay,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_player_picture_in_picture_24),
+                            contentDescription = stringResource(R.string.watch_player_picture_in_picture),
                             tint = Color.White,
                         )
                     }
@@ -2439,6 +2597,28 @@ private fun buildSkipSegmentKey(
     segment: PlaybackSegment,
 ): String = "$episodeId:${segment.type}:${segment.startMs}:${segment.endMs}"
 
+private fun createPictureInPictureAction(
+    context: Context,
+    action: String,
+    requestCode: Int,
+    iconResId: Int,
+    @StringRes titleResId: Int,
+): RemoteAction {
+    val title = context.getString(titleResId)
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        requestCode,
+        Intent(action).setPackage(context.packageName),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    return RemoteAction(
+        Icon.createWithResource(context, iconResId),
+        title,
+        title,
+        pendingIntent,
+    )
+}
+
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 260L
 private const val DOUBLE_TAP_ACCUMULATION_WINDOW_MS = 700L
@@ -2454,6 +2634,18 @@ private const val SEEK_GESTURE_FULL_WIDTH_MS = 90_000L
 private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
+private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY =
+    "org.akkirrai.hibiki.action.TOGGLE_AUDIO_ONLY"
+private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK =
+    "org.akkirrai.hibiki.action.TOGGLE_PLAYBACK"
+private const val PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE =
+    "org.akkirrai.hibiki.action.PREVIOUS_EPISODE"
+private const val PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE =
+    "org.akkirrai.hibiki.action.NEXT_EPISODE"
+private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
+private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
+private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
+private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
 private val PLAYER_SHEET_COLOR = Color(0xFF121212)
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp

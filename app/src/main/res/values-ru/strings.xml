@@ -147,6 +147,13 @@
     <string name="watch_player_retry">Повторить</string>
     <string name="watch_episode_number">Серия %1$s</string>
     <string name="watch_player_settings">Настройки плеера</string>
+    <string name="watch_player_picture_in_picture">Картинка в картинке</string>
+    <string name="watch_player_audio_only">Только звук</string>
+    <string name="watch_player_show_video">Показать видео</string>
+    <string name="watch_player_next_episode">Следующая серия</string>
+    <string name="watch_player_previous_episode">Предыдущая серия</string>
+    <string name="watch_player_pause">Пауза</string>
+    <string name="watch_player_play">Воспроизвести</string>
     <string name="watch_player_lock">Заблокировать интерфейс плеера</string>
     <string name="watch_player_unlock">Разблокировать</string>
     <string name="watch_player_hold">Удержание</string>

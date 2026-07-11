@@ -145,6 +145,13 @@
     <string name="watch_player_retry">Retry</string>
     <string name="watch_episode_number">Episode %1$s</string>
     <string name="watch_player_settings">Player settings</string>
+    <string name="watch_player_picture_in_picture">Picture-in-picture</string>
+    <string name="watch_player_audio_only">Audio only</string>
+    <string name="watch_player_show_video">Show video</string>
+    <string name="watch_player_next_episode">Next episode</string>
+    <string name="watch_player_previous_episode">Previous episode</string>
+    <string name="watch_player_pause">Pause</string>
+    <string name="watch_player_play">Play</string>
     <string name="watch_player_lock">Lock player controls</string>
     <string name="watch_player_unlock">Unlock</string>
     <string name="watch_player_hold">Hold</string>
