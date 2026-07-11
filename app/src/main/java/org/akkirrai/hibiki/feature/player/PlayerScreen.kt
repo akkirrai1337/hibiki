@@ -18,6 +18,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -163,7 +165,6 @@ fun PlayerScreen(
     val appPreferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val density = LocalDensity.current
     val view = LocalView.current
     val viewConfiguration = LocalViewConfiguration.current
     val activity = remember(context, view) {
@@ -185,6 +186,8 @@ fun PlayerScreen(
     var bufferedPositionMs by remember { mutableLongStateOf(0L) }
     var sliderPositionMs by remember { mutableLongStateOf(0L) }
     var pendingSeekMs by remember { mutableLongStateOf(0L) }
+    var lifecycleResumePositionMs by remember { mutableLongStateOf(0L) }
+    var resumePlaybackAfterLifecyclePause by remember { mutableStateOf(false) }
     var gestureSeekPreviewMs by remember { mutableLongStateOf(0L) }
     var gestureSeekDeltaMs by remember { mutableLongStateOf(0L) }
     var gestureSeekStartMs by remember { mutableLongStateOf(0L) }
@@ -210,11 +213,14 @@ fun PlayerScreen(
     var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
     var pendingDoubleTapSeekJob by remember { mutableStateOf<Job?>(null) }
     var doubleTapSeekOverlayVisible by remember { mutableStateOf(false) }
+    var doubleTapSeekOverlayDeltaMs by remember { mutableLongStateOf(0L) }
+    var holdSpeedOverlayVisible by remember { mutableStateOf(false) }
     val watchedSeconds = remember(state.currentSourceId, state.currentEpisodeId) { mutableSetOf<Long>() }
     var lastTrackedPlaybackPositionMs by remember(state.currentSourceId, state.currentEpisodeId) { mutableLongStateOf(-1L) }
     val seekOverlayActive = gestureSeekInProgress ||
         gestureSeekActive ||
         isSeeking ||
+        holdSpeedOverlayVisible ||
         (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0)
     val coroutineScope = rememberCoroutineScope()
     val exoPlayer = remember(context) {
@@ -236,8 +242,6 @@ fun PlayerScreen(
                 playWhenReady = true
             }
     }
-    val gestureBlockedTopPx = with(density) { PLAYER_TOP_GESTURE_EXCLUSION_HEIGHT.toPx() }
-    val gestureBlockedBottomPx = with(density) { PLAYER_BOTTOM_GESTURE_EXCLUSION_HEIGHT.toPx() }
     val seekGestureTouchSlopPx = viewConfiguration.touchSlop * SEEK_GESTURE_TOUCH_SLOP_MULTIPLIER
 
     fun keepControlsVisible() {
@@ -257,9 +261,9 @@ fun PlayerScreen(
     }
 
     fun isInGestureArea(y: Float, height: Int): Boolean {
-        if (!controlsVisible) return true
-        val safeHeight = height.toFloat()
-        return y in gestureBlockedTopPx..(safeHeight - gestureBlockedBottomPx)
+        // Interactive controls consume the pointer themselves. Any remaining free video area
+        // should keep supporting player gestures even while controls are visible.
+        return true
     }
 
     fun watchedSecondsSnapshot(): List<Long> = watchedSeconds.sorted()
@@ -287,6 +291,7 @@ fun PlayerScreen(
         accumulatedDoubleTapSteps = 0
         accumulatedDoubleTapBasePositionMs = 0L
         doubleTapSeekOverlayVisible = false
+        doubleTapSeekOverlayDeltaMs = 0L
     }
 
     fun currentPlaybackPositionMs(): Long {
@@ -342,6 +347,7 @@ fun PlayerScreen(
         accumulatedDoubleTapSteps = nextSteps
         accumulatedDoubleTapBasePositionMs = basePositionMs
         doubleTapSeekOverlayVisible = true
+        doubleTapSeekOverlayDeltaMs = SEEK_INCREMENT_MS * nextSteps * direction
         pendingDoubleTapSeekJob = coroutineScope.launch {
             delay(DOUBLE_TAP_ACCUMULATION_WINDOW_MS)
             commitAccumulatedDoubleTapSeek()
@@ -456,10 +462,33 @@ fun PlayerScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner, exoPlayer, durationMs, positionMs, sliderPositionMs) {
+    DisposableEffect(lifecycleOwner, exoPlayer) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
-                saveCurrentPlaybackProgress()
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    lifecycleResumePositionMs = currentPlaybackPositionMs()
+                    resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
+                    saveCurrentPlaybackProgress()
+                    exoPlayer.pause()
+                }
+
+                Lifecycle.Event.ON_STOP -> saveCurrentPlaybackProgress()
+
+                Lifecycle.Event.ON_RESUME -> {
+                    val resumePositionMs = lifecycleResumePositionMs
+                    if (resumePositionMs > 0L) {
+                        exoPlayer.seekTo(resumePositionMs)
+                        positionMs = resumePositionMs
+                        sliderPositionMs = resumePositionMs
+                        lifecycleResumePositionMs = 0L
+                    }
+                    if (resumePlaybackAfterLifecyclePause) {
+                        exoPlayer.play()
+                    }
+                    resumePlaybackAfterLifecyclePause = false
+                }
+
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -674,6 +703,8 @@ fun PlayerScreen(
                     var upPosition = firstDown.position
                     var handledAsSeek = false
                     var holdSpeedActive = false
+                    var holdSpeedEligible = !controlsLocked
+                    val holdSpeedDeadlineMs = firstDown.uptimeMillis + viewConfiguration.longPressTimeoutMillis
                     val canSeekByGesture = isInGestureArea(firstDown.position.y, size.height) && durationMs > 0L
 
                     gestureSeekInProgress = false
@@ -683,9 +714,22 @@ fun PlayerScreen(
                     gestureSeekPreviewMs = gestureSeekStartMs
                     gestureSeekDeltaMs = 0L
                     gestureSeekDragPx = 0f
+                    holdSpeedOverlayVisible = false
 
                     while (true) {
-                        val event = awaitPointerEvent()
+                        val event = if (holdSpeedEligible && !holdSpeedActive && !handledAsSeek) {
+                            val remainingTimeoutMs = (holdSpeedDeadlineMs - SystemClock.uptimeMillis())
+                                .coerceAtLeast(1L)
+                            withTimeoutOrNull(remainingTimeoutMs) { awaitPointerEvent() }
+                        } else {
+                            awaitPointerEvent()
+                        }
+                        if (event == null) {
+                            holdSpeedActive = true
+                            holdSpeedOverlayVisible = true
+                            applyPlaybackSpeed(2f)
+                            continue
+                        }
                         val change = event.changes.firstOrNull { it.id == firstDown.id } ?: break
                         if (!change.pressed) {
                             upPosition = change.position
@@ -701,18 +745,7 @@ fun PlayerScreen(
                         val movedTooFarForHold =
                             absoluteDragX >= seekGestureTouchSlopPx ||
                                 absoluteDragY >= seekGestureTouchSlopPx
-
-                        if (
-                            !holdSpeedActive &&
-                            !controlsLocked &&
-                            !handledAsSeek &&
-                            !movedTooFarForHold &&
-                            change.uptimeMillis - firstDown.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
-                        ) {
-                            holdSpeedActive = true
-                            applyPlaybackSpeed(2f)
-                            continue
-                        }
+                        if (movedTooFarForHold) holdSpeedEligible = false
 
                         if (holdSpeedActive) continue
 
@@ -770,6 +803,7 @@ fun PlayerScreen(
                     gestureSeekDragPx = 0f
 
                     if (holdSpeedActive) {
+                        holdSpeedOverlayVisible = false
                         applyPlaybackSpeed(playbackSpeed)
                         return@awaitEachGesture
                     }
@@ -837,9 +871,13 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        if (gestureSeekActive) {
+        AnimatedVisibility(
+            visible = gestureSeekActive,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
+            exit = fadeOut(animationSpec = tween(140)) + scaleOut(targetScale = 0.96f, animationSpec = tween(140)),
+        ) {
             Surface(
-                modifier = Modifier.align(Alignment.Center),
                 shape = RoundedCornerShape(18.dp),
                 color = Color.Black.copy(alpha = 0.62f)
             ) {
@@ -863,14 +901,38 @@ fun PlayerScreen(
             }
         }
 
-        if (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0 && !gestureSeekActive) {
+        AnimatedVisibility(
+            visible = holdSpeedOverlayVisible && !gestureSeekActive,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
+            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
+        ) {
             Surface(
-                modifier = Modifier.align(Alignment.Center),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Black.copy(alpha = 0.62f),
+            ) {
+                Text(
+                    text = "2×",
+                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 14.dp),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = doubleTapSeekOverlayVisible && doubleTapSeekOverlayDeltaMs != 0L && !gestureSeekActive,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
+            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
+        ) {
+            Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = Color.Black.copy(alpha = 0.62f)
             ) {
                 Text(
-                    text = buildSeekDeltaLabel(SEEK_INCREMENT_MS * accumulatedDoubleTapSteps * lastDoubleTapDirection),
+                    text = buildSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
@@ -2392,8 +2454,6 @@ private const val SEEK_GESTURE_FULL_WIDTH_MS = 90_000L
 private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
-private val PLAYER_TOP_GESTURE_EXCLUSION_HEIGHT = 116.dp
-private val PLAYER_BOTTOM_GESTURE_EXCLUSION_HEIGHT = 188.dp
 private val PLAYER_SHEET_COLOR = Color(0xFF121212)
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
