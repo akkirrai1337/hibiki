@@ -36,6 +36,9 @@ class HomeRepository(
     private var cachedHomeContent: CachedHomeContent? = null
 
     @Volatile
+    private var cachedRecentUpdates: List<Anime>? = null
+
+    @Volatile
     private var currentHomeSelectionSeed: Long? = null
 
     private val appContext = context.applicationContext
@@ -64,6 +67,7 @@ class HomeRepository(
         AppLogger.d(TAG, "refreshHomeState: clearing cache")
         ensureInternetConnection()
         cachedHomeContent = null
+        cachedRecentUpdates = null
         currentHomeSelectionSeed = Random.nextLong()
         AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
         return loadHomeState()
@@ -198,7 +202,20 @@ class HomeRepository(
         }
     }
 
-    private suspend fun loadRecentlyUpdated(): List<Anime> {
+    suspend fun loadRecentlyUpdatedPage(
+        offset: Int,
+        limit: Int = HOME_SECTION_LIMIT,
+    ): List<Anime> {
+        val catalog = cachedRecentUpdates ?: loadRecentlyUpdatedCatalog().also {
+            cachedRecentUpdates = it
+        }
+        return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
+    }
+
+    private suspend fun loadRecentlyUpdated(): List<Anime> =
+        loadRecentlyUpdatedPage(offset = 0)
+
+    private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
         val applicationToken = applicationTokenStore.getEffectiveApplicationToken()
         AppLogger.d(
             TAG,
@@ -237,7 +254,6 @@ class HomeRepository(
                 if (prev > 0L) prev else anime.episodes?.nextDate ?: 0L
             }
             .distinctBy(YummyScheduleAnime::animeId)
-            .take(HOME_SECTION_LIMIT)
             .map(::toScheduledHomeAnime)
             .toList()
         AppLogger.d(TAG, "loadRecentlyUpdated: after filter/sort/distinct/take — ${result.size} items")

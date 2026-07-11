@@ -271,6 +271,37 @@ class HomeViewModel(
         }
     }
 
+    fun loadMoreRecentUpdates() {
+        val current = uiState.value
+        if (current.isRecentUpdatesLoadingMore || !current.canLoadMoreRecentUpdates) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isRecentUpdatesLoadingMore = true, recentUpdatesLoadMoreError = null) }
+            runCatching {
+                repository.loadRecentlyUpdatedPage(
+                    offset = current.recentlyUpdated.size,
+                    limit = RECENT_UPDATES_PAGE_SIZE,
+                )
+            }.onSuccess { page ->
+                _uiState.update { state ->
+                    state.copy(
+                        recentlyUpdated = (state.recentlyUpdated + page).distinctBy { it.id },
+                        isRecentUpdatesLoadingMore = false,
+                        canLoadMoreRecentUpdates = page.size >= RECENT_UPDATES_PAGE_SIZE,
+                        recentUpdatesLoadMoreError = null,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isRecentUpdatesLoadingMore = false,
+                        recentUpdatesLoadMoreError = throwable.message ?: appString(R.string.home_error_refresh_failed),
+                    )
+                }
+            }
+        }
+    }
+
     fun openRandomAnime(onAnimeClick: (org.akkirrai.hibiki.core.model.Anime) -> Unit) {
         if (_uiState.value.isRandomLoading) return
         viewModelScope.launch {
@@ -413,6 +444,7 @@ class HomeViewModel(
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
         const val TRENDING_PAGE_SIZE = 20
+        const val RECENT_UPDATES_PAGE_SIZE = 12
         const val RANDOM_HISTORY_SIZE = 20
         const val PROFILE_AVATAR_CACHE_READ_THROTTLE_MS = 5_000L
     }

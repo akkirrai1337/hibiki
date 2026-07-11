@@ -4,16 +4,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
@@ -34,8 +39,26 @@ fun RecentUpdatesScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
+    val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
         if (state.recentlyUpdated.isEmpty()) viewModel.refresh()
+    }
+    LaunchedEffect(
+        listState,
+        state.recentlyUpdated.size,
+        state.isRecentUpdatesLoadingMore,
+        state.canLoadMoreRecentUpdates,
+    ) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+        }.distinctUntilChanged().collect { lastVisibleIndex ->
+            if (
+                state.recentlyUpdated.isNotEmpty() &&
+                lastVisibleIndex >= state.recentlyUpdated.lastIndex - RECENT_UPDATES_PREFETCH_DISTANCE
+            ) {
+                viewModel.loadMoreRecentUpdates()
+            }
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -49,6 +72,7 @@ fun RecentUpdatesScreen(
                 onActionClick = viewModel::refresh,
             )
             else -> LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 84.dp, bottom = UiDimens.ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -69,6 +93,18 @@ fun RecentUpdatesScreen(
                         }
                     },
                 )
+                if (state.isRecentUpdatesLoadingMore) {
+                    item(key = "recent_updates_loading_more") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = androidx.compose.ui.Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(strokeWidth = 2.dp)
+                        }
+                    }
+                }
             }
         }
         AppFloatingHeader(
@@ -79,3 +115,5 @@ fun RecentUpdatesScreen(
         )
     }
 }
+
+private const val RECENT_UPDATES_PREFETCH_DISTANCE = 4
