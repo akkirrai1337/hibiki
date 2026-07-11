@@ -107,6 +107,14 @@
     <string name="details_status">Статус</string>
     <string name="details_studio">Студия</string>
     <string name="details_source_material">Первоисточник</string>
+    <string name="details_source_material_manga">Манга</string>
+    <string name="details_source_material_manhwa">Манхва</string>
+    <string name="details_source_material_manhua">Маньхуа</string>
+    <string name="details_source_material_light_novel">Ранобэ</string>
+    <string name="details_source_material_web_novel">Веб-новелла</string>
+    <string name="details_source_material_visual_novel">Визуальная новелла</string>
+    <string name="details_source_material_game">Игра</string>
+    <string name="details_source_material_original">Оригинал</string>
     <string name="details_related">Связанное</string>
     <string name="details_related_titles">Связанные тайтлы</string>
     <string name="details_related_count_label">%1$d тайтлов</string>

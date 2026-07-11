@@ -1431,7 +1431,7 @@ private fun OverviewFacts(
         )
         addFact(
             label = stringResource(R.string.details_source_material),
-            value = anime.sourceMaterial,
+            value = localizedSourceMaterial(anime.sourceMaterial),
         )
         addFact(
             label = stringResource(R.string.details_studio),
@@ -2221,6 +2221,22 @@ private fun localizedType(type: String): String {
         "ONA" -> "ONA"
         "SPECIAL" -> stringResource(R.string.details_type_special)
         else -> type
+    }
+}
+
+@Composable
+private fun localizedSourceMaterial(sourceMaterial: String?): String? {
+    val normalized = sourceMaterial?.trim()?.lowercase(Locale.ROOT) ?: return null
+    return when (normalized) {
+        "манга", "manga" -> stringResource(R.string.details_source_material_manga)
+        "манхва", "manhwa" -> stringResource(R.string.details_source_material_manhwa)
+        "маньхуа", "manhua" -> stringResource(R.string.details_source_material_manhua)
+        "ранобэ", "light novel" -> stringResource(R.string.details_source_material_light_novel)
+        "веб-новелла", "web novel" -> stringResource(R.string.details_source_material_web_novel)
+        "визуальная новелла", "visual novel" -> stringResource(R.string.details_source_material_visual_novel)
+        "игра", "game" -> stringResource(R.string.details_source_material_game)
+        "оригинал", "original" -> stringResource(R.string.details_source_material_original)
+        else -> sourceMaterial
     }
 }
 

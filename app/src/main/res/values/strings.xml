@@ -105,6 +105,14 @@
     <string name="details_status">Status</string>
     <string name="details_studio">Studio</string>
     <string name="details_source_material">Source material</string>
+    <string name="details_source_material_manga">Manga</string>
+    <string name="details_source_material_manhwa">Manhwa</string>
+    <string name="details_source_material_manhua">Manhua</string>
+    <string name="details_source_material_light_novel">Light novel</string>
+    <string name="details_source_material_web_novel">Web novel</string>
+    <string name="details_source_material_visual_novel">Visual novel</string>
+    <string name="details_source_material_game">Game</string>
+    <string name="details_source_material_original">Original</string>
     <string name="details_related">Related titles</string>
     <string name="details_related_titles">Related titles</string>
     <string name="details_related_count_label">%1$d titles</string>
