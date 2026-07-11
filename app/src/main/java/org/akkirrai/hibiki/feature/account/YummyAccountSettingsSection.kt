@@ -34,22 +34,11 @@ import org.akkirrai.hibiki.core.design.component.SectionHeader
 @Composable
 internal fun AccountSettingsScreenContent(
     busy: Boolean,
-    enabled: Boolean,
-    available: Boolean,
-    onEnabledChange: (Boolean) -> Unit,
-    onHelpClick: () -> Unit,
     onExit: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SettingsOverviewCard()
-        AccessSettingsCard(
-            enabled = enabled,
-            available = available,
-            onEnabledChange = onEnabledChange,
-            onHelpClick = onHelpClick,
-        )
         AccountDangerZoneCard(
             busy = busy,
             onExit = onExit,
@@ -203,7 +192,7 @@ private fun AccountDangerZoneCard(
                         color = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        text = stringResource(R.string.yummy_account_settings_session_hint),
+                        text = stringResource(R.string.yummy_account_sign_out_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

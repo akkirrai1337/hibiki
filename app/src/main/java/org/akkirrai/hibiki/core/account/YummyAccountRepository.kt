@@ -40,16 +40,10 @@ class YummyAccountRepository(
 
     fun getCachedProfile(): YummyProfile? = profileCacheStore.getProfile()
 
-    fun isApplicationTokenEnabled(): Boolean = applicationTokenStore.isApplicationTokenEnabled()
-
     fun getApplicationToken(): String? = applicationTokenStore.getApplicationToken()
 
     fun saveApplicationToken(token: String) {
         applicationTokenStore.saveApplicationToken(token)
-    }
-
-    fun setApplicationTokenEnabled(enabled: Boolean) {
-        applicationTokenStore.setApplicationTokenEnabled(enabled)
     }
 
     fun clearApplicationToken() {
@@ -84,7 +78,7 @@ class YummyAccountRepository(
             return
         }
 
-        applicationTokenStore.saveApplicationToken(DEFAULT_APPLICATION_TOKEN)
+        applicationTokenStore.saveApplicationToken(YummyApplicationTokenStore.DEFAULT_YUMMY_APPLICATION_TOKEN)
     }
 
     suspend fun getProfile(): YummyProfile {
@@ -230,7 +224,6 @@ class YummyAccountRepository(
     private companion object {
         const val LOG_TAG = "YummyAccount"
         // Yummy web client sends this X-Application value with API requests.
-        const val DEFAULT_APPLICATION_TOKEN = "wawegr8j13it4rdw"
     }
 }
 

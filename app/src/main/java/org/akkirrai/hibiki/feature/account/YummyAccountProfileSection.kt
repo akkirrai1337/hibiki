@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,32 +37,27 @@ import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 @Composable
 internal fun ProfileCard(
     profile: YummyProfile,
-    busy: Boolean,
-    onExit: () -> Unit,
 ) {
     val nickname = profile.nickname.ifBlank { stringResource(R.string.yummy_account_profile_fallback) }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
                 Avatar(
                     avatarUrl = profile.avatarUrl ?: profile.avatars.full ?: profile.avatars.big ?: profile.avatars.small,
                     nickname = nickname,
-                    modifier = Modifier.size(76.dp),
+                    modifier = Modifier.size(84.dp),
                 )
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     Text(
                         text = nickname,
@@ -87,27 +80,6 @@ internal fun ProfileCard(
                         ),
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.22f))
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(11.dp),
-                        )
-                        .clickable(enabled = !busy, onClick = onExit),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Logout,
-                        contentDescription = stringResource(R.string.action_sign_out),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
         }
     }
 }
@@ -140,7 +112,7 @@ private fun Avatar(
     val resolvedUrl = normalizeYummyAssetUrl(avatarUrl)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f)),
         contentAlignment = Alignment.Center,
     ) {

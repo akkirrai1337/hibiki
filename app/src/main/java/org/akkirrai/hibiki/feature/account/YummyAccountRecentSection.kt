@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -33,15 +32,10 @@ import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 internal fun RecentLibraryCard(
     items: List<RecentLibraryItem>,
 ) {
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
             Text(
                 text = stringResource(R.string.yummy_account_recent_additions_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -62,7 +56,6 @@ internal fun RecentLibraryCard(
                     RecentLibraryRow(item)
                 }
             }
-        }
     }
 }
 
@@ -70,17 +63,13 @@ internal fun RecentLibraryCard(
 private fun RecentLibraryRow(
     item: RecentLibraryItem,
 ) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.18f),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
             RecentPoster(item = item)
             Column(
                 modifier = Modifier.weight(1f),
@@ -88,7 +77,7 @@ private fun RecentLibraryRow(
             ) {
                 Text(
                     text = item.title,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -124,7 +113,6 @@ private fun RecentLibraryRow(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
     }
 }
 
@@ -134,9 +122,9 @@ private fun RecentPoster(
 ) {
     Box(
         modifier = Modifier
-            .width(42.dp)
-            .height(56.dp)
-            .clip(RoundedCornerShape(7.dp))
+            .width(50.dp)
+            .height(68.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
         contentAlignment = Alignment.Center,
     ) {

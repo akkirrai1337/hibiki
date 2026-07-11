@@ -241,13 +241,14 @@
     <string name="yummy_account_stat_library_short">In library</string>
     <string name="yummy_account_stat_streak_short">Day streak</string>
     <string name="yummy_account_stat_active_days_short">Active days</string>
-    <string name="yummy_account_stat_episodes_title">Episodes</string>
+    <string name="yummy_account_stat_episodes_title">Episodes watched</string>
     <string name="yummy_account_stat_active_days_title">Active days</string>
     <string name="yummy_account_stat_favorites_title">Favorites</string>
     <string name="yummy_account_distribution_empty_hint">Add titles to see the distribution.</string>
     <string name="yummy_account_settings_access_section">Access</string>
     <string name="yummy_account_settings_account_section">Account</string>
     <string name="yummy_account_sign_out_title">Sign out</string>
+    <string name="yummy_account_sign_out_hint">Sign out on this device. Your lists and watch history will remain in YummyAnime.</string>
     <string name="yummy_account_api_key_enabled_hint_short">Stable API access</string>
     <string name="yummy_account_api_key_disabled_hint_short">Available after sign-in</string>
     <string name="error_source_generic">Source error</string>

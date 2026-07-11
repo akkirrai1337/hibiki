@@ -15,6 +15,7 @@ import org.akkirrai.animeresolver.metadata.YummyUserList
 import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.YUMMY_FAVORITE_LIST_ID
+import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
 import org.akkirrai.hibiki.core.design.yummyListColor
 import org.akkirrai.hibiki.core.design.yummyListLabel
 import org.akkirrai.hibiki.core.model.Anime
@@ -47,10 +48,8 @@ internal fun buildProfileSnapshot(
             )
         }
 
-    val totalDuration = listWatchStats.sumOf { it.seconds }
+    val totalDuration = watchSums.sumOf { it.spentTime ?: 0L }
         .takeIf { it > 0L }
-        ?: watchSums.sumOf { it.spentTime ?: 0L }
-            .takeIf { it > 0L }
         ?: history.sumOf { it.duration ?: 0L }
 
     val recentItems = libraryItems
@@ -74,21 +73,42 @@ internal fun buildProfileSnapshot(
     val genreTrackedTitlesCount = cachedLibraryMetadata.count { it.genres.isNotEmpty() }
     val siteWatchSegments = buildSiteWatchSegments(resources, watchSums)
     val siteWatchTotal = siteWatchSegments.sumOf(DurationSegment::value)
+    val libraryStatusSegments = buildLibraryStatusSegments(resources, libraryItems)
 
     return YummyProfileSnapshot(
         watchTimeLabel = formatDurationLabel(resources, totalDuration),
         siteWatchTimeLabel = formatDurationLabel(resources, siteWatchTotal),
         activeDaysCount = activityCounts.size,
         totalEpisodes = history.sumOf { it.episodeCount ?: 0 },
-        favoriteHoursLabel = formatDurationLabel(resources, listWatchStats.sumForRawListId(YUMMY_FAVORITE_LIST_ID)),
-        favoriteDurationSeconds = listWatchStats.sumForRawListId(YUMMY_FAVORITE_LIST_ID),
         libraryTotal = libraryItems.size,
         siteWatchSegments = siteWatchSegments,
-        durationSegments = buildDurationSegments(resources, watchSums, listWatchStats),
+        libraryStatusSegments = libraryStatusSegments,
         activityDays = activityDays,
         recentLibraryItems = recentItems,
         genreSegments = genreSegments,
         genreTrackedTitlesCount = genreTrackedTitlesCount,
+    )
+}
+
+private fun buildLibraryStatusSegments(
+    resources: Resources,
+    libraryItems: List<YummyUserAnimeListItem>,
+): List<DistributionSegment> = buildList {
+    YummyUserList.entries.forEach { list ->
+        add(
+            DistributionSegment(
+                label = list.yummyListLabel(resources),
+                count = libraryItems.count { it.list == list },
+                color = list.yummyListColor(),
+            ),
+        )
+    }
+    add(
+        DistributionSegment(
+            label = resources.getString(R.string.library_category_favorite),
+            count = libraryItems.count(YummyUserAnimeListItem::isFavorite),
+            color = yummyFavoriteListColor(),
+        ),
     )
 }
 
@@ -339,11 +359,9 @@ internal data class YummyProfileSnapshot(
     val siteWatchTimeLabel: String,
     val activeDaysCount: Int,
     val totalEpisodes: Int,
-    val favoriteHoursLabel: String,
-    val favoriteDurationSeconds: Long,
     val libraryTotal: Int,
     val siteWatchSegments: List<DurationSegment>,
-    val durationSegments: List<DurationSegment>,
+    val libraryStatusSegments: List<DistributionSegment>,
     val activityDays: List<ActivityDay>,
     val recentLibraryItems: List<RecentLibraryItem>,
     val genreSegments: List<DistributionSegment>,

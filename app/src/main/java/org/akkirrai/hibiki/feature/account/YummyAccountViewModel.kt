@@ -31,10 +31,7 @@ class YummyAccountViewModel(
 ) : ViewModel() {
     private val appContext = context.applicationContext
     private val _uiState = MutableStateFlow(
-        YummyAccountUiState(
-            apiKeyEnabled = repository.isApplicationTokenEnabled(),
-            apiKeyAvailable = !repository.getApplicationToken().isNullOrBlank(),
-        )
+        YummyAccountUiState()
     )
     val uiState: StateFlow<YummyAccountUiState> = _uiState.asStateFlow()
 
@@ -70,15 +67,9 @@ class YummyAccountViewModel(
                 it.copy(
                     screenState = nextState,
                     busy = false,
-                    apiKeyAvailable = !repository.getApplicationToken().isNullOrBlank(),
                 )
             }
         }
-    }
-
-    fun setApplicationTokenEnabled(enabled: Boolean) {
-        repository.setApplicationTokenEnabled(enabled)
-        _uiState.update { it.copy(apiKeyEnabled = enabled) }
     }
 
     fun clearSignInError() {
@@ -182,8 +173,6 @@ class YummyAccountViewModel(
 data class YummyAccountUiState(
     val screenState: YummyAccountScreenState = YummyAccountScreenState.Checking,
     val busy: Boolean = false,
-    val apiKeyEnabled: Boolean = false,
-    val apiKeyAvailable: Boolean = false,
 )
 
 sealed interface YummyAccountScreenState {

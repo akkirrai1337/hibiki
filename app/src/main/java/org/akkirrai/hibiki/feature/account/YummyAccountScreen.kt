@@ -95,7 +95,6 @@ fun YummyAccountScreen(
                 libraryMetadata = state.libraryMetadata,
                 busy = uiState.busy,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
-                onExit = viewModel::signOut,
             )
         }
 
@@ -141,8 +140,6 @@ fun YummyAccountSettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val state = uiState.screenState
-    var apiKeyHelpVisible by remember { mutableStateOf(false) }
-
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -172,11 +169,7 @@ fun YummyAccountSettingsScreen(
 
             is YummyAccountScreenState.SignedIn -> SignedInSettingsScreen(
                 busy = uiState.busy,
-                apiKeyEnabled = uiState.apiKeyEnabled,
-                apiKeyAvailable = uiState.apiKeyAvailable,
                 paddingValues = PaddingValues(top = AccountSettingsHeaderContentTopPadding),
-                onApiKeyEnabledChange = viewModel::setApplicationTokenEnabled,
-                onApiKeyHelpClick = { apiKeyHelpVisible = true },
                 onExit = viewModel::signOut,
             )
         }
@@ -187,26 +180,6 @@ fun YummyAccountSettingsScreen(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth(),
-        )
-    }
-
-    if (apiKeyHelpVisible) {
-        AlertDialog(
-            onDismissRequest = { apiKeyHelpVisible = false },
-            confirmButton = {
-                TextButton(onClick = { apiKeyHelpVisible = false }) {
-                    Text(text = stringResource(R.string.action_ok))
-                }
-            },
-            title = {
-                Text(text = stringResource(R.string.yummy_account_api_key_title))
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.yummy_account_api_key_help_text),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
         )
     }
 }
@@ -276,7 +249,6 @@ private fun SignedInProfileScreen(
     libraryMetadata: List<Anime>,
     busy: Boolean,
     paddingValues: PaddingValues,
-    onExit: () -> Unit,
 ) {
     val context = LocalContext.current
     val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, libraryMetadata) {
@@ -299,8 +271,6 @@ private fun SignedInProfileScreen(
     ) {
         ProfileCard(
             profile = profile,
-            busy = busy,
-            onExit = onExit,
         )
         AnalyticsCard(snapshot = snapshot)
         RecentLibraryCard(items = snapshot.recentLibraryItems)
@@ -311,11 +281,7 @@ private fun SignedInProfileScreen(
 @Composable
 private fun SignedInSettingsScreen(
     busy: Boolean,
-    apiKeyEnabled: Boolean,
-    apiKeyAvailable: Boolean,
     paddingValues: PaddingValues,
-    onApiKeyEnabledChange: (Boolean) -> Unit,
-    onApiKeyHelpClick: () -> Unit,
     onExit: () -> Unit,
 ) {
     Column(
@@ -328,10 +294,6 @@ private fun SignedInSettingsScreen(
     ) {
         AccountSettingsScreenContent(
             busy = busy,
-            enabled = apiKeyEnabled,
-            available = apiKeyAvailable,
-            onEnabledChange = onApiKeyEnabledChange,
-            onHelpClick = onApiKeyHelpClick,
             onExit = onExit,
         )
         Spacer(modifier = Modifier.height(24.dp))

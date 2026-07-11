@@ -19,12 +19,16 @@ interface YummyAccountTokenStore {
 }
 
 interface YummyApplicationTokenStore {
-    fun isApplicationTokenEnabled(): Boolean
-    fun setApplicationTokenEnabled(enabled: Boolean)
     fun getApplicationToken(): String?
-    fun getEffectiveApplicationToken(): String? = getApplicationToken().takeIf { isApplicationTokenEnabled() }
+    fun getEffectiveApplicationToken(): String =
+        getApplicationToken()?.takeIf(String::isNotBlank) ?: DEFAULT_YUMMY_APPLICATION_TOKEN
     fun saveApplicationToken(token: String)
     fun clearApplicationToken()
+
+    companion object {
+        // This header is required for stable YummyAnime API access across all sources.
+        const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
+    }
 }
 
 class AndroidKeystoreYummyAccountTokenStore(
@@ -59,22 +63,11 @@ class AndroidKeystoreYummyApplicationTokenStore(
     context: Context,
 ) : YummyApplicationTokenStore {
     private val appContext = context.applicationContext
-    private val prefs: SharedPreferences = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val secureStore = AndroidKeystoreStringStore(
         context = appContext,
         prefsName = PREFS_NAME,
         keyAlias = KEY_ALIAS,
     )
-
-    override fun isApplicationTokenEnabled(): Boolean {
-        return prefs.getBoolean(KEY_ENABLED, false)
-    }
-
-    override fun setApplicationTokenEnabled(enabled: Boolean) {
-        prefs.edit()
-            .putBoolean(KEY_ENABLED, enabled)
-            .apply()
-    }
 
     override fun getApplicationToken(): String? {
         return secureStore.get(KEY_APPLICATION_TOKEN)
@@ -88,12 +81,10 @@ class AndroidKeystoreYummyApplicationTokenStore(
 
     override fun clearApplicationToken() {
         secureStore.clear(KEY_APPLICATION_TOKEN)
-        setApplicationTokenEnabled(false)
     }
 
     private companion object {
         const val PREFS_NAME = "hibiki_yummy_application_token"
-        const val KEY_ENABLED = "application_token_enabled"
         const val KEY_APPLICATION_TOKEN = "application_token"
         const val KEY_ALIAS = "hibiki_yummy_application_token"
     }

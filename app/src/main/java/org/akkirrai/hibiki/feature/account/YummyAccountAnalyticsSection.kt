@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +27,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -45,100 +52,56 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
 
 @Composable
 internal fun AnalyticsCard(
     snapshot: YummyProfileSnapshot,
 ) {
     val hasActivity = snapshot.activeDaysCount > 0
-    val favoriteLabel = stringResource(R.string.library_category_favorite)
-    val durationSegments = remember(
-        snapshot.durationSegments,
-        snapshot.favoriteHoursLabel,
-        snapshot.favoriteDurationSeconds,
-        favoriteLabel,
-    ) {
-        snapshot.durationSegments + DurationSegment(
-            label = favoriteLabel,
-            hoursLabel = snapshot.favoriteHoursLabel,
-            value = snapshot.favoriteDurationSeconds,
-            color = yummyFavoriteListColor(),
-        )
-    }
     val pages = remember(
-        durationSegments,
+        snapshot.libraryStatusSegments,
         snapshot.siteWatchSegments,
         snapshot.siteWatchTimeLabel,
-        snapshot.watchTimeLabel,
-        snapshot.genreSegments,
-        snapshot.genreTrackedTitlesCount,
+        snapshot.libraryTotal,
     ) {
-        buildAnalyticsPages(
-            snapshot = snapshot,
-            durationSegments = durationSegments,
-        )
+        buildAnalyticsPages(snapshot).take(2)
     }
-    var currentPage by rememberSaveable { mutableIntStateOf(0) }
-    LaunchedEffect(pages.size) {
-        currentPage = currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
-    }
-    val page = pages[currentPage]
     val activityScrollState = rememberScrollState()
     LaunchedEffect(snapshot.activityDays) {
         activityScrollState.scrollTo(activityScrollState.maxValue)
     }
-
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
+        AnalyticsDonutPager(
+            pages = pages,
+            snapshot = snapshot,
+        )
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AnalyticsDonutPager(
-                page = page,
-                canGoBack = currentPage > 0,
-                canGoForward = currentPage < pages.lastIndex,
-                onBack = { if (currentPage > 0) currentPage -= 1 },
-                onForward = { if (currentPage < pages.lastIndex) currentPage += 1 },
+            Text(
+                text = stringResource(R.string.yummy_account_activity_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.1f),
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
+                    ACTIVITY_CHART_VISIBLE_DAYS
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(activityScrollState),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.yummy_account_activity_title),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(activityScrollState),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            ActivityBarChart(
-                                days = snapshot.activityDays,
-                                muted = !hasActivity,
-                            )
-                        }
-                    }
+                    ActivityBarChart(
+                        days = snapshot.activityDays,
+                        dayWidth = dayWidth,
+                        muted = !hasActivity,
+                    )
                 }
             }
         }
@@ -147,49 +110,96 @@ internal fun AnalyticsCard(
 
 @Composable
 private fun AnalyticsDonutPager(
-    page: AnalyticsPage,
-    canGoBack: Boolean,
-    canGoForward: Boolean,
-    onBack: () -> Unit,
-    onForward: () -> Unit,
+    pages: List<AnalyticsPage>,
+    snapshot: YummyProfileSnapshot,
 ) {
+    var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(
-            text = page.title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PageArrowButton(
-                enabled = canGoBack,
-                onClick = onBack,
-                isBack = true,
+            Text(
+                text = stringResource(R.string.yummy_account_segment_stats),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.width(18.dp))
-            SegmentDonut(
-                segments = page.segments,
-                centerPrimary = page.centerPrimary,
-                centerSecondary = page.centerSecondary,
-                modifier = Modifier.size(148.dp),
-                muted = page.segments.all { it.weight <= 0f },
-            )
-            Spacer(modifier = Modifier.width(18.dp))
-            PageArrowButton(
-                enabled = canGoForward,
-                onClick = onForward,
-                isBack = false,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PageArrowButton(
+                    enabled = currentPage > 0,
+                    onClick = { currentPage -= 1 },
+                    isBack = true,
+                    size = 32.dp,
+                )
+                Text(
+                    text = "${currentPage + 1}/${pages.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                PageArrowButton(
+                    enabled = currentPage < pages.lastIndex,
+                    onClick = { currentPage += 1 },
+                    isBack = false,
+                    size = 32.dp,
+                )
+            }
         }
-        LegendGrid(
-            items = page.segments,
-            modifier = Modifier.fillMaxWidth(),
-            columns = page.legendColumns,
-        )
+        AnimatedContent(
+            targetState = currentPage,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clipToBounds(),
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "AnalyticsPage",
+        ) { pageIndex ->
+            val displayedPage = pages[pageIndex]
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LegendGrid(
+                    items = displayedPage.segments,
+                    modifier = Modifier.weight(1f),
+                    columns = 1,
+                )
+                SegmentDonut(
+                    segments = displayedPage.segments,
+                    centerPrimary = displayedPage.centerPrimary,
+                    centerSecondary = displayedPage.centerSecondary,
+                    modifier = Modifier.size(152.dp),
+                    muted = displayedPage.segments.all { it.weight <= 0f },
+                )
+            }
+                if (pageIndex == 0) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -198,11 +208,13 @@ private fun PageArrowButton(
     enabled: Boolean,
     onClick: () -> Unit,
     isBack: Boolean,
-    size: Dp = 34.dp,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.22f else 0.12f),
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.28f else 0.12f),
     ) {
         IconButton(
             onClick = onClick,
@@ -274,7 +286,7 @@ private fun LegendItem(
         )
         Text(
             text = item.label,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.widthIn(max = 132.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -308,7 +320,11 @@ private fun SegmentDonut(
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+        ) {
             val strokeWidth = 18.dp.toPx()
             drawArc(
                 color = trackColor,
@@ -350,6 +366,7 @@ private fun SegmentDonut(
 @Composable
 private fun ActivityBarChart(
     days: List<ActivityDay>,
+    dayWidth: Dp,
     muted: Boolean = false,
 ) {
     val maxEpisodes = days.maxOfOrNull(ActivityDay::episodeCount)
@@ -364,7 +381,7 @@ private fun ActivityBarChart(
 
     Row(
         modifier = Modifier
-            .width((ACTIVITY_CHART_DAY_WIDTH * days.size) + (ACTIVITY_CHART_DAY_GAP * (days.size - 1).coerceAtLeast(0)))
+            .width((dayWidth * days.size) + (ACTIVITY_CHART_DAY_GAP * (days.size - 1).coerceAtLeast(0)))
             .height(142.dp),
         horizontalArrangement = Arrangement.spacedBy(ACTIVITY_CHART_DAY_GAP),
         verticalAlignment = Alignment.Bottom,
@@ -376,7 +393,7 @@ private fun ActivityBarChart(
                 10.dp
             }
             Column(
-                modifier = Modifier.width(ACTIVITY_CHART_DAY_WIDTH),
+                modifier = Modifier.width(dayWidth),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
@@ -421,20 +438,17 @@ private fun ActivityBarChart(
     }
 }
 
-private fun buildAnalyticsPages(
-    snapshot: YummyProfileSnapshot,
-    durationSegments: List<DurationSegment>,
-): List<AnalyticsPage> {
+private fun buildAnalyticsPages(snapshot: YummyProfileSnapshot): List<AnalyticsPage> {
     return listOf(
         AnalyticsPage(
             title = "Время просмотра",
-            centerPrimary = snapshot.siteWatchTimeLabel,
+            centerPrimary = snapshot.libraryTotal.toString(),
             centerSecondary = "всего",
-            segments = snapshot.siteWatchSegments.map { segment ->
+            segments = snapshot.libraryStatusSegments.map { segment ->
                 AnalyticsSegment(
                     label = segment.label,
-                    valueLabel = segment.hoursLabel,
-                    weight = segment.value.toFloat(),
+                    valueLabel = segment.count.toString(),
+                    weight = segment.count.toFloat(),
                     color = segment.color,
                 )
             },
@@ -442,9 +456,9 @@ private fun buildAnalyticsPages(
         ),
         AnalyticsPage(
             title = "Время просмотра по спискам",
-            centerPrimary = snapshot.watchTimeLabel,
+            centerPrimary = snapshot.siteWatchTimeLabel,
             centerSecondary = "всего",
-            segments = durationSegments.map { segment ->
+            segments = snapshot.siteWatchSegments.map { segment ->
                 AnalyticsSegment(
                     label = segment.label,
                     valueLabel = segment.hoursLabel,
@@ -487,5 +501,5 @@ private data class AnalyticsSegment(
 )
 
 private const val ACTIVITY_CHART_MIN_SCALE_EPISODES = 8
-private val ACTIVITY_CHART_DAY_WIDTH = 42.dp
 private val ACTIVITY_CHART_DAY_GAP = 4.dp
+private const val ACTIVITY_CHART_VISIBLE_DAYS = 7
