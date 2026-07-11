@@ -67,6 +67,7 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
+import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.model.Anime
@@ -77,6 +78,7 @@ import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 @Composable
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: CatalogViewModel = viewModel(
@@ -247,15 +249,21 @@ fun CatalogScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppFloatingPill {
-                Text(
-                    text = catalogTitle,
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppFloatingBackButton(onClick = onBackClick)
+                AppFloatingPill {
+                    Text(
+                        text = catalogTitle,
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                    )
+                }
             }
 
             AppFloatingPill(

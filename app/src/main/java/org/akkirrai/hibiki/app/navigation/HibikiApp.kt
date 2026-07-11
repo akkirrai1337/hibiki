@@ -313,6 +313,7 @@ private fun HibikiNavHost(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
+                onBackClick = navController::navigateUp,
                 modifier = screenModifier.statusBarsPadding(),
             )
         }
