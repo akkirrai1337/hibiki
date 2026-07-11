@@ -52,6 +52,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
@@ -204,6 +206,11 @@ private fun TrendingFilterButton(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val baseContext = LocalContext.current
+    val appLanguage = LocalAppLanguage.current
+    val localizedContext = remember(baseContext, appLanguage) {
+        baseContext.withLanguage(appLanguage)
+    }
 
     Box(modifier = modifier) {
         AppFloatingPill(
@@ -222,7 +229,7 @@ private fun TrendingFilterButton(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = stringResource(selectedFilter.titleResId),
+                    text = localizedContext.getString(selectedFilter.titleResId),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -235,7 +242,7 @@ private fun TrendingFilterButton(
         ) {
             TrendingFilter.entries.forEach { filter ->
                 DropdownMenuItem(
-                    text = { Text(text = stringResource(filter.titleResId)) },
+                    text = { Text(text = localizedContext.getString(filter.titleResId)) },
                     onClick = {
                         expanded = false
                         onFilterClick(filter)

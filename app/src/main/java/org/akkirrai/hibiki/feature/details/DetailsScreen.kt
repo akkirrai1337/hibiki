@@ -53,6 +53,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -1678,10 +1679,12 @@ private fun RelatedAnimeSheet(
     onAnimeClick: (RelatedAnime) -> Unit,
 ) {
     val normalizedCurrentAnimeId = YummyIdMigration.normalizeTitleId(currentAnime.id)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     BackHandler(onBack = onDismiss)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         dragHandle = null,
@@ -1731,7 +1734,7 @@ private fun RelatedAnimeSheet(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false),
+                    .heightIn(max = 560.dp),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
