@@ -260,6 +260,22 @@ class HomeRepository(
         return catalog.map(::toHomeAnime)
     }
 
+    suspend fun loadRandomAnime(excludedIds: Set<String>): Anime? {
+        ensureInternetConnection()
+        repeat(RANDOM_CATALOG_ATTEMPTS) {
+            val catalog = yummySource.getCatalog(
+                limit = RANDOM_CATALOG_PAGE_SIZE,
+                offset = Random.nextInt(RANDOM_CATALOG_MAX_OFFSET),
+                sort = RANDOM_CATALOG_SORTS.random(),
+            )
+            val candidates = catalog
+                .map(::toHomeAnime)
+                .filterNot { it.id in excludedIds }
+            candidates.randomOrNull()?.let { return it }
+        }
+        return null
+    }
+
     suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
         return items.map { anime ->
             runCatching { yummySource.getById(anime.id) }
@@ -406,6 +422,10 @@ class HomeRepository(
         const val FEATURED_COUNT = 5
         const val FEATURED_ROTATION_SEED_SALT = 0x51A7L
         const val TRENDING_ROTATION_SEED_SALT = 0x7E4DL
+        const val RANDOM_CATALOG_PAGE_SIZE = 40
+        const val RANDOM_CATALOG_MAX_OFFSET = 5_000
+        const val RANDOM_CATALOG_ATTEMPTS = 5
+        val RANDOM_CATALOG_SORTS = listOf("top", "views", "votes", "year", "title", "comments")
     }
 
     private data class CachedHomeContent(

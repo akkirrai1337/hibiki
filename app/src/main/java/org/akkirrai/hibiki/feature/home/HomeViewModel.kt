@@ -89,6 +89,7 @@ class HomeViewModel(
     private var searchJob: Job? = null
     private var profileAvatarJob: Job? = null
     private var recentDescriptionsJob: Job? = null
+    private val recentRandomIds = ArrayDeque<String>()
     private var lastProfileAvatarReadAt = 0L
 
     fun onSearchQueryChange(value: String) {
@@ -270,6 +271,24 @@ class HomeViewModel(
         }
     }
 
+    fun openRandomAnime(onAnimeClick: (org.akkirrai.hibiki.core.model.Anime) -> Unit) {
+        if (_uiState.value.isRandomLoading) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRandomLoading = true) }
+            val anime = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.loadRandomAnime(recentRandomIds.toSet())
+                }
+            }.getOrNull()
+            _uiState.update { it.copy(isRandomLoading = false) }
+            anime?.let {
+                recentRandomIds += it.id
+                if (recentRandomIds.size > RANDOM_HISTORY_SIZE) recentRandomIds.removeFirst()
+                onAnimeClick(it)
+            }
+        }
+    }
+
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
@@ -394,6 +413,7 @@ class HomeViewModel(
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
         const val TRENDING_PAGE_SIZE = 20
+        const val RANDOM_HISTORY_SIZE = 20
         const val PROFILE_AVATAR_CACHE_READ_THROTTLE_MS = 5_000L
     }
 

@@ -164,10 +164,6 @@ fun HomeScreen(
         state.searchResult !is SearchUiState.Idle
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    val randomPool = remember(state) {
-        (featuredAnime + state.trending + state.recentlyUpdated + listOfNotNull(continueAnime))
-            .distinctBy(Anime::id)
-    }
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
@@ -306,13 +302,11 @@ fun HomeScreen(
 
             item {
                 HomeQuickActions(
-                    canRandom = randomPool.isNotEmpty(),
+                    canRandom = !state.isRandomLoading,
                     onPopularClick = onShowAllTrendingClick,
                     onCatalogClick = onCatalogClick,
                     onRecentUpdatesClick = onRecentUpdatesClick,
-                    onRandomClick = {
-                        randomPool.randomOrNull()?.let(onRandomAnimeClick)
-                    },
+                    onRandomClick = { viewModel.openRandomAnime(onRandomAnimeClick) },
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                 )
             }

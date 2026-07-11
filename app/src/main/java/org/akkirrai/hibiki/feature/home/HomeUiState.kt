@@ -14,6 +14,7 @@ data class HomeUiState(
     val isTrendingLoadingMore: Boolean = false,
     val canLoadMoreTrending: Boolean = true,
     val trendingNextOffset: Int = 12,
+    val isRandomLoading: Boolean = false,
     val recentlyUpdated: List<Anime> = emptyList(),
     val profileAvatarUrl: String? = null,
     val searchQuery: String = "",
