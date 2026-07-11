@@ -13,11 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -58,8 +55,10 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
-import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
 
@@ -73,11 +72,12 @@ fun TrendingAnimeScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val gridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
-    LaunchedEffect(gridState) {
+    LaunchedEffect(listState) {
         snapshotFlow {
-            val layoutInfo = gridState.layoutInfo
+            val layoutInfo = listState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val isNearEnd = lastVisibleItem >= totalItems - TRENDING_SCROLL_THRESHOLD
@@ -107,9 +107,8 @@ fun TrendingAnimeScreen(
             }
 
             else -> {
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = GridCells.Adaptive(minSize = 118.dp),
+                LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = UiDimens.ScreenPadding,
@@ -117,23 +116,21 @@ fun TrendingAnimeScreen(
                         end = UiDimens.ScreenPadding,
                         bottom = UiDimens.ScreenPadding,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(state.items, key = Anime::id) { anime ->
-                        AnimePosterCardItem(
-                            anime = anime,
-                            metaText = buildTrendingMeta(anime),
-                            onClick = { onAnimeClick(anime) },
-                            width = 118.dp,
-                        )
-                    }
+                    verticalAnimeListContent(
+                        items = state.items,
+                        metaText = { anime -> buildTrendingMeta(anime) },
+                        onAnimeClick = onAnimeClick,
+                        posterFooterContent = { anime ->
+                            libraryStatusByAnimeId[anime.id]?.let { category ->
+                                LibraryStatusPosterFooter(category)
+                            }
+                        },
+                    )
 
                     if (state.isLoadingMore) {
-                        item(
-                            span = { GridItemSpan(maxLineSpan) },
-                            key = "trending_loading_more",
-                        ) {
+                        item(key = "trending_loading_more") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -149,10 +146,7 @@ fun TrendingAnimeScreen(
                     }
 
                     if (state.loadMoreError != null) {
-                        item(
-                            span = { GridItemSpan(maxLineSpan) },
-                            key = "trending_load_more_error",
-                        ) {
+                        item(key = "trending_load_more_error") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

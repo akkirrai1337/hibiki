@@ -17,11 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
@@ -64,12 +61,14 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
 import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
+import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
@@ -86,7 +85,8 @@ fun CatalogScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val gridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     var isCategorySheetOpen by remember { mutableStateOf(false) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
@@ -104,9 +104,9 @@ fun CatalogScreen(
         else -> "$categoriesTitle (${state.selectedCategories.size})"
     }
 
-    LaunchedEffect(gridState) {
+    LaunchedEffect(listState) {
         snapshotFlow {
-            val layoutInfo = gridState.layoutInfo
+            val layoutInfo = listState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val isNearEnd = lastVisibleItem >= totalItems - CATALOG_SCROLL_THRESHOLD
@@ -139,9 +139,8 @@ fun CatalogScreen(
             }
 
             else -> {
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = GridCells.Adaptive(minSize = 118.dp),
+                LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = UiDimens.ScreenPadding,
@@ -149,14 +148,10 @@ fun CatalogScreen(
                         end = UiDimens.ScreenPadding,
                         bottom = bottomContentPadding + UiDimens.ScreenPadding,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (state.description != null) {
-                        item(
-                            span = { GridItemSpan(maxLineSpan) },
-                            key = "catalog_description",
-                        ) {
+                        item(key = "catalog_description") {
                             Text(
                                 text = state.description.orEmpty(),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -166,31 +161,24 @@ fun CatalogScreen(
                         }
                     }
 
-                    items(
-                        items = state.items,
-                        key = { it.anime.id },
-                    ) { item ->
-                        AnimePosterCardItem(
-                            anime = item.anime,
-                            metaText = item.anime.buildCardMeta(
+                    verticalAnimeListContent(
+                        items = state.items.map { it.anime },
+                        metaText = { anime -> anime.buildCardMeta(
                                 announcementLabel = announcementLabel,
                                 movieLabel = movieLabel,
                                 maxSubtitleParts = 2,
                                 separator = " • ",
-                            ),
-                            onClick = { onAnimeClick(item.anime) },
-                            modifier = Modifier.fillMaxWidth(),
-                            titleBaseMaxLines = 3,
-                            titleExtraLongTitleLines = 1,
-                            titleOverflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        )
-                    }
+                        ) },
+                        onAnimeClick = onAnimeClick,
+                        posterFooterContent = { anime ->
+                            libraryStatusByAnimeId[anime.id]?.let { category ->
+                                LibraryStatusPosterFooter(category)
+                            }
+                        },
+                    )
 
                     if (state.isLoadingMore) {
-                        item(
-                            span = { GridItemSpan(maxLineSpan) },
-                            key = "catalog_loading_more",
-                        ) {
+                        item(key = "catalog_loading_more") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -206,10 +194,7 @@ fun CatalogScreen(
                     }
 
                     if (state.loadMoreError != null) {
-                        item(
-                            span = { GridItemSpan(maxLineSpan) },
-                            key = "catalog_load_more_error",
-                        ) {
+                        item(key = "catalog_load_more_error") {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
