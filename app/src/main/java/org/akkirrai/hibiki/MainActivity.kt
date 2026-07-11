@@ -20,6 +20,7 @@ import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +53,10 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
         AppLogger.install(applicationContext)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
+        }
 
         enableEdgeToEdge()
 
