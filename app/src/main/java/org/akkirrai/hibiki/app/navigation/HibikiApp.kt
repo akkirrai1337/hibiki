@@ -71,7 +71,9 @@ import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 
 @Composable
-fun HibikiApp() {
+fun HibikiApp(
+    onCheckForUpdates: () -> Unit = {},
+) {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
     val navController = rememberNavController()
@@ -123,6 +125,7 @@ fun HibikiApp() {
                 topLevelBottomContentPadding = topLevelBottomContentPadding,
                 showBottomBar = isTopLevelDestination,
                 currentTopLevel = currentTopLevel,
+                onCheckForUpdates = onCheckForUpdates,
             )
         }
     }
@@ -136,6 +139,7 @@ private fun HibikiNavHost(
     topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
     showBottomBar: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
+    onCheckForUpdates: () -> Unit = {},
 ) {
     val baseScreenModifier = Modifier
         .fillMaxSize()
@@ -321,6 +325,7 @@ private fun HibikiNavHost(
             SettingsScreen(
                 modifier = topLevelScreenModifier.statusBarsPadding(),
                 bottomContentPadding = topLevelBottomContentPadding,
+                onCheckForUpdates = onCheckForUpdates,
             )
         }
         composable(

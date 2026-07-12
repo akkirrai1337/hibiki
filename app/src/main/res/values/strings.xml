@@ -319,6 +319,9 @@
     <string name="settings_parser_storage">Parser storage</string>
     <string name="settings_parser_storage_summary">Reserved entry point for your source integration</string>
     <string name="settings_player">Player</string>
+    <string name="settings_updates">Обновления</string>
+    <string name="settings_check_updates">Проверить наличие обновлений</string>
+    <string name="settings_check_updates_summary">Проверить новые версии приложения на GitHub</string>
     <string name="settings_support">Support</string>
     <string name="settings_export_logs">Export logs</string>
     <string name="settings_export_logs_summary">Share sanitized app logs for bug reports. Tokens and cookies are redacted.</string>
@@ -327,10 +330,14 @@
     <string name="settings_auto_skip_segments_enabled_summary">After 10 seconds, the player will skip the detected opening or ending automatically.</string>
     <string name="settings_auto_skip_segments_disabled_summary">Show the skip button, but do not skip automatically.</string>
     <string name="settings_app_version">v%1$s (%2$d)</string>
-    <string name="update_available_title">Update available</string>
-    <string name="update_available_version">Version %1$s · %2$s</string>
-    <string name="update_action_download">Update</string>
-    <string name="update_action_later">Later</string>
-    <string name="update_downloading">Downloading: %1$d%%</string>
-    <string name="update_download_failed">The update could not be downloaded</string>
+    <string name="update_available_title">Доступно обновление</string>
+    <string name="update_available_version">Версия %1$s · %2$s</string>
+    <string name="update_version_label">Версия %1$s</string>
+    <string name="update_whats_new">Что нового</string>
+    <string name="update_action_download">Обновить</string>
+    <string name="update_action_later">Позже</string>
+    <string name="update_downloading">Загрузка: %1$d%%</string>
+    <string name="update_download_failed">Не удалось скачать обновление</string>
+    <string name="update_not_available">У вас установлена последняя версия</string>
+    <string name="update_check_failed">Не удалось проверить наличие обновлений</string>
 </resources>

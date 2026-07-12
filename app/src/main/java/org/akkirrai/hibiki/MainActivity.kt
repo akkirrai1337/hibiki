@@ -96,7 +96,9 @@ class MainActivity : ComponentActivity() {
                 HibikiTheme(
                     themeMode = LocalThemeMode.current
                 ) {
-                    HibikiApp()
+                    HibikiApp(
+                        onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                    )
                     availableUpdate?.let { update ->
                         AppUpdateDialog(
                             update = update,
@@ -139,10 +141,20 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun checkForAppUpdate() {
+    private fun checkForAppUpdate(showNoUpdateMessage: Boolean = false) {
         lifecycleScope.launch {
-            availableUpdate = withContext(Dispatchers.IO) {
-                runCatching { updateRepository.findAvailableUpdate() }.getOrNull()
+            val result = withContext(Dispatchers.IO) {
+                runCatching { updateRepository.findAvailableUpdate() }
+            }
+            result.onSuccess { update ->
+                availableUpdate = update
+                if (showNoUpdateMessage && update == null) {
+                    Toast.makeText(this@MainActivity, R.string.update_not_available, Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure {
+                if (showNoUpdateMessage) {
+                    Toast.makeText(this@MainActivity, R.string.update_check_failed, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

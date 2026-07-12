@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.SkipNext
+import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
+    onCheckForUpdates: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val appPreferences = LocalAppPreferences.current
@@ -125,6 +127,19 @@ fun SettingsScreen(
                     onCheckedChange = { enabled ->
                         appPreferences.setAutoSkipSegments(enabled)
                     }
+                )
+            }
+        }
+
+        item {
+            SettingsGroupCard(
+                title = stringResource(R.string.settings_updates)
+            ) {
+                SettingsClickableItem(
+                    icon = Icons.Outlined.Update,
+                    title = stringResource(R.string.settings_check_updates),
+                    subtitle = stringResource(R.string.settings_check_updates_summary),
+                    onClick = onCheckForUpdates,
                 )
             }
         }
