@@ -327,4 +327,10 @@
     <string name="settings_auto_skip_segments_enabled_summary">After 10 seconds, the player will skip the detected opening or ending automatically.</string>
     <string name="settings_auto_skip_segments_disabled_summary">Show the skip button, but do not skip automatically.</string>
     <string name="settings_app_version">v%1$s (%2$d)</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_version">Version %1$s · %2$s</string>
+    <string name="update_action_download">Update</string>
+    <string name="update_action_later">Later</string>
+    <string name="update_downloading">Downloading: %1$d%%</string>
+    <string name="update_download_failed">The update could not be downloaded</string>
 </resources>
