@@ -15,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
+import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.update.AppUpdate
 import org.akkirrai.hibiki.core.update.AppUpdateRepository
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -149,11 +151,11 @@ class MainActivity : ComponentActivity() {
             result.onSuccess { update ->
                 availableUpdate = update
                 if (showNoUpdateMessage && update == null) {
-                    Toast.makeText(this@MainActivity, R.string.update_not_available, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, updateString(R.string.update_not_available), Toast.LENGTH_SHORT).show()
                 }
             }.onFailure {
                 if (showNoUpdateMessage) {
-                    Toast.makeText(this@MainActivity, R.string.update_check_failed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, updateString(R.string.update_check_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -162,7 +164,7 @@ class MainActivity : ComponentActivity() {
     private fun downloadUpdate(update: AppUpdate) {
         val request = DownloadManager.Request(Uri.parse(update.apkUrl))
             .setTitle("${getString(R.string.app_name)} ${update.version}")
-            .setDescription(getString(R.string.update_downloading, 0))
+            .setDescription(updateString(R.string.update_downloading, 0))
             .setMimeType("application/vnd.android.package-archive")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, update.apkFileName)
@@ -196,7 +198,7 @@ class MainActivity : ComponentActivity() {
         val updateUri = downloadManager.getUriForDownloadedFile(updateDownloadId)
         if (updateUri == null) {
             updateDownloadProgress = null
-            Toast.makeText(this, R.string.update_download_failed, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, updateString(R.string.update_download_failed), Toast.LENGTH_SHORT).show()
             return
         }
         updateDownloadProgress = null
@@ -205,6 +207,10 @@ class MainActivity : ComponentActivity() {
                 .setDataAndType(updateUri, "application/vnd.android.package-archive")
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
         )
+    }
+
+    private fun updateString(@StringRes stringRes: Int, vararg formatArgs: Any): String {
+        return applicationContext.withAppPreferencesLanguage().getString(stringRes, *formatArgs)
     }
 
     private companion object {
