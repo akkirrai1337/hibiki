@@ -78,6 +78,7 @@
     <string name="search_filters_exclude">Исключить</string>
     <string name="search_filters_any">Любой</string>
     <string name="search_filters_not_selected">Не выбрано</string>
+    <string name="search_filters_choose_option">Выберите вариант</string>
     <string name="search_filters_genres_search">Поиск жанров</string>
     <string name="search_filters_selected_count">%1$d выбрано</string>
     <string name="search_filters_reset">Сбросить</string>

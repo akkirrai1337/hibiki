@@ -78,6 +78,7 @@
     <string name="search_filters_exclude">Exclude</string>
     <string name="search_filters_any">Any</string>
     <string name="search_filters_not_selected">Not selected</string>
+    <string name="search_filters_choose_option">Choose an option</string>
     <string name="search_filters_genres_search">Search genres</string>
     <string name="search_filters_selected_count">%1$d selected</string>
     <string name="search_filters_reset">Reset</string>

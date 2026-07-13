@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -228,12 +229,12 @@ fun HomeSearchFiltersScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = UiDimens.ScreenPadding,
-                            top = innerPadding.calculateTopPadding() + 4.dp,
+                            top = innerPadding.calculateTopPadding(),
                             end = UiDimens.ScreenPadding,
                             bottom = innerPadding.calculateBottomPadding() + 16.dp,
                         ),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             OutlinedTextField(
@@ -254,10 +255,10 @@ fun HomeSearchFiltersScreen(
                                 singleLine = true,
                                 shape = RoundedCornerShape(18.dp),
                                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f),
                                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 ),
                             )
                         }
@@ -302,11 +303,11 @@ fun HomeSearchFiltersScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = UiDimens.ScreenPadding,
-                        top = innerPadding.calculateTopPadding() + 4.dp,
+                        top = innerPadding.calculateTopPadding(),
                         end = UiDimens.ScreenPadding,
                         bottom = innerPadding.calculateBottomPadding() + 8.dp,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
                         CompactFilterGroup {
@@ -398,7 +399,7 @@ private fun FiltersHeader(
         title = title,
         onBackClick = onBackClick,
         includeStatusBarsPadding = false,
-        modifier = Modifier.padding(bottom = 10.dp),
+        modifier = Modifier,
     )
 }
 
@@ -481,14 +482,14 @@ private fun CompactFilterGroup(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.08f),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.16f),
         ),
     ) {
         Column(
-            modifier = Modifier.padding(4.dp),
+            modifier = Modifier.padding(5.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp),
             content = content,
         )
@@ -502,20 +503,20 @@ private fun YearFilterGroup(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.08f),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.16f),
         ),
     ) {
         Column(
             modifier = Modifier.padding(
                 start = 24.dp,
-                top = 14.dp,
+                top = 12.dp,
                 end = 24.dp,
                 bottom = 12.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content,
         )
     }
@@ -525,7 +526,7 @@ private fun YearFilterGroup(
 private fun GroupDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
     )
 }
 
@@ -590,6 +591,10 @@ private fun FilterSelectorSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val emptyLabel = stringResource(R.string.search_filters_not_selected)
+    val choices = buildList {
+        if (allowEmpty) add(SelectorChoice(id = null, title = emptyLabel))
+        addAll(options.map { SelectorChoice(id = it.id, title = it.title) })
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -601,28 +606,48 @@ private fun FilterSelectorSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = title,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (allowEmpty) {
-                SelectorSheetItem(
-                    title = emptyLabel,
-                    selected = selectedId == null,
-                    onClick = { onSelect(null) },
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.search_filters_choose_option),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            options.forEach { option ->
-                SelectorSheetItem(
-                    title = option.title,
-                    selected = option.id == selectedId,
-                    onClick = { onSelect(option.id) },
-                )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f),
+                ),
+            ) {
+                LazyColumn(
+                    contentPadding = PaddingValues(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    lazyItems(choices, key = { it.id ?: "empty" }) { choice ->
+                        SelectorSheetItem(
+                            title = choice.title,
+                            selected = choice.id == selectedId,
+                            onClick = { onSelect(choice.id) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -643,11 +668,16 @@ private fun SelectorSheetItem(
         } else {
             Color.Transparent
         },
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.26f))
+        } else {
+            null
+        },
     ) {
         Row(
             modifier = Modifier
-                .defaultMinSize(minHeight = 54.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .defaultMinSize(minHeight = 50.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -674,6 +704,11 @@ private fun SelectorSheetItem(
     }
 }
 
+private data class SelectorChoice(
+    val id: String?,
+    val title: String,
+)
+
 @Composable
 private fun YearField(
     value: String,
@@ -693,10 +728,10 @@ private fun YearField(
         textStyle = MaterialTheme.typography.bodyLarge,
         shape = RoundedCornerShape(17.dp),
         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f),
             focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     )
 }
@@ -726,14 +761,20 @@ private fun FilterNavigationRow(
                 fontWeight = FontWeight.Medium,
             )
             if (selectionCount > 0) {
-                Text(
-                    text = stringResource(
-                        R.string.search_filters_selected_count,
-                        selectionCount,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.46f),
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.search_filters_selected_count,
+                            selectionCount,
+                        ),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
@@ -775,7 +816,7 @@ private fun GenreSelectionChip(
         color = if (selected) {
             selectedColor
         } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)
         },
         contentColor = if (selected) {
             selectedContentColor
@@ -787,7 +828,7 @@ private fun GenreSelectionChip(
             color = if (selected) {
                 Color.Transparent
             } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.16f)
             },
         ),
     ) {
