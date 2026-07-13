@@ -6,13 +6,8 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 internal data class DetailsUiModel(
     val anime: Anime,
     val hero: HeroInfo,
-    val description: DescriptionUi,
+    val description: String,
     val sections: List<DetailsSection>,
-)
-
-internal data class DescriptionUi(
-    val text: String,
-    val expanded: Boolean,
 )
 
 internal sealed interface DetailsSection {
@@ -29,7 +24,6 @@ internal fun buildDetailsUiModel(
     anime: Anime,
     hero: HeroInfo,
     description: String,
-    isDescriptionExpanded: Boolean,
 ): DetailsUiModel {
     val sections = buildList {
         if (anime.franchiseAnime.isNotEmpty()) {
@@ -42,10 +36,7 @@ internal fun buildDetailsUiModel(
     return DetailsUiModel(
         anime = anime,
         hero = hero,
-        description = DescriptionUi(
-            text = description,
-            expanded = isDescriptionExpanded,
-        ),
+        description = description,
         sections = sections,
     )
 }

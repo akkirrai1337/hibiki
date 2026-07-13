@@ -45,7 +45,9 @@
 
 ### 🎬 Credits
 
-- 🎬 [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
+- [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
+- [Animite](https://github.com/imashnake0/Animite): references for the title page's dynamic palette and UI behavior, countdown styling, and the hourglass icon.
+- [AniSync](https://github.com/Marco-9456/AniSync): title page design and styling references.
 
 ### 💬 Contact
 

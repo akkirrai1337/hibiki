@@ -31,8 +31,8 @@ android {
         applicationId = "org.akkirrai.hibiki"
         minSdk = 26
         targetSdk = 36
-        versionCode = 161
-        versionName = "1.6.1"
+        versionCode = 170
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -90,6 +90,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.material.kolor)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.content.negotiation)
