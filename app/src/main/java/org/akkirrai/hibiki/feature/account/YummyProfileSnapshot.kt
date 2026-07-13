@@ -86,12 +86,18 @@ internal fun buildProfileSnapshot(
 }
 
 private fun buildSiteWatchTypeSegments(resources: Resources, profile: YummyProfile): List<DurationSegment> {
-    return profile.watches?.sum.orEmpty().mapNotNull { item ->
-        val alias = item.alias?.trim()?.lowercase(Locale.ROOT)
-        val fallbackLabel = listOf(item.shortName, item.name, item.alias)
+    val itemsByAlias = profile.watches?.sum.orEmpty()
+        .mapNotNull { item ->
+            item.alias?.trim()?.lowercase(Locale.ROOT)?.takeIf(String::isNotBlank)?.let { it to item }
+        }
+        .toMap()
+    val aliases = (WATCH_TYPE_ALIASES + itemsByAlias.keys).distinct()
+    return aliases.map { alias ->
+        val item = itemsByAlias[alias]
+        val fallbackLabel = listOf(item?.shortName, item?.name, item?.alias)
             .firstOrNull { !it.isNullOrBlank() }
             ?.trim()
-            ?: return@mapNotNull null
+            ?: alias
         val label = when (alias) {
             "tv" -> resources.getString(R.string.yummy_account_watch_type_tv)
             "short-tv" -> resources.getString(R.string.yummy_account_watch_type_short_tv)
@@ -102,8 +108,7 @@ private fun buildSiteWatchTypeSegments(resources: Resources, profile: YummyProfi
             "special" -> resources.getString(R.string.yummy_account_watch_type_special)
             else -> fallbackLabel
         }
-        val duration = yummySpentTimeToMillis(item.spentTime ?: 0L)
-        if (duration <= 0L) return@mapNotNull null
+        val duration = yummySpentTimeToMillis(item?.spentTime ?: 0L)
         DurationSegment(
             label = label,
             hoursLabel = if (duration < 3_600_000L) {
@@ -188,4 +193,13 @@ private val PROFILE_LIBRARY_CATEGORIES = listOf(
     LibraryCategory.Dropped,
     LibraryCategory.OnHold,
     LibraryCategory.Favorite,
+)
+private val WATCH_TYPE_ALIASES = listOf(
+    "tv",
+    "short-movie",
+    "ona",
+    "ova",
+    "movie",
+    "special",
+    "short-tv",
 )
