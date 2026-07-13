@@ -141,6 +141,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.app.settings.VideoScaleMode
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
@@ -203,6 +204,7 @@ fun PlayerScreen(
     var isEnteringPictureInPicture by remember { mutableStateOf(false) }
     var isPictureInPictureActive by remember { mutableStateOf(false) }
     var isAudioOnly by remember { mutableStateOf(false) }
+    val videoScaleMode = preferencesState.videoScaleMode
     var gestureSeekPreviewMs by remember { mutableLongStateOf(0L) }
     var gestureSeekDeltaMs by remember { mutableLongStateOf(0L) }
     var gestureSeekStartMs by remember { mutableLongStateOf(0L) }
@@ -992,12 +994,14 @@ fun PlayerScreen(
                     useController = false
                     setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     player = exoPlayer
+                    resizeMode = videoScaleMode.resizeMode()
                     attachedPlayerView = this
                 }
             },
             update = { playerView ->
                 attachedPlayerView = playerView
                 playerView.player = if (isAudioOnly) null else exoPlayer
+                playerView.resizeMode = videoScaleMode.resizeMode()
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -1156,6 +1160,11 @@ fun PlayerScreen(
                         exoPlayer.seekTo(sliderPositionMs)
                         positionMs = sliderPositionMs
                         isSeeking = false
+                    },
+                    videoScaleMode = videoScaleMode,
+                    onVideoScaleModeClick = {
+                        keepControlsVisible()
+                        appPreferences.setVideoScaleMode(videoScaleMode.next())
                     },
                     settingsEnabled = true,
                     onSettingsClick = {
@@ -2126,6 +2135,8 @@ private fun PlayerBottomOverlay(
     sliderPositionMs: Long,
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
+    videoScaleMode: VideoScaleMode,
+    onVideoScaleModeClick: () -> Unit,
     settingsEnabled: Boolean,
     onSettingsClick: () -> Unit,
     pictureInPictureEnabled: Boolean,
@@ -2185,6 +2196,17 @@ private fun PlayerBottomOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AppFilledIconButton(
+                        onClick = onVideoScaleModeClick,
+                        modifier = Modifier.size(46.dp),
+                        style = AppFilledIconButtonStyle.DarkOverlay,
+                    ) {
+                        Icon(
+                            painter = painterResource(videoScaleMode.iconResId()),
+                            contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
+                            tint = Color.White,
+                        )
+                    }
+                    AppFilledIconButton(
                         onClick = onLockClick,
                         modifier = Modifier.size(46.dp),
                         style = AppFilledIconButtonStyle.DarkOverlay,
@@ -2224,6 +2246,25 @@ private fun PlayerBottomOverlay(
         }
 
     }
+}
+
+private fun VideoScaleMode.resizeMode(): Int = when (this) {
+    VideoScaleMode.FIT -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+    VideoScaleMode.CROP -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+    VideoScaleMode.STRETCH -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+}
+
+private fun VideoScaleMode.iconResId(): Int = when (this) {
+    VideoScaleMode.FIT -> R.drawable.ic_player_fit_to_screen_24
+    VideoScaleMode.CROP -> R.drawable.ic_player_settings_overscan_24
+    VideoScaleMode.STRETCH -> R.drawable.ic_player_aspect_ratio_24
+}
+
+@StringRes
+private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
+    VideoScaleMode.FIT -> R.string.watch_player_video_scale_fit
+    VideoScaleMode.CROP -> R.string.watch_player_video_scale_crop
+    VideoScaleMode.STRETCH -> R.string.watch_player_video_scale_stretch
 }
 
 @Composable

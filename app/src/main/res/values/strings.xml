@@ -156,6 +156,9 @@
     <string name="watch_player_picture_in_picture">Picture-in-picture</string>
     <string name="watch_player_audio_only">Audio only</string>
     <string name="watch_player_show_video">Show video</string>
+    <string name="watch_player_video_scale_fit">Video scale: Fit</string>
+    <string name="watch_player_video_scale_crop">Video scale: Crop</string>
+    <string name="watch_player_video_scale_stretch">Video scale: Stretch</string>
     <string name="watch_player_next_episode">Next episode</string>
     <string name="watch_player_previous_episode">Previous episode</string>
     <string name="watch_player_pause">Pause</string>

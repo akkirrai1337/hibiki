@@ -158,6 +158,9 @@
     <string name="watch_player_picture_in_picture">Картинка в картинке</string>
     <string name="watch_player_audio_only">Только звук</string>
     <string name="watch_player_show_video">Показать видео</string>
+    <string name="watch_player_video_scale_fit">Масштаб видео: Вписать</string>
+    <string name="watch_player_video_scale_crop">Масштаб видео: Обрезать</string>
+    <string name="watch_player_video_scale_stretch">Масштаб видео: Растянуть</string>
     <string name="watch_player_next_episode">Следующая серия</string>
     <string name="watch_player_previous_episode">Предыдущая серия</string>
     <string name="watch_player_pause">Пауза</string>

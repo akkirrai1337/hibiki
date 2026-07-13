@@ -18,12 +18,21 @@ enum class LanguageMode(val tag: String?) {
     ENGLISH("en")
 }
 
+enum class VideoScaleMode {
+    FIT,
+    CROP,
+    STRETCH;
+
+    fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
+}
+
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
+    val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
 )
 
 class AppPreferences(context: Context) {
@@ -34,7 +43,8 @@ class AppPreferences(context: Context) {
             KEY_LANGUAGE_MODE,
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
-            KEY_PLAYBACK_SPEED -> {
+            KEY_PLAYBACK_SPEED,
+            KEY_VIDEO_SCALE_MODE -> {
                 _state.value = readState(prefs)
             }
         }
@@ -67,6 +77,10 @@ class AppPreferences(context: Context) {
         prefs.edit().putFloat(KEY_PLAYBACK_SPEED, normalizePlaybackSpeed(speed)).apply()
     }
 
+    fun setVideoScaleMode(mode: VideoScaleMode) {
+        prefs.edit().putString(KEY_VIDEO_SCALE_MODE, mode.name).apply()
+    }
+
     fun close() {
         prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
@@ -76,6 +90,7 @@ class AppPreferences(context: Context) {
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
         const val KEY_PLAYBACK_SPEED = "playback_speed"
+        const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_LANGUAGE_MODE = "language_mode"
 
@@ -96,6 +111,9 @@ class AppPreferences(context: Context) {
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),
+                videoScaleMode = prefs.getString(KEY_VIDEO_SCALE_MODE, VideoScaleMode.FIT.name)
+                    ?.let { runCatching { VideoScaleMode.valueOf(it) }.getOrNull() }
+                    ?: VideoScaleMode.FIT,
             )
         }
 
