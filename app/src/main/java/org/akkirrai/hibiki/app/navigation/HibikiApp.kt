@@ -408,9 +408,6 @@ private fun HibikiNavHost(
                 onOpenSources = { anime ->
                     navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
                 },
-                onOpenDownloadSources = { anime ->
-                    navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime, downloadMode = true))
-                },
                 contentPadding = contentPadding
             )
         }

@@ -100,6 +100,11 @@
     <string name="anime_meta_movie">Фильм</string>
 
     <string name="details_watch">Смотреть</string>
+    <string name="details_overview">Обзор</string>
+    <string name="details_information">Информация</string>
+    <string name="details_synopsis">СИНОПСИС</string>
+    <string name="details_genres">Жанры</string>
+    <string name="details_categories">Категории</string>
     <string name="details_favorite">В избранное</string>
     <string name="details_screenshots">Кадры</string>
     <string name="details_type">Тип</string>

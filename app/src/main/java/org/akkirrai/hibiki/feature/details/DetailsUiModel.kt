@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.details
 
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.RelatedAnime
 
 internal data class DetailsUiModel(
@@ -20,12 +19,6 @@ internal sealed interface DetailsSection {
     val key: String
 }
 
-internal data class ScreenshotsSection(
-    val screenshots: List<String>,
-) : DetailsSection {
-    override val key: String = "screenshots"
-}
-
 internal data class RelatedSection(
     val items: List<RelatedAnime>,
 ) : DetailsSection {
@@ -39,9 +32,6 @@ internal fun buildDetailsUiModel(
     isDescriptionExpanded: Boolean,
 ): DetailsUiModel {
     val sections = buildList {
-        if (anime.screenshots.isNotEmpty()) {
-            add(ScreenshotsSection(anime.screenshots))
-        }
         if (anime.franchiseAnime.isNotEmpty()) {
             add(
                 RelatedSection(items = anime.franchiseAnime)

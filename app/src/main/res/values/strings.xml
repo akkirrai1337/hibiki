@@ -98,6 +98,11 @@
     <string name="anime_meta_movie">Movie</string>
 
     <string name="details_watch">Watch</string>
+    <string name="details_overview">Overview</string>
+    <string name="details_information">Information</string>
+    <string name="details_synopsis">SYNOPSIS</string>
+    <string name="details_genres">Genres</string>
+    <string name="details_categories">Categories</string>
     <string name="details_favorite">Add to favorites</string>
     <string name="details_screenshots">Screenshots</string>
     <string name="details_type">Type</string>
