@@ -14,8 +14,11 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.SystemClock
+import android.view.LayoutInflater
+import android.view.TextureView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -113,6 +116,7 @@ import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.doOnLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -122,6 +126,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -137,6 +142,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import java.net.URI
+import kotlin.math.max
+import kotlin.math.min
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
@@ -205,6 +212,7 @@ fun PlayerScreen(
     var isPictureInPictureActive by remember { mutableStateOf(false) }
     var isAudioOnly by remember { mutableStateOf(false) }
     val videoScaleMode = preferencesState.videoScaleMode
+    var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
     var gestureSeekPreviewMs by remember { mutableLongStateOf(0L) }
     var gestureSeekDeltaMs by remember { mutableLongStateOf(0L) }
     var gestureSeekStartMs by remember { mutableLongStateOf(0L) }
@@ -522,6 +530,12 @@ fun PlayerScreen(
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    videoAspectRatio = videoSize.width.toFloat() * videoSize.pixelWidthHeightRatio / videoSize.height
+                }
+            }
+
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
@@ -989,19 +1003,21 @@ fun PlayerScreen(
     ) {
         if (!isClosing) AndroidView(
             factory = { viewContext ->
-                PlayerView(viewContext).apply {
+                (LayoutInflater.from(viewContext)
+                    .inflate(R.layout.view_media3_player, null, false) as PlayerView)
+                    .apply {
                     layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                     useController = false
                     setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     player = exoPlayer
-                    resizeMode = videoScaleMode.resizeMode()
+                    applyVideoScale(videoScaleMode, videoAspectRatio)
                     attachedPlayerView = this
                 }
             },
             update = { playerView ->
                 attachedPlayerView = playerView
                 playerView.player = if (isAudioOnly) null else exoPlayer
-                playerView.resizeMode = videoScaleMode.resizeMode()
+                playerView.applyVideoScale(videoScaleMode, videoAspectRatio)
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -2248,11 +2264,39 @@ private fun PlayerBottomOverlay(
     }
 }
 
-private fun VideoScaleMode.resizeMode(): Int = when (this) {
-    VideoScaleMode.FIT -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-    VideoScaleMode.CROP -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-    VideoScaleMode.STRETCH -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
+    val textureView = videoSurfaceView as? TextureView ?: return
+    if (!textureView.isLaidOut || textureView.width == 0 || textureView.height == 0) {
+        textureView.doOnLayout { applyVideoScale(mode, videoAspectRatio) }
+        return
+    }
+
+    val containerAspectRatio = textureView.width.toFloat() / textureView.height
+    val aspectRatioFactor = videoAspectRatio / containerAspectRatio
+    val (scaleX, scaleY) = when (mode) {
+        VideoScaleMode.FIT -> min(1f, aspectRatioFactor) to min(1f, 1f / aspectRatioFactor)
+        VideoScaleMode.CROP -> max(1f, aspectRatioFactor) to max(1f, 1f / aspectRatioFactor)
+        VideoScaleMode.STRETCH -> 1f to 1f
+    }
+    val target = TextureVideoScale(mode, scaleX, scaleY)
+    if (textureView.tag == target) return
+
+    textureView.tag = target
+    textureView.animate()
+        .cancel()
+    textureView.animate()
+        .scaleX(scaleX)
+        .scaleY(scaleY)
+        .setDuration(PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS)
+        .setInterpolator(DecelerateInterpolator())
+        .start()
 }
+
+private data class TextureVideoScale(
+    val mode: VideoScaleMode,
+    val scaleX: Float,
+    val scaleY: Float,
+)
 
 private fun VideoScaleMode.iconResId(): Int = when (this) {
     VideoScaleMode.FIT -> R.drawable.ic_player_fit_to_screen_24
@@ -2699,6 +2743,8 @@ private val PLAYER_OVERLAY_PANEL_EXIT_OFFSET = 40.dp
 private val PLAYER_PANEL_DISMISS_DRAG_THRESHOLD = 72.dp
 private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
 private const val PLAYER_OVERLAY_ANIMATION_MS = 220
+private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
+private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
 private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
