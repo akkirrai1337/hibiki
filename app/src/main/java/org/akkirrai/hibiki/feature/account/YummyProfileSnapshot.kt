@@ -8,401 +8,151 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import org.akkirrai.animeresolver.metadata.YummyProfile
-import org.akkirrai.animeresolver.metadata.YummyProfileWatchSum
-import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
-import org.akkirrai.animeresolver.metadata.YummyUserList
-import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.YUMMY_FAVORITE_LIST_ID
+import org.akkirrai.animeresolver.metadata.YummyProfile
+import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
+import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
+import org.akkirrai.animeresolver.metadata.YummyUserList
 import org.akkirrai.hibiki.core.design.yummyFavoriteListColor
+import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.core.profile.LocalProfileData
+import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.design.yummyListColor
 import org.akkirrai.hibiki.core.design.yummyListLabel
-import org.akkirrai.hibiki.core.model.Anime
 
 internal fun buildProfileSnapshot(
     resources: Resources,
     profile: YummyProfile,
     libraryItems: List<YummyUserAnimeListItem>,
     listWatchStats: List<YummyUserListWatchStat>,
-    cachedLibraryMetadata: List<Anime> = emptyList(),
+    libraryMetadata: List<Anime>,
+    localData: LocalProfileData,
 ): YummyProfileSnapshot {
-    val history = profile.watches?.history.orEmpty()
-    val watchSums = profile.watches?.sum.orEmpty()
-    val activityCounts = history
-        .filter { (it.duration ?: 0L) > 0L || (it.episodeCount ?: 0) > 0 }
-        .mapNotNull { item ->
-            val date = item.date?.let(::epochToLocalDate) ?: return@mapNotNull null
-            date to (item.episodeCount ?: 1).coerceAtLeast(1)
-        }
-        .groupBy({ it.first }, { it.second })
-        .mapValues { (_, values) -> values.sum() }
-
+    val progress = localData.episodeProgress
+    val localActivityCounts = progress
+        .filter { it.positionMs > 0L }
+        .groupBy { epochToLocalDate(it.updatedAt) }
+        .mapValues { (_, items) -> items.distinctBy { "${it.titleId}:${it.episodeId}" }.size }
+    val activityCounts = (localData.importedActivityCounts + localActivityCounts) + localData.activityOverrides
     val today = LocalDate.now()
-    val activityDays = (0 until ACTIVITY_HISTORY_DAYS)
-        .map { today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - it).toLong()) }
-        .map { date ->
-            ActivityDay(
-                dateLabel = date.format(ACTIVITY_DATE_FORMATTER),
-                episodeCount = activityCounts[date] ?: 0,
-            )
-        }
-
-    val totalDuration = watchSums.sumOf { it.spentTime ?: 0L }
-        .takeIf { it > 0L }
-        ?: history.sumOf { it.duration ?: 0L }
-
-    val recentItems = libraryItems
-        .asSequence()
+    val activityDays = (0 until ACTIVITY_HISTORY_DAYS).map { offset ->
+        val date = today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
+        ActivityDay(date.format(ACTIVITY_DATE_FORMATTER), activityCounts[date] ?: 0)
+    }
+    val remoteDuration = profile.watches?.sum.orEmpty().sumOf { it.spentTime ?: 0L }
+        .takeIf { it > 0L } ?: profile.watches?.history.orEmpty().sumOf { it.duration ?: 0L }
+    val localDuration = progress.sumOf { it.positionMs.coerceAtLeast(0L) }
+    val totalDuration = maxOf(normalizeRemoteDuration(remoteDuration), localDuration)
+    val sourceSegments = buildHybridSourceSegments(resources, listWatchStats, progress)
+    val remoteRecentItems = libraryItems.asSequence()
         .filter { !it.title.isBlank() && it.addedAt != null }
+        .map { item -> RecentLibraryItem(item.title, item.posterUrl, item.yummyRating?.let(::formatRating), item.list.yummyListLabel(resources), formatEpochDateShort(resources, requireNotNull(item.addedAt)), item.list.yummyListColor()) }
+        .toList()
+    val localRecentItems = localData.library
+        .asSequence()
+        .filter { it.addedAt != null && it.anime.title.isNotBlank() }
         .sortedByDescending { it.addedAt }
         .take(6)
         .map { item ->
+            val category = item.categories.primaryCategory()
             RecentLibraryItem(
-                title = item.title,
-                posterUrl = item.posterUrl,
-                ratingLabel = item.yummyRating?.let(::formatYummyRating),
-                statusLabel = item.list.yummyListLabel(resources),
-                dateLabel = item.addedAt?.let { formatEpochDateShort(resources, it) }.orEmpty(),
-                color = item.list.yummyListColor(),
+                title = item.anime.title,
+                posterUrl = item.anime.posterUrl,
+                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatRating),
+                statusLabel = resources.getString(category.labelResId),
+                dateLabel = formatEpochDateShort(resources, requireNotNull(item.addedAt)),
+                color = category.color(),
             )
-        }
-        .toList()
-
-    val genreSegments = buildGenreSegments(cachedLibraryMetadata)
-    val genreTrackedTitlesCount = cachedLibraryMetadata.count { it.genres.isNotEmpty() }
-    val siteWatchSegments = buildSiteWatchSegments(resources, watchSums)
-    val siteWatchTotal = siteWatchSegments.sumOf(DurationSegment::value)
-    val libraryStatusSegments = buildLibraryStatusSegments(resources, libraryItems)
+        }.toList()
+    val recentItems = (remoteRecentItems + localRecentItems).distinctBy { it.title }.take(6)
+    val librarySegments = YummyUserList.entries.map { list ->
+        DistributionSegment(list.yummyListLabel(resources), libraryItems.count { it.list == list }, list.yummyListColor())
+    } + LibraryCategory.entries.map { category ->
+        DistributionSegment(
+            label = resources.getString(category.labelResId),
+            count = localData.library.count { category in it.categories && it.anime.id !in libraryItems.map { remote -> remote.animeId.toString() } },
+            color = category.color(),
+        )
+    }
+    val allMetadata = (libraryMetadata + localData.library.map { it.anime }).distinctBy(Anime::id)
+    val genreCounts = allMetadata.flatMap { it.genres }.groupingBy { it.trim() }
+        .eachCount().filterKeys(String::isNotBlank)
+    val genreSegments = genreCounts.entries
+        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+        .take(6).mapIndexed { index, entry -> DistributionSegment(entry.key, entry.value, genrePalette[index % genrePalette.size]) }
 
     return YummyProfileSnapshot(
         watchTimeLabel = formatDurationLabel(resources, totalDuration),
-        siteWatchTimeLabel = formatDurationLabel(resources, siteWatchTotal),
+        siteWatchTimeLabel = formatDurationLabel(resources, totalDuration),
         activeDaysCount = activityCounts.size,
-        totalEpisodes = history.sumOf { it.episodeCount ?: 0 },
-        libraryTotal = libraryItems.size,
-        siteWatchSegments = siteWatchSegments,
-        libraryStatusSegments = libraryStatusSegments,
+        totalEpisodes = maxOf(profile.watches?.history.orEmpty().sumOf { it.episodeCount ?: 0 }, progress.count { it.positionMs > 0L }),
+        libraryTotal = (libraryItems.map { it.animeId.toString() } + localData.library.map { it.id }).distinct().size,
+        siteWatchSegments = sourceSegments,
+        libraryStatusSegments = librarySegments,
         activityDays = activityDays,
         recentLibraryItems = recentItems,
         genreSegments = genreSegments,
-        genreTrackedTitlesCount = genreTrackedTitlesCount,
+        genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
     )
 }
 
-private fun buildLibraryStatusSegments(
-    resources: Resources,
-    libraryItems: List<YummyUserAnimeListItem>,
-): List<DistributionSegment> = buildList {
-    YummyUserList.entries.forEach { list ->
-        add(
-            DistributionSegment(
-                label = list.yummyListLabel(resources),
-                count = libraryItems.count { it.list == list },
-                color = list.yummyListColor(),
-            ),
-        )
+private fun buildHybridSourceSegments(resources: Resources, remoteStats: List<YummyUserListWatchStat>, progress: List<EpisodeWatchProgress>): List<DurationSegment> {
+    val remote = YummyUserList.entries.map { list ->
+        val seconds = remoteStats.filter { it.rawListId == list.value }.sumOf { it.seconds }
+        DurationSegment(list.yummyListLabel(resources), formatDurationLabelForUi(seconds * 1_000L), seconds * 1_000L, list.yummyListColor())
     }
-    add(
-        DistributionSegment(
-            label = resources.getString(R.string.library_category_favorite),
-            count = libraryItems.count(YummyUserAnimeListItem::isFavorite),
-            color = yummyFavoriteListColor(),
-        ),
-    )
+    val local = progress
+    .groupBy { it.sourceTitle.ifBlank { it.sourceId } }
+    .map { (source, items) -> DurationSegment(source, formatDurationLabelForUi(items.sumOf { it.positionMs }), items.sumOf { it.positionMs }, Color(0xFF5DA9FF)) }
+    return (remote + local).filter { it.value > 0L }.sortedByDescending(DurationSegment::value)
+}
+
+private fun Set<LibraryCategory>.primaryCategory(): LibraryCategory =
+    LibraryCategory.entries.firstOrNull { it != LibraryCategory.Saved && it in this } ?: LibraryCategory.Saved
+
+private fun LibraryCategory.color(): Color = when (this) {
+    LibraryCategory.Watching -> Color(0xFF3DDC84)
+    LibraryCategory.Planned -> Color(0xFF5DA9FF)
+    LibraryCategory.Completed -> Color(0xFFFFB84D)
+    LibraryCategory.Dropped -> Color(0xFFFF6B6B)
+    LibraryCategory.OnHold -> Color(0xFFC593FF)
+    LibraryCategory.Favorite -> yummyFavoriteListColor()
+    LibraryCategory.Saved -> Color(0xFF9EA4B2)
 }
 
 internal fun normalizeYummyAssetUrl(rawUrl: String?): String? {
-    val value = rawUrl
-        ?.trim()
-        ?.trim('"')
-        ?.replace("\\/", "/")
-        ?.takeIf(String::isNotBlank)
-        ?: return null
+    val value = rawUrl?.trim()?.trim('"')?.replace("\\/", "/")?.takeIf(String::isNotBlank) ?: return null
     return when {
-        value.startsWith("http://", ignoreCase = true) ||
-            value.startsWith("https://", ignoreCase = true) -> value
+        value.startsWith("http://", true) || value.startsWith("https://", true) -> value
         value.startsWith("//") -> "https:$value"
-        value.startsWith("/") -> "$YUMMY_WEB_BASE$value"
-        else -> "$YUMMY_WEB_BASE/$value"
+        value.startsWith("/") -> "https://ru.yummyani.me$value"
+        else -> "https://ru.yummyani.me/$value"
     }
 }
 
-internal fun YummyProfile.resolvedAvatarUrl(): String? {
-    return normalizeYummyAssetUrl(
-        avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
-    )
-}
+internal fun YummyProfile.resolvedAvatarUrl(): String? = normalizeYummyAssetUrl(
+    avatarUrl ?: avatars.full ?: avatars.big ?: avatars.small,
+)
 
-private fun buildDurationSegments(
-    resources: Resources,
-    watchSums: List<YummyProfileWatchSum>,
-    listWatchStats: List<YummyUserListWatchStat>,
-): List<DurationSegment> {
-    if (listWatchStats.isNotEmpty()) {
-        val values = listOf(
-            Triple(YummyUserList.Watching.yummyListLabel(resources), listWatchStats.sumFor(YummyUserList.Watching), YummyUserList.Watching.yummyListColor()),
-            Triple(YummyUserList.Planned.yummyListLabel(resources), listWatchStats.sumFor(YummyUserList.Planned), YummyUserList.Planned.yummyListColor()),
-            Triple(YummyUserList.Completed.yummyListLabel(resources), listWatchStats.sumFor(YummyUserList.Completed), YummyUserList.Completed.yummyListColor()),
-            Triple(YummyUserList.Dropped.yummyListLabel(resources), listWatchStats.sumFor(YummyUserList.Dropped), YummyUserList.Dropped.yummyListColor()),
-            Triple(YummyUserList.OnHold.yummyListLabel(resources), listWatchStats.sumFor(YummyUserList.OnHold), YummyUserList.OnHold.yummyListColor()),
-        )
-
-        return values.map { (label, value, color) ->
-            DurationSegment(
-                label = label,
-                hoursLabel = formatDurationLabel(resources, value),
-                value = value,
-                color = color,
-            )
-        }
-    }
-
-    fun sumFor(vararg keys: String): Long {
-        val normalizedKeys = keys.map { it.lowercase(Locale.ROOT) }
-        return watchSums
-            .filter { item ->
-                val bucket = listOf(item.alias, item.shortName, item.name)
-                    .filterNotNull()
-                    .joinToString(" ")
-                    .lowercase(Locale.ROOT)
-                normalizedKeys.any(bucket::contains)
-            }
-            .sumOf { it.spentTime ?: 0L }
-    }
-
-    val values = listOf(
-        Triple(YummyUserList.Watching.yummyListLabel(resources), sumFor("watch", "watching", "смотр"), YummyUserList.Watching.yummyListColor()),
-        Triple(YummyUserList.Planned.yummyListLabel(resources), sumFor("plan", "planned", "план"), YummyUserList.Planned.yummyListColor()),
-        Triple(YummyUserList.Completed.yummyListLabel(resources), sumFor("complete", "completed", "просмотр"), YummyUserList.Completed.yummyListColor()),
-        Triple(YummyUserList.Dropped.yummyListLabel(resources), sumFor("drop", "dropped", "брош"), YummyUserList.Dropped.yummyListColor()),
-        Triple(YummyUserList.OnHold.yummyListLabel(resources), sumFor("hold", "on hold", "отлож"), YummyUserList.OnHold.yummyListColor()),
-    )
-
-    return values.map { (label, value, color) ->
-        DurationSegment(
-            label = label,
-            hoursLabel = formatDurationLabel(resources, value),
-            value = value,
-            color = color,
-        )
-    }
-}
-
-private fun buildSiteWatchSegments(
-    resources: Resources,
-    watchSums: List<YummyProfileWatchSum>,
-): List<DurationSegment> {
-    val totals = linkedMapOf(
-        "Serials" to 0L,
-        "S.Films" to 0L,
-        "ONA" to 0L,
-        "OVA" to 0L,
-        "Movie" to 0L,
-        "Special" to 0L,
-    )
-
-    watchSums.forEach { sum ->
-        val bucket = sum.resolveSiteWatchBucket() ?: return@forEach
-        totals[bucket] = totals.getValue(bucket) + (sum.spentTime ?: 0L)
-    }
-
-    val colors = mapOf(
-        "Serials" to Color(0xFFA06AE0),
-        "S.Films" to Color(0xFFF0C419),
-        "ONA" to Color(0xFFFF9F1C),
-        "OVA" to Color(0xFFFF646B),
-        "Movie" to Color(0xFFC24ED3),
-        "Special" to Color(0xFF737373),
-    )
-
-    val labels = mapOf(
-        "Serials" to "TV-Сериалы",
-        "S.Films" to "К.фильмы",
-        "ONA" to "ONA",
-        "OVA" to "OVA",
-        "Movie" to resources.getString(R.string.details_type_movie),
-        "Special" to resources.getString(R.string.details_type_special),
-    )
-
-    return totals.map { (bucket, value) ->
-        DurationSegment(
-            label = labels.getValue(bucket),
-            hoursLabel = formatDurationLabelForUi(value),
-            value = value,
-            color = colors.getValue(bucket),
-        )
-    }
-}
-
-private fun buildGenreSegments(
-    cachedLibraryMetadata: List<Anime>,
-): List<DistributionSegment> {
-    val counts = cachedLibraryMetadata
-        .flatMap { anime -> anime.genres.map(String::trim).filter(String::isNotBlank).distinct() }
-        .groupingBy { it }
-        .eachCount()
-
-    return counts.entries
-        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-        .take(6)
-        .mapIndexed { index, entry ->
-            DistributionSegment(
-                label = entry.key,
-                count = entry.value,
-                color = genrePalette[index % genrePalette.size],
-            )
-        }
-}
-
-private fun List<YummyUserListWatchStat>.sumFor(
-    list: YummyUserList,
-): Long {
-    return filter { it.rawListId == list.value }.sumOf { it.seconds }
-}
-
-private fun List<YummyUserListWatchStat>.sumForRawListId(rawListId: Int): Long {
-    return filter { it.rawListId == rawListId }.sumOf { it.seconds }
-}
-
-private fun formatDurationLabel(resources: Resources, rawDuration: Long): String {
-    if (rawDuration <= 0L) return localizedHourLabel(resources, "0")
-    val secondsBasedHours = rawDuration / 3600.0
-    val minutesBasedHours = rawDuration / 60.0
-    val hours = when {
-        rawDuration >= 10_000L -> secondsBasedHours
-        rawDuration >= 180L -> minutesBasedHours
-        else -> secondsBasedHours
-    }
-    return if (hours >= 10) {
-        localizedHourLabel(resources, hours.toInt().toString())
-    } else {
-        localizedHourLabel(resources, String.format(Locale.US, "%.1f", hours))
-    }
-}
-
-private fun formatDurationLabelForUi(rawDuration: Long): String {
-    if (rawDuration <= 0L) return "0 ч"
-    val secondsBasedHours = rawDuration / 3600.0
-    val minutesBasedHours = rawDuration / 60.0
-    val hours = when {
-        rawDuration >= 10_000L -> secondsBasedHours
-        rawDuration >= 180L -> minutesBasedHours
-        else -> secondsBasedHours
-    }
-    return if (hours >= 10) {
-        "${hours.toInt()} ч"
-    } else {
-        "${String.format(Locale.US, "%.1f", hours)} ч"
-    }
-}
-
-private fun epochToLocalDate(value: Long): LocalDate {
-    val instant = if (value >= 1_000_000_000_000L) {
-        Instant.ofEpochMilli(value)
-    } else {
-        Instant.ofEpochSecond(value)
-    }
-    return instant.atZone(ZoneId.systemDefault()).toLocalDate()
-}
-
+private fun epochToLocalDate(value: Long): LocalDate = Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault()).toLocalDate()
 private fun formatEpochDateShort(resources: Resources, value: Long): String {
     val date = epochToLocalDate(value)
     val daysAgo = ChronoUnit.DAYS.between(date, LocalDate.now()).toInt()
-    return when {
-        daysAgo <= 0 -> resources.getString(R.string.yummy_account_date_today)
-        daysAgo == 1 -> resources.getString(R.string.yummy_account_date_yesterday)
-        daysAgo < 7 -> resources.getString(R.string.yummy_account_date_days_ago_short, daysAgo)
-        else -> date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
-    }
+    return when { daysAgo <= 0 -> resources.getString(R.string.yummy_account_date_today); daysAgo == 1 -> resources.getString(R.string.yummy_account_date_yesterday); daysAgo < 7 -> resources.getString(R.string.yummy_account_date_days_ago_short, daysAgo); else -> date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())) }
 }
+internal fun formatEpochDateCompact(value: Long): String = epochToLocalDate(value).format(DateTimeFormatter.ofPattern("dd.MM.yy", Locale.getDefault()))
+private fun formatDurationLabel(resources: Resources, durationMs: Long): String = resources.getString(R.string.yummy_account_duration_hours_short, if (durationMs <= 0) "0" else String.format(Locale.US, "%.1f", durationMs / 3_600_000.0))
+private fun formatDurationLabelForUi(durationMs: Long): String = if (durationMs <= 0) "0 h" else String.format(Locale.US, "%.1f h", durationMs / 3_600_000.0)
+private fun formatRating(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.2f", value)
+private fun normalizeRemoteDuration(value: Long): Long = if (value >= 10_000L) value * 1_000L else value * 60_000L
 
-internal fun formatEpochDateCompact(value: Long): String {
-    return epochToLocalDate(value).format(DateTimeFormatter.ofPattern("dd.MM.yy", Locale.getDefault()))
-}
-
-private fun localizedHourLabel(resources: Resources, value: String): String {
-    return resources.getString(R.string.yummy_account_duration_hours_short, value)
-}
-
-private fun formatYummyRating(value: Double): String {
-    return if (value % 1.0 == 0.0) {
-        value.toInt().toString()
-    } else {
-        String.format(Locale.US, "%.2f", value)
-    }
-}
-
-private fun YummyProfileWatchSum.resolveSiteWatchBucket(): String? {
-    val bucket = listOf(alias, shortName, name)
-        .filterNotNull()
-        .joinToString(" ")
-        .lowercase(Locale.ROOT)
-        .replace(".", " ")
-        .replace("_", " ")
-    return when {
-        bucket.contains("short film") ||
-            bucket.contains("s films") ||
-            bucket.contains("sfilms") ||
-            bucket.contains("короткометраж") -> "S.Films"
-        bucket.contains("ona") -> "ONA"
-        bucket.contains("ova") -> "OVA"
-        bucket.contains("special") || bucket.contains("спеш") -> "Special"
-        bucket.contains("movie") || bucket.contains("film") || bucket.contains("фильм") -> "Movie"
-        bucket.contains("tv") || bucket.contains("series") || bucket.contains("serial") || bucket.contains("сериал") -> "Serials"
-        else -> null
-    }
-}
-
-internal data class YummyProfileSnapshot(
-    val watchTimeLabel: String,
-    val siteWatchTimeLabel: String,
-    val activeDaysCount: Int,
-    val totalEpisodes: Int,
-    val libraryTotal: Int,
-    val siteWatchSegments: List<DurationSegment>,
-    val libraryStatusSegments: List<DistributionSegment>,
-    val activityDays: List<ActivityDay>,
-    val recentLibraryItems: List<RecentLibraryItem>,
-    val genreSegments: List<DistributionSegment>,
-    val genreTrackedTitlesCount: Int,
-)
-
-internal data class DistributionSegment(
-    val label: String,
-    val count: Int,
-    val color: Color,
-)
-
-internal data class DurationSegment(
-    val label: String,
-    val hoursLabel: String,
-    val value: Long,
-    val color: Color,
-)
-
-internal data class ActivityDay(
-    val dateLabel: String,
-    val episodeCount: Int,
-)
-
-internal data class RecentLibraryItem(
-    val title: String,
-    val posterUrl: String?,
-    val ratingLabel: String?,
-    val statusLabel: String,
-    val dateLabel: String,
-    val color: Color,
-)
+internal data class YummyProfileSnapshot(val watchTimeLabel: String, val siteWatchTimeLabel: String, val activeDaysCount: Int, val totalEpisodes: Int, val libraryTotal: Int, val siteWatchSegments: List<DurationSegment>, val libraryStatusSegments: List<DistributionSegment>, val activityDays: List<ActivityDay>, val recentLibraryItems: List<RecentLibraryItem>, val genreSegments: List<DistributionSegment>, val genreTrackedTitlesCount: Int)
+internal data class DistributionSegment(val label: String, val count: Int, val color: Color)
+internal data class DurationSegment(val label: String, val hoursLabel: String, val value: Long, val color: Color)
+internal data class ActivityDay(val dateLabel: String, val episodeCount: Int)
+internal data class RecentLibraryItem(val title: String, val posterUrl: String?, val ratingLabel: String?, val statusLabel: String, val dateLabel: String, val color: Color)
 
 private const val ACTIVITY_HISTORY_DAYS = 90
-private const val YUMMY_WEB_BASE = "https://ru.yummyani.me"
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
-private val genrePalette = listOf(
-    Color(0xFF48D67B),
-    Color(0xFFF7BC16),
-    Color(0xFFA56CE3),
-    Color(0xFFFF646B),
-    Color(0xFFC24ED3),
-    Color(0xFF737373),
-)
+private val genrePalette = listOf(Color(0xFF48D67B), Color(0xFFF7BC16), Color(0xFFA56CE3), Color(0xFFFF646B), Color(0xFFC24ED3), Color(0xFF737373))

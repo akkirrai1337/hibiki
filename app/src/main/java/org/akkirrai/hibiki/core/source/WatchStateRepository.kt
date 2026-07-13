@@ -258,4 +258,26 @@ class WatchStateRepository(context: Context) {
         private const val PROGRESS_PREFIX = "progress_"
         private const val SEPARATOR = '\u001F'
     }
+
+    /**
+     * Returns every locally recorded episode progress entry. The entries are keyed by
+     * title and episode, so this remains independent of the streaming source used to
+     * play an episode.
+     */
+    fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
+        return prefs.all.entries
+            .asSequence()
+            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
+            .mapNotNull { (key, value) ->
+                val titleId = key.substringAfter(PROGRESS_PREFIX).substringBefore(':')
+                val episodeId = key.substringAfter(':', missingDelimiterValue = "")
+                if (titleId.isBlank() || episodeId.isBlank()) null else parseProgress(
+                    titleId = YummyIdMigration.normalizeTitleId(titleId),
+                    episodeId = episodeId,
+                    encoded = value as String,
+                )
+            }
+            .distinctBy { "${it.titleId}:${it.episodeId}" }
+            .toList()
+    }
 }

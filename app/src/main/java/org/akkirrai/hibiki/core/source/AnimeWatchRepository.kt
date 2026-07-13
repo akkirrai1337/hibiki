@@ -10,6 +10,7 @@ import kotlinx.coroutines.withTimeout
 import org.akkirrai.animeresolver.core.PlayerExtractor
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.core.TitleMatcher
+import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.extractor.AksorExtractor
 import org.akkirrai.animeresolver.extractor.AniBoomExtractor
 import org.akkirrai.animeresolver.extractor.CvhExtractor
@@ -27,6 +28,7 @@ import org.akkirrai.animeresolver.model.StreamType
 import org.akkirrai.animeresolver.model.VideoSegment
 import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.provider.YummyAnimeProvider
+import org.akkirrai.animeresolver.provider.AniLibertyProvider
 import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -75,6 +77,10 @@ class AnimeWatchRepository(
         matcher = TitleMatcher(),
         applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
         debugLogger = { message -> AppLogger.d(TAG, message) },
+    )
+    private val aniLibertyProvider = AniLibertyProvider(
+        client = client,
+        matcher = TitleMatcher(),
     )
     private val extractors = listOfNotNull<PlayerExtractor>(
         DirectHlsExtractor(),
@@ -324,7 +330,7 @@ class AnimeWatchRepository(
 
         return PlaybackSettingsOptions(
             voiceovers = voiceovers,
-            backends = listOf(PlaybackBackendOption(provider.id, provider.name)),
+            backends = listOf(PlaybackBackendOption(payload.provider.id, payload.provider.name)),
             links = resolvedLinkOptions.distinct(),
         )
     }
@@ -345,12 +351,10 @@ class AnimeWatchRepository(
     private suspend fun performLoadSources(animeId: String): List<WatchSource> {
         val title = metadataSource.getById(animeId)
         val match = directMatch(title, animeId)
-        val dubbings = provider.getDubbingCatalog(match)
-        if (dubbings.isEmpty()) {
-            throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
-        }
-
-        return dubbings.mapIndexed { index, dubbing ->
+        val dubbings = runCatching { provider.getDubbingCatalog(match) }
+            .onFailure { error -> AppLogger.w(TAG, "YummyAnime source discovery failed: ${error.message}") }
+            .getOrDefault(emptyList())
+        val sources = dubbings.mapIndexed { index, dubbing ->
             val source = WatchSource(
                 sourceId = buildSourceId(animeId, dubbing.title, index),
                 title = dubbing.title,
@@ -363,10 +367,41 @@ class AnimeWatchRepository(
                 animeId = animeId,
                 match = match,
                 episodes = dubbing.episodes.sortedBy(Episode::number),
+                provider = provider,
             )
             sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
             source
         }
+        val aniLibertySource = runCatching {
+            val aniLibertyMatch = aniLibertyProvider.search(title).maxByOrNull(ProviderMatch::confidence)
+                ?: return@runCatching null
+            val episodes = aniLibertyProvider.getEpisodes(aniLibertyMatch)
+            if (episodes.isEmpty()) return@runCatching null
+            val source = WatchSource(
+                sourceId = "$animeId:provider-aniliberty",
+                title = aniLibertyProvider.name,
+                episodeCount = episodes.size,
+                qualityLabel = "HLS",
+            )
+            sourcePayloads[source.sourceId] = SourcePayload(
+                source = source,
+                animeId = animeId,
+                match = aniLibertyMatch,
+                episodes = episodes,
+                provider = aniLibertyProvider,
+            )
+            sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
+            source
+        }.onFailure { error ->
+            AppLogger.w(TAG, "AniLiberty source discovery failed: ${error.message}")
+        }.getOrNull()
+        val allSources = listOfNotNull(sources.firstOrNull { it.isPriority }) +
+            sources.filterNot { it.isPriority } +
+            listOfNotNull(aniLibertySource)
+        if (allSources.isEmpty()) {
+            throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
+        }
+        return allSources
     }
 
     private suspend fun ensureSourcePayload(sourceId: String): SourcePayload? {
@@ -383,7 +418,7 @@ class AnimeWatchRepository(
         payload: SourcePayload,
         episode: Episode,
     ): List<PlayerLink> {
-        val allLinks = provider.getPlayerLinks(payload.match, episode)
+        val allLinks = payload.provider.getPlayerLinks(payload.match, episode)
             .filter(::isSupportedLink)
         val filtered = allLinks.filter { link ->
             link.translation.normalizeSourceTitle() == payload.source.title.normalizeSourceTitle()
@@ -591,6 +626,7 @@ class AnimeWatchRepository(
         val animeId: String,
         val match: ProviderMatch,
         val episodes: List<Episode>,
+        val provider: VideoProvider,
     )
 
     private companion object {

@@ -23,7 +23,13 @@ class LibraryRepository(context: Context) {
             val anime = getStoredAnime(id) ?: return@flatMap emptyList()
             getLibraryCategories(id)
                 .sortedBy(LibraryCategory::ordinal)
-                .map { category -> LibraryEntry(anime = anime, category = category) }
+                .map { category ->
+                    LibraryEntry(
+                        anime = anime,
+                        category = category,
+                        addedAt = getLibraryAddedAt(id),
+                    )
+                }
         }
     }
 
@@ -79,6 +85,7 @@ class LibraryRepository(context: Context) {
             .removeLegacyLibraryCategoryEntries(anime.id)
             .putString(libraryAnimeKey(normalizedAnime.id), encodeAnime(normalizedAnime).toString())
             .putStringSet(libraryCategorySetKey(normalizedAnime.id), categories.toStorageValues())
+            .putLongIfAbsent(libraryAddedAtKey(normalizedAnime.id), System.currentTimeMillis())
             .apply()
     }
 
@@ -266,7 +273,16 @@ class LibraryRepository(context: Context) {
 
     private fun libraryCategorySetKey(id: String): String = "library_categories_$id"
 
+    private fun libraryAddedAtKey(id: String): String = "library_added_at_$id"
+
     private fun favoriteKey(id: String): String = "favorite_$id"
+
+    private fun getLibraryAddedAt(id: String): Long? {
+        val normalizedId = YummyIdMigration.normalizeTitleId(id)
+        return listOf(libraryAddedAtKey(normalizedId), libraryAddedAtKey(id))
+            .firstNotNullOfOrNull { key -> prefs.takeIf { it.contains(key) }?.getLong(key, 0L) }
+            ?.takeIf { it > 0L }
+    }
 
     private fun libraryAnimeKeys(id: String): List<String> {
         val normalizedId = YummyIdMigration.normalizeTitleId(id)
@@ -302,7 +318,7 @@ class LibraryRepository(context: Context) {
             ids -= normalizedId
             editor
                 .putStringSet(LIBRARY_IDS_KEY, ids)
-                .removeLibraryEntries(id)
+            .removeLibraryEntries(id)
                 .apply()
             return
         }
@@ -331,6 +347,17 @@ class LibraryRepository(context: Context) {
         libraryAnimeKeys(id).forEach(::remove)
         libraryCategoryKeys(id).forEach(::remove)
         libraryCategorySetKeys(id).forEach(::remove)
+        listOf(libraryAddedAtKey(YummyIdMigration.normalizeTitleId(id)), libraryAddedAtKey(id))
+            .distinct()
+            .forEach(::remove)
+        return this
+    }
+
+    private fun android.content.SharedPreferences.Editor.putLongIfAbsent(
+        key: String,
+        value: Long,
+    ): android.content.SharedPreferences.Editor {
+        if (!prefs.contains(key)) putLong(key, value)
         return this
     }
 
@@ -371,6 +398,7 @@ class LibraryRepository(context: Context) {
 data class LibraryEntry(
     val anime: Anime,
     val category: LibraryCategory,
+    val addedAt: Long? = null,
 )
 
 enum class LibraryCategory(

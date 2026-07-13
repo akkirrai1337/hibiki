@@ -2,7 +2,9 @@ package org.akkirrai.animeresolver.provider
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.akkirrai.animeresolver.core.SourceException
@@ -14,24 +16,27 @@ import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.PlayerType
 import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.network.bodyOrThrow
+import org.akkirrai.animeresolver.network.normalizeUrl
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.minutes
 
 class AniLibertyProvider(
     private val client: HttpClient,
     private val matcher: TitleMatcher,
-    private val baseUrl: String = "https://anilibria.top/api/v1",
+    private val baseUrls: List<String> = DEFAULT_BASE_URLS,
 ) : VideoProvider {
     override val id: String = "aniliberty"
     override val name: String = "AniLiberty"
 
     override suspend fun search(title: AnimeTitle): List<ProviderMatch> {
-        val queries = title.allNames().take(3)
-        val releases = queries.flatMap { query ->
-            val response = client.get("$baseUrl/app/search/releases") {
-                parameter("query", query)
-            }
-            response.bodyOrThrow<List<AniLibertyReleaseSummary>>(name)
-        }.distinctBy(AniLibertyReleaseSummary::id)
+        val results = title.allNames().take(MAX_SEARCH_QUERIES).map { query ->
+            runCatching { searchReleases(query) }
+        }
+        val releases = results.flatMap { it.getOrElse { emptyList() } }
+            .distinctBy(AniLibertyReleaseSummary::id)
+        if (releases.isEmpty() && results.all { it.isFailure }) {
+            throw SourceException("AniLiberty search is temporarily unavailable", cause = results.first().exceptionOrNull())
+        }
 
         return releases.map { release ->
             ProviderMatch(
@@ -59,7 +64,11 @@ class AniLibertyProvider(
 
     override suspend fun getEpisodes(match: ProviderMatch): List<Episode> {
         val release = getRelease(match.mediaId)
-        return release.episodes.map {
+        return release.episodes
+            .filter { it.id.isNotBlank() && it.ordinal > 0.0 }
+            .distinctBy(AniLibertyEpisode::id)
+            .sortedBy(AniLibertyEpisode::ordinal)
+            .map {
             Episode(
                 id = it.id,
                 number = it.ordinal,
@@ -80,18 +89,43 @@ class AniLibertyProvider(
             releaseEpisode.hls1080?.toPlayerLink("1080p"),
             releaseEpisode.hls720?.toPlayerLink("720p"),
             releaseEpisode.hls480?.toPlayerLink("480p"),
+            releaseEpisode.hls360?.toPlayerLink("360p"),
+            releaseEpisode.hls240?.toPlayerLink("240p"),
         )
+            .distinctBy(PlayerLink::url)
     }
 
     private suspend fun getRelease(id: String): AniLibertyRelease {
-        cachedReleases[id]?.let { return it }
-        val response = client.get("$baseUrl/anime/releases/$id")
-        return response.bodyOrThrow<AniLibertyRelease>(name)
-            .also { cachedReleases[id] = it }
+        cachedReleases[id]?.takeIf { it.cachedAt + CACHE_TTL.inWholeMilliseconds > System.currentTimeMillis() }
+            ?.let { return it.release }
+        val release = requestFromMirrors { baseUrl ->
+            client.get("$baseUrl/anime/releases/$id") {
+                header(HttpHeaders.Accept, "application/json")
+            }.bodyOrThrow<AniLibertyRelease>(name)
+        }
+        cachedReleases[id] = CachedRelease(release, System.currentTimeMillis())
+        return release
+    }
+
+    private suspend fun searchReleases(query: String): List<AniLibertyReleaseSummary> = requestFromMirrors { baseUrl ->
+        client.get("$baseUrl/app/search/releases") {
+            header(HttpHeaders.Accept, "application/json")
+            parameter("query", query)
+        }.bodyOrThrow(name)
+    }
+
+    private suspend fun <T> requestFromMirrors(request: suspend (String) -> T): T {
+        val errors = mutableListOf<Throwable>()
+        baseUrls.forEach { baseUrl ->
+            runCatching { request(baseUrl.trimEnd('/')) }
+                .onSuccess { return it }
+                .onFailure(errors::add)
+        }
+        throw SourceException("AniLiberty API mirrors are unavailable", cause = errors.firstOrNull())
     }
 
     private fun String.toPlayerLink(quality: String) = PlayerLink(
-        url = this,
+        url = normalizeUrl(this),
         type = PlayerType.DIRECT_HLS,
         quality = quality,
         headers = mapOf("Referer" to "https://anilibria.top/"),
@@ -99,8 +133,16 @@ class AniLibertyProvider(
 
     private companion object {
         const val MIN_CONFIDENCE = 0.70
-        val cachedReleases = ConcurrentHashMap<String, AniLibertyRelease>()
+        const val MAX_SEARCH_QUERIES = 3
+        val CACHE_TTL = 15.minutes
+        val DEFAULT_BASE_URLS = listOf(
+            "https://anilibria.top/api/v1",
+            "https://api.anilibria.app/api/v1",
+        )
     }
+
+    private val cachedReleases = ConcurrentHashMap<String, CachedRelease>()
+    private data class CachedRelease(val release: AniLibertyRelease, val cachedAt: Long)
 }
 
 @Serializable
@@ -126,6 +168,8 @@ private data class AniLibertyEpisode(
     @SerialName("hls_480") val hls480: String? = null,
     @SerialName("hls_720") val hls720: String? = null,
     @SerialName("hls_1080") val hls1080: String? = null,
+    @SerialName("hls_360") val hls360: String? = null,
+    @SerialName("hls_240") val hls240: String? = null,
 )
 
 @Serializable

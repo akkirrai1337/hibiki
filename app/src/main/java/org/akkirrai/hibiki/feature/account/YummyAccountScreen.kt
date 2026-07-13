@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
 import org.akkirrai.hibiki.core.design.component.YummySignInForm
+import org.akkirrai.hibiki.core.profile.LocalProfileData
 import org.akkirrai.hibiki.core.model.Anime
 
 @Composable
@@ -60,6 +62,10 @@ fun YummyAccountScreen(
     val uiState by viewModel.uiState.collectAsState()
     val state = uiState.screenState
     val notificationCount = 0
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshLocalProfileData()
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -93,6 +99,7 @@ fun YummyAccountScreen(
                 libraryItems = state.libraryItems,
                 listWatchStats = state.listWatchStats,
                 libraryMetadata = state.libraryMetadata,
+                localProfileData = state.localProfileData,
                 busy = uiState.busy,
                 paddingValues = PaddingValues(top = AccountHeaderContentTopPadding),
             )
@@ -247,17 +254,19 @@ private fun SignedInProfileScreen(
     libraryItems: List<YummyUserAnimeListItem>,
     listWatchStats: List<YummyUserListWatchStat>,
     libraryMetadata: List<Anime>,
+    localProfileData: LocalProfileData,
     busy: Boolean,
     paddingValues: PaddingValues,
 ) {
     val context = LocalContext.current
-    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, libraryMetadata) {
+    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, libraryMetadata, localProfileData) {
         buildProfileSnapshot(
             resources = context.resources,
             profile = profile,
             libraryItems = libraryItems,
             listWatchStats = listWatchStats,
-            cachedLibraryMetadata = libraryMetadata,
+            libraryMetadata = libraryMetadata,
+            localData = localProfileData,
         )
     }
 
