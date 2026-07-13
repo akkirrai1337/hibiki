@@ -2,8 +2,12 @@ package org.akkirrai.hibiki.feature.details
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
@@ -29,8 +33,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -54,7 +60,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +71,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,6 +95,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.SubcomposeAsyncImage
@@ -103,6 +110,7 @@ import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
+import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -128,6 +136,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailsScreen(
     anime: Anime,
@@ -153,6 +162,7 @@ fun DetailsScreen(
     var libraryCategory by remember(anime.id) { mutableStateOf<LibraryCategory?>(null) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
+    var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
     var resumeState by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
     var resumeFrame by remember(anime.id) { mutableStateOf<File?>(null) }
     val listState = remember(anime.id) {
@@ -258,11 +268,15 @@ fun DetailsScreen(
                 DetailHeroSection(
                     anime = uiModel.anime,
                     heroInfo = uiModel.hero,
+                    description = uiModel.description.text,
                     canWatch = canWatch,
                     libraryCategory = libraryCategory,
                     resumeState = resumeState,
                     resumeFrame = resumeFrame,
+                    isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
+                    listState = listState,
                     onPosterClick = { isPosterPreviewOpen = true },
+                    onTitleClick = { isTitleDetailsSheetOpen = true },
                     onLibraryClick = {
                         isLibrarySheetOpen = true
                     },
@@ -322,6 +336,14 @@ fun DetailsScreen(
         )
     }
 
+    if (isTitleDetailsSheetOpen) {
+        TitleDetailsSheet(
+            title = currentAnime.title,
+            description = description,
+            onDismiss = { isTitleDetailsSheetOpen = false },
+        )
+    }
+
     if (isLibrarySheetOpen) {
         LibraryCategorySheet(
             selectedCategory = libraryCategory,
@@ -345,17 +367,31 @@ fun DetailsScreen(
 private fun DetailHeroSection(
     anime: Anime,
     heroInfo: HeroInfo,
+    description: String,
     canWatch: Boolean,
     libraryCategory: LibraryCategory?,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
+    isTitleDetailsSheetOpen: Boolean,
+    listState: LazyListState,
     onPosterClick: () -> Unit,
+    onTitleClick: () -> Unit,
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
+    val isAtTop by remember(listState) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val posterHeightOffset by animateDpAsState(
+        targetValue = if (isAtTop) 0.dp else 28.dp,
+        animationSpec = tween(durationMillis = 750),
+        label = "details_poster_height",
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -396,6 +432,7 @@ private fun DetailHeroSection(
             )
             PosterHeroInline(
                 anime = anime,
+                height = 165.dp - posterHeightOffset,
                 onPosterClick = onPosterClick,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -412,26 +449,50 @@ private fun DetailHeroSection(
                     ),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
-                    text = anime.title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        lineHeight = 27.sp,
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
+                val expandToCollapse = AnimatedImageVector.animatedVectorResource(
+                    R.drawable.expand_collapse_anim
                 )
-                Text(
-                    text = listOf(heroInfo.type, heroInfo.releaseDate)
-                        .filter(String::isNotBlank)
-                        .joinToString(" · "),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onTitleClick)
+                        .padding(end = 20.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = anime.title,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 22.sp,
+                                lineHeight = 27.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (description.isNotBlank()) {
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    Icon(
+                        painter = rememberAnimatedVectorPainter(
+                            animatedImageVector = expandToCollapse,
+                            atEnd = isTitleDetailsSheetOpen,
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
             }
         }
@@ -896,15 +957,59 @@ private fun DetailInfoPill(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TitleDetailsSheet(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    AppModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding(),
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .padding(horizontal = 24.dp, vertical = 18.dp),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun PosterHeroInline(
     anime: Anime,
+    height: Dp,
     onPosterClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
-            .size(width = 115.dp, height = 165.dp)
+            .width(115.dp)
+            .height(height)
             .clickable(onClick = onPosterClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
