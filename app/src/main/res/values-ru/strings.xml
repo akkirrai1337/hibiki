@@ -41,6 +41,7 @@
     <string name="catalog_categories_subtitle">Выберите жанры для фильтрации каталога.</string>
 
     <string name="library_add_title">Добавить в библиотеку</string>
+    <string name="library_add_subtitle">Выберите статус для тайтла</string>
     <string name="library_button_title">В библиотеку</string>
     <string name="library_saved_note">Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии.</string>
     <string name="library_remove_action">Убрать из библиотеки</string>

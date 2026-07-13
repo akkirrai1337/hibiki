@@ -41,6 +41,7 @@
     <string name="catalog_categories_subtitle">Choose genres to filter the catalog.</string>
 
     <string name="library_add_title">Add to library</string>
+    <string name="library_add_subtitle">Choose a status for this title</string>
     <string name="library_button_title">Library</string>
     <string name="library_saved_note">Saved titles are managed by downloaded episodes. To remove a title from here, delete the downloaded episodes.</string>
     <string name="library_remove_action">Remove from library</string>

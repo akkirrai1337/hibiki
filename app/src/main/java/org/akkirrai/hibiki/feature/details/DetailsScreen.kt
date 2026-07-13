@@ -1057,6 +1057,7 @@ private fun LibraryCategorySheet(
     onDismiss: () -> Unit,
 ) {
     val title = stringResource(R.string.library_add_title)
+    val subtitle = stringResource(R.string.library_add_subtitle)
     val savedNote = stringResource(R.string.library_saved_note)
     val removeAction = stringResource(R.string.library_remove_action)
     val categoryLabels = LibraryCategory.entries.associateWith { category ->
@@ -1080,13 +1081,23 @@ private fun LibraryCategorySheet(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 item {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
+                        )
+                    }
                 }
 
                 items(
@@ -1140,10 +1151,18 @@ private fun LibraryCategorySheetItem(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
         color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
         } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f)
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f)
         },
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f)
+            },
+        ),
         contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
