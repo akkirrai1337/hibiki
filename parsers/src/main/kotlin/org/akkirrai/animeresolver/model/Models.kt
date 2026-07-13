@@ -19,6 +19,7 @@ data class AnimeTitle(
     val ageRating: String? = null,
     val viewCount: Long? = null,
     val screenshots: List<String> = emptyList(),
+    val trailer: AnimeTrailerTitle? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
     val mainCharacters: List<CharacterTitle> = emptyList(),
@@ -40,6 +41,13 @@ data class AnimeTitle(
         addAll(synonyms)
     }.filter(String::isNotBlank).distinct()
 }
+
+data class AnimeTrailerTitle(
+    val id: String,
+    val site: String,
+    val thumbnailUrl: String? = null,
+    val sourceUrl: String? = null,
+)
 
 data class AnimeSearchRequest(
     val query: String = "",

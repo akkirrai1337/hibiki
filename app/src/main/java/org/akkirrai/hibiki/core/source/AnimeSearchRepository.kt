@@ -10,12 +10,14 @@ import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
+import org.akkirrai.hibiki.core.model.AnimeTrailer
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
@@ -108,11 +110,13 @@ class AnimeSearchRepository(
                 rawId = id,
                 fallbackTitle = fallback.title,
             )
-            val anime = yummySource.getById(resolvedId)
-                .toAnime(
+            val title = yummySource.getById(resolvedId)
+            val trailer = title.trailer?.toAnimeTrailer()
+            val anime = title.toAnime(
                     canonicalId = resolvedId,
                     preferEnglish = preferEnglish(),
                     fallback = fallback,
+                    trailer = trailer ?: fallback.trailer,
                 )
 
             detailsCache[cacheKey] = CachedAnime(
@@ -156,6 +160,7 @@ class AnimeSearchRepository(
         canonicalId: String = id,
         preferEnglish: Boolean,
         fallback: Anime? = null,
+        trailer: AnimeTrailer? = null,
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
         val resolvedStatus = status?.takeIf(String::isNotBlank)
@@ -191,6 +196,7 @@ class AnimeSearchRepository(
             ageRating = ageRating ?: fallback?.ageRating,
             viewCount = viewCount ?: fallback?.viewCount,
             screenshots = screenshots.ifEmpty { fallback?.screenshots.orEmpty() },
+            trailer = trailer,
             sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
             studios = studios.ifEmpty { fallback?.studios.orEmpty() },
             franchiseAnime = franchiseAnime.map(RelatedAnimeTitleMapper::map)
@@ -198,6 +204,15 @@ class AnimeSearchRepository(
             relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.relatedAnime.orEmpty() },
             releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
+        )
+    }
+
+    private fun AnimeTrailerTitle.toAnimeTrailer(): AnimeTrailer {
+        return AnimeTrailer(
+            id = id,
+            site = site,
+            thumbnailUrl = thumbnailUrl,
+            sourceUrl = sourceUrl,
         )
     }
 

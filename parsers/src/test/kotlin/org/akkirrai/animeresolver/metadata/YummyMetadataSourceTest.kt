@@ -52,6 +52,10 @@ class YummyMetadataSourceTest {
                     content = DETAILS_JSON,
                     headers = headersOf(HttpHeaders.ContentType, "application/json"),
                 )
+                "/anime/11371/trailers" -> respond(
+                    content = TRAILERS_JSON,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
                 else -> error("Unexpected URL: ${request.url}")
             }
         }
@@ -72,6 +76,10 @@ class YummyMetadataSourceTest {
         assertEquals("R-17+", result.ageRating)
         assertEquals(2_615_332L, result.viewCount)
         assertEquals(1, result.screenshots.size)
+        assertEquals("X_SnV_SdO4k", result.trailer?.id)
+        assertEquals("youtube", result.trailer?.site)
+        assertEquals("https://img.youtube.com/vi/X_SnV_SdO4k/hqdefault.jpg", result.trailer?.thumbnailUrl)
+        assertEquals("https://youtube.com/embed/X_SnV_SdO4k?enablejsapi=1", result.trailer?.sourceUrl)
         client.close()
     }
 
@@ -261,6 +269,19 @@ class YummyMetadataSourceTest {
                   }
                 }
               }
+            }
+        """.trimIndent()
+
+        val TRAILERS_JSON = """
+            {
+              "response": [{
+                "anime_id": 11371,
+                "dubbing": "Оригинал",
+                "number": "Тизер",
+                "trailer_id": 301,
+                "iframe_url": "https://youtube.com/embed/X_SnV_SdO4k?enablejsapi=1",
+                "player": "Плеер YouTube"
+              }]
             }
         """.trimIndent()
     }

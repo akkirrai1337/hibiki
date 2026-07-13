@@ -16,12 +16,26 @@ data class Anime(
     val ageRating: String? = null,
     val viewCount: Long? = null,
     val screenshots: List<String> = emptyList(),
+    val trailer: AnimeTrailer? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
     val franchiseAnime: List<RelatedAnime> = emptyList(),
     val relatedAnime: List<RelatedAnime> = emptyList(),
     val releaseDate: String? = null,
 )
+
+data class AnimeTrailer(
+    val id: String,
+    val site: String,
+    val thumbnailUrl: String? = null,
+    val sourceUrl: String? = null,
+) {
+    val playbackUrl: String?
+        get() = when (site.lowercase()) {
+            "youtube" -> "https://www.youtube.com/watch?v=$id"
+            else -> sourceUrl
+        }
+}
 
 data class AnimeRating(
     val source: String,

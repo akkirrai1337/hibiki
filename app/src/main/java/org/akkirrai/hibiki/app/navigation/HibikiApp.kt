@@ -408,6 +408,15 @@ private fun HibikiNavHost(
                 onOpenSources = { anime ->
                     navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
                 },
+                onResumePlayback = { progress ->
+                    navController.navigateSingleTopTo(
+                        AnimeNavType.createPlayerRoute(
+                            sourceId = progress.sourceId,
+                            episodeId = progress.episodeId,
+                            episodeNumber = progress.episodeNumber,
+                        )
+                    )
+                },
                 contentPadding = contentPadding
             )
         }

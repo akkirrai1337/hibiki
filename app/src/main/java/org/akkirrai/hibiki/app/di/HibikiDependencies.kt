@@ -9,6 +9,7 @@ import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.feature.home.HomeRepository
 
@@ -36,6 +37,8 @@ class HibikiDependencies(
     fun profileDataConflictRepository(): ProfileDataConflictRepository = ProfileDataConflictRepository(appContext)
 
     fun offlineTitleMetadataRepository(): OfflineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
+
+    fun resumeFrameRepository(): ResumeFrameRepository = ResumeFrameRepository(appContext)
 }
 
 fun Context.hibikiDependencies(): HibikiDependencies = HibikiDependencies(applicationContext)

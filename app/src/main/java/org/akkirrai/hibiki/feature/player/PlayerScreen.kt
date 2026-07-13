@@ -138,8 +138,10 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.net.URI
 import kotlin.math.max
@@ -159,6 +161,7 @@ import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -248,6 +251,7 @@ fun PlayerScreen(
         holdSpeedOverlayVisible ||
         (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0)
     val coroutineScope = rememberCoroutineScope()
+    val resumeFrameRepository = remember(context) { ResumeFrameRepository(context) }
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context)
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
@@ -312,6 +316,19 @@ fun PlayerScreen(
             durationMs = safeDurationMs,
             watchedSeconds = watchedSecondsSnapshot(),
         )
+    }
+
+    fun captureCurrentVideoFrame() =
+        (attachedPlayerView?.videoSurfaceView as? TextureView)
+            ?.takeIf(TextureView::isAvailable)
+            ?.bitmap
+
+    fun saveCurrentVideoFrame() {
+        val frame = captureCurrentVideoFrame() ?: return
+        val titleId = state.currentSourceId.substringBefore(':')
+        coroutineScope.launch(Dispatchers.IO) {
+            resumeFrameRepository.saveFrame(titleId, frame)
+        }
     }
 
     fun resetAccumulatedDoubleTapSeek() {
@@ -503,7 +520,7 @@ fun PlayerScreen(
         }
     }
 
-    val handleBackClick = remember(exoPlayer, onBackClick) {
+    val handleBackClick = remember(exoPlayer, onBackClick, state.currentSourceId) {
         {
             if (isClosing) return@remember
             isClosing = true
@@ -517,12 +534,21 @@ fun PlayerScreen(
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.playWhenReady = false
-            attachedPlayerView?.player = null
-            exoPlayer.clearVideoSurface()
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
-            restoreWindowUi?.invoke()
-            onBackClick()
+            val frame = captureCurrentVideoFrame()
+            val titleId = state.currentSourceId.substringBefore(':')
+            coroutineScope.launch {
+                if (frame != null) {
+                    withContext(Dispatchers.IO) {
+                        resumeFrameRepository.saveFrame(titleId, frame)
+                    }
+                }
+                attachedPlayerView?.player = null
+                exoPlayer.clearVideoSurface()
+                exoPlayer.stop()
+                exoPlayer.clearMediaItems()
+                restoreWindowUi?.invoke()
+                onBackClick()
+            }
         }
     }
 
@@ -608,6 +634,7 @@ fun PlayerScreen(
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
                     saveCurrentPlaybackProgress()
+                    if (!isClosing) saveCurrentVideoFrame()
                     if (isEnteringPictureInPicture || isPictureInPictureActive || isAudioOnly) {
                         return@LifecycleEventObserver
                     }

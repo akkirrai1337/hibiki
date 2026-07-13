@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
+import org.akkirrai.hibiki.core.model.AnimeTrailer
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,6 +44,14 @@ class OfflineTitleMetadataRepository(context: Context) {
             put("ageRating", anime.ageRating)
             put("viewCount", anime.viewCount)
             put("screenshots", JSONArray(anime.screenshots))
+            anime.trailer?.let { trailer ->
+                put("trailer", JSONObject().apply {
+                    put("id", trailer.id)
+                    put("site", trailer.site)
+                    put("thumbnailUrl", trailer.thumbnailUrl)
+                    put("sourceUrl", trailer.sourceUrl)
+                })
+            }
             put("sourceMaterial", anime.sourceMaterial)
             put("studios", JSONArray(anime.studios))
             put("ratings", JSONArray().apply {
@@ -92,10 +101,23 @@ class OfflineTitleMetadataRepository(context: Context) {
             ageRating = json.optString("ageRating").ifBlank { null },
             viewCount = json.optLong("viewCount").takeIf { it > 0L },
             screenshots = json.optJSONArray("screenshots").toStringList(),
+            trailer = json.optJSONObject("trailer")?.toAnimeTrailer(),
             sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
             studios = json.optJSONArray("studios").toStringList(),
             franchiseAnime = json.optJSONArray("franchiseAnime").toRelatedAnimeList(),
             relatedAnime = json.optJSONArray("relatedAnime").toRelatedAnimeList(),
+        )
+    }
+
+    private fun JSONObject.toAnimeTrailer(): AnimeTrailer? {
+        val id = optString("id").takeIf(String::isNotBlank) ?: return null
+        val site = optString("site").takeIf(String::isNotBlank) ?: return null
+        val sourceUrl = optString("sourceUrl").takeIf(String::isNotBlank) ?: return null
+        return AnimeTrailer(
+            id = id,
+            site = site,
+            thumbnailUrl = optString("thumbnailUrl").ifBlank { null },
+            sourceUrl = sourceUrl,
         )
     }
 

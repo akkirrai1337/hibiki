@@ -41,6 +41,24 @@ class AnimePresentationTest {
         assertTrue(anime(status = "anons").isAnnouncement())
     }
 
+    @Test
+    fun `youtube trailer exposes playable url`() {
+        val trailer = AnimeTrailer(
+            id = "abc123",
+            site = "YouTube",
+            thumbnailUrl = "https://example.com/trailer.jpg",
+        )
+
+        assertEquals("https://www.youtube.com/watch?v=abc123", trailer.playbackUrl)
+    }
+
+    @Test
+    fun `unsupported trailer site has no playable url`() {
+        val trailer = AnimeTrailer(id = "abc123", site = "unsupported")
+
+        assertEquals(null, trailer.playbackUrl)
+    }
+
     private fun anime(
         subtitle: String = "",
         episodesLabel: String = "",

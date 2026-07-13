@@ -53,6 +53,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -81,6 +82,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +91,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -113,7 +117,10 @@ import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.source.ResumeFrameRepository
+import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.YummyIdMigration
+import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.launch
@@ -127,21 +134,27 @@ fun DetailsScreen(
     onBackClick: () -> Unit,
     onRelatedAnimeClick: (Anime) -> Unit,
     onOpenSources: (Anime) -> Unit,
+    onResumePlayback: (TitleWatchState) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val uriHandler = LocalUriHandler.current
     val savedScreenState = remember(anime.id) { detailsScreenStateCache[anime.id] }
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
+    val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
+    val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     var currentAnime by remember(anime.id) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDescriptionExpanded by remember(anime.id) { mutableStateOf(savedScreenState?.isDescriptionExpanded ?: false) }
     var libraryCategory by remember(anime.id) { mutableStateOf<LibraryCategory?>(null) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
+    var resumeState by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
+    var resumeFrame by remember(anime.id) { mutableStateOf<File?>(null) }
     val listState = remember(anime.id) {
         LazyListState(
             firstVisibleItemIndex = savedScreenState?.firstVisibleItemIndex ?: 0,
@@ -154,6 +167,8 @@ fun DetailsScreen(
 
     fun refreshWatchStateSnapshot() {
         libraryCategory = libraryRepository.getLibraryCategory(anime.id)
+        resumeState = findResumeWatchState(watchStateRepository, anime.id)
+        resumeFrame = resumeFrameRepository.getFrame(anime.id)
     }
 
     DisposableEffect(searchRepository) {
@@ -245,11 +260,17 @@ fun DetailsScreen(
                     heroInfo = uiModel.hero,
                     canWatch = canWatch,
                     libraryCategory = libraryCategory,
+                    resumeState = resumeState,
+                    resumeFrame = resumeFrame,
                     onPosterClick = { isPosterPreviewOpen = true },
                     onLibraryClick = {
                         isLibrarySheetOpen = true
                     },
                     onPrimaryClick = { onOpenSources(currentAnime) },
+                    onResumeClick = onResumePlayback,
+                    onTrailerClick = {
+                        currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri)
+                    },
                 )
             }
 
@@ -326,9 +347,13 @@ private fun DetailHeroSection(
     heroInfo: HeroInfo,
     canWatch: Boolean,
     libraryCategory: LibraryCategory?,
+    resumeState: TitleWatchState?,
+    resumeFrame: File?,
     onPosterClick: () -> Unit,
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
+    onResumeClick: (TitleWatchState) -> Unit,
+    onTrailerClick: () -> Unit,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
 
@@ -342,8 +367,10 @@ private fun DetailHeroSection(
         ) {
             DetailHeroMedia(
                 anime = anime,
-                enabled = canWatch,
-                onWatchClick = onPrimaryClick,
+                resumeState = resumeState,
+                resumeFrame = resumeFrame,
+                onResumeClick = onResumeClick,
+                onTrailerClick = onTrailerClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
@@ -499,38 +526,128 @@ private fun DetailHeroSection(
 @Composable
 private fun DetailHeroMedia(
     anime: Anime,
-    enabled: Boolean,
-    onWatchClick: () -> Unit,
+    resumeState: TitleWatchState?,
+    resumeFrame: File?,
+    onResumeClick: (TitleWatchState) -> Unit,
+    onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     Box(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
-        NetworkImage(
-            imageUrl = anime.screenshots.firstOrNull() ?: anime.posterUrl,
-            fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-            contentDescription = null,
-        )
-        Surface(
-            onClick = onWatchClick,
-            enabled = enabled,
-            modifier = Modifier.size(64.dp),
-            shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.38f),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)),
-            contentColor = Color.White,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(R.string.details_watch),
-                    modifier = Modifier.size(32.dp),
-                )
+        if (resumeState != null && resumeFrame != null) {
+            ResumeFrameImage(
+                frame = resumeFrame,
+                version = resumeState.updatedAt,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            NetworkImage(
+                imageUrl = trailer?.thumbnailUrl
+                    ?: anime.screenshots.firstOrNull()
+                    ?: anime.posterUrl,
+                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                contentDescription = null,
+            )
+        }
+
+        when {
+            resumeState != null -> {
+                val progress = if (resumeState.durationMs > 0L) {
+                    (resumeState.positionMs.toFloat() / resumeState.durationMs).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+                Surface(
+                    onClick = { onResumeClick(resumeState) },
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.58f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
+                    contentColor = Color.White,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                        )
+                        Column {
+                            Text(
+                                text = stringResource(R.string.details_watch_continue),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.details_continue_episode_position,
+                                    formatEpisodeNumber(resumeState.episodeNumber),
+                                    formatPlaybackPosition(resumeState.positionMs),
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.78f),
+                            )
+                        }
+                    }
+                }
+                if (progress > 0f) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.BottomCenter),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = Color.White.copy(alpha = 0.24f),
+                    )
+                }
+            }
+
+            trailer != null -> {
+                Surface(
+                    onClick = onTrailerClick,
+                    modifier = Modifier.size(64.dp),
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.38f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)),
+                    contentColor = Color.White,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(R.string.details_trailer),
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun ResumeFrameImage(
+    frame: File,
+    version: Long,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    SubcomposeAsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(frame)
+            .memoryCacheKey("${frame.absolutePath}:$version")
+            .build(),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
+        loading = { ImagePlaceholder(Modifier.fillMaxSize()) },
+        error = { ImagePlaceholder(Modifier.fillMaxSize()) },
+    )
 }
 
 @Composable
@@ -1314,6 +1431,29 @@ private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
     return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
 }
 
+private fun findResumeWatchState(
+    repository: WatchStateRepository,
+    titleId: String,
+): TitleWatchState? {
+    val latest = repository.getEpisodeProgress(titleId)
+        .asSequence()
+        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
+        .maxByOrNull(EpisodeWatchProgress::updatedAt)
+        ?: return null
+    return TitleWatchState(
+        titleId = latest.titleId,
+        episodeId = latest.episodeId,
+        episodeNumber = latest.episodeNumber,
+        sourceId = latest.sourceId,
+        voiceoverId = latest.voiceoverId,
+        sourceTitle = latest.sourceTitle,
+        quality = latest.quality,
+        positionMs = latest.positionMs,
+        durationMs = latest.durationMs,
+        updatedAt = latest.updatedAt,
+    )
+}
+
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
 
 private fun formatEpisodeNumber(number: Double): String {
@@ -1321,6 +1461,18 @@ private fun formatEpisodeNumber(number: Double): String {
         number.toInt().toString()
     } else {
         number.toString()
+    }
+}
+
+private fun formatPlaybackPosition(positionMs: Long): String {
+    val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
+    val hours = totalSeconds / 3_600L
+    val minutes = (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
     }
 }
 

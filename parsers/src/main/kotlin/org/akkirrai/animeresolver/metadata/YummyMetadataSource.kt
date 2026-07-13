@@ -22,6 +22,7 @@ import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.RelatedAnimeTitle
 import org.akkirrai.animeresolver.model.SearchFilterOption
@@ -126,9 +127,25 @@ class YummyMetadataSource(
         val response = client.get("$baseUrl/anime/$id") {
             addHeaders(language)
         }
-        return response.bodyOrThrow<YummyEnvelope<YummyAnimePayload>>(name)
+        val title = response.bodyOrThrow<YummyEnvelope<YummyAnimePayload>>(name)
             .response
             .toAnimeTitle(language)
+        val trailer = runCatching { getTrailers(id).firstOrNull() }
+            .onFailure { error ->
+                debugLogger?.invoke("Yummy trailer request failed for anime $id: ${error.message}")
+            }
+            .getOrNull()
+        return title.copy(trailer = trailer)
+    }
+
+    suspend fun getTrailers(id: String): List<AnimeTrailerTitle> {
+        val language = requestLanguage()
+        val response = client.get("$baseUrl/anime/$id/trailers") {
+            addHeaders(language)
+        }
+        return response.bodyOrThrow<YummyEnvelope<List<YummyTrailerPayload>>>(name)
+            .response
+            .mapNotNull(YummyTrailerPayload::toAnimeTrailerTitle)
     }
 
     private suspend fun loadFilterCatalogFromSwagger(): AnimeSearchFilterCatalog {
@@ -481,6 +498,32 @@ private data class YummyViewingOrderEntry(
 }
 
 @Serializable
+private data class YummyTrailerPayload(
+    @SerialName("trailer_id") val trailerId: Long,
+    @SerialName("anime_id") val animeId: Long,
+    @SerialName("iframe_url") val iframeUrl: String,
+    val dubbing: String? = null,
+    val player: String? = null,
+    val number: String? = null,
+) {
+    fun toAnimeTrailerTitle(): AnimeTrailerTitle? {
+        val sourceUrl = iframeUrl.normalizeUrl() ?: return null
+        val youtubeId = sourceUrl.extractYouTubeVideoId()
+        val site = if (youtubeId != null) {
+            "youtube"
+        } else {
+            player.normalize()?.lowercase() ?: "yummy"
+        }
+        return AnimeTrailerTitle(
+            id = youtubeId ?: trailerId.toString(),
+            site = site,
+            thumbnailUrl = youtubeId?.let { "https://img.youtube.com/vi/$it/hqdefault.jpg" },
+            sourceUrl = sourceUrl,
+        )
+    }
+}
+
+@Serializable
 private data class YummyStatus(
     val title: String? = null,
     val alias: String? = null,
@@ -568,6 +611,17 @@ private fun String?.normalizeUrl(): String? {
         "https:$normalized"
     } else {
         normalized
+    }
+}
+
+private fun String.extractYouTubeVideoId(): String? {
+    val patterns = listOf(
+        Regex("(?:youtube\\.com/)?embed/([A-Za-z0-9_-]{6,})", RegexOption.IGNORE_CASE),
+        Regex("[?&]v=([A-Za-z0-9_-]{6,})", RegexOption.IGNORE_CASE),
+        Regex("youtu\\.be/([A-Za-z0-9_-]{6,})", RegexOption.IGNORE_CASE),
+    )
+    return patterns.firstNotNullOfOrNull { pattern ->
+        pattern.find(this)?.groupValues?.getOrNull(1)
     }
 }
 
