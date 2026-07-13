@@ -84,6 +84,44 @@ class YummyMetadataSourceTest {
     }
 
     @Test
+    fun `released title prefers total episode count over stale aired count`() = runBlocking {
+        val engine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/anime/4887" -> respond(
+                    content = """
+                        {
+                          "response": {
+                            "anime_id": 4887,
+                            "title": "Cyberpunk: Edgerunners",
+                            "anime_status": {"title": "вышел", "alias": "released"},
+                            "episodes": {"count": 10, "aired": 6}
+                          }
+                        }
+                    """.trimIndent(),
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+                "/anime/4887/trailers" -> respond(
+                    content = "{\"response\":[]}",
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+                else -> error("Unexpected URL: ${request.url}")
+            }
+        }
+        val client = HttpClient(engine) {
+            install(ContentNegotiation) { json() }
+        }
+        val source = YummyMetadataSource(
+            client = client,
+            baseUrl = "https://yummy.test",
+        )
+
+        val result = source.getById("4887")
+
+        assertEquals(10, result.episodeCount)
+        client.close()
+    }
+
+    @Test
     fun `filtered search builds yummy query params`() = runBlocking {
         val engine = MockEngine { request ->
             assertEquals("/anime", request.url.encodedPath)

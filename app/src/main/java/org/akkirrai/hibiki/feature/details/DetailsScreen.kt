@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -420,6 +421,7 @@ private fun DetailHeroSection(
     onTrailerClick: () -> Unit,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
+    val hasHeroRatings = anime.ratings.isNotEmpty() || !anime.viewCount.isNullOrZero()
     val isAtTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -430,6 +432,12 @@ private fun DetailHeroSection(
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )
+    val bannerHeight = 240.dp
+    val posterExpandedHeight = 200.dp
+    val posterTop = 228.dp
+    val detailsTop = 248.dp
+    val detailsHeight = 180.dp
+    val heroHeight = 428.dp
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -437,7 +445,7 @@ private fun DetailHeroSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(340.dp),
+                .height(heroHeight),
         ) {
             DetailHeroMedia(
                 anime = anime,
@@ -447,14 +455,14 @@ private fun DetailHeroSection(
                 onTrailerClick = onTrailerClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp),
+                    .height(bannerHeight),
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 100.dp)
+                    .height(80.dp)
+                    .align(Alignment.TopCenter)
+                    .offset(y = 160.dp)
                     .background(
                         Brush.verticalGradient(
                             listOf(Color.Transparent, MaterialTheme.colorScheme.background),
@@ -464,28 +472,29 @@ private fun DetailHeroSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(heroHeight - bannerHeight)
                     .align(Alignment.BottomCenter)
                     .background(MaterialTheme.colorScheme.background)
             )
             PosterHeroInline(
                 anime = anime,
-                height = 165.dp - posterHeightOffset,
+                height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = DETAIL_CONTENT_START_PADDING),
+                    .align(Alignment.TopStart)
+                    .offset(y = posterTop + posterHeightOffset)
+                    .padding(start = 16.dp),
             )
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.TopStart)
                     .fillMaxWidth()
+                    .offset(y = detailsTop)
                     .padding(
-                        start = DETAIL_CONTENT_START_PADDING + 131.dp,
-                        end = DETAIL_CONTENT_START_PADDING,
-                        bottom = 6.dp,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                        start = 172.dp,
+                        end = 16.dp,
+                    )
+                    .height(detailsHeight),
             ) {
                 val expandToCollapse = AnimatedImageVector.animatedVectorResource(
                     R.drawable.expand_collapse_anim
@@ -493,11 +502,15 @@ private fun DetailHeroSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onTitleClick)
-                        .padding(end = 20.dp),
+                        .clickable(onClick = onTitleClick),
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 24.dp),
+                    ) {
                         Text(
                             text = anime.title,
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -509,17 +522,35 @@ private fun DetailHeroSection(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        nextEpisodeEta?.let { eta ->
-                            NextEpisodeChip(
-                                episode = nextEpisodeNumber,
-                                eta = eta,
+                        if (hasHeroRatings) {
+                            HeroRatingsLine(
+                                ratings = anime.ratings,
+                                viewCount = anime.viewCount,
                             )
                         }
+                        nextEpisodeEta?.let { eta ->
+                            Box(contentAlignment = Alignment.Center) {
+                                NextEpisodeChip(
+                                    episode = nextEpisodeNumber,
+                                    eta = eta,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
+                            }
+                        }
                         if (description.isNotBlank()) {
-                            FadingHeroDescription(
-                                description = description,
-                                modifier = Modifier.height(56.dp),
-                            )
+                            NestedScrollableContent(
+                                modifier = Modifier.height(
+                                    if (hasHeroRatings && nextEpisodeEta != null) 73.dp else 93.dp
+                                ),
+                            ) { contentModifier ->
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                                    modifier = contentModifier,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                     Icon(
@@ -530,11 +561,11 @@ private fun DetailHeroSection(
                         contentDescription = null,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
+                            .padding(top = 2.dp)
                             .size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -639,42 +670,38 @@ private fun NextEpisodeChip(
 }
 
 @Composable
-private fun FadingHeroDescription(
-    description: String,
+private fun NestedScrollableContent(
     modifier: Modifier = Modifier,
+    gradientSize: Dp = 0.dp,
+    bottomGradientSize: Dp = 24.dp,
+    gradientColor: Color = MaterialTheme.colorScheme.background,
+    content: @Composable (Modifier) -> Unit,
 ) {
-    val gradientSize = 8.dp
-    val backgroundColor = MaterialTheme.colorScheme.background
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-            modifier = Modifier
-                .fillMaxWidth()
+    Box(modifier) {
+        content(
+            Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = gradientSize),
+                .padding(top = gradientSize, bottom = bottomGradientSize)
         )
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
                 .height(gradientSize)
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(backgroundColor, Color.Transparent),
+                        colors = listOf(gradientColor, Color.Transparent),
                     )
                 ),
         )
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
+                .height(bottomGradientSize)
                 .fillMaxWidth()
-                .height(gradientSize)
+                .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, backgroundColor),
+                        colors = listOf(Color.Transparent, gradientColor),
                     )
                 ),
         )
@@ -812,11 +839,13 @@ private fun ResumeFrameImage(
 private fun HeroRatingsLine(
     ratings: List<AnimeRating>,
     viewCount: Long?,
+    modifier: Modifier = Modifier,
 ) {
     val rating = ratings.firstOrNull { it.source.contains("yummy", ignoreCase = true) } ?: ratings.firstOrNull()
     if (rating == null && viewCount.isNullOrZero()) return
 
     Row(
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1069,7 +1098,7 @@ private fun PosterHeroInline(
 ) {
     Card(
         modifier = modifier
-            .width(115.dp)
+            .width(140.dp)
             .height(height)
             .clickable(onClick = onPosterClick),
         shape = RoundedCornerShape(12.dp),
@@ -1408,7 +1437,7 @@ private fun RelatedAnimeList(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = related.year?.toString().orEmpty(),
+                        text = formatRelatedAnimeMetadata(related.year, related.type),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -1840,6 +1869,16 @@ internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
         ?.toIntOrNull()
         ?: return null
     return releasedEpisodes.takeIf { it >= 0 }?.plus(1)
+}
+
+internal fun formatRelatedAnimeMetadata(year: Int?, type: String?): String {
+    val typeLabel = type
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?.replace('_', ' ')
+        ?.replace('-', ' ')
+        ?.uppercase(Locale.ROOT)
+    return listOfNotNull(year?.toString(), typeLabel).joinToString(" • ")
 }
 
 private const val DEFAULT_TYPE = "TV"

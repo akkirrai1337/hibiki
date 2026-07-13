@@ -454,7 +454,10 @@ private data class YummyAnimePayload(
             synonyms = synonyms,
             year = year,
             type = type?.alias.normalize(),
-            episodeCount = episodes.extractEpisodeCount() ?: episodesCount,
+            episodeCount = episodes.extractEpisodeCount(
+                preferTotal = listOf(animeStatus?.alias, animeStatus?.title, status)
+                    .any { it.isReleasedAnimeStatus() },
+            ) ?: episodesCount,
             posterUrl = poster?.bestUrl() ?: image?.bestUrl(),
             status = animeStatus?.title.normalize()
                 ?: animeStatus?.alias.normalize()
@@ -625,14 +628,21 @@ private fun String.extractYouTubeVideoId(): String? {
     }
 }
 
-private fun JsonElement?.extractEpisodeCount(): Int? {
+private fun JsonElement?.extractEpisodeCount(preferTotal: Boolean = false): Int? {
     return when (this) {
         is JsonPrimitive -> content.toIntOrNull()
-        is JsonObject -> listOf("aired", "count")
+        is JsonObject -> (if (preferTotal) listOf("count", "aired") else listOf("aired", "count"))
             .firstNotNullOfOrNull { key ->
                 get(key)?.jsonPrimitive?.content?.toIntOrNull()
             }
         else -> null
+    }
+}
+
+private fun String?.isReleasedAnimeStatus(): Boolean {
+    return when (this?.trim()?.lowercase()) {
+        "released", "completed", "вышел", "завершён", "завершен", "вийшов" -> true
+        else -> false
     }
 }
 
