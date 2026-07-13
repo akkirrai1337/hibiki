@@ -256,6 +256,17 @@
     <string name="yummy_account_date_yesterday">Вчера</string>
     <string name="yummy_account_date_days_ago_short">%1$dд</string>
     <string name="yummy_account_duration_hours_short">%1$s ч</string>
+    <string name="yummy_account_duration_less_than_hour">&lt;1 ч</string>
+    <string name="yummy_account_watch_type_tv">ТВ-Сериалы</string>
+    <string name="yummy_account_watch_type_short_tv">К.Сериалы</string>
+    <string name="yummy_account_watch_type_movie">Фильм</string>
+    <string name="yummy_account_watch_type_short_movie">К.Фильмы</string>
+    <string name="yummy_account_watch_type_special">Спешл</string>
+    <string name="yummy_account_sync_conflict_title">Данные библиотеки различаются</string>
+    <string name="yummy_account_sync_conflict_description">В приложении у этого тайтла стоит «%1$s», а на сайте — «%2$s». Выберите, какое значение сохранить с обеих сторон.</string>
+    <string name="yummy_account_sync_use_app">Взять из приложения</string>
+    <string name="yummy_account_sync_use_site">Взять с сайта</string>
+    <string name="yummy_account_sync_error_title">Не удалось синхронизировать библиотеку</string>
     <string name="yummy_account_settings_title">Настройки аккаунта</string>
     <string name="yummy_account_settings_session_title">Сессия</string>
     <string name="yummy_account_settings_session_hint">Здесь собраны технические параметры аккаунта и безопасный выход.</string>

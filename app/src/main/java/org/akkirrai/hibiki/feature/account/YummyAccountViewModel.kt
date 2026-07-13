@@ -1,9 +1,6 @@
 package org.akkirrai.hibiki.feature.account
 
 import android.content.Context
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -17,7 +14,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.metadata.YummyProfile
 import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
-import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.account.YummyAccountRepository
@@ -27,7 +23,9 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.profile.LocalProfileData
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
-import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.profile.LibraryStatusConflict
+import org.akkirrai.hibiki.core.profile.ProfileDataSource
+import org.akkirrai.hibiki.core.profile.toYummyUserList
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 
 class YummyAccountViewModel(
@@ -99,6 +97,65 @@ class YummyAccountViewModel(
         }
     }
 
+    fun resolveLibraryConflict(
+        conflict: LibraryStatusConflict,
+        source: ProfileDataSource,
+    ) {
+        if (source == ProfileDataSource.Custom) return
+        _uiState.update { it.copy(busy = true, syncError = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                when (source) {
+                    ProfileDataSource.Remote -> localProfileRepository.applyRemoteLibraryStatus(conflict)
+                    ProfileDataSource.Local -> {
+                        val animeId = conflict.animeId.toLongOrNull()
+                            ?: error("YummyAnime id is not numeric: ${conflict.animeId}")
+                        val list = conflict.localCategory.toYummyUserList()
+                            ?: error("Unsupported local library category: ${conflict.localCategory}")
+                        repository.setAnimeListStatus(animeId, list)
+                        localProfileRepository.completeLocalLibraryStatusResolution(conflict)
+                    }
+                    ProfileDataSource.Custom -> Unit
+                }
+            }
+            _uiState.update { state ->
+                val signedIn = state.screenState as? YummyAccountScreenState.SignedIn
+                    ?: return@update state.copy(busy = false)
+                result.fold(
+                    onSuccess = {
+                        val selectedList = when (source) {
+                            ProfileDataSource.Local -> conflict.localCategory.toYummyUserList()
+                            ProfileDataSource.Remote -> conflict.remoteCategory.toYummyUserList()
+                            ProfileDataSource.Custom -> null
+                        }
+                        state.copy(
+                            screenState = signedIn.copy(
+                                libraryItems = signedIn.libraryItems.map { item ->
+                                    if (item.animeId.toString() == conflict.animeId) item.copy(list = selectedList) else item
+                                },
+                                localProfileData = localProfileRepository.getData(),
+                                libraryConflicts = localProfileRepository.pendingLibraryStatusConflicts(),
+                            ),
+                            busy = false,
+                            syncError = null,
+                        )
+                    },
+                    onFailure = { error ->
+                        AppLogger.w(LOG_TAG, "Library conflict resolution failed: ${error.message}", error)
+                        state.copy(
+                            busy = false,
+                            syncError = error.message ?: appContext.getString(R.string.yummy_account_error_temporarily_unavailable),
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    fun clearSyncError() {
+        _uiState.update { it.copy(syncError = null) }
+    }
+
     fun signOut() {
         _uiState.update { it.copy(busy = true) }
         viewModelScope.launch(Dispatchers.IO) {
@@ -116,15 +173,14 @@ class YummyAccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val cachedProfile = repository.getCachedProfile().takeIf { repository.isLoggedIn() }
             if (cachedProfile != null) {
-                localProfileRepository.mergeRemoteActivity(cachedProfile.activityCountsByDay())
                 _uiState.update {
                     it.copy(
                         screenState = YummyAccountScreenState.SignedIn(
                             profile = cachedProfile,
                             libraryItems = emptyList(),
-                            listWatchStats = emptyList(),
                             libraryMetadata = emptyList(),
                             localProfileData = localProfileRepository.getData(),
+                            libraryConflicts = localProfileRepository.pendingLibraryStatusConflicts(),
                         )
                     )
                 }
@@ -194,6 +250,7 @@ class YummyAccountViewModel(
 data class YummyAccountUiState(
     val screenState: YummyAccountScreenState = YummyAccountScreenState.Checking,
     val busy: Boolean = false,
+    val syncError: String? = null,
 )
 
 sealed interface YummyAccountScreenState {
@@ -202,9 +259,9 @@ sealed interface YummyAccountScreenState {
     data class SignedIn(
         val profile: YummyProfile,
         val libraryItems: List<YummyUserAnimeListItem>,
-        val listWatchStats: List<YummyUserListWatchStat>,
         val libraryMetadata: List<Anime>,
         val localProfileData: LocalProfileData,
+        val libraryConflicts: List<LibraryStatusConflict>,
     ) : YummyAccountScreenState
 
     data class Error(val message: String) : YummyAccountScreenState
@@ -217,43 +274,40 @@ private suspend fun loadSignedInState(
     profile: YummyProfile,
     refreshDetailedProfile: Boolean = true,
 ): YummyAccountScreenState.SignedIn {
-    val (detailedProfile, libraryItems, listWatchStats) = coroutineScope {
+    val (detailedProfile, libraryItems, remoteLibraryLoaded) = coroutineScope {
         val detailed = async { if (refreshDetailedProfile) runCatching { repository.getUserProfile(profile.id) }.getOrDefault(profile) else profile }
-        val library = async { runCatching { repository.getUserLists(profile.id) }.getOrDefault(emptyList()) }
-        val stats = async { runCatching { repository.getUserStatsLists(profile.id) }.getOrDefault(emptyList()) }
-        Triple(detailed.await(), library.await(), stats.await())
+        val library = async { runCatching { repository.getUserLists(profile.id) } }
+        val libraryResult = library.await()
+        Triple(detailed.await(), libraryResult.getOrDefault(emptyList()), libraryResult.isSuccess)
     }
     val libraryMetadata = loadLibraryMetadata(context, libraryItems)
-    localProfileRepository.mergeRemoteActivity(detailedProfile.activityCountsByDay())
+    val libraryConflicts = if (remoteLibraryLoaded) {
+        localProfileRepository.mergeRemoteLibrary(libraryItems, libraryMetadata)
+    } else {
+        localProfileRepository.pendingLibraryStatusConflicts()
+    }
     return YummyAccountScreenState.SignedIn(
         profile = detailedProfile,
         libraryItems = libraryItems,
-        listWatchStats = listWatchStats,
         libraryMetadata = libraryMetadata,
         localProfileData = localProfileRepository.getData(),
+        libraryConflicts = libraryConflicts,
     )
 }
 
-private fun YummyProfile.activityCountsByDay(): Map<LocalDate, Int> = watches?.history.orEmpty()
-    .filter { (it.duration ?: 0L) > 0L || (it.episodeCount ?: 0) > 0 }
-    .mapNotNull { item ->
-        item.date?.let { value ->
-            val instant = if (value >= 1_000_000_000_000L) Instant.ofEpochMilli(value) else Instant.ofEpochSecond(value)
-            instant.atZone(ZoneId.systemDefault()).toLocalDate() to (item.episodeCount ?: 1).coerceAtLeast(1)
-        }
-    }
-    .groupBy({ it.first }, { it.second })
-    .mapValues { (_, counts) -> counts.sum() }
-
-private suspend fun loadLibraryMetadata(context: Context, libraryItems: List<YummyUserAnimeListItem>): List<Anime> {
+private fun loadLibraryMetadata(context: Context, libraryItems: List<YummyUserAnimeListItem>): List<Anime> {
     val metadataRepository = OfflineTitleMetadataRepository(context)
-    val searchRepository = AnimeSearchRepository(context)
-    return try {
-        libraryItems.mapNotNull { item ->
-            metadataRepository.get(item.animeId.toString()) ?: runCatching {
-                Anime(id = item.animeId.toString(), title = item.title, subtitle = "", episodesLabel = "", status = "", posterUrl = item.posterUrl)
-                    .let { fallback -> searchRepository.getDetails(id = fallback.id, fallback = fallback).also(metadataRepository::save) }
-            }.getOrNull()
-        }
-    } finally { searchRepository.close() }
+    return libraryItems.map { item ->
+        metadataRepository.get(item.animeId.toString()) ?: Anime(
+            id = item.animeId.toString(),
+            title = item.title,
+            subtitle = "",
+            episodesLabel = "",
+            status = "",
+            posterUrl = normalizeYummyAssetUrl(item.posterUrl),
+            ratings = item.yummyRating?.let { rating ->
+                listOf(org.akkirrai.hibiki.core.model.AnimeRating(source = "YummyAnime", value = rating))
+            }.orEmpty(),
+        )
+    }
 }

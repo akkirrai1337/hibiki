@@ -1,12 +1,14 @@
 package org.akkirrai.hibiki.core.profile
 
 import android.content.Context
-import java.time.LocalDate
+import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
+import org.akkirrai.animeresolver.metadata.YummyUserList
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import org.akkirrai.hibiki.core.source.YummyIdMigration
 
 /** Local, source-agnostic data used by the profile analytics. */
 class LocalProfileRepository(
@@ -31,64 +33,100 @@ class LocalProfileRepository(
         return LocalProfileData(
             episodeProgress = watchStateRepository.getAllEpisodeProgress(),
             library = library,
-            importedActivityCounts = getImportedActivityCounts(),
-            activityOverrides = conflictRepository.resolvedActivityCounts(),
         )
     }
 
     /**
-     * Persists historical activity received from a remote profile only for days that
-     * do not have local playback records. Local playback always wins for its day.
+     * Imports remote-only titles locally and records only true primary-status conflicts.
+     * Local-only titles are retained; they are not silently pushed to the website.
      */
-    fun mergeRemoteActivity(remoteActivityCounts: Map<LocalDate, Int>) {
-        val localActivityCounts = watchStateRepository.getAllEpisodeProgress()
-            .filter { it.positionMs > 0L }
-            .groupBy { LocalDate.ofInstant(java.time.Instant.ofEpochMilli(it.updatedAt), java.time.ZoneId.systemDefault()) }
-            .mapValues { (_, values) -> values.distinctBy { "${it.titleId}:${it.episodeId}" }.size }
-        val merged = getImportedActivityCounts().toMutableMap()
-        remoteActivityCounts.forEach { (date, episodeCount) ->
-            val localValue = localActivityCounts[date]
-            if (localValue == null && episodeCount > 0) {
-                merged[date] = episodeCount
-            } else if (localValue != null) {
-                merged.remove(date)
-                if (localValue != episodeCount) {
-                    conflictRepository.recordActivityConflict(date, localValue, episodeCount)
+    fun mergeRemoteLibrary(
+        remoteItems: List<YummyUserAnimeListItem>,
+        remoteMetadata: List<Anime>,
+    ): List<LibraryStatusConflict> {
+        conflictRepository.retainLibraryStatusConflicts(
+            remoteItems.mapTo(mutableSetOf()) {
+                YummyIdMigration.normalizeTitleId(it.animeId.toString())
+            },
+        )
+        val metadataById = remoteMetadata.associateBy { YummyIdMigration.normalizeTitleId(it.id) }
+        val localItems = getData().library
+
+        planLibraryMerge(localItems, remoteItems).forEach { action ->
+            when (action) {
+                is LibraryMergeAction.ImportRemote -> {
+                    val remote = action.remote
+                    val anime = metadataById[action.id] ?: Anime(
+                        id = action.id,
+                        title = remote.title,
+                        subtitle = "",
+                        episodesLabel = "",
+                        status = "",
+                        posterUrl = remote.posterUrl,
+                    )
+                    libraryRepository.importLibraryEntry(
+                        anime = anime,
+                        categories = action.categories,
+                        addedAt = remote.addedAt?.toEpochMillis(),
+                    )
                 }
+                is LibraryMergeAction.RecordConflict -> {
+                    val localTitle = localItems.firstOrNull { it.id == action.id }?.anime?.title.orEmpty()
+                    conflictRepository.recordLibraryStatusConflict(
+                        animeId = action.id,
+                        title = action.remote.title.ifBlank { localTitle },
+                        localCategory = action.localCategory,
+                        remoteCategory = action.remoteCategory,
+                    )
+                }
+                is LibraryMergeAction.ClearConflict ->
+                    conflictRepository.clearLibraryStatusConflictForAnime(action.id)
+                is LibraryMergeAction.AddRemotePrimary ->
+                    libraryRepository.replacePrimaryCategory(action.id, action.category)
+                is LibraryMergeAction.AddRemoteFavorite ->
+                    libraryRepository.addSupplementalCategory(action.id, LibraryCategory.Favorite)
             }
         }
-        preferences.edit()
-            .putStringSet(
-                KEY_IMPORTED_ACTIVITY,
-                merged.mapTo(linkedSetOf()) { (date, count) -> "$date$ACTIVITY_SEPARATOR$count" },
-            )
-            .apply()
+
+        return conflictRepository.pendingLibraryStatusConflicts()
     }
 
-    private fun getImportedActivityCounts(): Map<LocalDate, Int> = preferences
-        .getStringSet(KEY_IMPORTED_ACTIVITY, emptySet()).orEmpty()
-        .mapNotNull { encoded ->
-            val parts = encoded.split(ACTIVITY_SEPARATOR, limit = 2)
-            val date = parts.getOrNull(0)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-            val count = parts.getOrNull(1)?.toIntOrNull()
-            if (date != null && count != null && count > 0) date to count else null
-        }
-        .toMap()
+    fun pendingLibraryStatusConflicts(): List<LibraryStatusConflict> =
+        conflictRepository.pendingLibraryStatusConflicts()
 
-    private val preferences = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    private companion object {
-        const val PREFS_NAME = "hibiki_local_profile"
-        const val KEY_IMPORTED_ACTIVITY = "imported_activity"
-        const val ACTIVITY_SEPARATOR = '|'
+    fun applyRemoteLibraryStatus(conflict: LibraryStatusConflict) {
+        libraryRepository.replacePrimaryCategory(conflict.animeId, conflict.remoteCategory)
+        conflictRepository.clearLibraryStatusConflict(conflict.key)
     }
+
+    fun completeLocalLibraryStatusResolution(conflict: LibraryStatusConflict) {
+        conflictRepository.clearLibraryStatusConflict(conflict.key)
+    }
+
 }
+
+internal fun YummyUserList.toLibraryCategory(): LibraryCategory = when (this) {
+    YummyUserList.Watching -> LibraryCategory.Watching
+    YummyUserList.Planned -> LibraryCategory.Planned
+    YummyUserList.Completed -> LibraryCategory.Completed
+    YummyUserList.Dropped -> LibraryCategory.Dropped
+    YummyUserList.OnHold -> LibraryCategory.OnHold
+}
+
+internal fun LibraryCategory.toYummyUserList(): YummyUserList? = when (this) {
+    LibraryCategory.Watching -> YummyUserList.Watching
+    LibraryCategory.Planned -> YummyUserList.Planned
+    LibraryCategory.Completed -> YummyUserList.Completed
+    LibraryCategory.Dropped -> YummyUserList.Dropped
+    LibraryCategory.OnHold -> YummyUserList.OnHold
+    LibraryCategory.Favorite, LibraryCategory.Saved -> null
+}
+
+private fun Long.toEpochMillis(): Long = if (this in 1 until 1_000_000_000_000L) this * 1_000L else this
 
 data class LocalProfileData(
     val episodeProgress: List<EpisodeWatchProgress> = emptyList(),
     val library: List<LocalLibraryItem> = emptyList(),
-    val importedActivityCounts: Map<LocalDate, Int> = emptyMap(),
-    val activityOverrides: Map<LocalDate, Int> = emptyMap(),
 )
 
 data class LocalLibraryItem(

@@ -90,6 +90,38 @@ class LibraryRepository(context: Context) {
             .apply()
     }
 
+    /** Imports an entry which does not exist locally while preserving its remote timestamp. */
+    fun importLibraryEntry(
+        anime: Anime,
+        categories: Set<LibraryCategory>,
+        addedAt: Long?,
+    ) {
+        if (categories.isEmpty()) return
+        val normalizedAnime = anime.normalizeIds()
+        if (getLibraryCategories(normalizedAnime.id).isNotEmpty()) return
+
+        val ids = getLibraryIds().toMutableSet().apply { add(normalizedAnime.id) }
+        val editor = prefs.edit()
+            .putStringSet(LIBRARY_IDS_KEY, ids)
+            .putString(libraryAnimeKey(normalizedAnime.id), encodeAnime(normalizedAnime).toString())
+            .putStringSet(libraryCategorySetKey(normalizedAnime.id), categories.toStorageValues())
+        val normalizedAddedAt = addedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+        editor.putLong(libraryAddedAtKey(normalizedAnime.id), normalizedAddedAt).apply()
+    }
+
+    fun replacePrimaryCategory(id: String, category: LibraryCategory) {
+        require(category !in setOf(LibraryCategory.Favorite, LibraryCategory.Saved))
+        val categories = getLibraryCategories(id)
+            .filterTo(linkedSetOf()) { it == LibraryCategory.Favorite || it == LibraryCategory.Saved }
+            .apply { add(category) }
+        saveCategoriesOrRemove(id, categories)
+    }
+
+    fun addSupplementalCategory(id: String, category: LibraryCategory) {
+        require(category == LibraryCategory.Favorite || category == LibraryCategory.Saved)
+        saveCategoriesOrRemove(id, getLibraryCategories(id) + category)
+    }
+
     fun removeFromLibrary(id: String) {
         val remainingCategories = getLibraryCategories(id)
             .filterTo(mutableSetOf()) { it == LibraryCategory.Saved }
@@ -331,6 +363,9 @@ class LibraryRepository(context: Context) {
         categories: Set<LibraryCategory>,
     ) {
         val normalizedId = YummyIdMigration.normalizeTitleId(id)
+        // Read before legacy keys are removed so favorite-only records are migrated
+        // instead of losing their only serialized Anime payload.
+        val storedAnime = getStoredAnime(id)?.normalizeIds()
         val ids = getLibraryIds().toMutableSet()
         val editor = prefs.edit()
             .removeLegacyFavoriteEntries(id)
@@ -349,14 +384,21 @@ class LibraryRepository(context: Context) {
         editor
             .putStringSet(LIBRARY_IDS_KEY, ids)
             .putStringSet(libraryCategorySetKey(normalizedId), categories.toStorageValues())
+            .apply {
+                storedAnime?.let { anime ->
+                    putString(libraryAnimeKey(normalizedId), encodeAnime(anime).toString())
+                }
+            }
             .apply()
     }
 
     private fun Set<LibraryCategory>.withSelectedCategory(category: LibraryCategory): Set<LibraryCategory> {
-        return if (category == LibraryCategory.Saved) {
-            this + LibraryCategory.Saved
+        return if (category == LibraryCategory.Saved || category == LibraryCategory.Favorite) {
+            this + category
         } else {
-            filterTo(mutableSetOf()) { it == LibraryCategory.Saved } + category
+            filterTo(mutableSetOf()) {
+                it == LibraryCategory.Saved || it == LibraryCategory.Favorite
+            } + category
         }
     }
 

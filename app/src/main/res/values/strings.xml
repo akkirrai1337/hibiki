@@ -254,6 +254,17 @@
     <string name="yummy_account_date_yesterday">Yesterday</string>
     <string name="yummy_account_date_days_ago_short">%1$dd</string>
     <string name="yummy_account_duration_hours_short">%1$s h</string>
+    <string name="yummy_account_duration_less_than_hour">&lt;1 h</string>
+    <string name="yummy_account_watch_type_tv">TV series</string>
+    <string name="yummy_account_watch_type_short_tv">Short series</string>
+    <string name="yummy_account_watch_type_movie">Movie</string>
+    <string name="yummy_account_watch_type_short_movie">Short films</string>
+    <string name="yummy_account_watch_type_special">Specials</string>
+    <string name="yummy_account_sync_conflict_title">Library data differs</string>
+    <string name="yummy_account_sync_conflict_description">This title is “%1$s” in the app and “%2$s” on the website. Choose which value to keep on both sides.</string>
+    <string name="yummy_account_sync_use_app">Use app data</string>
+    <string name="yummy_account_sync_use_site">Use website data</string>
+    <string name="yummy_account_sync_error_title">Could not synchronize library</string>
     <string name="yummy_account_settings_title">Account settings</string>
     <string name="yummy_account_settings_session_title">Session</string>
     <string name="yummy_account_settings_session_hint">Manage technical account options and sign out from here.</string>

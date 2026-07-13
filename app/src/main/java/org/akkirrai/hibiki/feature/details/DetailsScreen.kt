@@ -1,5 +1,10 @@
 package org.akkirrai.hibiki.feature.details
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.Build
+import android.view.RoundedCorner
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -19,10 +24,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -88,6 +93,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
@@ -964,25 +970,46 @@ private fun TitleDetailsSheet(
     description: String,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val screenCornerRadiusPx = remember(context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.findActivity()
+                ?.windowManager
+                ?.currentWindowMetrics
+                ?.windowInsets
+                ?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)
+                ?.radius
+                ?: 0
+        } else {
+            0
+        }
+    }
+    val screenCornerRadius = with(density) { screenCornerRadiusPx.toDp() }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     AppModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxHeight(),
+        shape = RoundedCornerShape(
+            topStart = screenCornerRadius,
+            topEnd = screenCornerRadius,
+        ),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding(),
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
         ) {
             Text(
                 text = title,
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(horizontal = 24.dp, vertical = 18.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -990,13 +1017,21 @@ private fun TitleDetailsSheet(
             if (description.isNotBlank()) {
                 Text(
                     text = description,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable

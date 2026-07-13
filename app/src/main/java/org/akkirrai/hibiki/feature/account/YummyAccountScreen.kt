@@ -41,8 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.animeresolver.metadata.YummyProfile
-import org.akkirrai.animeresolver.metadata.YummyUserAnimeListItem
-import org.akkirrai.animeresolver.metadata.YummyUserListWatchStat
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFloatingBackButton
@@ -50,6 +48,8 @@ import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingIconButton
 import org.akkirrai.hibiki.core.design.component.YummySignInForm
 import org.akkirrai.hibiki.core.profile.LocalProfileData
+import org.akkirrai.hibiki.core.profile.LibraryStatusConflict
+import org.akkirrai.hibiki.core.profile.ProfileDataSource
 import org.akkirrai.hibiki.core.model.Anime
 
 @Composable
@@ -96,8 +96,6 @@ fun YummyAccountScreen(
 
             is YummyAccountScreenState.SignedIn -> SignedInProfileScreen(
                 profile = state.profile,
-                libraryItems = state.libraryItems,
-                listWatchStats = state.listWatchStats,
                 libraryMetadata = state.libraryMetadata,
                 localProfileData = state.localProfileData,
                 busy = uiState.busy,
@@ -134,6 +132,31 @@ fun YummyAccountScreen(
                         .padding(start = UiDimens.ScreenPadding, top = 14.dp)
                         .statusBarsPadding(),
                 )
+            }
+        }
+
+        if (state is YummyAccountScreenState.SignedIn) {
+            val syncError = uiState.syncError
+            if (syncError != null) {
+                AlertDialog(
+                    onDismissRequest = viewModel::clearSyncError,
+                    title = { Text(stringResource(R.string.yummy_account_sync_error_title)) },
+                    text = { Text(syncError) },
+                    confirmButton = {
+                        TextButton(onClick = viewModel::clearSyncError) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                )
+            } else {
+                state.libraryConflicts.firstOrNull()?.let { conflict ->
+                    LibraryStatusConflictDialog(
+                        conflict = conflict,
+                        busy = uiState.busy,
+                        onUseLocal = { viewModel.resolveLibraryConflict(conflict, ProfileDataSource.Local) },
+                        onUseRemote = { viewModel.resolveLibraryConflict(conflict, ProfileDataSource.Remote) },
+                    )
+                }
             }
         }
     }
@@ -251,20 +274,16 @@ private fun SignedOutScreen(
 @Composable
 private fun SignedInProfileScreen(
     profile: YummyProfile,
-    libraryItems: List<YummyUserAnimeListItem>,
-    listWatchStats: List<YummyUserListWatchStat>,
     libraryMetadata: List<Anime>,
     localProfileData: LocalProfileData,
     busy: Boolean,
     paddingValues: PaddingValues,
 ) {
     val context = LocalContext.current
-    val snapshot = remember(context.resources, profile, libraryItems, listWatchStats, libraryMetadata, localProfileData) {
+    val snapshot = remember(context.resources, profile, libraryMetadata, localProfileData) {
         buildProfileSnapshot(
             resources = context.resources,
             profile = profile,
-            libraryItems = libraryItems,
-            listWatchStats = listWatchStats,
             libraryMetadata = libraryMetadata,
             localData = localProfileData,
         )
@@ -285,6 +304,45 @@ private fun SignedInProfileScreen(
         RecentLibraryCard(items = snapshot.recentLibraryItems)
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun LibraryStatusConflictDialog(
+    conflict: LibraryStatusConflict,
+    busy: Boolean,
+    onUseLocal: () -> Unit,
+    onUseRemote: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.yummy_account_sync_conflict_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = conflict.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.yummy_account_sync_conflict_description,
+                        stringResource(conflict.localCategory.labelResId),
+                        stringResource(conflict.remoteCategory.labelResId),
+                    ),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onUseRemote, enabled = !busy) {
+                Text(stringResource(R.string.yummy_account_sync_use_site))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onUseLocal, enabled = !busy) {
+                Text(stringResource(R.string.yummy_account_sync_use_app))
+            }
+        },
+    )
 }
 
 @Composable
