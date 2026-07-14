@@ -59,7 +59,6 @@ fun AppModalBottomSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp)
                     .background(dragHandleBackgroundColor),
                 contentAlignment = Alignment.Center,
             ) {

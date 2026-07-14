@@ -78,6 +78,9 @@ import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
+import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
+import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
 @OptIn(
@@ -113,11 +116,11 @@ fun HomeSearchFiltersSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         modifier = modifier,
-    ) {
+    ) { sheetContentModifier ->
         when {
             state.isSearchFilterCatalogLoading && state.searchFilterCatalog == null -> {
                 Box(
-                    modifier = Modifier
+                    modifier = sheetContentModifier
                         .fillMaxWidth()
                         .height(260.dp),
                     contentAlignment = Alignment.Center,
@@ -128,7 +131,7 @@ fun HomeSearchFiltersSheet(
 
             state.searchFilterCatalog == null -> {
                 Box(
-                    modifier = Modifier
+                    modifier = sheetContentModifier
                         .fillMaxWidth()
                         .height(260.dp)
                         .padding(24.dp),
@@ -144,19 +147,18 @@ fun HomeSearchFiltersSheet(
             else -> {
                 val catalog = state.searchFilterCatalog ?: return@AppFilterBottomSheet
                 Column(
-                    modifier = Modifier
+                    modifier = sheetContentModifier
                         .background(
                             Brush.verticalGradient(
                                 0f to MaterialTheme.colorScheme.surfaceContainerHighest,
                                 1f to MaterialTheme.colorScheme.background,
                             )
                         )
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 24.dp),
                 ) {
-                    ConnectedToggleFilter(
+                    AppConnectedToggleFilter(
                         title = stringResource(R.string.search_filters_type),
                         entries = FilterAnimeType.entries,
                         selected = animeType,
@@ -167,7 +169,7 @@ fun HomeSearchFiltersSheet(
                         text = { it.label },
                     )
 
-                    ThreeStateChipFilter(
+                    AppThreeStateChipFilter(
                         title = stringResource(R.string.search_filters_genres),
                         options = catalog.genreOptions,
                         included = pendingFilters.includedGenreAliases,
@@ -178,10 +180,12 @@ fun HomeSearchFiltersSheet(
                                 excludedGenreAliases = excluded,
                             )
                         },
+                        id = { it.id },
+                        text = { appFilterOptionText(it.title) },
                         maxCollapsedItems = 15,
                     )
 
-                    ConnectedToggleFilter(
+                    AppConnectedToggleFilter(
                         title = stringResource(R.string.search_filters_season),
                         entries = FilterSeason.entries,
                         selected = season,
@@ -196,7 +200,7 @@ fun HomeSearchFiltersSheet(
                         onYearChange = { year = it },
                     )
 
-                    ThreeStateChipFilter(
+                    AppThreeStateChipFilter(
                         title = stringResource(R.string.search_filters_status),
                         options = catalog.statusOptions,
                         included = includedStatuses,
@@ -205,6 +209,8 @@ fun HomeSearchFiltersSheet(
                             includedStatuses = included
                             excludedStatuses = excluded
                         },
+                        id = { it.id },
+                        text = { appFilterOptionText(it.title) },
                         optionIcon = { statusIcon(it.id) },
                     )
 

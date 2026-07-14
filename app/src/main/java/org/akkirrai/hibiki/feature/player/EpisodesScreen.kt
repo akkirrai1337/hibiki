@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
@@ -126,7 +127,8 @@ fun EpisodesScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = UiDimens.ScreenPadding, top = 8.dp),
+                .padding(end = UiDimens.ScreenPadding, top = 8.dp)
+                .zIndex(1f),
             style = if (downloadControlsVisible) {
                 AppFilledIconButtonStyle.PrimaryContainer
             } else {

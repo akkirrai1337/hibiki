@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,10 +21,12 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
@@ -36,6 +39,8 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -59,9 +64,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,6 +84,9 @@ import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
+import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
+import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
@@ -302,246 +312,104 @@ private fun LibrarySearchFiltersSheet(
     AppFilterBottomSheet(
         sheetState = sheetState,
         onDismissRequest = onDismiss,
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize(),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+    ) { sheetContentModifier ->
+        Column(
+            modifier = sheetContentModifier
+                .background(
+                    Brush.verticalGradient(
+                        0f to MaterialTheme.colorScheme.surfaceContainerHighest,
+                        1f to MaterialTheme.colorScheme.background,
+                    )
+                )
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            AppConnectedToggleFilter(
+                title = stringResource(R.string.search_filters_type),
+                entries = catalog.typeOptions,
+                selected = pendingFilters.type,
+                onSelected = { pendingFilters = pendingFilters.copy(type = it) },
+                icon = { ImageVector.vectorResource(libraryTypeIcon(it)) },
+                text = { appFilterOptionText(it).uppercase() },
+            )
+
+            AppConnectedToggleFilter(
+                title = stringResource(R.string.search_filters_status),
+                entries = catalog.statusOptions,
+                selected = pendingFilters.status,
+                onSelected = { pendingFilters = pendingFilters.copy(status = it) },
+                icon = { ImageVector.vectorResource(libraryStatusIcon(it)) },
+                text = { appFilterOptionText(it) },
+            )
+
+            AppThreeStateChipFilter(
+                title = stringResource(R.string.search_filters_genres),
+                options = catalog.genreOptions,
+                included = pendingFilters.includedGenres,
+                excluded = pendingFilters.excludedGenres,
+                onChange = { included, excluded ->
+                    pendingFilters = pendingFilters.copy(
+                        includedGenres = included,
+                        excludedGenres = excluded,
+                    )
+                },
+                id = { it },
+                text = { appFilterOptionText(it) },
+                maxCollapsedItems = 15,
+            )
+
+            FlowRow(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .align(Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                Button(
+                    onClick = { pendingFilters = LibrarySearchFilters() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ),
                 ) {
-                    Text(
-                        text = stringResource(R.string.search_filters_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Outlined.Close,
-                            contentDescription = stringResource(R.string.action_cancel),
-                        )
-                    }
+                    Icon(ImageVector.vectorResource(R.drawable.animite_reset), null, Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(stringResource(R.string.search_filters_reset), fontWeight = FontWeight.SemiBold)
                 }
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 520.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                Spacer(modifier = Modifier.size(16.dp))
+                Button(
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            onApply(pendingFilters)
+                        }
+                    },
                 ) {
-                    filterSection(
-                        titleResId = R.string.search_filters_type
-                    ) {
-                        LibrarySingleChoiceOptions(
-                            options = catalog.typeOptions,
-                            selected = pendingFilters.type,
-                            onSelect = { pendingFilters = pendingFilters.copy(type = it) },
-                        )
-                    }
-                    item { HorizontalDivider() }
-                    filterSection(
-                        titleResId = R.string.search_filters_status
-                    ) {
-                        LibrarySingleChoiceOptions(
-                            options = catalog.statusOptions,
-                            selected = pendingFilters.status,
-                            onSelect = { pendingFilters = pendingFilters.copy(status = it) },
-                        )
-                    }
-                    item { HorizontalDivider() }
-                    filterSection(
-                        titleResId = R.string.search_filters_genres
-                    )
-                    items(catalog.genreOptions, key = { it }) { genre ->
-                        LibraryGenreFilterRow(
-                            label = genre,
-                            isIncluded = genre in pendingFilters.includedGenres,
-                            isExcluded = genre in pendingFilters.excludedGenres,
-                            onIncludeClick = {
-                                val included = pendingFilters.includedGenres.toMutableSet()
-                                val excluded = pendingFilters.excludedGenres.toMutableSet()
-                                if (!included.add(genre)) included.remove(genre)
-                                excluded.remove(genre)
-                                pendingFilters = pendingFilters.copy(
-                                    includedGenres = included,
-                                    excludedGenres = excluded,
-                                )
-                            },
-                            onExcludeClick = {
-                                val included = pendingFilters.includedGenres.toMutableSet()
-                                val excluded = pendingFilters.excludedGenres.toMutableSet()
-                                if (!excluded.add(genre)) excluded.remove(genre)
-                                included.remove(genre)
-                                pendingFilters = pendingFilters.copy(
-                                    includedGenres = included,
-                                    excludedGenres = excluded,
-                                )
-                            },
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(
-                        onClick = { pendingFilters = LibrarySearchFilters() },
-                    ) {
-                        Text(text = stringResource(R.string.search_filters_reset))
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            scope.launch {
-                                sheetState.hide()
-                                onApply(pendingFilters)
-                            }
-                        },
-                    ) {
-                        Text(text = stringResource(R.string.search_filters_apply))
-                    }
+                    Icon(ImageVector.vectorResource(R.drawable.animite_done), null, Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(stringResource(R.string.search_filters_apply), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.filterSection(
-    @androidx.annotation.StringRes titleResId: Int,
-    content: (@Composable () -> Unit)? = null,
-) {
-    item {
-        SectionHeader(
-            title = stringResource(titleResId),
-            titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            titleColor = MaterialTheme.colorScheme.onBackground,
-        )
-        content?.invoke()
-    }
+private fun libraryTypeIcon(type: String): Int = when (type.trim().lowercase()) {
+    "tv" -> R.drawable.animite_tv
+    "ona" -> R.drawable.animite_ona
+    "ova" -> R.drawable.animite_ova
+    "movie", "film" -> R.drawable.animite_movie
+    else -> R.drawable.animite_tv
 }
 
-@Composable
-private fun LibrarySingleChoiceOptions(
-    options: List<String>,
-    selected: String?,
-    onSelect: (String?) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        LibrarySingleChoiceRow(
-            title = stringResource(R.string.search_filters_any),
-            selected = selected == null,
-            onClick = { onSelect(null) },
-        )
-        options.forEach { option ->
-            LibrarySingleChoiceRow(
-                title = option,
-                selected = option == selected,
-                onClick = { onSelect(option) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun LibrarySingleChoiceRow(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    LibraryFilterRow(
-        label = title,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        labelStyle = MaterialTheme.typography.bodyLarge,
-    ) {
-        RadioButton(selected = selected, onClick = onClick)
-    }
-}
-
-@Composable
-private fun LibraryGenreFilterRow(
-    label: String,
-    isIncluded: Boolean,
-    isExcluded: Boolean,
-    onIncludeClick: () -> Unit,
-    onExcludeClick: () -> Unit,
-) {
-    LibraryFilterRow(
-        label = label,
-        modifier = Modifier
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        labelStyle = MaterialTheme.typography.bodyMedium,
-    ) {
-        LibraryGenreModeChip(
-            label = stringResource(R.string.search_filters_include),
-            selected = isIncluded,
-            onClick = onIncludeClick,
-        )
-        LibraryGenreModeChip(
-            label = stringResource(R.string.search_filters_exclude),
-            selected = isExcluded,
-            onClick = onExcludeClick,
-        )
-    }
-}
-
-@Composable
-private fun LibraryFilterRow(
-    label: String,
-    modifier: Modifier = Modifier,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(0.dp),
-    labelStyle: androidx.compose.ui.text.TextStyle,
-    trailingContent: @Composable RowScope.() -> Unit,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = horizontalArrangement,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            style = labelStyle,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        trailingContent()
-    }
-}
-
-@Composable
-private fun LibraryGenreModeChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.clip(RoundedCornerShape(999.dp)),
-        shape = RoundedCornerShape(999.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-        )
-    }
+private fun libraryStatusIcon(status: String): Int = when (status.trim().lowercase()) {
+    "released", "finished", "completed" -> R.drawable.animite_finished
+    "ongoing", "releasing", "airing" -> R.drawable.animite_releasing
+    "announced", "not_yet_released", "not-yet-released" -> R.drawable.animite_not_yet_released
+    "cancelled", "canceled" -> R.drawable.animite_cancelled
+    "hiatus", "paused" -> R.drawable.animite_hiatus
+    else -> R.drawable.animite_finished
 }
 
 @Composable
