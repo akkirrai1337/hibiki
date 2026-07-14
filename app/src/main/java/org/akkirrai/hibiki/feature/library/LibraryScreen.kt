@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,13 +47,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.ui.window.Dialog
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,11 +70,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
@@ -87,7 +91,7 @@ import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     onAnimeClick: (Anime) -> Unit,
@@ -116,6 +120,7 @@ fun LibraryScreen(
     LaunchedEffect(isActive) {
         if (isActive) {
             PerfLogger.mark("LibraryScreen active", "defer=${LIBRARY_DEFERRED_SYNC_DELAY_MS}ms")
+            viewModel.refreshProfileAvatar()
             delay(LIBRARY_DEFERRED_SYNC_DELAY_MS)
             PerfLogger.mark("LibraryScreen deferred sync trigger")
             viewModel.syncFromStorage()
@@ -140,6 +145,7 @@ fun LibraryScreen(
                 AppSearchTopBar(
                     query = state.searchQuery,
                     isSearchActive = isSearchActive,
+                    profileAvatarUrl = state.profileAvatarUrl,
                     onQueryChange = viewModel::onSearchQueryChange,
                     onClear = viewModel::clearSearch,
                     onProfileClick = onProfileClick,
@@ -204,7 +210,7 @@ fun LibraryScreen(
     }
 
     if (isFilterDialogVisible) {
-        LibrarySearchFiltersDialog(
+        LibrarySearchFiltersSheet(
             catalog = state.filterCatalog,
             currentFilters = state.searchFilters,
             onDismiss = { isFilterDialogVisible = false },
@@ -281,20 +287,25 @@ private fun LibraryCategoryChips(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LibrarySearchFiltersDialog(
+private fun LibrarySearchFiltersSheet(
     catalog: LibraryFilterCatalog,
     currentFilters: LibrarySearchFilters,
     onDismiss: () -> Unit,
     onApply: (LibrarySearchFilters) -> Unit,
 ) {
     var pendingFilters by remember(currentFilters) { mutableStateOf(currentFilters) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
 
-    Dialog(onDismissRequest = onDismiss) {
+    AppFilterBottomSheet(
+        sheetState = sheetState,
+        onDismissRequest = onDismiss,
+    ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp),
+                .fillMaxSize(),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
@@ -390,7 +401,12 @@ private fun LibrarySearchFiltersDialog(
                         Text(text = stringResource(R.string.search_filters_reset))
                     }
                     FilledTonalButton(
-                        onClick = { onApply(pendingFilters) },
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                                onApply(pendingFilters)
+                            }
+                        },
                     ) {
                         Text(text = stringResource(R.string.search_filters_apply))
                     }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -52,6 +53,8 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
+import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
@@ -93,6 +96,7 @@ fun EpisodesScreen(
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
+    var downloadControlsVisible by remember(sourceId, downloadMode) { mutableStateOf(downloadMode) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(state.result, sourceId) {
@@ -117,6 +121,24 @@ fun EpisodesScreen(
         navigationLocked = navigationLocked,
         modifier = modifier,
     ) {
+        AppFilledIconButton(
+            onClick = { downloadControlsVisible = !downloadControlsVisible },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = UiDimens.ScreenPadding, top = 8.dp),
+            style = if (downloadControlsVisible) {
+                AppFilledIconButtonStyle.PrimaryContainer
+            } else {
+                AppFilledIconButtonStyle.Surface
+            },
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Download,
+                contentDescription = stringResource(R.string.watch_download),
+            )
+        }
+
         when (val result = state.result) {
             EpisodesUiState.Loading -> {
                 AppCenteredLoading(modifier = Modifier.fillMaxSize())
@@ -167,7 +189,7 @@ fun EpisodesScreen(
                                 nextEpisodeId = nextEpisodeId,
                             ),
                             downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
-                            showDownloadControls = downloadMode,
+                            showDownloadControls = downloadControlsVisible,
                             enabled = !navigationLocked,
                             onClick = {
                                 if (navigationLocked) return@EpisodeRow

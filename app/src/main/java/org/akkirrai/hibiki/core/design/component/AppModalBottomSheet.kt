@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +59,7 @@ fun AppModalBottomSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(36.dp)
                     .background(dragHandleBackgroundColor),
                 contentAlignment = Alignment.Center,
             ) {

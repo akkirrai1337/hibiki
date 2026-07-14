@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -78,7 +77,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
+import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import java.time.Year
 
 @OptIn(
@@ -110,12 +109,10 @@ fun HomeSearchFiltersSheet(
         )
     }
 
-    AppModalBottomSheet(
+    AppFilterBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        modifier = modifier.fillMaxHeight(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        scrimColor = Color.Black.copy(alpha = 0.56f),
+        modifier = modifier,
     ) {
         when {
             state.isSearchFilterCatalogLoading && state.searchFilterCatalog == null -> {
@@ -145,7 +142,7 @@ fun HomeSearchFiltersSheet(
             }
 
             else -> {
-                val catalog = state.searchFilterCatalog ?: return@AppModalBottomSheet
+                val catalog = state.searchFilterCatalog ?: return@AppFilterBottomSheet
                 Column(
                     modifier = Modifier
                         .background(

@@ -312,6 +312,7 @@ fun DetailsScreen(
                     anime = uiModel.anime,
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
+                    bannerTint = Color(titleSeedColor ?: 0).copy(alpha = 0.25f),
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
                     canWatch = canWatch,
@@ -440,6 +441,7 @@ private fun DetailHeroSection(
     anime: Anime,
     heroInfo: HeroInfo,
     description: String,
+    bannerTint: Color,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     canWatch: Boolean,
@@ -467,12 +469,12 @@ private fun DetailHeroSection(
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )
-    val bannerHeight = 240.dp
+    val bannerHeight = 168.dp
     val posterExpandedHeight = 200.dp
-    val posterTop = 228.dp
-    val detailsTop = 248.dp
+    val posterTop = 156.dp
+    val detailsTop = 168.dp
     val detailsHeight = 180.dp
-    val heroHeight = 428.dp
+    val heroHeight = 356.dp
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -484,6 +486,7 @@ private fun DetailHeroSection(
         ) {
             DetailHeroMedia(
                 anime = anime,
+                bannerTint = bannerTint,
                 resumeState = resumeState,
                 resumeFrame = resumeFrame,
                 onResumeClick = onResumeClick,
@@ -497,7 +500,7 @@ private fun DetailHeroSection(
                     .fillMaxWidth()
                     .height(80.dp)
                     .align(Alignment.TopCenter)
-                    .offset(y = 160.dp)
+                    .offset(y = bannerHeight - 80.dp)
                     .background(
                         Brush.verticalGradient(
                             listOf(Color.Transparent, MaterialTheme.colorScheme.background),
@@ -574,9 +577,7 @@ private fun DetailHeroSection(
                         }
                         if (description.isNotBlank()) {
                             NestedScrollableContent(
-                                modifier = Modifier.height(
-                                    if (hasHeroRatings && nextEpisodeEta != null) 73.dp else 93.dp
-                                ),
+                                modifier = Modifier.weight(1f),
                             ) { contentModifier ->
                                 Text(
                                     text = description,
@@ -707,8 +708,7 @@ private fun NextEpisodeChip(
 @Composable
 private fun NestedScrollableContent(
     modifier: Modifier = Modifier,
-    gradientSize: Dp = 0.dp,
-    bottomGradientSize: Dp = 24.dp,
+    gradientSize: Dp = 8.dp,
     gradientColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable (Modifier) -> Unit,
 ) {
@@ -716,7 +716,7 @@ private fun NestedScrollableContent(
         content(
             Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(top = gradientSize, bottom = bottomGradientSize)
+                .padding(vertical = gradientSize)
         )
         Box(
             modifier = Modifier
@@ -731,7 +731,7 @@ private fun NestedScrollableContent(
         )
         Box(
             modifier = Modifier
-                .height(bottomGradientSize)
+                .height(gradientSize)
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .background(
@@ -746,6 +746,7 @@ private fun NestedScrollableContent(
 @Composable
 private fun DetailHeroMedia(
     anime: Anime,
+    bannerTint: Color,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
@@ -773,6 +774,12 @@ private fun DetailHeroMedia(
                 contentDescription = null,
             )
         }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(bannerTint),
+        )
 
         when {
             resumeState != null -> {
