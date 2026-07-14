@@ -60,7 +60,6 @@ import org.akkirrai.hibiki.feature.account.YummyAccountViewModel
 import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
-import org.akkirrai.hibiki.feature.home.HomeSearchFiltersScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
 import org.akkirrai.hibiki.feature.home.RecentUpdatesScreen
 import org.akkirrai.hibiki.feature.home.TrendingAnimeScreen
@@ -222,33 +221,9 @@ private fun HibikiNavHost(
                 onProfileClick = {
                     navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
                 },
-                onFilterClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.SEARCH_FILTERS_ROUTE)
-                },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
-            )
-        }
-        composable(
-            route = AnimeNavType.SEARCH_FILTERS_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
-        ) {
-            val context = LocalContext.current
-            val homeEntry = remember(navController) {
-                navController.getBackStackEntry(TopLevelDestination.Home.route)
-            }
-            val homeViewModel: HomeViewModel = viewModel(
-                viewModelStoreOwner = homeEntry,
-                factory = HomeViewModel.Factory(context),
-            )
-            HomeSearchFiltersScreen(
-                viewModel = homeViewModel,
-                onBackClick = navController::navigateUp,
-                modifier = topLevelScreenModifier.statusBarsPadding(),
             )
         }
         composable(

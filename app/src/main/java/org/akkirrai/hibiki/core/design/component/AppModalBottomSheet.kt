@@ -1,5 +1,9 @@
 package org.akkirrai.hibiki.core.design.component
 
+import android.content.Context
+import android.os.Build
+import android.view.RoundedCorner
+import android.view.WindowManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,10 +22,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -31,18 +38,19 @@ fun AppModalBottomSheet(
     onDismissRequest: () -> Unit,
     sheetState: SheetState,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    shape: Shape? = null,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     scrimColor: Color = Color.Black.copy(alpha = 0.5f),
     tonalElevation: Dp = 0.dp,
     dragHandleBackgroundColor: Color = Color.Transparent,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val resolvedShape = shape ?: rememberDeviceScreenTopCornerShape()
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
         sheetState = sheetState,
-        shape = shape,
+        shape = resolvedShape,
         containerColor = containerColor,
         scrimColor = scrimColor,
         tonalElevation = tonalElevation,
@@ -75,4 +83,25 @@ fun AppModalBottomSheet(
         },
         content = content,
     )
+}
+
+@Composable
+private fun rememberDeviceScreenTopCornerShape(): Shape {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val cornerRadiusPx = remember(context) { context.deviceScreenCornerRadiusPx() }
+    val cornerRadius = with(density) { cornerRadiusPx.toDp() }
+    return remember(cornerRadius) {
+        RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    }
+}
+
+private fun Context.deviceScreenCornerRadiusPx(): Int {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return 0
+    return getSystemService(WindowManager::class.java)
+        ?.currentWindowMetrics
+        ?.windowInsets
+        ?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)
+        ?.radius
+        ?: 0
 }

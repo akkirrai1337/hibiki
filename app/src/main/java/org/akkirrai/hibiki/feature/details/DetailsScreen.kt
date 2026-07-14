@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
@@ -91,6 +93,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -359,6 +362,11 @@ fun DetailsScreen(
             }
                 }
 
+                DetailsStatusBarScrim(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
+
                 HeroOverlayBackButton(
                     onClick = onBackClick,
                     modifier = Modifier.align(Alignment.TopStart),
@@ -398,6 +406,33 @@ fun DetailsScreen(
             )
         }
     }
+}
+
+@Composable
+private fun DetailsStatusBarScrim(
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    val density = LocalDensity.current
+    val distanceUntilOpaquePx = with(density) { 168.dp.toPx() }
+    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    val alpha by remember(listState, distanceUntilOpaquePx) {
+        derivedStateOf {
+            if (listState.firstVisibleItemIndex > 0) {
+                0.74f
+            } else {
+                0.74f * (listState.firstVisibleItemScrollOffset / distanceUntilOpaquePx)
+                    .coerceIn(0f, 1f)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(statusBarHeight)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = alpha)),
+    )
 }
 
 @Composable
@@ -1068,11 +1103,12 @@ private fun TitleDetailsSheet(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .padding(horizontal = 24.dp, vertical = 16.dp),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                ),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = description,

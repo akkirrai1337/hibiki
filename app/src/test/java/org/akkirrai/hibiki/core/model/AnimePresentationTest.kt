@@ -23,7 +23,26 @@ class AnimePresentationTest {
             episodesLabel = "24 episodes",
         )
 
-        assertEquals("2025", anime.buildCardMeta(announcementLabel = "Announced"))
+        assertEquals(
+            "TV | 2025",
+            anime.buildCardMeta(
+                announcementLabel = "Announced",
+                separator = " | ",
+            ),
+        )
+    }
+
+    @Test
+    fun `buildCardMeta normalizes anime type before year`() {
+        val anime = anime(subtitle = "Short Movie | 2024")
+
+        assertEquals(
+            "MOVIE | 2024",
+            anime.buildCardMeta(
+                announcementLabel = "Announced",
+                separator = " | ",
+            ),
+        )
     }
 
     @Test

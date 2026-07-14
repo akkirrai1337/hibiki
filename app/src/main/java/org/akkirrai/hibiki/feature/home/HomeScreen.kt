@@ -85,6 +85,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -143,7 +144,6 @@ fun HomeScreen(
     onRecentUpdatesClick: () -> Unit,
     onRandomAnimeClick: (Anime) -> Unit,
     onProfileClick: () -> Unit,
-    onFilterClick: () -> Unit,
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     modifier: Modifier = Modifier
@@ -157,6 +157,7 @@ fun HomeScreen(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var isSearchFocused by remember { mutableStateOf(false) }
+    var showSearchFilters by rememberSaveable { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
     val isSearchBarExpanded = isSearchFocused && isImeVisible
     val isSearchActive = state.searchQuery.isNotBlank() ||
@@ -352,7 +353,7 @@ fun HomeScreen(
             onFilterClick = {
                 keyboardController?.hide()
                 focusManager.clearFocus(force = true)
-                onFilterClick()
+                showSearchFilters = true
             },
             onFocusChange = { isSearchFocused = it },
             modifier = Modifier
@@ -360,6 +361,13 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(horizontal = UiDimens.ScreenPadding)
         )
+
+        if (showSearchFilters) {
+            HomeSearchFiltersSheet(
+                viewModel = viewModel,
+                onDismissRequest = { showSearchFilters = false },
+            )
+        }
     }
 }
 

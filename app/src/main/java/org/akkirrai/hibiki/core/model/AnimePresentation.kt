@@ -18,9 +18,10 @@ fun Anime.buildCardMeta(
         .filter { it.isNotEmpty() && it != UNKNOWN_META_VALUE }
         .take(maxSubtitleParts)
 
-    val type = subtitleParts.firstOrNull()?.lowercase(Locale.getDefault()).orEmpty()
+    val type = subtitleParts
+        .firstOrNull { !it.matches(YEAR_REGEX) }
+        ?.toCardTypeLabel(movieLabel)
     val year = subtitleParts.firstOrNull { it.matches(YEAR_REGEX) }
-    val contentLabel = movieLabel.takeIf { type in MOVIE_TYPES }
     val rating = ratings
         .firstOrNull { it.source.contains("yummy", ignoreCase = true) }
         ?.value
@@ -28,7 +29,7 @@ fun Anime.buildCardMeta(
         ?: ratings.firstOrNull()?.value?.takeIf { it.isFinite() && it > 0.0 }
     val ratingLabel = rating?.let { String.format(Locale.US, "%.1f ★", it) }
 
-    return listOfNotNull(contentLabel, year, ratingLabel).joinToString(separator)
+    return listOfNotNull(type, year, ratingLabel).joinToString(separator)
 }
 
 fun Anime.buildLibraryMeta(
@@ -53,4 +54,17 @@ fun Anime.isAnnouncement(): Boolean {
 
 private const val UNKNOWN_META_VALUE = "Unknown"
 private val YEAR_REGEX = Regex("\\d{4}")
-private val MOVIE_TYPES = setOf("movie", "short movie", "film", "полнометражный фильм")
+
+private fun String.toCardTypeLabel(movieLabel: String): String? {
+    val normalized = trim().lowercase(Locale.ROOT).replace('_', ' ').replace('-', ' ')
+    return when (normalized) {
+        "tv", "tv series", "tv short", "short serial", "serial", "сериал" -> "TV"
+        "ona" -> "ONA"
+        "ova" -> "OVA"
+        "movie", "short movie", "film", "полнометражный фильм", "короткометражный фильм" -> "MOVIE"
+        "special", "спэшл" -> "SPECIAL"
+        else -> movieLabel.takeIf {
+            normalized.contains("movie") || normalized.contains("фильм")
+        }
+    }
+}
