@@ -217,33 +217,20 @@ private fun HibikiNavHost(
                 onRandomAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                onProfileClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
-                },
+                onProfileClick = { navController.navigateTopLevelDestination(currentTopLevel, TopLevelDestination.Profile) },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
             )
         }
-        composable(
-            route = AnimeNavType.ACCOUNT_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() }
-        ) { backStackEntry ->
-            val context = LocalContext.current
-            val profileViewModel: LocalProfileViewModel = viewModel(
-                viewModelStoreOwner = backStackEntry,
-                factory = LocalProfileViewModel.Factory(context),
-            )
+        topLevelComposable(route = TopLevelDestination.Profile.route) {
             LocalProfileScreen(
-                onBackClick = navController::navigateUp,
                 onSettingsClick = {
-                    navController.navigateSingleTopTo(TopLevelDestination.Settings.route)
+                    navController.navigate(AnimeNavType.SETTINGS_ROUTE)
                 },
-                modifier = screenModifier,
-                viewModel = profileViewModel,
+                // The profile owns its status-bar background like Animite's screen.
+                // Do not apply Scaffold's top inset a second time here.
+                modifier = Modifier.fillMaxSize(),
             )
         }
         topLevelComposable(route = TopLevelDestination.Library.route) {
@@ -251,9 +238,7 @@ private fun HibikiNavHost(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                onProfileClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_ROUTE)
-                },
+                onProfileClick = { navController.navigateTopLevelDestination(currentTopLevel, TopLevelDestination.Profile) },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
@@ -274,9 +259,15 @@ private fun HibikiNavHost(
                 modifier = screenModifier.statusBarsPadding(),
             )
         }
-        topLevelComposable(route = TopLevelDestination.Settings.route) {
+        composable(
+            route = AnimeNavType.SETTINGS_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) {
             SettingsScreen(
-                modifier = topLevelScreenModifier.statusBarsPadding(),
+                modifier = screenModifier,
                 bottomContentPadding = topLevelBottomContentPadding,
                 onCheckForUpdates = onCheckForUpdates,
             )

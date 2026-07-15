@@ -455,20 +455,6 @@ private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsP
             legendColumns = 2,
         ),
         AnalyticsPage(
-            title = "Время просмотра по спискам",
-            centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
-            centerSecondary = "всего",
-            segments = snapshot.genreSegments.map { segment ->
-                AnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = segment.count.toString(),
-                    weight = segment.count.toFloat(),
-                    color = segment.color,
-                )
-            },
-            legendColumns = 2,
-        ),
-        AnalyticsPage(
             title = "Жанры",
             centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
             centerSecondary = "жанров",
