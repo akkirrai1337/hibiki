@@ -22,14 +22,11 @@ import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.feature.account.resolvedAvatarUrl
 
 class HomeViewModel(
     private val repository: HomeRepository,
-    private val accountRepository: YummyAccountRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext
@@ -42,7 +39,6 @@ class HomeViewModel(
     init {
         PerfLogger.mark("HomeViewModel created")
         load()
-        refreshProfileAvatar()
         loadSearchFilterCatalog()
         observeLanguageChanges()
     }
@@ -63,7 +59,6 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                        profileAvatarUrl = current.profileAvatarUrl,
                     )
                     enrichRecentDescriptions()
                     PerfLogger.mark(
@@ -87,10 +82,8 @@ class HomeViewModel(
     }
 
     private var searchJob: Job? = null
-    private var profileAvatarJob: Job? = null
     private var recentDescriptionsJob: Job? = null
     private val recentRandomIds = ArrayDeque<String>()
-    private var lastProfileAvatarReadAt = 0L
 
     fun onSearchQueryChange(value: String) {
         _uiState.update { it.copy(searchQuery = value) }
@@ -336,7 +329,6 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                        profileAvatarUrl = current.profileAvatarUrl,
                     )
                     enrichRecentDescriptions()
                     PerfLogger.mark(
@@ -359,33 +351,6 @@ class HomeViewModel(
         }
     }
 
-    fun refreshProfileAvatar() {
-        val now = SystemClock.elapsedRealtime()
-        if (profileAvatarJob?.isActive == true) {
-            PerfLogger.mark("Home profile avatar refresh skipped", "reason=already_running")
-            return
-        }
-        if (lastProfileAvatarReadAt > 0L && now - lastProfileAvatarReadAt < PROFILE_AVATAR_CACHE_READ_THROTTLE_MS) {
-            PerfLogger.mark(
-                event = "Home profile avatar refresh skipped",
-                details = "reason=throttled, sinceLast=${now - lastProfileAvatarReadAt}ms",
-            )
-            return
-        }
-
-        profileAvatarJob = viewModelScope.launch(Dispatchers.IO) {
-            val startedAt = System.currentTimeMillis()
-            PerfLogger.mark("Home profile avatar refresh started")
-            val cachedAvatarUrl = accountRepository.getCachedProfile()?.resolvedAvatarUrl()
-            lastProfileAvatarReadAt = SystemClock.elapsedRealtime()
-            _uiState.update { it.copy(profileAvatarUrl = cachedAvatarUrl) }
-            PerfLogger.mark(
-                event = "Home profile avatar refresh finished",
-                details = "source=cache, duration=${System.currentTimeMillis() - startedAt}ms, hasAvatar=${cachedAvatarUrl != null}",
-            )
-        }
-    }
-
     private fun enrichRecentDescriptions() {
         recentDescriptionsJob?.cancel()
         val ids = _uiState.value.recentlyUpdated.map { it.id }
@@ -401,10 +366,8 @@ class HomeViewModel(
 
     override fun onCleared() {
         searchJob?.cancel()
-        profileAvatarJob?.cancel()
         recentDescriptionsJob?.cancel()
         repository.close()
-        accountRepository.close()
         super.onCleared()
     }
 
@@ -446,7 +409,6 @@ class HomeViewModel(
         const val TRENDING_PAGE_SIZE = 20
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val RANDOM_HISTORY_SIZE = 20
-        const val PROFILE_AVATAR_CACHE_READ_THROTTLE_MS = 5_000L
     }
 
     class Factory(
@@ -457,7 +419,6 @@ class HomeViewModel(
             val dependencies = context.applicationContext.hibikiDependencies()
             return HomeViewModel(
                 repository = dependencies.homeRepository(),
-                accountRepository = dependencies.accountRepository(),
                 context = context.applicationContext,
             ) as T
         }

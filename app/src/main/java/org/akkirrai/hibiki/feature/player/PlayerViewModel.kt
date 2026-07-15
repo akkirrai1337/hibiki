@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.core.model.WatchEpisode
@@ -31,13 +30,10 @@ class PlayerViewModel(
     private val watchStateRepository: WatchStateRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
     private val offlineTitleMetadataRepository: OfflineTitleMetadataRepository,
-    private val accountRepository: YummyAccountRepository,
 ) : ViewModel() {
     private val titleId = sourceId.substringBefore(':')
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
-    private var lastSyncedVideoId: Long? = null
-    private var lastSyncedPositionMs: Long = 0L
     private val savedSelection = watchStateRepository.getSelectedSource(titleId)
         .takeIf { it.sourceId == sourceId }
     private val _uiState = MutableStateFlow(
@@ -345,12 +341,6 @@ class PlayerViewModel(
             positionMs = safePositionMs,
             durationMs = durationMs,
         )
-        syncPlaybackProgress(
-            videoId = playback.videoId,
-            positionMs = safePositionMs,
-            durationMs = durationMs,
-            watchedSeconds = watchedSeconds,
-        )
     }
 
     private fun persistSelection() {
@@ -365,41 +355,6 @@ class PlayerViewModel(
             backendId = state.selectedProviderId,
             autoSelect = false,
         )
-    }
-
-    private fun syncPlaybackProgress(
-        videoId: Long?,
-        positionMs: Long,
-        durationMs: Long,
-        watchedSeconds: List<Long>,
-    ) {
-        if (videoId == null || !accountRepository.isLoggedIn()) {
-            return
-        }
-        val isSameVideo = lastSyncedVideoId == videoId
-        val positionDelta = positionMs - lastSyncedPositionMs
-        val watchedToEnd = durationMs > 0L && positionMs >= durationMs * 0.9
-        if (isSameVideo && positionDelta in 0 until WATCH_SYNC_POSITION_STEP_MS && !watchedToEnd) {
-            return
-        }
-
-        lastSyncedVideoId = videoId
-        lastSyncedPositionMs = positionMs
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                accountRepository.markVideoWatched(
-                    videoId = videoId,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    watchedSeconds = watchedSeconds,
-                )
-            }.onFailure { error ->
-                AppLogger.w(
-                    PLAYBACK_LOG_TAG,
-                    "Failed to sync Yummy watch progress: videoId=$videoId, message=${error.message}",
-                )
-            }
-        }
     }
 
     fun consumePendingSeek() {
@@ -499,7 +454,6 @@ class PlayerViewModel(
                 watchStateRepository = dependencies.watchStateRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),
                 offlineTitleMetadataRepository = dependencies.offlineTitleMetadataRepository(),
-                accountRepository = dependencies.accountRepository(),
             ) as T
         }
     }

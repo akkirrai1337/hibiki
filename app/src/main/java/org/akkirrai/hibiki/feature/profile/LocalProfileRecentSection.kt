@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.account
+package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -128,7 +128,7 @@ private fun RecentPoster(
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
         contentAlignment = Alignment.Center,
     ) {
-        val posterUrl = normalizeYummyAssetUrl(item.posterUrl)
+        val posterUrl = normalizePosterUrl(item.posterUrl)
         if (posterUrl == null) {
             Box(
                 modifier = Modifier

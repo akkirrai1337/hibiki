@@ -11,13 +11,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-interface YummyAccountTokenStore {
-    fun getAccessToken(): String?
-    fun saveAccessToken(token: String)
-    fun clearAccessToken()
-    fun hasAccessToken(): Boolean = !getAccessToken().isNullOrBlank()
-}
-
 interface YummyApplicationTokenStore {
     fun getApplicationToken(): String?
     fun getEffectiveApplicationToken(): String =
@@ -28,34 +21,6 @@ interface YummyApplicationTokenStore {
     companion object {
         // This header is required for stable YummyAnime API access across all sources.
         const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
-    }
-}
-
-class AndroidKeystoreYummyAccountTokenStore(
-    context: Context,
-) : YummyAccountTokenStore {
-    private val secureStore = AndroidKeystoreStringStore(
-        context = context,
-        prefsName = PREFS_NAME,
-        keyAlias = KEY_ALIAS,
-    )
-
-    override fun getAccessToken(): String? = secureStore.get(KEY_ACCESS_TOKEN)
-
-    override fun saveAccessToken(token: String) {
-        val normalized = token.trim()
-        require(normalized.isNotBlank()) { "YummyAnime access token is blank" }
-        secureStore.save(KEY_ACCESS_TOKEN, normalized)
-    }
-
-    override fun clearAccessToken() {
-        secureStore.clear(KEY_ACCESS_TOKEN)
-    }
-
-    private companion object {
-        const val PREFS_NAME = "hibiki_yummy_account_tokens"
-        const val KEY_ACCESS_TOKEN = "access_token"
-        const val KEY_ALIAS = "hibiki_yummy_account_access_token"
     }
 }
 

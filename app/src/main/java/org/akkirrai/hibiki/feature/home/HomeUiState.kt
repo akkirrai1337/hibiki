@@ -19,7 +19,6 @@ data class HomeUiState(
     val isRecentUpdatesLoadingMore: Boolean = false,
     val canLoadMoreRecentUpdates: Boolean = true,
     val recentUpdatesLoadMoreError: String? = null,
-    val profileAvatarUrl: String? = null,
     val searchQuery: String = "",
     val searchResult: SearchUiState = SearchUiState.Idle,
     val searchFilterCatalog: AnimeSearchFilterCatalog? = null,

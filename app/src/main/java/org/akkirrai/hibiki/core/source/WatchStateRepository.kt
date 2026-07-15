@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
@@ -146,6 +149,7 @@ class WatchStateRepository(context: Context) {
         updatedAt: Long = System.currentTimeMillis(),
     ) {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
+        val previous = getEpisodeProgress(titleId, episodeId)
         val encoded = listOf(
             episodeNumber.toString(),
             sourceId,
@@ -161,6 +165,15 @@ class WatchStateRepository(context: Context) {
             .removeLegacyProgressEntries(titleId, episodeId)
             .putString(progressKey(normalizedTitleId, episodeId), encoded)
             .apply()
+
+        recordActivity(
+            titleId = normalizedTitleId,
+            episodeId = episodeId,
+            previousPositionMs = previous?.positionMs ?: 0L,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            updatedAt = updatedAt,
+        )
     }
 
     private fun parseProgress(
@@ -257,6 +270,9 @@ class WatchStateRepository(context: Context) {
         const val PREFS_NAME = "hibiki_watch_state"
         private const val PROGRESS_PREFIX = "progress_"
         private const val SEPARATOR = '\u001F'
+        private const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
+        private const val ACTIVITY_COMPLETED_PREFIX = "activity_completed_"
+        private const val COMPLETION_THRESHOLD_PERCENT = 90L
     }
 
     /**
@@ -280,4 +296,53 @@ class WatchStateRepository(context: Context) {
             .distinctBy { "${it.titleId}:${it.episodeId}" }
             .toList()
     }
+
+    /** Daily local playback aggregates used by the profile. Resume state remains separate. */
+    fun getDailyWatchActivity(): List<DailyWatchActivity> = prefs.all.keys
+        .asSequence()
+        .filter { it.startsWith(ACTIVITY_WATCHED_PREFIX) }
+        .mapNotNull { key ->
+            val date = runCatching { LocalDate.parse(key.removePrefix(ACTIVITY_WATCHED_PREFIX)) }.getOrNull()
+                ?: return@mapNotNull null
+            val watchedMs = prefs.getLong(key, 0L).coerceAtLeast(0L)
+            val completed = prefs.getStringSet(completedActivityKey(date), emptySet()).orEmpty().size
+            DailyWatchActivity(date = date, watchedMs = watchedMs, completedEpisodes = completed)
+        }
+        .sortedBy(DailyWatchActivity::date)
+        .toList()
+
+    private fun recordActivity(
+        titleId: String,
+        episodeId: String,
+        previousPositionMs: Long,
+        positionMs: Long,
+        durationMs: Long,
+        updatedAt: Long,
+    ) {
+        val deltaMs = (positionMs - previousPositionMs)
+            .coerceAtLeast(0L)
+            .coerceAtMost(durationMs.coerceAtLeast(0L))
+        val completed = durationMs > 0L && positionMs >= durationMs * COMPLETION_THRESHOLD_PERCENT / 100L
+        if (deltaMs == 0L && !completed) return
+
+        val date = Instant.ofEpochMilli(updatedAt).atZone(ZoneId.systemDefault()).toLocalDate()
+        val completedKey = completedActivityKey(date)
+        val completedEpisodes = prefs.getStringSet(completedKey, emptySet()).orEmpty().toMutableSet()
+        if (completed) completedEpisodes += "$titleId:$episodeId"
+        prefs.edit()
+            .putLong(activityWatchedKey(date), prefs.getLong(activityWatchedKey(date), 0L) + deltaMs)
+            .putStringSet(completedKey, completedEpisodes)
+            .apply()
+    }
+
+    private fun activityWatchedKey(date: LocalDate): String = "$ACTIVITY_WATCHED_PREFIX$date"
+
+    private fun completedActivityKey(date: LocalDate): String = "$ACTIVITY_COMPLETED_PREFIX$date"
+
+    data class DailyWatchActivity(
+        val date: LocalDate,
+        val watchedMs: Long,
+        val completedEpisodes: Int,
+    )
+
 }

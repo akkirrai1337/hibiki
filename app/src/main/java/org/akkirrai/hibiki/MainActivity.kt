@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
@@ -43,13 +42,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
-    private val accountRepository by lazy(LazyThreadSafetyMode.NONE) {
-        applicationContext.hibikiDependencies().accountRepository()
-    }
     private val appPreferences by lazy(LazyThreadSafetyMode.NONE) {
         AppPreferences(this)
     }
-    private var profileWarmupJob: Job? = null
     private val updateRepository by lazy(LazyThreadSafetyMode.NONE) {
         @Suppress("DEPRECATION")
         AppUpdateRepository(packageManager.getPackageInfo(packageName, 0).versionName.orEmpty())
@@ -123,23 +118,11 @@ class MainActivity : ComponentActivity() {
         checkForAppUpdate()
     }
 
-    override fun onStart() {
-        super.onStart()
-        profileWarmupJob?.cancel()
-        profileWarmupJob = lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                accountRepository.warmProfileCacheIfLoggedIn()
-            }
-        }
-    }
-
     override fun onDestroy() {
-        profileWarmupJob?.cancel()
         updateDownloadJob?.cancel()
         unregisterReceiver(updateDownloadReceiver)
         updateRepository.close()
         appPreferences.close()
-        accountRepository.close()
         super.onDestroy()
     }
 

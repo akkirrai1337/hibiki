@@ -1,10 +1,8 @@
 package org.akkirrai.hibiki.app.di
 
 import android.content.Context
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
-import org.akkirrai.hibiki.core.profile.ProfileDataConflictRepository
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -17,8 +15,6 @@ class HibikiDependencies(
     context: Context,
 ) {
     private val appContext = context.applicationContext
-
-    fun accountRepository(): YummyAccountRepository = YummyAccountRepository(appContext)
 
     fun animeSearchRepository(): AnimeSearchRepository = AnimeSearchRepository(appContext)
 
@@ -33,8 +29,6 @@ class HibikiDependencies(
     fun libraryRepository(): LibraryRepository = LibraryRepository(appContext)
 
     fun localProfileRepository(): LocalProfileRepository = LocalProfileRepository(appContext)
-
-    fun profileDataConflictRepository(): ProfileDataConflictRepository = ProfileDataConflictRepository(appContext)
 
     fun offlineTitleMetadataRepository(): OfflineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
 

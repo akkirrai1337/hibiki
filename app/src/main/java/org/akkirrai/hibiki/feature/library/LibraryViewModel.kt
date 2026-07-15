@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.core.account.YummyAccountRepository
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
@@ -22,7 +21,6 @@ import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
-import org.akkirrai.hibiki.feature.account.resolvedAvatarUrl
 
 class LibraryViewModel(
     context: Context,
@@ -30,7 +28,6 @@ class LibraryViewModel(
     searchRepository: AnimeSearchRepository? = null,
     offlineDownloadRepository: OfflineDownloadRepository? = null,
     offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
-    accountRepository: YummyAccountRepository? = null,
 ) : ViewModel() {
     private val appContext = context.applicationContext
     private val libraryRepositoryDelegate = lazy { libraryRepository ?: LibraryRepository(appContext) }
@@ -41,12 +38,10 @@ class LibraryViewModel(
     private val offlineTitleMetadataRepositoryDelegate = lazy {
         offlineTitleMetadataRepository ?: OfflineTitleMetadataRepository(appContext)
     }
-    private val accountRepositoryDelegate = lazy { accountRepository ?: YummyAccountRepository(appContext) }
     private val libraryRepository by libraryRepositoryDelegate
     private val searchRepository by searchRepositoryDelegate
     private val offlineDownloadRepository by offlineDownloadRepositoryDelegate
     private val offlineTitleMetadataRepository by offlineTitleMetadataRepositoryDelegate
-    private val accountRepository by accountRepositoryDelegate
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     private var syncJob: Job? = null
@@ -55,7 +50,6 @@ class LibraryViewModel(
 
     init {
         PerfLogger.mark("LibraryViewModel created")
-        refreshProfileAvatar()
     }
 
     fun syncFromStorage(force: Boolean = false) {
@@ -112,13 +106,6 @@ class LibraryViewModel(
     fun onLanguageChanged() {
         lastDetailsRefreshAt = 0L
         syncFromStorage(force = true)
-    }
-
-    fun refreshProfileAvatar() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val avatarUrl = accountRepository.getCachedProfile()?.resolvedAvatarUrl()
-            _uiState.update { it.copy(profileAvatarUrl = avatarUrl) }
-        }
     }
 
     private fun reconcileSavedDownloads(): Boolean {
@@ -231,9 +218,6 @@ class LibraryViewModel(
             PerfLogger.mark("LibraryViewModel close search repository")
             searchRepository.close()
         }
-        if (accountRepositoryDelegate.isInitialized()) {
-            accountRepository.close()
-        }
         super.onCleared()
     }
 
@@ -249,7 +233,6 @@ class LibraryViewModel(
                 searchRepository = dependencies.animeSearchRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),
                 offlineTitleMetadataRepository = dependencies.offlineTitleMetadataRepository(),
-                accountRepository = dependencies.accountRepository(),
             ) as T
         }
     }
@@ -259,7 +242,6 @@ data class LibraryUiState(
     val entries: List<LibraryEntry> = emptyList(),
     val selectedCategory: LibraryCategory = LibraryCategory.Watching,
     val isRefreshing: Boolean = false,
-    val profileAvatarUrl: String? = null,
     val searchQuery: String = "",
     val searchFilters: LibrarySearchFilters = LibrarySearchFilters(),
 ) {

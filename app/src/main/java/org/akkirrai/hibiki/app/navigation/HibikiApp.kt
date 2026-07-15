@@ -54,9 +54,8 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.feature.account.YummyAccountScreen
-import org.akkirrai.hibiki.feature.account.YummyAccountSettingsScreen
-import org.akkirrai.hibiki.feature.account.YummyAccountViewModel
+import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
+import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
 import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
@@ -234,38 +233,17 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             val context = LocalContext.current
-            val accountViewModel: YummyAccountViewModel = viewModel(
+            val profileViewModel: LocalProfileViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
-                factory = YummyAccountViewModel.Factory(context),
+                factory = LocalProfileViewModel.Factory(context),
             )
-            YummyAccountScreen(
+            LocalProfileScreen(
                 onBackClick = navController::navigateUp,
                 onSettingsClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.ACCOUNT_SETTINGS_ROUTE)
+                    navController.navigateSingleTopTo(TopLevelDestination.Settings.route)
                 },
                 modifier = screenModifier,
-                viewModel = accountViewModel,
-            )
-        }
-        composable(
-            route = AnimeNavType.ACCOUNT_SETTINGS_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() }
-        ) {
-            val context = LocalContext.current
-            val accountEntry = remember(navController) {
-                navController.getBackStackEntry(AnimeNavType.ACCOUNT_ROUTE)
-            }
-            val accountViewModel: YummyAccountViewModel = viewModel(
-                viewModelStoreOwner = accountEntry,
-                factory = YummyAccountViewModel.Factory(context),
-            )
-            YummyAccountSettingsScreen(
-                onBackClick = navController::navigateUp,
-                modifier = screenModifier,
-                viewModel = accountViewModel,
+                viewModel = profileViewModel,
             )
         }
         topLevelComposable(route = TopLevelDestination.Library.route) {

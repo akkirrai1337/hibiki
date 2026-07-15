@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.account
+package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -55,16 +55,16 @@ import org.akkirrai.hibiki.R
 
 @Composable
 internal fun AnalyticsCard(
-    snapshot: YummyProfileSnapshot,
+    snapshot: LocalProfileSnapshot,
 ) {
     val hasActivity = snapshot.activeDaysCount > 0
     val pages = remember(
         snapshot.libraryStatusSegments,
-        snapshot.siteWatchSegments,
-        snapshot.siteWatchTimeLabel,
+        snapshot.genreSegments,
+        snapshot.watchTimeLabel,
         snapshot.libraryTotal,
     ) {
-        buildAnalyticsPages(snapshot).take(2)
+        buildAnalyticsPages(snapshot)
     }
     val activityScrollState = rememberScrollState()
     LaunchedEffect(snapshot.activityDays) {
@@ -111,7 +111,7 @@ internal fun AnalyticsCard(
 @Composable
 private fun AnalyticsDonutPager(
     pages: List<AnalyticsPage>,
-    snapshot: YummyProfileSnapshot,
+    snapshot: LocalProfileSnapshot,
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -438,7 +438,7 @@ private fun ActivityBarChart(
     }
 }
 
-private fun buildAnalyticsPages(snapshot: YummyProfileSnapshot): List<AnalyticsPage> {
+private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsPage> {
     return listOf(
         AnalyticsPage(
             title = "Время просмотра",
@@ -456,13 +456,13 @@ private fun buildAnalyticsPages(snapshot: YummyProfileSnapshot): List<AnalyticsP
         ),
         AnalyticsPage(
             title = "Время просмотра по спискам",
-            centerPrimary = snapshot.siteWatchTimeLabel,
+            centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
             centerSecondary = "всего",
-            segments = snapshot.siteWatchSegments.map { segment ->
+            segments = snapshot.genreSegments.map { segment ->
                 AnalyticsSegment(
                     label = segment.label,
-                    valueLabel = segment.hoursLabel,
-                    weight = segment.value.toFloat(),
+                    valueLabel = segment.count.toString(),
+                    weight = segment.count.toFloat(),
                     color = segment.color,
                 )
             },

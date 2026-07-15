@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.account
+package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.ui.graphics.Color
 

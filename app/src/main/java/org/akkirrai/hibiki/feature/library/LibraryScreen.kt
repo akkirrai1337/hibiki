@@ -130,7 +130,6 @@ fun LibraryScreen(
     LaunchedEffect(isActive) {
         if (isActive) {
             PerfLogger.mark("LibraryScreen active", "defer=${LIBRARY_DEFERRED_SYNC_DELAY_MS}ms")
-            viewModel.refreshProfileAvatar()
             delay(LIBRARY_DEFERRED_SYNC_DELAY_MS)
             PerfLogger.mark("LibraryScreen deferred sync trigger")
             viewModel.syncFromStorage()
@@ -155,7 +154,7 @@ fun LibraryScreen(
                 AppSearchTopBar(
                     query = state.searchQuery,
                     isSearchActive = isSearchActive,
-                    profileAvatarUrl = state.profileAvatarUrl,
+                    profileAvatarUrl = null,
                     onQueryChange = viewModel::onSearchQueryChange,
                     onClear = viewModel::clearSearch,
                     onProfileClick = onProfileClick,

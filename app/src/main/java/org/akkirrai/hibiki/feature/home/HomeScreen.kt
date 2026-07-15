@@ -184,7 +184,6 @@ fun HomeScreen(
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refreshProfileAvatar()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -346,7 +345,7 @@ fun HomeScreen(
         AppSearchTopBar(
             query = state.searchQuery,
             isSearchActive = isSearchBarExpanded,
-            profileAvatarUrl = state.profileAvatarUrl,
+            profileAvatarUrl = null,
             onQueryChange = viewModel::onSearchQueryChange,
             onClear = viewModel::clearSearch,
             onProfileClick = onProfileClick,

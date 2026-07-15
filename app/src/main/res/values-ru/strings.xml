@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">hibiki</string>
+    <string name="local_profile_title">Профиль</string>
+    <string name="local_profile_subtitle">Локальная история просмотра и библиотека</string>
+    <string name="local_profile_settings">Настройки профиля</string>
+    <string name="local_profile_date_today">Сегодня</string>
+    <string name="local_profile_date_yesterday">Вчера</string>
+    <string name="local_profile_date_days_ago_short">%1$d дн. назад</string>
+    <string name="local_profile_duration_hours_short">%1$s ч</string>
 
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>

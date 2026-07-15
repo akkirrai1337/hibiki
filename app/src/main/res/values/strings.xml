@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">hibiki</string>
+    <string name="local_profile_title">Profile</string>
+    <string name="local_profile_subtitle">Your local watch history and library</string>
+    <string name="local_profile_settings">Profile settings</string>
+    <string name="local_profile_date_today">Today</string>
+    <string name="local_profile_date_yesterday">Yesterday</string>
+    <string name="local_profile_date_days_ago_short">%1$d d ago</string>
+    <string name="local_profile_duration_hours_short">%1$s h</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_catalog">Catalog</string>
