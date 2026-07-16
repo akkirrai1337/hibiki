@@ -205,7 +205,6 @@ private fun HibikiNavHost(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                onProfileClick = { navController.navigateTopLevelDestination(currentTopLevel, TopLevelDestination.Profile) },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
@@ -236,7 +235,6 @@ private fun HibikiNavHost(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                onProfileClick = { navController.navigateTopLevelDestination(currentTopLevel, TopLevelDestination.Profile) },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier

@@ -12,12 +12,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -105,7 +103,6 @@ import org.akkirrai.hibiki.core.source.LibraryEntry
 @Composable
 fun LibraryScreen(
     onAnimeClick: (Anime) -> Unit,
-    onProfileClick: () -> Unit,
     isActive: Boolean,
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
@@ -114,9 +111,6 @@ fun LibraryScreen(
     val state by viewModel.uiState.collectAsState()
     val languageMode = LocalAppLanguage.current
     val visibleEntries = state.visibleEntries
-    var isSearchFocused by remember { mutableStateOf(false) }
-    val isImeVisible = WindowInsets.isImeVisible
-    val isSearchActive = isSearchFocused && isImeVisible
     var isFilterDialogVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -153,14 +147,14 @@ fun LibraryScreen(
             ) {
                 AppSearchTopBar(
                     query = state.searchQuery,
-                    isSearchActive = isSearchActive,
-                    profileAvatarUrl = null,
                     onQueryChange = viewModel::onSearchQueryChange,
                     onClear = viewModel::clearSearch,
-                    onProfileClick = onProfileClick,
                     onFilterClick = { isFilterDialogVisible = true },
-                    onFocusChange = { isSearchFocused = it },
-                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                    modifier = Modifier.padding(
+                        top = UiDimens.SearchBarTopPadding,
+                        start = UiDimens.ScreenPadding,
+                        end = UiDimens.ScreenPadding,
+                    ),
                 )
                 LibraryCategoryChips(
                     selectedCategory = state.selectedCategory,

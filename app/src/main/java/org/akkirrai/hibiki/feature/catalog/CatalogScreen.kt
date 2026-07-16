@@ -257,10 +257,8 @@ fun CatalogScreen(
         ) {
             AppSearchTopBar(
                 query = state.query,
-                isSearchActive = true,
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
-                onProfileClick = {},
                 onFilterClick = { isCategorySheetOpen = true },
             )
             CatalogSortControl(
@@ -693,8 +691,8 @@ enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
     Updated(R.string.catalog_sort_updated),
 }
 
-private val CATALOG_HEADER_TOP_PADDING = 14.dp
-private val CATALOG_SEARCH_BAR_HEIGHT = 50.dp
+private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
+private val CATALOG_SEARCH_BAR_HEIGHT = UiDimens.SearchBarHeight
 private val CATALOG_SORT_VERTICAL_GAP = 20.dp
 private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
 private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +

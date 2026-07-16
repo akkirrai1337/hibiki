@@ -139,7 +139,6 @@ import org.akkirrai.hibiki.core.model.buildCardMeta
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
-    onProfileClick: () -> Unit,
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     modifier: Modifier = Modifier
@@ -152,10 +151,8 @@ fun HomeScreen(
     val hasContent = featuredAnime.isNotEmpty() || continueAnime != null || state.trending.isNotEmpty() || state.recentlyUpdated.isNotEmpty()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    var isSearchFocused by remember { mutableStateOf(false) }
     var showSearchFilters by rememberSaveable { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
-    val isSearchBarExpanded = isSearchFocused && isImeVisible
     val isSearchActive = state.searchQuery.isNotBlank() ||
         state.searchResult !is SearchUiState.Idle
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
@@ -222,7 +219,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = UiDimens.ScreenPadding,
-                        top = HOME_TOP_BAR_HEIGHT + UiDimens.ScreenPadding,
+                        top = HOME_CONTENT_TOP_PADDING,
                         end = UiDimens.ScreenPadding,
                         bottom = bottomContentPadding
                     ),
@@ -267,7 +264,7 @@ fun HomeScreen(
                         state = homeListState,
                         contentPadding = PaddingValues(
                             start = 0.dp,
-                            top = HOME_TOP_BAR_HEIGHT + UiDimens.ScreenPadding,
+                            top = HOME_CONTENT_TOP_PADDING,
                             end = 0.dp,
                             bottom = bottomContentPadding
                         ),
@@ -329,21 +326,21 @@ fun HomeScreen(
 
         AppSearchTopBar(
             query = state.searchQuery,
-            isSearchActive = isSearchBarExpanded,
-            profileAvatarUrl = null,
             onQueryChange = viewModel::onSearchQueryChange,
             onClear = viewModel::clearSearch,
-            onProfileClick = onProfileClick,
             onFilterClick = {
                 keyboardController?.hide()
                 focusManager.clearFocus(force = true)
                 showSearchFilters = true
             },
-            onFocusChange = { isSearchFocused = it },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .padding(horizontal = UiDimens.ScreenPadding)
+                .padding(
+                    top = UiDimens.SearchBarTopPadding,
+                    start = UiDimens.ScreenPadding,
+                    end = UiDimens.ScreenPadding,
+                )
         )
 
         if (showSearchFilters) {
@@ -934,9 +931,11 @@ private fun AnimeImagePlaceholder(
 }
 
 private const val FEATURED_AUTO_ADVANCE_MS = 5000
-private val HOME_TOP_BAR_HEIGHT = 50.dp
-private val HOME_TOP_SEARCH_SCRIM_HEIGHT = 88.dp
-private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = HOME_TOP_BAR_HEIGHT * 0.10f
+private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
+    UiDimens.SearchBarHeight +
+    UiDimens.ScreenPadding
+private val HOME_TOP_SEARCH_SCRIM_HEIGHT = HOME_CONTENT_TOP_PADDING + 18.dp
+private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = UiDimens.SearchBarHeight * 0.10f
 
 private fun buildHomeMeta(
     anime: Anime,
