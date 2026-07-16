@@ -30,6 +30,7 @@ import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
@@ -101,8 +102,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides this@MainActivity) {
                 HibikiSettingsProvider(appPreferences = appPreferences) {
+                    val preferences = LocalAppPreferencesState.current
                     HibikiTheme(
-                        themeMode = LocalThemeMode.current
+                        themeMode = preferences.themeMode,
+                        dynamicColor = preferences.useSystemColorScheme,
+                        amoled = preferences.useAmoledTheme,
                     ) {
                         HibikiApp(
                             onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },

@@ -1,17 +1,16 @@
 package org.akkirrai.hibiki.feature.settings
 
-import android.content.Context
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,47 +20,50 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
@@ -69,481 +71,487 @@ fun SettingsScreen(
     onCheckForUpdates: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val haptic = LocalHapticFeedback.current
     val appPreferences = LocalAppPreferences.current
-    val preferencesState = LocalAppPreferencesState.current
+    val preferences = LocalAppPreferencesState.current
+    val versionName = remember(context) {
+        @Suppress("DEPRECATION")
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    }
 
-    var showThemeSheet by remember { mutableStateOf(false) }
-    var showLanguageSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         PerfLogger.mark("SettingsScreen composed")
     }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = UiDimens.ScreenPadding,
-            top = 12.dp,
+            top = 16.dp,
             end = UiDimens.ScreenPadding,
-            bottom = bottomContentPadding
+            bottom = bottomContentPadding + 16.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        item {
-            SettingsGroupCard(
-                title = stringResource(R.string.settings_general)
-            ) {
-                SettingsClickableItem(
-                    icon = Icons.Outlined.DarkMode,
-                    title = stringResource(R.string.settings_theme),
-                    subtitle = themeModeLabel(preferencesState.themeMode),
-                    onClick = { showThemeSheet = true }
-                )
-
-                SettingsDivider()
-
-                SettingsClickableItem(
-                    icon = Icons.Outlined.Language,
-                    title = stringResource(R.string.settings_language),
-                    subtitle = languageModeLabel(preferencesState.languageMode),
-                    onClick = { showLanguageSheet = true }
-                )
-            }
-        }
-
-        item {
-            SettingsGroupCard(
-                title = stringResource(R.string.settings_player)
-            ) {
-                SettingsSwitchItem(
-                    icon = Icons.Outlined.SkipNext,
-                    title = stringResource(R.string.settings_auto_skip_segments),
-                    subtitle = stringResource(
-                        if (preferencesState.autoSkipSegments) {
-                            R.string.settings_auto_skip_segments_enabled_summary
-                        } else {
-                            R.string.settings_auto_skip_segments_disabled_summary
+        item(key = "appearance") {
+            SettingsSection(title = stringResource(R.string.settings_appearance)) {
+                SettingsItems(count = 3) { index, shape ->
+                    when (index) {
+                        0 -> SettingsVerticalItem(
+                            icon = Icons.Outlined.DarkMode,
+                            title = stringResource(R.string.settings_theme),
+                            shape = shape,
+                        ) {
+                            SettingsSegmentedControl(
+                                options = listOf(ThemeMode.DARK, ThemeMode.LIGHT, ThemeMode.SYSTEM),
+                                selectedOption = preferences.themeMode,
+                                label = ::themeModeLabel,
+                                onSelect = { mode ->
+                                    appPreferences.setThemeMode(mode)
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                            )
                         }
-                    ),
-                    checked = preferencesState.autoSkipSegments,
-                    onCheckedChange = { enabled ->
-                        appPreferences.setAutoSkipSegments(enabled)
+
+                        1 -> SettingsSwitchItem(
+                            icon = Icons.Outlined.Palette,
+                            title = stringResource(R.string.settings_use_system_color_scheme),
+                            checked = preferences.useSystemColorScheme,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setUseSystemColorScheme,
+                        )
+
+                        2 -> SettingsSwitchItem(
+                            icon = Icons.Outlined.Contrast,
+                            title = stringResource(R.string.settings_amoled),
+                            checked = preferences.useAmoledTheme,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setUseAmoledTheme,
+                        )
                     }
-                )
+                }
             }
         }
 
-        item {
-            SettingsGroupCard(
-                title = stringResource(R.string.settings_updates)
-            ) {
-                SettingsClickableItem(
-                    icon = Icons.Outlined.Update,
-                    title = stringResource(R.string.settings_check_updates),
-                    subtitle = stringResource(R.string.settings_check_updates_summary),
-                    onClick = onCheckForUpdates,
-                )
-            }
-        }
-
-        item {
-            SettingsGroupCard(
-                title = stringResource(R.string.settings_support)
-            ) {
-                SettingsClickableItem(
-                    icon = Icons.Outlined.Share,
-                    title = stringResource(R.string.settings_export_logs),
-                    subtitle = stringResource(R.string.settings_export_logs_summary),
-                    onClick = {
-                        AppLogger.shareLogs(context).onFailure {
-                            Toast.makeText(
-                                context,
-                                R.string.settings_export_logs_failed,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
+        item(key = "preferences") {
+            SettingsSection(title = stringResource(R.string.settings_preferences)) {
+                SettingsItems(count = 1) { _, shape ->
+                    SettingsVerticalItem(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.settings_language),
+                        shape = shape,
+                    ) {
+                        SettingsSegmentedControl(
+                            options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
+                            selectedOption = preferences.languageMode,
+                            label = ::languageModeLabel,
+                            onSelect = { mode ->
+                                appPreferences.setLanguageMode(mode)
+                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                            },
+                        )
                     }
-                )
+                }
             }
         }
 
-    }
+        item(key = "player") {
+            SettingsSection(title = stringResource(R.string.settings_player)) {
+                SettingsItems(count = 1) { _, _ ->
+                    SettingsSwitchItem(
+                        icon = Icons.Outlined.SkipNext,
+                        title = stringResource(R.string.settings_auto_skip_segments),
+                        checked = preferences.autoSkipSegments,
+                        shape = CircleShape,
+                        onCheckedChange = appPreferences::setAutoSkipSegments,
+                    )
+                }
+            }
+        }
 
-    if (showThemeSheet) {
-        ThemeBottomSheet(
-            selectedMode = preferencesState.themeMode,
-            onSelect = { mode ->
-                appPreferences.setThemeMode(mode)
-                showThemeSheet = false
-            },
-            onDismiss = { showThemeSheet = false }
-        )
-    }
+        item(key = "updates") {
+            SettingsSection(title = stringResource(R.string.settings_updates)) {
+                SettingsItems(count = 1) { _, _ ->
+                    SettingsActionItem(
+                        icon = Icons.Outlined.Update,
+                        title = stringResource(R.string.settings_check_updates),
+                        shape = CircleShape,
+                        onClick = onCheckForUpdates,
+                    )
+                }
+            }
+        }
 
-    if (showLanguageSheet) {
-        LanguageBottomSheet(
-            selectedMode = preferencesState.languageMode,
-            onSelect = { mode ->
-                appPreferences.setLanguageMode(mode)
-                showLanguageSheet = false
-            },
-            onDismiss = { showLanguageSheet = false }
-        )
-    }
-}
+        item(key = "support") {
+            SettingsSection(title = stringResource(R.string.settings_support)) {
+                SettingsItems(count = 1) { _, _ ->
+                    SettingsActionItem(
+                        icon = Icons.Outlined.Share,
+                        title = stringResource(R.string.settings_export_logs),
+                        shape = CircleShape,
+                        onClick = {
+                            AppLogger.shareLogs(context).onFailure {
+                                Toast.makeText(
+                                    context,
+                                    R.string.settings_export_logs_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        },
+                    )
+                }
+            }
+        }
 
-@Composable
-private fun ThemeBottomSheet(
-    selectedMode: ThemeMode,
-    onSelect: (ThemeMode) -> Unit,
-    onDismiss: () -> Unit
-) {
-    SettingsOptionsBottomSheet(
-        title = stringResource(R.string.settings_theme),
-        description = stringResource(R.string.settings_theme_sheet_description),
-        onDismiss = onDismiss
-    ) {
-        ThemeMode.entries.forEach { mode ->
-            SettingsOptionRow(
-                title = themeModeLabel(mode),
-                description = themeModeDescription(mode),
-                selected = mode == selectedMode,
-                onClick = { onSelect(mode) }
-            )
+        item(key = "about") {
+            SettingsSection(title = stringResource(R.string.settings_about)) {
+                SettingsAboutItem(
+                    versionName = versionName,
+                    onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SettingsGroupCard(
+private fun SettingsSection(
     title: String,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
+        content()
+    }
+}
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                content = content
-            )
+@Composable
+private fun SettingsItems(
+    count: Int,
+    content: @Composable ColumnScope.(index: Int, shape: Shape) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(count) { index ->
+            content(index, settingsItemShape(index, count))
         }
+    }
+}
+
+private fun settingsItemShape(index: Int, count: Int): Shape {
+    if (count == 1) return RoundedCornerShape(24.dp)
+    return RoundedCornerShape(
+        topStart = if (index == 0) 24.dp else 4.dp,
+        topEnd = if (index == 0) 24.dp else 4.dp,
+        bottomStart = if (index == count - 1) 24.dp else 4.dp,
+        bottomEnd = if (index == count - 1) 24.dp else 4.dp,
+    )
+}
+
+@Composable
+private fun SettingsVerticalItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    shape: Shape,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SettingsItemHeader(icon = icon, title = title)
+        content()
     }
 }
 
 @Composable
 private fun SettingsSwitchItem(
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
-    subtitle: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    shape: Shape,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
-    SettingsBaseItem(
-        icon = icon,
-        title = title,
-        subtitle = subtitle,
-        modifier = Modifier
-            .clickable { onCheckedChange(!checked) }
-            .fillMaxWidth(),
-    ) {
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
-}
-
-@Composable
-private fun SettingsClickableItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    SettingsBaseItem(
-        icon = icon,
-        title = title,
-        subtitle = subtitle,
+    val haptic = LocalHapticFeedback.current
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-    )
-}
-
-@Composable
-private fun SettingsBaseItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-    trailingContent: @Composable (() -> Unit)? = null,
-) {
-    Row(
-        modifier = modifier
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        SettingsIcon(icon = icon)
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        trailingContent?.invoke()
-    }
-}
-
-@Composable
-private fun SettingsIcon(
-    icon: ImageVector
-) {
-    AppTonalSurface(
-        modifier = Modifier.size(44.dp),
-        shape = CircleShape,
-        contentAlignment = Alignment.Center
+            .clip(shape)
+            .clickable {
+                onCheckedChange(!checked)
+                haptic.performHapticFeedback(
+                    if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                )
+            }
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+        SettingsSwitch(
+            checked = checked,
+            onCheckedChange = {
+                onCheckedChange(it)
+                haptic.performHapticFeedback(
+                    if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                )
+            },
         )
     }
 }
 
 @Composable
-private fun SettingsDivider() {
-    Spacer(
+private fun SettingsActionItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    shape: Shape,
+    onClick: () -> Unit,
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(1.dp)
-            .padding(horizontal = 16.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+    }
+}
+
+@Composable
+private fun SettingsItemHeader(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+    }
+}
+
+@Composable
+private fun SettingsSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        thumbContent = if (checked) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            null
+        },
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LanguageBottomSheet(
-    selectedMode: LanguageMode,
-    onSelect: (LanguageMode) -> Unit,
-    onDismiss: () -> Unit
+private fun <T> SettingsSegmentedControl(
+    options: List<T>,
+    selectedOption: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
 ) {
-    SettingsOptionsBottomSheet(
-        title = stringResource(R.string.settings_language),
-        description = stringResource(R.string.settings_language_sheet_description),
-        onDismiss = onDismiss
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        LanguageMode.entries.forEach { mode ->
-            SettingsOptionRow(
-                title = languageModeLabel(mode),
-                description = languageModeDescription(mode),
-                selected = mode == selectedMode,
-                onClick = { onSelect(mode) }
-            )
+        options.forEachIndexed { index, option ->
+            val selected = option == selectedOption
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .clip(segmentShape(index, options.lastIndex))
+                    .background(
+                        if (selected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.background
+                        },
+                    )
+                    .clickable { onSelect(option) }
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label(option),
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SettingsOptionsBottomSheet(
-    title: String,
-    description: String,
-    onDismiss: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    AppModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 3.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = UiDimens.ScreenPadding,
-                    end = UiDimens.ScreenPadding,
-                    bottom = 28.dp
-                ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-                content()
-            }
+private fun segmentShape(index: Int, lastIndex: Int): Shape {
+    return when (index) {
+        0 -> RoundedCornerShape(
+            topStart = 16.dp,
+            bottomStart = 16.dp,
+            topEnd = 6.dp,
+            bottomEnd = 6.dp,
         )
+
+        lastIndex -> RoundedCornerShape(
+            topStart = 6.dp,
+            bottomStart = 6.dp,
+            topEnd = 16.dp,
+            bottomEnd = 16.dp,
+        )
+
+        else -> RoundedCornerShape(6.dp)
     }
 }
 
 @Composable
-private fun SettingsOptionRow(
-    title: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit
+private fun SettingsAboutItem(
+    versionName: String,
+    onGitHubClick: () -> Unit,
 ) {
-    AppTonalSurface(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        shape = RoundedCornerShape(UiDimens.MediumCorner),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val context = LocalContext.current
+    val appIcon = remember(context) {
+        context.packageManager
+            .getApplicationIcon(context.packageName)
+            .toBitmap(config = Bitmap.Config.ARGB_8888)
+            .asImageBitmap()
+    }
+    val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val background = if (isDarkMode) Color(0x190FFF66) else Color(0x59FFC0CB)
+    val textColor = if (isDarkMode) Color(0xFF3BFF84) else Color(0xFFDA6482)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(background)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
         ) {
-            RadioButton(
-                selected = selected,
-                onClick = onClick
+        Image(
+            bitmap = appIcon,
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape),
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor,
             )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
-
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
-
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+            Text(
+                text = "v$versionName",
+                style = MaterialTheme.typography.labelMedium,
+                color = textColor.copy(alpha = 0.75f),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .clickable(onClick = onGitHubClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_github),
+                contentDescription = stringResource(R.string.settings_github),
+                modifier = Modifier.size(26.dp),
+            )
         }
     }
 }
 
 @Composable
 private fun languageModeLabel(mode: LanguageMode): String {
-    return stringResource(languageModeTexts(mode).titleResId)
+    return stringResource(
+        when (mode) {
+            LanguageMode.SYSTEM -> R.string.settings_language_system
+            LanguageMode.RUSSIAN -> R.string.settings_language_russian
+            LanguageMode.ENGLISH -> R.string.settings_language_english
+        },
+    )
 }
-
-@Composable
-private fun languageModeDescription(mode: LanguageMode): String {
-    return stringResource(languageModeTexts(mode).descriptionResId)
-}
-
-private fun languageModeTexts(mode: LanguageMode): LanguageModeText {
-    return when (mode) {
-        LanguageMode.SYSTEM -> LanguageModeText(
-            titleResId = R.string.settings_language_system,
-            descriptionResId = R.string.settings_language_system_summary,
-        )
-        LanguageMode.RUSSIAN -> LanguageModeText(
-            titleResId = R.string.settings_language_russian,
-            descriptionResId = R.string.settings_language_russian_summary,
-        )
-        LanguageMode.ENGLISH -> LanguageModeText(
-            titleResId = R.string.settings_language_english,
-            descriptionResId = R.string.settings_language_english_summary,
-        )
-    }
-}
-
-private data class LanguageModeText(
-    val titleResId: Int,
-    val descriptionResId: Int,
-)
 
 @Composable
 private fun themeModeLabel(mode: ThemeMode): String {
-    return stringResource(themeModeTexts(mode).titleResId)
+    return stringResource(
+        when (mode) {
+            ThemeMode.SYSTEM -> R.string.settings_theme_system
+            ThemeMode.LIGHT -> R.string.settings_theme_light
+            ThemeMode.DARK -> R.string.settings_theme_dark
+        },
+    )
 }
 
-@Composable
-private fun themeModeDescription(mode: ThemeMode): String {
-    return stringResource(themeModeTexts(mode).descriptionResId)
-}
-
-private fun themeModeTexts(mode: ThemeMode): ThemeModeText {
-    return when (mode) {
-        ThemeMode.SYSTEM -> ThemeModeText(
-            titleResId = R.string.settings_theme_system,
-            descriptionResId = R.string.settings_theme_system_summary,
-        )
-        ThemeMode.LIGHT -> ThemeModeText(
-            titleResId = R.string.settings_theme_light,
-            descriptionResId = R.string.settings_theme_light_summary,
-        )
-        ThemeMode.DARK -> ThemeModeText(
-            titleResId = R.string.settings_theme_dark,
-            descriptionResId = R.string.settings_theme_dark_summary,
-        )
-    }
-}
-
-private data class ThemeModeText(
-    val titleResId: Int,
-    val descriptionResId: Int,
-)
+private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"

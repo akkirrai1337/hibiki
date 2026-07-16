@@ -341,6 +341,12 @@
     <string name="details_type_special">Спешл</string>
 
     <string name="settings_general">Общие</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_preferences">Предпочтения</string>
+    <string name="settings_use_system_color_scheme">Использовать системную цветовую схему</string>
+    <string name="settings_amoled">AMOLED</string>
+    <string name="settings_about">О приложении</string>
+    <string name="settings_github">Открыть Hibiki на GitHub</string>
     <string name="settings_theme">Тема</string>
     <string name="settings_dark_theme">Темная тема</string>
     <string name="settings_dark_theme_summary">Позже будет следование системе, пока оставлен ручной переключатель</string>

@@ -28,6 +28,8 @@ enum class VideoScaleMode {
 
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val useSystemColorScheme: Boolean = true,
+    val useAmoledTheme: Boolean = false,
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
@@ -40,6 +42,8 @@ class AppPreferences(context: Context) {
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_THEME_MODE,
+            KEY_USE_SYSTEM_COLOR_SCHEME,
+            KEY_USE_AMOLED_THEME,
             KEY_LANGUAGE_MODE,
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
@@ -59,6 +63,14 @@ class AppPreferences(context: Context) {
 
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+
+    fun setUseSystemColorScheme(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_USE_SYSTEM_COLOR_SCHEME, enabled).apply()
+    }
+
+    fun setUseAmoledTheme(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_USE_AMOLED_THEME, enabled).apply()
     }
 
     fun setLanguageMode(mode: LanguageMode) {
@@ -92,6 +104,8 @@ class AppPreferences(context: Context) {
         const val KEY_PLAYBACK_SPEED = "playback_speed"
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_USE_SYSTEM_COLOR_SCHEME = "use_system_color_scheme"
+        private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
         private const val KEY_LANGUAGE_MODE = "language_mode"
 
         fun readState(context: Context): AppPreferencesState {
@@ -105,6 +119,8 @@ class AppPreferences(context: Context) {
                 themeMode = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
                     ?.let(ThemeMode::valueOf)
                     ?: ThemeMode.SYSTEM,
+                useSystemColorScheme = prefs.getBoolean(KEY_USE_SYSTEM_COLOR_SCHEME, true),
+                useAmoledTheme = prefs.getBoolean(KEY_USE_AMOLED_THEME, false),
                 languageMode = prefs.getString(KEY_LANGUAGE_MODE, LanguageMode.SYSTEM.name)
                     ?.let(LanguageMode::valueOf)
                     ?: LanguageMode.SYSTEM,
