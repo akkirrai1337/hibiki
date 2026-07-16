@@ -60,14 +60,13 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.ThemeMode
-import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    bottomContentPadding: Dp = UiDimens.ScreenPadding,
+    bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -87,10 +86,10 @@ fun SettingsScreen(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = UiDimens.ScreenPadding,
-            top = 16.dp,
-            end = UiDimens.ScreenPadding,
-            bottom = bottomContentPadding + 16.dp,
+            start = 18.dp,
+            top = 24.dp,
+            end = 18.dp,
+            bottom = bottomContentPadding,
         ),
         verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
@@ -419,7 +418,13 @@ private fun <T> SettingsSegmentedControl(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
-                    .clip(segmentShape(index, options.lastIndex))
+                    .clip(
+                        if (selected) {
+                            CircleShape
+                        } else {
+                            segmentShape(index, options.lastIndex)
+                        },
+                    )
                     .background(
                         if (selected) {
                             MaterialTheme.colorScheme.primary

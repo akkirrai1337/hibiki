@@ -249,7 +249,6 @@ private fun HibikiNavHost(
         ) {
             SettingsScreen(
                 modifier = screenModifier,
-                bottomContentPadding = topLevelBottomContentPadding,
                 onCheckForUpdates = onCheckForUpdates,
             )
         }
