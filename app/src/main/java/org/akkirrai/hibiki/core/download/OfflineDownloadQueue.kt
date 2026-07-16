@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -126,6 +127,11 @@ object OfflineDownloadQueue {
     ): Int {
         val appContext = context.applicationContext
         if (episodes.isEmpty()) return 0
+        val animeTitle = OfflineTitleMetadataRepository(appContext)
+            .get(source.sourceId.substringBefore(':'))
+            ?.title
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
         val entries = synchronized(requestLock) {
             val existingIds = pendingEntries(appContext)
                 .map { it.downloadId }
@@ -133,6 +139,7 @@ object OfflineDownloadQueue {
             val newEntries = episodes.map { episode ->
                 PendingEpisode(
                     sourceId = source.sourceId,
+                    animeTitle = animeTitle,
                     sourceTitle = source.title,
                     sourceEpisodeCount = source.episodeCount,
                     sourceQualityLabel = source.qualityLabel,
@@ -153,7 +160,7 @@ object OfflineDownloadQueue {
         if (entries.isEmpty()) return 0
         val manager = OfflineMediaCache.getDownloadManager(appContext)
         if (activeDownloadCount(manager) == 0) {
-            HibikiDownloadService.showPreparingNotification(appContext)
+            HibikiDownloadService.showPreparingNotification(appContext, entries.firstOrNull()?.animeTitle)
         }
         install(appContext, manager)
         drain(appContext, manager)
@@ -355,6 +362,7 @@ object OfflineDownloadQueue {
                                 playback = playback,
                             )
                             clearFailedEntries(context, setOf(entry.downloadId))
+                            HibikiDownloadService.cancelPreparingNotification(context)
                             DownloadService.sendAddDownload(
                                 context,
                                 HibikiDownloadService::class.java,
@@ -378,7 +386,7 @@ object OfflineDownloadQueue {
                 synchronized(processingLock) { isProcessing = false }
                 if (!addedAny) {
                     drain(context, manager)
-                    if (pendingEntries(context).isEmpty() && activeDownloadCount(manager) == 0) {
+                    if (pendingEntries(context).isEmpty()) {
                         HibikiDownloadService.cancelPreparingNotification(context)
                     }
                 }
@@ -755,6 +763,7 @@ object OfflineDownloadQueue {
 
     private data class PendingEpisode(
         val sourceId: String,
+        val animeTitle: String?,
         val sourceTitle: String,
         val sourceEpisodeCount: Int?,
         val sourceQualityLabel: String?,
@@ -787,6 +796,7 @@ object OfflineDownloadQueue {
         fun toJson(): JSONObject {
             return JSONObject().apply {
                 put("sourceId", sourceId)
+                put("animeTitle", animeTitle)
                 put("sourceTitle", sourceTitle)
                 put("sourceEpisodeCount", sourceEpisodeCount)
                 put("sourceQualityLabel", sourceQualityLabel)
@@ -804,6 +814,7 @@ object OfflineDownloadQueue {
                 val episodeId = json.optString("episodeId").takeIf(String::isNotBlank) ?: return null
                 return PendingEpisode(
                     sourceId = sourceId,
+                    animeTitle = json.optString("animeTitle").ifBlank { null },
                     sourceTitle = json.optString("sourceTitle").ifBlank { "Озвучка" },
                     sourceEpisodeCount = json.optInt("sourceEpisodeCount", -1).takeIf { it >= 0 },
                     sourceQualityLabel = json.optString("sourceQualityLabel").ifBlank { null },

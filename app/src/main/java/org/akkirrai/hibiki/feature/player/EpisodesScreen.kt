@@ -272,7 +272,14 @@ private fun EpisodeRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            val subtitle = buildEpisodeSubtitle(progress, status, downloadState)
+            val visibleDownloadState = if (
+                downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
+            ) {
+                OfflineEpisodeDownloadState.NotDownloaded
+            } else {
+                downloadState
+            }
+            val subtitle = buildEpisodeSubtitle(progress, status, visibleDownloadState)
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,

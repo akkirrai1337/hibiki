@@ -360,46 +360,17 @@ class AnimeWatchRepository(
             )
         }
 
-        return supervisorScope {
-            val results = Channel<Result<ResolvedPlayerStream>>(capacity = playerNames.size)
-            val jobs = playerNames.map { playerName ->
-                launch {
-                    val result = try {
-                        Result.success(
-                            ResolvedPlayerStream(
-                                playerName = playerName,
-                                playback = resolveStream(
-                                    sourceId = sourceId,
-                                    episodeId = episodeId,
-                                    forceRefresh = forceRefresh,
-                                    preferredPlayerName = playerName,
-                                    preferredQuality = preferredQuality,
-                                    requiredPlayerName = playerName,
-                                ),
-                            )
-                        )
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Throwable) {
-                        Result.failure(error)
-                    }
-                    results.send(result)
-                }
-            }
-
-            var firstError: Throwable? = null
-            repeat(playerNames.size) {
-                val result = results.receive()
-                result.getOrNull()?.let { resolved ->
-                    jobs.forEach { it.cancel() }
-                    return@supervisorScope resolved
-                }
-                if (firstError == null) firstError = result.exceptionOrNull()
-            }
-
-            results.close()
-            throw firstError ?: SourceException(appString(R.string.watch_error_stream_unavailable))
+        val (playerName, playback) = raceFirstSuccessful(playerNames) { candidate ->
+            resolveStream(
+                sourceId = sourceId,
+                episodeId = episodeId,
+                forceRefresh = forceRefresh,
+                preferredPlayerName = candidate,
+                preferredQuality = preferredQuality,
+                requiredPlayerName = candidate,
+            )
         }
+        return ResolvedPlayerStream(playerName = playerName, playback = playback)
     }
 
     suspend fun getPlaybackSettingsOptions(
@@ -738,4 +709,37 @@ class AnimeWatchRepository(
         const val AUTO_RESOLVE_TIMEOUT_MS = 8_000L
         const val PREFERRED_RESOLVE_TIMEOUT_MS = 12_000L
     }
+}
+
+internal suspend fun <Candidate, Value> raceFirstSuccessful(
+    candidates: List<Candidate>,
+    attempt: suspend (Candidate) -> Value,
+): Pair<Candidate, Value> = supervisorScope {
+    require(candidates.isNotEmpty())
+    val results = Channel<Result<Pair<Candidate, Value>>>(capacity = candidates.size)
+    val jobs = candidates.map { candidate ->
+        launch {
+            val result = try {
+                Result.success(candidate to attempt(candidate))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                Result.failure(error)
+            }
+            results.send(result)
+        }
+    }
+
+    var firstError: Throwable? = null
+    repeat(candidates.size) {
+        val result = results.receive()
+        result.getOrNull()?.let { resolved ->
+            jobs.forEach { it.cancel() }
+            return@supervisorScope resolved
+        }
+        if (firstError == null) firstError = result.exceptionOrNull()
+    }
+
+    results.close()
+    throw firstError ?: IllegalStateException("No candidate completed successfully")
 }

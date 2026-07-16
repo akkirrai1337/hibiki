@@ -109,8 +109,9 @@ class HibikiDownloadService : DownloadService(
 
     companion object {
         private const val DOWNLOAD_NOTIFICATION_ID = 31_000
+        private const val PREPARATION_NOTIFICATION_ID = 31_001
 
-        fun showPreparingNotification(context: Context) {
+        fun showPreparingNotification(context: Context, animeTitle: String?) {
             val localizedContext = context.applicationContext.withAppPreferencesLanguage()
             val manager = localizedContext.getSystemService(NotificationManager::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -126,10 +127,13 @@ class HibikiDownloadService : DownloadService(
             }
             val (completed, total) = OfflineDownloadQueue.getNotificationProgress(localizedContext)
             manager.notify(
-                DOWNLOAD_NOTIFICATION_ID,
+                PREPARATION_NOTIFICATION_ID,
                 NotificationCompat.Builder(localizedContext, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle(localizedContext.getString(R.string.download_notification_channel_name))
+                    .setContentTitle(
+                        animeTitle?.trim()?.takeIf(String::isNotBlank)
+                            ?: localizedContext.getString(R.string.download_notification_channel_name)
+                    )
                     .setContentText(
                         localizedContext.getString(
                             R.string.download_notification_preparing,
@@ -147,7 +151,7 @@ class HibikiDownloadService : DownloadService(
         fun cancelPreparingNotification(context: Context) {
             context.applicationContext
                 .getSystemService(NotificationManager::class.java)
-                .cancel(DOWNLOAD_NOTIFICATION_ID)
+                .cancel(PREPARATION_NOTIFICATION_ID)
         }
     }
 }

@@ -4,6 +4,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.PlayerType
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,6 +16,18 @@ class AnimeWatchRepositoryTest {
             MockEngine { error("No network expected in AnimeWatchRepositoryTest") }
         )
     )
+
+    @Test
+    fun `failed player does not cancel another player in the race`() = runBlocking {
+        val (player, stream) = raceFirstSuccessful(listOf("unavailable", "working")) { candidate ->
+            if (candidate == "unavailable") error("Player is unavailable")
+            delay(10)
+            "https://video.example/stream.m3u8"
+        }
+
+        assertEquals("working", player)
+        assertEquals("https://video.example/stream.m3u8", stream)
+    }
 
     @Test
     fun `automatic order prefers kodik before slower embeds`() {
