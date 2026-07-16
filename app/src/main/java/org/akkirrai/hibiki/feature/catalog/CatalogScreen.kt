@@ -83,6 +83,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
@@ -337,6 +339,19 @@ private fun CatalogSortControl(
 ) {
     val cascadeState = rememberCascadeState()
     val haptic = LocalHapticFeedback.current
+    val baseContext = LocalContext.current
+    val appLanguage = LocalAppLanguage.current
+    val localizedContext = remember(baseContext, appLanguage) {
+        baseContext.withLanguage(appLanguage)
+    }
+    val sortLabels = remember(localizedContext) {
+        CatalogSort.entries.associateWith { sort ->
+            localizedContext.getString(sort.labelRes)
+        }
+    }
+    val sortTitle = remember(localizedContext) {
+        localizedContext.getString(R.string.catalog_sort_title)
+    }
 
     Box(
         modifier = modifier
@@ -367,7 +382,7 @@ private fun CatalogSortControl(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
                 Text(
-                    text = stringResource(sort.labelRes),
+                    text = sortLabels.getValue(sort),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
@@ -399,7 +414,7 @@ private fun CatalogSortControl(
             shape = RoundedCornerShape(26.dp),
         ) {
             Text(
-                text = stringResource(R.string.catalog_sort_title),
+                text = sortTitle,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.tertiary,
@@ -446,7 +461,7 @@ private fun CatalogSortControl(
                                     contentDescription = null,
                                     modifier = Modifier.size(iconSize),
                                 )
-                                Text(stringResource(sort.labelRes))
+                                Text(sortLabels.getValue(sort))
                             }
                             if (isSelected) {
                                 CatalogSortOrderIcon(
