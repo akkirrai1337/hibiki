@@ -268,6 +268,7 @@ class WatchStateRepository(context: Context) {
 
     companion object {
         const val PREFS_NAME = "hibiki_watch_state"
+        const val ACTIVITY_RETENTION_DAYS = 90
         private const val PROGRESS_PREFIX = "progress_"
         private const val SEPARATOR = '\u001F'
         private const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
@@ -298,18 +299,21 @@ class WatchStateRepository(context: Context) {
     }
 
     /** Daily local playback aggregates used by the profile. Resume state remains separate. */
-    fun getDailyWatchActivity(): List<DailyWatchActivity> = prefs.all.keys
-        .asSequence()
-        .filter { it.startsWith(ACTIVITY_WATCHED_PREFIX) }
-        .mapNotNull { key ->
-            val date = runCatching { LocalDate.parse(key.removePrefix(ACTIVITY_WATCHED_PREFIX)) }.getOrNull()
-                ?: return@mapNotNull null
-            val watchedMs = prefs.getLong(key, 0L).coerceAtLeast(0L)
-            val completed = prefs.getStringSet(completedActivityKey(date), emptySet()).orEmpty().size
-            DailyWatchActivity(date = date, watchedMs = watchedMs, completedEpisodes = completed)
-        }
-        .sortedBy(DailyWatchActivity::date)
-        .toList()
+    fun getDailyWatchActivity(): List<DailyWatchActivity> {
+        pruneActivityBefore(activityCutoffDate())
+        return prefs.all.keys
+            .asSequence()
+            .filter { it.startsWith(ACTIVITY_WATCHED_PREFIX) }
+            .mapNotNull { key ->
+                val date = runCatching { LocalDate.parse(key.removePrefix(ACTIVITY_WATCHED_PREFIX)) }.getOrNull()
+                    ?: return@mapNotNull null
+                val watchedMs = prefs.getLong(key, 0L).coerceAtLeast(0L)
+                val completed = prefs.getStringSet(completedActivityKey(date), emptySet()).orEmpty().size
+                DailyWatchActivity(date = date, watchedMs = watchedMs, completedEpisodes = completed)
+            }
+            .sortedBy(DailyWatchActivity::date)
+            .toList()
+    }
 
     private fun recordActivity(
         titleId: String,
@@ -326,6 +330,9 @@ class WatchStateRepository(context: Context) {
         if (deltaMs == 0L && !completed) return
 
         val date = Instant.ofEpochMilli(updatedAt).atZone(ZoneId.systemDefault()).toLocalDate()
+        val cutoffDate = activityCutoffDate()
+        pruneActivityBefore(cutoffDate)
+        if (date.isBefore(cutoffDate)) return
         val completedKey = completedActivityKey(date)
         val completedEpisodes = prefs.getStringSet(completedKey, emptySet()).orEmpty().toMutableSet()
         if (completed) completedEpisodes += "$titleId:$episodeId"
@@ -338,6 +345,26 @@ class WatchStateRepository(context: Context) {
     private fun activityWatchedKey(date: LocalDate): String = "$ACTIVITY_WATCHED_PREFIX$date"
 
     private fun completedActivityKey(date: LocalDate): String = "$ACTIVITY_COMPLETED_PREFIX$date"
+
+    private fun activityCutoffDate(): LocalDate =
+        LocalDate.now().minusDays((ACTIVITY_RETENTION_DAYS - 1).toLong())
+
+    private fun pruneActivityBefore(cutoffDate: LocalDate) {
+        val expiredKeys = prefs.all.keys.filter { key ->
+            val rawDate = when {
+                key.startsWith(ACTIVITY_WATCHED_PREFIX) -> key.removePrefix(ACTIVITY_WATCHED_PREFIX)
+                key.startsWith(ACTIVITY_COMPLETED_PREFIX) -> key.removePrefix(ACTIVITY_COMPLETED_PREFIX)
+                else -> return@filter false
+            }
+            runCatching { LocalDate.parse(rawDate) }
+                .getOrNull()
+                ?.isBefore(cutoffDate) == true
+        }
+        if (expiredKeys.isEmpty()) return
+        prefs.edit().apply {
+            expiredKeys.forEach(::remove)
+        }.apply()
+    }
 
     data class DailyWatchActivity(
         val date: LocalDate,

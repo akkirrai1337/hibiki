@@ -168,33 +168,7 @@ private fun HibikiNavHost(
             .background(MaterialTheme.colorScheme.surface)
             .clipToBounds()
     ) {
-        composable(
-            route = TopLevelDestination.Home.route,
-            enterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            exitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popEnterTransition = {
-                topLevelEnterTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-            popExitTransition = {
-                topLevelExitTransition(
-                    initialRoute = initialState.destination.route,
-                    targetRoute = targetState.destination.route,
-                )
-            },
-        ) { backStackEntry ->
+        composable(route = TopLevelDestination.Home.route) { backStackEntry ->
             val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
@@ -596,30 +570,6 @@ private fun NavGraphBuilder.topLevelComposable(
 ) {
     composable(
         route = route,
-        enterTransition = {
-            topLevelEnterTransition(
-                initialRoute = initialState.destination.route,
-                targetRoute = targetState.destination.route,
-            )
-        },
-        exitTransition = {
-            topLevelExitTransition(
-                initialRoute = initialState.destination.route,
-                targetRoute = targetState.destination.route,
-            )
-        },
-        popEnterTransition = {
-            topLevelEnterTransition(
-                initialRoute = initialState.destination.route,
-                targetRoute = targetState.destination.route,
-            )
-        },
-        popExitTransition = {
-            topLevelExitTransition(
-                initialRoute = initialState.destination.route,
-                targetRoute = targetState.destination.route,
-            )
-        },
         content = { content() },
     )
 }

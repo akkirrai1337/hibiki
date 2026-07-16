@@ -135,6 +135,11 @@ class MainActivity : ComponentActivity() {
         checkForAppUpdate()
     }
 
+    override fun onResume() {
+        super.onResume()
+        requestHighestRefreshRate()
+    }
+
     override fun onDestroy() {
         updateDownloadJob?.cancel()
         unregisterReceiver(updateDownloadReceiver)
@@ -315,6 +320,28 @@ class MainActivity : ComponentActivity() {
 
     private fun updateString(@StringRes stringRes: Int, vararg formatArgs: Any): String {
         return applicationContext.withAppPreferencesLanguage().getString(stringRes, *formatArgs)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun requestHighestRefreshRate() {
+        val activityDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display ?: windowManager.defaultDisplay
+        } else {
+            windowManager.defaultDisplay
+        }
+        val currentMode = activityDisplay.mode
+        val preferredMode = activityDisplay.supportedModes
+            .asSequence()
+            .filter { mode ->
+                mode.physicalWidth == currentMode.physicalWidth &&
+                    mode.physicalHeight == currentMode.physicalHeight
+            }
+            .maxByOrNull { it.refreshRate }
+            ?: return
+        window.attributes = window.attributes.apply {
+            preferredDisplayModeId = preferredMode.modeId
+            preferredRefreshRate = preferredMode.refreshRate
+        }
     }
 
     private companion object {

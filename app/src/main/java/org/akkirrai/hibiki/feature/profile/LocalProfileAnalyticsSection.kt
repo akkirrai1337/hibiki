@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,7 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,9 +68,14 @@ internal fun AnalyticsCard(
     ) {
         buildAnalyticsPages(snapshot)
     }
-    val activityScrollState = rememberScrollState()
+    val firstVisibleActivityDay = remember(snapshot.activityDays.size) {
+        (snapshot.activityDays.size - ACTIVITY_CHART_VISIBLE_DAYS).coerceAtLeast(0)
+    }
+    val activityListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = firstVisibleActivityDay,
+    )
     LaunchedEffect(snapshot.activityDays) {
-        activityScrollState.scrollTo(activityScrollState.maxValue)
+        activityListState.scrollToItem(firstVisibleActivityDay)
     }
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -91,18 +98,13 @@ internal fun AnalyticsCard(
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
                     ACTIVITY_CHART_VISIBLE_DAYS
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(activityScrollState),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    ActivityBarChart(
-                        days = snapshot.activityDays,
-                        dayWidth = dayWidth,
-                        muted = !hasActivity,
-                    )
-                }
+                ActivityBarChart(
+                    days = snapshot.activityDays,
+                    dayWidth = dayWidth,
+                    listState = activityListState,
+                    muted = !hasActivity,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
@@ -367,6 +369,8 @@ private fun SegmentDonut(
 private fun ActivityBarChart(
     days: List<ActivityDay>,
     dayWidth: Dp,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
     muted: Boolean = false,
 ) {
     val maxEpisodes = days.maxOfOrNull(ActivityDay::episodeCount)
@@ -379,14 +383,16 @@ private fun ActivityBarChart(
     }
     val inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f)
 
-    Row(
-        modifier = Modifier
-            .width((dayWidth * days.size) + (ACTIVITY_CHART_DAY_GAP * (days.size - 1).coerceAtLeast(0)))
-            .height(142.dp),
+    LazyRow(
+        state = listState,
+        modifier = modifier.height(142.dp),
         horizontalArrangement = Arrangement.spacedBy(ACTIVITY_CHART_DAY_GAP),
         verticalAlignment = Alignment.Bottom,
     ) {
-        days.forEach { day ->
+        items(
+            items = days,
+            key = ActivityDay::dateLabel,
+        ) { day ->
             val barHeight = if (day.episodeCount > 0) {
                 (18 + (66 * day.episodeCount / maxEpisodes)).dp
             } else {

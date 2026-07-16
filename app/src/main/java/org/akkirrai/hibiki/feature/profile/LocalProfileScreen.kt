@@ -3,11 +3,6 @@ package org.akkirrai.hibiki.feature.profile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.BasicTextField
@@ -82,6 +77,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
+import org.akkirrai.hibiki.core.design.animation.continuousRotation
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -375,21 +371,14 @@ private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
 
 @Composable
 private fun RotatingSettingsButton(onClick: () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "settings_icon")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10_000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "rotation",
-    )
     ProfileActionButton(
         icon = Icons.Rounded.Settings,
         contentDescription = stringResource(R.string.local_profile_settings),
         onClick = onClick,
-        iconRotation = angle,
+        iconModifier = Modifier.continuousRotation(
+            durationMillis = 10_000,
+            label = "settings_icon_rotation",
+        ),
     )
 }
 
@@ -399,7 +388,7 @@ private fun ProfileActionButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconRotation: Float = 0f,
+    iconModifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = CircleShape) {
         Icon(
@@ -410,7 +399,7 @@ private fun ProfileActionButton(
                 .size(40.dp)
                 .clickable(onClick = onClick)
                 .padding(AnimiteSmallPadding)
-                .graphicsLayer { rotationZ = iconRotation },
+                .then(iconModifier),
         )
     }
 }
