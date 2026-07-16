@@ -42,7 +42,6 @@ internal fun buildProfileSnapshot(
         .asSequence()
         .filter { it.addedAt != null && it.anime.title.isNotBlank() }
         .sortedByDescending { it.addedAt }
-        .take(6)
         .map { item ->
             val category = item.categories.primaryCategory()
             RecentLibraryItem(
@@ -55,6 +54,7 @@ internal fun buildProfileSnapshot(
             )
         }
         .distinctBy(RecentLibraryItem::title)
+        .take(5)
         .toList()
     val favoriteItems = localData.library
         .asSequence()

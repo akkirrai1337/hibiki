@@ -98,6 +98,7 @@ private enum class LocalProfileTab(val titleRes: Int) {
 @Composable
 fun LocalProfileScreen(
     onSettingsClick: () -> Unit,
+    bottomContentPadding: Dp = 0.dp,
     modifier: Modifier = Modifier,
     viewModel: LocalProfileViewModel = viewModel(factory = LocalProfileViewModel.Factory(LocalContext.current)),
 ) {
@@ -213,9 +214,9 @@ fun LocalProfileScreen(
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 ) { page ->
                     when (LocalProfileTab.entries[page]) {
-                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot)
-                        LocalProfileTab.Activity -> LocalActivityTab(snapshot)
-                        LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems)
+                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
+                        LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
+                        LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
                     }
                 }
             }
@@ -416,9 +417,13 @@ private fun ProfileActionButton(
 
 /** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
 @Composable
-private fun LocalOverviewTab(snapshot: LocalProfileSnapshot) {
+private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
     Column(
-        modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(AnimiteLargePadding),
+        modifier = Modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
+            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
         verticalArrangement = Arrangement.spacedBy(AnimiteMediumPadding),
     ) {
         LocalStatsRow(snapshot)
@@ -486,18 +491,32 @@ private fun GenreBars(items: List<DistributionSegment>) {
 }
 
 @Composable
-private fun LocalActivityTab(snapshot: LocalProfileSnapshot) {
-    Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(AnimiteLargePadding)) { AnalyticsCard(snapshot) }
+private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
+    Column(
+        Modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
+            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
+    ) { AnalyticsCard(snapshot) }
 }
 
 @Composable
-private fun LocalFavoritesTab(items: List<RecentLibraryItem>) {
+private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPadding: Dp) {
     if (items.isEmpty()) {
         Box(Modifier.fillMaxHeight().padding(AnimiteLargePadding), contentAlignment = Alignment.TopCenter) {
             Text(stringResource(R.string.local_profile_empty_favorites), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
-        Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(AnimiteLargePadding)) { RecentLibraryCard(items) }
+        Column(
+            Modifier
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
+                .padding(bottom = bottomContentPadding + AnimiteLargePadding),
+        ) {
+            RecentLibraryCard(items = items, showTitle = false)
+        }
     }
 }
 

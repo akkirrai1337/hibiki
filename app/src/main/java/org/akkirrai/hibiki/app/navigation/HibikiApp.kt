@@ -228,6 +228,7 @@ private fun HibikiNavHost(
                 onSettingsClick = {
                     navController.navigate(AnimeNavType.SETTINGS_ROUTE)
                 },
+                bottomContentPadding = topLevelBottomContentPadding,
                 // The profile owns its status-bar background like Animite's screen.
                 // Do not apply Scaffold's top inset a second time here.
                 modifier = Modifier.fillMaxSize(),

@@ -31,17 +31,20 @@ import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 @Composable
 internal fun RecentLibraryCard(
     items: List<RecentLibraryItem>,
+    showTitle: Boolean = true,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-            Text(
-                text = stringResource(R.string.yummy_account_recent_additions_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            if (showTitle) {
+                Text(
+                    text = stringResource(R.string.yummy_account_recent_additions_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             if (items.isEmpty()) {
                 Box(
                     modifier = Modifier
