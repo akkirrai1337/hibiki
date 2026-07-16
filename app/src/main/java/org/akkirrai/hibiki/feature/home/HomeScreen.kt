@@ -935,7 +935,8 @@ private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
     UiDimens.ScreenPadding
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = HOME_CONTENT_TOP_PADDING + 18.dp
-private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET = UiDimens.SearchBarHeight * 0.10f
+private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET =
+    UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight - 8.dp
 
 private fun buildHomeMeta(
     anime: Anime,
