@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material3:material3:1.5.0-alpha23")
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation("me.saket.cascade:cascade-compose:2.3.0")
     implementation(libs.androidx.palette.ktx)
     implementation(libs.material.kolor)
     implementation(libs.androidx.navigation.compose)

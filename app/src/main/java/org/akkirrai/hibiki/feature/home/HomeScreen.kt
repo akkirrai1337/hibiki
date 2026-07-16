@@ -139,10 +139,6 @@ import org.akkirrai.hibiki.core.model.buildCardMeta
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
-    onShowAllTrendingClick: () -> Unit,
-    onCatalogClick: () -> Unit,
-    onRecentUpdatesClick: () -> Unit,
-    onRandomAnimeClick: (Anime) -> Unit,
     onProfileClick: () -> Unit,
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
@@ -297,17 +293,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-
-            item {
-                HomeQuickActions(
-                    canRandom = !state.isRandomLoading,
-                    onPopularClick = onShowAllTrendingClick,
-                    onCatalogClick = onCatalogClick,
-                    onRecentUpdatesClick = onRecentUpdatesClick,
-                    onRandomClick = { viewModel.openRandomAnime(onRandomAnimeClick) },
-                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                )
             }
 
             verticalAnimeListContent(
@@ -826,67 +811,6 @@ private fun EmptyContinueContent() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun HomeQuickActions(
-    canRandom: Boolean,
-    onPopularClick: () -> Unit,
-    onCatalogClick: () -> Unit,
-    onRecentUpdatesClick: () -> Unit,
-    onRandomClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HomeQuickActionPill(
-            label = stringResource(R.string.home_quick_popular),
-            icon = Icons.AutoMirrored.Outlined.TrendingUp,
-            onClick = onPopularClick,
-        )
-        HomeQuickActionPill(
-            label = stringResource(R.string.nav_catalog),
-            icon = Icons.Outlined.GridView,
-            onClick = onCatalogClick,
-        )
-        HomeQuickActionPill(
-            label = stringResource(R.string.home_quick_recent_updates),
-            icon = Icons.Outlined.Refresh,
-            onClick = onRecentUpdatesClick,
-        )
-        HomeQuickActionPill(
-            label = stringResource(R.string.home_quick_random),
-            icon = Icons.Filled.PlayArrow,
-            onClick = onRandomClick,
-            enabled = canRandom,
-        )
-    }
-}
-
-@Composable
-private fun HomeQuickActionPill(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-) {
-    Surface(
-        modifier = Modifier.clip(RoundedCornerShape(50)).clickable(enabled = enabled, onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

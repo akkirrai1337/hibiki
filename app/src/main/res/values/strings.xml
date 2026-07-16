@@ -58,6 +58,10 @@
     <string name="catalog_all_categories">All categories</string>
     <string name="catalog_categories_title">Categories</string>
     <string name="catalog_categories_subtitle">Choose genres to filter the catalog.</string>
+    <string name="catalog_sort_alphabetical">Alphabetical</string>
+    <string name="catalog_sort_popular">Popularity</string>
+    <string name="catalog_sort_updated">Recently updated</string>
+    <string name="catalog_sort_title">Sort</string>
 
     <string name="library_add_title">Add to library</string>
     <string name="library_add_subtitle">Choose a status for this title</string>

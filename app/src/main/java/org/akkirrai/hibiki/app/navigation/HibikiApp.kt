@@ -205,18 +205,6 @@ private fun HibikiNavHost(
                 onAnimeClick = { anime ->
                     navController.navigate(AnimeNavType.createDetailsRoute(anime))
                 },
-                onShowAllTrendingClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.TRENDING_ROUTE)
-                },
-                onCatalogClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.CATALOG_ROUTE)
-                },
-                onRecentUpdatesClick = {
-                    navController.navigateSingleTopTo(AnimeNavType.RECENT_UPDATES_ROUTE)
-                },
-                onRandomAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                },
                 onProfileClick = { navController.navigateTopLevelDestination(currentTopLevel, TopLevelDestination.Profile) },
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
                 bottomContentPadding = topLevelBottomContentPadding,
@@ -234,6 +222,15 @@ private fun HibikiNavHost(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        topLevelComposable(route = TopLevelDestination.Catalog.route) {
+            CatalogScreen(
+                onAnimeClick = { anime ->
+                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                },
+                bottomContentPadding = topLevelBottomContentPadding,
+                modifier = topLevelScreenModifier,
+            )
+        }
         topLevelComposable(route = TopLevelDestination.Library.route) {
             LibraryScreen(
                 onAnimeClick = { anime ->
@@ -243,21 +240,6 @@ private fun HibikiNavHost(
                 isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
                 bottomContentPadding = topLevelBottomContentPadding,
                 modifier = topLevelScreenModifier
-            )
-        }
-        composable(
-            route = AnimeNavType.CATALOG_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
-        ) {
-            CatalogScreen(
-                onAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                },
-                onBackClick = navController::navigateUp,
-                modifier = screenModifier.statusBarsPadding(),
             )
         }
         composable(

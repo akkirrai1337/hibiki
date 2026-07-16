@@ -50,6 +50,10 @@
     <string name="catalog_all_categories">Все категории</string>
     <string name="catalog_categories_title">Категории</string>
     <string name="catalog_categories_subtitle">Выберите жанры для фильтрации каталога.</string>
+    <string name="catalog_sort_alphabetical">По алфавиту</string>
+    <string name="catalog_sort_popular">По популярности</string>
+    <string name="catalog_sort_updated">По дате обновления</string>
+    <string name="catalog_sort_title">Сортировка</string>
 
     <string name="library_add_title">Добавить в библиотеку</string>
     <string name="library_add_subtitle">Выберите статус для тайтла</string>
