@@ -89,6 +89,9 @@ object OfflineDownloadQueue {
                         if (download.state == Download.STATE_COMPLETED) {
                             incrementSessionCompleted(context.applicationContext, download.request.id)
                         }
+                        if (download.state == Download.STATE_FAILED) {
+                            removeFromSession(context.applicationContext, download.request.id)
+                        }
                         if (download.state == Download.STATE_COMPLETED || download.state == Download.STATE_FAILED) {
                             drain(context.applicationContext, downloadManager)
                         }
@@ -149,6 +152,9 @@ object OfflineDownloadQueue {
         }
         if (entries.isEmpty()) return 0
         val manager = OfflineMediaCache.getDownloadManager(appContext)
+        if (activeDownloadCount(manager) == 0) {
+            HibikiDownloadService.showPreparingNotification(appContext)
+        }
         install(appContext, manager)
         drain(appContext, manager)
         return entries.size
@@ -364,6 +370,7 @@ object OfflineDownloadQueue {
                             error,
                         )
                         markFailedEntry(context, entry)
+                        removeFromSession(context, entry.downloadId)
                     }
                 }
             } finally {
@@ -371,6 +378,9 @@ object OfflineDownloadQueue {
                 synchronized(processingLock) { isProcessing = false }
                 if (!addedAny) {
                     drain(context, manager)
+                    if (pendingEntries(context).isEmpty() && activeDownloadCount(manager) == 0) {
+                        HibikiDownloadService.cancelPreparingNotification(context)
+                    }
                 }
             }
         }

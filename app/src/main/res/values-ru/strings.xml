@@ -225,6 +225,7 @@
     <string name="download_notification_channel_description">Скачивание серий для офлайн-просмотра</string>
     <string name="download_notification_active">Скачивание серий: %1$d</string>
     <string name="download_notification_waiting">Загрузки ожидают подключения</string>
+    <string name="download_notification_preparing">Подготавливаю загрузки • %1$d/%2$d</string>
     <string name="download_notification_progress">Скачиваю &lt;3 • %1$d/%2$d • %3$d%%</string>
 
     <string name="trending_error_title">Не удалось загрузить топ</string>

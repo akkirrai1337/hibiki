@@ -1,8 +1,11 @@
 package org.akkirrai.hibiki.core.download
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.offline.Download
@@ -104,7 +107,47 @@ class HibikiDownloadService : DownloadService(
             .build()
     }
 
-    private companion object {
-        const val DOWNLOAD_NOTIFICATION_ID = 31_000
+    companion object {
+        private const val DOWNLOAD_NOTIFICATION_ID = 31_000
+
+        fun showPreparingNotification(context: Context) {
+            val localizedContext = context.applicationContext.withAppPreferencesLanguage()
+            val manager = localizedContext.getSystemService(NotificationManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID,
+                        localizedContext.getString(R.string.download_notification_channel_name),
+                        NotificationManager.IMPORTANCE_LOW,
+                    ).apply {
+                        description = localizedContext.getString(R.string.download_notification_channel_description)
+                    }
+                )
+            }
+            val (completed, total) = OfflineDownloadQueue.getNotificationProgress(localizedContext)
+            manager.notify(
+                DOWNLOAD_NOTIFICATION_ID,
+                NotificationCompat.Builder(localizedContext, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle(localizedContext.getString(R.string.download_notification_channel_name))
+                    .setContentText(
+                        localizedContext.getString(
+                            R.string.download_notification_preparing,
+                            completed,
+                            total.coerceAtLeast(1),
+                        )
+                    )
+                    .setOngoing(true)
+                    .setOnlyAlertOnce(true)
+                    .setProgress(0, 0, true)
+                    .build()
+            )
+        }
+
+        fun cancelPreparingNotification(context: Context) {
+            context.applicationContext
+                .getSystemService(NotificationManager::class.java)
+                .cancel(DOWNLOAD_NOTIFICATION_ID)
+        }
     }
 }
