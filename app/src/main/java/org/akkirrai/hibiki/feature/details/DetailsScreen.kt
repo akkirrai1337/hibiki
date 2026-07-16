@@ -469,12 +469,12 @@ private fun DetailHeroSection(
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )
-    val bannerHeight = 168.dp
+    val bannerHeight = 224.dp
     val posterExpandedHeight = 200.dp
-    val posterTop = 156.dp
-    val detailsTop = 168.dp
+    val posterTop = 212.dp
+    val detailsTop = 224.dp
     val detailsHeight = 180.dp
-    val heroHeight = 356.dp
+    val heroHeight = 412.dp
 
     Column(
         modifier = Modifier.fillMaxWidth(),
