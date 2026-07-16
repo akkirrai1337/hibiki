@@ -396,7 +396,7 @@ object OfflineDownloadQueue {
         episode: WatchEpisode,
     ): PlaybackStream {
         return try {
-            repository.resolveStream(
+            repository.resolveFastestStream(
                 sourceId = source.sourceId,
                 episodeId = episode.id,
                 forceRefresh = false,
@@ -409,7 +409,7 @@ object OfflineDownloadQueue {
                 error,
             )
             delay(STREAM_RESOLVE_RETRY_DELAY_MS)
-            repository.resolveStream(
+            repository.resolveFastestStream(
                 sourceId = source.sourceId,
                 episodeId = episode.id,
                 forceRefresh = true,

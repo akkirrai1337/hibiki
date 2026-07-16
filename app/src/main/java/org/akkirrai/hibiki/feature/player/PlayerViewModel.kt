@@ -240,7 +240,7 @@ class PlayerViewModel(
         }
     }
 
-    fun selectVoiceover(source: WatchSource) {
+    fun selectVoiceover(source: WatchSource, resumePositionMs: Long = 0L) {
         val currentEpisode = _uiState.value.episodes.firstOrNull { it.id == _uiState.value.currentEpisodeId } ?: return
         settingsLoadJob?.cancel()
         viewModelScope.launch(Dispatchers.IO) {
@@ -254,6 +254,7 @@ class PlayerViewModel(
                     selectedProviderId = null,
                     selectedPlayerName = null,
                     selectedQualityLabel = source.qualityLabel,
+                    pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                     settingsOptionsKey = null,
                     failedStreamUrls = emptySet(),
                     recoveryAttempted = false,
@@ -273,12 +274,13 @@ class PlayerViewModel(
         }
     }
 
-    fun selectBackend(providerId: String?) {
+    fun selectBackend(providerId: String?, resumePositionMs: Long = 0L) {
         settingsLoadJob?.cancel()
         _uiState.update {
             it.copy(
                 selectedProviderId = providerId,
                 playback = null,
+                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -288,12 +290,13 @@ class PlayerViewModel(
         load(forceRefresh = true)
     }
 
-    fun selectPlayer(playerName: String?) {
+    fun selectPlayer(playerName: String?, resumePositionMs: Long = 0L) {
         settingsLoadJob?.cancel()
         _uiState.update {
             it.copy(
                 selectedPlayerName = playerName,
                 playback = null,
+                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
@@ -303,11 +306,12 @@ class PlayerViewModel(
         load(forceRefresh = true)
     }
 
-    fun selectQuality(qualityLabel: String?) {
+    fun selectQuality(qualityLabel: String?, resumePositionMs: Long = 0L) {
         _uiState.update {
             it.copy(
                 selectedQualityLabel = qualityLabel,
                 playback = null,
+                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 failedStreamUrls = emptySet(),
                 recoveryAttempted = false,
             )

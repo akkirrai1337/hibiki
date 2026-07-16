@@ -410,11 +410,18 @@ fun PlayerScreen(
         sliderPositionMs = segment.endMs
     }
 
-    fun runPlaybackSwitch(action: () -> Unit) {
+    fun runPlaybackSwitch(
+        preservePosition: Boolean = false,
+        action: (resumePositionMs: Long) -> Unit,
+    ) {
         keepControlsVisible()
         resetAccumulatedDoubleTapSeek()
+        val resumePositionMs = if (preservePosition) currentPlaybackPositionMs() else 0L
         saveCurrentPlaybackProgress()
-        action()
+        exoPlayer.pause()
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        action(resumePositionMs)
     }
 
     fun pictureInPictureParams(): PictureInPictureParams {
@@ -491,11 +498,11 @@ fun PlayerScreen(
                     }
 
                     PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE -> {
-                        if (hasPreviousEpisode) runPlaybackSwitch(viewModel::playPreviousEpisode)
+                        if (hasPreviousEpisode) runPlaybackSwitch { viewModel.playPreviousEpisode() }
                     }
 
                     PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE -> {
-                        if (hasNextEpisode) runPlaybackSwitch(viewModel::playNextEpisode)
+                        if (hasNextEpisode) runPlaybackSwitch { viewModel.playNextEpisode() }
                     }
                 }
             }
@@ -731,7 +738,13 @@ fun PlayerScreen(
     }
 
     LaunchedEffect(state.playback) {
-        val playback = state.playback ?: return@LaunchedEffect
+        val playback = state.playback
+        if (playback == null) {
+            exoPlayer.pause()
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            return@LaunchedEffect
+        }
         AppLogger.d(
             PLAYBACK_LOG_TAG,
             buildString {
@@ -1180,10 +1193,10 @@ fun PlayerScreen(
                             if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
                         },
                         onPreviousEpisode = {
-                            runPlaybackSwitch(viewModel::playPreviousEpisode)
+                            runPlaybackSwitch { viewModel.playPreviousEpisode() }
                         },
                         onNextEpisode = {
-                            runPlaybackSwitch(viewModel::playNextEpisode)
+                            runPlaybackSwitch { viewModel.playNextEpisode() }
                         },
                     )
                 }
@@ -1386,20 +1399,25 @@ fun PlayerScreen(
                         appPreferences.setPlaybackSpeed(speed)
                         applyPlaybackSpeed(speed)
                     },
-                    onSelectVoiceover = {
-                        runPlaybackSwitch { viewModel.selectVoiceover(it) }
+                    onSelectVoiceover = { source ->
+                        runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
+                            viewModel.selectVoiceover(source, resumePositionMs)
+                        }
                     },
-                    onSelectBackend = {
-                        keepControlsVisible()
-                        viewModel.selectBackend(it)
+                    onSelectBackend = { providerId ->
+                        runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
+                            viewModel.selectBackend(providerId, resumePositionMs)
+                        }
                     },
-                    onSelectPlayer = {
-                        keepControlsVisible()
-                        viewModel.selectPlayer(it)
+                    onSelectPlayer = { playerName ->
+                        runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
+                            viewModel.selectPlayer(playerName, resumePositionMs)
+                        }
                     },
-                    onSelectQuality = {
-                        keepControlsVisible()
-                        viewModel.selectQuality(it)
+                    onSelectQuality = { quality ->
+                        runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
+                            viewModel.selectQuality(quality, resumePositionMs)
+                        }
                     },
                     onAutoSkipSegmentsChange = { enabled ->
                         keepControlsVisible()

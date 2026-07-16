@@ -5,6 +5,9 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -180,8 +183,9 @@ class AnimeWatchRepository(
         excludedStreamUrls: Set<String> = emptySet(),
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
+        requiredPlayerName: String? = null,
     ): PlaybackStream {
-        val cacheKey = "$sourceId:$episodeId:${preferredPlayerName.orEmpty()}:${preferredQuality.orEmpty()}"
+        val cacheKey = "$sourceId:$episodeId:${preferredPlayerName.orEmpty()}:${preferredQuality.orEmpty()}:${requiredPlayerName.orEmpty()}"
         if (!forceRefresh) {
             cachedStreams[cacheKey]
                 ?.takeIf { System.currentTimeMillis() - it.cachedAt < STREAM_CACHE_TTL_MS }
@@ -199,7 +203,9 @@ class AnimeWatchRepository(
                 .filterNot { it.url in excludedStreamUrls },
             preferredPlayerName = preferredPlayerName,
             preferredQuality = preferredQuality,
-        )
+        ).filter { link ->
+            requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
+        }
 
         if (links.isEmpty()) {
             throw SourceException(appString(R.string.watch_error_no_players))
@@ -299,6 +305,66 @@ class AnimeWatchRepository(
         }
 
         throw SourceException(errors.firstOrNull() ?: appString(R.string.watch_error_stream_unavailable))
+    }
+
+    suspend fun resolveFastestStream(
+        sourceId: String,
+        episodeId: String,
+        forceRefresh: Boolean = false,
+        preferredQuality: String? = null,
+    ): PlaybackStream {
+        val playerNames = getPlaybackSettingsOptions(sourceId, episodeId)
+            .links
+            .mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
+            .distinctBy(String::lowercase)
+
+        if (playerNames.size <= 1) {
+            return resolveStream(
+                sourceId = sourceId,
+                episodeId = episodeId,
+                forceRefresh = forceRefresh,
+                preferredPlayerName = playerNames.firstOrNull(),
+                preferredQuality = preferredQuality,
+            )
+        }
+
+        return supervisorScope {
+            val results = Channel<Result<PlaybackStream>>(capacity = playerNames.size)
+            val jobs = playerNames.map { playerName ->
+                launch {
+                    val result = try {
+                        Result.success(
+                            resolveStream(
+                                sourceId = sourceId,
+                                episodeId = episodeId,
+                                forceRefresh = forceRefresh,
+                                preferredPlayerName = playerName,
+                                preferredQuality = preferredQuality,
+                                requiredPlayerName = playerName,
+                            )
+                        )
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
+                        Result.failure(error)
+                    }
+                    results.send(result)
+                }
+            }
+
+            var firstError: Throwable? = null
+            repeat(playerNames.size) {
+                val result = results.receive()
+                result.getOrNull()?.let { playback ->
+                    jobs.forEach { it.cancel() }
+                    return@supervisorScope playback
+                }
+                if (firstError == null) firstError = result.exceptionOrNull()
+            }
+
+            results.close()
+            throw firstError ?: SourceException(appString(R.string.watch_error_stream_unavailable))
+        }
     }
 
     suspend fun getPlaybackSettingsOptions(
