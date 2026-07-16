@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.core.download
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -11,14 +13,14 @@ class OfflineDownloadRepository(
     private val appContext = context.applicationContext
 
     init {
-        OfflineDownloadQueue.install(appContext)
+        OfflineDownloadQueue.installInBackground(appContext)
     }
 
     suspend fun enqueueEpisodes(
         source: WatchSource,
         episodes: List<WatchEpisode>,
-    ): Int {
-        return OfflineDownloadQueue.enqueue(
+    ): Int = withContext(Dispatchers.IO) {
+        OfflineDownloadQueue.enqueue(
             context = appContext,
             source = source,
             episodes = episodes,

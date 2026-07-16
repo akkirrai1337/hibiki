@@ -44,7 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -100,16 +102,18 @@ fun EpisodesScreen(
     var downloadControlsVisible by remember(sourceId, downloadMode) { mutableStateOf(downloadMode) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(state.result, sourceId) {
+    LaunchedEffect(state.result, sourceId, lifecycleOwner) {
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
-        while (true) {
-            downloadStates = withContext(Dispatchers.IO) {
-                offlineDownloadRepository.getEpisodeStates(
-                    sourceId = sourceId,
-                    episodeIds = content.items.map { it.id },
-                )
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                downloadStates = withContext(Dispatchers.IO) {
+                    offlineDownloadRepository.getEpisodeStates(
+                        sourceId = sourceId,
+                        episodeIds = content.items.map { it.id },
+                    )
+                }
+                delay(700)
             }
-            delay(700)
         }
     }
 
@@ -200,7 +204,7 @@ fun EpisodesScreen(
                             },
                             onDownloadClick = {
                                 downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
-                                coroutineScope.launch {
+                                coroutineScope.launch(Dispatchers.IO) {
                                     offlineDownloadRepository.enqueueEpisodes(
                                         source = downloadSource,
                                         episodes = listOf(episode),

@@ -41,6 +41,13 @@ object OfflineDownloadQueue {
     @Volatile
     private var isProcessing = false
 
+    fun installInBackground(context: Context) {
+        val appContext = context.applicationContext
+        scope.launch {
+            install(appContext)
+        }
+    }
+
     fun install(
         context: Context,
         manager: DownloadManager = OfflineMediaCache.getDownloadManager(context),
