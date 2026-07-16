@@ -78,6 +78,8 @@ import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
@@ -119,6 +121,7 @@ fun AnimeSearchFiltersSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appLanguage = LocalAppLanguage.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
     var pendingFilters by remember(initialFilters) { mutableStateOf(initialFilters) }
@@ -142,7 +145,8 @@ fun AnimeSearchFiltersSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) { sheetContentModifier ->
-        when {
+        LocalizedAppContext(languageMode = appLanguage) {
+            when {
             isFilterCatalogLoading && filterCatalog == null -> {
                 Box(
                     modifier = sheetContentModifier
@@ -300,6 +304,7 @@ fun AnimeSearchFiltersSheet(
                         }
                     }
                 }
+            }
             }
         }
     }
