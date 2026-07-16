@@ -823,6 +823,15 @@ fun PlayerScreen(
         }
     }
 
+    LaunchedEffect(exoPlayer, state.currentSourceId, state.currentEpisodeId) {
+        while (true) {
+            delay(PLAYBACK_PROGRESS_SAVE_INTERVAL_MS)
+            if (exoPlayer.isPlaying) {
+                saveCurrentPlaybackProgress()
+            }
+        }
+    }
+
     AutoHideVisibilityEffect(
         enabled = !controlsLocked,
         visible = controlsVisible,
@@ -2762,6 +2771,7 @@ private const val SEEK_GESTURE_TOUCH_SLOP_MULTIPLIER = 1.8f
 private const val SEEK_GESTURE_HORIZONTAL_DOMINANCE = 1.35f
 private const val SEEK_GESTURE_FULL_WIDTH_MS = 90_000L
 private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
+private const val PLAYBACK_PROGRESS_SAVE_INTERVAL_MS = 30_000L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
 private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY =

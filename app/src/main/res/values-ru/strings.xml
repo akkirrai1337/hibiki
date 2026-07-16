@@ -180,7 +180,6 @@
     <string name="watch_status_failed">Ошибка загрузки</string>
     <string name="watch_status_watched">Просмотрено</string>
     <string name="watch_status_next_episode">Следующая серия</string>
-    <string name="watch_progress_remaining">%1$s / %2$s · осталось %3$d мин</string>
     <string name="watch_player_playlist">Список серий</string>
     <string name="watch_player_error_title">Ошибка воспроизведения</string>
     <string name="watch_player_retry">Повторить</string>

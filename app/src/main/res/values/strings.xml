@@ -186,7 +186,6 @@
     <string name="watch_status_failed">Download failed</string>
     <string name="watch_status_watched">Watched</string>
     <string name="watch_status_next_episode">Next episode</string>
-    <string name="watch_progress_remaining">%1$s / %2$s · %3$d min left</string>
     <string name="watch_player_playlist">Playlist</string>
     <string name="watch_player_error_title">Playback error</string>
     <string name="watch_player_retry">Retry</string>

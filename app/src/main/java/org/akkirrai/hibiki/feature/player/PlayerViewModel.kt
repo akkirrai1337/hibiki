@@ -510,4 +510,3 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
-private const val WATCH_SYNC_POSITION_STEP_MS = 30_000L

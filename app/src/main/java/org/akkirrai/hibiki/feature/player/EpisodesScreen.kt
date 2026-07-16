@@ -25,7 +25,6 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,8 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
@@ -256,16 +259,21 @@ private fun EpisodeRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 12.dp),
+            .padding(
+                horizontal = UiDimens.ScreenPadding,
+                vertical = 10.dp,
+            ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(
+                if (status == EpisodeProgressStatus.InProgress) 4.dp else 6.dp
+            )
         ) {
             Text(
-                text = buildEpisodeHeadline(episode, status),
+                text = buildEpisodeHeadline(episode, progress, status),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -279,7 +287,7 @@ private fun EpisodeRow(
             } else {
                 downloadState
             }
-            val subtitle = buildEpisodeSubtitle(progress, status, visibleDownloadState)
+            val subtitle = buildEpisodeSubtitle(status, visibleDownloadState)
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,
@@ -287,14 +295,6 @@ private fun EpisodeRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (status == EpisodeProgressStatus.InProgress && progress != null && progress.durationMs > 0L) {
-                LinearProgressIndicator(
-                    progress = { (progress.positionMs.toFloat() / progress.durationMs.toFloat()).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
             }
         }
@@ -433,19 +433,39 @@ private fun nextEpisodeId(
 @Composable
 private fun buildEpisodeHeadline(
     episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
-): String {
+): AnnotatedString {
     val number = if (episode.number % 1.0 == 0.0) episode.number.toInt().toString() else episode.number.toString()
-    return when (status) {
+    val headline = when (status) {
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
         EpisodeProgressStatus.Next -> stringResource(R.string.watch_episode_headline_next, number)
         else -> stringResource(R.string.watch_episode_headline, number)
+    }
+    return if (
+        status == EpisodeProgressStatus.InProgress &&
+        progress != null &&
+        progress.durationMs > 0L
+    ) {
+        buildAnnotatedString {
+            append(headline)
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                )
+            ) {
+                append(" • ${formatDuration(progress.positionMs)} / ${formatDuration(progress.durationMs)}")
+            }
+        }
+    } else {
+        AnnotatedString(headline)
     }
 }
 
 @Composable
 private fun buildEpisodeSubtitle(
-    progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
     downloadState: OfflineEpisodeDownloadState,
 ): String {
@@ -460,17 +480,7 @@ private fun buildEpisodeSubtitle(
     val watchLabel = when (status) {
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_status_watched)
         EpisodeProgressStatus.Next -> stringResource(R.string.watch_status_next_episode)
-        EpisodeProgressStatus.InProgress -> {
-            if (progress == null || progress.durationMs <= 0L) "" else {
-                val remainingMinutes = ((progress.durationMs - progress.positionMs).coerceAtLeast(0L) / 60_000L).coerceAtLeast(1L)
-                stringResource(
-                    R.string.watch_progress_remaining,
-                    formatDuration(progress.positionMs),
-                    formatDuration(progress.durationMs),
-                    remainingMinutes,
-                )
-            }
-        }
+        EpisodeProgressStatus.InProgress -> ""
         EpisodeProgressStatus.NotStarted -> ""
     }
     return listOf(watchLabel, downloadLabel)
