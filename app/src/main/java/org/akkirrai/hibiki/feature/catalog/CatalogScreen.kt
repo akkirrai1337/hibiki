@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.feature.catalog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -57,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -68,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -110,6 +114,7 @@ fun CatalogScreen(
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     var isCategorySheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
+    var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val categoriesTitle = stringResource(R.string.catalog_categories_title)
@@ -131,6 +136,28 @@ fun CatalogScreen(
             if (shouldLoadMore) {
                 viewModel.loadMore()
             }
+        }
+    }
+
+    LaunchedEffect(listState) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousOffset = listState.firstVisibleItemScrollOffset
+
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (currentIndex, currentOffset) ->
+            val isScrollingDown = currentIndex > previousIndex ||
+                (currentIndex == previousIndex && currentOffset > previousOffset)
+            val isScrollingUp = currentIndex < previousIndex ||
+                (currentIndex == previousIndex && currentOffset < previousOffset)
+
+            when {
+                isScrollingDown -> isSortVisible = false
+                isScrollingUp -> isSortVisible = true
+            }
+
+            previousIndex = currentIndex
+            previousOffset = currentOffset
         }
     }
 
@@ -259,12 +286,31 @@ fun CatalogScreen(
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
                 onFilterClick = { isCategorySheetOpen = true },
+                modifier = Modifier.zIndex(1f),
+            )
+            val sortOffsetY by animateDpAsState(
+                targetValue = if (isSortVisible) {
+                    0.dp
+                } else {
+                    -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
+                },
+                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                label = "catalog_sort_offset",
+            )
+            val sortAlpha by animateFloatAsState(
+                targetValue = if (isSortVisible) 1f else 0f,
+                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                label = "catalog_sort_alpha",
             )
             CatalogSortControl(
                 selectedSort = state.selectedSort,
                 expanded = isSortMenuOpen,
                 onExpandedChange = { isSortMenuOpen = it },
                 onSortSelected = viewModel::selectSort,
+                modifier = Modifier.graphicsLayer {
+                    translationY = sortOffsetY.toPx()
+                    alpha = sortAlpha
+                },
             )
         }
     }
@@ -287,12 +333,13 @@ private fun CatalogSortControl(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onSortSelected: (CatalogSort) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val cascadeState = rememberCascadeState()
     val haptic = LocalHapticFeedback.current
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(CATALOG_SORT_CONTROL_HEIGHT),
     ) {
@@ -702,4 +749,5 @@ private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SORT_VERTICAL_GAP +
     CATALOG_SORT_CONTROL_HEIGHT +
     CATALOG_SORT_VERTICAL_GAP
+private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
 private const val CATALOG_SCROLL_THRESHOLD = 3
