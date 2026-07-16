@@ -57,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -305,9 +304,12 @@ private fun CatalogSortControl(
             Row(
                 modifier = Modifier
                     .clip(CircleShape)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.82f),
+                        shape = CircleShape,
+                    )
                     .clickable { onExpandedChange(!expanded) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .graphicsLayer { alpha = 0.5f },
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -315,18 +317,18 @@ private fun CatalogSortControl(
                     imageVector = sort.icon,
                     contentDescription = null,
                     modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
                 Text(
                     text = stringResource(sort.labelRes),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
                 CatalogSortOrderIcon(
                     atEnd = expanded,
                     modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
             }
         }
@@ -693,7 +695,7 @@ enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
 
 private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
 private val CATALOG_SEARCH_BAR_HEIGHT = UiDimens.SearchBarHeight
-private val CATALOG_SORT_VERTICAL_GAP = 12.dp
+private val CATALOG_SORT_VERTICAL_GAP = 8.dp
 private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
 private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SEARCH_BAR_HEIGHT +
