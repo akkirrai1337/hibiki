@@ -1,11 +1,13 @@
-name: Release on update commit
+name: Android release
 
 on:
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: Create a prerelease
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -14,11 +16,6 @@ jobs:
   release:
     name: Build signed release APK and create GitHub Release
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.message, '[update]') ||
-      contains(github.event.head_commit.message, '[prerelease]')
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -80,7 +77,7 @@ jobs:
         id: release
         shell: bash
         env:
-          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          IS_PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
 
@@ -92,16 +89,11 @@ jobs:
 
           if [[ ! "$BASE_VERSION" =~ ^[0-9][0-9A-Za-z.+-]*$ ]]; then
             echo "Invalid versionName: $BASE_VERSION"
-            echo "Set a valid versionName in app/build.gradle.kts before using [update]."
+            echo "Set a valid versionName in app/build.gradle.kts before running the workflow."
             exit 1
           fi
 
           TARGET_VERSION="$BASE_VERSION"
-
-          IS_PRERELEASE=false
-          if [[ "${HEAD_COMMIT_MESSAGE:-}" == *"[prerelease]"* ]]; then
-            IS_PRERELEASE=true
-          fi
 
           if [ "$IS_PRERELEASE" = true ]; then
             LAST_PRERELEASE_NUMBER=$(
@@ -123,7 +115,7 @@ jobs:
 
           TAG="v${RELEASE_VERSION}"
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-            echo "Release tag ${TAG} already exists. Bump versionName before using [update]."
+            echo "Release tag ${TAG} already exists. Bump versionName before running the workflow."
             exit 1
           fi
           PREVIOUS_TAG=$(
@@ -146,7 +138,7 @@ jobs:
           {
             echo "## Fixes"
             echo
-            git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE" | sed -E 's/\[(update|prerelease)\][[:space:]]*//Ig'
+            git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE"
             echo
           } > release-notes.md
 
