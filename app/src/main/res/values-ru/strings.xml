@@ -3,6 +3,10 @@
     <string name="local_profile_title">Профиль</string>
     <string name="local_profile_subtitle">Локальная история просмотра и библиотека</string>
     <string name="local_profile_settings">Настройки профиля</string>
+    <string name="local_profile_edit">Редактировать профиль</string>
+    <string name="local_profile_name">Ник</string>
+    <string name="local_profile_change_avatar">Сменить аватар</string>
+    <string name="action_save">Сохранить</string>
     <string name="local_profile_date_today">Сегодня</string>
     <string name="local_profile_date_yesterday">Вчера</string>
     <string name="local_profile_date_days_ago_short">%1$d дн. назад</string>

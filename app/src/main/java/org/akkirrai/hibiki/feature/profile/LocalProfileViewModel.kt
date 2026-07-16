@@ -29,6 +29,20 @@ class LocalProfileViewModel(
         }
     }
 
+    fun updateProfileName(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val profileName = repository.updateProfileName(name)
+            _uiState.update { state -> state.copy(data = state.data.copy(profileName = profileName)) }
+        }
+    }
+
+    fun updateProfileAvatar(uri: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateProfileAvatar(uri)
+            _uiState.update { state -> state.copy(data = state.data.copy(profileAvatarUri = uri)) }
+        }
+    }
+
     class Factory(private val context: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = LocalProfileViewModel(

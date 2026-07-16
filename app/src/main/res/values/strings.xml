@@ -3,6 +3,10 @@
     <string name="local_profile_title">Profile</string>
     <string name="local_profile_subtitle">Your local watch history and library</string>
     <string name="local_profile_settings">Profile settings</string>
+    <string name="local_profile_edit">Edit profile</string>
+    <string name="local_profile_name">Name</string>
+    <string name="local_profile_change_avatar">Change avatar</string>
+    <string name="action_save">Save</string>
     <string name="local_profile_date_today">Today</string>
     <string name="local_profile_date_yesterday">Yesterday</string>
     <string name="local_profile_date_days_ago_short">%1$d d ago</string>

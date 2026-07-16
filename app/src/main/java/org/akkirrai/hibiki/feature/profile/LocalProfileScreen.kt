@@ -1,12 +1,16 @@
 package org.akkirrai.hibiki.feature.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,10 +34,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -63,6 +69,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -74,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import coil.compose.AsyncImage
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -94,6 +102,11 @@ fun LocalProfileScreen(
     viewModel: LocalProfileViewModel = viewModel(factory = LocalProfileViewModel.Factory(LocalContext.current)),
 ) {
     val state by viewModel.uiState.collectAsState()
+    var isEditingProfile by remember { mutableStateOf(false) }
+    var editedName by remember(state.data.profileName) { mutableStateOf(state.data.profileName) }
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.updateProfileAvatar(it.toString()) }
+    }
     val context = LocalContext.current
     val snapshot = remember(context.resources, state.data) { buildProfileSnapshot(context.resources, state.data) }
     val pagerState = rememberPagerState(pageCount = { LocalProfileTab.entries.size })
@@ -116,32 +129,58 @@ fun LocalProfileScreen(
                 ) {
                     LocalAvatar(
                         ratio = ratio,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = AnimiteLargePadding),
+                        avatarUri = state.data.profileAvatarUri,
+                        isEditing = isEditingProfile,
+                        onEditClick = { avatarPicker.launch(arrayOf("image/*")) },
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
             },
             bannerElevatedContent = { ratio ->
-                RotatingSettingsButton(
-                    onClick = onSettingsClick,
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = statusInsets.calculateTopPadding() + AnimiteLargePadding * ratio)
+                        .padding(top = statusInsets.calculateTopPadding() + AnimiteLargePadding * ratio * 0.9f)
                         .padding(end = AnimiteLargePadding),
-                )
+                    horizontalArrangement = Arrangement.spacedBy(AnimiteSmallPadding),
+                ) {
+                    ProfileActionButton(
+                        icon = if (isEditingProfile) Icons.Rounded.Check else Icons.Rounded.Edit,
+                        contentDescription = stringResource(if (isEditingProfile) R.string.action_save else R.string.local_profile_edit),
+                        onClick = {
+                            if (isEditingProfile) {
+                                viewModel.updateProfileName(editedName)
+                            } else {
+                                editedName = state.data.profileName
+                            }
+                            isEditingProfile = !isEditingProfile
+                        },
+                    )
+                    RotatingSettingsButton(onClick = onSettingsClick)
+                }
             },
             contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
             contentPadding = PaddingValues(top = AnimiteLargePadding / 2),
             content = {
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Column(Modifier.padding(horizontal = AnimiteLargePadding)) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.titleLarge,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = AnimiteLargePadding),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (isEditingProfile) {
+                        ProfileNameEditor(
+                            name = editedName,
+                            onNameChange = { editedName = it },
+                        )
+                    } else {
+                        Text(
+                            text = state.data.profileName,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.titleLarge,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
                 PrimaryTabRow(
                     selectedTabIndex = pagerState.currentPage,
@@ -244,41 +283,133 @@ private fun NestedProfileBannerLayout(
 }
 
 @Composable
-private fun LocalAvatar(ratio: Float, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.size(64.dp).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) },
-        shape = RoundedCornerShape(topStart = AnimiteSmallPadding, topEnd = AnimiteSmallPadding),
+private fun LocalAvatar(
+    ratio: Float,
+    avatarUri: String?,
+    isEditing: Boolean,
+    onEditClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (isEditing) 0.38f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "avatar_scrim",
+    )
+    Box(
+        modifier = modifier.size(70.dp).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)),
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        Surface(modifier = Modifier.fillMaxSize(), shape = CircleShape) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)),
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (avatarUri.isNullOrBlank()) {
+                    Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                } else {
+                    AsyncImage(
+                        model = avatarUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha)))
+            }
+        }
+        if (isEditing) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(32.dp)
+                    .clickable(onClick = onEditClick),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.local_profile_change_avatar),
+                    modifier = Modifier.padding(7.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun RotatingSettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
+    val underlineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+    Column(modifier = Modifier.widthIn(min = 150.dp, max = 240.dp)) {
+        Text(
+            text = stringResource(R.string.local_profile_name),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+        BasicTextField(
+            value = name,
+            onValueChange = onNameChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.titleLarge.copy(
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 6.dp)
+                .drawBehind {
+                    drawLine(
+                        color = underlineColor,
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width, size.height),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                },
+        )
+    }
+}
+
+@Composable
+private fun RotatingSettingsButton(onClick: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "settings_icon")
     val angle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(10_000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(
+            animation = tween(10_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
         label = "rotation",
     )
+    ProfileActionButton(
+        icon = Icons.Rounded.Settings,
+        contentDescription = stringResource(R.string.local_profile_settings),
+        onClick = onClick,
+        iconRotation = angle,
+    )
+}
+
+@Composable
+private fun ProfileActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconRotation: Float = 0f,
+) {
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = CircleShape) {
         Icon(
-            imageVector = Icons.Rounded.Settings,
-            contentDescription = stringResource(R.string.local_profile_settings),
+            imageVector = icon,
+            contentDescription = contentDescription,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .size(40.dp)
                 .clickable(onClick = onClick)
                 .padding(AnimiteSmallPadding)
-                .graphicsLayer { rotationZ = angle },
+                .graphicsLayer { rotationZ = iconRotation },
         )
     }
 }

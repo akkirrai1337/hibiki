@@ -12,11 +12,13 @@ import android.os.Environment
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -89,20 +91,22 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            HibikiSettingsProvider(appPreferences = appPreferences) {
-                HibikiTheme(
-                    themeMode = LocalThemeMode.current
-                ) {
-                    HibikiApp(
-                        onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                    )
-                    availableUpdate?.let { update ->
-                        AppUpdateDialog(
-                            update = update,
-                            downloadProgress = updateDownloadProgress,
-                            onUpdate = { downloadUpdate(update) },
-                            onLater = { availableUpdate = null },
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides this@MainActivity) {
+                HibikiSettingsProvider(appPreferences = appPreferences) {
+                    HibikiTheme(
+                        themeMode = LocalThemeMode.current
+                    ) {
+                        HibikiApp(
+                            onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                         )
+                        availableUpdate?.let { update ->
+                            AppUpdateDialog(
+                                update = update,
+                                downloadProgress = updateDownloadProgress,
+                                onUpdate = { downloadUpdate(update) },
+                                onLater = { availableUpdate = null },
+                            )
+                        }
                     }
                 }
             }

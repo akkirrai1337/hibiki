@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.core.profile
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -14,6 +16,10 @@ class LocalProfileRepository(
     private val watchStateRepository: WatchStateRepository = WatchStateRepository(context.applicationContext),
     private val libraryRepository: LibraryRepository = LibraryRepository(context.applicationContext),
 ) {
+    private val appContext = context.applicationContext
+    private val preferences = context.getSharedPreferences(PROFILE_PREFERENCES, Context.MODE_PRIVATE)
+    private val defaultProfileName = context.getString(org.akkirrai.hibiki.R.string.app_name)
+
     fun getData(): LocalProfileData {
         val entries = libraryRepository.getLibraryEntries()
         val library = entries
@@ -28,14 +34,40 @@ class LocalProfileRepository(
             }
 
         return LocalProfileData(
+            profileName = preferences.getString(PROFILE_NAME_KEY, null)?.trim().orEmpty().ifBlank { defaultProfileName },
+            profileAvatarUri = preferences.getString(PROFILE_AVATAR_URI_KEY, null),
             episodeProgress = watchStateRepository.getAllEpisodeProgress(),
             activity = watchStateRepository.getDailyWatchActivity(),
             library = library,
         )
     }
+
+    fun updateProfileName(name: String): String {
+        val profileName = name.trim().ifBlank { defaultProfileName }
+        preferences.edit().putString(PROFILE_NAME_KEY, profileName).apply()
+        return profileName
+    }
+
+    fun updateProfileAvatar(uri: String) {
+        runCatching {
+            appContext.contentResolver.takePersistableUriPermission(
+                Uri.parse(uri),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        preferences.edit().putString(PROFILE_AVATAR_URI_KEY, uri).apply()
+    }
+
+    private companion object {
+        const val PROFILE_PREFERENCES = "local_profile"
+        const val PROFILE_NAME_KEY = "profile_name"
+        const val PROFILE_AVATAR_URI_KEY = "profile_avatar_uri"
+    }
 }
 
 data class LocalProfileData(
+    val profileName: String = "",
+    val profileAvatarUri: String? = null,
     val episodeProgress: List<EpisodeWatchProgress> = emptyList(),
     val activity: List<DailyWatchActivity> = emptyList(),
     val library: List<LocalLibraryItem> = emptyList(),
