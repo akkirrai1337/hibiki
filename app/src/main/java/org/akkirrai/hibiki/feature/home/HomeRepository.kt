@@ -17,6 +17,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -148,7 +149,7 @@ class HomeRepository(
 
     suspend fun search(
         query: String,
-        filters: HomeSearchFilters,
+        filters: AnimeSearchFilters,
         limit: Int,
         offset: Int,
     ): List<Anime> {

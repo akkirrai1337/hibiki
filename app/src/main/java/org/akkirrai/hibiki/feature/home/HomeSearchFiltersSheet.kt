@@ -76,7 +76,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.model.SearchFilterOption
+import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
@@ -94,21 +96,44 @@ fun HomeSearchFiltersSheet(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsState()
+    AnimeSearchFiltersSheet(
+        initialFilters = state.searchFilters,
+        filterCatalog = state.searchFilterCatalog,
+        isFilterCatalogLoading = state.isSearchFilterCatalogLoading,
+        onApply = viewModel::applySearchFilters,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+    )
+}
+
+@OptIn(
+    ExperimentalLayoutApi::class,
+    ExperimentalMaterial3Api::class,
+)
+@Composable
+fun AnimeSearchFiltersSheet(
+    initialFilters: AnimeSearchFilters,
+    filterCatalog: AnimeSearchFilterCatalog?,
+    isFilterCatalogLoading: Boolean,
+    onApply: (AnimeSearchFilters) -> Unit,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
-    var pendingFilters by remember(state.searchFilters) { mutableStateOf(state.searchFilters) }
-    var animeType by rememberSaveable(state.searchFilters) {
-        mutableStateOf(FilterAnimeType.fromAlias(state.searchFilters.typeAlias))
+    var pendingFilters by remember(initialFilters) { mutableStateOf(initialFilters) }
+    var animeType by rememberSaveable(initialFilters) {
+        mutableStateOf(FilterAnimeType.fromAlias(initialFilters.typeAlias))
     }
     var season by rememberSaveable { mutableStateOf<FilterSeason?>(null) }
-    var includedStatuses by remember(state.searchFilters) {
-        mutableStateOf(setOfNotNull(state.searchFilters.statusAlias))
+    var includedStatuses by remember(initialFilters) {
+        mutableStateOf(setOfNotNull(initialFilters.statusAlias))
     }
-    var excludedStatuses by remember(state.searchFilters) { mutableStateOf(emptySet<String>()) }
-    var year by rememberSaveable(state.searchFilters) {
+    var excludedStatuses by remember(initialFilters) { mutableStateOf(emptySet<String>()) }
+    var year by rememberSaveable(initialFilters) {
         mutableStateOf(
-            state.searchFilters.yearFrom
-                ?.takeIf { it == state.searchFilters.yearTo }
+            initialFilters.yearFrom
+                ?.takeIf { it == initialFilters.yearTo }
         )
     }
 
@@ -118,7 +143,7 @@ fun HomeSearchFiltersSheet(
         modifier = modifier,
     ) { sheetContentModifier ->
         when {
-            state.isSearchFilterCatalogLoading && state.searchFilterCatalog == null -> {
+            isFilterCatalogLoading && filterCatalog == null -> {
                 Box(
                     modifier = sheetContentModifier
                         .fillMaxWidth()
@@ -129,7 +154,7 @@ fun HomeSearchFiltersSheet(
                 }
             }
 
-            state.searchFilterCatalog == null -> {
+            filterCatalog == null -> {
                 Box(
                     modifier = sheetContentModifier
                         .fillMaxWidth()
@@ -145,7 +170,7 @@ fun HomeSearchFiltersSheet(
             }
 
             else -> {
-                val catalog = state.searchFilterCatalog ?: return@AppFilterBottomSheet
+                val catalog = filterCatalog
                 Column(
                     modifier = sheetContentModifier
                         .background(
@@ -222,7 +247,7 @@ fun HomeSearchFiltersSheet(
                     ) {
                         Button(
                             onClick = {
-                                pendingFilters = HomeSearchFilters()
+                                pendingFilters = AnimeSearchFilters()
                                 animeType = FilterAnimeType.Tv
                                 season = null
                                 year = null
@@ -248,7 +273,7 @@ fun HomeSearchFiltersSheet(
                         Spacer(modifier = Modifier.size(16.dp))
                         Button(
                             onClick = {
-                                viewModel.applySearchFilters(
+                                onApply(
                                     pendingFilters.copy(
                                         typeAlias = animeType.alias,
                                         statusAlias = includedStatuses.firstOrNull(),

@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.PerfLogger
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
 
 class HomeViewModel(
@@ -100,7 +101,7 @@ class HomeViewModel(
         _uiState.update { it.copy(searchQuery = "", searchResult = SearchUiState.Idle) }
     }
 
-    fun applySearchFilters(filters: HomeSearchFilters) {
+    fun applySearchFilters(filters: AnimeSearchFilters) {
         _uiState.update { it.copy(searchFilters = filters) }
         val query = uiState.value.searchQuery.trim()
         if (query.length >= MIN_QUERY_LENGTH || filters.hasActiveFilters()) {
@@ -112,7 +113,7 @@ class HomeViewModel(
     }
 
     fun resetSearchFilters() {
-        applySearchFilters(HomeSearchFilters())
+        applySearchFilters(AnimeSearchFilters())
     }
 
     private fun scheduleSearch(

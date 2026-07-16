@@ -14,8 +14,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,29 +22,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,7 +76,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
@@ -95,7 +84,9 @@ import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
@@ -114,13 +105,11 @@ fun CatalogScreen(
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
-    var isCategorySheetOpen by remember { mutableStateOf(false) }
+    var isFilterSheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    val categoriesTitle = stringResource(R.string.catalog_categories_title)
-    val categoriesSubtitle = stringResource(R.string.catalog_categories_subtitle)
 
     LaunchedEffect(state.query) {
         delay(350)
@@ -287,7 +276,7 @@ fun CatalogScreen(
                 query = state.query,
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
-                onFilterClick = { isCategorySheetOpen = true },
+                onFilterClick = { isFilterSheetOpen = true },
                 modifier = Modifier.zIndex(1f),
             )
             val sortOffsetY by animateDpAsState(
@@ -317,14 +306,13 @@ fun CatalogScreen(
         }
     }
 
-    if (isCategorySheetOpen) {
-        CatalogCategorySheet(
-            categories = state.categories,
-            title = categoriesTitle,
-            subtitle = categoriesSubtitle,
-            selectedCategories = state.selectedCategories,
-            onCategoryClick = viewModel::toggleCategory,
-            onDismiss = { isCategorySheetOpen = false },
+    if (isFilterSheetOpen) {
+        AnimeSearchFiltersSheet(
+            initialFilters = state.filters,
+            filterCatalog = state.filterCatalog,
+            isFilterCatalogLoading = state.isLoading && state.filterCatalog == null,
+            onApply = viewModel::applyFilters,
+            onDismissRequest = { isFilterSheetOpen = false },
         )
     }
 }
@@ -512,88 +500,6 @@ private val CatalogSort.icon: ImageVector
         CatalogSort.Updated -> Icons.Outlined.Update
     }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
-@Composable
-private fun CatalogCategorySheet(
-    categories: List<CatalogCategory>,
-    title: String,
-    subtitle: String,
-    selectedCategories: List<CatalogCategory>,
-    onCategoryClick: (CatalogCategory) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    AppModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(
-                start = UiDimens.ScreenPadding,
-                    top = 4.dp,
-                end = UiDimens.ScreenPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = UiDimens.ScreenPadding,
-                        end = UiDimens.ScreenPadding,
-                        bottom = UiDimens.SectionSpacing,
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                categories.forEach { category ->
-                    val isSelected = selectedCategories.any { it.genreAlias == category.genreAlias }
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onCategoryClick(category) },
-                        label = { Text(text = category.title) },
-                        leadingIcon = if (isSelected) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Outlined.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
 class CatalogViewModel(
     private val repository: CatalogRepository,
     private val errorContext: android.content.Context,
@@ -603,7 +509,7 @@ class CatalogViewModel(
 
     fun load() {
         val currentState = _uiState.value
-        val selectedCategories = currentState.selectedCategories
+        val filters = currentState.filters
         val query = currentState.query
         val sort = currentState.selectedSort
         viewModelScope.launch(Dispatchers.IO) {
@@ -617,7 +523,7 @@ class CatalogViewModel(
             runCatching {
                 repository.loadPage(
                     page = 1,
-                    categories = selectedCategories,
+                    filters = filters,
                     query = query,
                     sort = sort,
                 )
@@ -627,7 +533,7 @@ class CatalogViewModel(
                         isLoading = false,
                         title = "",
                         description = page.description,
-                        categories = page.categories,
+                        filterCatalog = page.filterCatalog,
                         items = page.items,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
@@ -654,15 +560,10 @@ class CatalogViewModel(
         load()
     }
 
-    fun toggleCategory(category: CatalogCategory) {
+    fun applyFilters(filters: AnimeSearchFilters) {
         _uiState.update {
-            val isSelected = it.selectedCategories.any { selected -> selected.genreAlias == category.genreAlias }
             it.copy(
-                selectedCategories = if (isSelected) {
-                    it.selectedCategories.filterNot { selected -> selected.genreAlias == category.genreAlias }
-                } else {
-                    it.selectedCategories + category
-                },
+                filters = filters,
                 items = emptyList(),
                 currentPage = 0,
                 canLoadMore = false,
@@ -686,7 +587,7 @@ class CatalogViewModel(
             runCatching {
                 repository.loadPage(
                     page = nextPage,
-                    categories = state.selectedCategories,
+                    filters = state.filters,
                     query = state.query,
                     sort = state.selectedSort,
                 )
@@ -697,7 +598,7 @@ class CatalogViewModel(
                         isLoadingMore = false,
                         title = current.title,
                         description = page.description ?: current.description,
-                        categories = if (current.categories.isEmpty()) page.categories else current.categories,
+                        filterCatalog = current.filterCatalog ?: page.filterCatalog,
                         items = merged,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
@@ -737,8 +638,8 @@ data class CatalogUiState(
     val isLoading: Boolean = false,
     val title: String = "",
     val description: String? = null,
-    val categories: List<CatalogCategory> = emptyList(),
-    val selectedCategories: List<CatalogCategory> = emptyList(),
+    val filterCatalog: org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog? = null,
+    val filters: AnimeSearchFilters = AnimeSearchFilters(),
     val query: String = "",
     val selectedSort: CatalogSort = CatalogSort.Popular,
     val items: List<CatalogAnimeCard> = emptyList(),
