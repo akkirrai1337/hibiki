@@ -58,6 +58,11 @@ data class WatchSourcesCacheSnapshot(
     val sources: List<WatchSource>,
 )
 
+data class ResolvedPlayerStream(
+    val playerName: String?,
+    val playback: PlaybackStream,
+)
+
 class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
@@ -311,36 +316,66 @@ class AnimeWatchRepository(
         sourceId: String,
         episodeId: String,
         forceRefresh: Boolean = false,
+        preferredPlayerName: String? = null,
         preferredQuality: String? = null,
-    ): PlaybackStream {
+    ): ResolvedPlayerStream {
         val playerNames = getPlaybackSettingsOptions(sourceId, episodeId)
             .links
             .mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
             .distinctBy(String::lowercase)
 
+        val rememberedPlayer = preferredPlayerName
+            ?.takeIf { preferred -> playerNames.any { matchesPreferredPlayer(it, preferred) } }
+        if (rememberedPlayer != null) {
+            try {
+                return ResolvedPlayerStream(
+                    playerName = rememberedPlayer,
+                    playback = resolveStream(
+                        sourceId = sourceId,
+                        episodeId = episodeId,
+                        forceRefresh = forceRefresh,
+                        preferredQuality = preferredQuality,
+                        requiredPlayerName = rememberedPlayer,
+                    ),
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                AppLogger.w(TAG, "Remembered download player failed; racing all players: player=$rememberedPlayer", error)
+            }
+        }
+
         if (playerNames.size <= 1) {
-            return resolveStream(
-                sourceId = sourceId,
-                episodeId = episodeId,
-                forceRefresh = forceRefresh,
-                preferredPlayerName = playerNames.firstOrNull(),
-                preferredQuality = preferredQuality,
+            val playerName = playerNames.firstOrNull()
+            return ResolvedPlayerStream(
+                playerName = playerName,
+                playback = resolveStream(
+                    sourceId = sourceId,
+                    episodeId = episodeId,
+                    forceRefresh = forceRefresh,
+                    preferredPlayerName = playerName,
+                    preferredQuality = preferredQuality,
+                    requiredPlayerName = playerName,
+                ),
             )
         }
 
         return supervisorScope {
-            val results = Channel<Result<PlaybackStream>>(capacity = playerNames.size)
+            val results = Channel<Result<ResolvedPlayerStream>>(capacity = playerNames.size)
             val jobs = playerNames.map { playerName ->
                 launch {
                     val result = try {
                         Result.success(
-                            resolveStream(
-                                sourceId = sourceId,
-                                episodeId = episodeId,
-                                forceRefresh = forceRefresh,
-                                preferredPlayerName = playerName,
-                                preferredQuality = preferredQuality,
-                                requiredPlayerName = playerName,
+                            ResolvedPlayerStream(
+                                playerName = playerName,
+                                playback = resolveStream(
+                                    sourceId = sourceId,
+                                    episodeId = episodeId,
+                                    forceRefresh = forceRefresh,
+                                    preferredPlayerName = playerName,
+                                    preferredQuality = preferredQuality,
+                                    requiredPlayerName = playerName,
+                                ),
                             )
                         )
                     } catch (error: CancellationException) {
@@ -355,9 +390,9 @@ class AnimeWatchRepository(
             var firstError: Throwable? = null
             repeat(playerNames.size) {
                 val result = results.receive()
-                result.getOrNull()?.let { playback ->
+                result.getOrNull()?.let { resolved ->
                     jobs.forEach { it.cancel() }
-                    return@supervisorScope playback
+                    return@supervisorScope resolved
                 }
                 if (firstError == null) firstError = result.exceptionOrNull()
             }

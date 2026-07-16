@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object OfflineDownloadQueue {
     private const val TAG = "OfflineDownloadQueue"
@@ -45,6 +46,7 @@ object OfflineDownloadQueue {
     private val requestLock = Any()
     private val installedManagers = mutableSetOf<Int>()
     private val downloadsBeingRemoved = mutableSetOf<String>()
+    private val successfulDownloadPlayers = ConcurrentHashMap<String, String>()
 
     @Volatile
     private var isProcessing = false
@@ -396,12 +398,16 @@ object OfflineDownloadQueue {
         episode: WatchEpisode,
     ): PlaybackStream {
         return try {
-            repository.resolveFastestStream(
+            val resolved = repository.resolveFastestStream(
                 sourceId = source.sourceId,
                 episodeId = episode.id,
                 forceRefresh = false,
+                preferredPlayerName = successfulDownloadPlayers[source.sourceId],
             )
+            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
+            resolved.playback
         } catch (error: Throwable) {
+            successfulDownloadPlayers.remove(source.sourceId)
             if (!error.isStreamResolveTimeout()) throw error
             AppLogger.w(
                 TAG,
@@ -409,11 +415,13 @@ object OfflineDownloadQueue {
                 error,
             )
             delay(STREAM_RESOLVE_RETRY_DELAY_MS)
-            repository.resolveFastestStream(
+            val resolved = repository.resolveFastestStream(
                 sourceId = source.sourceId,
                 episodeId = episode.id,
                 forceRefresh = true,
             )
+            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
+            resolved.playback
         }
     }
 
