@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -438,12 +439,14 @@ private fun <T> SettingsSegmentedControl(
             ) {
                 Text(
                     text = label(option),
+                    modifier = Modifier.fillMaxWidth(),
                     color = if (selected) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f)
                     },
                     style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
