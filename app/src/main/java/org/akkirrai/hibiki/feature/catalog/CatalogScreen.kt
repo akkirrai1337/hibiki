@@ -693,7 +693,7 @@ enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
 
 private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
 private val CATALOG_SEARCH_BAR_HEIGHT = UiDimens.SearchBarHeight
-private val CATALOG_SORT_VERTICAL_GAP = 20.dp
+private val CATALOG_SORT_VERTICAL_GAP = 12.dp
 private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
 private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SEARCH_BAR_HEIGHT +
