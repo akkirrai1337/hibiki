@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.download
 
 import android.app.Notification
+import android.app.Service
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
@@ -10,6 +11,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.Scheduler
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
+import kotlin.math.roundToInt
 
 @UnstableApi
 class HibikiDownloadService : DownloadService(
@@ -31,6 +33,13 @@ class HibikiDownloadService : DownloadService(
 
     override fun getScheduler(): Scheduler? = null
 
+    override fun onDestroy() {
+        // DownloadService stops itself when DownloadManager becomes idle, but its
+        // last foreground notification may otherwise remain visible as active.
+        stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
+    }
+
     override fun getForegroundNotification(
         downloads: MutableList<Download>,
         notMetRequirements: Int,
@@ -46,13 +55,23 @@ class HibikiDownloadService : DownloadService(
 
         if (activeDownload != null) {
             val meta = parseDownloadNotificationMeta(activeDownload.request.data)
-            val (sessionCompleted, sessionTotal) = OfflineDownloadQueue.getNotificationProgress(this)
+            val (storedCompleted, storedTotal) = OfflineDownloadQueue.getNotificationProgress(this)
+            val sessionTotal = storedTotal
+                .coerceAtLeast(storedCompleted + activeQueuedCount)
+                .coerceAtLeast(1)
+            val sessionCompleted = storedCompleted.coerceIn(0, sessionTotal)
+            val episodePercent = activeDownload.percentDownloaded
+                .takeIf { it.isFinite() && it >= 0f }
+                ?.roundToInt()
+                ?.coerceIn(0, 100)
+                ?: 0
 
             titleText = meta?.displayTitle ?: getString(R.string.download_notification_channel_name)
             contentText = getString(
                 R.string.download_notification_progress,
                 sessionCompleted,
                 sessionTotal,
+                episodePercent,
             )
             isOngoing = true
         } else if (activeQueuedCount > 0) {
@@ -65,13 +84,23 @@ class HibikiDownloadService : DownloadService(
             isOngoing = false
         }
 
+        val episodePercent = activeDownload?.percentDownloaded
+            ?.takeIf { it.isFinite() && it >= 0f }
+            ?.roundToInt()
+            ?.coerceIn(0, 100)
+
         return NotificationCompat.Builder(this, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(titleText)
             .setContentText(contentText)
             .setOngoing(isOngoing)
             .setOnlyAlertOnce(true)
-            .setProgress(0, 0, activeQueuedCount > 0 || activeDownload != null)
+            .setProgress(
+                100,
+                episodePercent ?: 0,
+                (activeDownload != null && episodePercent == null) ||
+                    (activeDownload == null && activeQueuedCount > 0),
+            )
             .build()
     }
 

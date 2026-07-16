@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
@@ -19,11 +20,14 @@ import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 object OfflineDownloadQueue {
+    private const val TAG = "OfflineDownloadQueue"
     private const val PREFS_NAME = "hibiki_offline_downloads"
     private const val QUEUE_KEY = "pending_queue"
     private const val STORED_EPISODES_KEY = "stored_episodes"
@@ -31,12 +35,16 @@ object OfflineDownloadQueue {
     private const val SESSION_TOTAL_KEY = "session_total"
     private const val SESSION_COMPLETED_KEY = "session_completed"
     private const val SESSION_COMPLETED_IDS_KEY = "session_completed_ids"
+    private const val SESSION_DOWNLOAD_IDS_KEY = "session_download_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
+    private const val STREAM_RESOLVE_RETRY_DELAY_MS = 500L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val processingLock = Any()
+    private val requestLock = Any()
     private val installedManagers = mutableSetOf<Int>()
+    private val downloadsBeingRemoved = mutableSetOf<String>()
 
     @Volatile
     private var isProcessing = false
@@ -69,6 +77,13 @@ object OfflineDownloadQueue {
                         download: Download,
                         finalException: Exception?,
                     ) {
+                        if (finalException != null) {
+                            AppLogger.e(
+                                TAG,
+                                "Media3 download failed: id=${download.request.id}",
+                                finalException,
+                            )
+                        }
                         if (download.state == Download.STATE_COMPLETED) {
                             incrementSessionCompleted(context.applicationContext, download.request.id)
                         }
@@ -81,6 +96,9 @@ object OfflineDownloadQueue {
                     }
 
                     override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+                        synchronized(requestLock) {
+                            downloadsBeingRemoved.remove(download.request.id)
+                        }
                         drain(context.applicationContext, downloadManager)
                     }
 
@@ -103,27 +121,31 @@ object OfflineDownloadQueue {
     ): Int {
         val appContext = context.applicationContext
         if (episodes.isEmpty()) return 0
-        val existingIds = pendingEntries(appContext)
-            .map { it.downloadId }
-            .toMutableSet()
-        val entries = episodes.map { episode ->
-            PendingEpisode(
-                sourceId = source.sourceId,
-                sourceTitle = source.title,
-                sourceEpisodeCount = source.episodeCount,
-                sourceQualityLabel = source.qualityLabel,
-                sourceIsPriority = source.isPriority,
-                episodeId = episode.id,
-                episodeNumber = episode.number,
-                episodeTitle = episode.title,
-            )
-        }.filter { existingIds.add(it.downloadId) }
+        val entries = synchronized(requestLock) {
+            val existingIds = pendingEntries(appContext)
+                .map { it.downloadId }
+                .toMutableSet()
+            val newEntries = episodes.map { episode ->
+                PendingEpisode(
+                    sourceId = source.sourceId,
+                    sourceTitle = source.title,
+                    sourceEpisodeCount = source.episodeCount,
+                    sourceQualityLabel = source.qualityLabel,
+                    sourceIsPriority = source.isPriority,
+                    episodeId = episode.id,
+                    episodeNumber = episode.number,
+                    episodeTitle = episode.title,
+                )
+            }.filter { existingIds.add(it.downloadId) }
+            if (newEntries.isNotEmpty()) {
+                clearFailedEntries(appContext, newEntries.map { it.downloadId }.toSet())
+                savePendingEntries(appContext, pendingEntries(appContext) + newEntries)
+                saveStoredEntries(appContext, mergeStoredEntries(storedEntries(appContext), newEntries))
+                addToSession(appContext, newEntries.mapTo(mutableSetOf()) { it.downloadId })
+            }
+            newEntries
+        }
         if (entries.isEmpty()) return 0
-
-        clearFailedEntries(appContext, entries.map { it.downloadId }.toSet())
-        savePendingEntries(appContext, pendingEntries(appContext) + entries)
-        saveStoredEntries(appContext, mergeStoredEntries(storedEntries(appContext), entries))
-        addToSessionTotal(appContext, entries.size)
         val manager = OfflineMediaCache.getDownloadManager(appContext)
         install(appContext, manager)
         drain(appContext, manager)
@@ -197,28 +219,36 @@ object OfflineDownloadQueue {
         val id = downloadId(sourceId, episodeId)
         val manager = OfflineMediaCache.getDownloadManager(appContext)
         install(appContext, manager)
-        savePendingEntries(
-            appContext,
-            pendingEntries(appContext).filterNot { it.downloadId == id },
-        )
-        saveStoredEntries(
-            appContext,
-            storedEntries(appContext).filterNot { it.downloadId == id },
-        )
-        clearFailedEntries(appContext, setOf(id))
-        prefs(appContext).edit()
-            .remove(playbackKey(sourceId, episodeId))
-            .apply()
-        val removedDirectly = runCatching {
-            manager.removeDownload(id)
-        }.isSuccess
-        if (!removedDirectly) {
-            DownloadService.sendRemoveDownload(
+        synchronized(requestLock) {
+            savePendingEntries(
                 appContext,
-                HibikiDownloadService::class.java,
-                id,
-                false,
+                pendingEntries(appContext).filterNot { it.downloadId == id },
             )
+            saveStoredEntries(
+                appContext,
+                storedEntries(appContext).filterNot { it.downloadId == id },
+            )
+            clearFailedEntries(appContext, setOf(id))
+            removeFromSession(appContext, id)
+            prefs(appContext).edit()
+                .remove(playbackKey(sourceId, episodeId))
+                .apply()
+            val isManagedDownload = manager.currentDownloads.any { it.request.id == id } ||
+                runCatching { manager.downloadIndex.getDownload(id) != null }.getOrDefault(false)
+            if (isManagedDownload) {
+                downloadsBeingRemoved.add(id)
+            }
+            val removedDirectly = runCatching {
+                manager.removeDownload(id)
+            }.isSuccess
+            if (!removedDirectly) {
+                DownloadService.sendRemoveDownload(
+                    appContext,
+                    HibikiDownloadService::class.java,
+                    id,
+                    false,
+                )
+            }
         }
         drain(appContext, manager)
     }
@@ -282,44 +312,64 @@ object OfflineDownloadQueue {
             isProcessing = true
         }
 
-        val entries = takePendingEntries(context, freeSlots)
+        val removingIds = synchronized(requestLock) {
+            manager.currentDownloads
+                .filter { it.state == Download.STATE_REMOVING }
+                .mapTo(downloadsBeingRemoved.toMutableSet()) { it.request.id }
+        }
+        val entries = synchronized(requestLock) {
+            takePendingEntries(context, freeSlots, removingIds)
+        }
         if (entries.isEmpty()) {
             synchronized(processingLock) { isProcessing = false }
             return
         }
 
         scope.launch {
-            val repository = AnimeWatchRepository()
+            val repository = AnimeWatchRepository(context.applicationContext)
+            var addedAny = false
             try {
                 entries.forEach { entry ->
                     runCatching {
                         val source = entry.toWatchSource()
                         val episode = entry.toWatchEpisode()
-                        val playback = repository.resolveStream(
-                            sourceId = source.sourceId,
-                            episodeId = episode.id,
-                            forceRefresh = false,
+                        val playback = resolveStreamForDownload(
+                            repository = repository,
+                            source = source,
+                            episode = episode,
                         )
-                        saveOfflinePlayback(
-                            context = context,
-                            sourceId = source.sourceId,
-                            episodeId = episode.id,
-                            playback = playback,
+                        synchronized(requestLock) {
+                            if (!isCurrentRequest(context, entry)) return@runCatching
+                            saveOfflinePlayback(
+                                context = context,
+                                sourceId = source.sourceId,
+                                episodeId = episode.id,
+                                playback = playback,
+                            )
+                            clearFailedEntries(context, setOf(entry.downloadId))
+                            DownloadService.sendAddDownload(
+                                context,
+                                HibikiDownloadService::class.java,
+                                playback.toDownloadRequest(source, episode),
+                                false,
+                            )
+                            addedAny = true
+                        }
+                    }.onFailure { error ->
+                        AppLogger.e(
+                            TAG,
+                            "Failed to prepare offline episode: id=${entry.downloadId}",
+                            error,
                         )
-                        clearFailedEntries(context, setOf(entry.downloadId))
-                        DownloadService.sendAddDownload(
-                            context,
-                            HibikiDownloadService::class.java,
-                            playback.toDownloadRequest(source, episode),
-                            false,
-                        )
-                    }.onFailure {
                         markFailedEntry(context, entry)
                     }
                 }
             } finally {
                 repository.close()
                 synchronized(processingLock) { isProcessing = false }
+                if (!addedAny) {
+                    drain(context, manager)
+                }
             }
         }
     }
@@ -338,6 +388,40 @@ object OfflineDownloadQueue {
             Download.STATE_REMOVING -> OfflineEpisodeDownloadState.NotDownloaded
             else -> OfflineEpisodeDownloadState.NotDownloaded
         }
+    }
+
+    private suspend fun resolveStreamForDownload(
+        repository: AnimeWatchRepository,
+        source: WatchSource,
+        episode: WatchEpisode,
+    ): PlaybackStream {
+        return try {
+            repository.resolveStream(
+                sourceId = source.sourceId,
+                episodeId = episode.id,
+                forceRefresh = false,
+            )
+        } catch (error: Throwable) {
+            if (!error.isStreamResolveTimeout()) throw error
+            AppLogger.w(
+                TAG,
+                "Stream resolve timed out; retrying once: id=${downloadId(source.sourceId, episode.id)}",
+                error,
+            )
+            delay(STREAM_RESOLVE_RETRY_DELAY_MS)
+            repository.resolveStream(
+                sourceId = source.sourceId,
+                episodeId = episode.id,
+                forceRefresh = true,
+            )
+        }
+    }
+
+    private fun Throwable.isStreamResolveTimeout(): Boolean {
+        val normalizedMessage = message.orEmpty().lowercase()
+        return "timeout" in normalizedMessage ||
+            "timed out" in normalizedMessage ||
+            "тайм" in normalizedMessage
     }
 
     private fun activeDownloadCount(manager: DownloadManager): Int {
@@ -422,13 +506,24 @@ object OfflineDownloadQueue {
             .toList()
     }
 
-    private fun takePendingEntries(context: Context, count: Int): List<PendingEpisode> {
+    private fun takePendingEntries(
+        context: Context,
+        count: Int,
+        blockedIds: Set<String>,
+    ): List<PendingEpisode> {
         val entries = pendingEntries(context)
-        val selected = entries.take(count)
+        val selected = entries.filterNot { it.downloadId in blockedIds }.take(count)
         if (selected.isNotEmpty()) {
-            savePendingEntries(context, entries.drop(selected.size))
+            val selectedTokens = selected.mapTo(mutableSetOf()) { it.requestToken }
+            savePendingEntries(context, entries.filterNot { it.requestToken in selectedTokens })
         }
         return selected
+    }
+
+    private fun isCurrentRequest(context: Context, entry: PendingEpisode): Boolean {
+        return storedEntries(context).any {
+            it.downloadId == entry.downloadId && it.requestToken == entry.requestToken
+        }
     }
 
     private fun visibleStoredEntries(context: Context): List<PendingEpisode> {
@@ -570,15 +665,42 @@ object OfflineDownloadQueue {
         return Pair(completed, total.coerceAtLeast(completed))
     }
 
-    private fun addToSessionTotal(context: Context, addition: Int) {
-        val current = prefs(context).getInt(SESSION_TOTAL_KEY, 0)
-        prefs(context).edit().putInt(SESSION_TOTAL_KEY, current + addition).apply()
+    private fun addToSession(context: Context, downloadIds: Set<String>) {
+        if (downloadIds.isEmpty()) return
+        val prefs = prefs(context)
+        val currentIds = prefs.getStringSet(SESSION_DOWNLOAD_IDS_KEY, emptySet()) ?: emptySet()
+        val addedCount = (downloadIds - currentIds).size
+        if (addedCount == 0) return
+        val currentTotal = prefs.getInt(SESSION_TOTAL_KEY, 0)
+        prefs.edit()
+            .putStringSet(SESSION_DOWNLOAD_IDS_KEY, currentIds + downloadIds)
+            .putInt(SESSION_TOTAL_KEY, currentTotal + addedCount)
+            .apply()
+    }
+
+    private fun removeFromSession(context: Context, downloadId: String) {
+        val prefs = prefs(context)
+        val sessionIds = prefs.getStringSet(SESSION_DOWNLOAD_IDS_KEY, emptySet()) ?: emptySet()
+        if (downloadId !in sessionIds) return
+        val completedIds = prefs.getStringSet(SESSION_COMPLETED_IDS_KEY, emptySet()) ?: emptySet()
+        val wasCompleted = downloadId in completedIds
+        prefs.edit()
+            .putStringSet(SESSION_DOWNLOAD_IDS_KEY, sessionIds - downloadId)
+            .putStringSet(SESSION_COMPLETED_IDS_KEY, completedIds - downloadId)
+            .putInt(SESSION_TOTAL_KEY, (prefs.getInt(SESSION_TOTAL_KEY, 0) - 1).coerceAtLeast(0))
+            .putInt(
+                SESSION_COMPLETED_KEY,
+                (prefs.getInt(SESSION_COMPLETED_KEY, 0) - if (wasCompleted) 1 else 0).coerceAtLeast(0),
+            )
+            .apply()
     }
 
     private fun incrementSessionCompleted(context: Context, downloadId: String) {
         val prefs = prefs(context)
         val completedIds = prefs.getStringSet(SESSION_COMPLETED_IDS_KEY, emptySet()) ?: emptySet()
         if (downloadId in completedIds) return
+        val sessionIds = prefs.getStringSet(SESSION_DOWNLOAD_IDS_KEY, emptySet()) ?: emptySet()
+        if (sessionIds.isNotEmpty() && downloadId !in sessionIds) return
 
         val currentCompleted = prefs.getInt(SESSION_COMPLETED_KEY, 0)
 
@@ -593,11 +715,13 @@ object OfflineDownloadQueue {
             .putInt(SESSION_TOTAL_KEY, 0)
             .putInt(SESSION_COMPLETED_KEY, 0)
             .putStringSet(SESSION_COMPLETED_IDS_KEY, emptySet())
+            .putStringSet(SESSION_DOWNLOAD_IDS_KEY, emptySet())
             .apply()
     }
 
     private fun shouldResetSessionProgress(context: Context, manager: DownloadManager): Boolean {
         if (pendingEntries(context).isNotEmpty()) return false
+        if (isProcessing) return false
         return manager.currentDownloads.none { download ->
             download.state == Download.STATE_DOWNLOADING ||
             download.state == Download.STATE_QUEUED ||
@@ -620,6 +744,7 @@ object OfflineDownloadQueue {
         val episodeId: String,
         val episodeNumber: Double,
         val episodeTitle: String?,
+        val requestToken: String = UUID.randomUUID().toString(),
     ) {
         val downloadId: String = downloadId(sourceId, episodeId)
 
@@ -651,6 +776,7 @@ object OfflineDownloadQueue {
                 put("episodeId", episodeId)
                 put("episodeNumber", episodeNumber)
                 put("episodeTitle", episodeTitle)
+                put("requestToken", requestToken)
             }
         }
 
@@ -667,6 +793,8 @@ object OfflineDownloadQueue {
                     episodeId = episodeId,
                     episodeNumber = json.optDouble("episodeNumber", 0.0),
                     episodeTitle = json.optString("episodeTitle").ifBlank { null },
+                    requestToken = json.optString("requestToken")
+                        .ifBlank { "$sourceId:$episodeId" },
                 )
             }
         }

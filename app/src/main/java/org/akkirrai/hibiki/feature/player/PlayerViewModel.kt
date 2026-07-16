@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,7 +76,7 @@ class PlayerViewModel(
                 offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
                     .takeIf { it.isNotEmpty() }
                     ?: repository.getEpisodes(state.currentSourceId)
-            }
+            }.throwIfCancelled()
             val currentState = _uiState.value
             if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
                 return@launch
@@ -102,7 +105,8 @@ class PlayerViewModel(
                         preferredPlayerName = state.selectedPlayerName,
                         preferredQuality = state.selectedQualityLabel,
                     )
-            }
+            }.throwIfCancelled()
+            currentCoroutineContext().ensureActive()
 
             playbackResult
                 .onSuccess { resolvedStream ->
@@ -137,6 +141,7 @@ class PlayerViewModel(
                     loadSettingsOptions()
                 }
                 .onFailure { throwable ->
+                    if (throwable is CancellationException) return@onFailure
                     AppLogger.e(
                         PLAYBACK_LOG_TAG,
                         "[viewmodel.load.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
@@ -205,7 +210,8 @@ class PlayerViewModel(
                     sourceId = state.currentSourceId,
                     episodeId = state.currentEpisodeId,
                 )
-            }
+            }.throwIfCancelled()
+            currentCoroutineContext().ensureActive()
             val updatedState = _uiState.value
             if (updatedState.currentSourceId != state.currentSourceId || updatedState.currentEpisodeId != state.currentEpisodeId) {
                 return@launch
@@ -221,6 +227,7 @@ class PlayerViewModel(
                     }
                 }
                 .onFailure { throwable ->
+                    if (throwable is CancellationException) return@onFailure
                     AppLogger.e(
                         PLAYBACK_LOG_TAG,
                         "[viewmodel.settings.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
@@ -491,6 +498,12 @@ private fun PlayerUiState.settingsOptionsKey(): String =
         append(':')
         append(selectedQualityLabel.orEmpty())
     }
+
+private fun <T> Result<T>.throwIfCancelled(): Result<T> {
+    val error = exceptionOrNull()
+    if (error is CancellationException) throw error
+    return this
+}
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
 private const val WATCH_SYNC_POSITION_STEP_MS = 30_000L

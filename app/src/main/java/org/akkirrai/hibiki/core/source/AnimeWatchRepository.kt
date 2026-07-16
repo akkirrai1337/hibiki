@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -282,6 +283,7 @@ class AnimeWatchRepository(
                         R.string.watch_error_timeout,
                         link.playerName ?: appString(R.string.watch_player_fallback_name),
                     )
+                    is CancellationException -> throw error
                     else -> error.message ?: appString(R.string.watch_error_open_player_failed)
                 }
                 null

@@ -6,14 +6,32 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.animeresolver.model.StreamType
 import org.akkirrai.animeresolver.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class HttpStreamValidatorTest {
+    @Test
+    fun `validation propagates coroutine cancellation`() = runBlocking {
+        val client = HttpClient(MockEngine { throw CancellationException("player changed") })
+
+        assertFailsWith<CancellationException> {
+            HttpStreamValidator(client).validate(
+                VideoStream(
+                    url = "https://video.example/media.m3u8",
+                    type = StreamType.HLS,
+                    quality = null,
+                ),
+            )
+        }
+        client.close()
+    }
+
     @Test
     fun `master playlist selects highest bandwidth without fetching segment`() = runBlocking {
         val requestedUrls = mutableListOf<String>()

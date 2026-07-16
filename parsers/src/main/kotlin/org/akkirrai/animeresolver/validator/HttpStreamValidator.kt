@@ -8,6 +8,7 @@ import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.animeresolver.core.StreamValidator
 import org.akkirrai.animeresolver.model.StreamType
 import org.akkirrai.animeresolver.model.StreamValidationResult
@@ -24,6 +25,8 @@ class HttpStreamValidator(
                 StreamType.MP4 -> validateMp4(stream)
                 StreamType.DASH -> validateDash(stream)
             }
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             failure(
                 stream,
