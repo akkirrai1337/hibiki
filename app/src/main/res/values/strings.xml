@@ -385,7 +385,9 @@
     <string name="update_version_label">Version %1$s</string>
     <string name="update_whats_new">What’s new</string>
     <string name="update_action_download">Update</string>
+    <string name="update_action_install">Install</string>
     <string name="update_action_later">Later</string>
+    <string name="update_action_never_remind">Don’t remind again</string>
     <string name="update_downloading">Downloading: %1$d%%</string>
     <string name="update_download_failed">The update could not be downloaded</string>
     <string name="update_not_available">You already have the latest version</string>

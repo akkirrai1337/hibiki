@@ -379,7 +379,9 @@
     <string name="update_version_label">Версия %1$s</string>
     <string name="update_whats_new">Что нового</string>
     <string name="update_action_download">Обновить</string>
+    <string name="update_action_install">Установить</string>
     <string name="update_action_later">Позже</string>
+    <string name="update_action_never_remind">Больше не напоминать</string>
     <string name="update_downloading">Загрузка: %1$d%%</string>
     <string name="update_download_failed">Не удалось скачать обновление</string>
     <string name="update_not_available">У вас установлена последняя версия</string>

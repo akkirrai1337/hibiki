@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.app.DownloadManager
 import android.os.Build
@@ -11,6 +12,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.net.Uri
 import android.widget.Toast
+import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
@@ -54,15 +56,19 @@ class MainActivity : ComponentActivity() {
     private val downloadManager by lazy(LazyThreadSafetyMode.NONE) {
         getSystemService(DOWNLOAD_SERVICE) as DownloadManager
     }
+    private val updatePreferences by lazy(LazyThreadSafetyMode.NONE) {
+        getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+    }
     private var availableUpdate by mutableStateOf<AppUpdate?>(null)
     private var updateDownloadProgress by mutableStateOf<Float?>(null)
     private var updateDownloadId: Long = NO_DOWNLOAD_ID
     private var updateDownloadJob: Job? = null
+    private var isStartingInstaller = false
     private val updateDownloadReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
             if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, NO_DOWNLOAD_ID) != updateDownloadId) return
-            installDownloadedUpdate()
+            availableUpdate?.let(::installDownloadedUpdate)
         }
     }
 
@@ -83,6 +89,8 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
         AppLogger.install(applicationContext)
+        cleanupInstalledUpdate()
+        updateDownloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
 
         lifecycleScope.launch(Dispatchers.IO) {
             OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
@@ -105,6 +113,7 @@ class MainActivity : ComponentActivity() {
                                 downloadProgress = updateDownloadProgress,
                                 onUpdate = { downloadUpdate(update) },
                                 onLater = { availableUpdate = null },
+                                onNeverRemind = { ignoreUpdateVersion(update.version) },
                             )
                         }
                     }
@@ -137,6 +146,10 @@ class MainActivity : ComponentActivity() {
             }
             result.onSuccess { update ->
                 availableUpdate = update
+                    ?.takeUnless { it.version == updatePreferences.getString(KEY_IGNORED_UPDATE_VERSION, null) }
+                    ?.let { candidate ->
+                        if (getCompletedDownloadUri(candidate.version) != null) candidate.copy(isDownloaded = true) else candidate
+                    }
                 if (showNoUpdateMessage && update == null) {
                     Toast.makeText(this@MainActivity, updateString(R.string.update_not_available), Toast.LENGTH_SHORT).show()
                 }
@@ -149,13 +162,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun downloadUpdate(update: AppUpdate) {
+        if (update.isDownloaded) {
+            installDownloadedUpdate(update)
+            return
+        }
         val request = DownloadManager.Request(Uri.parse(update.apkUrl))
             .setTitle("${getString(R.string.app_name)} ${update.version}")
             .setDescription(updateString(R.string.update_downloading, 0))
             .setMimeType("application/vnd.android.package-archive")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, update.apkFileName)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, update.apkFileName)
         updateDownloadId = downloadManager.enqueue(request)
+        updatePreferences.edit()
+            .putLong(KEY_PENDING_DOWNLOAD_ID, updateDownloadId)
+            .putString(KEY_PENDING_UPDATE_VERSION, update.version)
+            .apply()
         updateDownloadProgress = 0f
         observeUpdateDownload(updateDownloadId)
     }
@@ -165,35 +186,127 @@ class MainActivity : ComponentActivity() {
         updateDownloadJob = lifecycleScope.launch(Dispatchers.IO) {
             val query = DownloadManager.Query().setFilterById(downloadId)
             while (true) {
-                val isFinished = downloadManager.query(query).use { cursor ->
-                    if (!cursor.moveToFirst()) return@use true
+                val status = downloadManager.query(query).use { cursor ->
+                    if (!cursor.moveToFirst()) return@use DOWNLOAD_STATUS_MISSING
                     val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
                     val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                     withContext(Dispatchers.Main) {
                         updateDownloadProgress = if (total > 0) downloaded.toFloat() / total else 0f
                     }
-                    status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED
+                    status
                 }
-                if (isFinished) return@launch
+                when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        withContext(Dispatchers.Main) {
+                            updateDownloadProgress = null
+                            availableUpdate?.let(::installDownloadedUpdate)
+                        }
+                        return@launch
+                    }
+                    DownloadManager.STATUS_FAILED, DOWNLOAD_STATUS_MISSING -> {
+                        withContext(Dispatchers.Main) {
+                            clearPendingUpdate()
+                            updateDownloadProgress = null
+                            Toast.makeText(this@MainActivity, updateString(R.string.update_download_failed), Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+                }
                 delay(250)
             }
         }
     }
 
-    private fun installDownloadedUpdate() {
-        val updateUri = downloadManager.getUriForDownloadedFile(updateDownloadId)
-        if (updateUri == null) {
+    private fun installDownloadedUpdate(update: AppUpdate) {
+        if (isStartingInstaller) return
+        val updateUri = getCompletedDownloadUri(update.version)
+        if (updateUri == null || !isTrustedUpdateApk(update, updateUri)) {
+            clearPendingUpdate()
             updateDownloadProgress = null
             Toast.makeText(this, updateString(R.string.update_download_failed), Toast.LENGTH_SHORT).show()
             return
         }
+        isStartingInstaller = true
         updateDownloadProgress = null
+        availableUpdate = update.copy(isDownloaded = true)
         startActivity(
             Intent(Intent.ACTION_VIEW)
                 .setDataAndType(updateUri, "application/vnd.android.package-archive")
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
         )
+    }
+
+    private fun ignoreUpdateVersion(version: String) {
+        updatePreferences.edit().putString(KEY_IGNORED_UPDATE_VERSION, version).apply()
+        availableUpdate = null
+    }
+
+    private fun getCompletedDownloadUri(version: String): Uri? {
+        if (updatePreferences.getString(KEY_PENDING_UPDATE_VERSION, null) != version) return null
+        val downloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
+        if (downloadId == NO_DOWNLOAD_ID) return null
+        val isSuccessful = downloadManager.query(DownloadManager.Query().setFilterById(downloadId)).use { cursor ->
+            cursor.moveToFirst() && cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL
+        }
+        return if (isSuccessful) downloadManager.getUriForDownloadedFile(downloadId) else null
+    }
+
+    private fun isTrustedUpdateApk(update: AppUpdate, uri: Uri): Boolean = runCatching {
+        val apkFile = File(cacheDir, "update-validation.apk")
+        contentResolver.openInputStream(uri)?.use { input ->
+            apkFile.outputStream().use(input::copyTo)
+        } ?: return false
+        val archiveInfo = packageManager.getPackageArchiveInfo(apkFile.absolutePath, packageInfoFlags()) ?: return false
+        val archiveCertificates = signingCertificates(archiveInfo)
+        archiveCertificates.isNotEmpty() &&
+            archiveInfo.packageName == packageName &&
+            archiveInfo.versionName == update.version &&
+            archiveCertificates == signingCertificates(installedPackageInfo())
+    }.getOrDefault(false)
+
+    private fun installedPackageInfo(): PackageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(packageInfoFlags().toLong()))
+    } else {
+        @Suppress("DEPRECATION")
+        packageManager.getPackageInfo(packageName, packageInfoFlags())
+    }
+
+    private fun packageInfoFlags(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        PackageManager.GET_SIGNING_CERTIFICATES
+    } else {
+        @Suppress("DEPRECATION")
+        PackageManager.GET_SIGNATURES
+    }
+
+    private fun signingCertificates(packageInfo: PackageInfo): Set<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo.signatures?.map { it.toCharsString() }?.toSet().orEmpty()
+    }
+
+    private fun cleanupInstalledUpdate() {
+        val pendingVersion = updatePreferences.getString(KEY_PENDING_UPDATE_VERSION, null)
+        if (pendingVersion == currentVersionName()) {
+            val downloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
+            if (downloadId != NO_DOWNLOAD_ID) downloadManager.remove(downloadId)
+            clearPendingUpdate()
+        }
+    }
+
+    private fun clearPendingUpdate() {
+        updatePreferences.edit()
+            .remove(KEY_PENDING_DOWNLOAD_ID)
+            .remove(KEY_PENDING_UPDATE_VERSION)
+            .apply()
+        updateDownloadId = NO_DOWNLOAD_ID
+        isStartingInstaller = false
+    }
+
+    private fun currentVersionName(): String {
+        @Suppress("DEPRECATION")
+        return packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
     }
 
     private fun updateString(@StringRes stringRes: Int, vararg formatArgs: Any): String {
@@ -202,7 +315,12 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         private const val KEY_NOTIFICATIONS_ASKED = "notifications_permission_asked"
+        private const val UPDATE_PREFERENCES = "app_update"
+        private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
+        private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"
+        private const val KEY_IGNORED_UPDATE_VERSION = "ignored_update_version"
         private const val NO_DOWNLOAD_ID = -1L
+        private const val DOWNLOAD_STATUS_MISSING = -1
     }
 }
 

@@ -21,6 +21,7 @@ data class AppUpdate(
     val apkFileName: String,
     val apkSizeBytes: Long,
     val notes: String,
+    val isDownloaded: Boolean = false,
 )
 
 class AppUpdateRepository(

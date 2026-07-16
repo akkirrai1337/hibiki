@@ -38,6 +38,7 @@ fun AppUpdateDialog(
     downloadProgress: Float?,
     onUpdate: () -> Unit,
     onLater: () -> Unit,
+    onNeverRemind: () -> Unit,
 ) {
     val isDownloading = downloadProgress != null
     AlertDialog(
@@ -95,12 +96,17 @@ fun AppUpdateDialog(
         },
         confirmButton = {
             Button(onClick = onUpdate, enabled = !isDownloading) {
-                Text(stringResource(R.string.update_action_download))
+                Text(stringResource(if (update.isDownloaded) R.string.update_action_install else R.string.update_action_download))
             }
         },
         dismissButton = {
-            TextButton(onClick = onLater, enabled = !isDownloading) {
-                Text(stringResource(R.string.update_action_later))
+            Row {
+                TextButton(onClick = onLater, enabled = !isDownloading) {
+                    Text(stringResource(R.string.update_action_later))
+                }
+                TextButton(onClick = onNeverRemind, enabled = !isDownloading) {
+                    Text(stringResource(R.string.update_action_never_remind))
+                }
             }
         },
     )
