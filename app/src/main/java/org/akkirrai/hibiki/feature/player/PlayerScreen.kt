@@ -863,7 +863,6 @@ fun PlayerScreen(
         isPlaying,
     ) {
         val playback = state.playback ?: return@LaunchedEffect
-        if (!isPlaying) return@LaunchedEffect
         val titleId = state.currentSourceId.substringBefore(':')
         val coverUrl = withContext(Dispatchers.IO) {
             offlineTitleMetadataRepository.get(titleId)?.let { metadata ->
@@ -879,9 +878,11 @@ fun PlayerScreen(
                     episodeNumber = state.currentEpisodeNumber,
                     positionMs = positionMs,
                     durationMs = durationMs,
+                    isPlaying = isPlaying,
                     coverUrl = coverUrl,
                 ),
             )
+            if (!isPlaying) return@LaunchedEffect
             delay(DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS)
         }
     }

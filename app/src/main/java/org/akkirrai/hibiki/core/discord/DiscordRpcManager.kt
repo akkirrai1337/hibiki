@@ -9,6 +9,7 @@ import com.my.kizzyrpc.entities.presence.Metadata
 import com.my.kizzyrpc.entities.presence.Timestamps
 import com.my.kizzyrpc.logger.Logger
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,6 +49,7 @@ data class DiscordPlaybackPresence(
     val episodeNumber: Double?,
     val positionMs: Long,
     val durationMs: Long,
+    val isPlaying: Boolean,
     val coverUrl: String? = null,
 )
 
@@ -60,6 +62,7 @@ class DiscordRpcManager private constructor(
     private val repository = DiscordRepository()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val publishRequests = Channel<Unit>(capacity = Channel.CONFLATED)
+    private val publishImmediately = AtomicBoolean(false)
     private val mediaProxyCache = ConcurrentHashMap<String, String>()
     private val _state = MutableStateFlow(initialState())
 
@@ -187,11 +190,14 @@ class DiscordRpcManager private constructor(
     }
 
     fun showPlayback(value: DiscordPlaybackPresence) {
+        val playbackStateChanged = (desiredPresence as? DesiredPresence.Playback)
+            ?.value
+            ?.isPlaying != value.isPlaying
         desiredPresence = DesiredPresence.Playback(value)
         if (value.titleId in preferences.state.value.discordRpcExcludedTitleIds) {
             closeRpc(keepDesiredPresence = true)
         } else {
-            requestPublish()
+            requestPublish(immediately = playbackStateChanged)
         }
     }
 
@@ -228,7 +234,8 @@ class DiscordRpcManager private constructor(
         }
     }
 
-    private fun requestPublish() {
+    private fun requestPublish(immediately: Boolean = false) {
+        if (immediately) publishImmediately.set(true)
         publishRequests.trySend(Unit)
     }
 
@@ -236,8 +243,11 @@ class DiscordRpcManager private constructor(
         ensureDesiredPresence()
         if (!canPublish(desiredPresence ?: return)) return
 
-        val debounceMs = lastPublishAtMs + MIN_PUBLISH_INTERVAL_MS - SystemClock.elapsedRealtime()
-        if (debounceMs > 0) delay(debounceMs)
+        while (!publishImmediately.getAndSet(false)) {
+            val debounceMs = lastPublishAtMs + MIN_PUBLISH_INTERVAL_MS - SystemClock.elapsedRealtime()
+            if (debounceMs <= 0) break
+            delay(minOf(debounceMs, IMMEDIATE_PUBLISH_POLL_MS))
+        }
 
         val presence = desiredPresence ?: return
         val token = tokenStore.getToken() ?: return
@@ -334,10 +344,15 @@ class DiscordRpcManager private constructor(
             )
             is DesiredPresence.Playback -> {
                 val value = presence.value
-                val startTime = System.currentTimeMillis() - value.positionMs.coerceAtLeast(0L)
-                val endTime = value.durationMs
-                    .takeIf { it > value.positionMs }
-                    ?.let { startTime + it }
+                val timestamps = if (value.isPlaying) {
+                    val startTime = System.currentTimeMillis() - value.positionMs.coerceAtLeast(0L)
+                    val endTime = value.durationMs
+                        .takeIf { it > value.positionMs }
+                        ?.let { startTime + it }
+                    Timestamps(start = startTime, end = endTime)
+                } else {
+                    null
+                }
                 val progress = formatProgress(value.positionMs, value.durationMs)
                 val episode = value.episodeNumber?.let(::formatEpisodeNumber)
                 val largeImage = value.coverUrl?.let { mediaProxyUrl(token, it) } ?: appIcon
@@ -347,7 +362,7 @@ class DiscordRpcManager private constructor(
                     details = value.animeTitle.discordText() ?: appName,
                     state = value.voiceover.discordText(),
                     type = ACTIVITY_TYPE_WATCHING,
-                    timestamps = Timestamps(start = startTime, end = endTime),
+                    timestamps = timestamps,
                     assets = largeImage?.let {
                         Assets(
                             largeImage = it,
@@ -438,6 +453,7 @@ class DiscordRpcManager private constructor(
         private const val STATUS_ONLINE = "online"
         private const val ACTIVITY_TYPE_WATCHING = 3
         private const val MIN_PUBLISH_INTERVAL_MS = 16_000L
+        private const val IMMEDIATE_PUBLISH_POLL_MS = 100L
         private const val RPC_CONNECT_TIMEOUT_MS = 20_000L
         private const val MEDIA_PROXY_TIMEOUT_MS = 5_000L
         private const val RECONNECT_DELAY_MS = 15_000L
