@@ -24,7 +24,6 @@ import androidx.lifecycle.LifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
-import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 
 @Composable
@@ -81,14 +80,12 @@ internal fun WatchScreenScaffold(
 internal fun WatchBackButton(
     onBackClick: () -> Unit,
     enabled: Boolean = true,
-    darkStyle: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     AppBackButton(
         onClick = onBackClick,
         enabled = enabled,
         modifier = modifier,
-        style = if (darkStyle) AppBackButtonStyle.DarkOverlay else AppBackButtonStyle.Surface,
     )
 }
 

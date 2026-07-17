@@ -120,7 +120,6 @@ import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
-import org.akkirrai.hibiki.core.design.component.AppBackButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
@@ -1401,7 +1400,6 @@ private fun HeroOverlayBackButton(
         modifier = modifier
             .statusBarsPadding()
             .padding(start = UiDimens.ScreenPadding, top = 8.dp),
-        style = AppBackButtonStyle.HeroOverlay,
     )
 }
 

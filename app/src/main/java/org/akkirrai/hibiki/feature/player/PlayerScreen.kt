@@ -1797,7 +1797,6 @@ private fun PlayerTopOverlay(
     ) {
         WatchBackButton(
             onBackClick = onBackClick,
-            darkStyle = true,
             modifier = Modifier.align(Alignment.TopStart)
         )
 
@@ -1986,7 +1985,6 @@ private fun PlayerSettingsHeader(
         if (showBack) {
             WatchBackButton(
                 onBackClick = onBack,
-                darkStyle = true,
             )
         } else {
             SpacerBox(8.dp)

@@ -6,11 +6,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -61,79 +63,91 @@ fun SourcesScreen(
         label = "russian_sources_arrow",
     )
 
-    LazyColumn(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        item(key = "header") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AppBackButton(onClick = onBackClick)
-                Text(
-                    text = stringResource(R.string.settings_sources),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-        item(key = "ru_sources") {
-            Column {
-                Row(
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            item(key = "header") {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { russianSourcesExpanded = !russianSourcesExpanded }
-                        .padding(horizontal = 4.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .height(48.dp),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        text = stringResource(R.string.settings_sources_language_ru),
-                        style = MaterialTheme.typography.titleMedium,
+                        text = stringResource(R.string.settings_sources),
+                        modifier = Modifier.padding(start = 60.dp),
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .requiredSize(16.dp)
-                            .graphicsLayer { rotationZ = russianSourcesArrowRotation },
-                    )
                 }
-                AnimatedVisibility(visible = russianSourcesExpanded) {
-                    Column(
-                        modifier = Modifier.padding(top = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+            }
+            item(key = "ru_sources") {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { russianSourcesExpanded = !russianSourcesExpanded }
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        russianSources.forEachIndexed { index, source ->
-                            SourceItem(
-                                source = source,
-                                selected = source.id == selectedSource,
-                                shape = when {
-                                    russianSources.size == 1 -> RoundedCornerShape(24.dp)
-                                    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
-                                    index == russianSources.lastIndex -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                                    else -> RoundedCornerShape(8.dp)
-                                },
-                                onClick = {
-                                    preferences.setAnimeSource(source.id)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
+                        Text(
+                            text = stringResource(R.string.settings_sources_language_ru),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier
+                                .requiredSize(16.dp)
+                                .graphicsLayer { rotationZ = russianSourcesArrowRotation },
+                        )
+                    }
+                    AnimatedVisibility(visible = russianSourcesExpanded) {
+                        Column(
+                            modifier = Modifier.padding(top = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            russianSources.forEachIndexed { index, source ->
+                                SourceItem(
+                                    source = source,
+                                    selected = source.id == selectedSource,
+                                    shape = when {
+                                        russianSources.size == 1 -> RoundedCornerShape(24.dp)
+                                        index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+                                        index == russianSources.lastIndex -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+                                        else -> RoundedCornerShape(8.dp)
+                                    },
+                                    onClick = {
+                                        preferences.setAnimeSource(source.id)
+                                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+
+        AppBackButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 18.dp, top = 12.dp),
+        )
     }
 }
 
