@@ -150,6 +150,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.materialkolor.PaletteStyle
+import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,8 +179,15 @@ fun DetailsScreen(
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     var currentAnime by remember(detailsStateKey) { mutableStateOf(savedScreenState?.anime ?: anime) }
-    var titleSeedColor by remember(anime.id) { mutableStateOf(titleSeedColorCache[anime.id]) }
-    var libraryCategory by remember(anime.id) { mutableStateOf<LibraryCategory?>(null) }
+    var titleSeedColor by remember(detailsStateKey) {
+        mutableStateOf(
+            titleSeedColorCache[detailsStateKey]
+                ?: readStoredTitleSeedColor(context, detailsStateKey)
+        )
+    }
+    var libraryCategory by remember(anime.id) {
+        mutableStateOf(libraryRepository.getLibraryCategory(anime.id))
+    }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
@@ -239,6 +247,9 @@ fun DetailsScreen(
                     offlineTitleMetadataRepository.save(it)
                 }
             }
+    }
+
+    LaunchedEffect(anime.id) {
         refreshWatchStateSnapshot()
     }
 
@@ -253,7 +264,6 @@ fun DetailsScreen(
         currentAnime.posterFallbackUrl,
         currentAnime.screenshots,
     ) {
-        delay(AppMotion.ScreenTransitionDurationMillis.toLong())
         if (titleSeedColor == null) {
             extractTitleSeedColor(
                 context = context,
@@ -263,7 +273,8 @@ fun DetailsScreen(
                     currentAnime.screenshots.firstOrNull(),
                 ),
             )?.let { extractedColor ->
-                titleSeedColorCache[anime.id] = extractedColor
+                titleSeedColorCache[detailsStateKey] = extractedColor
+                storeTitleSeedColor(context, detailsStateKey, extractedColor)
                 titleSeedColor = extractedColor
             }
         }
@@ -335,8 +346,12 @@ fun DetailsScreen(
     } else {
         titleColorScheme
     }
+    val animatedDetailsColorScheme = animateColorScheme(
+        colorScheme = detailsColorScheme,
+        animationSpec = { tween(durationMillis = TITLE_COLOR_TRANSITION_DURATION_MILLIS) },
+    )
 
-    MaterialTheme(colorScheme = detailsColorScheme) {
+    MaterialTheme(colorScheme = animatedDetailsColorScheme) {
         Surface(
             modifier = modifier
                 .fillMaxSize(),
@@ -356,7 +371,6 @@ fun DetailsScreen(
                     anime = uiModel.anime,
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
-                    bannerTint = Color(titleSeedColor ?: 0).copy(alpha = 0.25f),
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
                     loadExpandedMedia = isScreenTransitionSettled,
@@ -494,7 +508,6 @@ private fun DetailHeroSection(
     anime: Anime,
     heroInfo: HeroInfo,
     description: String,
-    bannerTint: Color,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     loadExpandedMedia: Boolean,
@@ -539,7 +552,6 @@ private fun DetailHeroSection(
         ) {
             DetailHeroMedia(
                 anime = anime,
-                bannerTint = bannerTint,
                 resumeState = resumeState,
                 resumeFrame = resumeFrame,
                 loadExpandedMedia = loadExpandedMedia,
@@ -817,7 +829,6 @@ private fun NestedScrollableContent(
 @Composable
 private fun DetailHeroMedia(
     anime: Anime,
-    bannerTint: Color,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
     loadExpandedMedia: Boolean,
@@ -850,12 +861,6 @@ private fun DetailHeroMedia(
                 contentDescription = null,
             )
         }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(bannerTint),
-        )
 
         when {
             resumeState != null -> {
@@ -2025,8 +2030,22 @@ private data class DetailsWatchSnapshot(
     val resumeFrame: File?,
 )
 
+private fun readStoredTitleSeedColor(context: Context, key: String): Int? {
+    val preferences = context.getSharedPreferences(TITLE_COLOR_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    return preferences.getInt(key, 0).takeIf { preferences.contains(key) }
+}
+
+private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
+    context.getSharedPreferences(TITLE_COLOR_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putInt(key, color)
+        .apply()
+}
+
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
+private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
+private const val TITLE_COLOR_TRANSITION_DURATION_MILLIS = 280
 private val DETAIL_CONTENT_START_PADDING = 24.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
 private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET

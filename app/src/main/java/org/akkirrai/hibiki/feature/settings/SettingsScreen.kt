@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Storage
@@ -99,7 +100,6 @@ fun SettingsScreen(
     val appPreferences = LocalAppPreferences.current
     val preferences = LocalAppPreferencesState.current
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
-    val discordRpcState by discordRpcManager.state.collectAsState()
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
     val discordAuthLauncher = rememberLauncherForActivityResult(
@@ -173,20 +173,30 @@ fun SettingsScreen(
 
         item(key = "preferences") {
             SettingsSection(title = stringResource(R.string.settings_preferences)) {
-                SettingsItems(count = 1) { _, shape ->
-                    SettingsVerticalItem(
-                        icon = Icons.Outlined.Language,
-                        title = stringResource(R.string.settings_language),
-                        shape = shape,
-                    ) {
-                        SettingsSegmentedControl(
-                            options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
-                            selectedOption = preferences.languageMode,
-                            label = ::languageModeLabel,
-                            onSelect = { mode ->
-                                appPreferences.setLanguageMode(mode)
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                            },
+                SettingsItems(count = 2) { index, shape ->
+                    when (index) {
+                        0 -> SettingsVerticalItem(
+                            icon = Icons.Outlined.Language,
+                            title = stringResource(R.string.settings_language),
+                            shape = shape,
+                        ) {
+                            SettingsSegmentedControl(
+                                options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
+                                selectedOption = preferences.languageMode,
+                                label = ::languageModeLabel,
+                                onSelect = { mode ->
+                                    appPreferences.setLanguageMode(mode)
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                            )
+                        }
+
+                        1 -> SettingsActionItem(
+                            icon = Icons.Outlined.Storage,
+                            title = stringResource(R.string.settings_sources),
+                            shape = shape,
+                            showNavigationArrow = true,
+                            onClick = onOpenSources,
                         )
                     }
                 }
@@ -207,27 +217,12 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "sources") {
+        item(key = "experimental") {
             SettingsSection(title = stringResource(R.string.settings_experimental)) {
-                SettingsItems(count = 1) { _, shape ->
-                    SettingsActionItem(
-                        icon = Icons.Outlined.Storage,
-                        title = stringResource(R.string.settings_sources),
-                        subtitle = stringResource(R.string.settings_sources_summary),
-                        shape = shape,
-                        onClick = onOpenSources,
-                    )
-                }
-            }
-        }
-
-        item(key = "discord") {
-            SettingsSection(title = stringResource(R.string.discord_rpc_section)) {
                 SettingsItems(count = 1) { _, shape ->
                     DiscordSettingsItem(
                         icon = ImageVector.vectorResource(R.drawable.ic_discord),
                         title = stringResource(R.string.discord_rpc_title),
-                        subtitle = discordRpcStatusLabel(discordRpcState.status),
                         checked = preferences.discordRpcEnabled,
                         shape = shape,
                         onClick = { isDiscordAuthDialogOpen = true },
@@ -408,7 +403,6 @@ private fun SettingsSwitchItem(
 private fun DiscordSettingsItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
     checked: Boolean,
     shape: Shape,
     onClick: () -> Unit,
@@ -436,11 +430,6 @@ private fun DiscordSettingsItem(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
         )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -450,12 +439,24 @@ private fun SettingsActionItem(
     title: String,
     subtitle: String? = null,
     shape: Shape,
+    showNavigationArrow: Boolean = false,
     onClick: () -> Unit,
 ) {
     SettingsItemRow(
         icon = icon,
         shape = shape,
         onClick = onClick,
+        trailing = if (showNavigationArrow) {
+            {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            null
+        },
     ) {
         Text(
             text = title,
