@@ -89,6 +89,9 @@ object AnimeSourceRegistry {
     fun descriptorForTitle(titleId: String, fallbackSourceId: AnimeSourceId): AnimeSourceDescriptor =
         descriptor(ScopedAnimeId.parse(titleId)?.sourceId ?: fallbackSourceId)
 
+    fun descriptorForStoredTitle(titleId: String): AnimeSourceDescriptor =
+        descriptor(ScopedAnimeId.parse(titleId)?.sourceId ?: AnimeSourceId.YUMMY_ANIME)
+
     private fun registration(sourceId: AnimeSourceId): Registration =
         registrations.firstOrNull { it.descriptor.id == sourceId }
             ?: error("Anime source is not registered: $sourceId")

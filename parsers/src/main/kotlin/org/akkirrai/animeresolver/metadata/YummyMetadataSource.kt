@@ -479,6 +479,12 @@ private data class YummyAnimePayload(
             addAll(aliases.mapNotNull(String::normalize))
         }.distinct()
 
+        val isReleased = listOf(animeStatus?.alias, animeStatus?.title, status)
+            .any { it.isReleasedAnimeStatus() }
+        val availableEpisodeCount = episodes.extractEpisodeCount(preferTotal = false)
+            ?: episodesCount
+        val totalEpisodeCount = episodes.extractEpisodeCount(preferTotal = true)
+            ?: episodesCount
         return AnimeTitle(
             id = animeId.toString(),
             russianName = russianName,
@@ -488,10 +494,7 @@ private data class YummyAnimePayload(
             synonyms = synonyms,
             year = year,
             type = type?.alias.normalize(),
-            episodeCount = episodes.extractEpisodeCount(
-                preferTotal = listOf(animeStatus?.alias, animeStatus?.title, status)
-                    .any { it.isReleasedAnimeStatus() },
-            ) ?: episodesCount,
+            episodeCount = if (isReleased) totalEpisodeCount else availableEpisodeCount,
             posterUrl = poster?.bestUrl() ?: image?.bestUrl(),
             status = animeStatus?.title.normalize()
                 ?: animeStatus?.alias.normalize()
@@ -508,6 +511,7 @@ private data class YummyAnimePayload(
             franchiseAnime = viewingOrder.mapNotNull(YummyViewingOrderEntry::toRelatedAnimeTitle),
             relatedAnime = viewingOrder.mapNotNull(YummyViewingOrderEntry::toRelatedAnimeTitle),
             season = season,
+            availableEpisodeCount = if (isReleased) totalEpisodeCount else availableEpisodeCount,
         )
     }
 }
@@ -662,6 +666,7 @@ private data class YummyScheduleAnime(
             status = if (isAnnouncement) "announcement" else "ongoing",
             description = null,
             nextEpisodeAt = nextDate,
+            availableEpisodeCount = aired,
         )
     }
 }

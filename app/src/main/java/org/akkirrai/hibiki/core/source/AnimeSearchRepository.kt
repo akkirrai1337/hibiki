@@ -244,7 +244,9 @@ class AnimeSearchRepository(
         fallbackLabel: String?,
         preferEnglish: Boolean,
     ): String {
-        return when (val count = episodeCount) {
+        val releasedCount = availableEpisodeCount
+            ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED }
+        return when (val count = releasedCount) {
             null -> fallbackLabel.orEmpty().ifBlank {
                 if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
             }

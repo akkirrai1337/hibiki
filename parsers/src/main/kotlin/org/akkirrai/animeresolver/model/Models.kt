@@ -27,6 +27,8 @@ data class AnimeTitle(
     val franchiseAnime: List<RelatedAnimeTitle> = emptyList(),
     val relatedAnime: List<RelatedAnimeTitle> = emptyList(),
     val season: Int? = null,
+    /** Episodes currently available from this source; differs from the planned total for ongoing titles. */
+    val availableEpisodeCount: Int? = null,
 ) {
     val displayName: String
         get() = russianName?.takeIf(String::isNotBlank)

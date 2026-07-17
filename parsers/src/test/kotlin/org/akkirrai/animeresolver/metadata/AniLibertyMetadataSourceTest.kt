@@ -128,12 +128,31 @@ class AniLibertyMetadataSourceTest {
         val title = source.getById("10277")
 
         assertEquals(2, title.episodeCount)
+        assertEquals(2, title.availableEpisodeCount)
         assertEquals("ongoing", title.status)
+        client.close()
+    }
+
+    @Test
+    fun `keeps planned total separate from available episodes`() = runBlocking {
+        val client = HttpClient(MockEngine {
+            respond(
+                DANDELION_RELEASE,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+
+        val title = source.getById("10213")
+
+        assertEquals(7, title.episodeCount)
+        assertEquals(5, title.availableEpisodeCount)
         client.close()
     }
 
     private companion object {
         const val RELEASE = """{"id":7,"type":{"value":"TV"},"year":2026,"name":{"main":"Example","english":"Example","alternative":null},"poster":{"src":"/poster.jpg","optimized":{"src":"/optimized.webp"}},"is_ongoing":true,"publish_day":{"value":3},"episodes_total":12}"""
         const val RELEASE_WITH_EPISODES = """{"id":10277,"type":{"value":"TV"},"year":2026,"name":{"main":"Вперёд, отряд мистики!","english":"Ghost Concert: Missing Songs","alternative":null},"is_ongoing":true,"episodes_total":null,"episodes":[{"id":1,"ordinal":1},{"id":2,"ordinal":2}]}"""
+        const val DANDELION_RELEASE = """{"id":10213,"type":{"value":"WEB"},"year":2026,"name":{"main":"Одуванчик","english":"Dandelion","alternative":null},"is_ongoing":true,"episodes_total":7,"episodes":[{"id":1,"ordinal":1},{"id":2,"ordinal":2},{"id":3,"ordinal":3},{"id":4,"ordinal":4},{"id":5,"ordinal":5}]}"""
     }
 }

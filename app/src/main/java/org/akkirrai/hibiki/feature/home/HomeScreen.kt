@@ -119,6 +119,7 @@ import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
+import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
@@ -758,6 +759,8 @@ private fun ContinueWatchingCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+
+                        AnimeSourceBadge(titleId = anime.id)
 
                         Text(
                             text = stringResource(R.string.home_open_title_hint),

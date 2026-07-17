@@ -145,6 +145,7 @@ class AniLibertyMetadataSource(
         val poster = value["poster"].asObject()
         val posterPath = poster?.get("optimized").asObject()?.string("src")
             ?: poster?.string("src")
+        val availableEpisodeCount = value["episodes"].asArray().size.takeIf { it > 0 }
         return AnimeTitle(
             id = id,
             russianName = mainName,
@@ -154,8 +155,7 @@ class AniLibertyMetadataSource(
             synonyms = names.string("alternative").toAlternativeNames(),
             year = value.int("year"),
             type = value["type"].asObject()?.string("value"),
-            episodeCount = value.int("episodes_total")
-                ?: value["episodes"].asArray().size.takeIf { it > 0 },
+            episodeCount = value.int("episodes_total") ?: availableEpisodeCount,
             posterUrl = posterPath?.let { resolveUrl(PUBLIC_SITE_URL, it) },
             status = when (value.bool("is_ongoing")) {
                 true -> "ongoing"
@@ -168,6 +168,7 @@ class AniLibertyMetadataSource(
             },
             ageRating = value["age_rating"].asObject()?.string("label"),
             season = value["season"].asObject()?.string("value").toSeason(),
+            availableEpisodeCount = availableEpisodeCount,
         )
     }
 

@@ -88,6 +88,7 @@ import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
+import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
@@ -421,6 +422,7 @@ private fun LibraryAnimeCard(
         onClick = onClick,
         modifier = modifier,
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
+        supportingContent = { AnimeSourceBadge(titleId = anime.id) },
     )
 }
 

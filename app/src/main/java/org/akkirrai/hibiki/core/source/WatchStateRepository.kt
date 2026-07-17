@@ -8,6 +8,33 @@ import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 
+private const val PROGRESS_PREFIX = "progress_"
+private const val EPISODE_KEY_SEPARATOR = "|episode|"
+
+internal data class ProgressStorageKey(
+    val titleId: String,
+    val episodeId: String,
+)
+
+internal fun parseProgressStorageKey(key: String): ProgressStorageKey? {
+    if (!key.startsWith(PROGRESS_PREFIX)) return null
+    val payload = key.removePrefix(PROGRESS_PREFIX)
+    val (titleId, episodeId) = when {
+        EPISODE_KEY_SEPARATOR in payload ->
+            payload.substringBefore(EPISODE_KEY_SEPARATOR) to
+                payload.substringAfter(EPISODE_KEY_SEPARATOR)
+        payload.startsWith("source:") && ':' in payload ->
+            payload.substringBeforeLast(':') to payload.substringAfterLast(':')
+        ':' in payload -> payload.substringBefore(':') to payload.substringAfter(':')
+        else -> return null
+    }
+    if (titleId.isBlank() || episodeId.isBlank()) return null
+    return ProgressStorageKey(
+        titleId = YummyIdMigration.normalizeTitleId(titleId),
+        episodeId = episodeId,
+    )
+}
+
 class WatchStateRepository(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -71,18 +98,14 @@ class WatchStateRepository(context: Context) {
                 key.startsWith(PROGRESS_PREFIX) && value is String
             }
             .mapNotNull { (key, value) ->
-                val titleId = key.substringAfter(PROGRESS_PREFIX).substringBefore(':')
-                val episodeId = key.substringAfter(':', missingDelimiterValue = "")
-                if (titleId.isBlank() || episodeId.isBlank()) {
-                    return@mapNotNull null
-                }
+                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
                 parseProgress(
-                    titleId = YummyIdMigration.normalizeTitleId(titleId),
-                    episodeId = episodeId,
+                    titleId = progressKey.titleId,
+                    episodeId = progressKey.episodeId,
                     encoded = value as String,
                 )
             }
-            .distinctBy { "${it.titleId}:${it.episodeId}" }
+            .distinctBy { it.titleId to it.episodeId }
             .groupBy(EpisodeWatchProgress::titleId)
             .values
             .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
@@ -198,9 +221,12 @@ class WatchStateRepository(context: Context) {
     }
 
     private fun progressKey(titleId: String, episodeId: String): String =
-        "${episodePrefix(titleId)}$episodeId"
+        "${canonicalEpisodePrefix(titleId)}$episodeId"
 
-    private fun episodePrefix(titleId: String): String = "progress_$titleId:"
+    private fun canonicalEpisodePrefix(titleId: String): String =
+        "$PROGRESS_PREFIX$titleId$EPISODE_KEY_SEPARATOR"
+
+    private fun legacyEpisodePrefix(titleId: String): String = "$PROGRESS_PREFIX$titleId:"
 
     private fun selectedSourceKey(titleId: String): String = "selected_source_$titleId"
 
@@ -221,11 +247,18 @@ class WatchStateRepository(context: Context) {
     }
 
     private fun episodePrefixes(titleId: String): List<String> {
-        return legacyCompatibleTitleIds(titleId).map(::episodePrefix)
+        return legacyCompatibleTitleIds(titleId).flatMap { candidateId ->
+            listOf(canonicalEpisodePrefix(candidateId), legacyEpisodePrefix(candidateId))
+        }
     }
 
     private fun episodeProgressKeys(titleId: String, episodeId: String): List<String> {
-        return legacyCompatibleTitleIds(titleId).map { progressKey(it, episodeId) }
+        return legacyCompatibleTitleIds(titleId).flatMap { candidateId ->
+            listOf(
+                progressKey(candidateId, episodeId),
+                "${legacyEpisodePrefix(candidateId)}$episodeId",
+            )
+        }
     }
 
     private fun readString(titleId: String, keyBuilder: (String) -> String): String? {
@@ -267,7 +300,6 @@ class WatchStateRepository(context: Context) {
     companion object {
         const val PREFS_NAME = "hibiki_watch_state"
         const val ACTIVITY_RETENTION_DAYS = 90
-        private const val PROGRESS_PREFIX = "progress_"
         private const val SEPARATOR = '\u001F'
         private const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
         private const val ACTIVITY_COMPLETED_PREFIX = "activity_completed_"
@@ -284,15 +316,14 @@ class WatchStateRepository(context: Context) {
             .asSequence()
             .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
             .mapNotNull { (key, value) ->
-                val titleId = key.substringAfter(PROGRESS_PREFIX).substringBefore(':')
-                val episodeId = key.substringAfter(':', missingDelimiterValue = "")
-                if (titleId.isBlank() || episodeId.isBlank()) null else parseProgress(
-                    titleId = YummyIdMigration.normalizeTitleId(titleId),
-                    episodeId = episodeId,
+                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
+                parseProgress(
+                    titleId = progressKey.titleId,
+                    episodeId = progressKey.episodeId,
                     encoded = value as String,
                 )
             }
-            .distinctBy { "${it.titleId}:${it.episodeId}" }
+            .distinctBy { it.titleId to it.episodeId }
             .toList()
     }
 

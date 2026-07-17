@@ -23,6 +23,8 @@ import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceRuntime
 import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
+import org.akkirrai.hibiki.core.source.LibraryRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.localizedDisplayName
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 
@@ -44,11 +46,13 @@ class HomeRepository(
     private val sourceManager = AnimeSourceRuntimeManager(appContext, client)
     private val searchRepository = AnimeSearchRepository(appContext, client)
     private val watchStateRepository = WatchStateRepository(appContext)
+    private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
+    private val libraryRepository = LibraryRepository(appContext)
 
     fun fallbackHomeState(): HomeUiState {
         return HomeUiState(
             featuredAnime = MockAnimeData.trending.take(FEATURED_COUNT),
-            continueAnime = null,
+            continueAnime = loadStoredContinueAnime(),
             popular = emptyList(),
             trending = MockAnimeData.trending,
             recentlyUpdated = MockAnimeData.recent,
@@ -180,22 +184,34 @@ class HomeRepository(
     }
 
     private suspend fun loadContinueAnime(): Anime? {
-        return watchStateRepository.getRecentTitleWatchState()
-            ?.let { progress ->
-                runCatching {
-                    searchRepository.getDetails(
-                        id = progress.titleId,
-                        fallback = Anime(
-                            id = progress.titleId,
-                            title = "",
-                            subtitle = "",
-                            episodesLabel = "",
-                            status = "",
-                        ),
-                    )
-                }.getOrNull()
-            }
+        val progress = watchStateRepository.getRecentTitleWatchState() ?: return null
+        val storedAnime = findStoredAnime(progress.titleId)
+        val fallback = storedAnime ?: Anime(
+            id = progress.titleId,
+            title = "",
+            subtitle = "",
+            episodesLabel = "",
+            status = "",
+        )
+        return runCatching {
+            searchRepository.getDetails(id = progress.titleId, fallback = fallback)
+                .also(offlineTitleMetadataRepository::save)
+        }.getOrElse { error ->
+            AppLogger.w(TAG, "Continue title ${progress.titleId} is unavailable: ${error.message}")
+            storedAnime
+        }
     }
+
+    private fun loadStoredContinueAnime(): Anime? {
+        val progress = watchStateRepository.getRecentTitleWatchState() ?: return null
+        return findStoredAnime(progress.titleId)
+    }
+
+    private fun findStoredAnime(titleId: String): Anime? =
+        offlineTitleMetadataRepository.get(titleId)
+            ?: libraryRepository.getLibraryEntries()
+                .firstOrNull { it.anime.id == titleId }
+                ?.anime
 
     private fun ensureInternetConnection() {
         if (!hasActiveInternetConnection(appContext)) {
@@ -285,7 +301,14 @@ class HomeRepository(
             id = title.id,
             title = displayTitle(title),
             subtitle = subtitle,
-            episodesLabel = if (isAnnouncement) announcementLabel() else title.episodeCount?.let { episodesCountLabel(it) }.orEmpty(),
+            episodesLabel = if (isAnnouncement) {
+                announcementLabel()
+            } else {
+                (title.availableEpisodeCount
+                    ?: title.episodeCount.takeIf { title.releaseStatus == AnimeReleaseStatus.RELEASED })
+                    ?.let(::episodesCountLabel)
+                    .orEmpty()
+            },
             status = status,
             nextEpisodeAt = title.nextEpisodeAt,
             posterUrl = title.posterUrl,
