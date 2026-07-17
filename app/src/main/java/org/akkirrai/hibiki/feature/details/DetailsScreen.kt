@@ -1413,18 +1413,10 @@ private fun GenresSection(
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(24.dp))
         DetailSectionTitle(
-            text = stringResource(R.string.details_categories),
+            text = stringResource(R.string.details_genres),
             modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.details_genres),
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

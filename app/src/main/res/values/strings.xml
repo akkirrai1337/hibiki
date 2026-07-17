@@ -137,7 +137,6 @@
     <string name="details_continue_episode_position">Episode %1$s · %2$s</string>
     <string name="details_information">Information</string>
     <string name="details_genres">Genres</string>
-    <string name="details_categories">Categories</string>
     <string name="details_favorite">Add to favorites</string>
     <string name="details_screenshots">Screenshots</string>
     <string name="details_type">Type</string>

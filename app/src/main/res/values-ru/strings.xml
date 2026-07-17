@@ -131,7 +131,6 @@
     <string name="details_continue_episode_position">Серия %1$s · %2$s</string>
     <string name="details_information">Информация</string>
     <string name="details_genres">Жанры</string>
-    <string name="details_categories">Категории</string>
     <string name="details_favorite">В избранное</string>
     <string name="details_screenshots">Кадры</string>
     <string name="details_type">Тип</string>
