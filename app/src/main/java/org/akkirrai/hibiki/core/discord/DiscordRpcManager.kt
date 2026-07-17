@@ -310,21 +310,27 @@ class DiscordRpcManager private constructor(
         val localizedContext = appContext.withAppPreferencesLanguage()
         val appName = localizedContext.getString(R.string.app_name)
         val appIcon = mediaProxyUrl(token, HIBIKI_ICON_URL)
-        return when (presence) {
+        val githubButton = localizedContext.getString(R.string.discord_rpc_open_github)
+            .takeIf { it.isValidDiscordButtonLabel() }
+        val githubButtons = githubButton?.let(::listOf)
+        val githubMetadata = githubButton?.let { Metadata(listOf(HIBIKI_GITHUB_URL)) }
+        val activity = when (presence) {
             is DesiredPresence.General -> Activity(
                 applicationId = DISCORD_APPLICATION_ID,
                 name = appName,
                 details = presence.details.discordText() ?: appName,
                 state = null,
                 type = ACTIVITY_TYPE_WATCHING,
-                assets = Assets(
-                    largeImage = appIcon,
-                    largeText = appName,
-                    smallImage = null,
-                    smallText = null,
-                ),
-                buttons = listOf(localizedContext.getString(R.string.discord_rpc_open_github)),
-                metadata = Metadata(listOf(HIBIKI_GITHUB_URL)),
+                assets = appIcon?.let {
+                    Assets(
+                        largeImage = it,
+                        largeText = appName,
+                        smallImage = null,
+                        smallText = null,
+                    )
+                },
+                buttons = githubButtons,
+                metadata = githubMetadata,
             )
             is DesiredPresence.Playback -> {
                 val value = presence.value
@@ -334,6 +340,7 @@ class DiscordRpcManager private constructor(
                     ?.let { startTime + it }
                 val progress = formatProgress(value.positionMs, value.durationMs)
                 val episode = value.episodeNumber?.let(::formatEpisodeNumber)
+                val largeImage = value.coverUrl?.let { mediaProxyUrl(token, it) } ?: appIcon
                 Activity(
                     applicationId = DISCORD_APPLICATION_ID,
                     name = appName,
@@ -341,20 +348,31 @@ class DiscordRpcManager private constructor(
                     state = value.voiceover.discordText(),
                     type = ACTIVITY_TYPE_WATCHING,
                     timestamps = Timestamps(start = startTime, end = endTime),
-                    assets = Assets(
-                        largeImage = value.coverUrl?.let { mediaProxyUrl(token, it) } ?: appIcon,
-                        largeText = listOfNotNull(
-                            episode?.let { localizedContext.getString(R.string.discord_rpc_episode, it) },
-                            progress,
-                        ).joinToString(SEPARATOR).discordText(),
-                        smallImage = appIcon,
-                        smallText = appName,
-                    ),
-                    buttons = listOf(localizedContext.getString(R.string.discord_rpc_open_github)),
-                    metadata = Metadata(listOf(HIBIKI_GITHUB_URL)),
+                    assets = largeImage?.let {
+                        Assets(
+                            largeImage = it,
+                            largeText = listOfNotNull(
+                                episode?.let { number ->
+                                    localizedContext.getString(R.string.discord_rpc_episode, number)
+                                },
+                                progress,
+                            ).joinToString(SEPARATOR).discordText(),
+                            smallImage = appIcon,
+                            smallText = appName,
+                        )
+                    },
+                    buttons = githubButtons,
+                    metadata = githubMetadata,
                 )
             }
         }
+        AppLogger.d(
+            DISCORD_LOG_TAG,
+            "Discord RPC activity built: type=${activity.type}, " +
+                "applicationId=${activity.applicationId != null}, assets=${activity.assets != null}, " +
+                "buttons=${activity.buttons?.isNotEmpty() == true}",
+        )
+        return activity
     }
 
     private suspend fun mediaProxyUrl(token: String, url: String): String? {
@@ -413,7 +431,7 @@ class DiscordRpcManager private constructor(
         }
 
         private const val DISCORD_LOG_TAG = "HibikiDiscordRpc"
-        private const val DISCORD_APPLICATION_ID = "962990036020756480"
+        private const val DISCORD_APPLICATION_ID = "1527613923338096764"
         private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
         private const val HIBIKI_ICON_URL =
             "https://raw.githubusercontent.com/akkirrai1337/hibiki/refs/heads/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp"
@@ -426,6 +444,7 @@ class DiscordRpcManager private constructor(
         private const val BACKGROUND_DISCONNECT_DELAY_MS = 30_000L
         private const val SEPARATOR = " • "
         private const val MAX_DISCORD_TEXT_LENGTH = 128
+        private const val MAX_DISCORD_BUTTON_BYTES = 32
 
         private fun formatProgress(positionMs: Long, durationMs: Long): String? {
             if (durationMs <= 0L) return null
@@ -450,6 +469,9 @@ class DiscordRpcManager private constructor(
         private fun String.discordText(): String? = trim()
             .take(MAX_DISCORD_TEXT_LENGTH)
             .takeIf { it.length >= 2 }
+
+        private fun String.isValidDiscordButtonLabel(): Boolean =
+            isNotBlank() && toByteArray(Charsets.UTF_8).size <= MAX_DISCORD_BUTTON_BYTES
     }
 }
 

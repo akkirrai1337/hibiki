@@ -406,7 +406,7 @@
     <string name="discord_rpc_browsing_profile">Смотрит профиль</string>
     <string name="discord_rpc_browsing_settings">Настраивает Hibiki</string>
     <string name="discord_rpc_selecting_episode">Выбирает серию</string>
-    <string name="discord_rpc_open_github">Открыть Hibiki на GitHub</string>
+    <string name="discord_rpc_open_github">Hibiki на GitHub</string>
     <string name="discord_rpc_episode">Серия %1$s</string>
     <string name="discord_rpc_hide_title">Не показывать этот тайтл в Discord</string>
     <string name="discord_rpc_show_title">Показывать этот тайтл в Discord</string>
