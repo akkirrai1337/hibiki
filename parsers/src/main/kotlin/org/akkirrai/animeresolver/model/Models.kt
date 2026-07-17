@@ -55,9 +55,10 @@ enum class AnimeReleaseStatus {
 
     companion object {
         fun from(rawStatus: String?): AnimeReleaseStatus = when (rawStatus?.trim()?.lowercase()) {
-            "ongoing", "is_ongoing" -> ONGOING
-            "released", "completed", "is_not_ongoing" -> RELEASED
-            "announcement", "announced", "anons" -> ANNOUNCEMENT
+            "ongoing", "is_ongoing", "airing", "releasing", "онгоинг", "выходит", "в эфире" -> ONGOING
+            "released", "completed", "finished", "is_not_ongoing",
+            "вышел", "вышла", "вышло", "завершен", "завершён", "завершено" -> RELEASED
+            "announcement", "announced", "anons", "анонс", "анонсирован", "анонсировано" -> ANNOUNCEMENT
             else -> UNKNOWN
         }
     }

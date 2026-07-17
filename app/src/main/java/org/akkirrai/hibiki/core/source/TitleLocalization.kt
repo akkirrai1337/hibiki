@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.animeresolver.model.AnimeReleaseStatus
 import org.akkirrai.hibiki.app.settings.LanguageMode
 
 fun AnimeTitle.localizedDisplayName(languageMode: LanguageMode, systemLanguage: String?): String {
@@ -20,3 +21,9 @@ fun AnimeTitle.localizedDisplayName(languageMode: LanguageMode, systemLanguage: 
     }
 }
 
+fun AnimeReleaseStatus.localizedDisplayName(preferEnglish: Boolean): String = when (this) {
+    AnimeReleaseStatus.ONGOING -> if (preferEnglish) "Ongoing" else "Онгоинг"
+    AnimeReleaseStatus.RELEASED -> if (preferEnglish) "Released" else "Вышел"
+    AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish) "Announcement" else "Анонс"
+    AnimeReleaseStatus.UNKNOWN -> if (preferEnglish) "Unknown" else "Неизвестно"
+}

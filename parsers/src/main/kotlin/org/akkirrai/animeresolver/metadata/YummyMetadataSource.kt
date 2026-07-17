@@ -496,8 +496,8 @@ private data class YummyAnimePayload(
             type = type?.alias.normalize(),
             episodeCount = if (isReleased) totalEpisodeCount else availableEpisodeCount,
             posterUrl = poster?.bestUrl() ?: image?.bestUrl(),
-            status = animeStatus?.title.normalize()
-                ?: animeStatus?.alias.normalize()
+            status = animeStatus?.alias.normalize()
+                ?: animeStatus?.title.normalize()
                 ?: status.normalize(),
             description = description.normalize(),
             nextEpisodeAt = episodes.extractNextDate(),

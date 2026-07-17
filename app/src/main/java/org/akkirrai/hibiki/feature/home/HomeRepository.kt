@@ -295,7 +295,7 @@ class HomeRepository(
             title.year?.toString()?.let(::add)
         }.joinToString(" · ")
 
-        val status = title.releaseStatus.localizedStatus()
+        val status = title.releaseStatus.localizedDisplayName(preferEnglish())
         val isAnnouncement = status.isAnnouncementStatus()
         return Anime(
             id = title.id,
@@ -367,13 +367,6 @@ class HomeRepository(
             languageMode = appPreferences.state.value.languageMode,
             systemLanguage = appContext.resources.configuration.locales[0]?.language,
         )
-    }
-
-    private fun AnimeReleaseStatus.localizedStatus(): String = when (this) {
-        AnimeReleaseStatus.ONGOING -> if (preferEnglish()) "Ongoing" else "Онгоинг"
-        AnimeReleaseStatus.RELEASED -> if (preferEnglish()) "Released" else "Вышло"
-        AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish()) "Announcement" else "Анонс"
-        AnimeReleaseStatus.UNKNOWN -> if (preferEnglish()) "Unknown" else "Неизвестно"
     }
 
     private fun selectedSourceId(): AnimeSourceId = AppPreferences.readState(appContext).animeSource

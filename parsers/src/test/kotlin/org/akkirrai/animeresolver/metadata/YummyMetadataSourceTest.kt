@@ -11,6 +11,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.animeresolver.model.AnimeReleaseStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContains
@@ -118,6 +119,7 @@ class YummyMetadataSourceTest {
         val result = source.getById("4887")
 
         assertEquals(10, result.episodeCount)
+        assertEquals(AnimeReleaseStatus.RELEASED, result.releaseStatus)
         client.close()
     }
 

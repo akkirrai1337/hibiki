@@ -135,7 +135,7 @@ class AnimeSearchRepository(
         trailer: AnimeTrailer? = null,
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
-        val resolvedStatus = releaseStatus.localizedStatus(preferEnglish)
+        val resolvedStatus = releaseStatus.localizedDisplayName(preferEnglish)
             .takeUnless { releaseStatus == AnimeReleaseStatus.UNKNOWN }
             ?: fallback?.status
             ?: if (preferEnglish) "Unknown" else "Неизвестно"
@@ -346,13 +346,6 @@ class AnimeSearchRepository(
         }
         val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
         return "$DETAILS_CACHE_VERSION:${sourceId.name}:$languageKey:$id"
-    }
-
-    private fun AnimeReleaseStatus.localizedStatus(preferEnglish: Boolean): String = when (this) {
-        AnimeReleaseStatus.ONGOING -> if (preferEnglish) "Ongoing" else "Онгоинг"
-        AnimeReleaseStatus.RELEASED -> if (preferEnglish) "Released" else "Вышло"
-        AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish) "Announcement" else "Анонс"
-        AnimeReleaseStatus.UNKNOWN -> if (preferEnglish) "Unknown" else "Неизвестно"
     }
 
     private fun selectedSourceId() = sourceManager?.selectedId
