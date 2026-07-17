@@ -40,6 +40,25 @@ data class AnimeTitle(
         japaneseName?.let(::add)
         addAll(synonyms)
     }.filter(String::isNotBlank).distinct()
+
+    val releaseStatus: AnimeReleaseStatus
+        get() = AnimeReleaseStatus.from(status)
+}
+
+enum class AnimeReleaseStatus {
+    ONGOING,
+    RELEASED,
+    ANNOUNCEMENT,
+    UNKNOWN;
+
+    companion object {
+        fun from(rawStatus: String?): AnimeReleaseStatus = when (rawStatus?.trim()?.lowercase()) {
+            "ongoing", "is_ongoing" -> ONGOING
+            "released", "completed", "is_not_ongoing" -> RELEASED
+            "announcement", "announced", "anons" -> ANNOUNCEMENT
+            else -> UNKNOWN
+        }
+    }
 }
 
 data class AnimeTrailerTitle(

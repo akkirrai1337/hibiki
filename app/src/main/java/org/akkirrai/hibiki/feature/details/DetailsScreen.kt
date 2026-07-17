@@ -133,13 +133,13 @@ import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.core.source.YummyIdMigration
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -279,13 +279,9 @@ fun DetailsScreen(
             description = description,
         )
     }
-    val canWatch = remember(currentAnime.episodesLabel, heroInfo.status) {
-        !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel) && currentAnime.episodesLabel
-            .trim()
-            .takeIf { it.isNotBlank() }
-            ?.let { label -> Regex("""\d+""").find(label)?.value?.toIntOrNull() }
-            ?.let { episodeCount -> episodeCount > 0 }
-            ?: false
+    val canWatch = remember(selectedAnimeSource, currentAnime.episodesLabel, heroInfo.status) {
+        AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource).supportsPlayback &&
+            !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
     }
     val fallbackColorScheme = MaterialTheme.colorScheme
     val generatedColorScheme = rememberDynamicColorScheme(
@@ -902,7 +898,7 @@ private fun HeroRatingsLine(
     viewCount: Long?,
     modifier: Modifier = Modifier,
 ) {
-    val rating = ratings.firstOrNull { it.source.contains("yummy", ignoreCase = true) } ?: ratings.firstOrNull()
+    val rating = ratings.firstOrNull()
     if (rating == null && viewCount.isNullOrZero()) return
 
     Row(
@@ -1908,8 +1904,7 @@ internal fun String.toAbsoluteImageUrl(): String? {
     return when {
         value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true) -> value
         value.startsWith("//") -> "https:$value"
-        value.startsWith("/") -> "https://ru.yummyani.me$value"
-        else -> value
+        else -> null
     }
 }
 

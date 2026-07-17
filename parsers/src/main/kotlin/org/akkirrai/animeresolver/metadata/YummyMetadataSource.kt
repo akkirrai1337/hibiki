@@ -25,6 +25,7 @@ import org.akkirrai.animeresolver.model.AnimeSearchSort
 import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
+import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import org.akkirrai.animeresolver.model.RelatedAnimeTitle
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.TitleRating
@@ -39,7 +40,12 @@ class YummyMetadataSource(
     private val languageProvider: () -> String = { "ru" },
 ) : MetadataSource {
     override val name: String = "YummyAnime"
-    override val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL
+    override val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL.copy(
+        features = setOf(
+            MetadataSourceFeature.LATEST_RELEASES,
+            MetadataSourceFeature.SCHEDULE,
+        ),
+    )
 
     private val filterCatalogMutex = Mutex()
     private var cachedFilterCatalog: AnimeSearchFilterCatalog? = null
@@ -138,6 +144,30 @@ class YummyMetadataSource(
             }
             .getOrNull()
         return title.copy(trailer = trailer)
+    }
+
+    override suspend fun latest(limit: Int): List<AnimeTitle> {
+        val language = requestLanguage()
+        val schedule = client.get("$baseUrl/anime/schedule") {
+            addHeaders(language)
+        }.bodyOrThrow<YummyEnvelope<List<YummyScheduleAnime>>>(name).response
+
+        return schedule.asSequence()
+            .filter { item ->
+                val previous = item.episodes?.previousDate ?: 0L
+                val next = item.episodes?.nextDate ?: 0L
+                val aired = item.episodes?.aired ?: 0
+                previous > 0L || (aired <= 0 && next > 0L)
+            }
+            .sortedByDescending { item ->
+                item.episodes?.previousDate?.takeIf { it > 0L }
+                    ?: item.episodes?.nextDate
+                    ?: 0L
+            }
+            .distinctBy(YummyScheduleAnime::animeId)
+            .take(limit.coerceAtLeast(1))
+            .map(YummyScheduleAnime::toAnimeTitle)
+            .toList()
     }
 
     suspend fun getTrailers(id: String): List<AnimeTrailerTitle> {
@@ -604,6 +634,45 @@ private data class YummyMetadataImage(
             .firstOrNull()
     }
 }
+
+@Serializable
+private data class YummyScheduleAnime(
+    @SerialName("anime_id") val animeId: Long,
+    val title: String? = null,
+    val poster: YummyMetadataImage? = null,
+    val episodes: YummyScheduleEpisodes? = null,
+) {
+    fun toAnimeTitle(): AnimeTitle {
+        val aired = episodes?.aired?.takeIf { it > 0 }
+        val total = episodes?.count?.takeIf { it > 0 }
+        val nextDate = episodes?.nextDate?.takeIf { it > 0L }
+        val isAnnouncement = aired == null && nextDate != null
+        val normalizedTitle = title.normalize() ?: animeId.toString()
+        return AnimeTitle(
+            id = animeId.toString(),
+            russianName = normalizedTitle,
+            englishName = null,
+            originalName = normalizedTitle,
+            japaneseName = null,
+            synonyms = emptyList(),
+            year = null,
+            type = "TV",
+            episodeCount = aired ?: total,
+            posterUrl = poster?.bestUrl(),
+            status = if (isAnnouncement) "announcement" else "ongoing",
+            description = null,
+            nextEpisodeAt = nextDate,
+        )
+    }
+}
+
+@Serializable
+private data class YummyScheduleEpisodes(
+    val aired: Int? = null,
+    val count: Int? = null,
+    @SerialName("prev_date") val previousDate: Long? = null,
+    @SerialName("next_date") val nextDate: Long? = null,
+)
 
 private fun String?.normalize(): String? =
     this?.trim()?.takeIf(String::isNotBlank)

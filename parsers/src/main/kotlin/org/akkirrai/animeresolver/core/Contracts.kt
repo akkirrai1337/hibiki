@@ -20,6 +20,12 @@ interface MetadataSource {
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog()
 
+    /**
+     * Titles ordered by their latest source-side update.
+     * Sources advertising LATEST_RELEASES must implement this operation.
+     */
+    suspend fun latest(limit: Int): List<AnimeTitle> = emptyList()
+
     suspend fun getById(id: String): AnimeTitle
 }
 

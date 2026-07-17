@@ -13,5 +13,6 @@ class AnimeSourceRegistryTest {
         assertEquals(AnimeSourceId.entries.toSet(), sources.map { it.id }.toSet())
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
         assertTrue(sources.all { it.language == "RU" })
+        assertTrue(sources.all { it.supportsPlayback })
     }
 }

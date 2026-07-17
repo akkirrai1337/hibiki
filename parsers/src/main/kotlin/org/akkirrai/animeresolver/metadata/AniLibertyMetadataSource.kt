@@ -68,7 +68,7 @@ class AniLibertyMetadataSource(
             .mapNotNull { it.asObject()?.let(::toTitle) }
     }
 
-    suspend fun latest(limit: Int = DEFAULT_LATEST_LIMIT): List<AnimeTitle> = requestJson(
+    override suspend fun latest(limit: Int): List<AnimeTitle> = requestJson(
         path = "anime/releases/latest",
         parameters = listOf("limit" to limit.coerceIn(1, MAX_LATEST_PAGE_SIZE)),
     ).releaseArray().mapNotNull { it.asObject()?.let(::toTitle) }

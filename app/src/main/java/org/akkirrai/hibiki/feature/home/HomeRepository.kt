@@ -2,18 +2,12 @@ package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlin.random.Random
-import org.akkirrai.animeresolver.core.MetadataSource
-import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.animeresolver.model.AnimeReleaseStatus
 import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.AnimeSourceId
@@ -21,17 +15,16 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.AnimeRating
-import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.MockAnimeData
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.core.source.AnimeSourceRuntime
+import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.core.source.localizedDisplayName
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import java.util.concurrent.ConcurrentHashMap
 
 class HomeRepository(
     context: Context,
@@ -48,8 +41,7 @@ class HomeRepository(
 
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
-    private val applicationTokenStore = AndroidKeystoreYummyApplicationTokenStore(appContext)
-    private val sources = ConcurrentHashMap<AnimeSourceId, MetadataSource>()
+    private val sourceManager = AnimeSourceRuntimeManager(appContext, client)
     private val searchRepository = AnimeSearchRepository(appContext, client)
     private val watchStateRepository = WatchStateRepository(appContext)
 
@@ -78,7 +70,7 @@ class HomeRepository(
         val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
             currentHomeSelectionSeed = it
         }
-        val languageKey = "${selectedSourceId().name}:${yummyLanguage()}"
+        val languageKey = "${selectedSourceId().name}:${sourceLanguage()}"
         cachedHomeContent?.let { cached ->
             if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
@@ -229,53 +221,9 @@ class HomeRepository(
         loadRecentlyUpdatedPage(offset = 0)
 
     private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
-        if (selectedSourceId() == AnimeSourceId.ANI_LIBERTY) {
-            return (currentSource() as AniLibertyMetadataSource)
-                .latest(limit = HOME_FULL_SECTION_LIMIT)
-                .map(::toHomeAnime)
-        }
-        val applicationToken = applicationTokenStore.getEffectiveApplicationToken()
-        AppLogger.d(
-            TAG,
-            "loadRecentlyUpdated: fetching GET /anime/schedule, xApplicationAttached=${!applicationToken.isNullOrBlank()}",
-        )
-        val response = runCatching {
-            client.get("$YUMMY_BASE_URL/anime/schedule") {
-                header("Lang", yummyLanguage())
-                applicationToken?.takeIf(String::isNotBlank)?.let {
-                    header("X-Application", it)
-                }
-            }.bodyOrThrow<YummyScheduleEnvelope>("YummyAnime").response
-        }.onFailure { e ->
-            AppLogger.e(TAG, "loadRecentlyUpdated: request failed — ${e::class.simpleName}: ${e.message}", e)
-        }.getOrElse {
-            AppLogger.w(TAG, "loadRecentlyUpdated: returning empty list after failure")
-            return emptyList()
-        }
-        AppLogger.d(TAG, "loadRecentlyUpdated: raw response has ${response.size} items")
-
-        val result = response
-            .asSequence()
-            .filter { anime ->
-                val prev = anime.episodes?.prevDate ?: 0L
-                val next = anime.episodes?.nextDate ?: 0L
-                val aired = anime.episodes?.aired ?: 0
-                val pass = prev > 0L || (aired <= 0 && next > 0L)
-                if (!pass) {
-                    val id = anime.animeId
-                    AppLogger.v(TAG, "loadRecentlyUpdated: filtered out anime_id=$id, prevDate=$prev, nextDate=$next")
-                }
-                pass
-            }
-            .sortedByDescending { anime ->
-                val prev = anime.episodes?.prevDate ?: 0L
-                if (prev > 0L) prev else anime.episodes?.nextDate ?: 0L
-            }
-            .distinctBy(YummyScheduleAnime::animeId)
-            .map(::toScheduledHomeAnime)
-            .toList()
-        AppLogger.d(TAG, "loadRecentlyUpdated: after filter/sort/distinct/take — ${result.size} items")
-        return result
+        return currentSource()
+            .latest(limit = HOME_FULL_SECTION_LIMIT)
+            .map(::toHomeAnime)
     }
 
     suspend fun loadTrendingPage(
@@ -289,7 +237,7 @@ class HomeRepository(
                 limit = limit,
                 offset = offset,
                 sort = AnimeSearchSort.RATING,
-                typeAliases = listOfNotNull(filter.yummyType),
+                typeAliases = listOfNotNull(filter.typeAlias),
             ),
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
@@ -316,7 +264,7 @@ class HomeRepository(
 
     suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
         return items.map { anime ->
-            runCatching { currentSource().getById(anime.id) }
+            runCatching { currentSource().details(anime.id) }
                 .getOrNull()
                 ?.description
                 ?.takeIf(String::isNotBlank)
@@ -331,7 +279,7 @@ class HomeRepository(
             title.year?.toString()?.let(::add)
         }.joinToString(" · ")
 
-        val status = title.status.orEmpty().localizedStatus()
+        val status = title.releaseStatus.localizedStatus()
         val isAnnouncement = status.isAnnouncementStatus()
         return Anime(
             id = title.id,
@@ -389,7 +337,7 @@ class HomeRepository(
         }
     }
 
-    private fun yummyLanguage(): String = if (preferEnglish()) "en" else "ru"
+    private fun sourceLanguage(): String = if (preferEnglish()) "en" else "ru"
 
     private fun displayTitle(title: AnimeTitle): String {
         return title.localizedDisplayName(
@@ -398,21 +346,16 @@ class HomeRepository(
         )
     }
 
-    private fun String.localizedStatus(): String = when (trim().lowercase()) {
-        "ongoing", "is_ongoing" -> if (preferEnglish()) "Ongoing" else "Онгоинг"
-        "released", "is_not_ongoing" -> if (preferEnglish()) "Released" else "Вышло"
-        "announcement", "announced" -> if (preferEnglish()) "Announcement" else "Анонс"
-        else -> this
+    private fun AnimeReleaseStatus.localizedStatus(): String = when (this) {
+        AnimeReleaseStatus.ONGOING -> if (preferEnglish()) "Ongoing" else "Онгоинг"
+        AnimeReleaseStatus.RELEASED -> if (preferEnglish()) "Released" else "Вышло"
+        AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish()) "Announcement" else "Анонс"
+        AnimeReleaseStatus.UNKNOWN -> if (preferEnglish()) "Unknown" else "Неизвестно"
     }
 
     private fun selectedSourceId(): AnimeSourceId = AppPreferences.readState(appContext).animeSource
 
-    private fun currentSource(): MetadataSource {
-        val sourceId = selectedSourceId()
-        return sources.getOrPut(sourceId) {
-            AnimeSourceRegistry.create(appContext, client, sourceId)
-        }
-    }
+    private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
 
     private fun isRussianLocale(): Boolean = !preferEnglish()
 
@@ -426,39 +369,6 @@ class HomeRepository(
         }
     }
 
-    private fun releasedEpisodesLabel(aired: Int, total: Int?): String {
-        val isRu = isRussianLocale()
-        return when {
-            total != null -> if (isRu) "$aired из $total серий" else "$aired of $total episodes"
-            else -> if (isRu) "$aired серий вышло" else "$aired episodes released"
-        }
-    }
-
-    private fun ongoingStatusLabel(): String {
-        return if (isRussianLocale()) "Онгоинг" else "Ongoing"
-    }
-
-    private fun toScheduledHomeAnime(scheduleAnime: YummyScheduleAnime): Anime {
-        val aired = scheduleAnime.episodes?.aired?.takeIf { it > 0 }
-        val count = scheduleAnime.episodes?.count?.takeIf { it > 0 }
-        val nextDate = scheduleAnime.episodes?.nextDate?.takeIf { it > 0L }
-        val isAnnouncement = aired == null && nextDate != null
-        return Anime(
-            id = scheduleAnime.animeId.toString(),
-            title = scheduleAnime.title?.takeIf(String::isNotBlank) ?: scheduleAnime.animeId.toString(),
-            subtitle = "TV",
-            episodesLabel = when {
-                isAnnouncement -> announcementLabel()
-                aired != null -> releasedEpisodesLabel(aired, count)
-                count != null -> episodesCountLabel(count)
-                else -> ""
-            },
-            status = if (isAnnouncement) announcementLabel() else ongoingStatusLabel(),
-            nextEpisodeAt = nextDate,
-            posterUrl = scheduleAnime.poster?.bestUrl(),
-        )
-    }
-
     private fun trendingOffsetForSeed(selectionSeed: Long): Int {
         return Random(selectionSeed).nextInt(
             from = 0,
@@ -468,7 +378,6 @@ class HomeRepository(
 
     private companion object {
         const val TAG = "HomeRepository"
-        const val YUMMY_BASE_URL = "https://api.yani.tv"
         const val HOME_SECTION_LIMIT = 12
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
@@ -494,39 +403,4 @@ class HomeRepository(
         val sourceId: AnimeSourceId,
         val items: List<Anime>,
     )
-}
-
-@Serializable
-private data class YummyScheduleEnvelope(
-    val response: List<YummyScheduleAnime> = emptyList(),
-)
-
-@Serializable
-private data class YummyScheduleAnime(
-    @SerialName("anime_id") val animeId: Long,
-    val title: String? = null,
-    val poster: YummySchedulePoster? = null,
-    val episodes: YummyScheduleEpisodes? = null,
-)
-
-@Serializable
-private data class YummyScheduleEpisodes(
-    val aired: Int? = null,
-    val count: Int? = null,
-    @SerialName("prev_date") val prevDate: Long? = null,
-    @SerialName("next_date") val nextDate: Long? = null,
-)
-
-@Serializable
-private data class YummySchedulePoster(
-    val fullsize: String? = null,
-    val big: String? = null,
-    val medium: String? = null,
-    val small: String? = null,
-    val huge: String? = null,
-    val mega: String? = null,
-) {
-    fun bestUrl(): String? = listOf(mega, huge, big, medium, small, fullsize)
-        .firstOrNull { !it.isNullOrBlank() }
-        ?.let { if (it.startsWith("//")) "https:$it" else it }
 }

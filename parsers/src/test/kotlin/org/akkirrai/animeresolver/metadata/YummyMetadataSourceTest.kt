@@ -201,6 +201,28 @@ class YummyMetadataSourceTest {
         client.close()
     }
 
+    @Test
+    fun `latest releases are provided through metadata contract`() = runBlocking {
+        val client = HttpClient(MockEngine { request ->
+            assertEquals("/anime/schedule", request.url.encodedPath)
+            respond(
+                content = """{"response":[{"anime_id":42,"title":"Latest","poster":{"big":"//cdn.test/latest.webp"},"episodes":{"aired":2,"count":12,"prev_date":100,"next_date":200}}]}""",
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }) {
+            install(ContentNegotiation) { json() }
+        }
+        val source = YummyMetadataSource(client = client, baseUrl = "https://yummy.test")
+
+        val title = source.latest(10).single()
+
+        assertEquals("42", title.id)
+        assertEquals(2, title.episodeCount)
+        assertEquals("ongoing", title.status)
+        assertEquals("https://cdn.test/latest.webp", title.posterUrl)
+        client.close()
+    }
+
     private companion object {
         val SEARCH_JSON = """
             {

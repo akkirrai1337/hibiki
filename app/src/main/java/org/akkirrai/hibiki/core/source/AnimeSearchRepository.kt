@@ -4,15 +4,14 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.animeresolver.model.AnimeReleaseStatus
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -32,7 +31,7 @@ class AnimeSearchRepository(
     private val detailsCache = ConcurrentHashMap<String, CachedAnime>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
-    private val sources = ConcurrentHashMap<AnimeSourceId, MetadataSource>()
+    private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
     private val detailsMutex = Mutex()
 
@@ -66,15 +65,7 @@ class AnimeSearchRepository(
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
-        val catalog = currentSource().getSearchFilterCatalog()
-        return if (selectedSourceId() == AnimeSourceId.YUMMY_ANIME) {
-            YummySearchFilterLocalizer.localize(
-                catalog = catalog,
-                preferEnglish = preferEnglish(),
-            )
-        } else {
-            catalog
-        }
+        return currentSource().filterCatalog(preferEnglish())
     }
 
     suspend fun search(
@@ -105,10 +96,10 @@ class AnimeSearchRepository(
 
             ensureInternetConnection()
 
-            val directId = YummyIdMigration.normalizeTitleId(id)
-            val title = runCatching { currentSource().getById(directId) }
+            val source = sourceManager?.forTitle(id) ?: currentSource()
+            val title = runCatching { source.details(id) }
                 .getOrElse {
-                    currentSource().search(fallback.title)
+                    source.search(fallback.title)
                         .bestMatchFor(fallback.title)
                         ?: throw it
                 }
@@ -144,7 +135,8 @@ class AnimeSearchRepository(
         trailer: AnimeTrailer? = null,
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
-        val resolvedStatus = status?.takeIf(String::isNotBlank)?.localizedStatus(preferEnglish)
+        val resolvedStatus = releaseStatus.localizedStatus(preferEnglish)
+            .takeUnless { releaseStatus == AnimeReleaseStatus.UNKNOWN }
             ?: fallback?.status
             ?: if (preferEnglish) "Unknown" else "Неизвестно"
         return Anime(
@@ -350,28 +342,22 @@ class AnimeSearchRepository(
             LanguageMode.RUSSIAN -> "ru"
             LanguageMode.SYSTEM -> "sys"
         }
-        return "$DETAILS_CACHE_VERSION:${selectedSourceId().name}:$languageKey:$id"
+        val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
+        return "$DETAILS_CACHE_VERSION:${sourceId.name}:$languageKey:$id"
     }
 
-    private fun String.localizedStatus(preferEnglish: Boolean): String = when (trim().lowercase()) {
-        "ongoing", "is_ongoing" -> if (preferEnglish) "Ongoing" else "Онгоинг"
-        "released", "is_not_ongoing" -> if (preferEnglish) "Released" else "Вышло"
-        "announcement", "announced" -> if (preferEnglish) "Announcement" else "Анонс"
-        else -> this
+    private fun AnimeReleaseStatus.localizedStatus(preferEnglish: Boolean): String = when (this) {
+        AnimeReleaseStatus.ONGOING -> if (preferEnglish) "Ongoing" else "Онгоинг"
+        AnimeReleaseStatus.RELEASED -> if (preferEnglish) "Released" else "Вышло"
+        AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish) "Announcement" else "Анонс"
+        AnimeReleaseStatus.UNKNOWN -> if (preferEnglish) "Unknown" else "Неизвестно"
     }
 
-    private fun selectedSourceId(): AnimeSourceId = appContext
-        ?.let(AppPreferences::readState)
-        ?.animeSource
-        ?: AnimeSourceId.YUMMY_ANIME
+    private fun selectedSourceId() = sourceManager?.selectedId
+        ?: error("Anime source selection requires an Android context")
 
-    private fun currentSource(): MetadataSource {
-        val sourceId = selectedSourceId()
-        val context = appContext ?: error("Anime source selection requires an Android context")
-        return sources.getOrPut(sourceId) {
-            AnimeSourceRegistry.create(context, client, sourceId)
-        }
-    }
+    private fun currentSource(): AnimeSourceRuntime = sourceManager?.current()
+        ?: error("Anime source selection requires an Android context")
 
     private fun getCachedSearch(key: String): List<Anime>? {
         val cached = searchCache[key] ?: return null

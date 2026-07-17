@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.feature.details
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -26,10 +27,7 @@ class DetailsScreenLogicTest {
             "https://static.yani.tv/poster.webp",
             "//static.yani.tv/poster.webp".toAbsoluteImageUrl(),
         )
-        assertEquals(
-            "https://ru.yummyani.me/poster.webp",
-            "/poster.webp".toAbsoluteImageUrl(),
-        )
+        assertNull("/poster.webp".toAbsoluteImageUrl())
     }
 
     @Test

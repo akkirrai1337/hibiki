@@ -22,11 +22,9 @@ fun Anime.buildCardMeta(
         .firstOrNull { !it.matches(YEAR_REGEX) }
         ?.toCardTypeLabel(movieLabel)
     val year = subtitleParts.firstOrNull { it.matches(YEAR_REGEX) }
-    val rating = ratings
-        .firstOrNull { it.source.contains("yummy", ignoreCase = true) }
-        ?.value
-        ?.takeIf { it.isFinite() && it > 0.0 }
-        ?: ratings.firstOrNull()?.value?.takeIf { it.isFinite() && it > 0.0 }
+    val rating = ratings.firstNotNullOfOrNull { rating ->
+        rating.value.takeIf { it.isFinite() && it > 0.0 }
+    }
     val ratingLabel = rating?.let { String.format(Locale.US, "%.1f ★", it) }
 
     return listOfNotNull(type, year, ratingLabel).joinToString(separator)

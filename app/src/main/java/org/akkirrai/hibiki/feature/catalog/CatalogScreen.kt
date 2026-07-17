@@ -91,6 +91,7 @@ import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
@@ -721,7 +722,12 @@ private val CatalogSort.searchSort: AnimeSearchSort
 private fun availableCatalogSorts(
     capabilities: org.akkirrai.animeresolver.model.MetadataSourceCapabilities,
 ): List<CatalogSort> {
-    return CatalogSort.entries.filter { capabilities.supports(it.searchSort) }
+    return CatalogSort.entries.filter { sort ->
+        when (sort) {
+            CatalogSort.Updated -> MetadataSourceFeature.LATEST_RELEASES in capabilities.features
+            else -> capabilities.supports(sort.searchSort)
+        }
+    }
 }
 
 private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
