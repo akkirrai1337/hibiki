@@ -174,7 +174,6 @@ fun EpisodesScreen(
             }
 
             is EpisodesUiState.Content -> {
-                val nextEpisodeId = nextEpisodeId(result.items, savedProgress)
                 val watchSourceFallback = stringResource(R.string.watch_source_fallback)
                 val downloadSource = remember(sourceId, sourceTitle, result.items.size) {
                     WatchSource(
@@ -193,9 +192,7 @@ fun EpisodesScreen(
                             episode = episode,
                             progress = progress,
                             status = resolveEpisodeStatus(
-                                episode = episode,
                                 progress = progress,
-                                nextEpisodeId = nextEpisodeId,
                             ),
                             downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
                             showDownloadControls = downloadControlsVisible,
@@ -407,27 +404,13 @@ private fun PassiveDownloadStateIcon() {
 
 
 private fun resolveEpisodeStatus(
-    episode: WatchEpisode,
     progress: EpisodeWatchProgress?,
-    nextEpisodeId: String?,
 ): EpisodeProgressStatus {
     return when {
-        progress == null || progress.positionMs == 0L -> {
-            if (episode.id == nextEpisodeId) EpisodeProgressStatus.Next else EpisodeProgressStatus.NotStarted
-        }
+        progress == null || progress.positionMs == 0L -> EpisodeProgressStatus.NotStarted
         progress.isWatchedToEnd() -> EpisodeProgressStatus.Watched
         else -> EpisodeProgressStatus.InProgress
     }
-}
-
-private fun nextEpisodeId(
-    episodes: List<WatchEpisode>,
-    progressItems: List<EpisodeWatchProgress>,
-): String? {
-    val watchedNumbers = progressItems.filter(EpisodeWatchProgress::isWatchedToEnd)
-        .map(EpisodeWatchProgress::episodeNumber)
-    val lastWatched = watchedNumbers.maxOrNull() ?: return episodes.firstOrNull()?.id
-    return episodes.firstOrNull { it.number > lastWatched }?.id
 }
 
 @Composable
@@ -439,7 +422,6 @@ private fun buildEpisodeHeadline(
     val number = if (episode.number % 1.0 == 0.0) episode.number.toInt().toString() else episode.number.toString()
     val headline = when (status) {
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
-        EpisodeProgressStatus.Next -> stringResource(R.string.watch_episode_headline_next, number)
         else -> stringResource(R.string.watch_episode_headline, number)
     }
     return if (
@@ -479,7 +461,6 @@ private fun buildEpisodeSubtitle(
     }
     val watchLabel = when (status) {
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_status_watched)
-        EpisodeProgressStatus.Next -> stringResource(R.string.watch_status_next_episode)
         EpisodeProgressStatus.InProgress -> ""
         EpisodeProgressStatus.NotStarted -> ""
     }

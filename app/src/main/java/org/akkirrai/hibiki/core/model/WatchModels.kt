@@ -94,5 +94,4 @@ enum class EpisodeProgressStatus {
     NotStarted,
     InProgress,
     Watched,
-    Next,
 }

@@ -179,13 +179,11 @@
     <string name="watch_downloaded">Downloaded</string>
     <string name="watch_episode_headline">Episode %1$s</string>
     <string name="watch_episode_headline_watched">✓ Episode %1$s</string>
-    <string name="watch_episode_headline_next">▶ Episode %1$s</string>
     <string name="watch_status_queued">Queued</string>
     <string name="watch_status_downloading">Downloading %1$d%%</string>
     <string name="watch_status_paused">Paused</string>
     <string name="watch_status_failed">Download failed</string>
     <string name="watch_status_watched">Watched</string>
-    <string name="watch_status_next_episode">Next episode</string>
     <string name="watch_player_playlist">Playlist</string>
     <string name="watch_player_error_title">Playback error</string>
     <string name="watch_player_retry">Retry</string>

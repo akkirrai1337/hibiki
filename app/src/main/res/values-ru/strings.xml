@@ -173,13 +173,11 @@
     <string name="watch_downloaded">Скачано</string>
     <string name="watch_episode_headline">Серия %1$s</string>
     <string name="watch_episode_headline_watched">✓ Серия %1$s</string>
-    <string name="watch_episode_headline_next">▶ Серия %1$s</string>
     <string name="watch_status_queued">В очереди</string>
     <string name="watch_status_downloading">Скачивается %1$d%%</string>
     <string name="watch_status_paused">На паузе</string>
     <string name="watch_status_failed">Ошибка загрузки</string>
     <string name="watch_status_watched">Просмотрено</string>
-    <string name="watch_status_next_episode">Следующая серия</string>
     <string name="watch_player_playlist">Список серий</string>
     <string name="watch_player_error_title">Ошибка воспроизведения</string>
     <string name="watch_player_retry">Повторить</string>
