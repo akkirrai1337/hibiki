@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -136,6 +137,10 @@ private fun HibikiNavHost(
     NavHost(
         navController = navController,
         startDestination = TopLevelDestination.Home.route,
+        enterTransition = { appScreenEnterTransition() },
+        exitTransition = { appScreenExitTransition() },
+        popEnterTransition = { appScreenPopEnterTransition() },
+        popExitTransition = { appScreenPopExitTransition() },
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
             .clipToBounds()
@@ -150,13 +155,17 @@ private fun HibikiNavHost(
                 destination = TopLevelDestination.Home,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
-                    navController.navigateTopLevelDestination(TopLevelDestination.Home, destination)
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Home, destination)
+                    }
                 },
             ) {
                 HomeScreen(
                     viewModel = homeViewModel,
                     onAnimeClick = { anime ->
-                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -164,51 +173,63 @@ private fun HibikiNavHost(
                 )
             }
         }
-        topLevelComposable(route = TopLevelDestination.Profile.route) {
+        topLevelComposable(route = TopLevelDestination.Profile.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Profile,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
-                    navController.navigateTopLevelDestination(TopLevelDestination.Profile, destination)
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Profile, destination)
+                    }
                 },
             ) {
                 LocalProfileScreen(
                     onSettingsClick = {
-                        navController.navigate(AnimeNavType.SETTINGS_ROUTE)
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.SETTINGS_ROUTE)
+                        }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
         }
-        topLevelComposable(route = TopLevelDestination.Catalog.route) {
+        topLevelComposable(route = TopLevelDestination.Catalog.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Catalog,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
-                    navController.navigateTopLevelDestination(TopLevelDestination.Catalog, destination)
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Catalog, destination)
+                    }
                 },
             ) {
                 CatalogScreen(
                     onAnimeClick = { anime ->
-                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
                     modifier = topLevelScreenModifier,
                 )
             }
         }
-        topLevelComposable(route = TopLevelDestination.Library.route) {
+        topLevelComposable(route = TopLevelDestination.Library.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Library,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
-                    navController.navigateTopLevelDestination(TopLevelDestination.Library, destination)
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Library, destination)
+                    }
                 },
             ) {
                 LibraryScreen(
                     onAnimeClick = { anime ->
-                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -222,12 +243,20 @@ private fun HibikiNavHost(
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() },
-        ) {
-            SettingsScreen(
-                modifier = screenModifier,
-                onCheckForUpdates = onCheckForUpdates,
-                onOpenSources = { navController.navigate(AnimeNavType.SOURCES_ROUTE) },
-            )
+        ) { backStackEntry ->
+            DestinationScreenContainer {
+                SettingsScreen(
+                    modifier = screenModifier,
+                    onCheckForUpdates = {
+                        navController.runIfCurrent(backStackEntry, onCheckForUpdates)
+                    },
+                    onOpenSources = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.SOURCES_ROUTE)
+                        }
+                    },
+                )
+            }
         }
         composable(
             route = AnimeNavType.SOURCES_ROUTE,
@@ -235,11 +264,15 @@ private fun HibikiNavHost(
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() },
-        ) {
-            SourcesScreen(
-                onBackClick = navController::navigateUp,
-                modifier = screenModifier,
-            )
+        ) { backStackEntry ->
+            DestinationScreenContainer {
+                SourcesScreen(
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    modifier = screenModifier,
+                )
+            }
         }
         composable(
             route = AnimeNavType.TRENDING_ROUTE,
@@ -247,14 +280,20 @@ private fun HibikiNavHost(
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
-        ) {
-            TrendingAnimeScreen(
-                onBackClick = navController::navigateUp,
-                onAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                },
-                modifier = screenModifier,
-            )
+        ) { backStackEntry ->
+            DestinationScreenContainer {
+                TrendingAnimeScreen(
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
+                    },
+                    modifier = screenModifier,
+                )
+            }
         }
         composable(
             route = AnimeNavType.RECENT_UPDATES_ROUTE,
@@ -262,7 +301,7 @@ private fun HibikiNavHost(
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() },
-        ) {
+        ) { backStackEntry ->
             val context = LocalContext.current
             val homeEntry = remember(navController) {
                 navController.getBackStackEntry(TopLevelDestination.Home.route)
@@ -271,12 +310,20 @@ private fun HibikiNavHost(
                 viewModelStoreOwner = homeEntry,
                 factory = HomeViewModel.Factory(context),
             )
-            RecentUpdatesScreen(
-                viewModel = homeViewModel,
-                onBackClick = navController::navigateUp,
-                onAnimeClick = { anime -> navController.navigate(AnimeNavType.createDetailsRoute(anime)) },
-                modifier = screenModifier.statusBarsPadding(),
-            )
+            DestinationScreenContainer {
+                RecentUpdatesScreen(
+                    viewModel = homeViewModel,
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
+                    },
+                    modifier = screenModifier.statusBarsPadding(),
+                )
+            }
         }
         composable(
             route = AnimeNavType.DETAILS_PATTERN,
@@ -312,25 +359,36 @@ private fun HibikiNavHost(
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
-            DetailsScreen(
-                anime = animeFromArguments(backStackEntry.arguments),
-                onBackClick = navController::navigateUp,
-                onRelatedAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                },
-                onOpenSources = { anime ->
-                    navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
-                },
-                onResumePlayback = { progress ->
-                    navController.navigateSingleTopTo(
-                        AnimeNavType.createPlayerRoute(
-                            sourceId = progress.sourceId,
-                            episodeId = progress.episodeId,
-                            episodeNumber = progress.episodeNumber,
-                        )
-                    )
-                },
-            )
+            DestinationScreenContainer {
+                DetailsScreen(
+                    anime = animeFromArguments(backStackEntry.arguments),
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onRelatedAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
+                    },
+                    onOpenSources = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
+                        }
+                    },
+                    onResumePlayback = { progress ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createPlayerRoute(
+                                    sourceId = progress.sourceId,
+                                    episodeId = progress.episodeId,
+                                    episodeNumber = progress.episodeNumber,
+                                )
+                            )
+                        }
+                    },
+                    modifier = baseScreenModifier,
+                )
+            }
         }
         composable(
             route = AnimeNavType.WATCH_SOURCES_PATTERN,
@@ -356,21 +414,29 @@ private fun HibikiNavHost(
             val routeArgs = backStackEntry.arguments
             val animeId = routeArgs.stringArg(AnimeNavType.ID_ARG)
             val downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG)
-            WatchSourcesScreen(
-                animeId = animeId,
-                onBackClick = navController::navigateUp,
-                onSourceClick = { source ->
-                    watchStateRepository.saveSelectedSource(
-                        titleId = animeId,
-                        sourceId = source.sourceId,
-                        sourceTitle = source.title,
-                        quality = source.qualityLabel,
-                        autoSelect = false,
-                    )
-                    navController.navigateSingleTopTo(AnimeNavType.createEpisodesRoute(source, downloadMode = downloadMode))
-                },
-                modifier = screenModifier
-            )
+            DestinationScreenContainer {
+                WatchSourcesScreen(
+                    animeId = animeId,
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onSourceClick = { source ->
+                        navController.runIfCurrent(backStackEntry) {
+                            watchStateRepository.saveSelectedSource(
+                                titleId = animeId,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                autoSelect = false,
+                            )
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createEpisodesRoute(source, downloadMode = downloadMode)
+                            )
+                        }
+                    },
+                    modifier = screenModifier
+                )
+            }
         }
         composable(
             route = AnimeNavType.EPISODES_PATTERN,
@@ -391,23 +457,29 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             val routeArgs = backStackEntry.arguments
-            EpisodesScreen(
-                sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
-                sourceTitle = routeArgs.stringArg(AnimeNavType.SOURCE_TITLE_ARG),
-                downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG),
-                onBackClick = navController::navigateUp,
-                onEpisodeClick = { episode ->
-                    val sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG)
-                    navController.navigateSingleTopTo(
-                        AnimeNavType.createPlayerRoute(
-                            sourceId = sourceId,
-                            episodeId = episode.id,
-                            episodeNumber = episode.number,
-                        )
-                    )
-                },
-                modifier = screenModifier
-            )
+            DestinationScreenContainer {
+                EpisodesScreen(
+                    sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
+                    sourceTitle = routeArgs.stringArg(AnimeNavType.SOURCE_TITLE_ARG),
+                    downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG),
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onEpisodeClick = { episode ->
+                        navController.runIfCurrent(backStackEntry) {
+                            val sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG)
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createPlayerRoute(
+                                    sourceId = sourceId,
+                                    episodeId = episode.id,
+                                    episodeNumber = episode.number,
+                                )
+                            )
+                        }
+                    },
+                    modifier = screenModifier
+                )
+            }
         }
         composable(
             route = AnimeNavType.PLAYER_PATTERN,
@@ -428,13 +500,17 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             val routeArgs = backStackEntry.arguments
-            PlayerScreen(
-                sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
-                episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
-                episodeNumberHint = routeArgs.doubleArg(AnimeNavType.EPISODE_NUMBER_ARG),
-                onBackClick = navController::navigateUp,
-                modifier = Modifier.fillMaxSize()
-            )
+            DestinationScreenContainer {
+                PlayerScreen(
+                    sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
+                    episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
+                    episodeNumberHint = routeArgs.doubleArg(AnimeNavType.EPISODE_NUMBER_ARG),
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -456,7 +532,10 @@ private fun TopLevelScreenContainer(
     onDestinationClick: (TopLevelDestination) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+    ) {
         content()
         AppBottomBar(
             destinations = destinations,
@@ -464,6 +543,15 @@ private fun TopLevelScreenContainer(
             onDestinationClick = onDestinationClick,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+    }
+}
+
+@Composable
+private fun DestinationScreenContainer(
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        content()
     }
 }
 
@@ -597,13 +685,22 @@ private fun NavHostController.navigateSingleTopTo(route: String) {
     }
 }
 
+private inline fun NavHostController.runIfCurrent(
+    backStackEntry: NavBackStackEntry,
+    action: () -> Unit,
+) {
+    if (currentBackStackEntry?.id == backStackEntry.id) {
+        action()
+    }
+}
+
 private fun NavGraphBuilder.topLevelComposable(
     route: String,
-    content: @Composable () -> Unit,
+    content: @Composable (NavBackStackEntry) -> Unit,
 ) {
     composable(
         route = route,
-        content = { content() },
+        content = { backStackEntry -> content(backStackEntry) },
     )
 }
 
