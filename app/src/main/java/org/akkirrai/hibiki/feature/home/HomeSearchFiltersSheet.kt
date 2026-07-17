@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
+import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
@@ -126,11 +127,9 @@ fun AnimeSearchFiltersSheet(
     var animeType by rememberSaveable(initialFilters) {
         mutableStateOf(FilterAnimeType.fromAlias(initialFilters.typeAlias))
     }
-    var season by rememberSaveable { mutableStateOf<FilterSeason?>(null) }
     var includedStatuses by remember(initialFilters) {
         mutableStateOf(setOfNotNull(initialFilters.statusAlias))
     }
-    var excludedStatuses by remember(initialFilters) { mutableStateOf(emptySet<String>()) }
     var year by rememberSaveable(initialFilters) {
         mutableStateOf(
             initialFilters.yearFrom
@@ -173,6 +172,10 @@ fun AnimeSearchFiltersSheet(
 
             else -> {
                 val catalog = filterCatalog
+                val capabilities = catalog.capabilities
+                val typeEntries = FilterAnimeType.entries.filter { type ->
+                    catalog.typeOptions.any { it.id.equals(type.alias, ignoreCase = true) }
+                }
                 Column(
                     modifier = sheetContentModifier
                         .background(
@@ -185,61 +188,60 @@ fun AnimeSearchFiltersSheet(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 24.dp),
                 ) {
-                    AppConnectedToggleFilter(
-                        title = stringResource(R.string.search_filters_type),
-                        entries = FilterAnimeType.entries,
-                        selected = animeType,
-                        onSelected = { selected ->
-                            selected?.let { animeType = it }
-                        },
-                        icon = { ImageVector.vectorResource(it.iconRes) },
-                        text = { it.label },
-                    )
+                    if (capabilities.supports(AnimeSearchFilter.TYPE) && typeEntries.isNotEmpty()) {
+                        AppConnectedToggleFilter(
+                            title = stringResource(R.string.search_filters_type),
+                            entries = typeEntries,
+                            selected = animeType,
+                            onSelected = { animeType = it },
+                            icon = { ImageVector.vectorResource(it.iconRes) },
+                            text = { it.label },
+                        )
+                    }
 
-                    AppThreeStateChipFilter(
-                        title = stringResource(R.string.search_filters_genres),
-                        options = catalog.genreOptions,
-                        included = pendingFilters.includedGenreAliases,
-                        excluded = pendingFilters.excludedGenreAliases,
-                        onChange = { included, excluded ->
-                            pendingFilters = pendingFilters.copy(
-                                includedGenreAliases = included,
-                                excludedGenreAliases = excluded,
-                            )
-                        },
-                        id = { it.id },
-                        text = { appFilterOptionText(it.title) },
-                        maxCollapsedItems = 15,
-                    )
+                    if (
+                        catalog.genreOptions.isNotEmpty() &&
+                        capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES)
+                    ) {
+                        AppThreeStateChipFilter(
+                            title = stringResource(R.string.search_filters_genres),
+                            options = catalog.genreOptions,
+                            included = pendingFilters.includedGenreAliases,
+                            excluded = pendingFilters.excludedGenreAliases,
+                            onChange = { included, excluded ->
+                                pendingFilters = pendingFilters.copy(
+                                    includedGenreAliases = included,
+                                    excludedGenreAliases = excluded,
+                                )
+                            },
+                            id = { it.id },
+                            text = { appFilterOptionText(it.title) },
+                            maxCollapsedItems = 15,
+                            allowExclusion = capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES),
+                        )
+                    }
 
-                    AppConnectedToggleFilter(
-                        title = stringResource(R.string.search_filters_season),
-                        entries = FilterSeason.entries,
-                        selected = season,
-                        onSelected = { season = it },
-                        icon = { ImageVector.vectorResource(it.iconRes) },
-                        text = { stringResource(it.labelRes) },
-                    )
+                    if (capabilities.supports(AnimeSearchFilter.YEAR_RANGE)) {
+                        YearFilter(
+                            year = year,
+                            yearRange = FILTER_YEAR_RANGE,
+                            onYearChange = { year = it },
+                        )
+                    }
 
-                    YearFilter(
-                        year = year,
-                        yearRange = FILTER_YEAR_RANGE,
-                        onYearChange = { year = it },
-                    )
-
-                    AppThreeStateChipFilter(
-                        title = stringResource(R.string.search_filters_status),
-                        options = catalog.statusOptions,
-                        included = includedStatuses,
-                        excluded = excludedStatuses,
-                        onChange = { included, excluded ->
-                            includedStatuses = included
-                            excludedStatuses = excluded
-                        },
-                        id = { it.id },
-                        text = { appFilterOptionText(it.title) },
-                        optionIcon = { statusIcon(it.id) },
-                    )
+                    if (capabilities.supports(AnimeSearchFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
+                        AppThreeStateChipFilter(
+                            title = stringResource(R.string.search_filters_status),
+                            options = catalog.statusOptions,
+                            included = includedStatuses,
+                            excluded = emptySet(),
+                            onChange = { included, _ -> includedStatuses = included },
+                            id = { it.id },
+                            text = { appFilterOptionText(it.title) },
+                            optionIcon = { statusIcon(it.id) },
+                            allowExclusion = false,
+                        )
+                    }
 
                     Spacer(modifier = Modifier.size(8.dp))
                     FlowRow(
@@ -250,11 +252,9 @@ fun AnimeSearchFiltersSheet(
                         Button(
                             onClick = {
                                 pendingFilters = AnimeSearchFilters()
-                                animeType = FilterAnimeType.Tv
-                                season = null
+                                animeType = null
                                 year = null
                                 includedStatuses = emptySet()
-                                excludedStatuses = emptySet()
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -277,10 +277,20 @@ fun AnimeSearchFiltersSheet(
                             onClick = {
                                 onApply(
                                     pendingFilters.copy(
-                                        typeAlias = animeType.alias,
-                                        statusAlias = includedStatuses.firstOrNull(),
-                                        yearFrom = year,
-                                        yearTo = year,
+                                        typeAlias = animeType?.alias
+                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.TYPE) },
+                                        statusAlias = includedStatuses.firstOrNull()
+                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.STATUS) },
+                                        includedGenreAliases = pendingFilters.includedGenreAliases
+                                            .takeIf { capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES) }
+                                            .orEmpty(),
+                                        excludedGenreAliases = pendingFilters.excludedGenreAliases
+                                            .takeIf { capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES) }
+                                            .orEmpty(),
+                                        yearFrom = year
+                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.YEAR_RANGE) },
+                                        yearTo = year
+                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.YEAR_RANGE) },
                                     )
                                 )
                                 scope.launch {
@@ -683,17 +693,9 @@ private enum class FilterAnimeType(
     Movie("movie", "MOVIE", R.drawable.animite_movie);
 
     companion object {
-        fun fromAlias(alias: String?): FilterAnimeType {
-            return entries.firstOrNull { it.alias == alias?.trim()?.lowercase() } ?: Tv
-        }
+        fun fromAlias(alias: String?): FilterAnimeType? = entries
+            .firstOrNull { it.alias == alias?.trim()?.lowercase() }
     }
-}
-
-private enum class FilterSeason(val labelRes: Int, val iconRes: Int) {
-    Winter(R.string.search_filters_winter, R.drawable.animite_winter),
-    Spring(R.string.search_filters_spring, R.drawable.animite_spring),
-    Summer(R.string.search_filters_summer, R.drawable.animite_summer),
-    Fall(R.string.search_filters_fall, R.drawable.animite_fall),
 }
 
 private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)

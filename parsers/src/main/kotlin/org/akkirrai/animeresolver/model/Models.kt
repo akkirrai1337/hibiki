@@ -62,11 +62,62 @@ data class AnimeSearchRequest(
     val yearTo: Int? = null,
 )
 
+enum class AnimeSearchFilter {
+    TYPE,
+    STATUS,
+    INCLUDED_GENRES,
+    EXCLUDED_GENRES,
+    YEAR_RANGE,
+}
+
+enum class MetadataSourceFeature {
+    LATEST_RELEASES,
+    SCHEDULE,
+}
+
+data class MetadataSourceCapabilities(
+    val supportedSorts: Set<AnimeSearchSort>,
+    val supportedFilters: Set<AnimeSearchFilter>,
+    val features: Set<MetadataSourceFeature> = emptySet(),
+    val fallbackSort: AnimeSearchSort = AnimeSearchSort.RELEVANCE,
+) {
+    init {
+        require(supportedSorts.isNotEmpty()) { "A metadata source must support at least one sort" }
+        require(fallbackSort in supportedSorts) { "Fallback sort must be supported" }
+    }
+
+    fun supports(sort: AnimeSearchSort): Boolean = sort in supportedSorts
+
+    fun supports(filter: AnimeSearchFilter): Boolean = filter in supportedFilters
+
+    fun adapt(request: AnimeSearchRequest): AnimeSearchRequest = request.copy(
+        sort = request.sort.takeIf(::supports) ?: fallbackSort,
+        typeAliases = request.typeAliases.takeIf { supports(AnimeSearchFilter.TYPE) }.orEmpty(),
+        statusAliases = request.statusAliases.takeIf { supports(AnimeSearchFilter.STATUS) }.orEmpty(),
+        includedGenreAliases = request.includedGenreAliases
+            .takeIf { supports(AnimeSearchFilter.INCLUDED_GENRES) }
+            .orEmpty(),
+        excludedGenreAliases = request.excludedGenreAliases
+            .takeIf { supports(AnimeSearchFilter.EXCLUDED_GENRES) }
+            .orEmpty(),
+        yearFrom = request.yearFrom.takeIf { supports(AnimeSearchFilter.YEAR_RANGE) },
+        yearTo = request.yearTo.takeIf { supports(AnimeSearchFilter.YEAR_RANGE) },
+    )
+
+    companion object {
+        val FULL = MetadataSourceCapabilities(
+            supportedSorts = AnimeSearchSort.entries.toSet(),
+            supportedFilters = AnimeSearchFilter.entries.toSet(),
+        )
+    }
+}
+
 data class AnimeSearchFilterCatalog(
     val sortOptions: List<SearchFilterOption> = emptyList(),
     val typeOptions: List<SearchFilterOption> = emptyList(),
     val statusOptions: List<SearchFilterOption> = emptyList(),
     val genreOptions: List<SearchFilterOption> = emptyList(),
+    val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL,
 )
 
 data class SearchFilterOption(

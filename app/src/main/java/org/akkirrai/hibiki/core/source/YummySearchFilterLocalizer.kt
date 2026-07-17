@@ -13,6 +13,7 @@ internal object YummySearchFilterLocalizer {
             typeOptions = catalog.typeOptions.map { it.localize(typeLabels, preferEnglish) },
             statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish) },
             genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish) },
+            capabilities = catalog.capabilities,
         )
     }
 

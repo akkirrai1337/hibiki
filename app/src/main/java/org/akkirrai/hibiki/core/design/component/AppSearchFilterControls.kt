@@ -167,17 +167,25 @@ fun <T> AppThreeStateChipFilter(
     text: @Composable (T) -> String,
     optionIcon: @Composable ((T) -> ImageVector?)? = null,
     maxCollapsedItems: Int? = null,
+    allowExclusion: Boolean = true,
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
     AppCollapsibleFilterSection(title = title, onLongClick = { onChange(emptySet(), emptySet()) }) {
         Column(modifier = Modifier.padding(top = 16.dp)) {
             val includedOptions = options.filter { id(it) in included }
-            val excludedOptions = options.filter { id(it) in excluded }
-            val allOptions = options.filterNot { id(it) in included || id(it) in excluded }
+            val effectiveExcluded = excluded.takeIf { allowExclusion }.orEmpty()
+            val excludedOptions = options.filter { id(it) in effectiveExcluded }
+            val allOptions = options.filterNot { id(it) in included || id(it) in effectiveExcluded }
             val visibleAllOptions = if (maxCollapsedItems != null && !showAllOptions) allOptions.take(maxCollapsedItems) else allOptions
-            AppChipFilterFlowRow(includedOptions, Color(0xFF80DF87), Icons.Rounded.AddCircleOutline, stringResource(R.string.search_filters_include), { onChange(included - id(it), excluded + id(it)) }, text, optionIcon, Modifier.padding(bottom = 8.dp))
-            AppChipFilterFlowRow(excludedOptions, Color(0xFFFF9999), Icons.Rounded.Block, stringResource(R.string.search_filters_exclude), { onChange(included, excluded - id(it)) }, text, optionIcon, Modifier.padding(bottom = 8.dp))
-            AppChipFilterFlowRow(visibleAllOptions, MaterialTheme.colorScheme.tertiary, Icons.Rounded.RadioButtonChecked, stringResource(R.string.search_filters_all), { onChange(included + id(it), excluded) }, text, optionIcon)
+            AppChipFilterFlowRow(includedOptions, Color(0xFF80DF87), Icons.Rounded.AddCircleOutline, stringResource(R.string.search_filters_include), { option ->
+                val optionId = id(option)
+                if (allowExclusion) onChange(included - optionId, effectiveExcluded + optionId)
+                else onChange(included - optionId, emptySet())
+            }, text, optionIcon, Modifier.padding(bottom = 8.dp))
+            if (allowExclusion) {
+                AppChipFilterFlowRow(excludedOptions, Color(0xFFFF9999), Icons.Rounded.Block, stringResource(R.string.search_filters_exclude), { onChange(included, effectiveExcluded - id(it)) }, text, optionIcon, Modifier.padding(bottom = 8.dp))
+            }
+            AppChipFilterFlowRow(visibleAllOptions, MaterialTheme.colorScheme.tertiary, Icons.Rounded.RadioButtonChecked, stringResource(R.string.search_filters_all), { onChange(included + id(it), effectiveExcluded) }, text, optionIcon)
             if (maxCollapsedItems != null && allOptions.size > maxCollapsedItems) {
                 IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
                     Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))

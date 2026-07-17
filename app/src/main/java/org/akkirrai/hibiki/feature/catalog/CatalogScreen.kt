@@ -89,6 +89,7 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
+import org.akkirrai.animeresolver.model.AnimeSearchSort
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
@@ -111,6 +112,18 @@ fun CatalogScreen(
     var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
+    val availableSorts = remember(state.filterCatalog?.capabilities) {
+        state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+    }
+
+    LaunchedEffect(availableSorts, state.selectedSort) {
+        if (state.selectedSort !in availableSorts) {
+            val capabilities = state.filterCatalog?.capabilities
+            val fallback = availableSorts.firstOrNull { it.searchSort == capabilities?.fallbackSort }
+                ?: availableSorts.firstOrNull()
+            fallback?.let(viewModel::selectSort)
+        }
+    }
 
     LaunchedEffect(state.query) {
         delay(350)
@@ -269,6 +282,7 @@ fun CatalogScreen(
             )
             CatalogSortControl(
                 selectedSort = state.selectedSort,
+                availableSorts = availableSorts,
                 expanded = isSortMenuOpen,
                 onExpandedChange = { isSortMenuOpen = it },
                 onSortSelected = viewModel::selectSort,
@@ -342,6 +356,7 @@ private fun CatalogSortVisibilityEffect(
 @Composable
 private fun CatalogSortControl(
     selectedSort: CatalogSort,
+    availableSorts: List<CatalogSort>,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onSortSelected: (CatalogSort) -> Unit,
@@ -354,8 +369,8 @@ private fun CatalogSortControl(
     val localizedContext = remember(baseContext, appLanguage) {
         baseContext.withLanguage(appLanguage)
     }
-    val sortLabels = remember(localizedContext) {
-        CatalogSort.entries.associateWith { sort ->
+    val sortLabels = remember(localizedContext, availableSorts) {
+        availableSorts.associateWith { sort ->
             localizedContext.getString(sort.labelRes)
         }
     }
@@ -392,7 +407,7 @@ private fun CatalogSortControl(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
                 Text(
-                    text = sortLabels.getValue(sort),
+                    text = sortLabels[sort].orEmpty(),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
@@ -432,7 +447,7 @@ private fun CatalogSortControl(
                     .padding(top = 8.dp)
                     .align(Alignment.CenterHorizontally),
             )
-            CatalogSort.entries.forEach { sort ->
+            availableSorts.forEach { sort ->
                 val isSelected = sort == selectedSort
                 val backgroundColor by animateColorAsState(
                     targetValue = if (isSelected) {
@@ -676,6 +691,19 @@ enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
     Alphabetical(R.string.catalog_sort_alphabetical),
     Popular(R.string.catalog_sort_popular),
     Updated(R.string.catalog_sort_updated),
+}
+
+private val CatalogSort.searchSort: AnimeSearchSort
+    get() = when (this) {
+        CatalogSort.Alphabetical -> AnimeSearchSort.TITLE
+        CatalogSort.Popular -> AnimeSearchSort.RATING
+        CatalogSort.Updated -> AnimeSearchSort.RELEVANCE
+    }
+
+private fun availableCatalogSorts(
+    capabilities: org.akkirrai.animeresolver.model.MetadataSourceCapabilities,
+): List<CatalogSort> {
+    return CatalogSort.entries.filter { capabilities.supports(it.searchSort) }
 }
 
 private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding

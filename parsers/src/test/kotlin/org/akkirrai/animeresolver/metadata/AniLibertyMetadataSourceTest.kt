@@ -14,7 +14,7 @@ import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AniLibertyMetadataSourceTest {
@@ -84,16 +84,27 @@ class AniLibertyMetadataSourceTest {
     }
 
     @Test
-    fun `rejects filters and sorts missing from AniLiberty API`() = runBlocking {
-        val client = HttpClient(MockEngine { error("Network request was not expected") })
+    fun `silently adapts unsupported filters and sorting`() = runBlocking {
+        var capturedParameters: io.ktor.http.Parameters? = null
+        val client = HttpClient(MockEngine { request ->
+            capturedParameters = request.url.parameters
+            respond(
+                "{\"data\":[$RELEASE]}",
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
         val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
 
-        assertFailsWith<org.akkirrai.animeresolver.core.SourceException> {
-            source.search(AnimeSearchRequest(excludedGenreAliases = listOf("14")))
-        }
-        assertFailsWith<org.akkirrai.animeresolver.core.SourceException> {
-            source.search(AnimeSearchRequest(sort = AnimeSearchSort.TITLE))
-        }
+        source.search(
+            AnimeSearchRequest(
+                sort = AnimeSearchSort.TITLE,
+                excludedGenreAliases = listOf("14"),
+            )
+        )
+
+        val parameters = checkNotNull(capturedParameters)
+        assertEquals("FRESH_AT_DESC", parameters["f[sorting]"])
+        assertNull(parameters["f[genres]"])
         client.close()
     }
 

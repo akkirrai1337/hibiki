@@ -13,9 +13,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
+import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
+import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.resolveUrl
@@ -28,26 +31,37 @@ class AniLibertyMetadataSource(
     constructor(client: HttpClient, baseUrl: String) : this(client, listOf(baseUrl))
 
     override val name: String = "AniLiberty"
+    override val capabilities = MetadataSourceCapabilities(
+        supportedSorts = SUPPORTED_SORTS,
+        supportedFilters = setOf(
+            AnimeSearchFilter.TYPE,
+            AnimeSearchFilter.STATUS,
+            AnimeSearchFilter.INCLUDED_GENRES,
+            AnimeSearchFilter.YEAR_RANGE,
+        ),
+        features = setOf(
+            MetadataSourceFeature.LATEST_RELEASES,
+            MetadataSourceFeature.SCHEDULE,
+        ),
+    )
 
     override suspend fun search(query: String): List<AnimeTitle> = search(
         AnimeSearchRequest(query = query),
     )
 
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
-        if (request.excludedGenreAliases.isNotEmpty()) {
-            throw SourceException("AniLiberty does not support excluded genre filters")
-        }
-        val limit = request.limit.coerceIn(1, MAX_PAGE_SIZE)
+        val adaptedRequest = capabilities.adapt(request)
+        val limit = adaptedRequest.limit.coerceIn(1, MAX_PAGE_SIZE)
         val parameters = buildList {
-            add("page" to (request.offset.coerceAtLeast(0) / limit + 1))
+            add("page" to (adaptedRequest.offset.coerceAtLeast(0) / limit + 1))
             add("limit" to limit)
-            request.query.trim().takeIf(String::isNotBlank)?.let { add("f[search]" to it) }
-            request.typeAliases.normalizedCsv(uppercase = true)?.let { add("f[types]" to it) }
-            request.statusAliases.normalizedCsv(uppercase = true)?.let { add("f[publish_statuses]" to it) }
-            request.includedGenreAliases.normalizedCsv()?.let { add("f[genres]" to it) }
-            request.yearFrom?.let { add("f[years][from_year]" to it) }
-            request.yearTo?.let { add("f[years][to_year]" to it) }
-            add("f[sorting]" to request.sort.toAniLibertySorting())
+            adaptedRequest.query.trim().takeIf(String::isNotBlank)?.let { add("f[search]" to it) }
+            adaptedRequest.typeAliases.normalizedCsv(uppercase = true)?.let { add("f[types]" to it) }
+            adaptedRequest.statusAliases.normalizedCsv(uppercase = true)?.let { add("f[publish_statuses]" to it) }
+            adaptedRequest.includedGenreAliases.normalizedCsv()?.let { add("f[genres]" to it) }
+            adaptedRequest.yearFrom?.let { add("f[years][from_year]" to it) }
+            adaptedRequest.yearTo?.let { add("f[years][to_year]" to it) }
+            add("f[sorting]" to adaptedRequest.sort.toAniLibertySorting())
         }
         return requestJson("anime/catalog/releases", parameters)
             .releaseArray()
@@ -79,6 +93,7 @@ class AniLibertyMetadataSource(
         typeOptions = references("types").map(::referenceOption),
         statusOptions = references("publish-statuses").map(::referenceOption),
         genreOptions = references("genres").map(::referenceOption),
+        capabilities = capabilities,
     )
 
     private suspend fun references(reference: String): List<JsonObject> = requestJson(
@@ -214,7 +229,7 @@ class AniLibertyMetadataSource(
         const val PUBLIC_SITE_URL = "https://anilibria.top"
         const val DEFAULT_LATEST_LIMIT = 20
         const val MAX_PAGE_SIZE = 100
-        val SUPPORTED_SORTS = listOf(
+        val SUPPORTED_SORTS = setOf(
             AnimeSearchSort.RELEVANCE,
             AnimeSearchSort.RATING,
             AnimeSearchSort.YEAR,

@@ -24,6 +24,7 @@ import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.RelatedAnimeTitle
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.TitleRating
@@ -38,6 +39,7 @@ class YummyMetadataSource(
     private val languageProvider: () -> String = { "ru" },
 ) : MetadataSource {
     override val name: String = "YummyAnime"
+    override val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL
 
     private val filterCatalogMutex = Mutex()
     private var cachedFilterCatalog: AnimeSearchFilterCatalog? = null
@@ -187,6 +189,7 @@ class YummyMetadataSource(
             typeOptions = fallbackTypeAliases.map(::aliasOption),
             statusOptions = statusAliases.ifEmpty { fallbackStatusAliases }.map(::aliasOption),
             genreOptions = genreAliases.ifEmpty { fallbackGenreAliases }.map(::aliasOption),
+            capabilities = capabilities,
         )
     }
 
@@ -196,6 +199,7 @@ class YummyMetadataSource(
             typeOptions = fallbackTypeAliases.map(::aliasOption),
             statusOptions = fallbackStatusAliases.map(::aliasOption),
             genreOptions = fallbackGenreAliases.map(::aliasOption),
+            capabilities = capabilities,
         )
     }
 

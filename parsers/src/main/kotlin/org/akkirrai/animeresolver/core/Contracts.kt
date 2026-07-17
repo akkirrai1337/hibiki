@@ -1,6 +1,7 @@
 package org.akkirrai.animeresolver.core
 
 import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.Episode
@@ -11,6 +12,7 @@ import org.akkirrai.animeresolver.model.VideoStream
 
 interface MetadataSource {
     val name: String
+    val capabilities: MetadataSourceCapabilities
 
     suspend fun search(query: String): List<AnimeTitle>
 
