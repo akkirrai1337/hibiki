@@ -1446,7 +1446,6 @@ fun PlayerScreen(
                     destination = settingsDestination,
                     selectedSpeed = playbackSpeed,
                     selectedSourceId = state.currentSourceId,
-                    selectedProviderId = state.selectedProviderId,
                     selectedPlayerName = state.selectedPlayerName,
                     selectedQualityLabel = state.selectedQualityLabel ?: state.playback?.qualityLabel,
                     availableQualityLabels = state.playback?.availableQualityLabels.orEmpty(),
@@ -1470,11 +1469,6 @@ fun PlayerScreen(
                     onSelectVoiceover = { source ->
                         runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
                             viewModel.selectVoiceover(source, resumePositionMs)
-                        }
-                    },
-                    onSelectBackend = { providerId ->
-                        runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
-                            viewModel.selectBackend(providerId, resumePositionMs)
                         }
                     },
                     onSelectPlayer = { playerName ->
@@ -1864,7 +1858,6 @@ private fun PlayerSettingsSheet(
     destination: PlayerSettingsDestination,
     selectedSpeed: Float,
     selectedSourceId: String,
-    selectedProviderId: String?,
     selectedPlayerName: String?,
     selectedQualityLabel: String?,
     availableQualityLabels: List<String>,
@@ -1875,7 +1868,6 @@ private fun PlayerSettingsSheet(
     onBack: () -> Unit,
     onSelectSpeed: (Float) -> Unit,
     onSelectVoiceover: (WatchSource) -> Unit,
-    onSelectBackend: (String?) -> Unit,
     onSelectPlayer: (String?) -> Unit,
     onSelectQuality: (String?) -> Unit,
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
@@ -1887,14 +1879,6 @@ private fun PlayerSettingsSheet(
             label = if (speed == 1f) "1x" else "${speed}x",
             selected = selectedSpeed == speed,
             onClick = { onSelectSpeed(speed) },
-        )
-    }
-    val backendValues = options.backends.map { backend ->
-        SelectableValue(
-            id = backend.providerId,
-            label = backend.providerName,
-            selected = selectedProviderId == backend.providerId || (selectedProviderId == null && options.backends.firstOrNull()?.providerId == backend.providerId),
-            onClick = { onSelectBackend(backend.providerId) },
         )
     }
     val voiceoverValues = options.voiceovers.map { source ->
@@ -1929,7 +1913,6 @@ private fun PlayerSettingsSheet(
         }
     val rootEntries = playerSettingsRootEntries(
         speedValues = speedValues,
-        backendValues = backendValues,
         voiceoverValues = voiceoverValues,
         playerValues = playerValues,
         qualityValues = qualityValues,
@@ -1977,7 +1960,6 @@ private fun PlayerSettingsSheet(
                         destination = targetDestination,
                         rootEntries = rootEntries,
                         speedValues = speedValues,
-                        backendValues = backendValues,
                         voiceoverValues = voiceoverValues,
                         playerValues = playerValues,
                         qualityValues = qualityValues,
@@ -2157,7 +2139,6 @@ private fun List<SelectableValue>.firstSelectedLabelOrDefault(defaultLabel: Stri
 @Composable
 private fun playerSettingsRootEntries(
     speedValues: List<SelectableValue>,
-    backendValues: List<SelectableValue>,
     voiceoverValues: List<SelectableValue>,
     playerValues: List<SelectableValue>,
     qualityValues: List<SelectableValue>,
@@ -2217,16 +2198,6 @@ private fun playerSettingsRootEntries(
             onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
         )
     )
-    if (backendValues.isNotEmpty()) {
-        add(
-            PlayerSettingsEntryItem(
-                id = PlayerSettingsDestination.Backend.name,
-                title = stringResource(R.string.watch_player_settings_backend),
-                value = backendValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Backend) },
-            )
-        )
-    }
     if (playerValues.isNotEmpty()) {
         add(
             PlayerSettingsEntryItem(
@@ -2243,7 +2214,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
     destination: PlayerSettingsDestination,
     rootEntries: List<PlayerSettingsEntryItem>,
     speedValues: List<SelectableValue>,
-    backendValues: List<SelectableValue>,
     voiceoverValues: List<SelectableValue>,
     playerValues: List<SelectableValue>,
     qualityValues: List<SelectableValue>,
@@ -2254,7 +2224,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
         }
         PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
         PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
-        PlayerSettingsDestination.Backend -> playerSettingsChoices(backendValues)
         PlayerSettingsDestination.Player -> playerSettingsChoices(playerValues)
         PlayerSettingsDestination.Quality -> playerSettingsChoices(qualityValues)
     }
@@ -2272,7 +2241,6 @@ private enum class PlayerSettingsDestination(@param:StringRes val titleResId: In
     Root(R.string.watch_player_settings_root),
     Speed(R.string.watch_player_settings_speed),
     Voiceover(R.string.watch_player_settings_voiceover),
-    Backend(R.string.watch_player_settings_backend),
     Player(R.string.watch_player_settings_player),
     Quality(R.string.watch_player_settings_quality),
 }

@@ -44,7 +44,6 @@ class PlayerViewModel(
             currentSourceId = sourceId,
             currentEpisodeId = episodeId,
             currentEpisodeNumber = initialEpisodeNumber,
-            selectedProviderId = savedSelection?.backendId,
             selectedPlayerName = savedSelection?.playerName,
             selectedQualityLabel = savedSelection?.quality,
         )
@@ -251,7 +250,6 @@ class PlayerViewModel(
                     currentSourceId = source.sourceId,
                     currentEpisodeId = matching.id,
                     episodes = episodes,
-                    selectedProviderId = null,
                     selectedPlayerName = null,
                     selectedQualityLabel = source.qualityLabel,
                     pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
@@ -266,28 +264,11 @@ class PlayerViewModel(
                 sourceTitle = source.title,
                 quality = source.qualityLabel,
                 playerName = null,
-                backendId = null,
                 autoSelect = false,
             )
             restoreSavedSeek()
             load(forceRefresh = true)
         }
-    }
-
-    fun selectBackend(providerId: String?, resumePositionMs: Long = 0L) {
-        settingsLoadJob?.cancel()
-        _uiState.update {
-            it.copy(
-                selectedProviderId = providerId,
-                playback = null,
-                pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
-                settingsOptionsKey = null,
-                failedStreamUrls = emptySet(),
-                recoveryAttempted = false,
-            )
-        }
-        persistSelection()
-        load(forceRefresh = true)
     }
 
     fun selectPlayer(playerName: String?, resumePositionMs: Long = 0L) {
@@ -338,7 +319,6 @@ class PlayerViewModel(
             sourceTitle = playback.sourceTitle,
             quality = playback.qualityLabel,
             playerName = state.selectedPlayerName,
-            backendId = state.selectedProviderId,
             autoSelect = false,
         )
         watchStateRepository.saveEpisodeProgress(
@@ -363,7 +343,6 @@ class PlayerViewModel(
             sourceTitle = state.playback?.sourceTitle ?: previousSelection.sourceTitle,
             quality = state.selectedQualityLabel ?: state.playback?.qualityLabel,
             playerName = state.selectedPlayerName,
-            backendId = state.selectedProviderId,
             autoSelect = false,
         )
     }
@@ -485,7 +464,6 @@ data class PlayerUiState(
     val isSettingsLoading: Boolean = false,
     val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
     val settingsOptionsKey: String? = null,
-    val selectedProviderId: String? = null,
     val selectedPlayerName: String? = null,
     val selectedQualityLabel: String? = null,
 )
@@ -495,8 +473,6 @@ private fun PlayerUiState.settingsOptionsKey(): String =
         append(currentSourceId)
         append(':')
         append(currentEpisodeId)
-        append(':')
-        append(selectedProviderId.orEmpty())
         append(':')
         append(selectedPlayerName.orEmpty())
         append(':')

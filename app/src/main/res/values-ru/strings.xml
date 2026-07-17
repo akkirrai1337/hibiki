@@ -205,7 +205,6 @@
     <string name="watch_player_settings_auto_skip">Автопропуск опенинга/эндинга</string>
     <string name="watch_player_settings_auto_play_next">Автопереход к следующей серии</string>
     <string name="watch_player_settings_voiceover">Озвучка</string>
-    <string name="watch_player_settings_backend">Источник</string>
     <string name="watch_player_settings_player">Плеер</string>
     <string name="watch_player_fallback_name">Плеер</string>
     <string name="watch_episode_fallback_title">Серия %1$s</string>

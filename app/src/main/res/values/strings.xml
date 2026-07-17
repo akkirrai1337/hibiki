@@ -211,7 +211,6 @@
     <string name="watch_player_settings_auto_skip">Auto-skip opening/ending</string>
     <string name="watch_player_settings_auto_play_next">Autoplay next episode</string>
     <string name="watch_player_settings_voiceover">Voiceover</string>
-    <string name="watch_player_settings_backend">Source</string>
     <string name="watch_player_settings_player">Player</string>
     <string name="watch_player_settings_quality">Quality</string>
     <string name="watch_player_settings_on">On</string>

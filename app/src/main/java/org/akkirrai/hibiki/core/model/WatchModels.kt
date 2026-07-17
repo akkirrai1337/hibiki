@@ -39,11 +39,6 @@ enum class PlaybackSegmentType {
     Unknown,
 }
 
-data class PlaybackBackendOption(
-    val providerId: String,
-    val providerName: String,
-)
-
 data class PlaybackLinkOption(
     val playerName: String?,
     val qualityLabel: String?,
@@ -51,7 +46,6 @@ data class PlaybackLinkOption(
 
 data class PlaybackSettingsOptions(
     val voiceovers: List<WatchSource> = emptyList(),
-    val backends: List<PlaybackBackendOption> = emptyList(),
     val links: List<PlaybackLinkOption> = emptyList(),
 )
 
@@ -93,7 +87,6 @@ data class WatchSourceSelection(
     val sourceTitle: String?,
     val quality: String? = null,
     val playerName: String? = null,
-    val backendId: String? = null,
     val autoSelect: Boolean = true,
 )
 

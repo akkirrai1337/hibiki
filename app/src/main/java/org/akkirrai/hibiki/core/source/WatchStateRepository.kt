@@ -19,7 +19,6 @@ class WatchStateRepository(context: Context) {
             sourceTitle = readString(titleId, ::selectedSourceTitleKey),
             quality = readString(titleId, ::selectedQualityKey),
             playerName = readString(titleId, ::selectedPlayerKey),
-            backendId = readString(titleId, ::selectedBackendKey),
             autoSelect = readBoolean(titleId, ::selectedAutoKey, true),
         )
     }
@@ -30,7 +29,6 @@ class WatchStateRepository(context: Context) {
         sourceTitle: String?,
         quality: String?,
         playerName: String? = null,
-        backendId: String? = null,
         autoSelect: Boolean,
     ) {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
@@ -40,7 +38,7 @@ class WatchStateRepository(context: Context) {
             .putString(selectedSourceTitleKey(normalizedTitleId), sourceTitle)
             .putString(selectedQualityKey(normalizedTitleId), quality)
             .putString(selectedPlayerKey(normalizedTitleId), playerName)
-            .putString(selectedBackendKey(normalizedTitleId), backendId)
+            .remove(selectedBackendKey(normalizedTitleId))
             .putBoolean(selectedAutoKey(normalizedTitleId), autoSelect)
             .apply()
     }

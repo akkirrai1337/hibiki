@@ -37,7 +37,6 @@ import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
-import org.akkirrai.hibiki.core.model.PlaybackBackendOption
 import org.akkirrai.hibiki.core.model.PlaybackLinkOption
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
@@ -386,10 +385,7 @@ class AnimeWatchRepository(
             ?: loadSources(titleId, onUpdate = {})
         val payload = ensureSourcePayload(sourceId) ?: return PlaybackSettingsOptions(voiceovers = voiceovers)
         val episode = payload.episodes.firstOrNull { it.id == episodeId }
-            ?: return PlaybackSettingsOptions(
-                voiceovers = voiceovers,
-                backends = listOf(PlaybackBackendOption(provider.id, provider.name)),
-            )
+            ?: return PlaybackSettingsOptions(voiceovers = voiceovers)
         val links = getFilteredLinks(payload, episode)
         val resolvedLinkOptions = prioritizeLinks(
             links = links,
@@ -404,7 +400,6 @@ class AnimeWatchRepository(
 
         return PlaybackSettingsOptions(
             voiceovers = voiceovers,
-            backends = listOf(PlaybackBackendOption(payload.provider.id, payload.provider.name)),
             links = resolvedLinkOptions.distinct(),
         )
     }
