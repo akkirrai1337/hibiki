@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
@@ -33,8 +32,10 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -69,6 +70,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LanguageMode
@@ -96,11 +99,15 @@ fun SettingsScreen(
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     val discordRpcState by discordRpcManager.state.collectAsState()
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
+    var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
     val discordAuthLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            discordRpcManager.refreshAuthentication(enableOnSuccess = true)
+            DiscordAuthActivity.tokenFromResult(result.data)?.let { token ->
+                pendingDiscordToken = token
+                isDiscordAuthDialogOpen = true
+            }
         }
     }
     val versionName = remember(context) {
@@ -200,33 +207,24 @@ fun SettingsScreen(
 
         item(key = "discord") {
             SettingsSection(title = stringResource(R.string.discord_rpc_section)) {
-                SettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> SettingsSwitchItem(
-                            icon = ImageVector.vectorResource(R.drawable.ic_discord),
-                            title = stringResource(R.string.discord_rpc_title),
-                            checked = preferences.discordRpcEnabled,
-                            shape = shape,
-                            onCheckedChange = { enabled ->
-                                if (!enabled) {
-                                    appPreferences.setDiscordRpcEnabled(false)
-                                } else if (discordRpcManager.hasToken()) {
-                                    discordRpcManager.refreshAuthentication(enableOnSuccess = true)
-                                } else {
-                                    isDiscordAuthDialogOpen = true
-                                }
-                            },
-                        )
-
-                        1 -> SettingsActionItem(
-                            icon = Icons.Outlined.AccountCircle,
-                            title = discordRpcState.account?.displayName
-                                ?: stringResource(R.string.discord_rpc_connect_account),
-                            subtitle = discordRpcStatusLabel(discordRpcState.status),
-                            shape = shape,
-                            onClick = { isDiscordAuthDialogOpen = true },
-                        )
-                    }
+                SettingsItems(count = 1) { _, shape ->
+                    DiscordSettingsItem(
+                        icon = ImageVector.vectorResource(R.drawable.ic_discord),
+                        title = stringResource(R.string.discord_rpc_title),
+                        subtitle = discordRpcStatusLabel(discordRpcState.status),
+                        checked = preferences.discordRpcEnabled,
+                        shape = shape,
+                        onClick = { isDiscordAuthDialogOpen = true },
+                        onCheckedChange = { enabled ->
+                            if (!enabled) {
+                                appPreferences.setDiscordRpcEnabled(false)
+                            } else if (discordRpcManager.hasToken()) {
+                                discordRpcManager.refreshAuthentication(enableOnSuccess = true)
+                            } else {
+                                isDiscordAuthDialogOpen = true
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -278,11 +276,16 @@ fun SettingsScreen(
     if (isDiscordAuthDialogOpen) {
         DiscordAuthDialog(
             manager = discordRpcManager,
+            initialToken = pendingDiscordToken
+                ?: discordRpcManager.tokenForEditing().orEmpty(),
             isSignedIn = discordRpcManager.hasToken(),
             onBrowserSignIn = {
                 discordAuthLauncher.launch(Intent(context, DiscordAuthActivity::class.java))
             },
-            onDismiss = { isDiscordAuthDialogOpen = false },
+            onDismiss = {
+                pendingDiscordToken = null
+                isDiscordAuthDialogOpen = false
+            },
         )
     }
 }
@@ -396,6 +399,60 @@ private fun SettingsSwitchItem(
 }
 
 @Composable
+private fun DiscordSettingsItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    shape: Shape,
+    onClick: () -> Unit,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        SettingsSwitch(
+            checked = checked,
+            onCheckedChange = { enabled ->
+                onCheckedChange(enabled)
+                haptic.performHapticFeedback(
+                    if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                )
+            },
+        )
+    }
+}
+
+@Composable
 private fun SettingsActionItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
@@ -466,91 +523,169 @@ private fun SettingsItemHeader(
 @Composable
 private fun DiscordAuthDialog(
     manager: DiscordRpcManager,
+    initialToken: String,
     isSignedIn: Boolean,
     onBrowserSignIn: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val state by manager.state.collectAsState()
-    var manualToken by remember { mutableStateOf("") }
+    var manualToken by remember(initialToken) { mutableStateOf(initialToken) }
     var manualTokenFailed by remember { mutableStateOf(false) }
     val isChecking = state.status == DiscordRpcConnectionStatus.Checking ||
         state.status == DiscordRpcConnectionStatus.Connecting
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
-                contentDescription = null,
-            )
-        },
-        title = { Text(stringResource(R.string.discord_rpc_connect_account)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.discord_rpc_gateway_warning),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                TextButton(
-                    onClick = onBrowserSignIn,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isChecking,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.discord_rpc_sign_in_browser))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                            contentDescription = null,
+                            modifier = Modifier.size(26.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.discord_rpc_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = listOfNotNull(
+                                state.account?.displayName,
+                                discordRpcStatusLabel(state.status),
+                            ).distinct().joinToString(" • "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
-                OutlinedTextField(
-                    value = manualToken,
-                    onValueChange = {
-                        manualToken = it
-                        manualTokenFailed = false
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.discord_rpc_manual_token)) },
-                    supportingText = if (manualTokenFailed) {
-                        { Text(stringResource(R.string.discord_rpc_invalid_token)) }
-                    } else {
-                        null
-                    },
-                    isError = manualTokenFailed,
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    enabled = !isChecking,
-                )
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            manager.authenticate(manualToken)
-                                .onSuccess { onDismiss() }
-                                .onFailure { manualTokenFailed = true }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = manualToken,
+                            onValueChange = {
+                                manualToken = it
+                                manualTokenFailed = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.discord_rpc_manual_token)) },
+                            supportingText = if (manualTokenFailed) {
+                                { Text(stringResource(R.string.discord_rpc_invalid_token)) }
+                            } else {
+                                null
+                            },
+                            isError = manualTokenFailed,
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            enabled = !isChecking,
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                        if (isSignedIn) {
+                            OutlinedButton(
+                                onClick = {
+                                    manager.signOut()
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                enabled = !isChecking,
+                            ) {
+                                Text(stringResource(R.string.discord_rpc_disconnect))
+                            }
+                        } else {
+                            Button(
+                                onClick = onBrowserSignIn,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                enabled = !isChecking,
+                            ) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.discord_rpc_sign_in_browser),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = manualToken.isNotBlank() && !isChecking,
-                ) {
-                    Text(stringResource(R.string.discord_rpc_use_token))
+                    }
                 }
-                if (isSignedIn) {
-                    TextButton(
-                        onClick = {
-                            manager.signOut()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         enabled = !isChecking,
                     ) {
-                        Text(stringResource(R.string.discord_rpc_disconnect))
+                        Text(stringResource(android.R.string.cancel))
+                    }
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                manager.authenticate(manualToken)
+                                    .onSuccess { onDismiss() }
+                                    .onFailure { manualTokenFailed = true }
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        enabled = manualToken.isNotBlank() && !isChecking,
+                    ) {
+                        Text(stringResource(R.string.settings_apply))
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.cancel))
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable

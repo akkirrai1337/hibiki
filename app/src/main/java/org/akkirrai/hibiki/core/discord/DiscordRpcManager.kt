@@ -126,6 +126,8 @@ class DiscordRpcManager private constructor(
 
     fun hasToken(): Boolean = tokenStore.getToken() != null
 
+    fun tokenForEditing(): String? = tokenStore.getToken()
+
     suspend fun authenticate(token: String): Result<DiscordAccount> = runCatching {
         _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Checking)
         val account = repository.getAccount(token.trim())

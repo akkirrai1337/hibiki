@@ -59,7 +59,6 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
-import org.akkirrai.hibiki.core.account.DiscordTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 
@@ -67,7 +66,6 @@ class DiscordAuthActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var errorView: ComposeView
     private val appPreferences by lazy(LazyThreadSafetyMode.NONE) { AppPreferences(this) }
-    private val tokenStore by lazy(LazyThreadSafetyMode.NONE) { DiscordTokenStore(this) }
     private var tokenCaptured = false
     private var pageProgress by mutableIntStateOf(0)
     private var currentUrl by mutableStateOf("")
@@ -221,8 +219,10 @@ class DiscordAuthActivity : ComponentActivity() {
                 ?.takeIf { it.length >= MIN_TOKEN_LENGTH }
                 ?: return@evaluateJavascript
             tokenCaptured = true
-            tokenStore.saveToken(token)
-            setResult(RESULT_OK)
+            setResult(
+                RESULT_OK,
+                Intent().putExtra(EXTRA_DISCORD_TOKEN, token),
+            )
             clearBrowserSession()
             finish()
         }
@@ -300,12 +300,18 @@ class DiscordAuthActivity : ComponentActivity() {
         }
     }
 
-    private companion object {
+    companion object {
+        private const val EXTRA_DISCORD_TOKEN = "org.akkirrai.hibiki.extra.DISCORD_TOKEN"
         const val DISCORD_HOST = "discord.com"
         const val TAG = "DiscordAuth"
         const val DISCORD_LOGIN_URL = "https://discord.com/login"
         const val TOKEN_POLL_INTERVAL_MS = 1_000L
         const val MIN_TOKEN_LENGTH = 20
+
+        fun tokenFromResult(intent: Intent?): String? = intent
+            ?.getStringExtra(EXTRA_DISCORD_TOKEN)
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
         const val USER_AGENT =
             "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) " +
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.363"
