@@ -148,6 +148,8 @@ import kotlin.math.max
 import kotlin.math.min
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
+import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
+import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.VideoScaleMode
@@ -162,6 +164,7 @@ import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
+import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -252,6 +255,8 @@ fun PlayerScreen(
         (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0)
     val coroutineScope = rememberCoroutineScope()
     val resumeFrameRepository = remember(context) { ResumeFrameRepository(context) }
+    val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context) }
+    val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context)
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
@@ -490,6 +495,7 @@ fun PlayerScreen(
                         exoPlayer.play()
                         isAudioOnly = true
                         isPictureInPictureActive = false
+                        discordRpcManager.setBackgroundPlaybackActive(true)
                         activity?.moveTaskToBack(true)
                     }
 
@@ -678,6 +684,23 @@ fun PlayerScreen(
         }
     }
 
+    LaunchedEffect(
+        discordRpcManager,
+        isEnteringPictureInPicture,
+        isPictureInPictureActive,
+        isAudioOnly,
+    ) {
+        discordRpcManager.setBackgroundPlaybackActive(
+            isEnteringPictureInPicture || isPictureInPictureActive || isAudioOnly,
+        )
+    }
+
+    DisposableEffect(discordRpcManager) {
+        onDispose {
+            discordRpcManager.setBackgroundPlaybackActive(false)
+        }
+    }
+
     DisposableEffect(activity, view) {
         if (activity == null) {
             onDispose {}
@@ -829,6 +852,37 @@ fun PlayerScreen(
             if (exoPlayer.isPlaying) {
                 saveCurrentPlaybackProgress()
             }
+        }
+    }
+
+    LaunchedEffect(
+        state.playback,
+        state.currentSourceId,
+        state.currentEpisodeId,
+        state.currentEpisodeNumber,
+        isPlaying,
+    ) {
+        val playback = state.playback ?: return@LaunchedEffect
+        if (!isPlaying) return@LaunchedEffect
+        val titleId = state.currentSourceId.substringBefore(':')
+        val coverUrl = withContext(Dispatchers.IO) {
+            offlineTitleMetadataRepository.get(titleId)?.let { metadata ->
+                metadata.posterUrl ?: metadata.posterFallbackUrl
+            }
+        }
+        while (true) {
+            discordRpcManager.showPlayback(
+                DiscordPlaybackPresence(
+                    titleId = titleId,
+                    animeTitle = state.animeTitle.ifBlank { playback.animeTitle },
+                    voiceover = playback.sourceTitle,
+                    episodeNumber = state.currentEpisodeNumber,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    coverUrl = coverUrl,
+                ),
+            )
+            delay(DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS)
         }
     }
 
@@ -1241,6 +1295,7 @@ fun PlayerScreen(
                     pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
                     onPictureInPictureClick = {
                         isEnteringPictureInPicture = true
+                        discordRpcManager.setBackgroundPlaybackActive(true)
                         controlsVisible = false
                         val entered = runCatching {
                             activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
@@ -1248,6 +1303,7 @@ fun PlayerScreen(
                         isPictureInPictureActive = entered
                         if (!entered) {
                             isEnteringPictureInPicture = false
+                            discordRpcManager.setBackgroundPlaybackActive(false)
                         }
                     },
                     onLockClick = {
@@ -2772,6 +2828,7 @@ private const val SEEK_GESTURE_HORIZONTAL_DOMINANCE = 1.35f
 private const val SEEK_GESTURE_FULL_WIDTH_MS = 90_000L
 private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
 private const val PLAYBACK_PROGRESS_SAVE_INTERVAL_MS = 30_000L
+private const val DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS = 30_000L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
 private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY =

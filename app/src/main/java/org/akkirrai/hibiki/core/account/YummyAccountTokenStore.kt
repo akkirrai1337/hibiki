@@ -55,7 +55,7 @@ class AndroidKeystoreYummyApplicationTokenStore(
     }
 }
 
-private class AndroidKeystoreStringStore(
+internal class AndroidKeystoreStringStore(
     context: Context,
     prefsName: String,
     private val keyAlias: String,

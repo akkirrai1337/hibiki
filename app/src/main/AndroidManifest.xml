@@ -39,6 +39,12 @@
         </service>
 
         <activity
+            android:name=".core.discord.DiscordAuthActivity"
+            android:exported="false"
+            android:label="@string/discord_rpc_title"
+            android:theme="@style/Theme.Hibiki" />
+
+        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="true"

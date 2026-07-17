@@ -38,6 +38,7 @@ import org.akkirrai.hibiki.core.update.AppUpdate
 import org.akkirrai.hibiki.core.update.AppUpdateRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
+import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    private val discordRpcManager by lazy(LazyThreadSafetyMode.NONE) {
+        DiscordRpcManager.get(applicationContext)
+    }
     private val appPreferences by lazy(LazyThreadSafetyMode.NONE) {
         AppPreferences(this)
     }
@@ -138,6 +142,19 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         requestHighestRefreshRate()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        discordRpcManager.onAppForegrounded()
+    }
+
+    override fun onStop() {
+        if (isInPictureInPictureMode) {
+            discordRpcManager.setBackgroundPlaybackActive(true)
+        }
+        discordRpcManager.onAppBackgrounded()
+        super.onStop()
     }
 
     override fun onDestroy() {

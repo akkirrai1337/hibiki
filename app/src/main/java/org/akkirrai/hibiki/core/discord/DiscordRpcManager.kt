@@ -1,0 +1,420 @@
+package org.akkirrai.hibiki.core.discord
+
+import android.content.Context
+import android.os.SystemClock
+import com.my.kizzyrpc.KizzyRPC
+import com.my.kizzyrpc.entities.presence.Activity
+import com.my.kizzyrpc.entities.presence.Assets
+import com.my.kizzyrpc.entities.presence.Metadata
+import com.my.kizzyrpc.entities.presence.Timestamps
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
+import org.akkirrai.hibiki.core.account.DiscordTokenStore
+import org.akkirrai.hibiki.core.log.AppLogger
+
+enum class DiscordRpcConnectionStatus {
+    Disabled,
+    SignedOut,
+    Checking,
+    Connecting,
+    Connected,
+    Error,
+}
+
+data class DiscordRpcState(
+    val status: DiscordRpcConnectionStatus = DiscordRpcConnectionStatus.Disabled,
+    val account: DiscordAccount? = null,
+)
+
+data class DiscordPlaybackPresence(
+    val titleId: String,
+    val animeTitle: String,
+    val voiceover: String,
+    val episodeNumber: Double?,
+    val positionMs: Long,
+    val durationMs: Long,
+    val coverUrl: String? = null,
+)
+
+class DiscordRpcManager private constructor(
+    context: Context,
+) {
+    private val appContext = context.applicationContext
+    private val preferences = AppPreferences(appContext)
+    private val tokenStore = DiscordTokenStore(appContext)
+    private val repository = DiscordRepository()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val publishRequests = Channel<Unit>(capacity = Channel.CONFLATED)
+    private val mediaProxyCache = ConcurrentHashMap<String, String>()
+    private val _state = MutableStateFlow(initialState())
+
+    val state: StateFlow<DiscordRpcState> = _state.asStateFlow()
+
+    @Volatile
+    private var desiredPresence: DesiredPresence? = null
+
+    @Volatile
+    private var isAppForeground = true
+
+    @Volatile
+    private var backgroundPlaybackActive = false
+
+    private var rpc: KizzyRPC? = null
+    private var lastPublishAtMs = 0L
+    private var backgroundDisconnectJob: Job? = null
+    private var reconnectJob: Job? = null
+
+    init {
+        scope.launch {
+            preferences.state.collect { state ->
+                if (!state.discordRpcEnabled) {
+                    closeRpc(keepDesiredPresence = true)
+                    _state.value = DiscordRpcState(
+                        status = if (tokenStore.getToken() == null) {
+                            DiscordRpcConnectionStatus.SignedOut
+                        } else {
+                            DiscordRpcConnectionStatus.Disabled
+                        },
+                        account = _state.value.account,
+                    )
+                } else if (tokenStore.getToken() == null) {
+                    closeRpc(keepDesiredPresence = true)
+                    _state.value = DiscordRpcState(DiscordRpcConnectionStatus.SignedOut)
+                } else if (desiredPresence is DesiredPresence.Playback &&
+                    (desiredPresence as DesiredPresence.Playback).value.titleId in state.discordRpcExcludedTitleIds
+                ) {
+                    closeRpc(keepDesiredPresence = true)
+                } else {
+                    requestPublish()
+                }
+            }
+        }
+        scope.launch {
+            for (ignored in publishRequests) {
+                publishLatestPresence()
+            }
+        }
+        if (tokenStore.getToken() != null) {
+            refreshAuthentication(enableOnSuccess = false)
+        }
+    }
+
+    fun hasToken(): Boolean = tokenStore.getToken() != null
+
+    suspend fun authenticate(token: String): Result<DiscordAccount> = runCatching {
+        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Checking)
+        val account = repository.getAccount(token.trim())
+        tokenStore.saveToken(token)
+        preferences.setDiscordRpcEnabled(true)
+        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Connecting, account)
+        closeRpc(keepDesiredPresence = true)
+        requestPublish()
+        account
+    }.onFailure {
+        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Error)
+    }
+
+    fun refreshAuthentication(enableOnSuccess: Boolean) {
+        val token = tokenStore.getToken() ?: run {
+            _state.value = DiscordRpcState(DiscordRpcConnectionStatus.SignedOut)
+            return
+        }
+        scope.launch {
+            _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Checking)
+            runCatching { repository.getAccount(token) }
+                .onSuccess { account ->
+                    if (enableOnSuccess) preferences.setDiscordRpcEnabled(true)
+                    _state.value = DiscordRpcState(
+                        status = if (preferences.state.value.discordRpcEnabled) {
+                            DiscordRpcConnectionStatus.Connecting
+                        } else {
+                            DiscordRpcConnectionStatus.Disabled
+                        },
+                        account = account,
+                    )
+                    requestPublish()
+                }
+                .onFailure { throwable ->
+                    if (throwable is DiscordAuthenticationException) {
+                        tokenStore.clearToken()
+                        preferences.setDiscordRpcEnabled(false)
+                        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.SignedOut)
+                    } else {
+                        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Error)
+                    }
+                }
+        }
+    }
+
+    fun signOut() {
+        tokenStore.clearToken()
+        preferences.setDiscordRpcEnabled(false)
+        closeRpc(keepDesiredPresence = true)
+        _state.value = DiscordRpcState(DiscordRpcConnectionStatus.SignedOut)
+    }
+
+    fun showGeneralStatus(route: String?) {
+        val localizedContext = appContext.withAppPreferencesLanguage()
+        val details = when (route?.substringBefore('/')) {
+            "catalog", "search", "trending", "recent_updates", "details" ->
+                localizedContext.getString(R.string.discord_rpc_browsing_catalog)
+            "library" -> localizedContext.getString(R.string.discord_rpc_browsing_library)
+            "profile" -> localizedContext.getString(R.string.discord_rpc_browsing_profile)
+            "settings" -> localizedContext.getString(R.string.discord_rpc_browsing_settings)
+            "watch_sources", "episodes" -> localizedContext.getString(R.string.discord_rpc_selecting_episode)
+            "player" -> return
+            else -> localizedContext.getString(R.string.discord_rpc_browsing_home)
+        }
+        desiredPresence = DesiredPresence.General(details)
+        requestPublish()
+    }
+
+    fun showPlayback(value: DiscordPlaybackPresence) {
+        desiredPresence = DesiredPresence.Playback(value)
+        if (value.titleId in preferences.state.value.discordRpcExcludedTitleIds) {
+            closeRpc(keepDesiredPresence = true)
+        } else {
+            requestPublish()
+        }
+    }
+
+    fun onAppForegrounded() {
+        isAppForeground = true
+        backgroundDisconnectJob?.cancel()
+        backgroundDisconnectJob = null
+        requestPublish()
+    }
+
+    fun onAppBackgrounded() {
+        isAppForeground = false
+        scheduleBackgroundDisconnectIfNeeded()
+    }
+
+    fun setBackgroundPlaybackActive(active: Boolean) {
+        backgroundPlaybackActive = active
+        if (active) {
+            backgroundDisconnectJob?.cancel()
+            backgroundDisconnectJob = null
+        } else if (!isAppForeground) {
+            scheduleBackgroundDisconnectIfNeeded()
+        }
+    }
+
+    private fun scheduleBackgroundDisconnectIfNeeded() {
+        if (backgroundPlaybackActive) return
+        backgroundDisconnectJob?.cancel()
+        backgroundDisconnectJob = scope.launch {
+            delay(BACKGROUND_DISCONNECT_DELAY_MS)
+            if (!isAppForeground && !backgroundPlaybackActive) {
+                closeRpc(keepDesiredPresence = true)
+            }
+        }
+    }
+
+    private fun requestPublish() {
+        publishRequests.trySend(Unit)
+    }
+
+    private suspend fun publishLatestPresence() {
+        if (!canPublish(desiredPresence ?: return)) return
+
+        val debounceMs = lastPublishAtMs + MIN_PUBLISH_INTERVAL_MS - SystemClock.elapsedRealtime()
+        if (debounceMs > 0) delay(debounceMs)
+
+        val presence = desiredPresence ?: return
+        val token = tokenStore.getToken() ?: return
+        if (!canPublish(presence)) return
+        _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Connecting)
+        val activity = buildActivity(presence, token)
+        if (!canPublish(presence) || tokenStore.getToken() != token) return
+        runCatching {
+            val client = rpc ?: KizzyRPC(token).also { rpc = it }
+            client.updateRPC(
+                activity = activity,
+                status = STATUS_ONLINE,
+                since = activity.timestamps?.start ?: System.currentTimeMillis(),
+            )
+        }.onSuccess {
+            lastPublishAtMs = SystemClock.elapsedRealtime()
+            reconnectJob?.cancel()
+            reconnectJob = null
+            if (canPublish(presence)) {
+                _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Connected)
+            } else {
+                closeRpc(keepDesiredPresence = true)
+            }
+        }.onFailure { throwable ->
+            AppLogger.e(DISCORD_LOG_TAG, "Discord RPC update failed (${throwable.javaClass.simpleName})")
+            closeRpc(keepDesiredPresence = true)
+            if (preferences.state.value.discordRpcEnabled) {
+                _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Error)
+                scheduleReconnect()
+            }
+        }
+    }
+
+    private fun canPublish(presence: DesiredPresence): Boolean {
+        val state = preferences.state.value
+        if (!state.discordRpcEnabled || tokenStore.getToken() == null) return false
+        if (!isAppForeground && !backgroundPlaybackActive) return false
+        return presence !is DesiredPresence.Playback ||
+            presence.value.titleId !in state.discordRpcExcludedTitleIds
+    }
+
+    private suspend fun buildActivity(
+        presence: DesiredPresence,
+        token: String,
+    ): Activity {
+        val localizedContext = appContext.withAppPreferencesLanguage()
+        val appName = localizedContext.getString(R.string.app_name)
+        val appIcon = mediaProxyUrl(token, HIBIKI_ICON_URL)
+        return when (presence) {
+            is DesiredPresence.General -> Activity(
+                applicationId = DISCORD_APPLICATION_ID,
+                name = appName,
+                details = presence.details.discordText() ?: appName,
+                state = null,
+                type = ACTIVITY_TYPE_WATCHING,
+                assets = Assets(
+                    largeImage = appIcon,
+                    largeText = appName,
+                    smallImage = null,
+                    smallText = null,
+                ),
+                buttons = listOf(localizedContext.getString(R.string.discord_rpc_open_github)),
+                metadata = Metadata(listOf(HIBIKI_GITHUB_URL)),
+            )
+            is DesiredPresence.Playback -> {
+                val value = presence.value
+                val startTime = System.currentTimeMillis() - value.positionMs.coerceAtLeast(0L)
+                val endTime = value.durationMs
+                    .takeIf { it > value.positionMs }
+                    ?.let { startTime + it }
+                val progress = formatProgress(value.positionMs, value.durationMs)
+                val episode = value.episodeNumber?.let(::formatEpisodeNumber)
+                Activity(
+                    applicationId = DISCORD_APPLICATION_ID,
+                    name = appName,
+                    details = value.animeTitle.discordText() ?: appName,
+                    state = value.voiceover.discordText(),
+                    type = ACTIVITY_TYPE_WATCHING,
+                    timestamps = Timestamps(start = startTime, end = endTime),
+                    assets = Assets(
+                        largeImage = value.coverUrl?.let { mediaProxyUrl(token, it) } ?: appIcon,
+                        largeText = listOfNotNull(
+                            episode?.let { localizedContext.getString(R.string.discord_rpc_episode, it) },
+                            progress,
+                        ).joinToString(SEPARATOR).discordText(),
+                        smallImage = appIcon,
+                        smallText = appName,
+                    ),
+                    buttons = listOf(localizedContext.getString(R.string.discord_rpc_open_github)),
+                    metadata = Metadata(listOf(HIBIKI_GITHUB_URL)),
+                )
+            }
+        }
+    }
+
+    private suspend fun mediaProxyUrl(token: String, url: String): String? {
+        mediaProxyCache[url]?.let { return it }
+        return runCatching {
+            repository.getMediaProxyUrl(DISCORD_APPLICATION_ID, token, url)
+        }.getOrNull()?.also { mediaProxyCache[url] = it }
+    }
+
+    private fun scheduleReconnect() {
+        if (reconnectJob?.isActive == true) return
+        reconnectJob = scope.launch {
+            delay(RECONNECT_DELAY_MS)
+            if (preferences.state.value.discordRpcEnabled &&
+                (isAppForeground || backgroundPlaybackActive)
+            ) {
+                requestPublish()
+            }
+        }
+    }
+
+    @Synchronized
+    private fun closeRpc(keepDesiredPresence: Boolean) {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        runCatching { rpc?.closeRPC() }
+        rpc = null
+        lastPublishAtMs = 0L
+        if (!keepDesiredPresence) desiredPresence = null
+    }
+
+    private fun initialState(): DiscordRpcState {
+        val hasToken = tokenStore.getToken() != null
+        return DiscordRpcState(
+            status = when {
+                !hasToken -> DiscordRpcConnectionStatus.SignedOut
+                !preferences.state.value.discordRpcEnabled -> DiscordRpcConnectionStatus.Disabled
+                else -> DiscordRpcConnectionStatus.Checking
+            },
+        )
+    }
+
+    private sealed interface DesiredPresence {
+        data class General(val details: String) : DesiredPresence
+        data class Playback(val value: DiscordPlaybackPresence) : DesiredPresence
+    }
+
+    companion object {
+        @Volatile
+        private var instance: DiscordRpcManager? = null
+
+        fun get(context: Context): DiscordRpcManager = instance ?: synchronized(this) {
+            instance ?: DiscordRpcManager(context).also { instance = it }
+        }
+
+        private const val DISCORD_LOG_TAG = "HibikiDiscordRpc"
+        private const val DISCORD_APPLICATION_ID = "962990036020756480"
+        private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
+        private const val HIBIKI_ICON_URL =
+            "https://raw.githubusercontent.com/akkirrai1337/hibiki/refs/heads/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp"
+        private const val STATUS_ONLINE = "online"
+        private const val ACTIVITY_TYPE_WATCHING = 3
+        private const val MIN_PUBLISH_INTERVAL_MS = 16_000L
+        private const val RECONNECT_DELAY_MS = 15_000L
+        private const val BACKGROUND_DISCONNECT_DELAY_MS = 30_000L
+        private const val SEPARATOR = " • "
+        private const val MAX_DISCORD_TEXT_LENGTH = 128
+
+        private fun formatProgress(positionMs: Long, durationMs: Long): String? {
+            if (durationMs <= 0L) return null
+            return "${formatTime(positionMs)}/${formatTime(durationMs)}"
+        }
+
+        private fun formatTime(timeMs: Long): String {
+            val totalSeconds = timeMs.coerceAtLeast(0L) / 1_000L
+            val hours = totalSeconds / 3_600L
+            val minutes = (totalSeconds % 3_600L) / 60L
+            val seconds = totalSeconds % 60L
+            return if (hours > 0L) {
+                "%d:%02d:%02d".format(hours, minutes, seconds)
+            } else {
+                "%02d:%02d".format(minutes, seconds)
+            }
+        }
+
+        private fun formatEpisodeNumber(number: Double): String =
+            if (number % 1.0 == 0.0) number.toInt().toString() else number.toString()
+
+        private fun String.discordText(): String? = trim()
+            .take(MAX_DISCORD_TEXT_LENGTH)
+            .takeIf { it.length >= 2 }
+    }
+}

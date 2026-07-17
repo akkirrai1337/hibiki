@@ -35,6 +35,8 @@ data class AppPreferencesState(
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
     val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
+    val discordRpcEnabled: Boolean = false,
+    val discordRpcExcludedTitleIds: Set<String> = emptySet(),
 )
 
 class AppPreferences(context: Context) {
@@ -48,7 +50,9 @@ class AppPreferences(context: Context) {
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_PLAYBACK_SPEED,
-            KEY_VIDEO_SCALE_MODE -> {
+            KEY_VIDEO_SCALE_MODE,
+            KEY_DISCORD_RPC_ENABLED,
+            KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS -> {
                 _state.value = readState(prefs)
             }
         }
@@ -93,6 +97,23 @@ class AppPreferences(context: Context) {
         prefs.edit().putString(KEY_VIDEO_SCALE_MODE, mode.name).apply()
     }
 
+    fun setDiscordRpcEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DISCORD_RPC_ENABLED, enabled).apply()
+    }
+
+    fun setDiscordRpcExcluded(titleId: String, excluded: Boolean) {
+        val normalizedTitleId = titleId.trim().takeIf(String::isNotBlank) ?: return
+        val excludedIds = prefs.getStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, emptySet())
+            .orEmpty()
+            .toMutableSet()
+        if (excluded) {
+            excludedIds += normalizedTitleId
+        } else {
+            excludedIds -= normalizedTitleId
+        }
+        prefs.edit().putStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, excludedIds).apply()
+    }
+
     fun close() {
         prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
@@ -103,6 +124,8 @@ class AppPreferences(context: Context) {
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
         const val KEY_PLAYBACK_SPEED = "playback_speed"
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
+        const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
+        const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_USE_SYSTEM_COLOR_SCHEME = "use_system_color_scheme"
         private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
@@ -130,6 +153,11 @@ class AppPreferences(context: Context) {
                 videoScaleMode = prefs.getString(KEY_VIDEO_SCALE_MODE, VideoScaleMode.FIT.name)
                     ?.let { runCatching { VideoScaleMode.valueOf(it) }.getOrNull() }
                     ?: VideoScaleMode.FIT,
+                discordRpcEnabled = prefs.getBoolean(KEY_DISCORD_RPC_ENABLED, false),
+                discordRpcExcludedTitleIds = prefs
+                    .getStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, emptySet())
+                    .orEmpty()
+                    .toSet(),
             )
         }
 

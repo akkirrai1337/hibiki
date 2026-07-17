@@ -53,6 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
+import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
@@ -67,6 +68,7 @@ import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 
 @Composable
 fun HibikiApp(
@@ -75,6 +77,9 @@ fun HibikiApp(
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
+    val appLanguage = LocalAppLanguage.current
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry.value?.destination
@@ -85,13 +90,14 @@ fun HibikiApp(
     val currentTopLevel = destinations.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.route == destination.route } == true
     } ?: TopLevelDestination.Home
-    LaunchedEffect(currentRoute) {
+    LaunchedEffect(currentRoute, appLanguage) {
         AppLogger.setContext("route", currentRoute ?: "<none>")
         AppLogger.setContext("topLevelRoute", currentTopLevel.route)
         PerfLogger.mark(
             event = "Navigation route changed",
             details = "route=$currentRoute, topLevel=$isTopLevelDestination",
         )
+        discordRpcManager.showGeneralStatus(currentRoute)
     }
     Box(
         modifier = Modifier

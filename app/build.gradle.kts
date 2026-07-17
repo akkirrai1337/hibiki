@@ -92,6 +92,7 @@ dependencies {
     implementation("me.saket.cascade:cascade-compose:2.3.0")
     implementation(libs.androidx.palette.ktx)
     implementation(libs.material.kolor)
+    implementation(libs.kizzy.rpc)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.content.negotiation)
