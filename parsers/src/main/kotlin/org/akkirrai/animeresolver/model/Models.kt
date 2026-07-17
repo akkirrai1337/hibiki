@@ -176,6 +176,7 @@ data class RelatedAnimeTitle(
     val type: String? = null,
     val year: Int? = null,
     val episodeCount: Int? = null,
+    val status: String? = null,
 )
 
 data class ProviderMatch(

@@ -86,6 +86,8 @@ class YummyMetadataSourceTest {
         assertEquals("https://img.youtube.com/vi/X_SnV_SdO4k/hqdefault.jpg", result.trailer?.thumbnailUrl)
         assertEquals("https://youtube.com/embed/X_SnV_SdO4k?enablejsapi=1", result.trailer?.sourceUrl)
         assertEquals(listOf("303"), result.similarAnime.map { it.id })
+        assertEquals("announcement", result.similarAnime.single().status)
+        assertEquals("announcement", result.franchiseAnime.single().status)
         client.close()
     }
 
@@ -279,7 +281,14 @@ class YummyMetadataSourceTest {
                       "small": "https://i.kodikres.com/screenshots/seria/1340414/3.jpg"
                     }
                   }
-                ]
+                ],
+                "viewing_order": [{
+                  "anime_id": 900,
+                  "title": "Announced relation",
+                  "anime_status": {"title": "анонс", "alias": "announcement"},
+                  "type": {"alias": "tv"},
+                  "year": 0
+                }]
               }
             }
         """.trimIndent()
@@ -291,7 +300,8 @@ class YummyMetadataSourceTest {
                 "title": "Фрирен, провожающая в последний путь",
                 "title_en": "Frieren: Beyond Journey's End",
                 "type": {"alias": "tv"},
-                "year": 2023,
+                "year": 0,
+                "anime_status": {"title": "анонс", "alias": "announcement"},
                 "poster": {"big": "//cdn.test/frieren.webp"},
                 "episodes": {"count": 28, "aired": 28}
               }]

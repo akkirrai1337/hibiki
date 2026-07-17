@@ -563,6 +563,7 @@ private data class YummyViewingOrderEntry(
             posterUrl = poster?.bestUrl(),
             type = type?.alias,
             year = year,
+            status = animeStatus?.alias.normalize() ?: animeStatus?.title.normalize(),
         )
     }
 }
@@ -574,6 +575,7 @@ private fun AnimeTitle.toRelatedAnimeTitle(): RelatedAnimeTitle = RelatedAnimeTi
     type = type,
     year = year,
     episodeCount = episodeCount,
+    status = status,
 )
 
 @Serializable

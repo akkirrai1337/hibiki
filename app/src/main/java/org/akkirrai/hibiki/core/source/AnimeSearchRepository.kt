@@ -397,6 +397,7 @@ class AnimeSearchRepository(
                 type = related.type,
                 year = related.year,
                 episodeCount = related.episodeCount,
+                status = related.status,
             )
         }
     }

@@ -1462,6 +1462,7 @@ private fun RelatedAnimeList(
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(32.dp))
         DetailSectionTitle(
@@ -1499,7 +1500,12 @@ private fun RelatedAnimeList(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = formatRelatedAnimeMetadata(related.year, related.type),
+                        text = formatRelatedAnimeMetadata(
+                            year = related.year,
+                            type = related.type,
+                            status = related.status,
+                            announcementLabel = announcementLabel,
+                        ),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -1865,7 +1871,7 @@ private fun RelatedAnime.toAnime(): Anime = Anime(
     title = title,
     subtitle = "",
     episodesLabel = "",
-    status = "",
+    status = status.orEmpty(),
     posterUrl = posterUrl,
     posterFallbackUrl = posterFallbackUrl
 )
@@ -1932,14 +1938,23 @@ internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
     return releasedEpisodes.takeIf { it >= 0 }?.plus(1)
 }
 
-internal fun formatRelatedAnimeMetadata(year: Int?, type: String?): String {
+internal fun formatRelatedAnimeMetadata(
+    year: Int?,
+    type: String?,
+    status: String? = null,
+    announcementLabel: String = "announcement",
+): String {
+    val releaseLabel = year
+        ?.takeIf { it > 0 }
+        ?.toString()
+        ?: announcementLabel.takeIf { isAnnouncementStatus(status.orEmpty()) }
     val typeLabel = type
         ?.trim()
         ?.takeIf(String::isNotBlank)
         ?.replace('_', ' ')
         ?.replace('-', ' ')
         ?.uppercase(Locale.ROOT)
-    return listOfNotNull(year?.toString(), typeLabel).joinToString(" • ")
+    return listOfNotNull(releaseLabel, typeLabel).joinToString(" • ")
 }
 
 private const val DEFAULT_TYPE = "TV"

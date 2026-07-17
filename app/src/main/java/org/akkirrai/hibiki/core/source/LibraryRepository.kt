@@ -221,6 +221,7 @@ class LibraryRepository(context: Context) {
                         put("type", related.type)
                         put("year", related.year)
                         put("episodeCount", related.episodeCount)
+                        put("status", related.status)
                     })
                 }
             })
@@ -234,6 +235,7 @@ class LibraryRepository(context: Context) {
                         put("type", related.type)
                         put("year", related.year)
                         put("episodeCount", related.episodeCount)
+                        put("status", related.status)
                     })
                 }
             })
@@ -247,6 +249,7 @@ class LibraryRepository(context: Context) {
                         put("type", related.type)
                         put("year", related.year)
                         put("episodeCount", related.episodeCount)
+                        put("status", related.status)
                     })
                 }
             })
@@ -313,6 +316,7 @@ class LibraryRepository(context: Context) {
                     type = item.optString("type").ifBlank { null },
                     year = item.optInt("year").takeIf { it > 0 },
                     episodeCount = item.optInt("episodeCount").takeIf { it > 0 },
+                    status = item.optString("status").ifBlank { null },
                 )
             )
         }

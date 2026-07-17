@@ -52,4 +52,5 @@ data class RelatedAnime(
     val type: String? = null,
     val year: Int? = null,
     val episodeCount: Int? = null,
+    val status: String? = null,
 )
