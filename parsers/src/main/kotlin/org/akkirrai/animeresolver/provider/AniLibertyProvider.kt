@@ -15,6 +15,8 @@ import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.PlayerType
 import org.akkirrai.animeresolver.model.ProviderMatch
+import org.akkirrai.animeresolver.model.VideoSegment
+import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.normalizeUrl
 import java.util.concurrent.ConcurrentHashMap
@@ -84,13 +86,14 @@ class AniLibertyProvider(
         val releaseEpisode = getRelease(match.mediaId).episodes
             .firstOrNull { it.id == episode.id }
             ?: throw SourceException("AniLiberty не нашёл серию ${episode.number}")
+        val segments = releaseEpisode.videoSegments()
 
         return listOfNotNull(
-            releaseEpisode.hls1080?.toPlayerLink("1080p"),
-            releaseEpisode.hls720?.toPlayerLink("720p"),
-            releaseEpisode.hls480?.toPlayerLink("480p"),
-            releaseEpisode.hls360?.toPlayerLink("360p"),
-            releaseEpisode.hls240?.toPlayerLink("240p"),
+            releaseEpisode.hls1080?.toPlayerLink("1080p", segments),
+            releaseEpisode.hls720?.toPlayerLink("720p", segments),
+            releaseEpisode.hls480?.toPlayerLink("480p", segments),
+            releaseEpisode.hls360?.toPlayerLink("360p", segments),
+            releaseEpisode.hls240?.toPlayerLink("240p", segments),
         )
             .distinctBy(PlayerLink::url)
     }
@@ -124,11 +127,17 @@ class AniLibertyProvider(
         throw SourceException("AniLiberty API mirrors are unavailable", cause = errors.firstOrNull())
     }
 
-    private fun String.toPlayerLink(quality: String) = PlayerLink(
+    private fun String.toPlayerLink(
+        quality: String,
+        segments: List<VideoSegment>,
+    ) = PlayerLink(
         url = normalizeUrl(this),
         type = PlayerType.DIRECT_HLS,
         quality = quality,
         headers = mapOf("Referer" to "https://anilibria.top/"),
+        playerName = name,
+        translation = name,
+        segments = segments,
     )
 
     private companion object {
@@ -170,7 +179,41 @@ private data class AniLibertyEpisode(
     @SerialName("hls_1080") val hls1080: String? = null,
     @SerialName("hls_360") val hls360: String? = null,
     @SerialName("hls_240") val hls240: String? = null,
+    val duration: Long? = null,
+    val opening: AniLibertyTimecode? = null,
+    val ending: AniLibertyTimecode? = null,
 )
+
+@Serializable
+private data class AniLibertyTimecode(
+    val start: Long? = null,
+    val stop: Long? = null,
+)
+
+private fun AniLibertyEpisode.videoSegments(): List<VideoSegment> = buildList {
+    opening.toVideoSegment(VideoSegmentType.OPENING, duration)?.let(::add)
+    ending.toVideoSegment(VideoSegmentType.ENDING, duration)?.let(::add)
+}
+
+private fun AniLibertyTimecode?.toVideoSegment(
+    type: VideoSegmentType,
+    durationSeconds: Long?,
+): VideoSegment? {
+    val startSeconds = this?.start?.coerceAtLeast(0L) ?: return null
+    val rawEndSeconds = stop ?: return null
+    val endSeconds = durationSeconds
+        ?.takeIf { it > 0L }
+        ?.let { rawEndSeconds.coerceAtMost(it) }
+        ?: rawEndSeconds
+    if (endSeconds <= startSeconds) return null
+    return VideoSegment(
+        type = type,
+        startMs = startSeconds * MILLIS_PER_SECOND,
+        endMs = endSeconds * MILLIS_PER_SECOND,
+    )
+}
+
+private const val MILLIS_PER_SECOND = 1_000L
 
 @Serializable
 private data class AniLibertyName(

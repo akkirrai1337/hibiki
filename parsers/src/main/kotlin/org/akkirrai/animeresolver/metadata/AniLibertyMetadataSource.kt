@@ -6,10 +6,12 @@ import io.ktor.client.request.parameter
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.akkirrai.animeresolver.core.MetadataSource
+import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
@@ -18,31 +20,44 @@ import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.resolveUrl
 
-/** Public AniLiberty metadata API: catalog, search, details and filter references. */
+/** Public AniLiberty metadata API: catalog, search, details and schedules. */
 class AniLibertyMetadataSource(
     private val client: HttpClient,
-    private val baseUrl: String = "https://anilibria.top/api/v1",
+    private val baseUrls: List<String> = DEFAULT_BASE_URLS,
 ) : MetadataSource {
-    override val name = "AniLiberty"
+    constructor(client: HttpClient, baseUrl: String) : this(client, listOf(baseUrl))
 
-    override suspend fun search(query: String): List<AnimeTitle> = search(AnimeSearchRequest(query = query))
+    override val name: String = "AniLiberty"
+
+    override suspend fun search(query: String): List<AnimeTitle> = search(
+        AnimeSearchRequest(query = query),
+    )
 
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
-        val response = client.get("$baseUrl/anime/catalog/releases") {
-            parameter("page", request.offset / request.limit.coerceAtLeast(1) + 1)
-            parameter("limit", request.limit.coerceIn(1, 100))
-            request.query.takeIf(String::isNotBlank)?.let { parameter("f[search]", it) }
-            request.typeAliases.takeIf(List<String>::isNotEmpty)?.let { parameter("f[types]", it.joinToString(",") { value -> value.uppercase() }) }
-            request.yearFrom?.let { parameter("f[years][from_year]", it) }
-            request.yearTo?.let { parameter("f[years][to_year]", it) }
-            parameter("f[sorting]", request.sort.toAniLibertySorting())
+        if (request.excludedGenreAliases.isNotEmpty()) {
+            throw SourceException("AniLiberty does not support excluded genre filters")
         }
-        return response.bodyOrThrow<JsonElement>(name).releaseArray().mapNotNull { (it as? JsonObject)?.let(::toTitle) }
+        val limit = request.limit.coerceIn(1, MAX_PAGE_SIZE)
+        val parameters = buildList {
+            add("page" to (request.offset.coerceAtLeast(0) / limit + 1))
+            add("limit" to limit)
+            request.query.trim().takeIf(String::isNotBlank)?.let { add("f[search]" to it) }
+            request.typeAliases.normalizedCsv(uppercase = true)?.let { add("f[types]" to it) }
+            request.statusAliases.normalizedCsv(uppercase = true)?.let { add("f[publish_statuses]" to it) }
+            request.includedGenreAliases.normalizedCsv()?.let { add("f[genres]" to it) }
+            request.yearFrom?.let { add("f[years][from_year]" to it) }
+            request.yearTo?.let { add("f[years][to_year]" to it) }
+            add("f[sorting]" to request.sort.toAniLibertySorting())
+        }
+        return requestJson("anime/catalog/releases", parameters)
+            .releaseArray()
+            .mapNotNull { it.asObject()?.let(::toTitle) }
     }
 
-    suspend fun latest(limit: Int = 20): List<AnimeTitle> = client.get("$baseUrl/anime/releases/latest") {
-        parameter("limit", limit.coerceIn(1, 100))
-    }.bodyOrThrow<JsonElement>(name).releaseArray().mapNotNull { (it as? JsonObject)?.let(::toTitle) }
+    suspend fun latest(limit: Int = DEFAULT_LATEST_LIMIT): List<AnimeTitle> = requestJson(
+        path = "anime/releases/latest",
+        parameters = listOf("limit" to limit.coerceIn(1, MAX_PAGE_SIZE)),
+    ).releaseArray().mapNotNull { it.asObject()?.let(::toTitle) }
 
     /** Releases scheduled for the current week; suitable for a calendar UI. */
     suspend fun weeklySchedule(): List<AniLibertyScheduleEntry> = loadSchedule("week")
@@ -51,69 +66,168 @@ class AniLibertyMetadataSource(
     suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = loadSchedule("now")
 
     override suspend fun getById(id: String): AnimeTitle {
-        return client.get("$baseUrl/anime/releases/$id")
-            .bodyOrThrow<JsonElement>(name)
+        val releaseId = id.trim().takeIf(String::isNotBlank)
+            ?: throw SourceException("AniLiberty release id is blank")
+        return requestJson("anime/releases/$releaseId")
             .releaseObject()
             ?.let(::toTitle)
-            ?: error("AniLiberty returned an invalid release: $id")
+            ?: throw SourceException("AniLiberty returned an invalid release: $id")
     }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
-        sortOptions = AnimeSearchSort.entries.map { SearchFilterOption(it.name.lowercase(), it.name.lowercase()) },
+        sortOptions = SUPPORTED_SORTS.map { SearchFilterOption(it.name.lowercase(), it.name.lowercase()) },
         typeOptions = references("types").map(::referenceOption),
         statusOptions = references("publish-statuses").map(::referenceOption),
         genreOptions = references("genres").map(::referenceOption),
     )
 
-    private suspend fun references(name: String): List<JsonObject> = client.get("$baseUrl/anime/catalog/references/$name")
-        .bodyOrThrow<JsonElement>(this.name).releaseArray().mapNotNull { it as? JsonObject }
+    private suspend fun references(reference: String): List<JsonObject> = requestJson(
+        "anime/catalog/references/$reference",
+    ).releaseArray().mapNotNull { it.asObject() }
 
-    private suspend fun loadSchedule(period: String): List<AniLibertyScheduleEntry> = client
-        .get("$baseUrl/anime/schedule/$period")
-        .bodyOrThrow<JsonElement>(name)
-        .releaseArray()
-        .mapNotNull { item ->
-            val entry = item as? JsonObject ?: return@mapNotNull null
-        val release = entry["release"] as? JsonObject ?: entry
-            val title = toTitle(release) ?: return@mapNotNull null
-            AniLibertyScheduleEntry(
-                release = title,
-                dayOfWeek = release["publish_day"]?.jsonObject?.int("value"),
-            )
+    private suspend fun loadSchedule(period: String): List<AniLibertyScheduleEntry> = requestJson(
+        "anime/schedule/$period",
+    ).releaseArray().mapNotNull { item ->
+        val entry = item.asObject() ?: return@mapNotNull null
+        val release = entry["release"].asObject() ?: entry
+        val title = toTitle(release) ?: return@mapNotNull null
+        AniLibertyScheduleEntry(
+            release = title,
+            dayOfWeek = release["publish_day"].asObject()?.int("value"),
+        )
+    }
+
+    private suspend fun requestJson(
+        path: String,
+        parameters: List<Pair<String, Any>> = emptyList(),
+    ): JsonElement = requestFromMirrors { baseUrl ->
+        client.get("${baseUrl.trimEnd('/')}/$path") {
+            parameters.forEach { (key, value) -> parameter(key, value) }
+        }.bodyOrThrow(name)
+    }
+
+    private suspend fun <T> requestFromMirrors(request: suspend (String) -> T): T {
+        val errors = mutableListOf<Throwable>()
+        baseUrls.forEach { baseUrl ->
+            runCatching { request(baseUrl) }
+                .onSuccess { return it }
+                .onFailure(errors::add)
         }
+        throw SourceException("AniLiberty API mirrors are unavailable", cause = errors.firstOrNull())
+    }
 
     private fun referenceOption(value: JsonObject): SearchFilterOption {
         val id = value.string("id") ?: value.string("value").orEmpty()
-        return SearchFilterOption(id, value.string("name") ?: value.string("description") ?: id)
+        val title = value.string("name") ?: value.string("description") ?: id
+        return SearchFilterOption(id = id, title = title)
     }
 
     private fun toTitle(value: JsonObject): AnimeTitle? {
         val id = value.string("id") ?: value.string("alias") ?: return null
-        val name = value["name"]?.jsonObject ?: return null
-        val main = name.string("main") ?: return null
-        val poster = value["poster"]?.jsonObject?.string("src")?.let { resolveUrl("https://anilibria.top", it) }
+        val names = value["name"].asObject() ?: return null
+        val mainName = names.string("main") ?: return null
+        val englishName = names.string("english")
+        val poster = value["poster"].asObject()
+        val posterPath = poster?.get("optimized").asObject()?.string("src")
+            ?: poster?.string("src")
         return AnimeTitle(
-            id = id, russianName = main, englishName = name.string("english"), originalName = name.string("english") ?: main,
-            japaneseName = null, synonyms = listOfNotNull(name.string("alternative")), year = value.int("year"),
-            type = value["type"]?.jsonObject?.string("value"), episodeCount = value.int("episodes_total"), posterUrl = poster,
-            status = if (value.bool("is_ongoing") == true) "ongoing" else "released", description = value.string("description"),
-            genres = value["genres"].asArray().mapNotNull { it.jsonObject.string("name") ?: it.jsonObject.string("description") },
-            ageRating = value["age_rating"]?.jsonObject?.string("label"), season = value["season"]?.jsonObject?.string("value").toSeason(),
+            id = id,
+            russianName = mainName,
+            englishName = englishName,
+            originalName = englishName ?: mainName,
+            japaneseName = null,
+            synonyms = names.string("alternative").toAlternativeNames(),
+            year = value.int("year"),
+            type = value["type"].asObject()?.string("value"),
+            episodeCount = value.int("episodes_total"),
+            posterUrl = posterPath?.let { resolveUrl(PUBLIC_SITE_URL, it) },
+            status = when (value.bool("is_ongoing")) {
+                true -> "ongoing"
+                false -> "released"
+                null -> null
+            },
+            description = value.string("description"),
+            genres = value["genres"].asArray().mapNotNull { genre ->
+                genre.asObject()?.let { it.string("name") ?: it.string("description") }
+            },
+            ageRating = value["age_rating"].asObject()?.string("label"),
+            season = value["season"].asObject()?.string("value").toSeason(),
         )
     }
 
-    private fun JsonElement?.releaseArray(): List<JsonElement> = when (this) { is JsonArray -> this; is JsonObject -> (this["data"] ?: this["items"] ?: this["response"]).asArray(); else -> emptyList() }
-    private fun JsonElement?.releaseObject(): JsonObject? = when (this) { is JsonObject -> this["data"] as? JsonObject ?: this; else -> null }
+    private fun JsonElement?.releaseArray(): List<JsonElement> = when (this) {
+        is JsonArray -> this
+        is JsonObject -> (this["data"] ?: this["items"] ?: this["response"]).asArray()
+        else -> emptyList()
+    }
+
+    private fun JsonElement?.releaseObject(): JsonObject? = when (this) {
+        is JsonObject -> this["data"].asObject() ?: this
+        else -> null
+    }
+
     private fun JsonElement?.asArray(): List<JsonElement> = (this as? JsonArray).orEmpty()
-    private fun JsonObject.string(key: String): String? = get(key)?.jsonPrimitive?.content?.trim()?.takeIf(String::isNotBlank)
-    private fun JsonObject.int(key: String): Int? = get(key)?.jsonPrimitive?.content?.toIntOrNull()
-    private fun JsonObject.bool(key: String): Boolean? = get(key)?.jsonPrimitive?.content?.toBooleanStrictOrNull()
-    private fun String?.toSeason(): Int? = mapOf("winter" to 1, "spring" to 2, "summer" to 3, "autumn" to 4)[this?.lowercase()]
-    private fun AnimeSearchSort.toAniLibertySorting() = when (this) { AnimeSearchSort.TITLE -> "NAME_ASC"; AnimeSearchSort.YEAR -> "YEAR_DESC"; AnimeSearchSort.RATING -> "RATING_DESC"; else -> "FRESH_AT_DESC" }
+
+    private fun JsonElement?.asObject(): JsonObject? = this as? JsonObject
+
+    private fun JsonObject.string(key: String): String? = get(key)
+        ?.jsonPrimitive
+        ?.contentOrNull
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+
+    private fun JsonObject.int(key: String): Int? = get(key)?.jsonPrimitive?.intOrNull
+
+    private fun JsonObject.bool(key: String): Boolean? = get(key)?.jsonPrimitive?.booleanOrNull
+
+    private fun String?.toAlternativeNames(): List<String> = orEmpty()
+        .split(',', ';', '\n')
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .distinct()
+
+    private fun String?.toSeason(): Int? = when (this?.lowercase()) {
+        "winter" -> 1
+        "spring" -> 2
+        "summer" -> 3
+        "autumn" -> 4
+        else -> null
+    }
+
+    private fun List<String>.normalizedCsv(uppercase: Boolean = false): String? = asSequence()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .map { if (uppercase) it.uppercase() else it }
+        .distinct()
+        .toList()
+        .takeIf(List<String>::isNotEmpty)
+        ?.joinToString(",")
+
+    private fun AnimeSearchSort.toAniLibertySorting(): String = when (this) {
+        AnimeSearchSort.RELEVANCE -> "FRESH_AT_DESC"
+        AnimeSearchSort.RATING -> "RATING_DESC"
+        AnimeSearchSort.YEAR -> "YEAR_DESC"
+        else -> throw SourceException("AniLiberty does not support ${name.lowercase()} sorting")
+    }
+
+    private companion object {
+        const val PUBLIC_SITE_URL = "https://anilibria.top"
+        const val DEFAULT_LATEST_LIMIT = 20
+        const val MAX_PAGE_SIZE = 100
+        val SUPPORTED_SORTS = listOf(
+            AnimeSearchSort.RELEVANCE,
+            AnimeSearchSort.RATING,
+            AnimeSearchSort.YEAR,
+        )
+        val DEFAULT_BASE_URLS = listOf(
+            "https://anilibria.top/api/v1",
+            "https://api.anilibria.app/api/v1",
+        )
+    }
 }
 
 data class AniLibertyScheduleEntry(
     val release: AnimeTitle,
-    /** ISO-like AniLiberty day index: 1 (Monday) through 7 (Sunday), if supplied. */
+    /** ISO day index: 1 (Monday) through 7 (Sunday), if supplied. */
     val dayOfWeek: Int?,
 )
