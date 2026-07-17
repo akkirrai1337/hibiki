@@ -837,19 +837,17 @@ private fun DetailHeroMedia(
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
+        NetworkImage(
+            imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
+            fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+            contentDescription = null,
+        )
+
         if (resumeState != null && resumeFrame != null) {
             ResumeFrameImage(
                 frame = resumeFrame,
                 version = resumeState.updatedAt,
                 modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            NetworkImage(
-                imageUrl = trailer?.thumbnailUrl
-                    ?: anime.screenshots.firstOrNull()
-                    ?: anime.posterUrl,
-                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                contentDescription = null,
             )
         }
 
@@ -944,8 +942,8 @@ private fun ResumeFrameImage(
         contentDescription = null,
         modifier = modifier,
         contentScale = ContentScale.Crop,
-        loading = { ImagePlaceholder(Modifier.fillMaxSize()) },
-        error = { ImagePlaceholder(Modifier.fillMaxSize()) },
+        loading = {},
+        error = {},
     )
 }
 
