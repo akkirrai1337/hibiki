@@ -262,6 +262,9 @@ fun DetailsScreen(
     val description = remember(currentAnime) {
         buildDescription(currentAnime)
     }
+    val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
+        AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
+    }
     val nextEpisodeEta = rememberNextEpisodeEta(currentAnime.nextEpisodeAt)
         ?.takeIf { isOngoingStatus(heroInfo.status) }
     val nextEpisodeNumber = remember(currentAnime.episodesLabel) {
@@ -271,15 +274,17 @@ fun DetailsScreen(
         currentAnime,
         heroInfo,
         description,
+        sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
             anime = currentAnime,
             hero = heroInfo,
             description = description,
+            contentFeatures = sourceDescriptor.contentFeatures,
         )
     }
     val canWatch = remember(selectedAnimeSource, currentAnime.episodesLabel, heroInfo.status) {
-        AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource).supportsPlayback &&
+        sourceDescriptor.supportsPlayback &&
             !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
     }
     val fallbackColorScheme = MaterialTheme.colorScheme
@@ -354,6 +359,14 @@ fun DetailsScreen(
                     is RelatedSection -> {
                         RelatedAnimeList(
                             items = section.items,
+                            title = stringResource(R.string.details_related),
+                            onAnimeClick = onRelatedAnimeClick,
+                        )
+                    }
+                    is SimilarSection -> {
+                        RelatedAnimeList(
+                            items = section.items,
+                            title = stringResource(R.string.details_similar),
                             onAnimeClick = onRelatedAnimeClick,
                         )
                     }
@@ -1445,13 +1458,14 @@ private fun GenresSection(
 @Composable
 private fun RelatedAnimeList(
     items: List<RelatedAnime>,
+    title: String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(32.dp))
         DetailSectionTitle(
-            text = stringResource(R.string.details_related),
+            text = title,
             modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
         )
         Spacer(modifier = Modifier.height(16.dp))

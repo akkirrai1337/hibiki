@@ -149,6 +149,7 @@
     <string name="details_source_material_game">Игра</string>
     <string name="details_source_material_original">Оригинал</string>
     <string name="details_related">Связанное</string>
+    <string name="details_similar">Похожие</string>
     <string name="details_related_titles">Связанные тайтлы</string>
     <string name="details_related_count_label">%1$d тайтлов</string>
     <string name="details_related_show_all_count">Показать все %1$d</string>

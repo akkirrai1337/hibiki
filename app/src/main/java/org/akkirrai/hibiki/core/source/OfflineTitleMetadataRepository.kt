@@ -14,6 +14,7 @@ class OfflineTitleMetadataRepository(context: Context) {
     fun save(anime: Anime) {
         val normalized = anime.copy(
             id = YummyIdMigration.normalizeTitleId(anime.id),
+            similarAnime = anime.similarAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
             franchiseAnime = anime.franchiseAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
             relatedAnime = anime.relatedAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
         )
@@ -66,6 +67,9 @@ class OfflineTitleMetadataRepository(context: Context) {
             put("franchiseAnime", JSONArray().apply {
                 anime.franchiseAnime.forEach { related -> put(encodeRelated(related)) }
             })
+            put("similarAnime", JSONArray().apply {
+                anime.similarAnime.forEach { related -> put(encodeRelated(related)) }
+            })
             put("relatedAnime", JSONArray().apply {
                 anime.relatedAnime.forEach { related -> put(encodeRelated(related)) }
             })
@@ -104,6 +108,7 @@ class OfflineTitleMetadataRepository(context: Context) {
             trailer = json.optJSONObject("trailer")?.toAnimeTrailer(),
             sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
             studios = json.optJSONArray("studios").toStringList(),
+            similarAnime = json.optJSONArray("similarAnime").toRelatedAnimeList(),
             franchiseAnime = json.optJSONArray("franchiseAnime").toRelatedAnimeList(),
             relatedAnime = json.optJSONArray("relatedAnime").toRelatedAnimeList(),
         )

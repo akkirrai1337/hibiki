@@ -57,6 +57,10 @@ class YummyMetadataSourceTest {
                     content = TRAILERS_JSON,
                     headers = headersOf(HttpHeaders.ContentType, "application/json"),
                 )
+                "/anime/11371/recommendations" -> respond(
+                    content = RECOMMENDATIONS_JSON,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
                 else -> error("Unexpected URL: ${request.url}")
             }
         }
@@ -81,6 +85,7 @@ class YummyMetadataSourceTest {
         assertEquals("youtube", result.trailer?.site)
         assertEquals("https://img.youtube.com/vi/X_SnV_SdO4k/hqdefault.jpg", result.trailer?.thumbnailUrl)
         assertEquals("https://youtube.com/embed/X_SnV_SdO4k?enablejsapi=1", result.trailer?.sourceUrl)
+        assertEquals(listOf("303"), result.similarAnime.map { it.id })
         client.close()
     }
 
@@ -276,6 +281,20 @@ class YummyMetadataSourceTest {
                   }
                 ]
               }
+            }
+        """.trimIndent()
+
+        val RECOMMENDATIONS_JSON = """
+            {
+              "response": [{
+                "anime_id": 303,
+                "title": "Фрирен, провожающая в последний путь",
+                "title_en": "Frieren: Beyond Journey's End",
+                "type": {"alias": "tv"},
+                "year": 2023,
+                "poster": {"big": "//cdn.test/frieren.webp"},
+                "episodes": {"count": 28, "aired": 28}
+              }]
             }
         """.trimIndent()
 

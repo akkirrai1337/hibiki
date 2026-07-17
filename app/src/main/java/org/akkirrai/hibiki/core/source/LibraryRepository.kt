@@ -224,6 +224,19 @@ class LibraryRepository(context: Context) {
                     })
                 }
             })
+            put("similarAnime", JSONArray().apply {
+                anime.similarAnime.forEach { related ->
+                    put(JSONObject().apply {
+                        put("id", related.id)
+                        put("title", related.title)
+                        put("posterUrl", related.posterUrl)
+                        put("posterFallbackUrl", related.posterFallbackUrl)
+                        put("type", related.type)
+                        put("year", related.year)
+                        put("episodeCount", related.episodeCount)
+                    })
+                }
+            })
             put("relatedAnime", JSONArray().apply {
                 anime.relatedAnime.forEach { related ->
                     put(JSONObject().apply {
@@ -260,6 +273,7 @@ class LibraryRepository(context: Context) {
             sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
             genres = json.optJSONArray("genres").toStringList(),
             studios = json.optJSONArray("studios").toStringList(),
+            similarAnime = json.optJSONArray("similarAnime").toRelatedAnimeList(),
             franchiseAnime = json.optJSONArray("franchiseAnime").toRelatedAnimeList(),
             relatedAnime = json.optJSONArray("relatedAnime").toRelatedAnimeList(),
         )
@@ -443,6 +457,7 @@ class LibraryRepository(context: Context) {
     private fun Anime.normalizeIds(): Anime {
         return copy(
             id = YummyIdMigration.normalizeTitleId(id),
+            similarAnime = similarAnime.map(::normalizeRelated),
             franchiseAnime = franchiseAnime.map(::normalizeRelated),
             relatedAnime = relatedAnime.map(::normalizeRelated),
         )

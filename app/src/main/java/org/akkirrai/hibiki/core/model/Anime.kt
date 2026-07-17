@@ -19,6 +19,7 @@ data class Anime(
     val trailer: AnimeTrailer? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
+    val similarAnime: List<RelatedAnime> = emptyList(),
     val franchiseAnime: List<RelatedAnime> = emptyList(),
     val relatedAnime: List<RelatedAnime> = emptyList(),
     val releaseDate: String? = null,

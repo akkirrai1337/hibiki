@@ -6,6 +6,8 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
@@ -138,12 +140,26 @@ class YummyMetadataSource(
         val title = response.bodyOrThrow<YummyEnvelope<YummyAnimePayload>>(name)
             .response
             .toAnimeTitle(language)
-        val trailer = runCatching { getTrailers(id).firstOrNull() }
-            .onFailure { error ->
-                debugLogger?.invoke("Yummy trailer request failed for anime $id: ${error.message}")
+        return coroutineScope {
+            val trailer = async {
+                runCatching { getTrailers(id).firstOrNull() }
+                    .onFailure { error ->
+                        debugLogger?.invoke("Yummy trailer request failed for anime $id: ${error.message}")
+                    }
+                    .getOrNull()
             }
-            .getOrNull()
-        return title.copy(trailer = trailer)
+            val recommendations = async {
+                runCatching { getRecommendations(id) }
+                    .onFailure { error ->
+                        debugLogger?.invoke("Yummy recommendations request failed for anime $id: ${error.message}")
+                    }
+                    .getOrDefault(emptyList())
+            }
+            title.copy(
+                trailer = trailer.await(),
+                similarAnime = recommendations.await(),
+            )
+        }
     }
 
     override suspend fun latest(limit: Int): List<AnimeTitle> {
@@ -178,6 +194,19 @@ class YummyMetadataSource(
         return response.bodyOrThrow<YummyEnvelope<List<YummyTrailerPayload>>>(name)
             .response
             .mapNotNull(YummyTrailerPayload::toAnimeTrailerTitle)
+    }
+
+    suspend fun getRecommendations(id: String): List<RelatedAnimeTitle> {
+        val language = requestLanguage()
+        val response = client.get("$baseUrl/anime/$id/recommendations") {
+            addHeaders(language)
+        }
+        return response.bodyOrThrow<YummyEnvelope<List<YummyAnimePayload>>>(name)
+            .response
+            .mapNotNull { recommendation ->
+                recommendation.toAnimeTitle(language).toRelatedAnimeTitle()
+            }
+            .distinctBy(RelatedAnimeTitle::id)
     }
 
     private suspend fun loadFilterCatalogFromSwagger(): AnimeSearchFilterCatalog {
@@ -537,6 +566,15 @@ private data class YummyViewingOrderEntry(
         )
     }
 }
+
+private fun AnimeTitle.toRelatedAnimeTitle(): RelatedAnimeTitle = RelatedAnimeTitle(
+    id = id,
+    title = russianName ?: englishName ?: originalName,
+    posterUrl = posterUrl,
+    type = type,
+    year = year,
+    episodeCount = episodeCount,
+)
 
 @Serializable
 private data class YummyTrailerPayload(

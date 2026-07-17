@@ -24,7 +24,14 @@ data class AnimeSourceDescriptor(
     val language: String,
     @param:DrawableRes val iconRes: Int,
     val supportsPlayback: Boolean,
+    val contentFeatures: Set<AnimeSourceContentFeature> = emptySet(),
 )
+
+/** Optional details-page content. Omitted features remain completely hidden in the UI. */
+enum class AnimeSourceContentFeature {
+    RELATED_TITLES,
+    SIMILAR_TITLES,
+}
 
 object AnimeSourceRegistry {
     private data class Registration(
@@ -43,6 +50,10 @@ object AnimeSourceRegistry {
                 "RU",
                 R.drawable.source_yummy_anime,
                 supportsPlayback = true,
+                contentFeatures = setOf(
+                    AnimeSourceContentFeature.RELATED_TITLES,
+                    AnimeSourceContentFeature.SIMILAR_TITLES,
+                ),
             ),
             createMetadataSource = { context, client -> createYummySource(context, client) },
             createWatchDiscovery = { context, client -> createYummyWatchDiscovery(context, client) },

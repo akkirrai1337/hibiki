@@ -172,6 +172,8 @@ class AnimeSearchRepository(
             trailer = trailer,
             sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
             studios = studios.ifEmpty { fallback?.studios.orEmpty() },
+            similarAnime = similarAnime.map(RelatedAnimeTitleMapper::map)
+                .ifEmpty { fallback?.similarAnime.orEmpty() },
             franchiseAnime = franchiseAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.franchiseAnime.orEmpty() },
             relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)

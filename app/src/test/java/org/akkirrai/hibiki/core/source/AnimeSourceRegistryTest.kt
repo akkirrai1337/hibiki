@@ -14,5 +14,10 @@ class AnimeSourceRegistryTest {
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
         assertTrue(sources.all { it.language == "RU" })
         assertTrue(sources.all { it.supportsPlayback })
+        assertEquals(
+            AnimeSourceContentFeature.entries.toSet(),
+            AnimeSourceRegistry.descriptor(AnimeSourceId.YUMMY_ANIME).contentFeatures,
+        )
+        assertTrue(AnimeSourceRegistry.descriptor(AnimeSourceId.ANI_LIBERTY).contentFeatures.isEmpty())
     }
 }
