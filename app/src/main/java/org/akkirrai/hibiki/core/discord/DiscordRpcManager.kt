@@ -75,10 +75,17 @@ class DiscordRpcManager private constructor(
     private var isAppForeground = true
 
     @Volatile
-    private var backgroundPlaybackActive = false
+    private var pictureInPictureActive = false
+
+    @Volatile
+    private var backgroundAudioActive = false
+
+    private val backgroundPlaybackActive: Boolean
+        get() = pictureInPictureActive || backgroundAudioActive
 
     private var rpc: KizzyRPC? = null
     private var lastPublishAtMs = 0L
+    private var lastPublishedFingerprint: PublishFingerprint? = null
     private var backgroundDisconnectJob: Job? = null
     private var reconnectJob: Job? = null
 
@@ -213,9 +220,18 @@ class DiscordRpcManager private constructor(
         scheduleBackgroundDisconnectIfNeeded()
     }
 
-    fun setBackgroundPlaybackActive(active: Boolean) {
-        backgroundPlaybackActive = active
-        if (active) {
+    fun setPictureInPictureActive(active: Boolean) {
+        pictureInPictureActive = active
+        updateBackgroundPlaybackState()
+    }
+
+    fun setBackgroundAudioActive(active: Boolean) {
+        backgroundAudioActive = active
+        updateBackgroundPlaybackState()
+    }
+
+    private fun updateBackgroundPlaybackState() {
+        if (backgroundPlaybackActive) {
             backgroundDisconnectJob?.cancel()
             backgroundDisconnectJob = null
         } else if (!isAppForeground) {
@@ -241,17 +257,27 @@ class DiscordRpcManager private constructor(
 
     private suspend fun publishLatestPresence() {
         ensureDesiredPresence()
-        if (!canPublish(desiredPresence ?: return)) return
+        val initialPresence = desiredPresence ?: return
+        if (!canPublish(initialPresence)) return
+        if (publishFingerprint(initialPresence) == lastPublishedFingerprint) {
+            publishImmediately.set(false)
+            return
+        }
 
         while (!publishImmediately.getAndSet(false)) {
             val debounceMs = lastPublishAtMs + MIN_PUBLISH_INTERVAL_MS - SystemClock.elapsedRealtime()
             if (debounceMs <= 0) break
             delay(minOf(debounceMs, IMMEDIATE_PUBLISH_POLL_MS))
         }
+        val rateLimitMs = lastPublishAtMs + ABSOLUTE_MIN_PUBLISH_INTERVAL_MS -
+            SystemClock.elapsedRealtime()
+        if (rateLimitMs > 0) delay(rateLimitMs)
 
         val presence = desiredPresence ?: return
         val token = tokenStore.getToken() ?: return
         if (!canPublish(presence)) return
+        val fingerprint = publishFingerprint(presence)
+        if (fingerprint == lastPublishedFingerprint) return
         _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Connecting)
         val activity = buildActivity(presence, token)
         if (!canPublish(presence) || tokenStore.getToken() != token) return
@@ -259,6 +285,7 @@ class DiscordRpcManager private constructor(
         AppLogger.d(DISCORD_LOG_TAG, "Discord RPC Gateway update started")
         updateRpcWithTimeout(client, activity).onSuccess {
             lastPublishAtMs = SystemClock.elapsedRealtime()
+            lastPublishedFingerprint = fingerprint
             reconnectJob?.cancel()
             reconnectJob = null
             AppLogger.d(DISCORD_LOG_TAG, "Discord RPC Gateway update completed")
@@ -284,6 +311,12 @@ class DiscordRpcManager private constructor(
             localizedContext.getString(R.string.discord_rpc_browsing_home),
         )
     }
+
+    private fun publishFingerprint(presence: DesiredPresence): PublishFingerprint =
+        PublishFingerprint(
+            presence = presence,
+            language = preferences.state.value.languageMode.name,
+        )
 
     private suspend fun updateRpcWithTimeout(
         client: KizzyRPC,
@@ -418,6 +451,7 @@ class DiscordRpcManager private constructor(
         runCatching { rpc?.closeRPC() }
         rpc = null
         lastPublishAtMs = 0L
+        lastPublishedFingerprint = null
         if (!keepDesiredPresence) desiredPresence = null
     }
 
@@ -437,6 +471,11 @@ class DiscordRpcManager private constructor(
         data class Playback(val value: DiscordPlaybackPresence) : DesiredPresence
     }
 
+    private data class PublishFingerprint(
+        val presence: DesiredPresence,
+        val language: String,
+    )
+
     companion object {
         @Volatile
         private var instance: DiscordRpcManager? = null
@@ -453,6 +492,7 @@ class DiscordRpcManager private constructor(
         private const val STATUS_ONLINE = "online"
         private const val ACTIVITY_TYPE_WATCHING = 3
         private const val MIN_PUBLISH_INTERVAL_MS = 16_000L
+        private const val ABSOLUTE_MIN_PUBLISH_INTERVAL_MS = 2_000L
         private const val IMMEDIATE_PUBLISH_POLL_MS = 100L
         private const val RPC_CONNECT_TIMEOUT_MS = 20_000L
         private const val MEDIA_PROXY_TIMEOUT_MS = 5_000L

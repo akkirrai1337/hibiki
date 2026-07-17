@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki
 
+import android.content.res.Configuration
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -150,14 +151,21 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        if (isInPictureInPictureMode) {
-            discordRpcManager.setBackgroundPlaybackActive(true)
-        }
+        discordRpcManager.setPictureInPictureActive(isInPictureInPictureMode)
         discordRpcManager.onAppBackgrounded()
         super.onStop()
     }
 
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        discordRpcManager.setPictureInPictureActive(isInPictureInPictureMode)
+    }
+
     override fun onDestroy() {
+        discordRpcManager.setPictureInPictureActive(false)
         updateDownloadJob?.cancel()
         unregisterReceiver(updateDownloadReceiver)
         updateRepository.close()

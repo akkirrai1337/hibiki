@@ -495,7 +495,7 @@ fun PlayerScreen(
                         exoPlayer.play()
                         isAudioOnly = true
                         isPictureInPictureActive = false
-                        discordRpcManager.setBackgroundPlaybackActive(true)
+                        discordRpcManager.setBackgroundAudioActive(true)
                         activity?.moveTaskToBack(true)
                     }
 
@@ -690,14 +690,16 @@ fun PlayerScreen(
         isPictureInPictureActive,
         isAudioOnly,
     ) {
-        discordRpcManager.setBackgroundPlaybackActive(
-            isEnteringPictureInPicture || isPictureInPictureActive || isAudioOnly,
+        discordRpcManager.setPictureInPictureActive(
+            isEnteringPictureInPicture || isPictureInPictureActive,
         )
+        discordRpcManager.setBackgroundAudioActive(isAudioOnly)
     }
 
     DisposableEffect(discordRpcManager) {
         onDispose {
-            discordRpcManager.setBackgroundPlaybackActive(false)
+            discordRpcManager.setPictureInPictureActive(false)
+            discordRpcManager.setBackgroundAudioActive(false)
         }
     }
 
@@ -1296,7 +1298,7 @@ fun PlayerScreen(
                     pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
                     onPictureInPictureClick = {
                         isEnteringPictureInPicture = true
-                        discordRpcManager.setBackgroundPlaybackActive(true)
+                        discordRpcManager.setPictureInPictureActive(true)
                         controlsVisible = false
                         val entered = runCatching {
                             activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
@@ -1304,7 +1306,7 @@ fun PlayerScreen(
                         isPictureInPictureActive = entered
                         if (!entered) {
                             isEnteringPictureInPicture = false
-                            discordRpcManager.setBackgroundPlaybackActive(false)
+                            discordRpcManager.setPictureInPictureActive(false)
                         }
                     },
                     onLockClick = {
