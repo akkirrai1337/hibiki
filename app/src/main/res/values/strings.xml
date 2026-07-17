@@ -365,6 +365,9 @@
     <string name="settings_downloads">Downloads</string>
     <string name="settings_downloads_summary">Placeholder for offline storage settings</string>
     <string name="settings_sources">Sources</string>
+    <string name="settings_sources_summary">Choose the catalog and metadata provider</string>
+    <string name="settings_experimental">Experimental</string>
+    <string name="settings_sources_language_ru">RU</string>
     <string name="settings_source_language">Source language</string>
     <string name="settings_source_language_summary">Russian / English sources can be added later</string>
     <string name="settings_language_system">System</string>

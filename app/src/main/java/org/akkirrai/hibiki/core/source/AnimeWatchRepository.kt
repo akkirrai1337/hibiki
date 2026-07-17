@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.core.VideoProvider
@@ -23,7 +24,6 @@ import org.akkirrai.animeresolver.extractor.DirectMp4Extractor
 import org.akkirrai.animeresolver.extractor.KodikExtractor
 import org.akkirrai.animeresolver.extractor.SibnetExtractor
 import org.akkirrai.animeresolver.extractor.VkExtractor
-import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
@@ -36,6 +36,7 @@ import org.akkirrai.animeresolver.provider.AniLibertyProvider
 import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.PlaybackLinkOption
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -74,12 +75,7 @@ class AnimeWatchRepository(
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val applicationTokenStore = appContext?.let(::AndroidKeystoreYummyApplicationTokenStore)
-    private val metadataSource = YummyMetadataSource(
-        client = client,
-        applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
-        debugLogger = { message -> AppLogger.d(TAG, message) },
-        languageProvider = ::yummyLanguage,
-    )
+    private val metadataSources = ConcurrentHashMap<AnimeSourceId, MetadataSource>()
     private val provider = YummyAnimeProvider(
         client = client,
         matcher = TitleMatcher(),
@@ -418,7 +414,10 @@ class AnimeWatchRepository(
     }
 
     private suspend fun performLoadSources(animeId: String): List<WatchSource> {
-        val title = metadataSource.getById(animeId)
+        val title = currentMetadataSource().getById(animeId)
+        if (selectedSourceId() == AnimeSourceId.ANI_LIBERTY) {
+            return loadAniLibertySources(animeId, title)
+        }
         val match = directMatch(title, animeId)
         val dubbings = runCatching { provider.getDubbingCatalog(match) }
             .onFailure { error -> AppLogger.w(TAG, "YummyAnime source discovery failed: ${error.message}") }
@@ -441,41 +440,55 @@ class AnimeWatchRepository(
             sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
             source
         }
-        val aniLibertySource = runCatching {
-            val aniLibertyMatch = aniLibertyProvider.search(title).maxByOrNull(ProviderMatch::confidence)
-                ?: return@runCatching null
-            val episodes = aniLibertyProvider.getEpisodes(aniLibertyMatch)
-            if (episodes.isEmpty()) return@runCatching null
-            val source = WatchSource(
-                sourceId = "$animeId:provider-aniliberty",
-                title = aniLibertyProvider.name,
-                episodeCount = episodes.size,
-                qualityLabel = "HLS",
-            )
-            sourcePayloads[source.sourceId] = SourcePayload(
-                source = source,
-                animeId = animeId,
-                match = aniLibertyMatch,
-                episodes = episodes,
-                provider = aniLibertyProvider,
-            )
-            sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
-            source
-        }.onFailure { error ->
-            AppLogger.w(TAG, "AniLiberty source discovery failed: ${error.message}")
-        }.getOrNull()
         val allSources = listOfNotNull(sources.firstOrNull { it.isPriority }) +
-            sources.filterNot { it.isPriority } +
-            listOfNotNull(aniLibertySource)
+            sources.filterNot { it.isPriority }
         if (allSources.isEmpty()) {
             throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
         }
         return allSources
     }
 
+    private suspend fun loadAniLibertySources(animeId: String, title: AnimeTitle): List<WatchSource> {
+        val match = aniLibertyProvider.search(title).maxByOrNull(ProviderMatch::confidence)
+            ?: throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
+        val episodes = aniLibertyProvider.getEpisodes(match)
+        if (episodes.isEmpty()) {
+            throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
+        }
+        val source = WatchSource(
+            sourceId = "$animeId:provider-aniliberty",
+            title = aniLibertyProvider.name,
+            episodeCount = episodes.size,
+            qualityLabel = "HLS",
+            isPriority = true,
+        )
+        sourcePayloads[source.sourceId] = SourcePayload(
+            source = source,
+            animeId = animeId,
+            match = match,
+            episodes = episodes,
+            provider = aniLibertyProvider,
+        )
+        sourcePayloadLanguages[source.sourceId] = languageCacheKey(animeId).substringAfter(':')
+        return listOf(source)
+    }
+
+    private fun selectedSourceId(): AnimeSourceId = appContext
+        ?.let(AppPreferences::readState)
+        ?.animeSource
+        ?: AnimeSourceId.YUMMY_ANIME
+
+    private fun currentMetadataSource(): MetadataSource {
+        val sourceId = selectedSourceId()
+        val context = appContext ?: error("Anime source selection requires an Android context")
+        return metadataSources.getOrPut(sourceId) {
+            AnimeSourceRegistry.create(context, client, sourceId)
+        }
+    }
+
     private suspend fun ensureSourcePayload(sourceId: String): SourcePayload? {
         sourcePayloads[sourceId]
-            ?.takeIf { sourcePayloadLanguages[sourceId] == currentLanguageKey() }
+            ?.takeIf { sourcePayloadLanguages[sourceId] == currentSourceLanguageKey() }
             ?.let { return it }
         val titleId = extractTitleId(sourceId)
         if (titleId.isBlank()) return null
@@ -581,9 +594,11 @@ class AnimeWatchRepository(
         LanguageMode.SYSTEM -> if (appContext?.resources?.configuration?.locales?.get(0)?.language == "ru") "ru" else "en"
     }
 
-    private fun languageCacheKey(titleId: String): String = "$titleId:${currentLanguageKey()}"
+    private fun languageCacheKey(titleId: String): String =
+        "$titleId:${currentSourceLanguageKey()}"
 
-    private fun yummyLanguage(): String = currentLanguageKey()
+    private fun currentSourceLanguageKey(): String =
+        "${selectedSourceId().name}:${currentLanguageKey()}"
 
     private fun matchesPreferredPlayer(
         candidatePlayerName: String?,

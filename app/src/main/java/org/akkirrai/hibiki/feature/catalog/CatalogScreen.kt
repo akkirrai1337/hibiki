@@ -89,6 +89,7 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
@@ -543,6 +544,23 @@ class CatalogViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CatalogUiState(isLoading = true))
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            AppPreferences.animeSourceChanges.collect {
+                    _uiState.update { state ->
+                        state.copy(
+                            filterCatalog = null,
+                            filters = AnimeSearchFilters(),
+                            items = emptyList(),
+                            currentPage = 0,
+                            canLoadMore = false,
+                        )
+                    }
+                    load()
+                }
+        }
+    }
 
     fun load() {
         val currentState = _uiState.value

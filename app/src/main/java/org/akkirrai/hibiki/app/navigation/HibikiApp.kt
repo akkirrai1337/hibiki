@@ -68,6 +68,7 @@ import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
+import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 
 @Composable
@@ -230,6 +231,19 @@ private fun HibikiNavHost(
             SettingsScreen(
                 modifier = screenModifier,
                 onCheckForUpdates = onCheckForUpdates,
+                onOpenSources = { navController.navigate(AnimeNavType.SOURCES_ROUTE) },
+            )
+        }
+        composable(
+            route = AnimeNavType.SOURCES_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) {
+            SourcesScreen(
+                onBackClick = navController::navigateUp,
+                modifier = screenModifier,
             )
         }
         composable(

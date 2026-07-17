@@ -20,12 +20,16 @@ import kotlin.test.assertTrue
 class AniLibertyMetadataSourceTest {
     @Test
     fun `parses latest releases and weekly schedule`() = runBlocking {
+        var latestLimit: String? = null
         val client = HttpClient(MockEngine { request ->
             if (request.url.host == "primary.test") {
                 return@MockEngine respond("unavailable", HttpStatusCode.ServiceUnavailable)
             }
             val payload = when (request.url.encodedPath) {
-                "/api/v1/anime/releases/latest" -> "[$RELEASE]"
+                "/api/v1/anime/releases/latest" -> {
+                    latestLimit = request.url.parameters["limit"]
+                    "[$RELEASE]"
+                }
                 "/api/v1/anime/schedule/week" -> "[{\"release\":$RELEASE}]"
                 else -> error("Unexpected URL: ${request.url}")
             }
@@ -36,8 +40,9 @@ class AniLibertyMetadataSourceTest {
             listOf("https://primary.test/api/v1", "https://mirror.test/api/v1"),
         )
 
-        val latest = source.latest().single()
+        val latest = source.latest(limit = 100).single()
         assertEquals("Example", latest.displayName)
+        assertEquals("50", latestLimit)
         assertTrue(latest.synonyms.isEmpty())
         assertEquals("https://anilibria.top/optimized.webp", latest.posterUrl)
         assertEquals(3, source.weeklySchedule().single().dayOfWeek)
@@ -97,18 +102,38 @@ class AniLibertyMetadataSourceTest {
 
         source.search(
             AnimeSearchRequest(
+                limit = 75,
                 sort = AnimeSearchSort.TITLE,
                 excludedGenreAliases = listOf("14"),
             )
         )
 
         val parameters = checkNotNull(capturedParameters)
+        assertEquals("50", parameters["limit"])
         assertEquals("FRESH_AT_DESC", parameters["f[sorting]"])
         assertNull(parameters["f[genres]"])
         client.close()
     }
 
+    @Test
+    fun `uses loaded episodes when ongoing total is unknown`() = runBlocking {
+        val client = HttpClient(MockEngine {
+            respond(
+                RELEASE_WITH_EPISODES,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+
+        val title = source.getById("10277")
+
+        assertEquals(2, title.episodeCount)
+        assertEquals("ongoing", title.status)
+        client.close()
+    }
+
     private companion object {
         const val RELEASE = """{"id":7,"type":{"value":"TV"},"year":2026,"name":{"main":"Example","english":"Example","alternative":null},"poster":{"src":"/poster.jpg","optimized":{"src":"/optimized.webp"}},"is_ongoing":true,"publish_day":{"value":3},"episodes_total":12}"""
+        const val RELEASE_WITH_EPISODES = """{"id":10277,"type":{"value":"TV"},"year":2026,"name":{"main":"Вперёд, отряд мистики!","english":"Ghost Concert: Missing Songs","alternative":null},"is_ongoing":true,"episodes_total":null,"episodes":[{"id":1,"ordinal":1},{"id":2,"ordinal":2}]}"""
     }
 }

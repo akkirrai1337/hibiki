@@ -359,6 +359,9 @@
     <string name="settings_downloads">Загрузки</string>
     <string name="settings_downloads_summary">Заглушка для настроек офлайн-хранилища</string>
     <string name="settings_sources">Источники</string>
+    <string name="settings_sources_summary">Выбор источника каталога и данных о тайтлах</string>
+    <string name="settings_experimental">Экспериментальное</string>
+    <string name="settings_sources_language_ru">RU</string>
     <string name="settings_source_language">Язык источников</string>
     <string name="settings_source_language_summary">Позже можно будет добавить русские и английские источники</string>
     <string name="settings_language_system">Системный</string>

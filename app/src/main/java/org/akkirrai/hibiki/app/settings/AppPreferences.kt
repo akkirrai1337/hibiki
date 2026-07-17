@@ -3,8 +3,11 @@ package org.akkirrai.hibiki.app.settings
 import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 enum class ThemeMode {
     SYSTEM,
@@ -26,11 +29,17 @@ enum class VideoScaleMode {
     fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
 }
 
+enum class AnimeSourceId {
+    YUMMY_ANIME,
+    ANI_LIBERTY,
+}
+
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useSystemColorScheme: Boolean = true,
     val useAmoledTheme: Boolean = false,
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
+    val animeSource: AnimeSourceId = AnimeSourceId.YUMMY_ANIME,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
@@ -47,6 +56,7 @@ class AppPreferences(context: Context) {
             KEY_USE_SYSTEM_COLOR_SCHEME,
             KEY_USE_AMOLED_THEME,
             KEY_LANGUAGE_MODE,
+            KEY_ANIME_SOURCE,
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_PLAYBACK_SPEED,
@@ -79,6 +89,12 @@ class AppPreferences(context: Context) {
 
     fun setLanguageMode(mode: LanguageMode) {
         prefs.edit().putString(KEY_LANGUAGE_MODE, mode.name).apply()
+    }
+
+    fun setAnimeSource(source: AnimeSourceId) {
+        prefs.edit().putString(KEY_ANIME_SOURCE, source.name).apply()
+        _state.value = readState(prefs)
+        _animeSourceChanges.tryEmit(source)
     }
 
     fun setAutoSkipSegments(enabled: Boolean) {
@@ -119,6 +135,9 @@ class AppPreferences(context: Context) {
     }
 
     companion object {
+        private val _animeSourceChanges = MutableSharedFlow<AnimeSourceId>(extraBufferCapacity = 1)
+        val animeSourceChanges: SharedFlow<AnimeSourceId> = _animeSourceChanges.asSharedFlow()
+
         const val PREFS_NAME = "hibiki_app_preferences"
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
@@ -130,6 +149,7 @@ class AppPreferences(context: Context) {
         private const val KEY_USE_SYSTEM_COLOR_SCHEME = "use_system_color_scheme"
         private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
         private const val KEY_LANGUAGE_MODE = "language_mode"
+        private const val KEY_ANIME_SOURCE = "anime_source"
 
         fun readState(context: Context): AppPreferencesState {
             return readState(
@@ -147,6 +167,9 @@ class AppPreferences(context: Context) {
                 languageMode = prefs.getString(KEY_LANGUAGE_MODE, LanguageMode.SYSTEM.name)
                     ?.let(LanguageMode::valueOf)
                     ?: LanguageMode.SYSTEM,
+                animeSource = prefs.getString(KEY_ANIME_SOURCE, AnimeSourceId.YUMMY_ANIME.name)
+                    ?.let { runCatching { AnimeSourceId.valueOf(it) }.getOrNull() }
+                    ?: AnimeSourceId.YUMMY_ANIME,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),

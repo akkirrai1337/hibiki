@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 
@@ -32,6 +33,15 @@ class SearchViewModel(
 
     init {
         loadFilterCatalog()
+        viewModelScope.launch {
+            AppPreferences.animeSourceChanges.collect {
+                searchJob?.cancel()
+                loadMoreJob?.cancel()
+                _uiState.update { state -> state.copy(result = SearchUiState.Idle, filterCatalog = null) }
+                loadFilterCatalog()
+                if (currentSearchQuery() != null) search()
+            }
+        }
     }
 
     fun onQueryChange(value: String) {

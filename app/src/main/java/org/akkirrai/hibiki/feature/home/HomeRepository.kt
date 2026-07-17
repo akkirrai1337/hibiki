@@ -7,7 +7,8 @@ import io.ktor.client.request.header
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
-import org.akkirrai.animeresolver.metadata.YummyMetadataSource
+import org.akkirrai.animeresolver.core.MetadataSource
+import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
@@ -15,6 +16,7 @@ import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
@@ -26,8 +28,10 @@ import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.localizedDisplayName
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import java.util.concurrent.ConcurrentHashMap
 
 class HomeRepository(
     context: Context,
@@ -37,7 +41,7 @@ class HomeRepository(
     private var cachedHomeContent: CachedHomeContent? = null
 
     @Volatile
-    private var cachedRecentUpdates: List<Anime>? = null
+    private var cachedRecentUpdates: CachedSourceAnime? = null
 
     @Volatile
     private var currentHomeSelectionSeed: Long? = null
@@ -45,12 +49,7 @@ class HomeRepository(
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
     private val applicationTokenStore = AndroidKeystoreYummyApplicationTokenStore(appContext)
-    private val yummySource = YummyMetadataSource(
-        client = client,
-        applicationToken = applicationTokenStore.getEffectiveApplicationToken(),
-        debugLogger = { message -> AppLogger.d(TAG, message) },
-        languageProvider = ::yummyLanguage,
-    )
+    private val sources = ConcurrentHashMap<AnimeSourceId, MetadataSource>()
     private val searchRepository = AnimeSearchRepository(appContext, client)
     private val watchStateRepository = WatchStateRepository(appContext)
 
@@ -79,7 +78,7 @@ class HomeRepository(
         val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
             currentHomeSelectionSeed = it
         }
-        val languageKey = yummyLanguage()
+        val languageKey = "${selectedSourceId().name}:${yummyLanguage()}"
         cachedHomeContent?.let { cached ->
             if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
@@ -98,10 +97,12 @@ class HomeRepository(
 
         val trendingOffset = trendingOffsetForSeed(selectionSeed)
         AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-        val catalog = yummySource.getCatalog(
-            limit = HOME_TRENDING_WINDOW_SIZE,
-            offset = trendingOffset,
-            sort = "top",
+        val catalog = currentSource().search(
+            AnimeSearchRequest(
+                limit = HOME_TRENDING_WINDOW_SIZE,
+                offset = trendingOffset,
+                sort = AnimeSearchSort.RATING,
+            ),
         )
         AppLogger.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
 
@@ -120,7 +121,14 @@ class HomeRepository(
             .filterNot { it.id in featuredIds }
             .take(HOME_SECTION_LIMIT)
         AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
-        val recentlyUpdated = loadRecentlyUpdated()
+        val recentlyUpdated = runCatching { loadRecentlyUpdated() }
+            .onFailure { error ->
+                AppLogger.w(
+                    TAG,
+                    "loadHomeState: recent updates are unavailable: ${error.message}",
+                )
+            }
+            .getOrDefault(emptyList())
         AppLogger.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
         cachedHomeContent = CachedHomeContent(
             selectionSeed = selectionSeed,
@@ -207,9 +215,13 @@ class HomeRepository(
         offset: Int,
         limit: Int = HOME_SECTION_LIMIT,
     ): List<Anime> {
-        val catalog = cachedRecentUpdates ?: loadRecentlyUpdatedCatalog().also {
-            cachedRecentUpdates = it
-        }
+        val sourceId = selectedSourceId()
+        val catalog = cachedRecentUpdates
+            ?.takeIf { it.sourceId == sourceId }
+            ?.items
+            ?: loadRecentlyUpdatedCatalog().also {
+                cachedRecentUpdates = CachedSourceAnime(sourceId, it)
+            }
         return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
     }
 
@@ -217,6 +229,11 @@ class HomeRepository(
         loadRecentlyUpdatedPage(offset = 0)
 
     private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
+        if (selectedSourceId() == AnimeSourceId.ANI_LIBERTY) {
+            return (currentSource() as AniLibertyMetadataSource)
+                .latest(limit = HOME_FULL_SECTION_LIMIT)
+                .map(::toHomeAnime)
+        }
         val applicationToken = applicationTokenStore.getEffectiveApplicationToken()
         AppLogger.d(
             TAG,
@@ -267,11 +284,13 @@ class HomeRepository(
         filter: TrendingFilter = TrendingFilter.All,
     ): List<Anime> {
         AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
-        val catalog = yummySource.getCatalog(
-            limit = limit,
-            offset = offset,
-            sort = "top",
-            type = filter.yummyType,
+        val catalog = currentSource().search(
+            AnimeSearchRequest(
+                limit = limit,
+                offset = offset,
+                sort = AnimeSearchSort.RATING,
+                typeAliases = listOfNotNull(filter.yummyType),
+            ),
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
         return catalog.map(::toHomeAnime)
@@ -280,10 +299,12 @@ class HomeRepository(
     suspend fun loadRandomAnime(excludedIds: Set<String>): Anime? {
         ensureInternetConnection()
         repeat(RANDOM_CATALOG_ATTEMPTS) {
-            val catalog = yummySource.getCatalog(
-                limit = RANDOM_CATALOG_PAGE_SIZE,
-                offset = Random.nextInt(RANDOM_CATALOG_MAX_OFFSET),
-                sort = RANDOM_CATALOG_SORTS.random(),
+            val catalog = currentSource().search(
+                AnimeSearchRequest(
+                    limit = RANDOM_CATALOG_PAGE_SIZE,
+                    offset = Random.nextInt(RANDOM_CATALOG_MAX_OFFSET),
+                    sort = RANDOM_CATALOG_SORTS.random(),
+                ),
             )
             val candidates = catalog
                 .map(::toHomeAnime)
@@ -295,7 +316,7 @@ class HomeRepository(
 
     suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
         return items.map { anime ->
-            runCatching { yummySource.getById(anime.id) }
+            runCatching { currentSource().getById(anime.id) }
                 .getOrNull()
                 ?.description
                 ?.takeIf(String::isNotBlank)
@@ -310,7 +331,7 @@ class HomeRepository(
             title.year?.toString()?.let(::add)
         }.joinToString(" · ")
 
-        val status = title.status.orEmpty()
+        val status = title.status.orEmpty().localizedStatus()
         val isAnnouncement = status.isAnnouncementStatus()
         return Anime(
             id = title.id,
@@ -375,6 +396,22 @@ class HomeRepository(
             languageMode = appPreferences.state.value.languageMode,
             systemLanguage = appContext.resources.configuration.locales[0]?.language,
         )
+    }
+
+    private fun String.localizedStatus(): String = when (trim().lowercase()) {
+        "ongoing", "is_ongoing" -> if (preferEnglish()) "Ongoing" else "Онгоинг"
+        "released", "is_not_ongoing" -> if (preferEnglish()) "Released" else "Вышло"
+        "announcement", "announced" -> if (preferEnglish()) "Announcement" else "Анонс"
+        else -> this
+    }
+
+    private fun selectedSourceId(): AnimeSourceId = AppPreferences.readState(appContext).animeSource
+
+    private fun currentSource(): MetadataSource {
+        val sourceId = selectedSourceId()
+        return sources.getOrPut(sourceId) {
+            AnimeSourceRegistry.create(appContext, client, sourceId)
+        }
     }
 
     private fun isRussianLocale(): Boolean = !preferEnglish()
@@ -442,7 +479,7 @@ class HomeRepository(
         const val RANDOM_CATALOG_PAGE_SIZE = 40
         const val RANDOM_CATALOG_MAX_OFFSET = 5_000
         const val RANDOM_CATALOG_ATTEMPTS = 5
-        val RANDOM_CATALOG_SORTS = listOf("top", "views", "votes", "year", "title", "comments")
+        val RANDOM_CATALOG_SORTS = AnimeSearchSort.entries
     }
 
     private data class CachedHomeContent(
@@ -451,6 +488,11 @@ class HomeRepository(
         val featuredAnime: List<Anime>,
         val trending: List<Anime>,
         val recentlyUpdated: List<Anime>,
+    )
+
+    private data class CachedSourceAnime(
+        val sourceId: AnimeSourceId,
+        val items: List<Anime>,
     )
 }
 

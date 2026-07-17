@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
@@ -90,6 +91,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
+    onOpenSources: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -200,6 +202,20 @@ fun SettingsScreen(
                         checked = preferences.autoSkipSegments,
                         shape = CircleShape,
                         onCheckedChange = appPreferences::setAutoSkipSegments,
+                    )
+                }
+            }
+        }
+
+        item(key = "sources") {
+            SettingsSection(title = stringResource(R.string.settings_experimental)) {
+                SettingsItems(count = 1) { _, shape ->
+                    SettingsActionItem(
+                        icon = Icons.Outlined.Storage,
+                        title = stringResource(R.string.settings_sources),
+                        subtitle = stringResource(R.string.settings_sources_summary),
+                        shape = shape,
+                        onClick = onOpenSources,
                     )
                 }
             }

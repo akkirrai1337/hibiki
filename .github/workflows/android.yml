@@ -44,13 +44,13 @@ jobs:
         env:
           # This secret must contain base64 of the real keystore file.
           # Your local file can be named without extension, for example:
-          # C:\projects\keys\hibiki\hibiki
+          # C:\path\to\key\
           HIBIKI_RELEASE_KEYSTORE_BASE64: ${{ secrets.HIBIKI_RELEASE_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$HIBIKI_RELEASE_KEYSTORE_BASE64" ]; then
             echo "Missing GitHub secret: HIBIKI_RELEASE_KEYSTORE_BASE64"
             echo "Create it from your local keystore file, for example in PowerShell:"
-            echo "[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\projects\keys\hibiki\hibiki'))"
+            echo "[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\path\to\key\'))"
             exit 1
           fi
 

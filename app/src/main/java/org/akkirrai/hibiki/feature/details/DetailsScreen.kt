@@ -133,6 +133,7 @@ import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
@@ -161,16 +162,18 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val selectedAnimeSource = LocalAppPreferencesState.current.animeSource
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val uriHandler = LocalUriHandler.current
-    val savedScreenState = remember(anime.id) { detailsScreenStateCache[anime.id] }
+    val detailsStateKey = remember(anime.id, selectedAnimeSource) { "${selectedAnimeSource.name}:${anime.id}" }
+    val savedScreenState = remember(detailsStateKey) { detailsScreenStateCache[detailsStateKey] }
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
-    var currentAnime by remember(anime.id) { mutableStateOf(savedScreenState?.anime ?: anime) }
+    var currentAnime by remember(detailsStateKey) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var titleSeedColor by remember(anime.id) { mutableStateOf(titleSeedColorCache[anime.id]) }
     var libraryCategory by remember(anime.id) { mutableStateOf<LibraryCategory?>(null) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
@@ -199,9 +202,9 @@ fun DetailsScreen(
         }
     }
 
-    DisposableEffect(anime.id, listState) {
+    DisposableEffect(detailsStateKey, listState) {
         onDispose {
-            detailsScreenStateCache[anime.id] = DetailsScreenSavedState(
+            detailsScreenStateCache[detailsStateKey] = DetailsScreenSavedState(
                 anime = currentAnimeState,
                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
                 firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
@@ -209,7 +212,7 @@ fun DetailsScreen(
         }
     }
 
-    LaunchedEffect(anime.id) {
+    LaunchedEffect(anime.id, selectedAnimeSource) {
         offlineTitleMetadataRepository.get(anime.id)?.let { cachedAnime ->
             currentAnime = cachedAnime
         }

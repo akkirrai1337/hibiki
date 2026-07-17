@@ -70,7 +70,7 @@ class AniLibertyMetadataSource(
 
     suspend fun latest(limit: Int = DEFAULT_LATEST_LIMIT): List<AnimeTitle> = requestJson(
         path = "anime/releases/latest",
-        parameters = listOf("limit" to limit.coerceIn(1, MAX_PAGE_SIZE)),
+        parameters = listOf("limit" to limit.coerceIn(1, MAX_LATEST_PAGE_SIZE)),
     ).releaseArray().mapNotNull { it.asObject()?.let(::toTitle) }
 
     /** Releases scheduled for the current week; suitable for a calendar UI. */
@@ -154,7 +154,8 @@ class AniLibertyMetadataSource(
             synonyms = names.string("alternative").toAlternativeNames(),
             year = value.int("year"),
             type = value["type"].asObject()?.string("value"),
-            episodeCount = value.int("episodes_total"),
+            episodeCount = value.int("episodes_total")
+                ?: value["episodes"].asArray().size.takeIf { it > 0 },
             posterUrl = posterPath?.let { resolveUrl(PUBLIC_SITE_URL, it) },
             status = when (value.bool("is_ongoing")) {
                 true -> "ongoing"
@@ -228,7 +229,8 @@ class AniLibertyMetadataSource(
     private companion object {
         const val PUBLIC_SITE_URL = "https://anilibria.top"
         const val DEFAULT_LATEST_LIMIT = 20
-        const val MAX_PAGE_SIZE = 100
+        const val MAX_LATEST_PAGE_SIZE = 50
+        const val MAX_PAGE_SIZE = 50
         val SUPPORTED_SORTS = setOf(
             AnimeSearchSort.RELEVANCE,
             AnimeSearchSort.RATING,

@@ -42,6 +42,7 @@ class HomeViewModel(
         load()
         loadSearchFilterCatalog()
         observeLanguageChanges()
+        observeSourceChanges()
     }
 
     fun refresh() {
@@ -411,6 +412,24 @@ class HomeViewModel(
         const val TRENDING_PAGE_SIZE = 20
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val RANDOM_HISTORY_SIZE = 20
+    }
+
+    private fun observeSourceChanges() {
+        viewModelScope.launch {
+            AppPreferences.animeSourceChanges.collect {
+                    searchJob?.cancel()
+                    recentRandomIds.clear()
+                    _uiState.update {
+                        it.copy(
+                            searchResult = SearchUiState.Idle,
+                            searchFilters = AnimeSearchFilters(),
+                            searchFilterCatalog = null,
+                        )
+                    }
+                    load()
+                    loadSearchFilterCatalog()
+                }
+        }
     }
 
     class Factory(

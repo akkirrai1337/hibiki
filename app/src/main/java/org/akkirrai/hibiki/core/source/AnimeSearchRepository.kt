@@ -4,16 +4,16 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.AnimeTrailerTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.LanguageMode
-import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
@@ -32,13 +32,7 @@ class AnimeSearchRepository(
     private val detailsCache = ConcurrentHashMap<String, CachedAnime>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
-    private val applicationTokenStore = appContext?.let(::AndroidKeystoreYummyApplicationTokenStore)
-    private val yummySource = YummyMetadataSource(
-        client = client,
-        applicationToken = applicationTokenStore?.getEffectiveApplicationToken(),
-        debugLogger = { message -> AppLogger.d(TAG, message) },
-        languageProvider = ::yummyLanguage,
-    )
+    private val sources = ConcurrentHashMap<AnimeSourceId, MetadataSource>()
     private val titleMatcher = TitleMatcher()
     private val detailsMutex = Mutex()
 
@@ -64,7 +58,7 @@ class AnimeSearchRepository(
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
-        val results = yummySource.search(normalizedRequest)
+        val results = currentSource().search(normalizedRequest)
             .map { title -> title.toAnime(preferEnglish = preferEnglish) }
 
         searchCache[cacheKey] = CachedSearchResults(items = results)
@@ -72,10 +66,15 @@ class AnimeSearchRepository(
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
-        return YummySearchFilterLocalizer.localize(
-            catalog = yummySource.getSearchFilterCatalog(),
-            preferEnglish = preferEnglish(),
-        )
+        val catalog = currentSource().getSearchFilterCatalog()
+        return if (selectedSourceId() == AnimeSourceId.YUMMY_ANIME) {
+            YummySearchFilterLocalizer.localize(
+                catalog = catalog,
+                preferEnglish = preferEnglish(),
+            )
+        } else {
+            catalog
+        }
     }
 
     suspend fun search(
@@ -106,14 +105,16 @@ class AnimeSearchRepository(
 
             ensureInternetConnection()
 
-            val resolvedId = resolveYummyId(
-                rawId = id,
-                fallbackTitle = fallback.title,
-            )
-            val title = yummySource.getById(resolvedId)
+            val directId = YummyIdMigration.normalizeTitleId(id)
+            val title = runCatching { currentSource().getById(directId) }
+                .getOrElse {
+                    currentSource().search(fallback.title)
+                        .bestMatchFor(fallback.title)
+                        ?: throw it
+                }
             val trailer = title.trailer?.toAnimeTrailer()
             val anime = title.toAnime(
-                    canonicalId = resolvedId,
+                    canonicalId = title.id,
                     preferEnglish = preferEnglish(),
                     fallback = fallback,
                     trailer = trailer ?: fallback.trailer,
@@ -136,26 +137,6 @@ class AnimeSearchRepository(
         client.close()
     }
 
-    private suspend fun resolveYummyId(
-        rawId: String,
-        fallbackTitle: String,
-    ): String {
-        val normalizedId = YummyIdMigration.normalizeTitleId(rawId)
-        if (normalizedId.all(Char::isDigit)) {
-            return normalizedId
-        }
-
-        val title = fallbackTitle.trim()
-        if (title.isBlank()) {
-            return normalizedId
-        }
-
-        return yummySource.search(title)
-            .bestMatchFor(title)
-            ?.id
-            ?: normalizedId
-    }
-
     private fun AnimeTitle.toAnime(
         canonicalId: String = id,
         preferEnglish: Boolean,
@@ -163,7 +144,7 @@ class AnimeSearchRepository(
         trailer: AnimeTrailer? = null,
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
-        val resolvedStatus = status?.takeIf(String::isNotBlank)
+        val resolvedStatus = status?.takeIf(String::isNotBlank)?.localizedStatus(preferEnglish)
             ?: fallback?.status
             ?: if (preferEnglish) "Unknown" else "Неизвестно"
         return Anime(
@@ -317,8 +298,6 @@ class AnimeSearchRepository(
         }
     }
 
-    private fun yummyLanguage(): String = if (preferEnglish()) "en" else "ru"
-
     private fun ensureInternetConnection() {
         val context = appContext ?: return
         if (!hasActiveInternetConnection(context)) {
@@ -338,6 +317,8 @@ class AnimeSearchRepository(
         val excludedGenres = request.excludedGenreAliases.sorted().joinToString(",")
         return buildString {
             append(SEARCH_CACHE_VERSION)
+            append(':')
+            append(selectedSourceId().name)
             append(':')
             append(languageKey)
             append(':')
@@ -369,7 +350,27 @@ class AnimeSearchRepository(
             LanguageMode.RUSSIAN -> "ru"
             LanguageMode.SYSTEM -> "sys"
         }
-        return "$DETAILS_CACHE_VERSION:$languageKey:$id"
+        return "$DETAILS_CACHE_VERSION:${selectedSourceId().name}:$languageKey:$id"
+    }
+
+    private fun String.localizedStatus(preferEnglish: Boolean): String = when (trim().lowercase()) {
+        "ongoing", "is_ongoing" -> if (preferEnglish) "Ongoing" else "Онгоинг"
+        "released", "is_not_ongoing" -> if (preferEnglish) "Released" else "Вышло"
+        "announcement", "announced" -> if (preferEnglish) "Announcement" else "Анонс"
+        else -> this
+    }
+
+    private fun selectedSourceId(): AnimeSourceId = appContext
+        ?.let(AppPreferences::readState)
+        ?.animeSource
+        ?: AnimeSourceId.YUMMY_ANIME
+
+    private fun currentSource(): MetadataSource {
+        val sourceId = selectedSourceId()
+        val context = appContext ?: error("Anime source selection requires an Android context")
+        return sources.getOrPut(sourceId) {
+            AnimeSourceRegistry.create(context, client, sourceId)
+        }
     }
 
     private fun getCachedSearch(key: String): List<Anime>? {
