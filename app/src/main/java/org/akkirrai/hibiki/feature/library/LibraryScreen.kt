@@ -422,7 +422,7 @@ private fun LibraryAnimeCard(
         onClick = onClick,
         modifier = modifier,
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
-        supportingContent = { AnimeSourceBadge(titleId = anime.id) },
+        metaTrailingContent = { AnimeSourceBadge(titleId = anime.id) },
     )
 }
 

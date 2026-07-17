@@ -750,17 +750,25 @@ private fun ContinueWatchingCard(
                             announcementLabel = stringResource(R.string.anime_meta_announcement),
                             movieLabel = stringResource(R.string.anime_meta_movie),
                         )
-                        if (meta.isNotBlank()) {
-                            Text(
-                                text = meta,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (meta.isNotBlank()) {
+                                Text(
+                                    text = meta,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                            AnimeSourceBadge(titleId = anime.id)
                         }
-
-                        AnimeSourceBadge(titleId = anime.id)
 
                         Text(
                             text = stringResource(R.string.home_open_title_hint),
