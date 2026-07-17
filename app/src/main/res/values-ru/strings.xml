@@ -385,7 +385,11 @@
     <string name="discord_rpc_title">Discord Rich Presence</string>
     <string name="discord_rpc_connect_account">Подключить аккаунт Discord</string>
     <string name="discord_rpc_gateway_warning">Функция использует неофициальное подключение к Discord Gateway с пользовательским токеном. Discord может ограничить аккаунт за использование этого способа. Токен хранится только на устройстве и зашифрован через Android Keystore.</string>
-    <string name="discord_rpc_sign_in_browser">Войти в Discord через браузер</string>
+    <string name="discord_rpc_sign_in_browser">Войти через Discord</string>
+    <string name="discord_auth_close">Закрыть вход в Discord</string>
+    <string name="discord_auth_loading">Загрузка…</string>
+    <string name="discord_auth_load_failed">Не удалось загрузить страницу входа Discord</string>
+    <string name="discord_auth_retry">Повторить</string>
     <string name="discord_rpc_manual_token">Токен (ручной способ)</string>
     <string name="discord_rpc_use_token">Проверить и использовать токен</string>
     <string name="discord_rpc_invalid_token">Токен недействителен или Discord недоступен</string>

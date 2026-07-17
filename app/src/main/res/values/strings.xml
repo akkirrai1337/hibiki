@@ -394,7 +394,11 @@
     <string name="discord_rpc_title">Discord Rich Presence</string>
     <string name="discord_rpc_connect_account">Connect Discord account</string>
     <string name="discord_rpc_gateway_warning">This feature uses an unofficial Discord Gateway connection with your user token. Discord may restrict accounts that use this method. The token is stored only on this device and encrypted with Android Keystore.</string>
-    <string name="discord_rpc_sign_in_browser">Sign in with Discord in browser</string>
+    <string name="discord_rpc_sign_in_browser">Sign in with Discord</string>
+    <string name="discord_auth_close">Close Discord sign-in</string>
+    <string name="discord_auth_loading">Loading…</string>
+    <string name="discord_auth_load_failed">Discord sign-in page could not be loaded</string>
+    <string name="discord_auth_retry">Try again</string>
     <string name="discord_rpc_manual_token">Token (manual method)</string>
     <string name="discord_rpc_use_token">Check and use token</string>
     <string name="discord_rpc_invalid_token">The token is invalid or Discord could not be reached</string>
