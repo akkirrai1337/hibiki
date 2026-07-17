@@ -12,10 +12,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Build signed release APK and create GitHub Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -96,6 +101,17 @@ jobs:
           TARGET_VERSION="$BASE_VERSION"
 
           if [ "$IS_PRERELEASE" = true ]; then
+            EXISTING_PRERELEASE_FOR_COMMIT=$(
+              git tag --points-at HEAD --list "v${TARGET_VERSION}-prerelease.*" |
+                head -n 1 ||
+                true
+            )
+            if [ -n "${EXISTING_PRERELEASE_FOR_COMMIT:-}" ]; then
+              echo "Commit HEAD has already been published as ${EXISTING_PRERELEASE_FOR_COMMIT}."
+              echo "Refusing to create another prerelease from the same commit."
+              exit 1
+            fi
+
             LAST_PRERELEASE_NUMBER=$(
               git tag --list "v${TARGET_VERSION}-prerelease.*" |
                 sed -nE "s/^v${TARGET_VERSION//./\\.}-prerelease\\.([0-9]+)$/\\1/p" |
@@ -118,12 +134,24 @@ jobs:
             echo "Release tag ${TAG} already exists. Bump versionName before running the workflow."
             exit 1
           fi
-          PREVIOUS_TAG=$(
-            git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags |
-              grep -E '^v[0-9][0-9A-Za-z.+-]*$' |
-              head -n 1 ||
-              true
-          )
+
+          if [ "$IS_PRERELEASE" = true ]; then
+            PREVIOUS_TAG=$(
+              git tag --list "v${TARGET_VERSION}-prerelease.*" --sort=-version:refname |
+                head -n 1 ||
+                true
+            )
+          fi
+
+          if [ -z "${PREVIOUS_TAG:-}" ]; then
+            PREVIOUS_TAG=$(
+              git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags |
+                grep -E '^v[0-9][0-9A-Za-z.+-]*$' |
+                grep -v -- '-prerelease\.' |
+                head -n 1 ||
+                true
+            )
+          fi
 
           if [ -n "$PREVIOUS_TAG" ]; then
             COMMIT_RANGE="${PREVIOUS_TAG}..HEAD"
@@ -136,9 +164,10 @@ jobs:
           echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
 
           {
-            echo "## Fixes"
+            echo "## What's changed"
             echo
-            git log --reverse --pretty=format:'- %s' "$COMMIT_RANGE"
+            git log --reverse --pretty=format:'%s' "$COMMIT_RANGE" |
+              awk -v version="$TARGET_VERSION" '$0 != version && $0 != "v" version { print "- " $0 }'
             echo
           } > release-notes.md
 
@@ -149,6 +178,29 @@ jobs:
           HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
           HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -s "$APK" ]; then
+            echo "Release APK was not created: $APK"
+            exit 1
+          fi
+
+          APKSIGNER=$(
+            find "$ANDROID_HOME/build-tools" -type f -name apksigner -print |
+              sort -V |
+              tail -n 1
+          )
+          if [ -z "${APKSIGNER:-}" ]; then
+            echo "apksigner was not found in Android SDK build-tools."
+            exit 1
+          fi
+
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
 
       - name: Rename APK
         shell: bash
