@@ -96,7 +96,6 @@ import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
-import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
@@ -413,16 +412,30 @@ private fun LibraryAnimeCard(
     onClick: () -> Unit
 ) {
     val anime = entry.anime
+    val meta = anime.buildLibraryMeta()
     VerticalAnimeListItem(
         anime = anime,
-        metaText = anime.buildCardMeta(
-            announcementLabel = stringResource(R.string.anime_meta_announcement),
-            movieLabel = stringResource(R.string.anime_meta_movie),
-        ),
+        metaText = "",
         onClick = onClick,
         modifier = modifier,
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
-        metaTrailingContent = { AnimeSourceBadge(titleId = anime.id) },
+        metaContent = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (meta.isNotBlank()) {
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                AnimeSourceBadge(titleId = anime.id)
+            }
+        },
     )
 }
 
@@ -507,20 +520,4 @@ private fun emptyLibraryCategoryMessage(category: LibraryCategory): String {
         LibraryCategory.Favorite -> stringResource(R.string.library_empty_favorite)
         LibraryCategory.Saved -> stringResource(R.string.library_empty_saved)
     }
-}
-
-private fun buildLibraryMeta(anime: Anime): String {
-    val subtitleParts = anime.subtitle
-        .split(Regex("\\s*[•·|]\\s*"))
-        .map { it.trim() }
-        .filter { it.isNotEmpty() && it != "Unknown" }
-        .take(2)
-
-    val episodes = anime.episodesLabel
-        .takeIf { it.isNotBlank() && it != "Unknown" }
-        .orEmpty()
-
-    return (subtitleParts + episodes)
-        .filter { it.isNotBlank() }
-        .joinToString(" • ")
 }

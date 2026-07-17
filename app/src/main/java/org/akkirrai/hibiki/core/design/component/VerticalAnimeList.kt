@@ -48,7 +48,7 @@ fun VerticalAnimeListItem(
     posterWidth: Dp = 104.dp,
     descriptionMaxLines: Int = 5,
     trailingContent: (@Composable () -> Unit)? = null,
-    metaTrailingContent: (@Composable () -> Unit)? = null,
+    metaContent: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
     posterFooterContent: (@Composable () -> Unit)? = null,
 ) {
@@ -150,26 +150,16 @@ fun VerticalAnimeListItem(
                 }
             }
 
-            if (metaText.isNotBlank() || metaTrailingContent != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (metaText.isNotBlank()) {
-                        Text(
-                            text = metaText,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                    metaTrailingContent?.invoke()
-                }
+            if (metaContent != null) {
+                metaContent()
+            } else if (metaText.isNotBlank()) {
+                Text(
+                    text = metaText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
 
             anime.description?.takeIf(String::isNotBlank)?.let { description ->
