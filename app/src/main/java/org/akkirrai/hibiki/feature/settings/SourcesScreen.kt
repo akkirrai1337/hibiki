@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.feature.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -10,31 +12,37 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
@@ -47,6 +55,11 @@ fun SourcesScreen(
     val selectedSource = LocalAppPreferencesState.current.animeSource
     val haptic = LocalHapticFeedback.current
     val russianSources = AnimeSourceRegistry.sources.filter { it.language == "RU" }
+    var russianSourcesExpanded by rememberSaveable { mutableStateOf(true) }
+    val russianSourcesArrowRotation by animateFloatAsState(
+        targetValue = if (russianSourcesExpanded) 0f else -90f,
+        label = "russian_sources_arrow",
+    )
 
     LazyColumn(
         modifier = modifier
@@ -58,49 +71,66 @@ fun SourcesScreen(
         item(key = "header") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                AppBackButton(onClick = onBackClick)
                 Text(
                     text = stringResource(R.string.settings_sources),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
-        item(key = "ru_title") {
-            Text(
-                text = stringResource(R.string.settings_sources_language_ru),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            )
-        }
         item(key = "ru_sources") {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                russianSources.forEachIndexed { index, source ->
-                    SourceItem(
-                        source = source,
-                        selected = source.id == selectedSource,
-                        shape = when {
-                            russianSources.size == 1 -> RoundedCornerShape(24.dp)
-                            index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
-                            index == russianSources.lastIndex -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                            else -> RoundedCornerShape(8.dp)
-                        },
-                        onClick = {
-                            preferences.setAnimeSource(source.id)
-                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                        },
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { russianSourcesExpanded = !russianSourcesExpanded }
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_sources_language_ru),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier
+                            .requiredSize(16.dp)
+                            .graphicsLayer { rotationZ = russianSourcesArrowRotation },
+                    )
+                }
+                AnimatedVisibility(visible = russianSourcesExpanded) {
+                    Column(
+                        modifier = Modifier.padding(top = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        russianSources.forEachIndexed { index, source ->
+                            SourceItem(
+                                source = source,
+                                selected = source.id == selectedSource,
+                                shape = when {
+                                    russianSources.size == 1 -> RoundedCornerShape(24.dp)
+                                    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+                                    index == russianSources.lastIndex -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+                                    else -> RoundedCornerShape(8.dp)
+                                },
+                                onClick = {
+                                    preferences.setAnimeSource(source.id)
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
