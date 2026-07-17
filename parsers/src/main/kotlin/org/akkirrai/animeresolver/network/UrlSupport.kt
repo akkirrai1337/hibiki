@@ -44,7 +44,7 @@ fun decodeShiftedBase64(raw: String): String {
     val shifted = raw.map { ch ->
         if (ch.isLetter()) shiftLetter(ch) else ch
     }.joinToString("")
-    val padded = shifted.padEnd(((shifted.length + 3) / 4) * 4, '=')
+    val padded = shifted.padEnd((shifted.length + 3) / 4 * 4, '=')
     return Base64.Default.decode(padded).decodeToString()
 }
 

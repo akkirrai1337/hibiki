@@ -50,62 +50,58 @@ class SearchViewModel(
 
     private fun scheduleSearch(immediate: Boolean) {
         searchJob?.cancel()
-        val query = uiState.value.query.trim()
-        if (query.isBlank() || query.length < MIN_QUERY_LENGTH) {
+        if (currentSearchQuery() == null) {
             _uiState.update { it.copy(result = SearchUiState.Idle) }
             return
         }
 
         searchJob = viewModelScope.launch {
-            if (!immediate) {
-                delay(SEARCH_DEBOUNCE_MS)
-            }
-            val activeQuery = uiState.value.query.trim()
-            if (activeQuery.isBlank()) {
-                _uiState.update { it.copy(result = SearchUiState.Idle) }
-                return@launch
-            }
-            if (activeQuery.length < MIN_QUERY_LENGTH) {
+            if (!immediate) delay(SEARCH_DEBOUNCE_MS)
+            val activeQuery = currentSearchQuery()
+            if (activeQuery == null) {
                 _uiState.update { it.copy(result = SearchUiState.Idle) }
                 return@launch
             }
 
             loadMoreJob?.cancel()
             _uiState.update { it.copy(result = SearchUiState.Loading) }
-
-            try {
-                val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.search(
-                        query = activeQuery,
-                        limit = SEARCH_PAGE_SIZE,
-                        offset = 0,
-                    )
-                }
-                if (activeQuery != uiState.value.query.trim()) return@launch
-                _uiState.update {
-                    it.copy(
-                        result = if (items.isEmpty()) {
-                            SearchUiState.Empty
-                        } else {
-                            SearchUiState.Content(
-                                items = items,
-                                canLoadMore = items.size >= SEARCH_PAGE_SIZE,
-                            )
-                        }
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (throwable: Throwable) {
-                if (activeQuery != uiState.value.query.trim()) return@launch
-                val message = when (throwable) {
-                    is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
-                    else -> throwable.message ?: appString(R.string.error_search_failed)
-                }
-                _uiState.update { it.copy(result = SearchUiState.Error(message)) }
-            }
+            loadFirstSearchPage(activeQuery)
         }
     }
+
+    private suspend fun loadFirstSearchPage(activeQuery: String) {
+        try {
+            val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                repository.search(
+                    query = activeQuery,
+                    limit = SEARCH_PAGE_SIZE,
+                    offset = 0,
+                )
+            }
+            if (activeQuery != uiState.value.query.trim()) return
+            val result = if (items.isEmpty()) {
+                SearchUiState.Empty
+            } else {
+                SearchUiState.Content(
+                    items = items,
+                    canLoadMore = items.size >= SEARCH_PAGE_SIZE,
+                )
+            }
+            _uiState.update { it.copy(result = result) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (throwable: Throwable) {
+            if (activeQuery != uiState.value.query.trim()) return
+            val message = when (throwable) {
+                is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
+                else -> throwable.message ?: appString(R.string.error_search_failed)
+            }
+            _uiState.update { it.copy(result = SearchUiState.Error(message)) }
+        }
+    }
+
+    private fun currentSearchQuery(): String? = uiState.value.query.trim()
+        .takeIf { it.length >= MIN_QUERY_LENGTH }
 
     fun loadMore() {
         val query = uiState.value.query.trim()

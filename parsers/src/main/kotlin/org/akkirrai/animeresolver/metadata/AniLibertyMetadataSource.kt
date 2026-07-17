@@ -74,7 +74,7 @@ class AniLibertyMetadataSource(
         .releaseArray()
         .mapNotNull { item ->
             val entry = item as? JsonObject ?: return@mapNotNull null
-            val release = (entry["release"] as? JsonObject) ?: entry
+        val release = entry["release"] as? JsonObject ?: entry
             val title = toTitle(release) ?: return@mapNotNull null
             AniLibertyScheduleEntry(
                 release = title,
@@ -103,7 +103,7 @@ class AniLibertyMetadataSource(
     }
 
     private fun JsonElement?.releaseArray(): List<JsonElement> = when (this) { is JsonArray -> this; is JsonObject -> (this["data"] ?: this["items"] ?: this["response"]).asArray(); else -> emptyList() }
-    private fun JsonElement?.releaseObject(): JsonObject? = when (this) { is JsonObject -> (this["data"] as? JsonObject) ?: this; else -> null }
+    private fun JsonElement?.releaseObject(): JsonObject? = when (this) { is JsonObject -> this["data"] as? JsonObject ?: this; else -> null }
     private fun JsonElement?.asArray(): List<JsonElement> = (this as? JsonArray).orEmpty()
     private fun JsonObject.string(key: String): String? = get(key)?.jsonPrimitive?.content?.trim()?.takeIf(String::isNotBlank)
     private fun JsonObject.int(key: String): Int? = get(key)?.jsonPrimitive?.content?.toIntOrNull()

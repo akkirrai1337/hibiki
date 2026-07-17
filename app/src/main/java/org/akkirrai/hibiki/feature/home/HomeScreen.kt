@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -78,7 +79,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -106,9 +106,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
@@ -144,7 +141,6 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
     val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
     val errorMessage = state.errorMessage
@@ -171,17 +167,6 @@ fun HomeScreen(
             lastVisible >= layout.totalItemsCount - 4
         }.collect { nearEnd ->
             if (nearEnd && !isSearchActive) viewModel.loadMoreTrending()
-        }
-    }
-
-    DisposableEffect(lifecycleOwner, viewModel) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -270,50 +255,20 @@ fun HomeScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-
-            item {
-                if (featuredAnime.isNotEmpty()) {
-                    FeaturedCarousel(
-                        items = featuredAnime,
-                        onAnimeClick = onAnimeClick,
-                        autoAdvanceEnabled = isActive,
-                    )
-                }
-            }
-
-            if (continueAnime != null) {
-                item {
-                    Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
-                        ContinueWatchingCard(
-                            anime = continueAnime,
-                            onClick = { onAnimeClick(continueAnime) }
+                        homeFeedContent(
+                            featuredAnime = featuredAnime,
+                            continueAnime = continueAnime,
+                            trending = state.trending,
+                            isTrendingLoadingMore = state.isTrendingLoadingMore,
+                            isActive = isActive,
+                            onAnimeClick = onAnimeClick,
+                            metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+                            posterFooterContent = { anime ->
+                                libraryStatusByAnimeId[anime.id]?.let { category ->
+                                    LibraryStatusPosterFooter(category)
+                                }
+                            },
                         )
-                    }
-                }
-            }
-
-            verticalAnimeListContent(
-                items = state.trending,
-                metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
-                onAnimeClick = onAnimeClick,
-                modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                posterFooterContent = { anime ->
-                    libraryStatusByAnimeId[anime.id]?.let { category ->
-                        LibraryStatusPosterFooter(category)
-                    }
-                },
-            )
-
-            if (state.isTrendingLoadingMore) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                    }
-                }
-            }
                     }
                 }
             }
@@ -348,6 +303,51 @@ fun HomeScreen(
                 viewModel = viewModel,
                 onDismissRequest = { showSearchFilters = false },
             )
+        }
+    }
+}
+
+private fun LazyListScope.homeFeedContent(
+    featuredAnime: List<Anime>,
+    continueAnime: Anime?,
+    trending: List<Anime>,
+    isTrendingLoadingMore: Boolean,
+    isActive: Boolean,
+    onAnimeClick: (Anime) -> Unit,
+    metaText: @Composable (Anime) -> String,
+    posterFooterContent: @Composable (Anime) -> Unit,
+) {
+    item {
+        if (featuredAnime.isNotEmpty()) {
+            FeaturedCarousel(
+                items = featuredAnime,
+                onAnimeClick = onAnimeClick,
+                autoAdvanceEnabled = isActive,
+            )
+        }
+    }
+    continueAnime?.let { anime ->
+        item {
+            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
+                ContinueWatchingCard(anime = anime, onClick = { onAnimeClick(anime) })
+            }
+        }
+    }
+    verticalAnimeListContent(
+        items = trending,
+        metaText = metaText,
+        onAnimeClick = onAnimeClick,
+        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        posterFooterContent = posterFooterContent,
+    )
+    if (isTrendingLoadingMore) {
+        item {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            }
         }
     }
 }

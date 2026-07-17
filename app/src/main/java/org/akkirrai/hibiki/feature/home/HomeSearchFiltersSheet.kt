@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -305,95 +303,6 @@ fun AnimeSearchFiltersSheet(
                     }
                 }
             }
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> ConnectedToggleFilter(
-    title: String,
-    entries: List<T>,
-    selected: T?,
-    onSelected: (T?) -> Unit,
-    icon: @Composable (T) -> ImageVector,
-    text: @Composable (T) -> String,
-) {
-    CollapsibleRow(title = title, onLongClick = { onSelected(null) }) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            entries.forEachIndexed { index, entry ->
-                val checked = selected == entry
-                val selectedRadius = 32.dp
-                val innerRadius = 4.dp
-                val topStart by animateDpAsState(
-                    targetValue = if (checked || index == 0) selectedRadius else innerRadius,
-                    label = "type_top_start_radius",
-                )
-                val bottomStart by animateDpAsState(
-                    targetValue = if (checked || index == 0) selectedRadius else innerRadius,
-                    label = "type_bottom_start_radius",
-                )
-                val topEnd by animateDpAsState(
-                    targetValue = if (checked || index == entries.lastIndex) selectedRadius else innerRadius,
-                    label = "type_top_end_radius",
-                )
-                val bottomEnd by animateDpAsState(
-                    targetValue = if (checked || index == entries.lastIndex) selectedRadius else innerRadius,
-                    label = "type_bottom_end_radius",
-                )
-                val containerColor by animateColorAsState(
-                    targetValue = if (checked) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    },
-                    label = "type_container_color",
-                )
-                val contentColor by animateColorAsState(
-                    targetValue = if (checked) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    label = "type_content_color",
-                )
-                Surface(
-                    onClick = { onSelected(entry) },
-                    shape = RoundedCornerShape(
-                        topStart = topStart,
-                        topEnd = topEnd,
-                        bottomStart = bottomStart,
-                        bottomEnd = bottomEnd,
-                    ),
-                    color = containerColor,
-                    contentColor = contentColor,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = icon(entry),
-                            contentDescription = text(entry),
-                            modifier = Modifier
-                                .graphicsLayer { alpha = 0.5f }
-                                .height(14.dp),
-                        )
-                        Text(
-                            text = text(entry),
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
             }
         }
     }

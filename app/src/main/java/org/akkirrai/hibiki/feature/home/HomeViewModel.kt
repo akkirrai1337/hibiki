@@ -129,9 +129,7 @@ class HomeViewModel(
         }
 
         searchJob = viewModelScope.launch {
-            if (!immediate) {
-                delay(SEARCH_DEBOUNCE_MS)
-            }
+            if (!immediate) delay(SEARCH_DEBOUNCE_MS)
             val activeQuery = uiState.value.searchQuery.trim()
             val activeFilters = uiState.value.searchFilters
             if (activeQuery.length < MIN_QUERY_LENGTH && !activeFilters.hasActiveFilters()) {
@@ -140,39 +138,42 @@ class HomeViewModel(
             }
 
             _uiState.update { it.copy(searchResult = SearchUiState.Loading) }
+            loadFirstSearchPage(activeQuery, activeFilters)
+        }
+    }
 
-            try {
-                val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.search(
-                        query = activeQuery,
-                        filters = activeFilters,
-                        limit = SEARCH_PAGE_SIZE + 1,
-                        offset = 0,
-                    )
-                }
-                if (activeQuery != uiState.value.searchQuery.trim()) return@launch
-                _uiState.update {
-                    it.copy(
-                        searchResult = if (items.isEmpty()) {
-                            SearchUiState.Empty
-                        } else {
-                            SearchUiState.Content(
-                                items = items.take(SEARCH_PAGE_SIZE),
-                                canLoadMore = items.size > SEARCH_PAGE_SIZE,
-                            )
-                        }
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (throwable: Throwable) {
-                if (activeQuery != uiState.value.searchQuery.trim()) return@launch
-                val message = when (throwable) {
-                    is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
-                    else -> throwable.message ?: appString(R.string.error_search_failed)
-                }
-                _uiState.update { it.copy(searchResult = SearchUiState.Error(message)) }
+    private suspend fun loadFirstSearchPage(
+        activeQuery: String,
+        activeFilters: AnimeSearchFilters,
+    ) {
+        try {
+            val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                repository.search(
+                    query = activeQuery,
+                    filters = activeFilters,
+                    limit = SEARCH_PAGE_SIZE + 1,
+                    offset = 0,
+                )
             }
+            if (activeQuery != uiState.value.searchQuery.trim()) return
+            val result = if (items.isEmpty()) {
+                SearchUiState.Empty
+            } else {
+                SearchUiState.Content(
+                    items = items.take(SEARCH_PAGE_SIZE),
+                    canLoadMore = items.size > SEARCH_PAGE_SIZE,
+                )
+            }
+            _uiState.update { it.copy(searchResult = result) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (throwable: Throwable) {
+            if (activeQuery != uiState.value.searchQuery.trim()) return
+            val message = when (throwable) {
+                is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
+                else -> throwable.message ?: appString(R.string.error_search_failed)
+            }
+            _uiState.update { it.copy(searchResult = SearchUiState.Error(message)) }
         }
     }
 

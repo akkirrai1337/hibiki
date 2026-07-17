@@ -83,7 +83,7 @@ internal data class VersionNumber(private val parts: List<Int>) : Comparable<Ver
     override fun compareTo(other: VersionNumber): Int {
         val length = maxOf(parts.size, other.parts.size)
         for (index in 0 until length) {
-            val comparison = (parts.getOrElse(index) { 0 }).compareTo(other.parts.getOrElse(index) { 0 })
+            val comparison = parts.getOrElse(index) { 0 }.compareTo(other.parts.getOrElse(index) { 0 })
             if (comparison != 0) return comparison
         }
         return 0

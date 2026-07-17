@@ -359,41 +359,31 @@ private fun SettingsSwitchItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .clickable {
-                onCheckedChange(!checked)
-                haptic.performHapticFeedback(
-                    if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
-                )
-            }
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingsItemRow(
+        icon = icon,
+        shape = shape,
+        onClick = {
+            onCheckedChange(!checked)
+            haptic.performHapticFeedback(
+                if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+            )
+        },
+        trailing = {
+            SettingsSwitch(
+                checked = checked,
+                onCheckedChange = {
+                    onCheckedChange(it)
+                    haptic.performHapticFeedback(
+                        if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                },
+            )
+        },
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-        SettingsSwitch(
-            checked = checked,
-            onCheckedChange = {
-                onCheckedChange(it)
-                haptic.performHapticFeedback(
-                    if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                )
-            },
         )
     }
 }
@@ -409,45 +399,31 @@ private fun DiscordSettingsItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingsItemRow(
+        icon = icon,
+        shape = shape,
+        onClick = onClick,
+        trailing = {
+            SettingsSwitch(
+                checked = checked,
+                onCheckedChange = { enabled ->
+                    onCheckedChange(enabled)
+                    haptic.performHapticFeedback(
+                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                },
+            )
+        },
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
         )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        SettingsSwitch(
-            checked = checked,
-            onCheckedChange = { enabled ->
-                onCheckedChange(enabled)
-                haptic.performHapticFeedback(
-                    if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                )
-            },
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -459,6 +435,34 @@ private fun SettingsActionItem(
     subtitle: String? = null,
     shape: Shape,
     onClick: () -> Unit,
+) {
+    SettingsItemRow(
+        icon = icon,
+        shape = shape,
+        onClick = onClick,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+        subtitle?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsItemRow(
+    icon: ImageVector,
+    shape: Shape,
+    onClick: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -479,20 +483,9 @@ private fun SettingsActionItem(
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-            )
-            subtitle?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+            content = content,
+        )
+        trailing?.invoke()
     }
 }
 

@@ -89,36 +89,69 @@ fun <T> AppConnectedToggleFilter(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             entries.forEachIndexed { index, entry ->
-                val checked = selected == entry
-                val selectedRadius = 32.dp
-                val innerRadius = 4.dp
-                val topStart by animateDpAsState(if (checked || index == 0) selectedRadius else innerRadius, label = "filter_top_start")
-                val bottomStart by animateDpAsState(if (checked || index == 0) selectedRadius else innerRadius, label = "filter_bottom_start")
-                val topEnd by animateDpAsState(if (checked || index == entries.lastIndex) selectedRadius else innerRadius, label = "filter_top_end")
-                val bottomEnd by animateDpAsState(if (checked || index == entries.lastIndex) selectedRadius else innerRadius, label = "filter_bottom_end")
-                val containerColor by animateColorAsState(if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, label = "filter_container")
-                val contentColor by animateColorAsState(if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "filter_content")
-                Surface(
-                    onClick = { onSelected(entry) },
-                    shape = RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart),
-                    color = containerColor,
-                    contentColor = contentColor,
+                AppConnectedToggleFilterItem(
+                    entry = entry,
+                    checked = selected == entry,
+                    isFirst = index == 0,
+                    isLast = index == entries.lastIndex,
+                    onSelected = onSelected,
+                    icon = icon,
+                    text = text,
                     modifier = Modifier.weight(1f),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = icon(entry),
-                            contentDescription = text(entry),
-                            modifier = Modifier.graphicsLayer { alpha = 0.5f }.size(width = 14.dp, height = 14.dp),
-                        )
-                        Text(text = text(entry), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun <T> AppConnectedToggleFilterItem(
+    entry: T,
+    checked: Boolean,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onSelected: (T?) -> Unit,
+    icon: @Composable (T) -> ImageVector,
+    text: @Composable (T) -> String,
+    modifier: Modifier = Modifier,
+) {
+    val selectedRadius = 32.dp
+    val innerRadius = 4.dp
+    val topStart by animateDpAsState(if (checked || isFirst) selectedRadius else innerRadius, label = "filter_top_start")
+    val bottomStart by animateDpAsState(if (checked || isFirst) selectedRadius else innerRadius, label = "filter_bottom_start")
+    val topEnd by animateDpAsState(if (checked || isLast) selectedRadius else innerRadius, label = "filter_top_end")
+    val bottomEnd by animateDpAsState(if (checked || isLast) selectedRadius else innerRadius, label = "filter_bottom_end")
+    val containerColor by animateColorAsState(
+        if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        label = "filter_container",
+    )
+    val contentColor by animateColorAsState(
+        if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "filter_content",
+    )
+    Surface(
+        onClick = { onSelected(entry) },
+        shape = RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart),
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                imageVector = icon(entry),
+                contentDescription = text(entry),
+                modifier = Modifier.graphicsLayer { alpha = 0.5f }.size(width = 14.dp, height = 14.dp),
+            )
+            Text(
+                text = text(entry),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

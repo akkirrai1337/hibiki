@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -115,42 +116,15 @@ fun CatalogScreen(
         delay(350)
         viewModel.load()
     }
-
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val isNearEnd = lastVisibleItem >= totalItems - CATALOG_SCROLL_THRESHOLD
-            isNearEnd && !state.isLoading && !state.isLoadingMore && state.canLoadMore && state.loadMoreError == null
-        }.collect { shouldLoadMore ->
-            if (shouldLoadMore) {
-                viewModel.loadMore()
-            }
-        }
-    }
-
-    LaunchedEffect(listState) {
-        var previousIndex = listState.firstVisibleItemIndex
-        var previousOffset = listState.firstVisibleItemScrollOffset
-
-        snapshotFlow {
-            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
-        }.collect { (currentIndex, currentOffset) ->
-            val isScrollingDown = currentIndex > previousIndex ||
-                (currentIndex == previousIndex && currentOffset > previousOffset)
-            val isScrollingUp = currentIndex < previousIndex ||
-                (currentIndex == previousIndex && currentOffset < previousOffset)
-
-            when {
-                isScrollingDown -> isSortVisible = false
-                isScrollingUp -> isSortVisible = true
-            }
-
-            previousIndex = currentIndex
-            previousOffset = currentOffset
-        }
-    }
+    CatalogPaginationEffect(
+        listState = listState,
+        state = state,
+        onLoadMore = viewModel::loadMore,
+    )
+    CatalogSortVisibilityEffect(
+        listState = listState,
+        onVisibilityChange = { isSortVisible = it },
+    )
 
     Box(modifier = modifier.fillMaxSize()) {
         when {
@@ -314,6 +288,54 @@ fun CatalogScreen(
             onApply = viewModel::applyFilters,
             onDismissRequest = { isFilterSheetOpen = false },
         )
+    }
+}
+
+@Composable
+private fun CatalogPaginationEffect(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    state: CatalogUiState,
+    onLoadMore: () -> Unit,
+) {
+    val latestState by rememberUpdatedState(state)
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val isNearEnd = lastVisibleItem >= layoutInfo.totalItemsCount - CATALOG_SCROLL_THRESHOLD
+            isNearEnd &&
+                !latestState.isLoading &&
+                !latestState.isLoadingMore &&
+                latestState.canLoadMore &&
+                latestState.loadMoreError == null
+        }.collect { shouldLoadMore ->
+            if (shouldLoadMore) onLoadMore()
+        }
+    }
+}
+
+@Composable
+private fun CatalogSortVisibilityEffect(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onVisibilityChange: (Boolean) -> Unit,
+) {
+    LaunchedEffect(listState) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousOffset = listState.firstVisibleItemScrollOffset
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (currentIndex, currentOffset) ->
+            val isScrollingDown = currentIndex > previousIndex ||
+                (currentIndex == previousIndex && currentOffset > previousOffset)
+            val isScrollingUp = currentIndex < previousIndex ||
+                (currentIndex == previousIndex && currentOffset < previousOffset)
+            when {
+                isScrollingDown -> onVisibilityChange(false)
+                isScrollingUp -> onVisibilityChange(true)
+            }
+            previousIndex = currentIndex
+            previousOffset = currentOffset
+        }
     }
 }
 

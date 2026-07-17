@@ -465,8 +465,7 @@ private data class YummyScheduleAnime(
     val title: String? = null,
     val poster: YummySchedulePoster? = null,
     val episodes: YummyScheduleEpisodes? = null,
-) {
-}
+)
 
 @Serializable
 private data class YummyScheduleEpisodes(
