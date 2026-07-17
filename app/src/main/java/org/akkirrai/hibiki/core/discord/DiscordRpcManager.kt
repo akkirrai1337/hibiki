@@ -7,17 +7,20 @@ import com.my.kizzyrpc.entities.presence.Activity
 import com.my.kizzyrpc.entities.presence.Assets
 import com.my.kizzyrpc.entities.presence.Metadata
 import com.my.kizzyrpc.entities.presence.Timestamps
+import com.my.kizzyrpc.logger.Logger
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
@@ -118,6 +121,7 @@ class DiscordRpcManager private constructor(
         val account = repository.getAccount(token.trim())
         tokenStore.saveToken(token)
         preferences.setDiscordRpcEnabled(true)
+        ensureDesiredPresence()
         _state.value = DiscordRpcState(DiscordRpcConnectionStatus.Connecting, account)
         closeRpc(keepDesiredPresence = true)
         requestPublish()
@@ -136,6 +140,7 @@ class DiscordRpcManager private constructor(
             runCatching { repository.getAccount(token) }
                 .onSuccess { account ->
                     if (enableOnSuccess) preferences.setDiscordRpcEnabled(true)
+                    ensureDesiredPresence()
                     _state.value = DiscordRpcState(
                         status = if (preferences.state.value.discordRpcEnabled) {
                             DiscordRpcConnectionStatus.Connecting
@@ -228,6 +233,7 @@ class DiscordRpcManager private constructor(
     }
 
     private suspend fun publishLatestPresence() {
+        ensureDesiredPresence()
         if (!canPublish(desiredPresence ?: return)) return
 
         val debounceMs = lastPublishAtMs + MIN_PUBLISH_INTERVAL_MS - SystemClock.elapsedRealtime()
@@ -239,17 +245,13 @@ class DiscordRpcManager private constructor(
         _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Connecting)
         val activity = buildActivity(presence, token)
         if (!canPublish(presence) || tokenStore.getToken() != token) return
-        runCatching {
-            val client = rpc ?: KizzyRPC(token).also { rpc = it }
-            client.updateRPC(
-                activity = activity,
-                status = STATUS_ONLINE,
-                since = activity.timestamps?.start ?: System.currentTimeMillis(),
-            )
-        }.onSuccess {
+        val client = rpc ?: KizzyRPC(token, DiscordGatewayLogger).also { rpc = it }
+        AppLogger.d(DISCORD_LOG_TAG, "Discord RPC Gateway update started")
+        updateRpcWithTimeout(client, activity).onSuccess {
             lastPublishAtMs = SystemClock.elapsedRealtime()
             reconnectJob?.cancel()
             reconnectJob = null
+            AppLogger.d(DISCORD_LOG_TAG, "Discord RPC Gateway update completed")
             if (canPublish(presence)) {
                 _state.value = _state.value.copy(status = DiscordRpcConnectionStatus.Connected)
             } else {
@@ -263,6 +265,34 @@ class DiscordRpcManager private constructor(
                 scheduleReconnect()
             }
         }
+    }
+
+    private fun ensureDesiredPresence() {
+        if (desiredPresence != null) return
+        val localizedContext = appContext.withAppPreferencesLanguage()
+        desiredPresence = DesiredPresence.General(
+            localizedContext.getString(R.string.discord_rpc_browsing_home),
+        )
+    }
+
+    private suspend fun updateRpcWithTimeout(
+        client: KizzyRPC,
+        activity: Activity,
+    ): Result<Unit> {
+        val update = scope.async(Dispatchers.IO) {
+            runCatching {
+                client.updateRPC(
+                    activity = activity,
+                    status = STATUS_ONLINE,
+                    since = activity.timestamps?.start ?: System.currentTimeMillis(),
+                )
+            }
+        }
+        val result = withTimeoutOrNull(RPC_CONNECT_TIMEOUT_MS) { update.await() }
+        if (result != null) return result
+
+        update.cancel()
+        return Result.failure(DiscordRpcTimeoutException())
     }
 
     private fun canPublish(presence: DesiredPresence): Boolean {
@@ -329,9 +359,11 @@ class DiscordRpcManager private constructor(
 
     private suspend fun mediaProxyUrl(token: String, url: String): String? {
         mediaProxyCache[url]?.let { return it }
-        return runCatching {
-            repository.getMediaProxyUrl(DISCORD_APPLICATION_ID, token, url)
-        }.getOrNull()?.also { mediaProxyCache[url] = it }
+        return withTimeoutOrNull(MEDIA_PROXY_TIMEOUT_MS) {
+            runCatching {
+                repository.getMediaProxyUrl(DISCORD_APPLICATION_ID, token, url)
+            }.getOrNull()
+        }?.also { mediaProxyCache[url] = it }
     }
 
     private fun scheduleReconnect() {
@@ -388,6 +420,8 @@ class DiscordRpcManager private constructor(
         private const val STATUS_ONLINE = "online"
         private const val ACTIVITY_TYPE_WATCHING = 3
         private const val MIN_PUBLISH_INTERVAL_MS = 16_000L
+        private const val RPC_CONNECT_TIMEOUT_MS = 20_000L
+        private const val MEDIA_PROXY_TIMEOUT_MS = 5_000L
         private const val RECONNECT_DELAY_MS = 15_000L
         private const val BACKGROUND_DISCONNECT_DELAY_MS = 30_000L
         private const val SEPARATOR = " • "
@@ -416,5 +450,27 @@ class DiscordRpcManager private constructor(
         private fun String.discordText(): String? = trim()
             .take(MAX_DISCORD_TEXT_LENGTH)
             .takeIf { it.length >= 2 }
+    }
+}
+
+private class DiscordRpcTimeoutException : Exception("Discord RPC connection timed out")
+
+private object DiscordGatewayLogger : Logger {
+    override fun clear() = Unit
+
+    override fun i(tag: String, event: String) {
+        AppLogger.i("HibikiDiscordRpc", "KizzyRPC [$tag] $event")
+    }
+
+    override fun e(tag: String, event: String) {
+        AppLogger.e("HibikiDiscordRpc", "KizzyRPC [$tag] $event")
+    }
+
+    override fun d(tag: String, event: String) {
+        AppLogger.d("HibikiDiscordRpc", "KizzyRPC [$tag] $event")
+    }
+
+    override fun w(tag: String, event: String) {
+        AppLogger.w("HibikiDiscordRpc", "KizzyRPC [$tag] $event")
     }
 }

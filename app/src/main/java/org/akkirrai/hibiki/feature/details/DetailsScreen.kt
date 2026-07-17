@@ -55,7 +55,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -117,8 +116,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.app.settings.LocalAppPreferences
-import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -164,8 +161,6 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val appPreferences = LocalAppPreferences.current
-    val preferencesState = LocalAppPreferencesState.current
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val uriHandler = LocalUriHandler.current
@@ -322,8 +317,6 @@ fun DetailsScreen(
                     nextEpisodeNumber = nextEpisodeNumber,
                     canWatch = canWatch,
                     libraryCategory = libraryCategory,
-                    showDiscordVisibilityAction = preferencesState.discordRpcEnabled,
-                    discordRpcExcluded = currentAnime.id in preferencesState.discordRpcExcludedTitleIds,
                     resumeState = resumeState,
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
@@ -332,22 +325,6 @@ fun DetailsScreen(
                     onTitleClick = { isTitleDetailsSheetOpen = true },
                     onLibraryClick = {
                         isLibrarySheetOpen = true
-                    },
-                    onDiscordVisibilityClick = {
-                        val excluded = currentAnime.id !in preferencesState.discordRpcExcludedTitleIds
-                        appPreferences.setDiscordRpcExcluded(
-                            titleId = currentAnime.id,
-                            excluded = excluded,
-                        )
-                        android.widget.Toast.makeText(
-                            context,
-                            if (excluded) {
-                                R.string.discord_rpc_title_hidden
-                            } else {
-                                R.string.discord_rpc_title_visible
-                            },
-                            android.widget.Toast.LENGTH_SHORT,
-                        ).show()
                     },
                     onPrimaryClick = { onOpenSources(currentAnime) },
                     onResumeClick = onResumePlayback,
@@ -469,8 +446,6 @@ private fun DetailHeroSection(
     nextEpisodeNumber: Int?,
     canWatch: Boolean,
     libraryCategory: LibraryCategory?,
-    showDiscordVisibilityAction: Boolean,
-    discordRpcExcluded: Boolean,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
     isTitleDetailsSheetOpen: Boolean,
@@ -478,7 +453,6 @@ private fun DetailHeroSection(
     onPosterClick: () -> Unit,
     onTitleClick: () -> Unit,
     onLibraryClick: () -> Unit,
-    onDiscordVisibilityClick: () -> Unit,
     onPrimaryClick: () -> Unit,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
@@ -663,41 +637,6 @@ private fun DetailHeroSection(
                         contentDescription = stringResource(R.string.details_favorite),
                         modifier = Modifier.size(28.dp),
                     )
-                }
-            }
-            if (showDiscordVisibilityAction) {
-                Surface(
-                    onClick = onDiscordVisibilityClick,
-                    modifier = Modifier.size(56.dp),
-                    shape = CircleShape,
-                    color = if (discordRpcExcluded) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    },
-                    contentColor = if (discordRpcExcluded) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (discordRpcExcluded) {
-                                Icons.Outlined.Visibility
-                            } else {
-                                Icons.Outlined.VisibilityOff
-                            },
-                            contentDescription = stringResource(
-                                if (discordRpcExcluded) {
-                                    R.string.discord_rpc_show_title
-                                } else {
-                                    R.string.discord_rpc_hide_title
-                                },
-                            ),
-                            modifier = Modifier.size(26.dp),
-                        )
-                    }
                 }
             }
             OutlinedButton(

@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.core.network
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
@@ -11,7 +11,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object AndroidHttpClientFactory {
-    fun create(): HttpClient = HttpClient(Android) {
+    fun create(): HttpClient = HttpClient(OkHttp) {
         expectSuccess = false
 
         install(UserAgent) {

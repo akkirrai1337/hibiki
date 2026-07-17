@@ -92,9 +92,12 @@ dependencies {
     implementation("me.saket.cascade:cascade-compose:2.3.0")
     implementation(libs.androidx.palette.ktx)
     implementation(libs.material.kolor)
-    implementation(libs.kizzy.rpc)
+    implementation(libs.kizzy.rpc) {
+        exclude(group = "io.ktor", module = "ktor-client-cio")
+    }
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.ktor.client.android)
+    implementation(enforcedPlatform("io.ktor:ktor-bom:${libs.versions.ktor.get()}"))
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.coil.compose)
