@@ -234,7 +234,6 @@ fun DetailsScreen(
     }
 
     LaunchedEffect(anime.id, selectedAnimeSource) {
-        delay(AppMotion.ScreenTransitionDurationMillis.toLong())
         withContext(Dispatchers.IO) {
             offlineTitleMetadataRepository.get(anime.id)
         }?.let { cachedAnime ->
@@ -373,7 +372,6 @@ fun DetailsScreen(
                     description = uiModel.description,
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
-                    loadExpandedMedia = isScreenTransitionSettled,
                     canWatch = canWatch,
                     libraryCategory = libraryCategory,
                     resumeState = resumeState,
@@ -510,7 +508,6 @@ private fun DetailHeroSection(
     description: String,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
-    loadExpandedMedia: Boolean,
     canWatch: Boolean,
     libraryCategory: LibraryCategory?,
     resumeState: TitleWatchState?,
@@ -554,7 +551,6 @@ private fun DetailHeroSection(
                 anime = anime,
                 resumeState = resumeState,
                 resumeFrame = resumeFrame,
-                loadExpandedMedia = loadExpandedMedia,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
                 modifier = Modifier
@@ -831,7 +827,6 @@ private fun DetailHeroMedia(
     anime: Anime,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
-    loadExpandedMedia: Boolean,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -850,13 +845,9 @@ private fun DetailHeroMedia(
             )
         } else {
             NetworkImage(
-                imageUrl = if (loadExpandedMedia) {
-                    trailer?.thumbnailUrl
-                        ?: anime.screenshots.firstOrNull()
-                        ?: anime.posterUrl
-                } else {
-                    anime.posterUrl
-                },
+                imageUrl = trailer?.thumbnailUrl
+                    ?: anime.screenshots.firstOrNull()
+                    ?: anime.posterUrl,
                 fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
                 contentDescription = null,
             )
