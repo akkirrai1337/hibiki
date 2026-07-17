@@ -458,7 +458,6 @@ private fun DetailHeroSection(
     onTrailerClick: () -> Unit,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
-    val hasHeroRatings = anime.ratings.isNotEmpty() || !anime.viewCount.isNullOrZero()
     val isAtTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -523,7 +522,13 @@ private fun DetailHeroSection(
                     .offset(y = posterTop + posterHeightOffset)
                     .padding(start = 16.dp),
             )
-            Column(
+            DetailHeroTextContent(
+                anime = anime,
+                description = description,
+                nextEpisodeEta = nextEpisodeEta,
+                nextEpisodeNumber = nextEpisodeNumber,
+                isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
+                onTitleClick = onTitleClick,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
@@ -533,138 +538,149 @@ private fun DetailHeroSection(
                         end = 16.dp,
                     )
                     .height(detailsHeight),
-            ) {
-                val expandToCollapse = AnimatedImageVector.animatedVectorResource(
-                    R.drawable.expand_collapse_anim
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onTitleClick),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 24.dp),
-                    ) {
-                        Text(
-                            text = anime.title,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 22.sp,
-                                lineHeight = 27.sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onBackground,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (hasHeroRatings) {
-                            HeroRatingsLine(
-                                ratings = anime.ratings,
-                                viewCount = anime.viewCount,
-                            )
-                        }
-                        nextEpisodeEta?.let { eta ->
-                            Box(contentAlignment = Alignment.Center) {
-                                NextEpisodeChip(
-                                    episode = nextEpisodeNumber,
-                                    eta = eta,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
-                            }
-                        }
-                        if (description.isNotBlank()) {
-                            NestedScrollableContent(
-                                modifier = Modifier.weight(1f),
-                            ) { contentModifier ->
-                                Text(
-                                    text = description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-                                    modifier = contentModifier,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                    Icon(
-                        painter = rememberAnimatedVectorPainter(
-                            animatedImageVector = expandToCollapse,
-                            atEnd = isTitleDetailsSheetOpen,
-                        ),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 2.dp)
-                            .size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Row(
+        DetailHeroActions(
+            isInLibrary = isUserLibraryCategorySelected,
+            canWatch = canWatch,
+            onLibraryClick = onLibraryClick,
+            onPrimaryClick = onPrimaryClick,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun DetailHeroTextContent(
+    anime: Anime,
+    description: String,
+    nextEpisodeEta: String?,
+    nextEpisodeNumber: Int?,
+    isTitleDetailsSheetOpen: Boolean,
+    onTitleClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val expandToCollapse = AnimatedImageVector.animatedVectorResource(R.drawable.expand_collapse_anim)
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onTitleClick),
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(end = 24.dp),
         ) {
-            Surface(
-                onClick = onLibraryClick,
-                modifier = Modifier.size(56.dp),
-                shape = CircleShape,
-                color = if (isUserLibraryCategorySelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-                contentColor = if (isUserLibraryCategorySelected) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (isUserLibraryCategorySelected) {
-                            Icons.Filled.Bookmark
-                        } else {
-                            Icons.Outlined.BookmarkBorder
-                        },
-                        contentDescription = stringResource(R.string.details_favorite),
-                        modifier = Modifier.size(28.dp),
+            Text(
+                text = anime.title,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    lineHeight = 27.sp,
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (anime.ratings.isNotEmpty() || !anime.viewCount.isNullOrZero()) {
+                HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
+            }
+            nextEpisodeEta?.let { eta ->
+                NextEpisodeChip(
+                    episode = nextEpisodeNumber,
+                    eta = eta,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            if (description.isNotBlank()) {
+                NestedScrollableContent(modifier = Modifier.weight(1f)) { contentModifier ->
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                        modifier = contentModifier,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            OutlinedButton(
-                onClick = onPrimaryClick,
-                enabled = canWatch,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = CircleShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    containerColor = Color.Transparent,
-                ),
-            ) {
+        }
+        Icon(
+            painter = rememberAnimatedVectorPainter(
+                animatedImageVector = expandToCollapse,
+                atEnd = isTitleDetailsSheetOpen,
+            ),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 2.dp)
+                .size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DetailHeroActions(
+    isInLibrary: Boolean,
+    canWatch: Boolean,
+    onLibraryClick: () -> Unit,
+    onPrimaryClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = DETAIL_CONTENT_START_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            onClick = onLibraryClick,
+            modifier = Modifier.size(56.dp),
+            shape = CircleShape,
+            color = if (isInLibrary) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            },
+            contentColor = if (isInLibrary) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.details_watch),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                    imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = stringResource(R.string.details_favorite),
+                    modifier = Modifier.size(28.dp),
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedButton(
+            onClick = onPrimaryClick,
+            enabled = canWatch,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp),
+            shape = CircleShape,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = Color.Transparent,
+            ),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.details_watch),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+            )
+        }
     }
 }
 
@@ -1678,7 +1694,7 @@ private fun formatEpisodeNumber(number: Double): String {
 private fun formatPlaybackPosition(positionMs: Long): String {
     val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
     val hours = totalSeconds / 3_600L
-    val minutes = (totalSeconds % 3_600L) / 60L
+    val minutes = totalSeconds % 3_600L / 60L
     val seconds = totalSeconds % 60L
     return if (hours > 0L) {
         "%d:%02d:%02d".format(hours, minutes, seconds)
@@ -1784,8 +1800,8 @@ private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
     val deltaSeconds = seconds - nowEpochSeconds
     if (deltaSeconds <= 0L) return null
     val days = deltaSeconds / 86_400L
-    val hours = (deltaSeconds % 86_400L) / 3_600L
-    val minutes = (deltaSeconds % 3_600L) / 60L
+    val hours = deltaSeconds % 86_400L / 3_600L
+    val minutes = deltaSeconds % 3_600L / 60L
     val remainingSeconds = deltaSeconds % 60L
     return when {
         days > 0L -> stringResource(R.string.details_eta_days_hours, days, hours.coerceAtLeast(0L))

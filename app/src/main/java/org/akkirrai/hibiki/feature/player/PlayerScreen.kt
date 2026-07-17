@@ -1927,80 +1927,18 @@ private fun PlayerSettingsSheet(
                 onClick = { onSelectQuality(quality) },
             )
         }
-    val rootEntries = buildList {
-        if (voiceoverValues.size > 1) {
-            add(
-                PlayerSettingsEntryItem(
-                    id = PlayerSettingsDestination.Voiceover.name,
-                    title = stringResource(R.string.watch_player_settings_voiceover),
-                    value = voiceoverValues.firstSelectedLabelOrDefault(),
-                    onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
-                )
-            )
-        }
-        if (qualityValues.size > 1) {
-            add(
-                PlayerSettingsEntryItem(
-                    id = PlayerSettingsDestination.Quality.name,
-                    title = stringResource(R.string.watch_player_settings_quality),
-                    value = qualityValues.firstSelectedLabelOrDefault(),
-                    onClick = { onNavigate(PlayerSettingsDestination.Quality) },
-                )
-            )
-        }
-        add(
-            PlayerSettingsEntryItem(
-                id = PlayerSettingsDestination.Speed.name,
-                title = stringResource(R.string.watch_player_settings_speed),
-                value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
-                onClick = { onNavigate(PlayerSettingsDestination.Speed) },
-            )
-        )
-        add(
-            PlayerSettingsEntryItem(
-                id = "auto_skip",
-                title = stringResource(R.string.watch_player_settings_auto_skip),
-                value = if (autoSkipSegments) {
-                    stringResource(R.string.watch_player_settings_on)
-                } else {
-                    stringResource(R.string.watch_player_settings_off)
-                },
-                onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
-            )
-        )
-        add(
-            PlayerSettingsEntryItem(
-                id = "auto_play_next",
-                title = stringResource(R.string.watch_player_settings_auto_play_next),
-                value = if (autoPlayNextEpisode) {
-                    stringResource(R.string.watch_player_settings_on)
-                } else {
-                    stringResource(R.string.watch_player_settings_off)
-                },
-                onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
-            )
-        )
-        if (backendValues.isNotEmpty()) {
-            add(
-                PlayerSettingsEntryItem(
-                    id = PlayerSettingsDestination.Backend.name,
-                    title = stringResource(R.string.watch_player_settings_backend),
-                    value = backendValues.firstSelectedLabelOrDefault(),
-                    onClick = { onNavigate(PlayerSettingsDestination.Backend) },
-                )
-            )
-        }
-        if (playerValues.isNotEmpty()) {
-            add(
-                PlayerSettingsEntryItem(
-                    id = PlayerSettingsDestination.Player.name,
-                    title = stringResource(R.string.watch_player_settings_player),
-                    value = playerValues.firstSelectedLabelOrDefault(),
-                    onClick = { onNavigate(PlayerSettingsDestination.Player) },
-                )
-            )
-        }
-    }
+    val rootEntries = playerSettingsRootEntries(
+        speedValues = speedValues,
+        backendValues = backendValues,
+        voiceoverValues = voiceoverValues,
+        playerValues = playerValues,
+        qualityValues = qualityValues,
+        autoSkipSegments = autoSkipSegments,
+        autoPlayNextEpisode = autoPlayNextEpisode,
+        onNavigate = onNavigate,
+        onAutoSkipSegmentsChange = onAutoSkipSegmentsChange,
+        onAutoPlayNextEpisodeChange = onAutoPlayNextEpisodeChange,
+    )
 
     BackHandler(enabled = destination != PlayerSettingsDestination.Root) {
         onBack()
@@ -2035,47 +1973,15 @@ private fun PlayerSettingsSheet(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     userScrollEnabled = true,
                 ) {
-                    when (targetDestination) {
-                        PlayerSettingsDestination.Root -> {
-                            items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
-                                PlayerSettingsEntry(
-                                    title = entry.title,
-                                    value = entry.value,
-                                    onClick = entry.onClick,
-                                )
-                            }
-                        }
-
-                        PlayerSettingsDestination.Speed -> {
-                            items(speedValues, key = SelectableValue::id) { value ->
-                                PlayerSettingsChoiceRow(value = value)
-                            }
-                        }
-
-                        PlayerSettingsDestination.Voiceover -> {
-                            items(voiceoverValues, key = SelectableValue::id) { value ->
-                                PlayerSettingsChoiceRow(value = value)
-                            }
-                        }
-
-                        PlayerSettingsDestination.Backend -> {
-                            items(backendValues, key = SelectableValue::id) { value ->
-                                PlayerSettingsChoiceRow(value = value)
-                            }
-                        }
-
-                        PlayerSettingsDestination.Player -> {
-                            items(playerValues, key = SelectableValue::id) { value ->
-                                PlayerSettingsChoiceRow(value = value)
-                            }
-                        }
-
-                        PlayerSettingsDestination.Quality -> {
-                            items(qualityValues, key = SelectableValue::id) { value ->
-                                PlayerSettingsChoiceRow(value = value)
-                            }
-                        }
-                    }
+                    playerSettingsItems(
+                        destination = targetDestination,
+                        rootEntries = rootEntries,
+                        speedValues = speedValues,
+                        backendValues = backendValues,
+                        voiceoverValues = voiceoverValues,
+                        playerValues = playerValues,
+                        qualityValues = qualityValues,
+                    )
                 }
             }
         }
@@ -2246,6 +2152,120 @@ private data class PlayerSettingsEntryItem(
 
 private fun List<SelectableValue>.firstSelectedLabelOrDefault(defaultLabel: String = first().label): String {
     return firstOrNull { it.selected }?.label ?: defaultLabel
+}
+
+@Composable
+private fun playerSettingsRootEntries(
+    speedValues: List<SelectableValue>,
+    backendValues: List<SelectableValue>,
+    voiceoverValues: List<SelectableValue>,
+    playerValues: List<SelectableValue>,
+    qualityValues: List<SelectableValue>,
+    autoSkipSegments: Boolean,
+    autoPlayNextEpisode: Boolean,
+    onNavigate: (PlayerSettingsDestination) -> Unit,
+    onAutoSkipSegmentsChange: (Boolean) -> Unit,
+    onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
+): List<PlayerSettingsEntryItem> = buildList {
+    if (voiceoverValues.size > 1) {
+        add(
+            PlayerSettingsEntryItem(
+                id = PlayerSettingsDestination.Voiceover.name,
+                title = stringResource(R.string.watch_player_settings_voiceover),
+                value = voiceoverValues.firstSelectedLabelOrDefault(),
+                onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
+            )
+        )
+    }
+    if (qualityValues.size > 1) {
+        add(
+            PlayerSettingsEntryItem(
+                id = PlayerSettingsDestination.Quality.name,
+                title = stringResource(R.string.watch_player_settings_quality),
+                value = qualityValues.firstSelectedLabelOrDefault(),
+                onClick = { onNavigate(PlayerSettingsDestination.Quality) },
+            )
+        )
+    }
+    add(
+        PlayerSettingsEntryItem(
+            id = PlayerSettingsDestination.Speed.name,
+            title = stringResource(R.string.watch_player_settings_speed),
+            value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
+            onClick = { onNavigate(PlayerSettingsDestination.Speed) },
+        )
+    )
+    add(
+        PlayerSettingsEntryItem(
+            id = "auto_skip",
+            title = stringResource(R.string.watch_player_settings_auto_skip),
+            value = stringResource(
+                if (autoSkipSegments) R.string.watch_player_settings_on
+                else R.string.watch_player_settings_off,
+            ),
+            onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
+        )
+    )
+    add(
+        PlayerSettingsEntryItem(
+            id = "auto_play_next",
+            title = stringResource(R.string.watch_player_settings_auto_play_next),
+            value = stringResource(
+                if (autoPlayNextEpisode) R.string.watch_player_settings_on
+                else R.string.watch_player_settings_off,
+            ),
+            onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
+        )
+    )
+    if (backendValues.isNotEmpty()) {
+        add(
+            PlayerSettingsEntryItem(
+                id = PlayerSettingsDestination.Backend.name,
+                title = stringResource(R.string.watch_player_settings_backend),
+                value = backendValues.firstSelectedLabelOrDefault(),
+                onClick = { onNavigate(PlayerSettingsDestination.Backend) },
+            )
+        )
+    }
+    if (playerValues.isNotEmpty()) {
+        add(
+            PlayerSettingsEntryItem(
+                id = PlayerSettingsDestination.Player.name,
+                title = stringResource(R.string.watch_player_settings_player),
+                value = playerValues.firstSelectedLabelOrDefault(),
+                onClick = { onNavigate(PlayerSettingsDestination.Player) },
+            )
+        )
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
+    destination: PlayerSettingsDestination,
+    rootEntries: List<PlayerSettingsEntryItem>,
+    speedValues: List<SelectableValue>,
+    backendValues: List<SelectableValue>,
+    voiceoverValues: List<SelectableValue>,
+    playerValues: List<SelectableValue>,
+    qualityValues: List<SelectableValue>,
+) {
+    when (destination) {
+        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
+            PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
+        }
+        PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
+        PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
+        PlayerSettingsDestination.Backend -> playerSettingsChoices(backendValues)
+        PlayerSettingsDestination.Player -> playerSettingsChoices(playerValues)
+        PlayerSettingsDestination.Quality -> playerSettingsChoices(qualityValues)
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices(
+    values: List<SelectableValue>,
+) {
+    items(values, key = SelectableValue::id) { value ->
+        PlayerSettingsChoiceRow(value = value)
+    }
 }
 
 private enum class PlayerSettingsDestination(@param:StringRes val titleResId: Int) {
@@ -2775,7 +2795,7 @@ private fun formatDuration(durationMs: Long): String {
     }
     val totalSeconds = durationMs / 1000
     val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
+    val minutes = totalSeconds % 3600 / 60
     val seconds = totalSeconds % 60
     return if (hours > 0) {
         "%d:%02d:%02d".format(hours, minutes, seconds)

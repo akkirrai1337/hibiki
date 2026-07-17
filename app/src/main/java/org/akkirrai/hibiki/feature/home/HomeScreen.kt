@@ -354,23 +354,23 @@ fun HomeScreen(
 
 private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
     return if (searchActive) {
-        (slideInVertically(
+        slideInVertically(
             animationSpec = tween(durationMillis = 220),
             initialOffsetY = { fullHeight -> fullHeight / 12 },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180))) togetherWith
-            (slideOutVertically(
+        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
+            slideOutVertically(
                 animationSpec = tween(durationMillis = 200),
                 targetOffsetY = { fullHeight -> -(fullHeight / 24) },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120)))
+            ) + fadeOut(animationSpec = tween(durationMillis = 120))
     } else {
-        (slideInVertically(
+        slideInVertically(
             animationSpec = tween(durationMillis = 220),
             initialOffsetY = { fullHeight -> -(fullHeight / 24) },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180))) togetherWith
-            (slideOutVertically(
+        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
+            slideOutVertically(
                 animationSpec = tween(durationMillis = 200),
                 targetOffsetY = { fullHeight -> fullHeight / 12 },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120)))
+            ) + fadeOut(animationSpec = tween(durationMillis = 120))
     }
 }
 
