@@ -161,7 +161,8 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val selectedAnimeSource = LocalAppPreferencesState.current.animeSource
+    val preferences = LocalAppPreferencesState.current
+    val selectedAnimeSource = preferences.animeSource
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val uriHandler = LocalUriHandler.current
@@ -293,7 +294,17 @@ fun DetailsScreen(
         isDark = fallbackColorScheme.background.luminance() < 0.5f,
         style = PaletteStyle.Vibrant,
     )
-    val detailsColorScheme = if (titleSeedColor == null) fallbackColorScheme else generatedColorScheme
+    val titleColorScheme = if (titleSeedColor == null) fallbackColorScheme else generatedColorScheme
+    val detailsColorScheme = if (preferences.useAmoledTheme) {
+        titleColorScheme.copy(
+            background = fallbackColorScheme.background,
+            onBackground = fallbackColorScheme.onBackground,
+            surface = fallbackColorScheme.surface,
+            onSurface = fallbackColorScheme.onSurface,
+        )
+    } else {
+        titleColorScheme
+    }
 
     MaterialTheme(colorScheme = detailsColorScheme) {
         Surface(
