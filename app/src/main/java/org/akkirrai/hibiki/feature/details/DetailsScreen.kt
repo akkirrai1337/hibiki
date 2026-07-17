@@ -119,6 +119,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
@@ -146,6 +147,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -166,6 +169,7 @@ fun DetailsScreen(
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val uriHandler = LocalUriHandler.current
+    val screenScope = rememberCoroutineScope()
     val detailsStateKey = remember(anime.id, selectedAnimeSource) { "${selectedAnimeSource.name}:${anime.id}" }
     val savedScreenState = remember(detailsStateKey) { detailsScreenStateCache[detailsStateKey] }
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
@@ -179,6 +183,7 @@ fun DetailsScreen(
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
+    var isScreenTransitionSettled by remember(anime.id) { mutableStateOf(false) }
     var resumeState by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
     var resumeFrame by remember(anime.id) { mutableStateOf<File?>(null) }
     val listState = remember(anime.id) {
@@ -189,11 +194,19 @@ fun DetailsScreen(
     }
     val localizedEpisodeWord = stringResource(R.string.details_episode_label)
     val currentAnimeState by rememberUpdatedState(currentAnime)
+    val screenTransitionSettledState by rememberUpdatedState(isScreenTransitionSettled)
 
-    fun refreshWatchStateSnapshot() {
-        libraryCategory = libraryRepository.getLibraryCategory(anime.id)
-        resumeState = findResumeWatchState(watchStateRepository, anime.id)
-        resumeFrame = resumeFrameRepository.getFrame(anime.id)
+    suspend fun refreshWatchStateSnapshot() {
+        val snapshot = withContext(Dispatchers.IO) {
+            DetailsWatchSnapshot(
+                libraryCategory = libraryRepository.getLibraryCategory(anime.id),
+                resumeState = findResumeWatchState(watchStateRepository, anime.id),
+                resumeFrame = resumeFrameRepository.getFrame(anime.id),
+            )
+        }
+        libraryCategory = snapshot.libraryCategory
+        resumeState = snapshot.resumeState
+        resumeFrame = snapshot.resumeFrame
     }
 
     DisposableEffect(searchRepository) {
@@ -213,15 +226,25 @@ fun DetailsScreen(
     }
 
     LaunchedEffect(anime.id, selectedAnimeSource) {
-        offlineTitleMetadataRepository.get(anime.id)?.let { cachedAnime ->
+        delay(AppMotion.ScreenTransitionDurationMillis.toLong())
+        withContext(Dispatchers.IO) {
+            offlineTitleMetadataRepository.get(anime.id)
+        }?.let { cachedAnime ->
             currentAnime = cachedAnime
         }
         runCatching { searchRepository.getDetails(anime.id, currentAnime) }
             .onSuccess {
                 currentAnime = it
-                offlineTitleMetadataRepository.save(it)
+                withContext(Dispatchers.IO) {
+                    offlineTitleMetadataRepository.save(it)
+                }
             }
         refreshWatchStateSnapshot()
+    }
+
+    LaunchedEffect(anime.id) {
+        delay(AppMotion.ScreenTransitionDurationMillis.toLong())
+        isScreenTransitionSettled = true
     }
 
     LaunchedEffect(
@@ -230,6 +253,7 @@ fun DetailsScreen(
         currentAnime.posterFallbackUrl,
         currentAnime.screenshots,
     ) {
+        delay(AppMotion.ScreenTransitionDurationMillis.toLong())
         if (titleSeedColor == null) {
             extractTitleSeedColor(
                 context = context,
@@ -247,8 +271,10 @@ fun DetailsScreen(
 
     DisposableEffect(lifecycleOwner, anime.id) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshWatchStateSnapshot()
+            if (event == Lifecycle.Event.ON_RESUME && screenTransitionSettledState) {
+                screenScope.launch {
+                    refreshWatchStateSnapshot()
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -289,12 +315,16 @@ fun DetailsScreen(
             !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
     }
     val fallbackColorScheme = MaterialTheme.colorScheme
-    val generatedColorScheme = rememberDynamicColorScheme(
-        seedColor = Color(titleSeedColor ?: fallbackColorScheme.primary.toArgb()),
-        isDark = fallbackColorScheme.background.luminance() < 0.5f,
-        style = PaletteStyle.Vibrant,
-    )
-    val titleColorScheme = if (titleSeedColor == null) fallbackColorScheme else generatedColorScheme
+    val resolvedTitleSeedColor = titleSeedColor
+    val titleColorScheme = if (resolvedTitleSeedColor == null) {
+        fallbackColorScheme
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = Color(resolvedTitleSeedColor),
+            isDark = fallbackColorScheme.background.luminance() < 0.5f,
+            style = PaletteStyle.Vibrant,
+        )
+    }
     val detailsColorScheme = if (preferences.useAmoledTheme) {
         titleColorScheme.copy(
             background = fallbackColorScheme.background,
@@ -329,6 +359,7 @@ fun DetailsScreen(
                     bannerTint = Color(titleSeedColor ?: 0).copy(alpha = 0.25f),
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
+                    loadExpandedMedia = isScreenTransitionSettled,
                     canWatch = canWatch,
                     libraryCategory = libraryCategory,
                     resumeState = resumeState,
@@ -466,6 +497,7 @@ private fun DetailHeroSection(
     bannerTint: Color,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
+    loadExpandedMedia: Boolean,
     canWatch: Boolean,
     libraryCategory: LibraryCategory?,
     resumeState: TitleWatchState?,
@@ -510,6 +542,7 @@ private fun DetailHeroSection(
                 bannerTint = bannerTint,
                 resumeState = resumeState,
                 resumeFrame = resumeFrame,
+                loadExpandedMedia = loadExpandedMedia,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
                 modifier = Modifier
@@ -787,6 +820,7 @@ private fun DetailHeroMedia(
     bannerTint: Color,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
+    loadExpandedMedia: Boolean,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -805,9 +839,13 @@ private fun DetailHeroMedia(
             )
         } else {
             NetworkImage(
-                imageUrl = trailer?.thumbnailUrl
-                    ?: anime.screenshots.firstOrNull()
-                    ?: anime.posterUrl,
+                imageUrl = if (loadExpandedMedia) {
+                    trailer?.thumbnailUrl
+                        ?: anime.screenshots.firstOrNull()
+                        ?: anime.posterUrl
+                } else {
+                    anime.posterUrl
+                },
                 fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
                 contentDescription = null,
             )
@@ -1902,13 +1940,16 @@ private suspend fun extractTitleSeedColor(
                     .build(),
             )
         }.getOrNull() as? SuccessResult ?: continue
-        val bitmap = runCatching { result.drawable.toBitmap(width = 96, height = 96) }.getOrNull()
-            ?: continue
-        val palette = runCatching {
-            Palette.from(bitmap)
-                .maximumColorCount(24)
-                .generate()
-        }.getOrNull() ?: continue
+        val palette = withContext(Dispatchers.Default) {
+            val bitmap = runCatching {
+                result.drawable.toBitmap(width = 96, height = 96)
+            }.getOrNull() ?: return@withContext null
+            runCatching {
+                Palette.from(bitmap)
+                    .maximumColorCount(24)
+                    .generate()
+            }.getOrNull()
+        } ?: continue
         return (
             palette.vibrantSwatch
                 ?: palette.lightVibrantSwatch
@@ -1976,6 +2017,12 @@ private data class DetailsScreenSavedState(
     val anime: Anime,
     val firstVisibleItemIndex: Int,
     val firstVisibleItemScrollOffset: Int,
+)
+
+private data class DetailsWatchSnapshot(
+    val libraryCategory: LibraryCategory?,
+    val resumeState: TitleWatchState?,
+    val resumeFrame: File?,
 )
 
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()

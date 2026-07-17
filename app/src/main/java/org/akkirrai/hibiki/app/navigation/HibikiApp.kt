@@ -6,9 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,34 +102,14 @@ fun HibikiApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        Scaffold(
+        HibikiNavHost(
             modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Transparent,
-            bottomBar = {
-                if (isTopLevelDestination) {
-                    AppBottomBar(
-                        destinations = destinations,
-                        currentTopLevel = currentTopLevel,
-                        onDestinationClick = { destination ->
-                            navController.navigateTopLevelDestination(
-                                currentTopLevel = currentTopLevel,
-                                destination = destination,
-                            )
-                        },
-                    )
-                }
-            },
-        ) { innerPadding ->
-            HibikiNavHost(
-                modifier = Modifier.fillMaxSize(),
-                navController = navController,
-                contentPadding = innerPadding,
-                topLevelBottomContentPadding = topLevelBottomContentPadding,
-                showBottomBar = isTopLevelDestination,
-                currentTopLevel = currentTopLevel,
-                onCheckForUpdates = onCheckForUpdates,
-            )
-        }
+            navController = navController,
+            topLevelBottomContentPadding = topLevelBottomContentPadding,
+            isTopLevelDestination = isTopLevelDestination,
+            currentTopLevel = currentTopLevel,
+            onCheckForUpdates = onCheckForUpdates,
+        )
     }
 }
 
@@ -140,31 +117,19 @@ fun HibikiApp(
 private fun HibikiNavHost(
     navController: androidx.navigation.NavHostController,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(),
     topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
-    showBottomBar: Boolean = false,
+    isTopLevelDestination: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
     onCheckForUpdates: () -> Unit = {},
 ) {
     val baseScreenModifier = Modifier
         .fillMaxSize()
         .background(MaterialTheme.colorScheme.surface)
-        .padding(
-            top = contentPadding.calculateTopPadding(),
-            bottom = contentPadding.calculateBottomPadding() +
-                if (showBottomBar) {
-                    BottomBarContentExtraPadding
-                } else {
-                    0.dp
-                }
-        )
-        .consumeWindowInsets(contentPadding)
 
     val topLevelScreenModifier = Modifier
         .fillMaxSize()
         .background(MaterialTheme.colorScheme.surface)
-        .padding(top = contentPadding.calculateTopPadding())
-        .consumeWindowInsets(contentPadding)
+        .statusBarsPadding()
 
     val screenModifier = baseScreenModifier.statusBarsPadding()
 
@@ -181,45 +146,75 @@ private fun HibikiNavHost(
                 viewModelStoreOwner = backStackEntry,
                 factory = HomeViewModel.Factory(context),
             )
-            HomeScreen(
-                viewModel = homeViewModel,
-                onAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Home,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.navigateTopLevelDestination(TopLevelDestination.Home, destination)
                 },
-                isActive = showBottomBar && currentTopLevel == TopLevelDestination.Home,
-                bottomContentPadding = topLevelBottomContentPadding,
-                modifier = topLevelScreenModifier
-            )
+            ) {
+                HomeScreen(
+                    viewModel = homeViewModel,
+                    onAnimeClick = { anime ->
+                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                    },
+                    isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
+                    bottomContentPadding = topLevelBottomContentPadding,
+                    modifier = topLevelScreenModifier,
+                )
+            }
         }
         topLevelComposable(route = TopLevelDestination.Profile.route) {
-            LocalProfileScreen(
-                onSettingsClick = {
-                    navController.navigate(AnimeNavType.SETTINGS_ROUTE)
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Profile,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.navigateTopLevelDestination(TopLevelDestination.Profile, destination)
                 },
-                bottomContentPadding = topLevelBottomContentPadding,
-                // The profile owns its status-bar background like Animite's screen.
-                // Do not apply Scaffold's top inset a second time here.
-                modifier = Modifier.fillMaxSize(),
-            )
+            ) {
+                LocalProfileScreen(
+                    onSettingsClick = {
+                        navController.navigate(AnimeNavType.SETTINGS_ROUTE)
+                    },
+                    bottomContentPadding = topLevelBottomContentPadding,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
         topLevelComposable(route = TopLevelDestination.Catalog.route) {
-            CatalogScreen(
-                onAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Catalog,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.navigateTopLevelDestination(TopLevelDestination.Catalog, destination)
                 },
-                bottomContentPadding = topLevelBottomContentPadding,
-                modifier = topLevelScreenModifier,
-            )
+            ) {
+                CatalogScreen(
+                    onAnimeClick = { anime ->
+                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                    },
+                    bottomContentPadding = topLevelBottomContentPadding,
+                    modifier = topLevelScreenModifier,
+                )
+            }
         }
         topLevelComposable(route = TopLevelDestination.Library.route) {
-            LibraryScreen(
-                onAnimeClick = { anime ->
-                    navController.navigate(AnimeNavType.createDetailsRoute(anime))
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Library,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.navigateTopLevelDestination(TopLevelDestination.Library, destination)
                 },
-                isActive = showBottomBar && currentTopLevel == TopLevelDestination.Library,
-                bottomContentPadding = topLevelBottomContentPadding,
-                modifier = topLevelScreenModifier
-            )
+            ) {
+                LibraryScreen(
+                    onAnimeClick = { anime ->
+                        navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                    },
+                    isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
+                    bottomContentPadding = topLevelBottomContentPadding,
+                    modifier = topLevelScreenModifier,
+                )
+            }
         }
         composable(
             route = AnimeNavType.SETTINGS_ROUTE,
@@ -335,7 +330,6 @@ private fun HibikiNavHost(
                         )
                     )
                 },
-                contentPadding = contentPadding
             )
         }
         composable(
@@ -456,15 +450,34 @@ private val BottomBarLabelSize = 11.sp
 private val BottomBarContentExtraPadding = 12.dp
 
 @Composable
+private fun TopLevelScreenContainer(
+    destination: TopLevelDestination,
+    destinations: List<TopLevelDestination>,
+    onDestinationClick: (TopLevelDestination) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        content()
+        AppBottomBar(
+            destinations = destinations,
+            currentTopLevel = destination,
+            onDestinationClick = onDestinationClick,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
 private fun AppBottomBar(
     destinations: List<TopLevelDestination>,
     currentTopLevel: TopLevelDestination,
     onDestinationClick: (TopLevelDestination) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
