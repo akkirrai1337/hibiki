@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
 import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.ProviderMatch
@@ -75,16 +78,13 @@ object AnimeSourceRegistry {
         ),
         Registration(
             descriptor = AnimeSourceDescriptor(
-                info = SourceInfo(
-                    id = SourceId("ani-liberty"),
-                    name = "AniLiberty",
-                    languages = setOf(SourceLanguage.RUSSIAN),
-                    website = "https://anilibria.top",
-                ),
+                info = AniLibertySource.INFO,
                 iconRes = R.drawable.source_ani_liberty,
                 supportsPlayback = true,
             ),
-            createMetadataSource = { _, client -> AniLibertyMetadataSource(client) },
+            createMetadataSource = { context, client ->
+                AniLibertySource(createSourceContext(context, client, AniLibertySource.INFO.id))
+            },
             createWatchDiscovery = { _, client -> createAniLibertyWatchDiscovery(client) },
         ),
     )
@@ -126,6 +126,31 @@ object AnimeSourceRegistry {
     private fun registration(sourceId: SourceId): Registration =
         registrations.firstOrNull { it.descriptor.id == sourceId }
             ?: error("Anime source is not registered: $sourceId")
+
+    private fun createSourceContext(
+        context: Context,
+        client: HttpClient,
+        sourceId: SourceId,
+    ): DefaultSourceContext = DefaultSourceContext(
+        httpClient = client,
+        preferredLanguages = listOf(
+            when (AppPreferences.readState(context).languageMode) {
+                LanguageMode.ENGLISH -> SourceLanguage.ENGLISH
+                LanguageMode.RUSSIAN -> SourceLanguage.RUSSIAN
+                LanguageMode.SYSTEM -> if (
+                    context.resources.configuration.locales[0]?.language == "en"
+                ) SourceLanguage.ENGLISH else SourceLanguage.RUSSIAN
+            },
+        ),
+        logger = SourceLogger { level, message, throwable ->
+            val tag = "BeakoKit/${sourceId.value}"
+            when (level) {
+                SourceLogLevel.DEBUG -> AppLogger.d(tag, message)
+                SourceLogLevel.WARNING -> AppLogger.w(tag, message, throwable)
+                SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
+            }
+        },
+    )
 
     private fun createYummySource(context: Context, client: HttpClient): MetadataSource =
         YummyMetadataSource(

@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,6 +19,10 @@ class AnimeSourceRegistryTest {
         assertEquals(sources.map { it.info }, AnimeSourceRegistry.catalog.sources)
         assertTrue(sources.all { it.language == "RU" })
         assertTrue(sources.all { it.supportsPlayback })
+        assertEquals(
+            AniLibertySource.INFO,
+            AnimeSourceRegistry.descriptor(SourceId("ani-liberty")).info,
+        )
         assertEquals(
             AnimeSourceContentFeature.entries.toSet(),
             AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).contentFeatures,
