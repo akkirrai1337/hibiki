@@ -77,8 +77,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LanguageMode
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
@@ -538,6 +540,7 @@ private fun DiscordAuthDialog(
     onBrowserSignIn: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val appLanguage = LocalAppLanguage.current
     val scope = rememberCoroutineScope()
     val state by manager.state.collectAsState()
     var manualToken by remember(initialToken) { mutableStateOf(initialToken) }
@@ -549,21 +552,18 @@ private fun DiscordAuthDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+        LocalizedAppContext(languageMode = appLanguage) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Box(
                         modifier = Modifier
@@ -675,7 +675,7 @@ private fun DiscordAuthDialog(
                             .height(48.dp),
                         enabled = !isChecking,
                     ) {
-                        Text(stringResource(android.R.string.cancel))
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Button(
                         onClick = {
