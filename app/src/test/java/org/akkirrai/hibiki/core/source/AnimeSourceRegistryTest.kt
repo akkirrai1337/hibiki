@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
+import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,6 +23,10 @@ class AnimeSourceRegistryTest {
         assertEquals(
             AniLibertySource.INFO,
             AnimeSourceRegistry.descriptor(SourceId("ani-liberty")).info,
+        )
+        assertEquals(
+            YummyAnimeSource.INFO,
+            AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).info,
         )
         assertEquals(
             AnimeSourceContentFeature.entries.toSet(),

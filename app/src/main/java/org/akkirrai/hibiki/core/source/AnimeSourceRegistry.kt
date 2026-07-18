@@ -5,16 +5,18 @@ import androidx.annotation.DrawableRes
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceCatalog
+import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
+import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.provider.AniLibertyProvider
@@ -59,11 +61,7 @@ object AnimeSourceRegistry {
     private val registrations = listOf(
         Registration(
             descriptor = AnimeSourceDescriptor(
-                info = SourceInfo(
-                    id = SourceId("yummy-anime"),
-                    name = "YummyAnime",
-                    languages = setOf(SourceLanguage.RUSSIAN),
-                ),
+                info = YummyAnimeSource.INFO,
                 iconRes = R.drawable.source_yummy_anime,
                 supportsPlayback = true,
                 contentFeatures = setOf(
@@ -131,6 +129,7 @@ object AnimeSourceRegistry {
         context: Context,
         client: HttpClient,
         sourceId: SourceId,
+        config: SourceConfig = SourceConfig.EMPTY,
     ): DefaultSourceContext = DefaultSourceContext(
         httpClient = client,
         preferredLanguages = listOf(
@@ -142,6 +141,7 @@ object AnimeSourceRegistry {
                 ) SourceLanguage.ENGLISH else SourceLanguage.RUSSIAN
             },
         ),
+        config = config,
         logger = SourceLogger { level, message, throwable ->
             val tag = "BeakoKit/${sourceId.value}"
             when (level) {
@@ -152,22 +152,20 @@ object AnimeSourceRegistry {
         },
     )
 
-    private fun createYummySource(context: Context, client: HttpClient): MetadataSource =
-        YummyMetadataSource(
-            client = client,
-            applicationToken = AndroidKeystoreYummyApplicationTokenStore(context)
-                .getEffectiveApplicationToken(),
-            debugLogger = { message -> AppLogger.d("YummyMetadataSource", message) },
-            languageProvider = {
-                when (AppPreferences.readState(context).languageMode) {
-                    LanguageMode.ENGLISH -> "en"
-                    LanguageMode.RUSSIAN -> "ru"
-                    LanguageMode.SYSTEM -> if (
-                        context.resources.configuration.locales[0]?.language == "en"
-                    ) "en" else "ru"
+    private fun createYummySource(context: Context, client: HttpClient): MetadataSource {
+        val applicationToken = AndroidKeystoreYummyApplicationTokenStore(context)
+            .getEffectiveApplicationToken()
+        val config = MapSourceConfig(
+            secrets = buildMap {
+                applicationToken.takeIf(String::isNotBlank)?.let { token ->
+                    put(YummyAnimeSource.APPLICATION_TOKEN_KEY, token)
                 }
             },
         )
+        return YummyAnimeSource(
+            createSourceContext(context, client, YummyAnimeSource.INFO.id, config),
+        )
+    }
 
     private fun createYummyWatchDiscovery(context: Context, client: HttpClient): WatchSourceDiscovery {
         val provider = YummyAnimeProvider(
