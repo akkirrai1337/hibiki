@@ -32,6 +32,8 @@ android {
         versionCode = 190
         versionName = "1.9.0"
 
+        buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -57,6 +59,11 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("fdroid") {
+            initWith(getByName("release"))
+            buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "false")
+            matchingFallbacks += listOf("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -64,6 +71,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

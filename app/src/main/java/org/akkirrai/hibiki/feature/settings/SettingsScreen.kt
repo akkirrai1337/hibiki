@@ -76,6 +76,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
@@ -242,15 +243,17 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "updates") {
-            SettingsSection(title = stringResource(R.string.settings_updates)) {
-                SettingsItems(count = 1) { _, _ ->
-                    SettingsActionItem(
-                        icon = Icons.Outlined.Update,
-                        title = stringResource(R.string.settings_check_updates),
-                        shape = CircleShape,
-                        onClick = onCheckForUpdates,
-                    )
+        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+            item(key = "updates") {
+                SettingsSection(title = stringResource(R.string.settings_updates)) {
+                    SettingsItems(count = 1) { _, _ ->
+                        SettingsActionItem(
+                            icon = Icons.Outlined.Update,
+                            title = stringResource(R.string.settings_check_updates),
+                            shape = CircleShape,
+                            onClick = onCheckForUpdates,
+                        )
+                    }
                 }
             }
         }

@@ -95,8 +95,10 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
         AppLogger.install(applicationContext)
-        cleanupInstalledUpdate()
-        updateDownloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
+        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+            cleanupInstalledUpdate()
+            updateDownloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
@@ -116,14 +118,16 @@ class MainActivity : ComponentActivity() {
                         HibikiApp(
                             onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                         )
-                        availableUpdate?.let { update ->
-                            AppUpdateDialog(
-                                update = update,
-                                downloadProgress = updateDownloadProgress,
-                                onUpdate = { downloadUpdate(update) },
-                                onLater = { availableUpdate = null },
-                                onNeverRemind = { ignoreUpdateVersion(update.version) },
-                            )
+                        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+                            availableUpdate?.let { update ->
+                                AppUpdateDialog(
+                                    update = update,
+                                    downloadProgress = updateDownloadProgress,
+                                    onUpdate = { downloadUpdate(update) },
+                                    onLater = { availableUpdate = null },
+                                    onNeverRemind = { ignoreUpdateVersion(update.version) },
+                                )
+                            }
                         }
                     }
                 }
@@ -131,13 +135,15 @@ class MainActivity : ComponentActivity() {
         }
 
         requestNotificationPermissionOnFirstLaunch()
-        ContextCompat.registerReceiver(
-            this,
-            updateDownloadReceiver,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
-        checkForAppUpdate()
+        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+            ContextCompat.registerReceiver(
+                this,
+                updateDownloadReceiver,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            checkForAppUpdate()
+        }
     }
 
     override fun onResume() {
@@ -166,14 +172,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         discordRpcManager.setPictureInPictureActive(false)
-        updateDownloadJob?.cancel()
-        unregisterReceiver(updateDownloadReceiver)
-        updateRepository.close()
+        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+            updateDownloadJob?.cancel()
+            unregisterReceiver(updateDownloadReceiver)
+            updateRepository.close()
+        }
         appPreferences.close()
         super.onDestroy()
     }
 
     private fun checkForAppUpdate(showNoUpdateMessage: Boolean = false) {
+        if (!BuildConfig.GITHUB_UPDATES_ENABLED) return
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching { updateRepository.findAvailableUpdate() }
