@@ -413,6 +413,7 @@ fun DetailsScreen(
                     is RelatedSection -> {
                         RelatedAnimeList(
                             items = section.items,
+                            currentAnime = uiModel.anime,
                             title = stringResource(R.string.details_related),
                             onAnimeClick = onRelatedAnimeClick,
                         )
@@ -1013,11 +1014,11 @@ private fun DetailContentCard(
         Spacer(modifier = Modifier.height(8.dp))
         DetailSectionTitle(
             text = stringResource(R.string.details_information),
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
+            modifier = Modifier.padding(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
         )
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
+            contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
@@ -1501,11 +1502,16 @@ private fun GenresSection(
 @Composable
 private fun RelatedAnimeList(
     items: List<RelatedAnime>,
+    currentAnime: Anime? = null,
     title: String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val displayItems = remember(items, currentAnime) {
+        listOfNotNull(currentAnime?.toRelatedAnime()) +
+            items.filterNot { it.id == currentAnime?.id }
+    }
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(32.dp))
         DetailSectionTitle(
@@ -1520,7 +1526,7 @@ private fun RelatedAnimeList(
             contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(items, key = RelatedAnime::id) { related ->
+            items(displayItems, key = RelatedAnime::id) { related ->
                 Column(
                     modifier = Modifier
                         .width(100.dp)
@@ -1919,6 +1925,19 @@ private fun RelatedAnime.toAnime(): Anime = Anime(
     posterFallbackUrl = posterFallbackUrl
 )
 
+private fun Anime.toRelatedAnime(): RelatedAnime {
+    val metadata = subtitle.split('•').map(String::trim)
+    return RelatedAnime(
+        id = id,
+        title = title,
+        posterUrl = posterUrl,
+        posterFallbackUrl = posterFallbackUrl,
+        type = metadata.firstOrNull(),
+        year = metadata.firstOrNull { it.length == 4 && it.all(Char::isDigit) }?.toIntOrNull(),
+        status = status,
+    )
+}
+
 private suspend fun extractTitleSeedColor(
     context: Context,
     imageUrls: List<String>,
@@ -2036,6 +2055,7 @@ private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
 private const val TITLE_COLOR_TRANSITION_DURATION_MILLIS = 280
 private val DETAIL_CONTENT_START_PADDING = 24.dp
+private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
 private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
 
