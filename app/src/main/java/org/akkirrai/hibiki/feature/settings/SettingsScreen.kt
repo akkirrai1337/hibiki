@@ -568,6 +568,10 @@ private fun DiscordAuthDialog(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -695,6 +699,7 @@ private fun DiscordAuthDialog(
                     ) {
                         Text(stringResource(R.string.settings_apply))
                     }
+                }
                 }
             }
         }

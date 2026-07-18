@@ -1,0 +1,9 @@
+Hibiki is an unofficial Android client for anime browsing and playback.
+
+Browse a catalog of featured titles, trending titles, and recent updates. Search by title, use filters, and open detailed pages with descriptions, ratings, genres, screenshots, and related titles.
+
+Choose a watch source and episode, then watch anime in the built-in player. Adjust playback quality and speed, enable autoplay for the next episode, and use opening and ending skip controls.
+
+Keep track of your watch progress, continue from the last opened title, and organize a local library using watching, planned, completed, dropped, on-hold, favorite, and saved categories. Episodes can be saved for local playback.
+
+The interface is available in English and Russian.

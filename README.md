@@ -4,9 +4,9 @@
 
   # hibiki
 
-  [English version](README_EN.md)
+  [Русский](README_RU.md)
 
-  **hibiki — неофициальный клиент YummyAnime для Android с каталогом, поиском, страницами тайтлов, прогрессом просмотра, локальной библиотекой, встроенным плеером и поддержкой сохранённых серий. В будущем может появиться переключение источников.**
+  **hibiki is an Android app for browsing and watching anime from selectable sources. It combines a catalog, search, a local library, offline downloads, and a built-in player, while keeping your watch progress and profile data on the device.**
 
   ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
   ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
@@ -15,48 +15,48 @@
 
 </div>
 
-### 📚 Основные возможности
+### 📚 Features
 
-* Каталог аниме с подборками, трендами и недавними обновлениями
-* Поиск по названию с фильтрами
-* Подробные страницы тайтлов с постером, описанием, оценками, жанрами, скриншотами и связанными тайтлами
-* Выбор источника просмотра и серии
-* Встроенный Media3-плеер с поддержкой HLS, DASH и MP4
-* Настройки плеера: качество, источник, вариант плеера, скорость воспроизведения, автопереход к следующей серии и пропуск опенинга/эндинга
-* Сохранение прогресса просмотра и продолжение с последнего открытого тайтла
-* Локальная библиотека с категориями: смотрю, запланировано, просмотрено, брошено, отложено, избранное и сохранённое
-* Сохранённые серии с локальным кэшем воспроизведения
-* Экран аккаунта и вход; функции профиля ещё в разработке
-* Русская и английская локализация интерфейса
-
-<div align="center">
-
-### 🖼️ Скриншоты
+* Switchable anime sources, with source-aware catalog, search, filters, and sorting
+* Detailed title pages with descriptions, genres, related and similar titles
+* Episode and voice-over selection
+* Built-in Media3 player with HLS, DASH, and MP4 support
+* Playback controls: quality, player engine, speed, autoplay, and opening/ending skip
+* Watch progress, continue watching, and a local profile with viewing statistics
+* Local library: watching, planned, completed, dropped, on hold, favourites, and downloads
+* Offline episode downloads and playback
+* Light, dark, system, and AMOLED themes
+* Russian and English app languages
+* Optional Discord Rich Presence
 
 <div align="center">
-    <img src="./docs/screenshots/ru/mainscreen.jpg" alt="Главная" width="250"/>
-    <img src="./docs/screenshots/ru/search.jpg" alt="Поиск" width="250"/>
+
+### 🖼️ Screenshots
+
+<div align="center">
+    <img src="./docs/screenshots/main.jpg" alt="Home screen" width="250"/>
+    <img src="./docs/screenshots/search.jpg" alt="Search screen" width="250"/>
     <br/>
-    <img src="./docs/screenshots/ru/details.jpg" alt="Страница тайтла" width="250"/>
-    <img src="./docs/screenshots/ru/library.jpg" alt="Библиотека" width="250"/>
+    <img src="./docs/screenshots/details.jpg" alt="Title details screen" width="250"/>
+    <img src="./docs/screenshots/library.jpg" alt="Library screen" width="250"/>
 </div>
 
 </div>
 
 ### 🎬 Credits
 
-- [anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
-- [Animite](https://github.com/imashnake0/Animite): референсы для динамической палитры и поведения интерфейса страницы тайтла, оформление таймера и иконка песочных часов.
-- [AniSync](https://github.com/Marco-9456/AniSync): дизайн и стилистические решения страницы тайтла.
+- [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
+- [Animite](https://github.com/imashnake0/Animite): references for the title page's dynamic palette and UI behavior, countdown styling, and the hourglass icon.
+- [AniSync](https://github.com/Marco-9456/AniSync): title page design and styling references.
 
-### 💬 Связь
+### 💬 Contact
 
-По вопросам, предложениям или баг-репортам можно написать мне в Discord: `akkirrai`
+For questions, suggestions, or bug reports, you can contact me on Discord: `akkirrai`
 
-### 📄 Лицензия
+### 📄 License
 
-hibiki распространяется под лицензией [GNU General Public License v3.0](LICENSE).
+hibiki is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ### ⚖️ DMCA Disclaimer
 
-Разработчик этого приложения не аффилирован с контентом, доступным в приложении, и не хранит и не распространяет этот контент. Приложение следует рассматривать как веб-браузер: всё содержимое, доступное через него, свободно доступно в интернете. Все запросы на удаление контента по DMCA следует направлять владельцам сайта, на котором этот контент размещён.
+The developer of this application does not have any affiliation with the content available in the app and does not store or distribute any content. This application should be considered a web browser, and all content that can be found using this application is freely available on the Internet. All DMCA takedown requests should be sent to the owners of the website where the content is hosted.
