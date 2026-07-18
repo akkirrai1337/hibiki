@@ -1,0 +1,7 @@
+Version 2.0.0
+
+- Improved downloads, playback reliability, and progress saving
+- Added configurable Discord Rich Presence and improved Discord sign-in
+- Expanded AniLiberty and multi-source support
+- Refined navigation, title details, settings, and transitions
+- Added an F-Droid build without the in-app updater
