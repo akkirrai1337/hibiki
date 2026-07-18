@@ -284,7 +284,7 @@ private fun EpisodeRow(
             } else {
                 downloadState
             }
-            val subtitle = buildEpisodeSubtitle(status, visibleDownloadState)
+            val subtitle = buildEpisodeSubtitle(visibleDownloadState)
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,
@@ -441,6 +441,19 @@ private fun buildEpisodeHeadline(
                 append(" • ${formatDuration(progress.positionMs)} / ${formatDuration(progress.durationMs)}")
             }
         }
+    } else if (status == EpisodeProgressStatus.Watched) {
+        buildAnnotatedString {
+            append(headline)
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                )
+            ) {
+                append(" • ${stringResource(R.string.watch_status_watched)}")
+            }
+        }
     } else {
         AnnotatedString(headline)
     }
@@ -448,7 +461,6 @@ private fun buildEpisodeHeadline(
 
 @Composable
 private fun buildEpisodeSubtitle(
-    status: EpisodeProgressStatus,
     downloadState: OfflineEpisodeDownloadState,
 ): String {
     val downloadLabel = when (downloadState) {
@@ -459,14 +471,7 @@ private fun buildEpisodeSubtitle(
         OfflineEpisodeDownloadState.Completed -> stringResource(R.string.watch_downloaded)
         OfflineEpisodeDownloadState.Failed -> stringResource(R.string.watch_status_failed)
     }
-    val watchLabel = when (status) {
-        EpisodeProgressStatus.Watched -> stringResource(R.string.watch_status_watched)
-        EpisodeProgressStatus.InProgress -> ""
-        EpisodeProgressStatus.NotStarted -> ""
-    }
-    return listOf(watchLabel, downloadLabel)
-        .filter(String::isNotBlank)
-        .joinToString(" · ")
+    return downloadLabel
 }
 
 private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
