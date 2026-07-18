@@ -124,8 +124,7 @@ class MainActivity : ComponentActivity() {
                                     update = update,
                                     downloadProgress = updateDownloadProgress,
                                     onUpdate = { downloadUpdate(update) },
-                                    onLater = { availableUpdate = null },
-                                    onNeverRemind = { ignoreUpdateVersion(update.version) },
+                                    onLater = { dismissUpdate(update.version) },
                                 )
                             }
                         }
@@ -189,10 +188,18 @@ class MainActivity : ComponentActivity() {
             }
             result.onSuccess { update ->
                 availableUpdate = update
-                    ?.takeUnless { it.version == updatePreferences.getString(KEY_IGNORED_UPDATE_VERSION, null) }
+                    ?.takeUnless {
+                        !showNoUpdateMessage &&
+                            it.version == updatePreferences.getString(KEY_LAST_SHOWN_UPDATE_VERSION, null)
+                    }
                     ?.let { candidate ->
                         if (getCompletedDownloadUri(candidate.version) != null) candidate.copy(isDownloaded = true) else candidate
                     }
+                availableUpdate?.let { shownUpdate ->
+                    updatePreferences.edit()
+                        .putString(KEY_LAST_SHOWN_UPDATE_VERSION, shownUpdate.version)
+                        .apply()
+                }
                 if (showNoUpdateMessage && update == null) {
                     Toast.makeText(this@MainActivity, updateString(R.string.update_not_available), Toast.LENGTH_SHORT).show()
                 }
@@ -280,8 +287,8 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun ignoreUpdateVersion(version: String) {
-        updatePreferences.edit().putString(KEY_IGNORED_UPDATE_VERSION, version).apply()
+    private fun dismissUpdate(version: String) {
+        updatePreferences.edit().putString(KEY_LAST_SHOWN_UPDATE_VERSION, version).apply()
         availableUpdate = null
     }
 
@@ -383,7 +390,7 @@ class MainActivity : ComponentActivity() {
         private const val UPDATE_PREFERENCES = "app_update"
         private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
         private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"
-        private const val KEY_IGNORED_UPDATE_VERSION = "ignored_update_version"
+        private const val KEY_LAST_SHOWN_UPDATE_VERSION = "last_shown_update_version"
         private const val NO_DOWNLOAD_ID = -1L
         private const val DOWNLOAD_STATUS_MISSING = -1
     }
