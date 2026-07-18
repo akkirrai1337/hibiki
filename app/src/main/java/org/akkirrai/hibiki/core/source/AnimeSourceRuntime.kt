@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.core.source
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
@@ -11,7 +13,6 @@ import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.model.SearchFilterOption
-import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import java.util.concurrent.ConcurrentHashMap
 
@@ -58,7 +59,7 @@ class AnimeSourceRuntime internal constructor(
         watchDiscovery?.discover(title.copy(id = nativeId(title.id))).orEmpty()
 
     private fun nativeId(id: String): String {
-        val scoped = ScopedAnimeId.parse(id)
+        val scoped = AnimeKey.parse(id)
         if (scoped != null) {
             require(scoped.sourceId == descriptor.id) {
                 "Title $id belongs to ${scoped.sourceId}, not ${descriptor.id}"
@@ -68,7 +69,7 @@ class AnimeSourceRuntime internal constructor(
         return normalizeTitleId(id)
     }
 
-    private fun scopedId(nativeId: String): String = ScopedAnimeId(descriptor.id, nativeId).value
+    private fun scopedId(nativeId: String): String = AnimeKey(descriptor.id, nativeId).value
 
     private fun scopeTitle(title: AnimeTitle): AnimeTitle = title.copy(
         id = scopedId(title.id),
@@ -83,40 +84,20 @@ class AnimeSourceRuntimeManager(
     private val client: HttpClient,
 ) {
     private val appContext = context.applicationContext
-    private val runtimes = ConcurrentHashMap<AnimeSourceId, AnimeSourceRuntime>()
+    private val runtimes = ConcurrentHashMap<SourceId, AnimeSourceRuntime>()
 
-    val selectedId: AnimeSourceId
+    val selectedId: SourceId
         get() = AppPreferences.readState(appContext).animeSource
 
     fun current(): AnimeSourceRuntime = runtime(selectedId)
 
     fun forTitle(titleId: String): AnimeSourceRuntime =
-        ScopedAnimeId.parse(titleId)?.sourceId?.let(::runtime)
+        AnimeKey.parse(titleId)?.sourceId?.let(::runtime)
             // Unscoped identifiers were persisted by versions which only supported YummyAnime.
-            ?: runtime(AnimeSourceId.YUMMY_ANIME)
+            ?: runtime(AppPreferences.DEFAULT_ANIME_SOURCE_ID)
 
-    fun runtime(sourceId: AnimeSourceId): AnimeSourceRuntime = runtimes.getOrPut(sourceId) {
+    fun runtime(sourceId: SourceId): AnimeSourceRuntime = runtimes.getOrPut(sourceId) {
         AnimeSourceRegistry.createRuntime(appContext, client, sourceId)
-    }
-}
-
-internal data class ScopedAnimeId(
-    val sourceId: AnimeSourceId,
-    val nativeId: String,
-) {
-    val value: String
-        get() = "$PREFIX${sourceId.name}:$nativeId"
-
-    companion object {
-        private const val PREFIX = "source:"
-
-        fun parse(value: String): ScopedAnimeId? {
-            if (!value.startsWith(PREFIX)) return null
-            val parts = value.removePrefix(PREFIX).split(':', limit = 2)
-            if (parts.size != 2 || parts[1].isBlank()) return null
-            val sourceId = runCatching { AnimeSourceId.valueOf(parts[0]) }.getOrNull() ?: return null
-            return ScopedAnimeId(sourceId, parts[1])
-        }
     }
 }
 

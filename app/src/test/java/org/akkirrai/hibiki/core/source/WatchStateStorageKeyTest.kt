@@ -8,7 +8,7 @@ class WatchStateStorageKeyTest {
     fun `parses source scoped progress key without truncating title id`() {
         assertEquals(
             ProgressStorageKey(
-                titleId = "source:ANI_LIBERTY:10213",
+                titleId = "source:ani-liberty:10213",
                 episodeId = "episode-5",
             ),
             parseProgressStorageKey(
@@ -21,7 +21,7 @@ class WatchStateStorageKeyTest {
     fun `reads source scoped key written by legacy colon format`() {
         assertEquals(
             ProgressStorageKey(
-                titleId = "source:ANI_LIBERTY:10213",
+                titleId = "source:ani-liberty:10213",
                 episodeId = "episode-5",
             ),
             parseProgressStorageKey("progress_source:ANI_LIBERTY:10213:episode-5"),

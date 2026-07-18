@@ -243,7 +243,7 @@ class WatchStateRepository(context: Context) {
     private fun normalizedTitleId(titleId: String): String = YummyIdMigration.normalizeTitleId(titleId)
 
     private fun legacyCompatibleTitleIds(titleId: String): List<String> {
-        return listOf(normalizedTitleId(titleId), titleId).distinct()
+        return YummyIdMigration.compatibleTitleIds(titleId)
     }
 
     private fun episodePrefixes(titleId: String): List<String> {

@@ -3,6 +3,11 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import androidx.annotation.DrawableRes
 import io.ktor.client.HttpClient
+import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.SourceCatalog
+import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceInfo
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
@@ -11,7 +16,6 @@ import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.provider.AniLibertyProvider
 import org.akkirrai.animeresolver.provider.YummyAnimeProvider
-import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.R
@@ -19,13 +23,20 @@ import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStor
 import org.akkirrai.hibiki.core.log.AppLogger
 
 data class AnimeSourceDescriptor(
-    val id: AnimeSourceId,
-    val name: String,
-    val language: String,
+    val info: SourceInfo,
     @param:DrawableRes val iconRes: Int,
     val supportsPlayback: Boolean,
     val contentFeatures: Set<AnimeSourceContentFeature> = emptySet(),
-)
+) {
+    val id: SourceId
+        get() = info.id
+
+    val name: String
+        get() = info.name
+
+    val language: String
+        get() = info.languages.first().tag.uppercase()
+}
 
 /** Optional details-page content. Omitted features remain completely hidden in the UI. */
 enum class AnimeSourceContentFeature {
@@ -45,10 +56,12 @@ object AnimeSourceRegistry {
     private val registrations = listOf(
         Registration(
             descriptor = AnimeSourceDescriptor(
-                AnimeSourceId.YUMMY_ANIME,
-                "YummyAnime",
-                "RU",
-                R.drawable.source_yummy_anime,
+                info = SourceInfo(
+                    id = SourceId("yummy-anime"),
+                    name = "YummyAnime",
+                    languages = setOf(SourceLanguage.RUSSIAN),
+                ),
+                iconRes = R.drawable.source_yummy_anime,
                 supportsPlayback = true,
                 contentFeatures = setOf(
                     AnimeSourceContentFeature.RELATED_TITLES,
@@ -62,10 +75,13 @@ object AnimeSourceRegistry {
         ),
         Registration(
             descriptor = AnimeSourceDescriptor(
-                AnimeSourceId.ANI_LIBERTY,
-                "AniLiberty",
-                "RU",
-                R.drawable.source_ani_liberty,
+                info = SourceInfo(
+                    id = SourceId("ani-liberty"),
+                    name = "AniLiberty",
+                    languages = setOf(SourceLanguage.RUSSIAN),
+                    website = "https://anilibria.top",
+                ),
+                iconRes = R.drawable.source_ani_liberty,
                 supportsPlayback = true,
             ),
             createMetadataSource = { _, client -> AniLibertyMetadataSource(client) },
@@ -74,11 +90,12 @@ object AnimeSourceRegistry {
     )
 
     val sources: List<AnimeSourceDescriptor> = registrations.map(Registration::descriptor)
+    val catalog = SourceCatalog(sources.map(AnimeSourceDescriptor::info))
 
     fun createRuntime(
         context: Context,
         client: HttpClient,
-        sourceId: AnimeSourceId = AppPreferences.readState(context).animeSource,
+        sourceId: SourceId = AppPreferences.readState(context).animeSource,
     ): AnimeSourceRuntime {
         val appContext = context.applicationContext
         val registration = registration(sourceId)
@@ -95,15 +112,18 @@ object AnimeSourceRegistry {
         return runtime
     }
 
-    fun descriptor(sourceId: AnimeSourceId): AnimeSourceDescriptor = registration(sourceId).descriptor
+    fun descriptor(sourceId: SourceId): AnimeSourceDescriptor = registration(sourceId).descriptor
 
-    fun descriptorForTitle(titleId: String, fallbackSourceId: AnimeSourceId): AnimeSourceDescriptor =
-        descriptor(ScopedAnimeId.parse(titleId)?.sourceId ?: fallbackSourceId)
+    fun descriptorForTitle(titleId: String, fallbackSourceId: SourceId): AnimeSourceDescriptor =
+        descriptor(AnimeKey.parse(titleId)?.sourceId ?: fallbackSourceId)
 
     fun descriptorForStoredTitle(titleId: String): AnimeSourceDescriptor =
-        descriptor(ScopedAnimeId.parse(titleId)?.sourceId ?: AnimeSourceId.YUMMY_ANIME)
+        descriptor(
+            AnimeKey.parse(titleId)?.sourceId
+                ?: AppPreferences.DEFAULT_ANIME_SOURCE_ID,
+        )
 
-    private fun registration(sourceId: AnimeSourceId): Registration =
+    private fun registration(sourceId: SourceId): Registration =
         registrations.firstOrNull { it.descriptor.id == sourceId }
             ?: error("Anime source is not registered: $sourceId")
 

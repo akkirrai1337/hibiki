@@ -532,7 +532,7 @@ class AnimeWatchRepository(
         "$titleId:${sourceLanguageKey(titleId)}"
 
     private fun sourceLanguageKey(titleId: String): String =
-        "${sourceForTitle(titleId).descriptor.id.name}:${currentLanguageKey()}"
+        "${sourceForTitle(titleId).descriptor.id.value}:${currentLanguageKey()}"
 
     private fun matchesPreferredPlayer(
         candidatePlayerName: String?,

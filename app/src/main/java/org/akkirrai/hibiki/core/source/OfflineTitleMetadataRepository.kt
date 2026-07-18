@@ -24,8 +24,9 @@ class OfflineTitleMetadataRepository(context: Context) {
     }
 
     fun get(id: String): Anime? {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        val encoded = prefs.getString(key(normalizedId), null) ?: return null
+        val encoded = YummyIdMigration.compatibleTitleIds(id)
+            .firstNotNullOfOrNull { candidate -> prefs.getString(key(candidate), null) }
+            ?: return null
         return runCatching { decodeAnime(JSONObject(encoded)) }.getOrNull()
     }
 
@@ -168,7 +169,7 @@ class OfflineTitleMetadataRepository(context: Context) {
         }
     }
 
-    private fun key(id: String): String = "offline_title_${YummyIdMigration.normalizeTitleId(id)}"
+    private fun key(id: String): String = "offline_title_$id"
 
     companion object {
         const val PREFS_NAME = "hibiki_offline_title_metadata"

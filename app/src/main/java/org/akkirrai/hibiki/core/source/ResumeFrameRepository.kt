@@ -11,12 +11,15 @@ class ResumeFrameRepository(context: Context) {
     }
 
     fun getFrame(titleId: String): File? {
-        return frameFile(titleId).takeIf { it.isFile && it.length() > 0L }
+        return YummyIdMigration.compatibleTitleIds(titleId)
+            .firstNotNullOfOrNull { candidate ->
+                frameFile(candidate).takeIf { it.isFile && it.length() > 0L }
+            }
     }
 
     fun saveFrame(titleId: String, bitmap: Bitmap): File? {
         if (bitmap.width <= 0 || bitmap.height <= 0) return null
-        val target = frameFile(titleId)
+        val target = frameFile(YummyIdMigration.normalizeTitleId(titleId))
         val temporary = File(target.parentFile, "${target.name}.tmp")
         val scaled = bitmap.scaleToMaxWidth(MAX_FRAME_WIDTH)
         return runCatching {
@@ -34,9 +37,8 @@ class ResumeFrameRepository(context: Context) {
     }
 
     private fun frameFile(titleId: String): File {
-        val normalizedId = YummyIdMigration.normalizeTitleId(titleId)
         val digest = MessageDigest.getInstance("SHA-256")
-            .digest(normalizedId.toByteArray())
+            .digest(titleId.toByteArray())
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
         return File(framesDirectory, "$digest.jpg")
     }

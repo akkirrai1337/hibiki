@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
 import kotlinx.coroutines.runBlocking
+import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceInfo
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
@@ -10,7 +13,6 @@ import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.RelatedAnimeTitle
-import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,8 +26,8 @@ class AnimeSourceRuntimeTest {
         val searchResult = runtime.search(AnimeSearchRequest(query = "test")).single()
         val details = runtime.details(searchResult.id)
 
-        assertEquals("source:ANI_LIBERTY:7", searchResult.id)
-        assertEquals("source:ANI_LIBERTY:8", searchResult.relatedAnime.single().id)
+        assertEquals("source:ani-liberty:7", searchResult.id)
+        assertEquals("source:ani-liberty:8", searchResult.relatedAnime.single().id)
         assertEquals("7", metadata.requestedDetailsId)
         assertEquals(searchResult.id, details.id)
     }
@@ -54,9 +56,11 @@ class AnimeSourceRuntimeTest {
 
     private fun runtime(metadata: MetadataSource): AnimeSourceRuntime = AnimeSourceRuntime(
             descriptor = AnimeSourceDescriptor(
-                id = AnimeSourceId.ANI_LIBERTY,
-                name = "Test",
-                language = "RU",
+                info = SourceInfo(
+                    id = SourceId("ani-liberty"),
+                    name = "Test",
+                    languages = setOf(SourceLanguage.RUSSIAN),
+                ),
                 iconRes = 0,
                 supportsPlayback = false,
             ),
@@ -78,6 +82,17 @@ class AnimeSourceRuntimeTest {
             requestedDetailsId = id
             return TITLE
         }
+    }
+
+    @Test
+    fun `runtime reads legacy scoped ids and emits canonical ids`() = runBlocking {
+        val metadata = FakeMetadataSource(AnimeSearchFilterCatalog())
+        val runtime = runtime(metadata)
+
+        val details = runtime.details("source:ANI_LIBERTY:7")
+
+        assertEquals("7", metadata.requestedDetailsId)
+        assertEquals("source:ani-liberty:7", details.id)
     }
 
     private companion object {

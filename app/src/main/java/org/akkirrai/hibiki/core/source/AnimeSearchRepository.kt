@@ -314,7 +314,7 @@ class AnimeSearchRepository(
         return buildString {
             append(SEARCH_CACHE_VERSION)
             append(':')
-            append(selectedSourceId().name)
+            append(selectedSourceId().value)
             append(':')
             append(languageKey)
             append(':')
@@ -347,7 +347,7 @@ class AnimeSearchRepository(
             LanguageMode.SYSTEM -> "sys"
         }
         val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
-        return "$DETAILS_CACHE_VERSION:${sourceId.name}:$languageKey:$id"
+        return "$DETAILS_CACHE_VERSION:${sourceId.value}:$languageKey:$id"
     }
 
     private fun selectedSourceId() = sourceManager?.selectedId

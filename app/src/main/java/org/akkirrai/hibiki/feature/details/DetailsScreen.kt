@@ -171,7 +171,7 @@ fun DetailsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val uriHandler = LocalUriHandler.current
     val screenScope = rememberCoroutineScope()
-    val detailsStateKey = remember(anime.id, selectedAnimeSource) { "${selectedAnimeSource.name}:${anime.id}" }
+    val detailsStateKey = remember(anime.id, selectedAnimeSource) { "${selectedAnimeSource.value}:${anime.id}" }
     val savedScreenState = remember(detailsStateKey) { detailsScreenStateCache[detailsStateKey] }
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }

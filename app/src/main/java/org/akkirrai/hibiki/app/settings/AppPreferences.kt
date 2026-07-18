@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import org.akkirrai.beakokit.api.SourceId
 
 enum class ThemeMode {
     SYSTEM,
@@ -29,17 +30,12 @@ enum class VideoScaleMode {
     fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
 }
 
-enum class AnimeSourceId {
-    YUMMY_ANIME,
-    ANI_LIBERTY,
-}
-
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useSystemColorScheme: Boolean = true,
     val useAmoledTheme: Boolean = false,
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
-    val animeSource: AnimeSourceId = AnimeSourceId.YUMMY_ANIME,
+    val animeSource: SourceId = AppPreferences.DEFAULT_ANIME_SOURCE_ID,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
@@ -91,8 +87,8 @@ class AppPreferences(context: Context) {
         prefs.edit().putString(KEY_LANGUAGE_MODE, mode.name).apply()
     }
 
-    fun setAnimeSource(source: AnimeSourceId) {
-        prefs.edit().putString(KEY_ANIME_SOURCE, source.name).apply()
+    fun setAnimeSource(source: SourceId) {
+        prefs.edit().putString(KEY_ANIME_SOURCE, source.value).apply()
         _state.value = readState(prefs)
         _animeSourceChanges.tryEmit(source)
     }
@@ -135,8 +131,10 @@ class AppPreferences(context: Context) {
     }
 
     companion object {
-        private val _animeSourceChanges = MutableSharedFlow<AnimeSourceId>(extraBufferCapacity = 1)
-        val animeSourceChanges: SharedFlow<AnimeSourceId> = _animeSourceChanges.asSharedFlow()
+        private val _animeSourceChanges = MutableSharedFlow<SourceId>(extraBufferCapacity = 1)
+        val animeSourceChanges: SharedFlow<SourceId> = _animeSourceChanges.asSharedFlow()
+
+        val DEFAULT_ANIME_SOURCE_ID = SourceId("yummy-anime")
 
         const val PREFS_NAME = "hibiki_app_preferences"
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
@@ -167,9 +165,9 @@ class AppPreferences(context: Context) {
                 languageMode = prefs.getString(KEY_LANGUAGE_MODE, LanguageMode.SYSTEM.name)
                     ?.let(LanguageMode::valueOf)
                     ?: LanguageMode.SYSTEM,
-                animeSource = prefs.getString(KEY_ANIME_SOURCE, AnimeSourceId.YUMMY_ANIME.name)
-                    ?.let { runCatching { AnimeSourceId.valueOf(it) }.getOrNull() }
-                    ?: AnimeSourceId.YUMMY_ANIME,
+                animeSource = SourceId.parseStored(
+                    prefs.getString(KEY_ANIME_SOURCE, DEFAULT_ANIME_SOURCE_ID.value),
+                ) ?: DEFAULT_ANIME_SOURCE_ID,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),

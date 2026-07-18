@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.feature.home
 import android.content.Context
 import io.ktor.client.HttpClient
 import kotlin.random.Random
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
@@ -10,7 +11,6 @@ import org.akkirrai.animeresolver.model.AnimeReleaseStatus
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.AnimeSourceId
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
@@ -74,7 +74,7 @@ class HomeRepository(
         val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
             currentHomeSelectionSeed = it
         }
-        val languageKey = "${selectedSourceId().name}:${sourceLanguage()}"
+        val languageKey = "${selectedSourceId().value}:${sourceLanguage()}"
         cachedHomeContent?.let { cached ->
             if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
@@ -369,7 +369,7 @@ class HomeRepository(
         )
     }
 
-    private fun selectedSourceId(): AnimeSourceId = AppPreferences.readState(appContext).animeSource
+    private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 
     private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
 
@@ -416,7 +416,7 @@ class HomeRepository(
     )
 
     private data class CachedSourceAnime(
-        val sourceId: AnimeSourceId,
+        val sourceId: SourceId,
         val items: List<Anime>,
     )
 }

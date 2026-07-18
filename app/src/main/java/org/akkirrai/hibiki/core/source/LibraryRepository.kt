@@ -350,30 +350,25 @@ class LibraryRepository(context: Context) {
     private fun favoriteKey(id: String): String = "favorite_$id"
 
     private fun getLibraryAddedAt(id: String): Long? {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        return listOf(libraryAddedAtKey(normalizedId), libraryAddedAtKey(id))
+        return YummyIdMigration.compatibleTitleIds(id).map(::libraryAddedAtKey)
             .firstNotNullOfOrNull { key -> prefs.takeIf { it.contains(key) }?.getLong(key, 0L) }
             ?.takeIf { it > 0L }
     }
 
     private fun libraryAnimeKeys(id: String): List<String> {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        return listOf(libraryAnimeKey(normalizedId), libraryAnimeKey(id)).distinct()
+        return YummyIdMigration.compatibleTitleIds(id).map(::libraryAnimeKey)
     }
 
     private fun libraryCategoryKeys(id: String): List<String> {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        return listOf(libraryCategoryKey(normalizedId), libraryCategoryKey(id)).distinct()
+        return YummyIdMigration.compatibleTitleIds(id).map(::libraryCategoryKey)
     }
 
     private fun libraryCategorySetKeys(id: String): List<String> {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        return listOf(libraryCategorySetKey(normalizedId), libraryCategorySetKey(id)).distinct()
+        return YummyIdMigration.compatibleTitleIds(id).map(::libraryCategorySetKey)
     }
 
     private fun favoriteKeys(id: String): List<String> {
-        val normalizedId = YummyIdMigration.normalizeTitleId(id)
-        return listOf(favoriteKey(normalizedId), favoriteKey(id)).distinct()
+        return YummyIdMigration.compatibleTitleIds(id).map(::favoriteKey)
     }
 
     private fun saveCategoriesOrRemove(
@@ -429,8 +424,8 @@ class LibraryRepository(context: Context) {
         libraryAnimeKeys(id).forEach(::remove)
         libraryCategoryKeys(id).forEach(::remove)
         libraryCategorySetKeys(id).forEach(::remove)
-        listOf(libraryAddedAtKey(YummyIdMigration.normalizeTitleId(id)), libraryAddedAtKey(id))
-            .distinct()
+        YummyIdMigration.compatibleTitleIds(id)
+            .map(::libraryAddedAtKey)
             .forEach(::remove)
         return this
     }

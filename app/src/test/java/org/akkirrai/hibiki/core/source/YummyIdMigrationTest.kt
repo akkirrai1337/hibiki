@@ -34,4 +34,20 @@ class YummyIdMigrationTest {
 
         assertEquals("bleach-2004", YummyIdMigration.normalizeTitleId(rawId))
     }
+
+    @Test
+    fun `canonicalizes legacy source scoped id`() {
+        assertEquals(
+            "source:ani-liberty:10213",
+            YummyIdMigration.normalizeTitleId("source:ANI_LIBERTY:10213"),
+        )
+    }
+
+    @Test
+    fun `keeps legacy scoped id as storage alias`() {
+        assertEquals(
+            listOf("source:ani-liberty:10213", "source:ANI_LIBERTY:10213"),
+            YummyIdMigration.compatibleTitleIds("source:ani-liberty:10213"),
+        )
+    }
 }
