@@ -22,13 +22,18 @@ import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.resolveUrl
+import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.http.MirrorRequestExecutor
 
 /** Public AniLiberty metadata API: catalog, search, details and schedules. */
 class AniLibertyMetadataSource(
     private val client: HttpClient,
     private val baseUrls: List<String> = DEFAULT_BASE_URLS,
+    logger: SourceLogger = SourceLogger.NONE,
 ) : MetadataSource {
     constructor(client: HttpClient, baseUrl: String) : this(client, listOf(baseUrl))
+
+    private val mirrors = MirrorRequestExecutor("AniLiberty", baseUrls, logger)
 
     override val name: String = "AniLiberty"
     override val capabilities = MetadataSourceCapabilities(
@@ -115,20 +120,10 @@ class AniLibertyMetadataSource(
     private suspend fun requestJson(
         path: String,
         parameters: List<Pair<String, Any>> = emptyList(),
-    ): JsonElement = requestFromMirrors { baseUrl ->
+    ): JsonElement = mirrors.execute { baseUrl ->
         client.get("${baseUrl.trimEnd('/')}/$path") {
             parameters.forEach { (key, value) -> parameter(key, value) }
         }.bodyOrThrow(name)
-    }
-
-    private suspend fun <T> requestFromMirrors(request: suspend (String) -> T): T {
-        val errors = mutableListOf<Throwable>()
-        baseUrls.forEach { baseUrl ->
-            runCatching { request(baseUrl) }
-                .onSuccess { return it }
-                .onFailure(errors::add)
-        }
-        throw SourceException("AniLiberty API mirrors are unavailable", cause = errors.firstOrNull())
     }
 
     private fun referenceOption(value: JsonObject): SearchFilterOption {

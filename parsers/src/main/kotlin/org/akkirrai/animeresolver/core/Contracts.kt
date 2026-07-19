@@ -10,6 +10,8 @@ import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.model.StreamValidationResult
 import org.akkirrai.animeresolver.model.VideoStream
 
+typealias SourceException = org.akkirrai.beakokit.api.SourceException
+
 interface MetadataSource {
     val name: String
     val capabilities: MetadataSourceCapabilities
@@ -51,9 +53,3 @@ interface PlayerExtractor {
 interface StreamValidator {
     suspend fun validate(stream: VideoStream): StreamValidationResult
 }
-
-class SourceException(
-    message: String,
-    val statusCode: Int? = null,
-    cause: Throwable? = null,
-) : RuntimeException(message, cause)

@@ -19,6 +19,8 @@ import org.akkirrai.animeresolver.model.VideoSegment
 import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.normalizeUrl
+import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.http.MirrorRequestExecutor
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.minutes
 
@@ -26,9 +28,11 @@ class AniLibertyProvider(
     private val client: HttpClient,
     private val matcher: TitleMatcher,
     private val baseUrls: List<String> = DEFAULT_BASE_URLS,
+    logger: SourceLogger = SourceLogger.NONE,
 ) : VideoProvider {
     override val id: String = "aniliberty"
     override val name: String = "AniLiberty"
+    private val mirrors = MirrorRequestExecutor(name, baseUrls, logger)
 
     override suspend fun search(title: AnimeTitle): List<ProviderMatch> {
         val results = title.allNames().take(MAX_SEARCH_QUERIES).map { query ->
@@ -101,7 +105,7 @@ class AniLibertyProvider(
     private suspend fun getRelease(id: String): AniLibertyRelease {
         cachedReleases[id]?.takeIf { it.cachedAt + CACHE_TTL.inWholeMilliseconds > System.currentTimeMillis() }
             ?.let { return it.release }
-        val release = requestFromMirrors { baseUrl ->
+        val release = mirrors.execute { baseUrl ->
             client.get("$baseUrl/anime/releases/$id") {
                 header(HttpHeaders.Accept, "application/json")
             }.bodyOrThrow<AniLibertyRelease>(name)
@@ -110,21 +114,11 @@ class AniLibertyProvider(
         return release
     }
 
-    private suspend fun searchReleases(query: String): List<AniLibertyReleaseSummary> = requestFromMirrors { baseUrl ->
+    private suspend fun searchReleases(query: String): List<AniLibertyReleaseSummary> = mirrors.execute { baseUrl ->
         client.get("$baseUrl/app/search/releases") {
             header(HttpHeaders.Accept, "application/json")
             parameter("query", query)
         }.bodyOrThrow(name)
-    }
-
-    private suspend fun <T> requestFromMirrors(request: suspend (String) -> T): T {
-        val errors = mutableListOf<Throwable>()
-        baseUrls.forEach { baseUrl ->
-            runCatching { request(baseUrl.trimEnd('/')) }
-                .onSuccess { return it }
-                .onFailure(errors::add)
-        }
-        throw SourceException("AniLiberty API mirrors are unavailable", cause = errors.firstOrNull())
     }
 
     private fun String.toPlayerLink(

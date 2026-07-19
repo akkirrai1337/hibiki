@@ -5,6 +5,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.beakokit.api.SourceErrorKind
 
 suspend inline fun <reified T> HttpResponse.bodyOrThrow(source: String): T {
     if (!status.isSuccess()) {
@@ -18,6 +19,13 @@ suspend inline fun <reified T> HttpResponse.bodyOrThrow(source: String): T {
         throw SourceException(
             message = if (normalizedDetails.isBlank()) message else "$message: $normalizedDetails",
             statusCode = status.value,
+            kind = when (status.value) {
+                401, 403 -> SourceErrorKind.AUTH
+                404 -> SourceErrorKind.NOT_FOUND
+                429 -> SourceErrorKind.RATE_LIMITED
+                in 500..599 -> SourceErrorKind.NETWORK
+                else -> SourceErrorKind.UNKNOWN
+            },
         )
     }
     return body()

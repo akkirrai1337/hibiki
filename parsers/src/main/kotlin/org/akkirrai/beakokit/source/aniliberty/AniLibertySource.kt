@@ -31,11 +31,12 @@ class AniLibertySource(
         ?.filter(String::isNotBlank)
         ?.takeIf(List<String>::isNotEmpty)
         ?: DEFAULT_BASE_URLS
-    private val metadata = AniLibertyMetadataSource(context.httpClient, baseUrls)
+    private val metadata = AniLibertyMetadataSource(context.httpClient, baseUrls, context.logger)
     private val playbackProvider = AniLibertyProvider(
         client = context.httpClient,
         matcher = TitleMatcher(),
         baseUrls = baseUrls,
+        logger = context.logger,
     )
 
     override val info: SourceInfo = INFO
