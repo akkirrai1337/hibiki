@@ -1,20 +1,13 @@
 package org.akkirrai.beakokit.source.aniliberty
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.HttpHeaders
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogFeature
-import org.akkirrai.beakokit.api.DefaultSourceContext
-import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.testkit.JsonFixtureRoute
+import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,15 +16,8 @@ import kotlin.test.assertTrue
 class AniLibertySourceTest {
     @Test
     fun `source owns its stable identity and capabilities`() {
-        val client = HttpClient(MockEngine { error("Network must not be called") })
-
-        try {
-            val source = AniLibertySource(
-                DefaultSourceContext(
-                    httpClient = client,
-                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
-                ),
-            )
+        SourceFixtureHost(preferredLanguages = listOf(SourceLanguage.RUSSIAN)).use { host ->
+            val source = AniLibertySource(host.context)
 
             SourceTestKit.assertSourceContract(source, SourceId("ani-liberty"))
             assertEquals(SourceId("ani-liberty"), source.info.id)
@@ -44,41 +30,26 @@ class AniLibertySourceTest {
             )
             assertTrue(CatalogFeature.LATEST_RELEASES in source.catalogCapabilities.features)
             assertTrue(CatalogFeature.SCHEDULE in source.catalogCapabilities.features)
-        } finally {
-            client.close()
         }
     }
 
     @Test
     fun `playback stays behind source contract`() = runBlocking {
-        val client = HttpClient(MockEngine { request ->
-            when (request.url.encodedPath) {
-                "/api/v1/app/search/releases" -> respond(
+        SourceFixtureHost(
+            routes = listOf(
+                JsonFixtureRoute(
+                    "/api/v1/app/search/releases",
                     """[{"id":987654,"name":{"main":"Test"},"year":2026,"episodes_total":1}]""",
-                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                )
-                "/api/v1/anime/releases/987654" -> respond(
-                    """{"id":987654,"episodes":[{"id":"episode-1","ordinal":1,"hls_720":"https://cdn.test/720.m3u8"}]}""",
-                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                )
-                else -> error("Unexpected URL: ${request.url}")
-            }
-        }) {
-            install(ContentNegotiation) { json() }
-        }
-
-        try {
-            val source = AniLibertySource(
-                DefaultSourceContext(
-                    httpClient = client,
-                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
-                    config = MapSourceConfig(
-                        values = mapOf(
-                            AniLibertySource.BASE_URLS_KEY to "https://aniliberty.test/api/v1",
-                        ),
-                    ),
                 ),
-            )
+                JsonFixtureRoute(
+                    "/api/v1/anime/releases/987654",
+                    """{"id":987654,"episodes":[{"id":"episode-1","ordinal":1,"hls_720":"https://cdn.test/720.m3u8"}]}""",
+                ),
+            ),
+            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            values = mapOf(AniLibertySource.BASE_URLS_KEY to "https://aniliberty.test/api/v1"),
+        ).use { host ->
+            val source = AniLibertySource(host.context)
             val title = AnimeTitle(
                 id = "987654",
                 russianName = "Test",
@@ -101,8 +72,6 @@ class AniLibertySourceTest {
             assertEquals("AniLiberty", group.title)
             assertEquals("HLS", group.qualityLabel)
             assertEquals(listOf("720p"), links.map { it.quality })
-        } finally {
-            client.close()
         }
     }
 }

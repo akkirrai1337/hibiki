@@ -28,6 +28,9 @@ dependencies {
     testImplementation("io.ktor:ktor-client-mock:3.5.0")
 
     testFixturesImplementation(kotlin("test"))
+    testFixturesImplementation("io.ktor:ktor-client-mock:3.5.0")
+    testFixturesImplementation("io.ktor:ktor-client-content-negotiation:3.5.0")
+    testFixturesImplementation("io.ktor:ktor-serialization-kotlinx-json:3.5.0")
     ksp(project(":beakokit-processor"))
 }
 

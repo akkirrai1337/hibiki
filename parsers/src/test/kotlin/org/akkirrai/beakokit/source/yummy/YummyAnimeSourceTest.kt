@@ -1,19 +1,12 @@
 package org.akkirrai.beakokit.source.yummy
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.HttpHeaders
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.api.DefaultSourceContext
-import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.testkit.JsonFixtureRoute
+import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,49 +14,31 @@ import kotlin.test.assertEquals
 class YummyAnimeSourceTest {
     @Test
     fun `source owns identity and consumes host language and secret`() = runBlocking {
-        val client = HttpClient(MockEngine { request ->
-            assertEquals("/anime", request.url.encodedPath)
-            assertEquals("en", request.headers["Lang"])
-            assertEquals("application-secret", request.headers["X-Application"])
-            respond(
-                content = """{"response":[]}""",
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
-            )
-        }) {
-            install(ContentNegotiation) { json() }
-        }
-
-        try {
-            val source = YummyAnimeSource(
-                DefaultSourceContext(
-                    httpClient = client,
-                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
-                    config = MapSourceConfig(
-                        values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
-                        secrets = mapOf(
-                            YummyAnimeConfig.APPLICATION_TOKEN to "application-secret",
-                        ),
-                    ),
-                ),
-            )
+        SourceFixtureHost(
+            routes = listOf(JsonFixtureRoute("/anime", """{"response":[]}""")),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
+            secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
+        ).use { host ->
+            val source = YummyAnimeSource(host.context)
 
             SourceTestKit.assertSourceContract(source, SourceId("yummy-anime"))
             assertEquals(SourceId("yummy-anime"), source.info.id)
             assertEquals("YummyAnime", source.name)
             assertEquals(SourceCapability.entries.toSet(), source.info.capabilities)
             assertEquals(emptyList(), source.search("frieren"))
-        } finally {
-            client.close()
+            assertEquals("en", host.requests.single().headers["Lang"])
+            assertEquals("application-secret", host.requests.single().headers["X-Application"])
         }
     }
 
     @Test
     fun `playback stays behind source contract`() = runBlocking {
-        val client = HttpClient(MockEngine { request ->
-            assertEquals("application-secret", request.headers["X-Application"])
-            when (request.url.encodedPath) {
-                "/anime/987654/videos" -> respond(
-                    content = """
+        SourceFixtureHost(
+            routes = listOf(
+                JsonFixtureRoute(
+                    path = "/anime/987654/videos",
+                    body = """
                         {"response":[{
                           "video_id":1,
                           "iframe_url":"https://player.test/episode-1",
@@ -71,25 +46,13 @@ class YummyAnimeSourceTest {
                           "number":"1"
                         }]}
                     """.trimIndent(),
-                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                )
-                else -> error("Unexpected URL: ${request.url}")
-            }
-        }) {
-            install(ContentNegotiation) { json() }
-        }
-
-        try {
-            val source = YummyAnimeSource(
-                DefaultSourceContext(
-                    httpClient = client,
-                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
-                    config = MapSourceConfig(
-                        values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
-                        secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
-                    ),
                 ),
-            )
+            ),
+            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
+            secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
+        ).use { host ->
+            val source = YummyAnimeSource(host.context)
             val title = title("987654")
 
             val snapshot = SourceTestKit.assertPlaybackContract(source, title)
@@ -98,8 +61,7 @@ class YummyAnimeSourceTest {
 
             assertEquals("Voice", group.title)
             assertEquals(listOf("Kodik"), links.map { it.playerName })
-        } finally {
-            client.close()
+            assertEquals("application-secret", host.requests.single().headers["X-Application"])
         }
     }
 
