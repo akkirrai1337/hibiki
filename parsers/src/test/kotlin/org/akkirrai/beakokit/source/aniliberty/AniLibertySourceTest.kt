@@ -14,6 +14,7 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceCapability
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -35,6 +36,10 @@ class AniLibertySourceTest {
             assertEquals("AniLiberty", source.name)
             assertEquals(setOf(SourceLanguage.RUSSIAN), source.info.languages)
             assertEquals("https://anilibria.top", source.info.website)
+            assertEquals(
+                setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
+                source.info.capabilities,
+            )
             assertTrue(MetadataSourceFeature.LATEST_RELEASES in source.capabilities.features)
             assertTrue(MetadataSourceFeature.SCHEDULE in source.capabilities.features)
         } finally {

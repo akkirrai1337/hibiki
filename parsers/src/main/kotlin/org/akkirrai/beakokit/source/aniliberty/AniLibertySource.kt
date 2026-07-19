@@ -14,15 +14,17 @@ import org.akkirrai.animeresolver.provider.AniLibertyProvider
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceCapability
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 class AniLibertySource(
     context: SourceContext,
-) : AnimeSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource {
     private val baseUrls = context.config.value(BASE_URLS_KEY)
         ?.split(',')
         ?.map(String::trim)
@@ -101,6 +103,10 @@ class AniLibertySource(
             name = "AniLiberty",
             languages = setOf(SourceLanguage.RUSSIAN),
             website = "https://anilibria.top",
+            capabilities = setOf(
+                SourceCapability.LATEST_RELEASES,
+                SourceCapability.PLAYBACK,
+            ),
         )
     }
 }

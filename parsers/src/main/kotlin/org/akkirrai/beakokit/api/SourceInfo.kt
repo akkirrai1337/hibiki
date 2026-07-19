@@ -26,6 +26,7 @@ data class SourceInfo(
     val name: String,
     val languages: Set<SourceLanguage>,
     val website: String? = null,
+    val capabilities: Set<SourceCapability> = emptySet(),
 ) {
     init {
         require(name.isNotBlank()) { "Source name must not be blank" }

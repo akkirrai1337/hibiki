@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
@@ -71,9 +72,22 @@ class AnimeSourceRuntimeTest {
         assertEquals("default", groups.single().id)
     }
 
+    @Test
+    fun `latest operation is provided by optional capability`() = runBlocking {
+        val runtime = runtime(
+            metadata = FakeMetadataSource(AnimeSearchFilterCatalog()),
+            latestSource = LatestSource { listOf(TITLE) },
+        )
+
+        val latest = runtime.latest(10)
+
+        assertEquals(listOf("source:ani-liberty:7"), latest.map { it.id })
+    }
+
     private fun runtime(
         metadata: MetadataSource,
         playbackSource: PlaybackSource? = null,
+        latestSource: LatestSource? = null,
     ): AnimeSourceRuntime = AnimeSourceRuntime(
             descriptor = AnimeSourceDescriptor(
                 info = SourceInfo(
@@ -82,9 +96,9 @@ class AnimeSourceRuntimeTest {
                     languages = setOf(SourceLanguage.RUSSIAN),
                 ),
                 iconRes = 0,
-                supportsPlayback = false,
             ),
             metadata = metadata,
+            latestSource = latestSource,
             playbackSource = playbackSource,
             localizeFilters = { catalog, _ -> catalog },
             normalizeTitleId = { it },

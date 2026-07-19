@@ -2,7 +2,7 @@ package org.akkirrai.hibiki.feature.details
 
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
-import org.akkirrai.hibiki.core.source.AnimeSourceContentFeature
+import org.akkirrai.beakokit.api.SourceCapability
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,7 +21,7 @@ class DetailsUiModelTest {
             anime = anime,
             hero = hero,
             description = "",
-            contentFeatures = AnimeSourceContentFeature.entries.toSet(),
+            contentFeatures = SourceCapability.entries.toSet(),
         )
 
         assertEquals(listOf("related", "similar"), model.sections.map(DetailsSection::key))
@@ -39,7 +39,7 @@ class DetailsUiModelTest {
             anime = anime,
             hero = hero,
             description = "",
-            contentFeatures = AnimeSourceContentFeature.entries.toSet(),
+            contentFeatures = SourceCapability.entries.toSet(),
         )
 
         assertEquals(listOf("related", "similar"), model.sections.map(DetailsSection::key))
@@ -52,7 +52,7 @@ class DetailsUiModelTest {
             anime = anime(),
             hero = hero,
             description = "",
-            contentFeatures = AnimeSourceContentFeature.entries.toSet(),
+            contentFeatures = SourceCapability.entries.toSet(),
         )
 
         assertTrue(model.sections.isEmpty())

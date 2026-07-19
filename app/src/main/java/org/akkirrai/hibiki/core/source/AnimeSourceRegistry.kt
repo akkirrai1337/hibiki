@@ -7,9 +7,11 @@ import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceConfig
+import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -27,8 +29,6 @@ import org.akkirrai.hibiki.core.log.AppLogger
 data class AnimeSourceDescriptor(
     val info: SourceInfo,
     @param:DrawableRes val iconRes: Int,
-    val supportsPlayback: Boolean,
-    val contentFeatures: Set<AnimeSourceContentFeature> = emptySet(),
 ) {
     val id: SourceId
         get() = info.id
@@ -38,12 +38,19 @@ data class AnimeSourceDescriptor(
 
     val language: String
         get() = info.languages.first().tag.uppercase()
-}
 
-/** Optional details-page content. Omitted features remain completely hidden in the UI. */
-enum class AnimeSourceContentFeature {
-    RELATED_TITLES,
-    SIMILAR_TITLES,
+    val supportsPlayback: Boolean
+        get() = SourceCapability.PLAYBACK in info.capabilities
+
+    val contentFeatures: Set<SourceCapability>
+        get() = info.capabilities.intersect(CONTENT_CAPABILITIES)
+
+    private companion object {
+        val CONTENT_CAPABILITIES = setOf(
+            SourceCapability.RELATED_TITLES,
+            SourceCapability.SIMILAR_TITLES,
+        )
+    }
 }
 
 object AnimeSourceRegistry {
@@ -59,11 +66,6 @@ object AnimeSourceRegistry {
             descriptor = AnimeSourceDescriptor(
                 info = YummyAnimeSource.INFO,
                 iconRes = R.drawable.source_yummy_anime,
-                supportsPlayback = true,
-                contentFeatures = setOf(
-                    AnimeSourceContentFeature.RELATED_TITLES,
-                    AnimeSourceContentFeature.SIMILAR_TITLES,
-                ),
             ),
             createSource = { context, client -> createYummySource(context, client) },
             localizeFilters = YummySearchFilterLocalizer::localize,
@@ -73,7 +75,6 @@ object AnimeSourceRegistry {
             descriptor = AnimeSourceDescriptor(
                 info = AniLibertySource.INFO,
                 iconRes = R.drawable.source_ani_liberty,
-                supportsPlayback = true,
             ),
             createSource = { context, client ->
                 AniLibertySource(createSourceContext(context, client, AniLibertySource.INFO.id))
@@ -92,16 +93,18 @@ object AnimeSourceRegistry {
         val appContext = context.applicationContext
         val registration = registration(sourceId)
         val source = registration.createSource(appContext, client)
+        check(source.info == registration.descriptor.info) {
+            "Source metadata does not match its registration: $sourceId"
+        }
+        validateCapabilities(source)
         val runtime = AnimeSourceRuntime(
             descriptor = registration.descriptor,
             metadata = source,
+            latestSource = source as? LatestSource,
             playbackSource = source as? PlaybackSource,
             localizeFilters = registration.localizeFilters,
             normalizeTitleId = registration.normalizeTitleId,
         )
-        check(runtime.supportsPlayback == registration.descriptor.supportsPlayback) {
-            "Playback capability does not match source registration: $sourceId"
-        }
         return runtime
     }
 
@@ -119,6 +122,16 @@ object AnimeSourceRegistry {
     private fun registration(sourceId: SourceId): Registration =
         registrations.firstOrNull { it.descriptor.id == sourceId }
             ?: error("Anime source is not registered: $sourceId")
+
+    private fun validateCapabilities(source: AnimeSource) {
+        val capabilities = source.info.capabilities
+        check((SourceCapability.PLAYBACK in capabilities) == (source is PlaybackSource)) {
+            "${source.info.id} playback declaration does not match PlaybackSource"
+        }
+        check((SourceCapability.LATEST_RELEASES in capabilities) == (source is LatestSource)) {
+            "${source.info.id} latest declaration does not match LatestSource"
+        }
+    }
 
     private fun createSourceContext(
         context: Context,

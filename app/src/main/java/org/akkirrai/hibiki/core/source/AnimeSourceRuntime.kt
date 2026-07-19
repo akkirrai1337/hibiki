@@ -5,13 +5,13 @@ import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.MetadataSourceFeature
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 class AnimeSourceRuntime internal constructor(
     val descriptor: AnimeSourceDescriptor,
     val metadata: MetadataSource,
+    private val latestSource: LatestSource?,
     private val playbackSource: PlaybackSource?,
     private val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog,
     private val normalizeTitleId: (String) -> String,
@@ -37,8 +38,7 @@ class AnimeSourceRuntime internal constructor(
     fun normalizeId(id: String): String = scopedId(nativeId(id))
 
     suspend fun latest(limit: Int): List<AnimeTitle> {
-        if (MetadataSourceFeature.LATEST_RELEASES !in metadata.capabilities.features) return emptyList()
-        return metadata.latest(limit).map(::scopeTitle)
+        return latestSource?.latest(limit)?.map(::scopeTitle).orEmpty()
     }
 
     suspend fun filterCatalog(preferEnglish: Boolean): AnimeSearchFilterCatalog =

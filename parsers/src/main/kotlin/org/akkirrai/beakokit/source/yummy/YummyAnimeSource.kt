@@ -13,16 +13,18 @@ import org.akkirrai.animeresolver.provider.YummyAnimeProvider
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceCapability
 
 /** YummyAnime metadata wired exclusively through host-provided BeakoKit services. */
 class YummyAnimeSource(
     context: SourceContext,
-) : AnimeSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource {
     private val applicationToken = context.config.secret(APPLICATION_TOKEN_KEY)
     private val baseUrl = context.config.value(BASE_URL_KEY) ?: DEFAULT_BASE_URL
     private val metadata = YummyMetadataSource(
@@ -111,6 +113,12 @@ class YummyAnimeSource(
             id = SourceId("yummy-anime"),
             name = "YummyAnime",
             languages = setOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            capabilities = setOf(
+                SourceCapability.LATEST_RELEASES,
+                SourceCapability.PLAYBACK,
+                SourceCapability.RELATED_TITLES,
+                SourceCapability.SIMILAR_TITLES,
+            ),
         )
     }
 }

@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceCapability
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -47,6 +48,7 @@ class YummyAnimeSourceTest {
 
             assertEquals(SourceId("yummy-anime"), source.info.id)
             assertEquals("YummyAnime", source.name)
+            assertEquals(SourceCapability.entries.toSet(), source.info.capabilities)
             assertEquals(emptyList(), source.search("frieren"))
         } finally {
             client.close()

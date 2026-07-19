@@ -2,7 +2,7 @@ package org.akkirrai.hibiki.feature.details
 
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
-import org.akkirrai.hibiki.core.source.AnimeSourceContentFeature
+import org.akkirrai.beakokit.api.SourceCapability
 
 internal data class DetailsUiModel(
     val anime: Anime,
@@ -31,9 +31,9 @@ internal fun buildDetailsUiModel(
     anime: Anime,
     hero: HeroInfo,
     description: String,
-    contentFeatures: Set<AnimeSourceContentFeature>,
+    contentFeatures: Set<SourceCapability>,
 ): DetailsUiModel {
-    val relatedItems = if (AnimeSourceContentFeature.RELATED_TITLES in contentFeatures) {
+    val relatedItems = if (SourceCapability.RELATED_TITLES in contentFeatures) {
         (anime.franchiseAnime + anime.relatedAnime)
             .filterNot { it.id == anime.id }
             .distinctBy(RelatedAnime::id)
@@ -41,7 +41,7 @@ internal fun buildDetailsUiModel(
         emptyList()
     }
     val relatedIds = relatedItems.mapTo(mutableSetOf(), RelatedAnime::id)
-    val similarItems = if (AnimeSourceContentFeature.SIMILAR_TITLES in contentFeatures) {
+    val similarItems = if (SourceCapability.SIMILAR_TITLES in contentFeatures) {
         anime.similarAnime
             .filterNot { it.id == anime.id || it.id in relatedIds }
             .distinctBy(RelatedAnime::id)
