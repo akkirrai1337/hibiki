@@ -21,6 +21,7 @@ class AnimeGoSourceTest {
         SourceFixtureHost(
             routes = listOf(
                 htmlRoute("/search/all", "search.html", query = mapOf("q" to "Test")),
+                htmlRoute("/search/all", "empty-search.html", query = mapOf("q" to "Missing")),
                 htmlRoute("/anime/test-anime-710", "details.html"),
                 htmlRoute("/anime", "search.html"),
                 FixtureRoute.fromResource(
@@ -52,12 +53,16 @@ class AnimeGoSourceTest {
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
             val playback = SourceTestKit.assertPlaybackContract(source, catalog.details)
-            val filters = source.getSearchFilterCatalog()
+            val filters = SourceTestKit.assertFilterCatalogContract(source)
             val paged = source.search(
                 AnimeSearchRequest(offset = 20, limit = 1, sort = AnimeSearchSort.RATING),
             )
-            val pageBoundary = source.search(AnimeSearchRequest(limit = 2))
-            val filtered = source.search(
+            val pagination = SourceTestKit.assertPaginationContract(
+                source,
+                AnimeSearchRequest(limit = 1),
+            )
+            val filtered = SourceTestKit.assertFilteredSearchContract(
+                source,
                 AnimeSearchRequest(
                     limit = 1,
                     sort = AnimeSearchSort.YEAR,
@@ -69,6 +74,10 @@ class AnimeGoSourceTest {
                     yearTo = 2024,
                 ),
             )
+            SourceTestKit.assertEmptySearchContract(
+                source,
+                AnimeSearchRequest(query = "Missing", limit = 1),
+            )
 
             assertEquals("test-anime-710", catalog.details.id)
             assertEquals("Test Anime", catalog.details.originalName)
@@ -77,9 +86,10 @@ class AnimeGoSourceTest {
             assertEquals("AniBoom", playback.firstEpisodeLinks.first().playerName)
             assertEquals(listOf("tv"), filters.typeOptions.map { it.id })
             assertEquals(listOf("ongoing"), filters.statusOptions.map { it.id })
-            assertEquals(listOf("action"), filters.genreOptions.map { it.id })
+            assertEquals(listOf("action", "comedy"), filters.genreOptions.map { it.id })
             assertEquals(listOf("paged-anime-711"), paged.map(AnimeTitle::id))
-            assertEquals(listOf("test-anime-710", "paged-anime-711"), pageBoundary.map(AnimeTitle::id))
+            assertEquals(listOf("test-anime-710"), pagination.firstPage.map(AnimeTitle::id))
+            assertEquals(listOf("paged-anime-711"), pagination.secondPage.map(AnimeTitle::id))
             assertEquals(listOf("paged-anime-711"), filtered.map(AnimeTitle::id))
             assertEquals(
                 setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),

@@ -1,8 +1,11 @@
 package org.akkirrai.beakokit.testkit
 
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.PlaybackGroup
@@ -18,6 +21,11 @@ data class PlaybackContractSnapshot(
 data class CatalogContractSnapshot(
     val searchResults: List<AnimeTitle>,
     val details: AnimeTitle,
+)
+
+data class PaginationContractSnapshot(
+    val firstPage: List<AnimeTitle>,
+    val secondPage: List<AnimeTitle>,
 )
 
 /** Reusable contract assertions for fixture-backed source tests. */
@@ -55,6 +63,116 @@ object SourceTestKit {
         }
         assertTitles(results, "search results")
         return results
+    }
+
+    suspend fun assertEmptySearchContract(
+        source: AnimeSource,
+        request: AnimeSearchRequest,
+    ) {
+        val results = assertSearchContract(source, request)
+        assertContract(results.isEmpty()) {
+            "Expected an empty search page, got ${results.size} titles"
+        }
+    }
+
+    suspend fun assertFilterCatalogContract(source: AnimeSource): AnimeSearchFilterCatalog {
+        val catalog = source.getSearchFilterCatalog()
+        val capabilities = source.catalogCapabilities
+        assertContract(catalog.capabilities == capabilities) {
+            "Filter catalog capabilities differ from source catalog capabilities"
+        }
+        assertOptions(catalog.sortOptions, "sort options")
+        assertOptions(catalog.typeOptions, "type options")
+        assertOptions(catalog.statusOptions, "status options")
+        assertOptions(catalog.genreOptions, "genre options")
+        assertContract(catalog.sortOptions.size >= capabilities.supportedSorts.size) {
+            "Filter catalog exposes ${catalog.sortOptions.size} sort options for " +
+                "${capabilities.supportedSorts.size} supported sorts"
+        }
+        assertContract(
+            catalog.sortOptions.any { it.id.equals(capabilities.fallbackSort.name, ignoreCase = true) },
+        ) {
+            "Filter catalog does not expose fallback sort ${capabilities.fallbackSort}"
+        }
+        if (capabilities.supports(AnimeSearchFilter.TYPE)) {
+            assertContract(catalog.typeOptions.isNotEmpty()) { "TYPE filter has no options" }
+        }
+        if (capabilities.supports(AnimeSearchFilter.STATUS)) {
+            assertContract(catalog.statusOptions.isNotEmpty()) { "STATUS filter has no options" }
+        }
+        if (
+            capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES) ||
+            capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES)
+        ) {
+            assertContract(catalog.genreOptions.isNotEmpty()) { "Genre filters have no options" }
+        }
+        return catalog
+    }
+
+    suspend fun assertFilteredSearchContract(
+        source: AnimeSource,
+        request: AnimeSearchRequest,
+    ): List<AnimeTitle> {
+        val catalog = assertFilterCatalogContract(source)
+        val capabilities = source.catalogCapabilities
+        assertContract(capabilities.supports(request.sort)) {
+            "Source does not support requested sort ${request.sort}"
+        }
+        assertFilterAliases(
+            request.typeAliases,
+            catalog.typeOptions,
+            AnimeSearchFilter.TYPE,
+            capabilities.supports(AnimeSearchFilter.TYPE),
+        )
+        assertFilterAliases(
+            request.statusAliases,
+            catalog.statusOptions,
+            AnimeSearchFilter.STATUS,
+            capabilities.supports(AnimeSearchFilter.STATUS),
+        )
+        assertFilterAliases(
+            request.includedGenreAliases,
+            catalog.genreOptions,
+            AnimeSearchFilter.INCLUDED_GENRES,
+            capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES),
+        )
+        assertFilterAliases(
+            request.excludedGenreAliases.map { it.removePrefix("!") },
+            catalog.genreOptions,
+            AnimeSearchFilter.EXCLUDED_GENRES,
+            capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES),
+        )
+        if (request.yearFrom != null || request.yearTo != null) {
+            assertContract(capabilities.supports(AnimeSearchFilter.YEAR_RANGE)) {
+                "Source does not support YEAR_RANGE"
+            }
+            assertContract(request.yearFrom == null || request.yearTo == null || request.yearFrom <= request.yearTo) {
+                "yearFrom must not be greater than yearTo"
+            }
+        }
+        return assertSearchContract(source, request)
+    }
+
+    suspend fun assertPaginationContract(
+        source: AnimeSource,
+        request: AnimeSearchRequest,
+        pageSize: Int = request.limit,
+    ): PaginationContractSnapshot {
+        assertContract(pageSize > 0) { "Pagination page size must be positive" }
+        assertContract(request.offset >= 0) { "Pagination offset must not be negative" }
+        val firstPage = assertSearchContract(source, request.copy(limit = pageSize))
+        val secondPage = assertSearchContract(
+            source,
+            request.copy(limit = pageSize, offset = request.offset + pageSize),
+        )
+        assertContract(firstPage.isNotEmpty()) { "Pagination fixture returned an empty first page" }
+        assertContract(secondPage.isNotEmpty()) { "Pagination fixture returned an empty second page" }
+        val duplicateIds = firstPage.map(AnimeTitle::id).toSet()
+            .intersect(secondPage.map(AnimeTitle::id).toSet())
+        assertContract(duplicateIds.isEmpty()) {
+            "Adjacent pages contain duplicate ids: ${duplicateIds.joinToString()}"
+        }
+        return PaginationContractSnapshot(firstPage, secondPage)
     }
 
     suspend fun assertDetailsContract(source: AnimeSource, id: String): AnimeTitle {
@@ -119,6 +237,30 @@ object SourceTestKit {
             "Source returned duplicate ids in $label"
         }
         titles.forEach { assertTitle(it, label) }
+    }
+
+    private fun assertOptions(options: List<SearchFilterOption>, label: String) {
+        assertContract(options.all { it.id.isNotBlank() }) { "Source returned a blank id in $label" }
+        assertContract(options.all { it.title.isNotBlank() }) { "Source returned a blank title in $label" }
+        assertContract(options.map(SearchFilterOption::id).distinct().size == options.size) {
+            "Source returned duplicate ids in $label"
+        }
+    }
+
+    private fun assertFilterAliases(
+        aliases: List<String>,
+        options: List<SearchFilterOption>,
+        filter: AnimeSearchFilter,
+        supported: Boolean,
+    ) {
+        if (aliases.isEmpty()) return
+        assertContract(supported) { "Source does not support $filter" }
+        val knownAliases = options.map { it.id.lowercase() }.toSet()
+        val unknownAliases = aliases.map(String::trim)
+            .filterNot { it.lowercase() in knownAliases }
+        assertContract(unknownAliases.isEmpty()) {
+            "Unknown $filter aliases: ${unknownAliases.joinToString()}"
+        }
     }
 
     private fun assertTitle(title: AnimeTitle, label: String) {
