@@ -312,6 +312,7 @@ class HomeRepository(
             status = status,
             nextEpisodeAt = title.nextEpisodeAt,
             posterUrl = title.posterUrl,
+            posterFallbackUrl = title.posterFallbackUrl,
             description = title.description,
             ratings = title.ratings.map { rating ->
                 AnimeRating(source = rating.source, value = rating.value, votes = rating.votes)

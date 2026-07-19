@@ -6,6 +6,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
+import io.ktor.http.URLBuilder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -153,6 +154,10 @@ internal class AnimeGoCatalogClient(
                 ?.takeIf(String::isNotBlank)
                 ?: russianName
             val rating = card.selectFirst(".rating-badge")?.text()?.replace(',', '.')?.toDoubleOrNull()
+            val sourcePosterUrl = card.selectFirst(
+                ".ani-grid__item-picture img[src], .ani-list__item-picture img[src]",
+            )?.absUrl("src")
+            val posterUrl = sourcePosterUrl?.toPosterProxyUrl() ?: sourcePosterUrl
             AnimeTitle(
                 id = slug,
                 russianName = russianName,
@@ -163,12 +168,11 @@ internal class AnimeGoCatalogClient(
                 year = metadata.firstNotNullOfOrNull(String::toIntOrNull),
                 type = metadata.firstOrNull()?.toAnimeType(),
                 episodeCount = null,
-                posterUrl = card.selectFirst(
-                    ".ani-grid__item-picture img[src], .ani-list__item-picture img[src]",
-                )?.absUrl("src"),
+                posterUrl = posterUrl,
                 status = null,
                 description = null,
                 ratings = rating?.let { listOf(TitleRating("AnimeGo", it)) }.orEmpty(),
+                posterFallbackUrl = sourcePosterUrl?.takeIf { it != posterUrl },
             )
         }.distinctBy(AnimeTitle::id)
     }
@@ -193,6 +197,8 @@ internal class AnimeGoCatalogClient(
         }
         val rating = schema.obj("aggregateRating")
         val episodeText = document.fieldValue("Эпизоды")
+        val sourcePosterUrl = schema.string("image")
+        val posterUrl = sourcePosterUrl?.toPosterProxyUrl() ?: sourcePosterUrl
         return AnimeTitle(
             id = id,
             russianName = name,
@@ -207,7 +213,7 @@ internal class AnimeGoCatalogClient(
             year = schema.string("datePublished")?.take(4)?.toIntOrNull(),
             type = schema.string("@type").toAnimeType(),
             episodeCount = schema.int("numberOfEpisodes"),
-            posterUrl = schema.string("image"),
+            posterUrl = posterUrl,
             status = document.fieldValue("Статус")?.lowercase()?.toStatusAlias(),
             description = schema.string("description")
                 ?: document.selectFirst(".description")?.text()?.trim(),
@@ -219,6 +225,7 @@ internal class AnimeGoCatalogClient(
             sourceMaterial = document.fieldValue("Первоисточник"),
             studios = schema.obj("productionCompany")?.string("name")?.let(::listOf).orEmpty(),
             availableEpisodeCount = episodeText?.substringBefore('/')?.trim()?.toIntOrNull(),
+            posterFallbackUrl = sourcePosterUrl?.takeIf { it != posterUrl },
         )
     }
 
@@ -295,6 +302,17 @@ internal class AnimeGoCatalogClient(
         else -> "createdAt" to "asc"
     }
 
+    private fun String.toPosterProxyUrl(): String? {
+        val sourceUrl = trim().takeIf { it.startsWith("https://img.cdngos.com/") } ?: return null
+        return URLBuilder(POSTER_PROXY_URL).apply {
+            parameters.append("url", sourceUrl)
+            parameters.append("w", "500")
+            parameters.append("h", "700")
+            parameters.append("fit", "cover")
+            parameters.append("output", "webp")
+        }.buildString()
+    }
+
     private fun io.ktor.client.statement.HttpResponse.toSourceException() = SourceException(
         message = "AnimeGo returned HTTP ${status.value}",
         statusCode = status.value,
@@ -325,6 +343,7 @@ internal class AnimeGoCatalogClient(
     private companion object {
         const val MAX_RESULTS = 50
         const val PAGE_SIZE = 20
+        const val POSTER_PROXY_URL = "https://images.weserv.nl/"
         val ANIME_SLUG = Regex("[a-z0-9][a-z0-9-]*-\\d+")
         val ANIMEGO_ALIAS = Regex("!?[a-z0-9][a-z0-9+_-]*")
         val SUPPORTED_SCHEMA_TYPES = setOf("TVSeries", "Movie")

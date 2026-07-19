@@ -135,6 +135,8 @@ class AnimeSearchRepository(
         trailer: AnimeTrailer? = null,
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
+        val sourcePosterFallbackUrl = posterFallbackUrl
+            ?.takeIf { it.isNotBlank() && it != posterUrl }
         val resolvedStatus = releaseStatus.localizedDisplayName(preferEnglish)
             .takeUnless { releaseStatus == AnimeReleaseStatus.UNKNOWN }
             ?: fallback?.status
@@ -154,7 +156,7 @@ class AnimeSearchRepository(
             status = resolvedStatus,
             nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
             posterUrl = posterUrl,
-            posterFallbackUrl = fallback?.posterFallbackUrl
+            posterFallbackUrl = sourcePosterFallbackUrl ?: fallback?.posterFallbackUrl
                 ?.takeIf { it.isNotBlank() && it != posterUrl },
             description = description ?: fallback?.description,
             genres = genres.ifEmpty { fallback?.genres.orEmpty() },

@@ -56,6 +56,15 @@ data class ResolvedPlayerStream(
     val playback: PlaybackStream,
 )
 
+internal const val WATCH_SOURCE_SEPARATOR = "|watch|"
+
+internal fun watchTitleIdFromSourceId(sourceId: String): String =
+    if (WATCH_SOURCE_SEPARATOR in sourceId) {
+        sourceId.substringBefore(WATCH_SOURCE_SEPARATOR)
+    } else {
+        sourceId.substringBefore(':')
+    }
+
 class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
@@ -459,11 +468,7 @@ class AnimeWatchRepository(
     }
 
     private fun extractTitleId(sourceId: String): String {
-        return if (WATCH_SOURCE_SEPARATOR in sourceId) {
-            sourceId.substringBefore(WATCH_SOURCE_SEPARATOR)
-        } else {
-            sourceId.substringBefore(':')
-        }
+        return watchTitleIdFromSourceId(sourceId)
     }
 
     private fun buildSourceId(
@@ -643,7 +648,6 @@ class AnimeWatchRepository(
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val AUTO_RESOLVE_TIMEOUT_MS = 8_000L
         const val PREFERRED_RESOLVE_TIMEOUT_MS = 12_000L
-        const val WATCH_SOURCE_SEPARATOR = "|watch|"
     }
 }
 

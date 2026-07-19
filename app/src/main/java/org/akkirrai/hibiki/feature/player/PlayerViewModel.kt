@@ -24,6 +24,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 
 class PlayerViewModel(
     sourceId: String,
@@ -34,7 +35,7 @@ class PlayerViewModel(
     private val offlineDownloadRepository: OfflineDownloadRepository,
     private val offlineTitleMetadataRepository: OfflineTitleMetadataRepository,
 ) : ViewModel() {
-    private val titleId = sourceId.substringBefore(':')
+    private val titleId = watchTitleIdFromSourceId(sourceId)
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
     private val savedSelection = watchStateRepository.getSelectedSource(titleId)
@@ -386,10 +387,8 @@ class PlayerViewModel(
                 .filter { it.episodeNumber == number }
                 .maxByOrNull { it.updatedAt }
         }
-        return (exactProgress ?: numberProgress)
-            ?.positionMs
-            ?.coerceAtLeast(0L)
-            ?.takeIf { it > 0L }
+        val progress = exactProgress ?: numberProgress ?: return null
+        return resumablePlaybackPositionMs(progress.positionMs, progress.durationMs)
     }
 
     private fun adjacentEpisode(offset: Int): WatchEpisode? {
@@ -449,6 +448,14 @@ class PlayerViewModel(
     }
 }
 
+internal fun resumablePlaybackPositionMs(positionMs: Long, durationMs: Long): Long? {
+    val position = positionMs.coerceAtLeast(0L).takeIf { it > 0L } ?: return null
+    if (durationMs <= 0L) return position
+    val duration = durationMs.coerceAtLeast(1L)
+    val resetThresholdMs = maxOf(PLAYBACK_END_WINDOW_MS, duration * PLAYBACK_END_PERCENT / 100L)
+    return position.takeIf { duration - position > resetThresholdMs }
+}
+
 data class PlayerUiState(
     val isLoading: Boolean = true,
     val playback: PlaybackStream? = null,
@@ -486,3 +493,5 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
+private const val PLAYBACK_END_WINDOW_MS = 30_000L
+private const val PLAYBACK_END_PERCENT = 5L

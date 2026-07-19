@@ -75,7 +75,7 @@ object AnimeSourceRegistry {
         ),
         Registration(
             sourceId = BuiltInSources.ANIMEGO_ID,
-            iconRes = R.drawable.animite_media_type_anime,
+            iconRes = R.drawable.source_animego,
         ),
     )
 

@@ -79,6 +79,17 @@ class AnimeWatchRepositoryTest {
     }
 
     @Test
+    fun `watch source id keeps the complete scoped title id`() {
+        assertEquals(
+            "source:animego:mob-psiho-100-3-2131",
+            watchTitleIdFromSourceId(
+                "source:animego:mob-psiho-100-3-2131|watch|animego-0",
+            ),
+        )
+        assertEquals("42", watchTitleIdFromSourceId("42:legacy-voiceover"))
+    }
+
+    @Test
     fun `clearCaches removes all repository cache state`() {
         repository.cachedSources()["title"] = Any()
         repository.sourcePayloads()["source"] = Any()

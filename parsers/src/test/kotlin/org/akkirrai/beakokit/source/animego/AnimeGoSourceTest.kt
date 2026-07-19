@@ -81,6 +81,8 @@ class AnimeGoSourceTest {
 
             assertEquals("test-anime-710", catalog.details.id)
             assertEquals("Test Anime", catalog.details.originalName)
+            assertTrue(catalog.details.posterUrl?.startsWith("https://images.weserv.nl/") == true)
+            assertTrue(catalog.details.posterFallbackUrl?.startsWith("https://img.cdngos.com/") == true)
             assertEquals(3, catalog.details.availableEpisodeCount)
             assertEquals(listOf("test-anime-710"), latest.map(AnimeTitle::id))
             assertEquals("AniBoom", playback.firstEpisodeLinks.first().playerName)

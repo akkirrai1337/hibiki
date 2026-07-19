@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.core.source
 
+import org.akkirrai.hibiki.R
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.source.animego.AnimeGoSource
@@ -33,6 +34,10 @@ class AnimeSourceRegistryTest {
         assertEquals(
             AnimeGoSource.INFO,
             AnimeSourceRegistry.descriptor(SourceId("animego")).info,
+        )
+        assertEquals(
+            R.drawable.source_animego,
+            AnimeSourceRegistry.descriptor(SourceId("animego")).iconRes,
         )
         assertEquals(
             setOf(SourceCapability.RELATED_TITLES, SourceCapability.SIMILAR_TITLES),

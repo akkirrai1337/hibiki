@@ -29,6 +29,8 @@ data class AnimeTitle(
     val season: Int? = null,
     /** Episodes currently available from this source; differs from the planned total for ongoing titles. */
     val availableEpisodeCount: Int? = null,
+    /** Optional source-owned fallback when the primary poster CDN is unavailable to the host. */
+    val posterFallbackUrl: String? = null,
 ) {
     val displayName: String
         get() = russianName?.takeIf(String::isNotBlank)
