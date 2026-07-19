@@ -39,9 +39,9 @@ class YummyAnimeSourceTest {
                     httpClient = client,
                     preferredLanguages = listOf(SourceLanguage.ENGLISH),
                     config = MapSourceConfig(
-                        values = mapOf(YummyAnimeSource.BASE_URL_KEY to "https://yummy.test"),
+                        values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
                         secrets = mapOf(
-                            YummyAnimeSource.APPLICATION_TOKEN_KEY to "application-secret",
+                            YummyAnimeConfig.APPLICATION_TOKEN to "application-secret",
                         ),
                     ),
                 ),
@@ -85,8 +85,8 @@ class YummyAnimeSourceTest {
                     httpClient = client,
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN),
                     config = MapSourceConfig(
-                        values = mapOf(YummyAnimeSource.BASE_URL_KEY to "https://yummy.test"),
-                        secrets = mapOf(YummyAnimeSource.APPLICATION_TOKEN_KEY to "application-secret"),
+                        values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
+                        secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
                     ),
                 ),
             )

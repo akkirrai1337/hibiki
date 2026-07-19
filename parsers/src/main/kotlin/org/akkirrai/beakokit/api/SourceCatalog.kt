@@ -1,9 +1,27 @@
 package org.akkirrai.beakokit.api
 
-/** Immutable metadata catalog. Source factories will be added when the first source is migrated. */
-class SourceCatalog(entries: Iterable<SourceInfo>) {
-    val sources: List<SourceInfo> = entries.toList()
+fun interface SourceFactory {
+    fun create(context: SourceContext): AnimeSource
+}
+
+data class SourceEntry(
+    val info: SourceInfo,
+    val factory: SourceFactory,
+) {
+    fun create(context: SourceContext): AnimeSource {
+        val source = factory.create(context)
+        check(source.info == info) { "Factory metadata does not match catalog entry: ${info.id}" }
+        SourceContractValidator.requireValid(source)
+        return source
+    }
+}
+
+/** Immutable source metadata and factory catalog; designed to become KSP-generated later. */
+class SourceCatalog(sourceEntries: Iterable<SourceEntry>) {
+    val entries: List<SourceEntry> = sourceEntries.toList()
+    val sources: List<SourceInfo> = entries.map(SourceEntry::info)
     private val sourcesById = sources.associateBy(SourceInfo::id)
+    private val entriesById = entries.associateBy { it.info.id }
 
     init {
         require(sourcesById.size == sources.size) {
@@ -19,4 +37,7 @@ class SourceCatalog(entries: Iterable<SourceInfo>) {
 
     fun require(id: SourceId): SourceInfo = sourcesById[id]
         ?: error("Source is not registered: $id")
+
+    fun create(id: SourceId, context: SourceContext): AnimeSource =
+        entriesById[id]?.create(context) ?: error("Source is not registered: $id")
 }

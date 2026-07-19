@@ -4,20 +4,17 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
-import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
-import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceCapability
-import org.akkirrai.beakokit.api.SourceContractValidator
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
-import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
-import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
+import org.akkirrai.beakokit.source.BuiltInSources
+import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
@@ -54,35 +51,32 @@ data class AnimeSourceDescriptor(
 
 object AnimeSourceRegistry {
     private data class Registration(
-        val descriptor: AnimeSourceDescriptor,
-        val createSource: (Context, HttpClient) -> AnimeSource,
+        val sourceId: SourceId,
+        @param:DrawableRes val iconRes: Int,
         val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog = { catalog, _ -> catalog },
         val normalizeTitleId: (String) -> String = { it },
-    )
+    ) {
+        val descriptor = AnimeSourceDescriptor(
+            info = BuiltInSources.catalog.require(sourceId),
+            iconRes = iconRes,
+        )
+    }
 
     private val registrations = listOf(
         Registration(
-            descriptor = AnimeSourceDescriptor(
-                info = YummyAnimeSource.INFO,
-                iconRes = R.drawable.source_yummy_anime,
-            ),
-            createSource = { context, client -> createYummySource(context, client) },
+            sourceId = BuiltInSources.YUMMY_ANIME_ID,
+            iconRes = R.drawable.source_yummy_anime,
             localizeFilters = YummySearchFilterLocalizer::localize,
             normalizeTitleId = YummyIdMigration::normalizeTitleId,
         ),
         Registration(
-            descriptor = AnimeSourceDescriptor(
-                info = AniLibertySource.INFO,
-                iconRes = R.drawable.source_ani_liberty,
-            ),
-            createSource = { context, client ->
-                AniLibertySource(createSourceContext(context, client, AniLibertySource.INFO.id))
-            },
+            sourceId = BuiltInSources.ANI_LIBERTY_ID,
+            iconRes = R.drawable.source_ani_liberty,
         ),
     )
 
     val sources: List<AnimeSourceDescriptor> = registrations.map(Registration::descriptor)
-    val catalog = SourceCatalog(sources.map(AnimeSourceDescriptor::info))
+    val catalog = BuiltInSources.catalog
 
     fun createRuntime(
         context: Context,
@@ -91,11 +85,15 @@ object AnimeSourceRegistry {
     ): AnimeSourceRuntime {
         val appContext = context.applicationContext
         val registration = registration(sourceId)
-        val source = registration.createSource(appContext, client)
-        check(source.info == registration.descriptor.info) {
-            "Source metadata does not match its registration: $sourceId"
-        }
-        SourceContractValidator.requireValid(source)
+        val source = catalog.create(
+            sourceId,
+            createSourceContext(
+                context = appContext,
+                client = client,
+                sourceId = sourceId,
+                config = createSourceConfig(appContext, sourceId),
+            ),
+        )
         val runtime = AnimeSourceRuntime(
             descriptor = registration.descriptor,
             source = source,
@@ -147,19 +145,16 @@ object AnimeSourceRegistry {
         },
     )
 
-    private fun createYummySource(context: Context, client: HttpClient): AnimeSource {
-        val applicationToken = AndroidKeystoreYummyApplicationTokenStore(context)
-            .getEffectiveApplicationToken()
-        val config = MapSourceConfig(
+    private fun createSourceConfig(context: Context, sourceId: SourceId): SourceConfig = when (sourceId) {
+        BuiltInSources.YUMMY_ANIME_ID -> MapSourceConfig(
             secrets = buildMap {
-                applicationToken.takeIf(String::isNotBlank)?.let { token ->
-                    put(YummyAnimeSource.APPLICATION_TOKEN_KEY, token)
-                }
+                AndroidKeystoreYummyApplicationTokenStore(context)
+                    .getEffectiveApplicationToken()
+                    .takeIf(String::isNotBlank)
+                    ?.let { token -> put(YummyAnimeConfig.APPLICATION_TOKEN, token) }
             },
         )
-        return YummyAnimeSource(
-            createSourceContext(context, client, YummyAnimeSource.INFO.id, config),
-        )
+        else -> SourceConfig.EMPTY
     }
 
 }
