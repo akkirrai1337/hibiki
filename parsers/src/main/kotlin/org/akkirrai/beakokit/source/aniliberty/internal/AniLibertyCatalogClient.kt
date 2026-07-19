@@ -10,7 +10,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -19,8 +19,8 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.MetadataSourceCapabilities
 import org.akkirrai.beakokit.model.MetadataSourceFeature
 import org.akkirrai.beakokit.model.SearchFilterOption
-import org.akkirrai.animeresolver.network.bodyOrThrow
-import org.akkirrai.animeresolver.network.resolveUrl
+import org.akkirrai.beakokit.http.bodyOrThrow
+import org.akkirrai.beakokit.http.resolveUrl
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.MirrorRequestExecutor
 import org.akkirrai.beakokit.source.aniliberty.AniLibertyScheduleEntry

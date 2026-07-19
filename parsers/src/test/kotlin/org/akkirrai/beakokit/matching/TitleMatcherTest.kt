@@ -1,6 +1,6 @@
-package org.akkirrai.animeresolver.core
+package org.akkirrai.beakokit.matching
 
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeTitle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

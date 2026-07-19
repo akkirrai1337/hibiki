@@ -30,7 +30,7 @@ import org.akkirrai.beakokit.model.MetadataSourceFeature
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.TitleRating
-import org.akkirrai.animeresolver.network.bodyOrThrow
+import org.akkirrai.beakokit.http.bodyOrThrow
 
 internal class YummyCatalogClient(
     private val client: HttpClient,

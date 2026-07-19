@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.network
+package org.akkirrai.beakokit.http
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -12,7 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class HttpSupportTest {
+class HttpResponseSupportTest {
     @Test
     fun `classifies authentication and rate limit responses`() = runBlocking {
         suspend fun classifiedKind(status: HttpStatusCode): SourceErrorKind {

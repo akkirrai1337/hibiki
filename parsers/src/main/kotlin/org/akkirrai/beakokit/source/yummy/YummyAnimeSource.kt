@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.source.yummy
 
-import org.akkirrai.animeresolver.core.TitleMatcher
+import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle

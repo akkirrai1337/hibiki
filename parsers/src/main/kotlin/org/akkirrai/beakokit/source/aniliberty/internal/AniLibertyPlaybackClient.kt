@@ -7,8 +7,8 @@ import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.akkirrai.animeresolver.core.SourceException
-import org.akkirrai.animeresolver.core.TitleMatcher
+import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
@@ -16,8 +16,8 @@ import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.ProviderMatch
 import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
-import org.akkirrai.animeresolver.network.bodyOrThrow
-import org.akkirrai.animeresolver.network.normalizeUrl
+import org.akkirrai.beakokit.http.bodyOrThrow
+import org.akkirrai.beakokit.http.normalizeUrl
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.MirrorRequestExecutor
 import java.util.concurrent.ConcurrentHashMap
