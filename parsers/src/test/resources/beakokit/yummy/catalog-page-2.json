@@ -1,0 +1,13 @@
+{
+  "response": [
+    {
+      "anime_id": 987655,
+      "title": "Second Test",
+      "title_en": "Second Test",
+      "title_orig": "Second Test",
+      "year": 2025,
+      "type": {"alias": "tv"},
+      "episodes": {"aired": 12, "count": 12}
+    }
+  ]
+}

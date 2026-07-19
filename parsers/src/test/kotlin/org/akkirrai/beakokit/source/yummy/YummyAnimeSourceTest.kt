@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.source.yummy
 
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -45,6 +46,16 @@ class YummyAnimeSourceTest {
                 FixtureRoute.fromResource(
                     path = "/anime",
                     resource = "beakokit/yummy/catalog-search.json",
+                    query = mapOf("limit" to "1", "offset" to "0"),
+                ),
+                FixtureRoute.fromResource(
+                    path = "/anime",
+                    resource = "beakokit/yummy/catalog-page-2.json",
+                    query = mapOf("limit" to "1", "offset" to "1"),
+                ),
+                FixtureRoute.fromResource(
+                    path = "/anime",
+                    resource = "beakokit/yummy/catalog-search.json",
                 ),
                 FixtureRoute.fromResource(
                     path = "/anime/987654",
@@ -62,6 +73,10 @@ class YummyAnimeSourceTest {
                     path = "/anime/schedule",
                     resource = "beakokit/yummy/catalog-latest.json",
                 ),
+                FixtureRoute.fromResource(
+                    path = "/swagger.json",
+                    resource = "beakokit/yummy/swagger.json",
+                ),
             ),
             preferredLanguages = listOf(SourceLanguage.ENGLISH),
             values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
@@ -74,10 +89,31 @@ class YummyAnimeSourceTest {
                 AnimeSearchRequest(query = "Test", limit = 5),
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
+            val filters = SourceTestKit.assertFilterCatalogContract(source)
+            val pagination = SourceTestKit.assertPaginationContract(
+                source,
+                AnimeSearchRequest(limit = 1),
+            )
+            val filtered = SourceTestKit.assertFilteredSearchContract(
+                source,
+                AnimeSearchRequest(
+                    limit = 1,
+                    sort = AnimeSearchSort.RATING,
+                    typeAliases = listOf("tv"),
+                    statusAliases = listOf("ongoing"),
+                    includedGenreAliases = listOf("drama"),
+                    excludedGenreAliases = listOf("senen"),
+                    yearFrom = 2020,
+                    yearTo = 2026,
+                ),
+            )
 
             assertEquals("987654", catalog.details.id)
             assertEquals(listOf("987654"), latest.map(AnimeTitle::id))
-            assertEquals(5, host.requests.size)
+            assertEquals(listOf("tv"), filters.typeOptions.take(1).map { it.id })
+            assertEquals(listOf("987654"), pagination.firstPage.map(AnimeTitle::id))
+            assertEquals(listOf("987655"), pagination.secondPage.map(AnimeTitle::id))
+            assertEquals(listOf("987654"), filtered.map(AnimeTitle::id))
         }
     }
 

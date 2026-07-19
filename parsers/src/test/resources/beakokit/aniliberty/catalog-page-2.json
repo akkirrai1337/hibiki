@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "id": 987655,
+      "type": {"value": "TV"},
+      "year": 2025,
+      "name": {"main": "Second Test", "english": "Second Test", "alternative": null},
+      "is_ongoing": false,
+      "episodes_total": 12
+    }
+  ]
+}

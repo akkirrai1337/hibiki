@@ -1,0 +1,46 @@
+{
+  "components": {
+    "schemas": {
+      "GetAnimeGenresIdResponse": {
+        "properties": {
+          "response": {
+            "properties": {
+              "alias": {"enum": ["drama", "senen"]}
+            }
+          }
+        }
+      },
+      "GetAnimeCatalogResponse": {
+        "properties": {
+          "response": {
+            "properties": {
+              "data": {
+                "items": {
+                  "properties": {
+                    "anime_status": {
+                      "properties": {
+                        "alias": {"enum": ["released", "ongoing", "announcement"]}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/anime": {
+      "get": {
+        "parameters": [
+          {
+            "name": "sort",
+            "schema": {"enum": ["top", "title", "year", "votes", "views", "comments"]}
+          }
+        ]
+      }
+    }
+  }
+}

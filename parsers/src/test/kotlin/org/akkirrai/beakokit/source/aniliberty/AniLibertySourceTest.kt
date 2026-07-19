@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.source.aniliberty
 
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.api.SourceId
@@ -41,6 +42,16 @@ class AniLibertySourceTest {
                 FixtureRoute.fromResource(
                     path = "/api/v1/anime/catalog/releases",
                     resource = "beakokit/aniliberty/catalog-search.json",
+                    query = mapOf("page" to "1", "limit" to "1"),
+                ),
+                FixtureRoute.fromResource(
+                    path = "/api/v1/anime/catalog/releases",
+                    resource = "beakokit/aniliberty/catalog-page-2.json",
+                    query = mapOf("page" to "2", "limit" to "1"),
+                ),
+                FixtureRoute.fromResource(
+                    path = "/api/v1/anime/catalog/releases",
+                    resource = "beakokit/aniliberty/catalog-search.json",
                 ),
                 FixtureRoute.fromResource(
                     path = "/api/v1/anime/releases/987654",
@@ -49,6 +60,18 @@ class AniLibertySourceTest {
                 FixtureRoute.fromResource(
                     path = "/api/v1/anime/releases/latest",
                     resource = "beakokit/aniliberty/catalog-search.json",
+                ),
+                FixtureRoute.fromResource(
+                    path = "/api/v1/anime/catalog/references/types",
+                    resource = "beakokit/aniliberty/reference-types.json",
+                ),
+                FixtureRoute.fromResource(
+                    path = "/api/v1/anime/catalog/references/publish-statuses",
+                    resource = "beakokit/aniliberty/reference-statuses.json",
+                ),
+                FixtureRoute.fromResource(
+                    path = "/api/v1/anime/catalog/references/genres",
+                    resource = "beakokit/aniliberty/reference-genres.json",
                 ),
             ),
             preferredLanguages = listOf(SourceLanguage.RUSSIAN),
@@ -61,9 +84,30 @@ class AniLibertySourceTest {
                 AnimeSearchRequest(query = "Test", limit = 5),
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
+            val filters = SourceTestKit.assertFilterCatalogContract(source)
+            val pagination = SourceTestKit.assertPaginationContract(
+                source,
+                AnimeSearchRequest(limit = 1),
+            )
+            val filtered = SourceTestKit.assertFilteredSearchContract(
+                source,
+                AnimeSearchRequest(
+                    limit = 1,
+                    sort = AnimeSearchSort.RATING,
+                    typeAliases = listOf("tv"),
+                    statusAliases = listOf("is_ongoing"),
+                    includedGenreAliases = listOf("15"),
+                    yearFrom = 2020,
+                    yearTo = 2026,
+                ),
+            )
 
             assertEquals("987654", catalog.details.id)
             assertEquals(listOf("987654"), latest.map(AnimeTitle::id))
+            assertEquals(listOf("tv"), filters.typeOptions.map { it.id })
+            assertEquals(listOf("987654"), pagination.firstPage.map(AnimeTitle::id))
+            assertEquals(listOf("987655"), pagination.secondPage.map(AnimeTitle::id))
+            assertEquals(listOf("987654"), filtered.map(AnimeTitle::id))
         }
     }
 
