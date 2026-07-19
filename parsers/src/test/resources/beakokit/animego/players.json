@@ -1,0 +1,6 @@
+{
+  "status": "success",
+  "data": {
+    "content": "<button data-player=\"//kodikplayer.com/example\" data-provider-title=\"Kodik\" data-translation-title=\"AniLibria\"></button><button data-player=\"//aniboom.one/embed/example\" data-provider-title=\"AniBoom\" data-translation-title=\"AniLibria\"></button>"
+  }
+}

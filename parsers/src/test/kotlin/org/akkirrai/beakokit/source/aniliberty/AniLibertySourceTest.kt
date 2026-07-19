@@ -7,7 +7,7 @@ import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
-import org.akkirrai.beakokit.testkit.JsonFixtureRoute
+import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
@@ -38,15 +38,15 @@ class AniLibertySourceTest {
     fun `catalog operations satisfy the shared contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/api/v1/anime/catalog/releases",
                     resource = "beakokit/aniliberty/catalog-search.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/api/v1/anime/releases/987654",
                     resource = "beakokit/aniliberty/catalog-details.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/api/v1/anime/releases/latest",
                     resource = "beakokit/aniliberty/catalog-search.json",
                 ),
@@ -71,11 +71,11 @@ class AniLibertySourceTest {
     fun `playback stays behind source contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/api/v1/app/search/releases",
                     resource = "beakokit/aniliberty/search-releases.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/api/v1/anime/releases/987654",
                     resource = "beakokit/aniliberty/release-playback.json",
                 ),

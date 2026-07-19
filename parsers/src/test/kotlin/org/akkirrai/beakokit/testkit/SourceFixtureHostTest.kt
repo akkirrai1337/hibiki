@@ -20,7 +20,7 @@ class SourceFixtureHostTest {
     fun `matches declared JSON route and records the request`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute(
+                FixtureRoute(
                     path = "/catalog",
                     query = mapOf("page" to "2"),
                     body = """{"items":[]}""",

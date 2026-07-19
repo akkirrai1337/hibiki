@@ -19,7 +19,11 @@ class BuiltInSourcesTest {
 
         try {
             assertEquals(
-                listOf(BuiltInSources.YUMMY_ANIME_ID, BuiltInSources.ANI_LIBERTY_ID),
+                listOf(
+                    BuiltInSources.YUMMY_ANIME_ID,
+                    BuiltInSources.ANI_LIBERTY_ID,
+                    BuiltInSources.ANIMEGO_ID,
+                ),
                 BuiltInSources.catalog.sources.map { it.id },
             )
             val sources = BuiltInSources.catalog.entries.map { entry ->

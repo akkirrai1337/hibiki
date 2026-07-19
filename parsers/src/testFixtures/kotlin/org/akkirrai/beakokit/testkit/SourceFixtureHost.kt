@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.Headers
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -17,12 +18,13 @@ import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
 import java.util.Collections
 
-data class JsonFixtureRoute(
+data class FixtureRoute(
     val path: String,
     val body: String,
     val method: HttpMethod = HttpMethod.Get,
     val status: HttpStatusCode = HttpStatusCode.OK,
     val query: Map<String, String> = emptyMap(),
+    val contentType: ContentType = ContentType.Application.Json,
 ) {
     init {
         require(path.startsWith('/')) { "Fixture route path must start with '/': $path" }
@@ -40,15 +42,20 @@ data class JsonFixtureRoute(
             method: HttpMethod = HttpMethod.Get,
             status: HttpStatusCode = HttpStatusCode.OK,
             query: Map<String, String> = emptyMap(),
-        ): JsonFixtureRoute = JsonFixtureRoute(
+            contentType: ContentType = ContentType.Application.Json,
+        ): FixtureRoute = FixtureRoute(
             path = path,
             body = FixtureResources.read(resource),
             method = method,
             status = status,
             query = query,
+            contentType = contentType,
         )
     }
 }
+
+@Deprecated("Use FixtureRoute", ReplaceWith("FixtureRoute"))
+typealias JsonFixtureRoute = FixtureRoute
 
 data class FixtureRequest(
     val method: HttpMethod,
@@ -63,7 +70,7 @@ data class FixtureRequest(
  * no declared route. The same route may be used repeatedly.
  */
 class SourceFixtureHost(
-    routes: List<JsonFixtureRoute> = emptyList(),
+    routes: List<FixtureRoute> = emptyList(),
     preferredLanguages: List<SourceLanguage> = listOf(SourceLanguage.ENGLISH),
     values: Map<String, String> = emptyMap(),
     secrets: Map<String, String> = emptyMap(),
@@ -86,7 +93,7 @@ class SourceFixtureHost(
         respond(
             content = route.body,
             status = route.status,
-            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            headers = headersOf(HttpHeaders.ContentType, route.contentType.toString()),
         )
     }) {
         install(ContentNegotiation) { json() }

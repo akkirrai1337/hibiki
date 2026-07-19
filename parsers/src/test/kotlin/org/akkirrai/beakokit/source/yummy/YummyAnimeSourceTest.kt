@@ -6,7 +6,7 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
-import org.akkirrai.beakokit.testkit.JsonFixtureRoute
+import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
@@ -17,7 +17,7 @@ class YummyAnimeSourceTest {
     fun `source owns identity and consumes host language and secret`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime",
                     resource = "beakokit/yummy/empty-search.json",
                 ),
@@ -42,23 +42,23 @@ class YummyAnimeSourceTest {
     fun `catalog operations satisfy the shared contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime",
                     resource = "beakokit/yummy/catalog-search.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime/987654",
                     resource = "beakokit/yummy/catalog-details.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime/987654/trailers",
                     resource = "beakokit/yummy/empty-response.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime/987654/recommendations",
                     resource = "beakokit/yummy/empty-response.json",
                 ),
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime/schedule",
                     resource = "beakokit/yummy/catalog-latest.json",
                 ),
@@ -85,7 +85,7 @@ class YummyAnimeSourceTest {
     fun `playback stays behind source contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute.fromResource(
+                FixtureRoute.fromResource(
                     path = "/anime/987654/videos",
                     resource = "beakokit/yummy/playback-videos.json",
                 ),

@@ -73,6 +73,10 @@ object AnimeSourceRegistry {
             sourceId = BuiltInSources.ANI_LIBERTY_ID,
             iconRes = R.drawable.source_ani_liberty,
         ),
+        Registration(
+            sourceId = BuiltInSources.ANIMEGO_ID,
+            iconRes = R.drawable.animite_media_type_anime,
+        ),
     )
 
     val sources: List<AnimeSourceDescriptor> = registrations.map(Registration::descriptor)

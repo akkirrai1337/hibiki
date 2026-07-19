@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.source.animego.AnimeGoSource
 import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
 import org.junit.Assert.assertEquals
@@ -14,7 +15,7 @@ class AnimeSourceRegistryTest {
         val sources = AnimeSourceRegistry.sources
 
         assertEquals(
-            setOf(SourceId("yummy-anime"), SourceId("ani-liberty")),
+            setOf(SourceId("yummy-anime"), SourceId("ani-liberty"), SourceId("animego")),
             sources.map { it.id }.toSet(),
         )
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
@@ -28,6 +29,10 @@ class AnimeSourceRegistryTest {
         assertEquals(
             YummyAnimeSource.INFO,
             AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).info,
+        )
+        assertEquals(
+            AnimeGoSource.INFO,
+            AnimeSourceRegistry.descriptor(SourceId("animego")).info,
         )
         assertEquals(
             setOf(SourceCapability.RELATED_TITLES, SourceCapability.SIMILAR_TITLES),
