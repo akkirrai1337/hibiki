@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.validator
+package org.akkirrai.beakokit.playback.validation
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -9,11 +9,11 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
-import org.akkirrai.animeresolver.core.StreamValidator
+import org.akkirrai.beakokit.api.StreamValidator
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.StreamValidationResult
 import org.akkirrai.beakokit.model.VideoStream
-import org.akkirrai.animeresolver.network.resolveUrl
+import org.akkirrai.beakokit.http.resolveUrl
 
 class HttpStreamValidator(
     private val client: HttpClient,

@@ -3,6 +3,8 @@ package org.akkirrai.animeresolver.core
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import org.akkirrai.beakokit.api.StreamExtractor
+import org.akkirrai.beakokit.api.StreamValidator as BeakoStreamValidator
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.ProviderFailure
@@ -12,8 +14,8 @@ import org.akkirrai.beakokit.model.StreamValidationResult
 
 class VideoResolver(
     providers: List<VideoProvider>,
-    private val extractors: List<PlayerExtractor>,
-    private val validator: StreamValidator,
+    private val extractors: List<StreamExtractor>,
+    private val validator: BeakoStreamValidator,
 ) {
     private val providersById = providers.associateBy(VideoProvider::id)
 

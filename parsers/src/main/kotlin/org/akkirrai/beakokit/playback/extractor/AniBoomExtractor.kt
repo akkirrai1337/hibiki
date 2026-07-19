@@ -1,11 +1,11 @@
-package org.akkirrai.animeresolver.extractor
+package org.akkirrai.beakokit.playback.extractor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
@@ -15,7 +15,7 @@ import org.jsoup.parser.Parser
 
 class AniBoomExtractor(
     private val client: HttpClient,
-) : PlayerExtractor {
+) : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean =
         link.type == PlayerType.EMBED && link.url.contains("aniboom.one")
 

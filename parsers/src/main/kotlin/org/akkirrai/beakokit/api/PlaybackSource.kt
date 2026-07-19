@@ -3,6 +3,8 @@ package org.akkirrai.beakokit.api
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.StreamValidationResult
+import org.akkirrai.beakokit.model.VideoStream
 
 /** A source-owned voiceover or release group available for watching a title. */
 data class PlaybackGroup(
@@ -27,4 +29,18 @@ interface PlaybackSource {
         group: PlaybackGroup,
         episode: Episode,
     ): List<PlayerLink>
+}
+
+/** Converts a source-owned player link into one or more directly playable streams. */
+interface StreamExtractor {
+    fun supports(link: PlayerLink): Boolean
+
+    suspend fun extract(link: PlayerLink): VideoStream
+
+    suspend fun extractVariants(link: PlayerLink): List<VideoStream> = listOf(extract(link))
+}
+
+/** Verifies that a resolved stream can be consumed before it reaches the player. */
+interface StreamValidator {
+    suspend fun validate(stream: VideoStream): StreamValidationResult
 }

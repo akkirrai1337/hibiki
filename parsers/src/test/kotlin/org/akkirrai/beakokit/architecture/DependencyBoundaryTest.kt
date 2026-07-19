@@ -11,7 +11,23 @@ import kotlin.test.assertTrue
 class DependencyBoundaryTest {
     @Test
     fun `BeakoKit main sources do not depend on the legacy resolver namespace`() {
-        val sourceRoot = findSourceRoot()
+        val sourceRoot = findSourceRoot(
+            Path.of("src", "main", "kotlin", "org", "akkirrai", "beakokit"),
+            Path.of("parsers", "src", "main", "kotlin", "org", "akkirrai", "beakokit"),
+        )
+        assertNoLegacyImports(sourceRoot, "BeakoKit")
+    }
+
+    @Test
+    fun `Hibiki app consumes BeakoKit without legacy resolver imports`() {
+        val sourceRoot = findSourceRoot(
+            Path.of("app", "src", "main", "java"),
+            Path.of("..", "app", "src", "main", "java"),
+        )
+        assertNoLegacyImports(sourceRoot, "Hibiki app")
+    }
+
+    private fun assertNoLegacyImports(sourceRoot: Path, owner: String) {
         val violations = Files.walk(sourceRoot).use { paths ->
             paths
                 .filter { it.extension == "kt" }
@@ -22,19 +38,15 @@ class DependencyBoundaryTest {
 
         assertTrue(
             violations.isEmpty(),
-            "BeakoKit must remain extractable; legacy namespace imports found in: $violations",
+            "$owner must use the extractable BeakoKit API; legacy namespace imports found in: $violations",
         )
     }
 
-    private fun findSourceRoot(): Path {
-        val relativeRoot = Path.of("src", "main", "kotlin", "org", "akkirrai", "beakokit")
-        val repositoryRelativeRoot = Path.of("parsers").resolve(relativeRoot)
+    private fun findSourceRoot(vararg candidates: Path): Path {
         return generateSequence(Path.of("").toAbsolutePath()) { it.parent }
-            .map { current ->
-                listOf(current.resolve(relativeRoot), current.resolve(repositoryRelativeRoot))
-            }
+            .map { current -> candidates.map(current::resolve) }
             .flatten()
             .firstOrNull(Path::exists)
-            ?: error("Unable to locate BeakoKit source root")
+            ?: error("Unable to locate source root from ${candidates.toList()}")
     }
 }

@@ -7,8 +7,6 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.ProviderMatch
-import org.akkirrai.beakokit.model.StreamValidationResult
-import org.akkirrai.beakokit.model.VideoStream
 
 typealias SourceException = org.akkirrai.beakokit.api.SourceException
 
@@ -42,14 +40,8 @@ interface VideoProvider {
     suspend fun getPlayerLinks(match: ProviderMatch, episode: Episode): List<PlayerLink>
 }
 
-interface PlayerExtractor {
-    fun supports(link: PlayerLink): Boolean
+@Deprecated("Use StreamExtractor from BeakoKit", ReplaceWith("StreamExtractor"))
+typealias PlayerExtractor = org.akkirrai.beakokit.api.StreamExtractor
 
-    suspend fun extract(link: PlayerLink): VideoStream
-
-    suspend fun extractVariants(link: PlayerLink): List<VideoStream> = listOf(extract(link))
-}
-
-interface StreamValidator {
-    suspend fun validate(stream: VideoStream): StreamValidationResult
-}
+@Deprecated("Use StreamValidator from BeakoKit", ReplaceWith("StreamValidator"))
+typealias StreamValidator = org.akkirrai.beakokit.api.StreamValidator

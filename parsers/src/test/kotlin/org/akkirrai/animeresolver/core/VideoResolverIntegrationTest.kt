@@ -1,5 +1,8 @@
 package org.akkirrai.animeresolver.core
 
+import org.akkirrai.beakokit.api.StreamExtractor
+import org.akkirrai.beakokit.api.StreamValidator as BeakoStreamValidator
+
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
@@ -62,7 +65,7 @@ class VideoResolverIntegrationTest {
         }
 
         var extractedLink: PlayerLink? = null
-        val extractor = object : PlayerExtractor {
+        val extractor = object : StreamExtractor {
             override fun supports(link: PlayerLink): Boolean = link.type == PlayerType.DIRECT_HLS
 
             override suspend fun extract(link: PlayerLink): VideoStream {
@@ -76,7 +79,7 @@ class VideoResolverIntegrationTest {
             }
         }
 
-        val validator = object : StreamValidator {
+        val validator = object : BeakoStreamValidator {
             override suspend fun validate(stream: VideoStream): StreamValidationResult =
                 StreamValidationResult(
                     success = true,

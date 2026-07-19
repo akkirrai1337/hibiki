@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.extractor
+package org.akkirrai.beakokit.playback.extractor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -15,21 +15,21 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoStream
-import org.akkirrai.animeresolver.network.hostOf
-import org.akkirrai.animeresolver.network.normalizeUrl
-import org.akkirrai.animeresolver.network.pathOf
+import org.akkirrai.beakokit.http.hostOf
+import org.akkirrai.beakokit.http.normalizeUrl
+import org.akkirrai.beakokit.http.pathOf
 import java.net.URLDecoder
 import java.net.URI
 
 class VkExtractor(
     private val client: HttpClient,
-) : PlayerExtractor {
+) : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean {
         if (link.type != PlayerType.EMBED) return false
         val host = hostOf(link.url) ?: return false

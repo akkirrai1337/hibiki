@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.extractor
+package org.akkirrai.beakokit.playback.extractor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine

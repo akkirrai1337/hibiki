@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.extractor
+package org.akkirrai.beakokit.playback.extractor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -15,7 +15,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
@@ -23,18 +23,18 @@ import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
 import org.akkirrai.beakokit.model.VideoStream
-import org.akkirrai.animeresolver.network.bodyOrThrow
-import org.akkirrai.animeresolver.network.decodeShiftedBase64
-import org.akkirrai.animeresolver.network.hostOf
-import org.akkirrai.animeresolver.network.normalizeUrl
-import org.akkirrai.animeresolver.network.originOf
+import org.akkirrai.beakokit.http.bodyOrThrow
+import org.akkirrai.beakokit.http.decodeShiftedBase64
+import org.akkirrai.beakokit.http.hostOf
+import org.akkirrai.beakokit.http.normalizeUrl
+import org.akkirrai.beakokit.http.originOf
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 class KodikExtractor(
     private val client: HttpClient,
-) : PlayerExtractor {
+) : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean {
         if (link.type != PlayerType.EMBED) return false
         val host = hostOf(link.url)?.lowercase().orEmpty()

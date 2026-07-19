@@ -14,21 +14,21 @@ import android.webkit.WebViewClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoStream
-import org.akkirrai.animeresolver.network.hostOf
-import org.akkirrai.animeresolver.network.normalizeUrl
-import org.akkirrai.animeresolver.network.originOf
+import org.akkirrai.beakokit.http.hostOf
+import org.akkirrai.beakokit.http.normalizeUrl
+import org.akkirrai.beakokit.http.originOf
 import org.akkirrai.hibiki.core.log.AppLogger
 import kotlin.coroutines.resume
 
 class AllohaWebViewExtractor(
     private val context: Context,
-) : PlayerExtractor {
+) : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean {
         if (link.type != PlayerType.EMBED) return false
         val host = hostOf(link.url)?.lowercase().orEmpty()

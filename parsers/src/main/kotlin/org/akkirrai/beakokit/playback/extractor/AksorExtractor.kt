@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.extractor
+package org.akkirrai.beakokit.playback.extractor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -7,21 +7,21 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoStream
-import org.akkirrai.animeresolver.network.bodyOrThrow
-import org.akkirrai.animeresolver.network.hostOf
-import org.akkirrai.animeresolver.network.normalizeUrl
-import org.akkirrai.animeresolver.network.originOf
-import org.akkirrai.animeresolver.network.pathOf
+import org.akkirrai.beakokit.http.bodyOrThrow
+import org.akkirrai.beakokit.http.hostOf
+import org.akkirrai.beakokit.http.normalizeUrl
+import org.akkirrai.beakokit.http.originOf
+import org.akkirrai.beakokit.http.pathOf
 
 class AksorExtractor(
     private val client: HttpClient,
-) : PlayerExtractor {
+) : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean =
         link.type == PlayerType.EMBED && hostOf(link.url)?.endsWith("aksor.tv") == true
 

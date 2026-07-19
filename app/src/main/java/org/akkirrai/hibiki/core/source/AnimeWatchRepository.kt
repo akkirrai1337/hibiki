@@ -11,23 +11,23 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
-import org.akkirrai.animeresolver.core.PlayerExtractor
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
-import org.akkirrai.animeresolver.extractor.AksorExtractor
-import org.akkirrai.animeresolver.extractor.AniBoomExtractor
-import org.akkirrai.animeresolver.extractor.CvhExtractor
-import org.akkirrai.animeresolver.extractor.DirectHlsExtractor
-import org.akkirrai.animeresolver.extractor.DirectMp4Extractor
-import org.akkirrai.animeresolver.extractor.KodikExtractor
-import org.akkirrai.animeresolver.extractor.SibnetExtractor
-import org.akkirrai.animeresolver.extractor.VkExtractor
+import org.akkirrai.beakokit.playback.extractor.AksorExtractor
+import org.akkirrai.beakokit.playback.extractor.AniBoomExtractor
+import org.akkirrai.beakokit.playback.extractor.CvhExtractor
+import org.akkirrai.beakokit.playback.extractor.DirectHlsExtractor
+import org.akkirrai.beakokit.playback.extractor.DirectMp4Extractor
+import org.akkirrai.beakokit.playback.extractor.KodikExtractor
+import org.akkirrai.beakokit.playback.extractor.SibnetExtractor
+import org.akkirrai.beakokit.playback.extractor.VkExtractor
+import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
-import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
@@ -77,7 +77,7 @@ class AnimeWatchRepository(
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
-    private val extractors = listOfNotNull<PlayerExtractor>(
+    private val extractors = listOfNotNull<StreamExtractor>(
         DirectHlsExtractor(),
         DirectMp4Extractor(),
         AniBoomExtractor(client),
