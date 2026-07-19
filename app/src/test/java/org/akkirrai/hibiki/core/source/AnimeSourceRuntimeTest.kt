@@ -4,10 +4,10 @@ import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
-import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchSort
@@ -25,21 +25,21 @@ import org.junit.Test
 class AnimeSourceRuntimeTest {
     @Test
     fun `runtime scopes ids and only sends native ids to source`() = runBlocking {
-        val metadata = FakeMetadataSource(AnimeSearchFilterCatalog())
-        val runtime = runtime(metadata)
+        val source = FakeAnimeSource(AnimeSearchFilterCatalog())
+        val runtime = runtime(source)
 
         val searchResult = runtime.search(AnimeSearchRequest(query = "test")).single()
         val details = runtime.details(searchResult.id)
 
         assertEquals("source:ani-liberty:7", searchResult.id)
         assertEquals("source:ani-liberty:8", searchResult.relatedAnime.single().id)
-        assertEquals("7", metadata.requestedDetailsId)
+        assertEquals("7", source.requestedDetailsId)
         assertEquals(searchResult.id, details.id)
     }
 
     @Test
     fun `filter contract hides unsupported and technical options`() = runBlocking {
-        val metadata = FakeMetadataSource(
+        val source = FakeAnimeSource(
             AnimeSearchFilterCatalog(
                 typeOptions = listOf(SearchFilterOption("tv", "TV")),
                 statusOptions = listOf(SearchFilterOption("1", "IS_ONGOING")),
@@ -50,7 +50,7 @@ class AnimeSourceRuntimeTest {
                 capabilities = CAPABILITIES,
             ),
         )
-        val runtime = runtime(metadata)
+        val runtime = runtime(source)
 
         val catalog = runtime.filterCatalog(preferEnglish = false)
 
@@ -61,50 +61,36 @@ class AnimeSourceRuntimeTest {
 
     @Test
     fun `playback source receives native title id`() = runBlocking {
-        val metadata = FakeMetadataSource(AnimeSearchFilterCatalog())
-        val playback = FakePlaybackSource()
-        val runtime = runtime(metadata, playback)
+        val source = FakePlaybackAnimeSource()
+        val runtime = runtime(source)
         val title = TITLE.copy(id = "source:ani-liberty:7")
 
         val groups = runtime.getPlaybackGroups(title)
 
-        assertEquals("7", playback.requestedTitleId)
+        assertEquals("7", source.requestedTitleId)
         assertEquals("default", groups.single().id)
     }
 
     @Test
     fun `latest operation is provided by optional capability`() = runBlocking {
-        val runtime = runtime(
-            metadata = FakeMetadataSource(AnimeSearchFilterCatalog()),
-            latestSource = LatestSource { listOf(TITLE) },
-        )
+        val runtime = runtime(FakeLatestAnimeSource())
 
         val latest = runtime.latest(10)
 
         assertEquals(listOf("source:ani-liberty:7"), latest.map { it.id })
     }
 
-    private fun runtime(
-        metadata: MetadataSource,
-        playbackSource: PlaybackSource? = null,
-        latestSource: LatestSource? = null,
-    ): AnimeSourceRuntime = AnimeSourceRuntime(
+    private fun runtime(source: AnimeSource): AnimeSourceRuntime = AnimeSourceRuntime(
             descriptor = AnimeSourceDescriptor(
-                info = SourceInfo(
-                    id = SourceId("ani-liberty"),
-                    name = "Test",
-                    languages = setOf(SourceLanguage.RUSSIAN),
-                ),
+                info = source.info,
                 iconRes = 0,
             ),
-            metadata = metadata,
-            latestSource = latestSource,
-            playbackSource = playbackSource,
+            source = source,
             localizeFilters = { catalog, _ -> catalog },
             normalizeTitleId = { it },
         )
 
-    private class FakePlaybackSource : PlaybackSource {
+    private class FakePlaybackAnimeSource : FakeAnimeSource(), PlaybackSource {
         var requestedTitleId: String? = null
 
         override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
@@ -125,11 +111,19 @@ class AnimeSourceRuntimeTest {
         ): List<PlayerLink> = emptyList()
     }
 
-    private class FakeMetadataSource(
-        private val catalog: AnimeSearchFilterCatalog,
-    ) : MetadataSource {
+    private class FakeLatestAnimeSource : FakeAnimeSource(), LatestSource {
+        override suspend fun latest(limit: Int): List<AnimeTitle> = listOf(TITLE)
+    }
+
+    private open class FakeAnimeSource(
+        private val catalog: AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(),
+    ) : AnimeSource {
+        override val info = SourceInfo(
+            id = SourceId("ani-liberty"),
+            name = "Test",
+            languages = setOf(SourceLanguage.RUSSIAN),
+        )
         var requestedDetailsId: String? = null
-        override val name = "Test"
         override val capabilities = CAPABILITIES
         override suspend fun search(query: String): List<AnimeTitle> = listOf(TITLE)
         override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = catalog
@@ -141,12 +135,12 @@ class AnimeSourceRuntimeTest {
 
     @Test
     fun `runtime reads legacy scoped ids and emits canonical ids`() = runBlocking {
-        val metadata = FakeMetadataSource(AnimeSearchFilterCatalog())
-        val runtime = runtime(metadata)
+        val source = FakeAnimeSource(AnimeSearchFilterCatalog())
+        val runtime = runtime(source)
 
         val details = runtime.details("source:ANI_LIBERTY:7")
 
-        assertEquals("7", metadata.requestedDetailsId)
+        assertEquals("7", source.requestedDetailsId)
         assertEquals("source:ani-liberty:7", details.id)
     }
 

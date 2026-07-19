@@ -3,11 +3,11 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeTitle
@@ -19,21 +19,22 @@ import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSourceRuntime internal constructor(
     val descriptor: AnimeSourceDescriptor,
-    val metadata: MetadataSource,
-    private val latestSource: LatestSource?,
-    private val playbackSource: PlaybackSource?,
+    val source: AnimeSource,
     private val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog,
     private val normalizeTitleId: (String) -> String,
 ) {
+    private val latestSource = source as? LatestSource
+    private val playbackSource = source as? PlaybackSource
+
     val supportsPlayback: Boolean
         get() = playbackSource != null
 
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> =
-        metadata.search(metadata.capabilities.adapt(request)).map(::scopeTitle)
+        source.search(source.capabilities.adapt(request)).map(::scopeTitle)
 
-    suspend fun search(query: String): List<AnimeTitle> = metadata.search(query).map(::scopeTitle)
+    suspend fun search(query: String): List<AnimeTitle> = source.search(query).map(::scopeTitle)
 
-    suspend fun details(id: String): AnimeTitle = metadata.getById(nativeId(id)).let(::scopeTitle)
+    suspend fun details(id: String): AnimeTitle = source.getById(nativeId(id)).let(::scopeTitle)
 
     fun normalizeId(id: String): String = scopedId(nativeId(id))
 
@@ -42,7 +43,7 @@ class AnimeSourceRuntime internal constructor(
     }
 
     suspend fun filterCatalog(preferEnglish: Boolean): AnimeSearchFilterCatalog =
-        localizeFilters(metadata.getSearchFilterCatalog(), preferEnglish).sanitized(preferEnglish)
+        localizeFilters(source.getSearchFilterCatalog(), preferEnglish).sanitized(preferEnglish)
 
     internal suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> =
         playbackSource?.getPlaybackGroups(title.copy(id = nativeId(title.id))).orEmpty()

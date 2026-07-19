@@ -7,8 +7,6 @@ import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
-import org.akkirrai.beakokit.api.LatestSource
-import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceCapability
@@ -100,9 +98,7 @@ object AnimeSourceRegistry {
         SourceContractValidator.requireValid(source)
         val runtime = AnimeSourceRuntime(
             descriptor = registration.descriptor,
-            metadata = source,
-            latestSource = source as? LatestSource,
-            playbackSource = source as? PlaybackSource,
+            source = source,
             localizeFilters = registration.localizeFilters,
             normalizeTitleId = registration.normalizeTitleId,
         )
