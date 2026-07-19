@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     `java-test-fixtures`
+    id("com.google.devtools.ksp")
 }
 
 kotlin {
@@ -27,8 +28,14 @@ dependencies {
     testImplementation("io.ktor:ktor-client-mock:3.5.0")
 
     testFixturesImplementation(kotlin("test"))
+    ksp(project(":beakokit-processor"))
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// The built-in catalog belongs to main; tests consume that compiled output instead of regenerating it.
+tasks.matching { it.name == "kspTestKotlin" || it.name == "kspTestFixturesKotlin" }.configureEach {
+    enabled = false
 }

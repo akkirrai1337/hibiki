@@ -18,6 +18,10 @@ class BuiltInSourcesTest {
         )
 
         try {
+            assertEquals(
+                listOf(BuiltInSources.YUMMY_ANIME_ID, BuiltInSources.ANI_LIBERTY_ID),
+                BuiltInSources.catalog.sources.map { it.id },
+            )
             val sources = BuiltInSources.catalog.entries.map { entry ->
                 BuiltInSources.catalog.create(entry.info.id, context).also { source ->
                     SourceTestKit.assertSourceContract(source, entry.info.id)

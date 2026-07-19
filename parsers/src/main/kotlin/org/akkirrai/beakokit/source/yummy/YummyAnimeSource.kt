@@ -20,6 +20,7 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceEntry
 
 object YummyAnimeConfig {
     const val APPLICATION_TOKEN = "application_token"
@@ -27,6 +28,7 @@ object YummyAnimeConfig {
 }
 
 /** YummyAnime metadata wired exclusively through host-provided BeakoKit services. */
+@SourceEntry(id = "yummy-anime", order = 0)
 class YummyAnimeSource(
     context: SourceContext,
 ) : AnimeSource, LatestSource, PlaybackSource {

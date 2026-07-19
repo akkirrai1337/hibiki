@@ -4,7 +4,7 @@ fun interface SourceFactory {
     fun create(context: SourceContext): AnimeSource
 }
 
-data class SourceEntry(
+data class SourceCatalogEntry(
     val info: SourceInfo,
     val factory: SourceFactory,
 ) {
@@ -17,9 +17,9 @@ data class SourceEntry(
 }
 
 /** Immutable source metadata and factory catalog; designed to become KSP-generated later. */
-class SourceCatalog(sourceEntries: Iterable<SourceEntry>) {
-    val entries: List<SourceEntry> = sourceEntries.toList()
-    val sources: List<SourceInfo> = entries.map(SourceEntry::info)
+class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
+    val entries: List<SourceCatalogEntry> = sourceEntries.toList()
+    val sources: List<SourceInfo> = entries.map(SourceCatalogEntry::info)
     private val sourcesById = sources.associateBy(SourceInfo::id)
     private val entriesById = entries.associateBy { it.info.id }
 

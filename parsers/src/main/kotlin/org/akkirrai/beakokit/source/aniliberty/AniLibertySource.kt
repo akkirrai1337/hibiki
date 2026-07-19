@@ -20,8 +20,10 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceEntry
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
+@SourceEntry(id = "ani-liberty", order = 1)
 class AniLibertySource(
     context: SourceContext,
 ) : AnimeSource, LatestSource, PlaybackSource {

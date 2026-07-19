@@ -34,7 +34,7 @@ class SourceCatalogTest {
     fun `catalog creates and validates source from context`() {
         val info = sourceInfo("ani-liberty")
         val catalog = SourceCatalog(
-            listOf(SourceEntry(info, SourceFactory { FakeSource(info) })),
+            listOf(SourceCatalogEntry(info, SourceFactory { FakeSource(info) })),
         )
         val client = HttpClient(MockEngine { error("Network must not be called") })
 
@@ -55,7 +55,7 @@ class SourceCatalogTest {
         val catalogInfo = sourceInfo("ani-liberty")
         val catalog = SourceCatalog(
             listOf(
-                SourceEntry(
+                SourceCatalogEntry(
                     catalogInfo,
                     SourceFactory { FakeSource(sourceInfo("different-source")) },
                 ),
@@ -75,7 +75,7 @@ class SourceCatalogTest {
         }
     }
 
-    private fun sourceEntry(info: SourceInfo) = SourceEntry(
+    private fun sourceEntry(info: SourceInfo) = SourceCatalogEntry(
         info = info,
         factory = SourceFactory { error("Factory must not be called") },
     )
