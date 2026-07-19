@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
+    `java-test-fixtures`
 }
 
 kotlin {
@@ -24,6 +25,8 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-client-mock:3.5.0")
+
+    testFixturesImplementation(kotlin("test"))
 }
 
 tasks.test {

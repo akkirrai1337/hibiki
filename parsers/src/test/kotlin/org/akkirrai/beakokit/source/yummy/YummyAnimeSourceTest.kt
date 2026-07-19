@@ -14,6 +14,7 @@ import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -46,6 +47,7 @@ class YummyAnimeSourceTest {
                 ),
             )
 
+            SourceTestKit.assertSourceContract(source, SourceId("yummy-anime"))
             assertEquals(SourceId("yummy-anime"), source.info.id)
             assertEquals("YummyAnime", source.name)
             assertEquals(SourceCapability.entries.toSet(), source.info.capabilities)
@@ -90,8 +92,9 @@ class YummyAnimeSourceTest {
             )
             val title = title("987654")
 
-            val group = source.getPlaybackGroups(title).single()
-            val links = source.getPlayerLinks(title, group, group.episodes.single())
+            val snapshot = SourceTestKit.assertPlaybackContract(source, title)
+            val group = snapshot.groups.single()
+            val links = snapshot.firstEpisodeLinks
 
             assertEquals("Voice", group.title)
             assertEquals(listOf("Kodik"), links.map { it.playerName })

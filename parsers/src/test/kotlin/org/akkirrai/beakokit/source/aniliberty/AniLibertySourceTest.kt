@@ -15,6 +15,7 @@ import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,6 +33,7 @@ class AniLibertySourceTest {
                 ),
             )
 
+            SourceTestKit.assertSourceContract(source, SourceId("ani-liberty"))
             assertEquals(SourceId("ani-liberty"), source.info.id)
             assertEquals("AniLiberty", source.name)
             assertEquals(setOf(SourceLanguage.RUSSIAN), source.info.languages)
@@ -92,8 +94,9 @@ class AniLibertySourceTest {
                 description = null,
             )
 
-            val group = source.getPlaybackGroups(title).single()
-            val links = source.getPlayerLinks(title, group, group.episodes.single())
+            val snapshot = SourceTestKit.assertPlaybackContract(source, title)
+            val group = snapshot.groups.single()
+            val links = snapshot.firstEpisodeLinks
 
             assertEquals("AniLiberty", group.title)
             assertEquals("HLS", group.qualityLabel)

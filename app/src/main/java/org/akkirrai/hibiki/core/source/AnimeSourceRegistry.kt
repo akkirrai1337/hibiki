@@ -12,6 +12,7 @@ import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceContractValidator
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -96,7 +97,7 @@ object AnimeSourceRegistry {
         check(source.info == registration.descriptor.info) {
             "Source metadata does not match its registration: $sourceId"
         }
-        validateCapabilities(source)
+        SourceContractValidator.requireValid(source)
         val runtime = AnimeSourceRuntime(
             descriptor = registration.descriptor,
             metadata = source,
@@ -122,16 +123,6 @@ object AnimeSourceRegistry {
     private fun registration(sourceId: SourceId): Registration =
         registrations.firstOrNull { it.descriptor.id == sourceId }
             ?: error("Anime source is not registered: $sourceId")
-
-    private fun validateCapabilities(source: AnimeSource) {
-        val capabilities = source.info.capabilities
-        check((SourceCapability.PLAYBACK in capabilities) == (source is PlaybackSource)) {
-            "${source.info.id} playback declaration does not match PlaybackSource"
-        }
-        check((SourceCapability.LATEST_RELEASES in capabilities) == (source is LatestSource)) {
-            "${source.info.id} latest declaration does not match LatestSource"
-        }
-    }
 
     private fun createSourceContext(
         context: Context,
