@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.metadata
+package org.akkirrai.beakokit.source.aniliberty.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -10,7 +10,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchFilter
@@ -24,19 +23,20 @@ import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.resolveUrl
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.MirrorRequestExecutor
+import org.akkirrai.beakokit.source.aniliberty.AniLibertyScheduleEntry
 
 /** Public AniLiberty metadata API: catalog, search, details and schedules. */
-class AniLibertyMetadataSource(
+internal class AniLibertyCatalogClient(
     private val client: HttpClient,
     private val baseUrls: List<String> = DEFAULT_BASE_URLS,
     logger: SourceLogger = SourceLogger.NONE,
-) : MetadataSource {
+) {
     constructor(client: HttpClient, baseUrl: String) : this(client, listOf(baseUrl))
 
     private val mirrors = MirrorRequestExecutor("AniLiberty", baseUrls, logger)
 
-    override val name: String = "AniLiberty"
-    override val capabilities = MetadataSourceCapabilities(
+    val name: String = "AniLiberty"
+    val capabilities = MetadataSourceCapabilities(
         supportedSorts = SUPPORTED_SORTS,
         supportedFilters = setOf(
             AnimeSearchFilter.TYPE,
@@ -50,11 +50,11 @@ class AniLibertyMetadataSource(
         ),
     )
 
-    override suspend fun search(query: String): List<AnimeTitle> = search(
+    suspend fun search(query: String): List<AnimeTitle> = search(
         AnimeSearchRequest(query = query),
     )
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
+    suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
         val adaptedRequest = capabilities.adapt(request)
         val limit = adaptedRequest.limit.coerceIn(1, MAX_PAGE_SIZE)
         val parameters = buildList {
@@ -73,7 +73,7 @@ class AniLibertyMetadataSource(
             .mapNotNull { it.asObject()?.let(::toTitle) }
     }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = requestJson(
+    suspend fun latest(limit: Int): List<AnimeTitle> = requestJson(
         path = "anime/releases/latest",
         parameters = listOf("limit" to limit.coerceIn(1, MAX_LATEST_PAGE_SIZE)),
     ).releaseArray().mapNotNull { it.asObject()?.let(::toTitle) }
@@ -84,7 +84,7 @@ class AniLibertyMetadataSource(
     /** Releases scheduled for the current day. */
     suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = loadSchedule("now")
 
-    override suspend fun getById(id: String): AnimeTitle {
+    suspend fun getById(id: String): AnimeTitle {
         val releaseId = id.trim().takeIf(String::isNotBlank)
             ?: throw SourceException("AniLiberty release id is blank")
         return requestJson("anime/releases/$releaseId")
@@ -93,7 +93,7 @@ class AniLibertyMetadataSource(
             ?: throw SourceException("AniLiberty returned an invalid release: $id")
     }
 
-    override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
+    suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
         sortOptions = SUPPORTED_SORTS.map { SearchFilterOption(it.name.lowercase(), it.name.lowercase()) },
         typeOptions = references("types").map(::referenceOption),
         statusOptions = references("publish-statuses").map(::referenceOption),
@@ -238,9 +238,3 @@ class AniLibertyMetadataSource(
         )
     }
 }
-
-data class AniLibertyScheduleEntry(
-    val release: AnimeTitle,
-    /** ISO day index: 1 (Monday) through 7 (Sunday), if supplied. */
-    val dayOfWeek: Int?,
-)

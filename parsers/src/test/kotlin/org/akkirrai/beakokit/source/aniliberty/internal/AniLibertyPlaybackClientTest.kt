@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.provider
+package org.akkirrai.beakokit.source.aniliberty.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -14,7 +14,7 @@ import org.akkirrai.animeresolver.model.VideoSegmentType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class AniLibertyProviderTest {
+class AniLibertyPlaybackClientTest {
     @Test
     fun `uses mirror and exposes every available hls quality`() = runBlocking {
         val client = HttpClient(MockEngine { request ->
@@ -26,7 +26,7 @@ class AniLibertyProviderTest {
                 else -> error("Unexpected URL: ${request.url}")
             }
         }) { install(ContentNegotiation) { json() } }
-        val provider = AniLibertyProvider(
+        val provider = AniLibertyPlaybackClient(
             client = client,
             matcher = TitleMatcher(),
             baseUrls = listOf("https://primary.test/api/v1", "https://mirror.test/api/v1"),

@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.metadata
+package org.akkirrai.beakokit.source.aniliberty.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class AniLibertyMetadataSourceTest {
+class AniLibertyCatalogClientTest {
     @Test
     fun `parses latest releases and weekly schedule`() = runBlocking {
         var latestLimit: String? = null
@@ -35,7 +35,7 @@ class AniLibertyMetadataSourceTest {
             }
             respond(payload, headers = headersOf(HttpHeaders.ContentType, "application/json"))
         }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-        val source = AniLibertyMetadataSource(
+        val source = AniLibertyCatalogClient(
             client,
             listOf("https://primary.test/api/v1", "https://mirror.test/api/v1"),
         )
@@ -59,7 +59,7 @@ class AniLibertyMetadataSourceTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+        val source = AniLibertyCatalogClient(client, "https://ani.test/api/v1")
 
         source.search(
             AnimeSearchRequest(
@@ -98,7 +98,7 @@ class AniLibertyMetadataSourceTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+        val source = AniLibertyCatalogClient(client, "https://ani.test/api/v1")
 
         source.search(
             AnimeSearchRequest(
@@ -123,7 +123,7 @@ class AniLibertyMetadataSourceTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+        val source = AniLibertyCatalogClient(client, "https://ani.test/api/v1")
 
         val title = source.getById("10277")
 
@@ -141,7 +141,7 @@ class AniLibertyMetadataSourceTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-        val source = AniLibertyMetadataSource(client, "https://ani.test/api/v1")
+        val source = AniLibertyCatalogClient(client, "https://ani.test/api/v1")
 
         val title = source.getById("10213")
 

@@ -1,7 +1,5 @@
 package org.akkirrai.beakokit.source.aniliberty
 
-import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
-import org.akkirrai.animeresolver.metadata.AniLibertyScheduleEntry
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
@@ -10,7 +8,8 @@ import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.ProviderMatch
-import org.akkirrai.animeresolver.provider.AniLibertyProvider
+import org.akkirrai.beakokit.source.aniliberty.internal.AniLibertyCatalogClient
+import org.akkirrai.beakokit.source.aniliberty.internal.AniLibertyPlaybackClient
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
@@ -33,8 +32,8 @@ class AniLibertySource(
         ?.filter(String::isNotBlank)
         ?.takeIf(List<String>::isNotEmpty)
         ?: DEFAULT_BASE_URLS
-    private val metadata = AniLibertyMetadataSource(context.httpClient, baseUrls, context.logger)
-    private val playbackProvider = AniLibertyProvider(
+    private val metadata = AniLibertyCatalogClient(context.httpClient, baseUrls, context.logger)
+    private val playbackProvider = AniLibertyPlaybackClient(
         client = context.httpClient,
         matcher = TitleMatcher(),
         baseUrls = baseUrls,

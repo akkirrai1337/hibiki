@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.provider
+package org.akkirrai.beakokit.source.aniliberty.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -9,7 +9,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
@@ -24,17 +23,17 @@ import org.akkirrai.beakokit.http.MirrorRequestExecutor
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.minutes
 
-class AniLibertyProvider(
+internal class AniLibertyPlaybackClient(
     private val client: HttpClient,
     private val matcher: TitleMatcher,
     private val baseUrls: List<String> = DEFAULT_BASE_URLS,
     logger: SourceLogger = SourceLogger.NONE,
-) : VideoProvider {
-    override val id: String = "aniliberty"
-    override val name: String = "AniLiberty"
+) {
+    val id: String = "aniliberty"
+    val name: String = "AniLiberty"
     private val mirrors = MirrorRequestExecutor(name, baseUrls, logger)
 
-    override suspend fun search(title: AnimeTitle): List<ProviderMatch> {
+    suspend fun search(title: AnimeTitle): List<ProviderMatch> {
         val results = title.allNames().take(MAX_SEARCH_QUERIES).map { query ->
             runCatching { searchReleases(query) }
         }
@@ -68,7 +67,7 @@ class AniLibertyProvider(
         }.filter { it.confidence >= MIN_CONFIDENCE }
     }
 
-    override suspend fun getEpisodes(match: ProviderMatch): List<Episode> {
+    suspend fun getEpisodes(match: ProviderMatch): List<Episode> {
         val release = getRelease(match.mediaId)
         return release.episodes
             .filter { it.id.isNotBlank() && it.ordinal > 0.0 }
@@ -83,7 +82,7 @@ class AniLibertyProvider(
         }
     }
 
-    override suspend fun getPlayerLinks(
+    suspend fun getPlayerLinks(
         match: ProviderMatch,
         episode: Episode,
     ): List<PlayerLink> {
