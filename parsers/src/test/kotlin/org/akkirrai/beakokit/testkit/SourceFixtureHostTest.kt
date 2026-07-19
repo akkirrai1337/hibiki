@@ -5,9 +5,17 @@ import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class SourceFixtureHostTest {
+    @Test
+    fun `loads fixture body from test resources`() {
+        val body = FixtureResources.read("/beakokit/yummy/empty-search.json")
+
+        assertContains(body, "\"response\"")
+    }
+
     @Test
     fun `matches declared JSON route and records the request`() = runBlocking {
         SourceFixtureHost(

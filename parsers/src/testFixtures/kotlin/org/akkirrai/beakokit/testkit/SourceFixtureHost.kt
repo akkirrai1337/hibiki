@@ -31,6 +31,22 @@ data class JsonFixtureRoute(
         method == request.method &&
             path == request.url.encodedPath &&
             query.all { (name, value) -> request.url.parameters[name] == value }
+
+    companion object {
+        fun fromResource(
+            path: String,
+            resource: String,
+            method: HttpMethod = HttpMethod.Get,
+            status: HttpStatusCode = HttpStatusCode.OK,
+            query: Map<String, String> = emptyMap(),
+        ): JsonFixtureRoute = JsonFixtureRoute(
+            path = path,
+            body = FixtureResources.read(resource),
+            method = method,
+            status = status,
+            query = query,
+        )
+    }
 }
 
 data class FixtureRequest(
@@ -83,5 +99,19 @@ class SourceFixtureHost(
 
     override fun close() {
         httpClient.close()
+    }
+}
+
+object FixtureResources {
+    fun read(path: String): String {
+        val normalizedPath = path.trim().removePrefix("/")
+        require(normalizedPath.isNotBlank()) { "Fixture resource path must not be blank" }
+        val classLoaders = listOfNotNull(
+            Thread.currentThread().contextClassLoader,
+            FixtureResources::class.java.classLoader,
+        ).distinct()
+        val stream = classLoaders.firstNotNullOfOrNull { it.getResourceAsStream(normalizedPath) }
+            ?: error("Fixture resource not found: $normalizedPath")
+        return stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
     }
 }

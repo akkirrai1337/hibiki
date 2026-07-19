@@ -15,7 +15,12 @@ class YummyAnimeSourceTest {
     @Test
     fun `source owns identity and consumes host language and secret`() = runBlocking {
         SourceFixtureHost(
-            routes = listOf(JsonFixtureRoute("/anime", """{"response":[]}""")),
+            routes = listOf(
+                JsonFixtureRoute.fromResource(
+                    path = "/anime",
+                    resource = "beakokit/yummy/empty-search.json",
+                ),
+            ),
             preferredLanguages = listOf(SourceLanguage.ENGLISH),
             values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
             secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
@@ -36,16 +41,9 @@ class YummyAnimeSourceTest {
     fun `playback stays behind source contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute(
+                JsonFixtureRoute.fromResource(
                     path = "/anime/987654/videos",
-                    body = """
-                        {"response":[{
-                          "video_id":1,
-                          "iframe_url":"https://player.test/episode-1",
-                          "data":{"dubbing":"Voice","player":"Плеер Kodik","player_id":3},
-                          "number":"1"
-                        }]}
-                    """.trimIndent(),
+                    resource = "beakokit/yummy/playback-videos.json",
                 ),
             ),
             preferredLanguages = listOf(SourceLanguage.RUSSIAN),

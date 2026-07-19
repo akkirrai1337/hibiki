@@ -37,13 +37,13 @@ class AniLibertySourceTest {
     fun `playback stays behind source contract`() = runBlocking {
         SourceFixtureHost(
             routes = listOf(
-                JsonFixtureRoute(
-                    "/api/v1/app/search/releases",
-                    """[{"id":987654,"name":{"main":"Test"},"year":2026,"episodes_total":1}]""",
+                JsonFixtureRoute.fromResource(
+                    path = "/api/v1/app/search/releases",
+                    resource = "beakokit/aniliberty/search-releases.json",
                 ),
-                JsonFixtureRoute(
-                    "/api/v1/anime/releases/987654",
-                    """{"id":987654,"episodes":[{"id":"episode-1","ordinal":1,"hls_720":"https://cdn.test/720.m3u8"}]}""",
+                JsonFixtureRoute.fromResource(
+                    path = "/api/v1/anime/releases/987654",
+                    resource = "beakokit/aniliberty/release-playback.json",
                 ),
             ),
             preferredLanguages = listOf(SourceLanguage.RUSSIAN),

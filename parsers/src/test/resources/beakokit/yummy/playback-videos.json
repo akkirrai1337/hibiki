@@ -1,0 +1,14 @@
+{
+  "response": [
+    {
+      "video_id": 1,
+      "iframe_url": "https://player.test/episode-1",
+      "data": {
+        "dubbing": "Voice",
+        "player": "Плеер Kodik",
+        "player_id": 3
+      },
+      "number": "1"
+    }
+  ]
+}
