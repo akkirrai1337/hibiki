@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
+import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceId
@@ -15,12 +17,7 @@ import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
-import org.akkirrai.animeresolver.core.MetadataSource
-import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.ProviderMatch
-import org.akkirrai.animeresolver.provider.AniLibertyProvider
-import org.akkirrai.animeresolver.provider.YummyAnimeProvider
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.R
@@ -52,8 +49,7 @@ enum class AnimeSourceContentFeature {
 object AnimeSourceRegistry {
     private data class Registration(
         val descriptor: AnimeSourceDescriptor,
-        val createMetadataSource: (Context, HttpClient) -> MetadataSource,
-        val createWatchDiscovery: (Context, HttpClient) -> WatchSourceDiscovery?,
+        val createSource: (Context, HttpClient) -> AnimeSource,
         val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog = { catalog, _ -> catalog },
         val normalizeTitleId: (String) -> String = { it },
     )
@@ -69,8 +65,7 @@ object AnimeSourceRegistry {
                     AnimeSourceContentFeature.SIMILAR_TITLES,
                 ),
             ),
-            createMetadataSource = { context, client -> createYummySource(context, client) },
-            createWatchDiscovery = { context, client -> createYummyWatchDiscovery(context, client) },
+            createSource = { context, client -> createYummySource(context, client) },
             localizeFilters = YummySearchFilterLocalizer::localize,
             normalizeTitleId = YummyIdMigration::normalizeTitleId,
         ),
@@ -80,10 +75,9 @@ object AnimeSourceRegistry {
                 iconRes = R.drawable.source_ani_liberty,
                 supportsPlayback = true,
             ),
-            createMetadataSource = { context, client ->
+            createSource = { context, client ->
                 AniLibertySource(createSourceContext(context, client, AniLibertySource.INFO.id))
             },
-            createWatchDiscovery = { _, client -> createAniLibertyWatchDiscovery(client) },
         ),
     )
 
@@ -97,10 +91,11 @@ object AnimeSourceRegistry {
     ): AnimeSourceRuntime {
         val appContext = context.applicationContext
         val registration = registration(sourceId)
+        val source = registration.createSource(appContext, client)
         val runtime = AnimeSourceRuntime(
             descriptor = registration.descriptor,
-            metadata = registration.createMetadataSource(appContext, client),
-            watchDiscovery = registration.createWatchDiscovery(appContext, client),
+            metadata = source,
+            playbackSource = source as? PlaybackSource,
             localizeFilters = registration.localizeFilters,
             normalizeTitleId = registration.normalizeTitleId,
         )
@@ -152,7 +147,7 @@ object AnimeSourceRegistry {
         },
     )
 
-    private fun createYummySource(context: Context, client: HttpClient): MetadataSource {
+    private fun createYummySource(context: Context, client: HttpClient): AnimeSource {
         val applicationToken = AndroidKeystoreYummyApplicationTokenStore(context)
             .getEffectiveApplicationToken()
         val config = MapSourceConfig(
@@ -167,52 +162,4 @@ object AnimeSourceRegistry {
         )
     }
 
-    private fun createYummyWatchDiscovery(context: Context, client: HttpClient): WatchSourceDiscovery {
-        val provider = YummyAnimeProvider(
-            client = client,
-            matcher = TitleMatcher(),
-            applicationToken = AndroidKeystoreYummyApplicationTokenStore(context).getEffectiveApplicationToken(),
-            debugLogger = { message -> AppLogger.d("YummyAnimeProvider", message) },
-        )
-        return WatchSourceDiscovery { title ->
-            val match = ProviderMatch(
-                providerId = provider.id,
-                providerName = provider.name,
-                mediaId = title.id,
-                title = title.displayName,
-                confidence = 1.0,
-                year = title.year,
-                type = title.type,
-                episodeCount = title.episodeCount,
-            )
-            provider.getDubbingCatalog(match).map { dubbing ->
-                DiscoveredWatchSource(
-                    title = dubbing.title,
-                    qualityLabel = dubbing.qualityLabel,
-                    match = match,
-                    episodes = dubbing.episodes,
-                    provider = provider,
-                )
-            }
-        }
-    }
-
-    private fun createAniLibertyWatchDiscovery(client: HttpClient): WatchSourceDiscovery {
-        val provider = AniLibertyProvider(client = client, matcher = TitleMatcher())
-        return WatchSourceDiscovery { title ->
-            val match = provider.search(title).maxByOrNull(ProviderMatch::confidence)
-                ?: return@WatchSourceDiscovery emptyList()
-            val episodes = provider.getEpisodes(match)
-            if (episodes.isEmpty()) return@WatchSourceDiscovery emptyList()
-            listOf(
-                DiscoveredWatchSource(
-                    title = provider.name,
-                    qualityLabel = "HLS",
-                    match = match,
-                    episodes = episodes,
-                    provider = provider,
-                ),
-            )
-        }
-    }
 }

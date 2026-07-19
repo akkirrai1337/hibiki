@@ -3,40 +3,29 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.PlaybackGroup
+import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.animeresolver.core.MetadataSource
-import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.MetadataSourceFeature
-import org.akkirrai.animeresolver.model.ProviderMatch
+import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import java.util.concurrent.ConcurrentHashMap
 
-internal data class DiscoveredWatchSource(
-    val title: String,
-    val qualityLabel: String?,
-    val match: ProviderMatch,
-    val episodes: List<Episode>,
-    val provider: VideoProvider,
-)
-
-internal fun interface WatchSourceDiscovery {
-    suspend fun discover(title: AnimeTitle): List<DiscoveredWatchSource>
-}
-
 class AnimeSourceRuntime internal constructor(
     val descriptor: AnimeSourceDescriptor,
     val metadata: MetadataSource,
-    internal val watchDiscovery: WatchSourceDiscovery?,
+    private val playbackSource: PlaybackSource?,
     private val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog,
     private val normalizeTitleId: (String) -> String,
 ) {
     val supportsPlayback: Boolean
-        get() = watchDiscovery != null
+        get() = playbackSource != null
 
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> =
         metadata.search(metadata.capabilities.adapt(request)).map(::scopeTitle)
@@ -55,8 +44,18 @@ class AnimeSourceRuntime internal constructor(
     suspend fun filterCatalog(preferEnglish: Boolean): AnimeSearchFilterCatalog =
         localizeFilters(metadata.getSearchFilterCatalog(), preferEnglish).sanitized(preferEnglish)
 
-    internal suspend fun discoverWatchSources(title: AnimeTitle): List<DiscoveredWatchSource> =
-        watchDiscovery?.discover(title.copy(id = nativeId(title.id))).orEmpty()
+    internal suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> =
+        playbackSource?.getPlaybackGroups(title.copy(id = nativeId(title.id))).orEmpty()
+
+    internal suspend fun getPlayerLinks(
+        title: AnimeTitle,
+        group: PlaybackGroup,
+        episode: Episode,
+    ): List<PlayerLink> = playbackSource?.getPlayerLinks(
+        title = title.copy(id = nativeId(title.id)),
+        group = group,
+        episode = episode,
+    ).orEmpty()
 
     private fun nativeId(id: String): String {
         val scoped = AnimeKey.parse(id)

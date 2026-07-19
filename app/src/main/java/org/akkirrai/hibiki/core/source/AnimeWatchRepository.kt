@@ -13,7 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import org.akkirrai.animeresolver.core.PlayerExtractor
 import org.akkirrai.animeresolver.core.SourceException
-import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.extractor.AksorExtractor
 import org.akkirrai.animeresolver.extractor.AniBoomExtractor
 import org.akkirrai.animeresolver.extractor.CvhExtractor
@@ -23,8 +22,8 @@ import org.akkirrai.animeresolver.extractor.KodikExtractor
 import org.akkirrai.animeresolver.extractor.SibnetExtractor
 import org.akkirrai.animeresolver.extractor.VkExtractor
 import org.akkirrai.animeresolver.model.Episode
+import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.ProviderMatch
 import org.akkirrai.animeresolver.model.StreamType
 import org.akkirrai.animeresolver.model.VideoSegment
 import org.akkirrai.animeresolver.model.VideoSegmentType
@@ -44,6 +43,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
@@ -246,7 +246,7 @@ class AnimeWatchRepository(
                         )
                         if (!validation.success) return@firstNotNullOfOrNull null
                         PlaybackStream(
-                            animeTitle = payload.match.title,
+                            animeTitle = payload.title.displayName,
                             sourceTitle = payload.source.title,
                             episodeTitle = episode.title?.takeIf(String::isNotBlank)
                                 ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
@@ -401,25 +401,26 @@ class AnimeWatchRepository(
         if (!runtime.supportsPlayback) {
             throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
         }
-        val discovered = runCatching { runtime.discoverWatchSources(title) }
+        val groups = runCatching { runtime.getPlaybackGroups(title) }
             .onFailure { error ->
                 AppLogger.w(TAG, "${runtime.descriptor.name} source discovery failed: ${error.message}")
             }
             .getOrDefault(emptyList())
-        val sources = discovered.mapIndexed { index, discoveredSource ->
+        val sources = groups.mapIndexed { index, group ->
             val source = WatchSource(
-                sourceId = buildSourceId(animeId, discoveredSource.title, index),
-                title = discoveredSource.title,
-                episodeCount = discoveredSource.episodes.size,
-                qualityLabel = discoveredSource.qualityLabel,
+                sourceId = buildSourceId(animeId, group.title, index),
+                title = group.title,
+                episodeCount = group.episodes.size,
+                qualityLabel = group.qualityLabel,
                 isPriority = index == 0,
             )
             sourcePayloads[source.sourceId] = SourcePayload(
                 source = source,
                 animeId = animeId,
-                match = discoveredSource.match,
-                episodes = discoveredSource.episodes.sortedBy(Episode::number),
-                provider = discoveredSource.provider,
+                title = title,
+                group = group,
+                episodes = group.episodes.sortedBy(Episode::number),
+                runtime = runtime,
             )
             sourcePayloadLanguages[source.sourceId] = sourceLanguageKey(animeId)
             source
@@ -449,12 +450,8 @@ class AnimeWatchRepository(
         payload: SourcePayload,
         episode: Episode,
     ): List<PlayerLink> {
-        val allLinks = payload.provider.getPlayerLinks(payload.match, episode)
+        return payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
             .filter(::isSupportedLink)
-        val filtered = allLinks.filter { link ->
-            link.translation.normalizeSourceTitle() == payload.source.title.normalizeSourceTitle()
-        }
-        return if (filtered.isNotEmpty()) filtered else allLinks
     }
 
     private suspend fun resolveAnimeId(rawId: String): String {
@@ -479,13 +476,6 @@ class AnimeWatchRepository(
             .trim('-')
             .ifBlank { "voiceover-$index" }
         return "$animeId$WATCH_SOURCE_SEPARATOR$slug-$index"
-    }
-
-    private fun String?.normalizeSourceTitle(): String {
-        return this.orEmpty()
-            .trim()
-            .lowercase()
-            .replace(Regex("""\s+"""), " ")
     }
 
     internal fun prioritizeLinks(
@@ -642,9 +632,10 @@ class AnimeWatchRepository(
     private data class SourcePayload(
         val source: WatchSource,
         val animeId: String,
-        val match: ProviderMatch,
+        val title: AnimeTitle,
+        val group: PlaybackGroup,
         val episodes: List<Episode>,
-        val provider: VideoProvider,
+        val runtime: AnimeSourceRuntime,
     )
 
     private companion object {

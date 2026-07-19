@@ -2,11 +2,18 @@ package org.akkirrai.beakokit.source.aniliberty
 
 import org.akkirrai.animeresolver.metadata.AniLibertyMetadataSource
 import org.akkirrai.animeresolver.metadata.AniLibertyScheduleEntry
+import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
+import org.akkirrai.animeresolver.model.Episode
+import org.akkirrai.animeresolver.model.PlayerLink
+import org.akkirrai.animeresolver.model.ProviderMatch
+import org.akkirrai.animeresolver.provider.AniLibertyProvider
 import org.akkirrai.beakokit.api.AnimeSource
+import org.akkirrai.beakokit.api.PlaybackGroup
+import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
@@ -15,8 +22,19 @@ import org.akkirrai.beakokit.api.SourceLanguage
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 class AniLibertySource(
     context: SourceContext,
-) : AnimeSource {
-    private val metadata = AniLibertyMetadataSource(context.httpClient)
+) : AnimeSource, PlaybackSource {
+    private val baseUrls = context.config.value(BASE_URLS_KEY)
+        ?.split(',')
+        ?.map(String::trim)
+        ?.filter(String::isNotBlank)
+        ?.takeIf(List<String>::isNotEmpty)
+        ?: DEFAULT_BASE_URLS
+    private val metadata = AniLibertyMetadataSource(context.httpClient, baseUrls)
+    private val playbackProvider = AniLibertyProvider(
+        client = context.httpClient,
+        matcher = TitleMatcher(),
+        baseUrls = baseUrls,
+    )
 
     override val info: SourceInfo = INFO
     override val capabilities: MetadataSourceCapabilities
@@ -37,7 +55,47 @@ class AniLibertySource(
 
     suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = metadata.currentSchedule()
 
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
+        val match = playbackProvider.search(title).maxByOrNull(ProviderMatch::confidence)
+            ?: return emptyList()
+        val episodes = playbackProvider.getEpisodes(match)
+        if (episodes.isEmpty()) return emptyList()
+        return listOf(
+            PlaybackGroup(
+                id = match.mediaId,
+                title = playbackProvider.name,
+                episodes = episodes,
+                qualityLabel = "HLS",
+            ),
+        )
+    }
+
+    override suspend fun getPlayerLinks(
+        title: AnimeTitle,
+        group: PlaybackGroup,
+        episode: Episode,
+    ): List<PlayerLink> = playbackProvider.getPlayerLinks(
+        match = ProviderMatch(
+            providerId = playbackProvider.id,
+            providerName = playbackProvider.name,
+            mediaId = group.id,
+            title = title.displayName,
+            confidence = 1.0,
+            year = title.year,
+            type = title.type,
+            episodeCount = title.episodeCount,
+        ),
+        episode = episode,
+    )
+
     companion object {
+        const val BASE_URLS_KEY = "api_base_urls"
+
+        private val DEFAULT_BASE_URLS = listOf(
+            "https://anilibria.top/api/v1",
+            "https://api.anilibria.app/api/v1",
+        )
+
         val INFO = SourceInfo(
             id = SourceId("ani-liberty"),
             name = "AniLiberty",

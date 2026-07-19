@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.PlaybackGroup
+import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilter
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
@@ -13,6 +15,8 @@ import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.RelatedAnimeTitle
+import org.akkirrai.animeresolver.model.Episode
+import org.akkirrai.animeresolver.model.PlayerLink
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -54,7 +58,23 @@ class AnimeSourceRuntimeTest {
         assertEquals(listOf(SearchFilterOption("15", "Action")), catalog.genreOptions)
     }
 
-    private fun runtime(metadata: MetadataSource): AnimeSourceRuntime = AnimeSourceRuntime(
+    @Test
+    fun `playback source receives native title id`() = runBlocking {
+        val metadata = FakeMetadataSource(AnimeSearchFilterCatalog())
+        val playback = FakePlaybackSource()
+        val runtime = runtime(metadata, playback)
+        val title = TITLE.copy(id = "source:ani-liberty:7")
+
+        val groups = runtime.getPlaybackGroups(title)
+
+        assertEquals("7", playback.requestedTitleId)
+        assertEquals("default", groups.single().id)
+    }
+
+    private fun runtime(
+        metadata: MetadataSource,
+        playbackSource: PlaybackSource? = null,
+    ): AnimeSourceRuntime = AnimeSourceRuntime(
             descriptor = AnimeSourceDescriptor(
                 info = SourceInfo(
                     id = SourceId("ani-liberty"),
@@ -65,10 +85,31 @@ class AnimeSourceRuntimeTest {
                 supportsPlayback = false,
             ),
             metadata = metadata,
-            watchDiscovery = null,
+            playbackSource = playbackSource,
             localizeFilters = { catalog, _ -> catalog },
             normalizeTitleId = { it },
         )
+
+    private class FakePlaybackSource : PlaybackSource {
+        var requestedTitleId: String? = null
+
+        override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
+            requestedTitleId = title.id
+            return listOf(
+                PlaybackGroup(
+                    id = "default",
+                    title = "Test",
+                    episodes = listOf(Episode(id = "1", number = 1.0, title = null)),
+                ),
+            )
+        }
+
+        override suspend fun getPlayerLinks(
+            title: AnimeTitle,
+            group: PlaybackGroup,
+            episode: Episode,
+        ): List<PlayerLink> = emptyList()
+    }
 
     private class FakeMetadataSource(
         private val catalog: AnimeSearchFilterCatalog,
