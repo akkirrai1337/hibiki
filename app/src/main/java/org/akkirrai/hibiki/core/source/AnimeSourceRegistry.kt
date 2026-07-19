@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 
 data class AnimeSourceDescriptor(
     val info: SourceInfo,
@@ -147,6 +148,7 @@ object AnimeSourceRegistry {
                 SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
             }
         },
+        challengeSessionProvider = AndroidChallengeSessionProvider(context),
     )
 
     private fun createSourceConfig(context: Context, sourceId: SourceId): SourceConfig = when (sourceId) {

@@ -45,6 +45,12 @@
             android:theme="@style/Theme.Hibiki" />
 
         <activity
+            android:name=".core.network.ChallengeSessionActivity"
+            android:exported="false"
+            android:label="@string/source_verification_title"
+            android:theme="@style/Theme.Hibiki" />
+
+        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="true"

@@ -8,6 +8,8 @@ interface SourceContext {
     val preferredLanguages: List<SourceLanguage>
     val config: SourceConfig
     val logger: SourceLogger
+    val challengeSessionProvider: ChallengeSessionProvider
+        get() = ChallengeSessionProvider.UNSUPPORTED
 }
 
 /** Source-scoped values supplied by the host; secrets are deliberately read separately. */
@@ -52,6 +54,7 @@ data class DefaultSourceContext(
     override val preferredLanguages: List<SourceLanguage>,
     override val config: SourceConfig = SourceConfig.EMPTY,
     override val logger: SourceLogger = SourceLogger.NONE,
+    override val challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
 ) : SourceContext {
     init {
         require(preferredLanguages.isNotEmpty()) { "At least one preferred language is required" }

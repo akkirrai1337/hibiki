@@ -368,6 +368,7 @@
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>
     <string name="settings_sources_empty">No sources yet</string>
+    <string name="source_verification_title">Source verification</string>
     <string name="settings_source_language">Source language</string>
     <string name="settings_source_language_summary">Russian / English sources can be added later</string>
     <string name="settings_language_system">System</string>
