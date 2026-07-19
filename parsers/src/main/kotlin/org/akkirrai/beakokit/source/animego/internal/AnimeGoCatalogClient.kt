@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.source.animego.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
@@ -16,6 +17,7 @@ import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.http.pathOf
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -32,22 +34,30 @@ internal class AnimeGoCatalogClient(
     private val baseUrl: String,
 ) {
     val capabilities = CatalogCapabilities(
-        supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
-        supportedFilters = emptySet(),
+        supportedSorts = setOf(
+            AnimeSearchSort.RELEVANCE,
+            AnimeSearchSort.YEAR,
+            AnimeSearchSort.RATING,
+        ),
+        supportedFilters = setOf(
+            AnimeSearchFilter.TYPE,
+            AnimeSearchFilter.STATUS,
+            AnimeSearchFilter.INCLUDED_GENRES,
+            AnimeSearchFilter.EXCLUDED_GENRES,
+            AnimeSearchFilter.YEAR_RANGE,
+        ),
         features = setOf(CatalogFeature.LATEST_RELEASES),
     )
 
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
         val adapted = capabilities.adapt(request)
         val limit = adapted.limit.coerceIn(1, MAX_RESULTS)
-        val html = if (adapted.query.isBlank()) {
-            getHtml("/anime")
-        } else {
-            getHtml("/search/all", "q" to adapted.query.trim())
+        if (adapted.query.isNotBlank()) {
+            return parseCards(getHtml("/search/all", "q" to adapted.query.trim()))
+                .drop(adapted.offset.coerceAtLeast(0))
+                .take(limit)
         }
-        return parseCards(html)
-            .drop(adapted.offset.coerceAtLeast(0))
-            .take(limit)
+        return collectCatalogPages(adapted, limit)
     }
 
     suspend fun latest(limit: Int): List<AnimeTitle> =
@@ -62,40 +72,82 @@ internal class AnimeGoCatalogClient(
         return parseDetails(slug, getHtml("/anime/$slug"))
     }
 
-    fun filterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
-        sortOptions = listOf(SearchFilterOption("relevance", "relevance")),
-        capabilities = capabilities,
-    )
+    suspend fun filterCatalog(): AnimeSearchFilterCatalog {
+        val document = Jsoup.parse(getHtml("/anime"), baseUrl)
+        return AnimeSearchFilterCatalog(
+            sortOptions = listOf(
+                SearchFilterOption("relevance", "date added"),
+                SearchFilterOption("year", "newest"),
+                SearchFilterOption("rating", "rating"),
+            ),
+            typeOptions = document.filterOptions("type_"),
+            statusOptions = document.filterOptions("status_"),
+            genreOptions = document.filterOptions("genres_")
+                .filterNot { it.id.startsWith('!') },
+            capabilities = capabilities,
+        )
+    }
+
+    private suspend fun collectCatalogPages(request: AnimeSearchRequest, limit: Int): List<AnimeTitle> {
+        val firstPage = request.offset.coerceAtLeast(0) / PAGE_SIZE + 1
+        var page = firstPage
+        var skip = request.offset.coerceAtLeast(0) % PAGE_SIZE
+        val result = mutableListOf<AnimeTitle>()
+        while (result.size < limit) {
+            val response = getCatalogPage(request, page)
+            val cards = parseCards(response.html)
+            result += cards.drop(skip).take(limit - result.size)
+            skip = 0
+            if (response.endPage || cards.isEmpty()) break
+            page++
+        }
+        return result.distinctBy(AnimeTitle::id).take(limit)
+    }
+
+    private suspend fun getCatalogPage(request: AnimeSearchRequest, page: Int): CatalogPage {
+        val basePath = request.toFilterPath()
+        val path = if (page == 1) basePath else "$basePath/$page"
+        val (sort, direction) = request.sort.toAnimeGoSort()
+        val response = client.get("${baseUrl.trimEnd('/')}$path") {
+            header("X-Requested-With", "XMLHttpRequest")
+            parameter("entities", "true")
+            parameter("sort", sort)
+            parameter("direction", direction)
+        }
+        if (!response.status.isSuccess()) throw response.toSourceException()
+        val body = response.bodyAsText()
+        val root = runCatching { Json.parseToJsonElement(body) as? JsonObject }.getOrNull()
+        val data = root?.get("data") as? JsonObject
+        return CatalogPage(
+            html = data?.string("content") ?: body,
+            endPage = data?.get("endPage")?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false,
+        )
+    }
 
     private suspend fun getHtml(path: String, parameter: Pair<String, String>? = null): String {
         val response = client.get("${baseUrl.trimEnd('/')}$path") {
             parameter?.let { (name, value) -> parameter(name, value) }
         }
-        if (!response.status.isSuccess()) {
-            throw SourceException(
-                message = "AnimeGo returned HTTP ${response.status.value}",
-                statusCode = response.status.value,
-                kind = when (response.status.value) {
-                    404 -> SourceErrorKind.NOT_FOUND
-                    429 -> SourceErrorKind.RATE_LIMITED
-                    in 500..599 -> SourceErrorKind.NETWORK
-                    else -> SourceErrorKind.UNKNOWN
-                },
-            )
-        }
+        if (!response.status.isSuccess()) throw response.toSourceException()
         return response.bodyAsText()
     }
 
     private fun parseCards(html: String): List<AnimeTitle> {
         val document = Jsoup.parse(html, baseUrl)
-        return document.select(".ani-grid__item").mapNotNull { card ->
-            val link = card.selectFirst(".ani-grid__item-title a[href^=/anime/]")
+        return document.select(".ani-grid__item, .ani-list__item").mapNotNull { card ->
+            val link = card.selectFirst(
+                ".ani-grid__item-title a[href^=/anime/], .ani-list__item-title a[href^=/anime/]",
+            )
                 ?: return@mapNotNull null
             val slug = animeSlug(link.absUrl("href")) ?: return@mapNotNull null
-            val metadata = card.select(".ani-grid__item-genres__link").map { it.text().trim() }
+            val metadata = card.select(
+                ".ani-grid__item-genres__link, .ani-list__item-genres__link",
+            ).map { it.text().trim() }
             val russianName = link.attr("title").ifBlank { link.text() }.trim()
             if (russianName.isBlank()) return@mapNotNull null
-            val originalName = card.selectFirst(".ani-grid__item-body > .fw-lighter")
+            val originalName = card.selectFirst(
+                ".ani-grid__item-body > .fw-lighter, .ani-list__item-body > .fw-lighter",
+            )
                 ?.text()
                 ?.trim()
                 ?.takeIf(String::isNotBlank)
@@ -111,7 +163,9 @@ internal class AnimeGoCatalogClient(
                 year = metadata.firstNotNullOfOrNull(String::toIntOrNull),
                 type = metadata.firstOrNull()?.toAnimeType(),
                 episodeCount = null,
-                posterUrl = card.selectFirst(".ani-grid__item-picture img[src]")?.absUrl("src"),
+                posterUrl = card.selectFirst(
+                    ".ani-grid__item-picture img[src], .ani-list__item-picture img[src]",
+                )?.absUrl("src"),
                 status = null,
                 description = null,
                 ratings = rating?.let { listOf(TitleRating("AnimeGo", it)) }.orEmpty(),
@@ -196,6 +250,62 @@ internal class AnimeGoCatalogClient(
         ?.mapNotNull { it.jsonPrimitive.contentOrNull?.trim()?.takeIf(String::isNotBlank) }
         .orEmpty()
 
+    private fun Document.filterOptions(namePrefix: String): List<SearchFilterOption> =
+        select("input[name^=$namePrefix][value]")
+            .mapNotNull { input ->
+                val id = input.attr("value").trim().takeIf(String::isNotBlank) ?: return@mapNotNull null
+                val title = input.closest(".form-check")?.selectFirst("label")?.text()?.trim()
+                    ?.takeIf(String::isNotBlank)
+                    ?: input.attr("data-text").trim().takeIf(String::isNotBlank)
+                    ?: id
+                SearchFilterOption(id, title)
+            }
+            .distinctBy(SearchFilterOption::id)
+
+    private fun AnimeSearchRequest.toFilterPath(): String {
+        val segments = buildList {
+            val from = yearFrom
+            val to = yearTo
+            when {
+                from != null && to != null -> add("year-from-$from-to-$to")
+                from != null -> add("year-from-$from")
+                to != null -> add("year-to-$to")
+            }
+            (includedGenreAliases + excludedGenreAliases.map { "!${it.removePrefix("!")}" })
+                .pathAliases()
+                .takeIf(List<String>::isNotEmpty)
+                ?.let { add("genres-is-${it.joinToString("-or-")}") }
+            typeAliases.pathAliases().takeIf(List<String>::isNotEmpty)
+                ?.let { add("type-is-${it.joinToString("-or-")}") }
+            statusAliases.pathAliases().takeIf(List<String>::isNotEmpty)
+                ?.let { add("status-is-${it.joinToString("-or-")}") }
+        }
+        return if (segments.isEmpty()) "/anime" else "/anime/filter/${segments.joinToString("/")}/apply"
+    }
+
+    private fun List<String>.pathAliases(): List<String> = asSequence()
+        .map { it.trim().lowercase() }
+        .filter(ANIMEGO_ALIAS::matches)
+        .distinct()
+        .toList()
+
+    private fun AnimeSearchSort.toAnimeGoSort(): Pair<String, String> = when (this) {
+        AnimeSearchSort.YEAR -> "startDate" to "desc"
+        AnimeSearchSort.RATING -> "rating" to "desc"
+        else -> "createdAt" to "asc"
+    }
+
+    private fun io.ktor.client.statement.HttpResponse.toSourceException() = SourceException(
+        message = "AnimeGo returned HTTP ${status.value}",
+        statusCode = status.value,
+        kind = when (status.value) {
+            404 -> SourceErrorKind.NOT_FOUND
+            429 -> SourceErrorKind.RATE_LIMITED
+            in 500..599 -> SourceErrorKind.NETWORK
+            else -> SourceErrorKind.UNKNOWN
+        },
+    )
+
     private fun String?.toAnimeType(): String? = when (this?.trim()?.lowercase()) {
         "tvseries", "сериал" -> "tv"
         "movie", "фильм" -> "movie"
@@ -214,7 +324,11 @@ internal class AnimeGoCatalogClient(
 
     private companion object {
         const val MAX_RESULTS = 50
+        const val PAGE_SIZE = 20
         val ANIME_SLUG = Regex("[a-z0-9][a-z0-9-]*-\\d+")
+        val ANIMEGO_ALIAS = Regex("!?[a-z0-9][a-z0-9+_-]*")
         val SUPPORTED_SCHEMA_TYPES = setOf("TVSeries", "Movie")
     }
+
+    private data class CatalogPage(val html: String, val endPage: Boolean)
 }

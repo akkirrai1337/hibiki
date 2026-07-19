@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
@@ -22,6 +23,14 @@ class AnimeGoSourceTest {
                 htmlRoute("/search/all", "search.html", query = mapOf("q" to "Test")),
                 htmlRoute("/anime/test-anime-710", "details.html"),
                 htmlRoute("/anime", "search.html"),
+                FixtureRoute.fromResource(
+                    path = "/anime/2",
+                    resource = "beakokit/animego/catalog-page.json",
+                ),
+                FixtureRoute.fromResource(
+                    path = "/anime/filter/year-from-2020-to-2024/genres-is-action-or-!comedy/type-is-tv/status-is-ongoing/apply",
+                    resource = "beakokit/animego/catalog-page.json",
+                ),
                 FixtureRoute.fromResource(
                     path = "/player/710",
                     resource = "beakokit/animego/episodes.json",
@@ -43,12 +52,35 @@ class AnimeGoSourceTest {
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
             val playback = SourceTestKit.assertPlaybackContract(source, catalog.details)
+            val filters = source.getSearchFilterCatalog()
+            val paged = source.search(
+                AnimeSearchRequest(offset = 20, limit = 1, sort = AnimeSearchSort.RATING),
+            )
+            val pageBoundary = source.search(AnimeSearchRequest(limit = 2))
+            val filtered = source.search(
+                AnimeSearchRequest(
+                    limit = 1,
+                    sort = AnimeSearchSort.YEAR,
+                    typeAliases = listOf("tv"),
+                    statusAliases = listOf("ongoing"),
+                    includedGenreAliases = listOf("action"),
+                    excludedGenreAliases = listOf("comedy"),
+                    yearFrom = 2020,
+                    yearTo = 2024,
+                ),
+            )
 
             assertEquals("test-anime-710", catalog.details.id)
             assertEquals("Test Anime", catalog.details.originalName)
             assertEquals(3, catalog.details.availableEpisodeCount)
             assertEquals(listOf("test-anime-710"), latest.map(AnimeTitle::id))
             assertEquals("AniBoom", playback.firstEpisodeLinks.first().playerName)
+            assertEquals(listOf("tv"), filters.typeOptions.map { it.id })
+            assertEquals(listOf("ongoing"), filters.statusOptions.map { it.id })
+            assertEquals(listOf("action"), filters.genreOptions.map { it.id })
+            assertEquals(listOf("paged-anime-711"), paged.map(AnimeTitle::id))
+            assertEquals(listOf("test-anime-710", "paged-anime-711"), pageBoundary.map(AnimeTitle::id))
+            assertEquals(listOf("paged-anime-711"), filtered.map(AnimeTitle::id))
             assertEquals(
                 setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
                 source.info.capabilities,
@@ -56,6 +88,21 @@ class AnimeGoSourceTest {
             assertTrue(
                 host.requests.filter { it.url.encodedPath.startsWith("/player") }
                     .all { it.headers["X-Requested-With"] == "XMLHttpRequest" },
+            )
+            assertTrue(
+                host.requests.filter {
+                    it.url.encodedPath == "/anime/2" || it.url.encodedPath.startsWith("/anime/filter/")
+                }.all { request ->
+                    request.headers["X-Requested-With"] == "XMLHttpRequest" &&
+                        request.url.parameters["entities"] == "true"
+                },
+            )
+            assertTrue(
+                host.requests.any { request ->
+                    request.url.encodedPath == "/anime/2" &&
+                        request.url.parameters["sort"] == "rating" &&
+                        request.url.parameters["direction"] == "desc"
+                },
             )
         }
     }

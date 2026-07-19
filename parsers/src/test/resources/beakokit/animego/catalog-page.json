@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "data": {
+    "content": "<div class=\"ani-list__item\"><div class=\"rating-badge\">9.1</div><a class=\"ani-list__item-picture\" href=\"/anime/paged-anime-711\"><img src=\"https://cdn.test/animego/paged.jpg\"></a><div class=\"ani-list__item-body\"><div class=\"fw-lighter\">Paged Anime</div><div class=\"ani-list__item-title\"><a title=\"Paged Anime RU\" href=\"/anime/paged-anime-711\">Paged Anime RU</a></div><div class=\"ani-list__item-genres\"><a class=\"ani-list__item-genres__link\">Series</a><a class=\"ani-list__item-genres__link\">2025</a></div></div></div>",
+    "page": 2,
+    "endPage": true,
+    "view": "list"
+  }
+}
