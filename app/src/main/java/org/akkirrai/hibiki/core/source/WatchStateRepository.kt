@@ -157,6 +157,31 @@ class WatchStateRepository(context: Context) {
         return parseProgress(normalizedTitleId, episodeId, value)
     }
 
+    /** Moves progress written by the old scoped-id truncation bug to its real title key. */
+    fun migrateLegacyScopedEpisodeProgress(
+        titleId: String,
+        episodeIds: Set<String>,
+    ) {
+        val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
+        if (!normalizedTitleId.startsWith("source:") || episodeIds.isEmpty()) return
+        val legacyTitleId = normalizedTitleId.substringBefore(':')
+        val candidates = getEpisodeProgress(legacyTitleId).filter { progress ->
+            progress.episodeId in episodeIds &&
+                watchTitleIdFromSourceId(progress.sourceId) == normalizedTitleId &&
+                getEpisodeProgress(normalizedTitleId, progress.episodeId) == null
+        }
+        if (candidates.isEmpty()) return
+        prefs.edit().apply {
+            candidates.forEach { progress ->
+                val encoded = episodeProgressKeys(legacyTitleId, progress.episodeId)
+                    .firstNotNullOfOrNull { key -> prefs.getString(key, null) }
+                    ?: return@forEach
+                putString(progressKey(normalizedTitleId, progress.episodeId), encoded)
+                episodeProgressKeys(legacyTitleId, progress.episodeId).forEach(::remove)
+            }
+        }.apply()
+    }
+
     fun saveEpisodeProgress(
         titleId: String,
         episodeId: String,

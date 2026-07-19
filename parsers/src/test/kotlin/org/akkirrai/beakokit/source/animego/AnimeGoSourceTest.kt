@@ -81,6 +81,7 @@ class AnimeGoSourceTest {
 
             assertEquals("test-anime-710", catalog.details.id)
             assertEquals("Test Anime", catalog.details.originalName)
+            assertEquals("Подробное описание тестового аниме.", catalog.searchResults.single().description)
             assertTrue(catalog.details.posterUrl?.startsWith("https://images.weserv.nl/") == true)
             assertTrue(catalog.details.posterFallbackUrl?.startsWith("https://img.cdngos.com/") == true)
             assertEquals(3, catalog.details.availableEpisodeCount)
@@ -90,6 +91,7 @@ class AnimeGoSourceTest {
             assertEquals(listOf("ongoing"), filters.statusOptions.map { it.id })
             assertEquals(listOf("action", "comedy"), filters.genreOptions.map { it.id })
             assertEquals(listOf("paged-anime-711"), paged.map(AnimeTitle::id))
+            assertEquals("Paged catalog description.", paged.single().description)
             assertEquals(listOf("test-anime-710"), pagination.firstPage.map(AnimeTitle::id))
             assertEquals(listOf("paged-anime-711"), pagination.secondPage.map(AnimeTitle::id))
             assertEquals(listOf("paged-anime-711"), filtered.map(AnimeTitle::id))

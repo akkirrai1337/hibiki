@@ -8,6 +8,11 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import io.ktor.http.URLBuilder
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -54,9 +59,10 @@ internal class AnimeGoCatalogClient(
         val adapted = capabilities.adapt(request)
         val limit = adapted.limit.coerceIn(1, MAX_RESULTS)
         if (adapted.query.isNotBlank()) {
-            return parseCards(getHtml("/search/all", "q" to adapted.query.trim()))
+            val results = parseCards(getHtml("/search/all", "q" to adapted.query.trim()))
                 .drop(adapted.offset.coerceAtLeast(0))
                 .take(limit)
+            return enrichSearchDescriptions(results)
         }
         return collectCatalogPages(adapted, limit)
     }
@@ -170,7 +176,10 @@ internal class AnimeGoCatalogClient(
                 episodeCount = null,
                 posterUrl = posterUrl,
                 status = null,
-                description = null,
+                description = card.selectFirst(".ani-list__item-description")
+                    ?.text()
+                    ?.trim()
+                    ?.takeIf(String::isNotBlank),
                 ratings = rating?.let { listOf(TitleRating("AnimeGo", it)) }.orEmpty(),
                 posterFallbackUrl = sourcePosterUrl?.takeIf { it != posterUrl },
             )
@@ -290,6 +299,20 @@ internal class AnimeGoCatalogClient(
         return if (segments.isEmpty()) "/anime" else "/anime/filter/${segments.joinToString("/")}/apply"
     }
 
+    private suspend fun enrichSearchDescriptions(titles: List<AnimeTitle>): List<AnimeTitle> = coroutineScope {
+        val semaphore = Semaphore(SEARCH_DETAILS_CONCURRENCY)
+        titles.map { summary ->
+            async {
+                semaphore.withPermit {
+                    runCatching { getById(summary.id) }
+                        .getOrNull()
+                        ?.takeIf { !it.description.isNullOrBlank() }
+                        ?: summary
+                }
+            }
+        }.awaitAll()
+    }
+
     private fun List<String>.pathAliases(): List<String> = asSequence()
         .map { it.trim().lowercase() }
         .filter(ANIMEGO_ALIAS::matches)
@@ -343,6 +366,7 @@ internal class AnimeGoCatalogClient(
     private companion object {
         const val MAX_RESULTS = 50
         const val PAGE_SIZE = 20
+        const val SEARCH_DETAILS_CONCURRENCY = 4
         const val POSTER_PROXY_URL = "https://images.weserv.nl/"
         val ANIME_SLUG = Regex("[a-z0-9][a-z0-9-]*-\\d+")
         val ANIMEGO_ALIAS = Regex("!?[a-z0-9][a-z0-9+_-]*")

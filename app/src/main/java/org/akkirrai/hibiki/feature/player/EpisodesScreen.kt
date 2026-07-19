@@ -71,6 +71,7 @@ import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
 
@@ -97,8 +98,10 @@ fun EpisodesScreen(
     val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
-    val titleId = remember(sourceId) { sourceId.substringBefore(':') }
-    val savedProgress = remember(state, titleId) { watchStateRepository.getEpisodeProgress(titleId) }
+    val titleId = remember(sourceId) { watchTitleIdFromSourceId(sourceId) }
+    var savedProgress by remember(titleId) {
+        mutableStateOf(watchStateRepository.getEpisodeProgress(titleId))
+    }
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
@@ -109,6 +112,13 @@ fun EpisodesScreen(
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
+                savedProgress = withContext(Dispatchers.IO) {
+                    watchStateRepository.migrateLegacyScopedEpisodeProgress(
+                        titleId = titleId,
+                        episodeIds = content.items.mapTo(mutableSetOf(), WatchEpisode::id),
+                    )
+                    watchStateRepository.getEpisodeProgress(titleId)
+                }
                 downloadStates = withContext(Dispatchers.IO) {
                     offlineDownloadRepository.getEpisodeStates(
                         sourceId = sourceId,
