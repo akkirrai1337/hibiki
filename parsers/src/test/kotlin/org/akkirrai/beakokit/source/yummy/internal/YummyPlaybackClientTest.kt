@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.provider
+package org.akkirrai.beakokit.source.yummy.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -13,7 +13,7 @@ import org.akkirrai.animeresolver.model.AnimeTitle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class YummyAnimeProviderTest {
+class YummyPlaybackClientTest {
     @Test
     fun `uses yummy id and groups players into episodes`() = runBlocking {
         val engine = MockEngine { request ->
@@ -34,7 +34,7 @@ class YummyAnimeProviderTest {
         val client = HttpClient(engine) {
             install(ContentNegotiation) { json() }
         }
-        val provider = YummyAnimeProvider(
+        val provider = YummyPlaybackClient(
             client = client,
             matcher = TitleMatcher(),
             baseUrl = "https://yummy.test",

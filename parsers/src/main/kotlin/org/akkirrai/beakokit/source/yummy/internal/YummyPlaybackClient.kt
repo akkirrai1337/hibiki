@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.provider
+package org.akkirrai.beakokit.source.yummy.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -9,7 +9,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.akkirrai.animeresolver.core.SourceException
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.core.VideoProvider
 import org.akkirrai.animeresolver.model.AnimeTitle
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
@@ -20,17 +19,17 @@ import org.akkirrai.animeresolver.model.VideoSegmentType
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import java.util.concurrent.ConcurrentHashMap
 
-class YummyAnimeProvider(
+internal class YummyPlaybackClient(
     private val client: HttpClient,
     private val matcher: TitleMatcher,
     private val applicationToken: String? = null,
     private val baseUrl: String = "https://api.yani.tv",
     private val debugLogger: ((String) -> Unit)? = null,
-) : VideoProvider {
-    override val id: String = "yummyanime"
-    override val name: String = "YummyAnime"
+) {
+    val id: String = "yummyanime"
+    val name: String = "YummyAnime"
 
-    override suspend fun search(title: AnimeTitle): List<ProviderMatch> {
+    suspend fun search(title: AnimeTitle): List<ProviderMatch> {
         val results = title.allNames().take(3).flatMap { query ->
             val response = client.get("$baseUrl/anime") {
                 addHeaders()
@@ -65,11 +64,11 @@ class YummyAnimeProvider(
         }.filter { it.confidence >= MIN_CONFIDENCE }
     }
 
-    override suspend fun getEpisodes(match: ProviderMatch): List<Episode> {
+    suspend fun getEpisodes(match: ProviderMatch): List<Episode> {
         return getEpisodeIndex(match.mediaId).values.toList()
     }
 
-    override suspend fun getPlayerLinks(
+    suspend fun getPlayerLinks(
         match: ProviderMatch,
         episode: Episode,
     ): List<PlayerLink> {
@@ -187,7 +186,7 @@ class YummyAnimeProvider(
     }
 }
 
-data class YummyDubbingCatalog(
+internal data class YummyDubbingCatalog(
     val title: String,
     val episodes: List<Episode>,
     val qualityLabel: String?,

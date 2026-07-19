@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.metadata
+package org.akkirrai.beakokit.source.yummy.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -20,7 +20,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.core.MetadataSource
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
 import org.akkirrai.animeresolver.model.AnimeSearchSort
@@ -33,16 +32,16 @@ import org.akkirrai.animeresolver.model.SearchFilterOption
 import org.akkirrai.animeresolver.model.TitleRating
 import org.akkirrai.animeresolver.network.bodyOrThrow
 
-class YummyMetadataSource(
+internal class YummyCatalogClient(
     private val client: HttpClient,
     private val applicationToken: String? = null,
     private val baseUrl: String = "https://api.yani.tv",
     private val searchLimit: Int = 20,
     private val debugLogger: ((String) -> Unit)? = null,
     private val languageProvider: () -> String = { "ru" },
-) : MetadataSource {
-    override val name: String = "YummyAnime"
-    override val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL.copy(
+) {
+    val name: String = "YummyAnime"
+    val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL.copy(
         features = setOf(
             MetadataSourceFeature.LATEST_RELEASES,
             MetadataSourceFeature.SCHEDULE,
@@ -58,7 +57,7 @@ class YummyMetadataSource(
         sort: String = "top",
         type: String? = null,
     ): List<AnimeTitle> {
-        println("[YummyMetadataSource] getCatalog(limit=$limit, offset=$offset, sort=$sort, type=$type)")
+        debugLogger?.invoke("Yummy catalog: limit=$limit, offset=$offset, sort=$sort, type=$type")
         val language = requestLanguage()
         val response = client.get("$baseUrl/anime") {
             addHeaders(language)
@@ -72,17 +71,17 @@ class YummyMetadataSource(
             .map { payload -> payload.toAnimeTitle(language) }
     }
 
-    override suspend fun search(query: String): List<AnimeTitle> {
+    suspend fun search(query: String): List<AnimeTitle> {
         return search(query = query, limit = searchLimit, offset = 0)
     }
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
-        println(
-            "[YummyMetadataSource] search(request=" +
+    suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
+        debugLogger?.invoke(
+            "Yummy search: " +
                 "query=${request.query}, limit=${request.limit}, offset=${request.offset}, " +
                 "sort=${request.sort}, types=${request.typeAliases}, statuses=${request.statusAliases}, " +
                 "genres=${request.includedGenreAliases}, excludedGenres=${request.excludedGenreAliases}, " +
-                "yearFrom=${request.yearFrom}, yearTo=${request.yearTo})"
+                "yearFrom=${request.yearFrom}, yearTo=${request.yearTo}"
         )
         val language = requestLanguage()
         val response = client.get("$baseUrl/anime") {
@@ -117,7 +116,7 @@ class YummyMetadataSource(
         )
     }
 
-    override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
+    suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
         cachedFilterCatalog?.let { return it }
         return filterCatalogMutex.withLock {
             cachedFilterCatalog?.let { return@withLock it }
@@ -131,8 +130,8 @@ class YummyMetadataSource(
         }
     }
 
-    override suspend fun getById(id: String): AnimeTitle {
-        println("[YummyMetadataSource] getById(id=$id)")
+    suspend fun getById(id: String): AnimeTitle {
+        debugLogger?.invoke("Yummy details: id=$id")
         val language = requestLanguage()
         val response = client.get("$baseUrl/anime/$id") {
             addHeaders(language)
@@ -162,7 +161,7 @@ class YummyMetadataSource(
         }
     }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> {
+    suspend fun latest(limit: Int): List<AnimeTitle> {
         val language = requestLanguage()
         val schedule = client.get("$baseUrl/anime/schedule") {
             addHeaders(language)

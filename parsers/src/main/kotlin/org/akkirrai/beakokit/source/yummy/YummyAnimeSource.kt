@@ -1,6 +1,5 @@
 package org.akkirrai.beakokit.source.yummy
 
-import org.akkirrai.animeresolver.metadata.YummyMetadataSource
 import org.akkirrai.animeresolver.core.TitleMatcher
 import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
 import org.akkirrai.animeresolver.model.AnimeSearchRequest
@@ -9,7 +8,8 @@ import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
 import org.akkirrai.animeresolver.model.Episode
 import org.akkirrai.animeresolver.model.PlayerLink
 import org.akkirrai.animeresolver.model.ProviderMatch
-import org.akkirrai.animeresolver.provider.YummyAnimeProvider
+import org.akkirrai.beakokit.source.yummy.internal.YummyCatalogClient
+import org.akkirrai.beakokit.source.yummy.internal.YummyPlaybackClient
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
@@ -34,7 +34,7 @@ class YummyAnimeSource(
 ) : AnimeSource, LatestSource, PlaybackSource {
     private val applicationToken = context.config.secret(YummyAnimeConfig.APPLICATION_TOKEN)
     private val baseUrl = context.config.value(YummyAnimeConfig.BASE_URL) ?: DEFAULT_BASE_URL
-    private val metadata = YummyMetadataSource(
+    private val metadata = YummyCatalogClient(
         client = context.httpClient,
         applicationToken = applicationToken,
         baseUrl = baseUrl,
@@ -45,7 +45,7 @@ class YummyAnimeSource(
             context.preferredLanguages.firstOrNull()?.tag ?: SourceLanguage.RUSSIAN.tag
         },
     )
-    private val playbackProvider = YummyAnimeProvider(
+    private val playbackProvider = YummyPlaybackClient(
         client = context.httpClient,
         matcher = TitleMatcher(),
         applicationToken = applicationToken,

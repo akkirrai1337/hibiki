@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.metadata
+package org.akkirrai.beakokit.source.yummy.internal
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -16,7 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContains
 
-class YummyMetadataSourceTest {
+class YummyCatalogClientTest {
     @Test
     fun `search maps aliases`() = runBlocking {
         val engine = MockEngine { request ->
@@ -32,7 +32,7 @@ class YummyMetadataSourceTest {
             install(ContentNegotiation) { json() }
         }
 
-        val source = YummyMetadataSource(
+        val source = YummyCatalogClient(
             client = client,
             baseUrl = "https://yummy.test",
         )
@@ -68,7 +68,7 @@ class YummyMetadataSourceTest {
             install(ContentNegotiation) { json() }
         }
 
-        val source = YummyMetadataSource(
+        val source = YummyCatalogClient(
             client = client,
             baseUrl = "https://yummy.test",
         )
@@ -118,7 +118,7 @@ class YummyMetadataSourceTest {
         val client = HttpClient(engine) {
             install(ContentNegotiation) { json() }
         }
-        val source = YummyMetadataSource(
+        val source = YummyCatalogClient(
             client = client,
             baseUrl = "https://yummy.test",
         )
@@ -158,7 +158,7 @@ class YummyMetadataSourceTest {
             install(ContentNegotiation) { json() }
         }
 
-        val source = YummyMetadataSource(
+        val source = YummyCatalogClient(
             client = client,
             baseUrl = "https://yummy.test",
         )
@@ -194,7 +194,7 @@ class YummyMetadataSourceTest {
         }) {
             install(ContentNegotiation) { json() }
         }
-        val source = YummyMetadataSource(
+        val source = YummyCatalogClient(
             client = client,
             baseUrl = "https://yummy.test",
         )
@@ -221,7 +221,7 @@ class YummyMetadataSourceTest {
         }) {
             install(ContentNegotiation) { json() }
         }
-        val source = YummyMetadataSource(client = client, baseUrl = "https://yummy.test")
+        val source = YummyCatalogClient(client = client, baseUrl = "https://yummy.test")
 
         val title = source.latest(10).single()
 
