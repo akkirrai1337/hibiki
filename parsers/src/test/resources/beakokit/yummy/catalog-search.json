@@ -1,0 +1,13 @@
+{
+  "response": [
+    {
+      "anime_id": 987654,
+      "title": "Test",
+      "title_en": "Test",
+      "title_orig": "Test",
+      "year": 2026,
+      "type": {"alias": "tv"},
+      "episodes": {"aired": 1, "count": 1}
+    }
+  ]
+}

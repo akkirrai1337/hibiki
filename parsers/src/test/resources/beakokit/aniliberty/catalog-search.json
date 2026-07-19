@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "id": 987654,
+      "type": {"value": "TV"},
+      "year": 2026,
+      "name": {"main": "Test", "english": "Test", "alternative": null},
+      "is_ongoing": true,
+      "episodes_total": 1
+    }
+  ]
+}

@@ -15,6 +15,7 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
+import java.util.Collections
 
 data class JsonFixtureRoute(
     val path: String,
@@ -68,10 +69,10 @@ class SourceFixtureHost(
     secrets: Map<String, String> = emptyMap(),
 ) : AutoCloseable {
     private val fixtureRoutes = routes.toList()
-    private val recordedRequests = mutableListOf<FixtureRequest>()
+    private val recordedRequests = Collections.synchronizedList(mutableListOf<FixtureRequest>())
 
     val requests: List<FixtureRequest>
-        get() = recordedRequests.toList()
+        get() = synchronized(recordedRequests) { recordedRequests.toList() }
 
     val httpClient = HttpClient(MockEngine { requestData ->
         val request = FixtureRequest(

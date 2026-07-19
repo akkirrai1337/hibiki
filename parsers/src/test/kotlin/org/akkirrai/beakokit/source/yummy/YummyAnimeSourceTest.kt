@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.source.yummy
 
 import kotlinx.coroutines.runBlocking
+import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -34,6 +35,49 @@ class YummyAnimeSourceTest {
             assertEquals(emptyList(), source.search("frieren"))
             assertEquals("en", host.requests.single().headers["Lang"])
             assertEquals("application-secret", host.requests.single().headers["X-Application"])
+        }
+    }
+
+    @Test
+    fun `catalog operations satisfy the shared contract`() = runBlocking {
+        SourceFixtureHost(
+            routes = listOf(
+                JsonFixtureRoute.fromResource(
+                    path = "/anime",
+                    resource = "beakokit/yummy/catalog-search.json",
+                ),
+                JsonFixtureRoute.fromResource(
+                    path = "/anime/987654",
+                    resource = "beakokit/yummy/catalog-details.json",
+                ),
+                JsonFixtureRoute.fromResource(
+                    path = "/anime/987654/trailers",
+                    resource = "beakokit/yummy/empty-response.json",
+                ),
+                JsonFixtureRoute.fromResource(
+                    path = "/anime/987654/recommendations",
+                    resource = "beakokit/yummy/empty-response.json",
+                ),
+                JsonFixtureRoute.fromResource(
+                    path = "/anime/schedule",
+                    resource = "beakokit/yummy/catalog-latest.json",
+                ),
+            ),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            values = mapOf(YummyAnimeConfig.BASE_URL to "https://yummy.test"),
+            secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to "application-secret"),
+        ).use { host ->
+            val source = YummyAnimeSource(host.context)
+
+            val catalog = SourceTestKit.assertCatalogContract(
+                source,
+                AnimeSearchRequest(query = "Test", limit = 5),
+            )
+            val latest = SourceTestKit.assertLatestContract(source, limit = 5)
+
+            assertEquals("987654", catalog.details.id)
+            assertEquals(listOf("987654"), latest.map(AnimeTitle::id))
+            assertEquals(5, host.requests.size)
         }
     }
 

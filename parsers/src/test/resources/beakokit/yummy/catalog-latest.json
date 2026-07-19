@@ -1,0 +1,10 @@
+{
+  "response": [
+    {
+      "anime_id": 987654,
+      "title": "Test",
+      "poster": {"big": "//cdn.test/latest.webp"},
+      "episodes": {"aired": 1, "count": 1, "prev_date": 100, "next_date": 200}
+    }
+  ]
+}
