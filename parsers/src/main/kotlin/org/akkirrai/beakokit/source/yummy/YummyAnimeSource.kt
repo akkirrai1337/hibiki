@@ -4,7 +4,7 @@ import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.ProviderMatch
@@ -56,7 +56,7 @@ class YummyAnimeSource(
     )
 
     override val info: SourceInfo = INFO
-    override val capabilities: MetadataSourceCapabilities
+    override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
 
     override suspend fun search(query: String): List<AnimeTitle> = metadata.search(query)

@@ -1,7 +1,7 @@
 package org.akkirrai.animeresolver.core
 
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.Episode
@@ -14,7 +14,7 @@ typealias SourceException = org.akkirrai.beakokit.api.SourceException
 
 interface MetadataSource {
     val name: String
-    val capabilities: MetadataSourceCapabilities
+    val capabilities: CatalogCapabilities
 
     suspend fun search(query: String): List<AnimeTitle>
 

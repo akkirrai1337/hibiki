@@ -3,12 +3,12 @@ package org.akkirrai.beakokit.api
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 
-/** Standalone BeakoKit metadata contract; legacy resolver interfaces stay implementation details. */
+/** Standalone BeakoKit catalog contract; legacy resolver interfaces stay implementation details. */
 interface AnimeSource {
     val info: SourceInfo
-    val capabilities: MetadataSourceCapabilities
+    val catalogCapabilities: CatalogCapabilities
 
     val name: String
         get() = info.name

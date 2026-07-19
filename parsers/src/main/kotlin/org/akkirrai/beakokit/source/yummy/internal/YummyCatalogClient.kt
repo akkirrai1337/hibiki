@@ -25,8 +25,8 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
-import org.akkirrai.beakokit.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.TitleRating
@@ -41,10 +41,10 @@ internal class YummyCatalogClient(
     private val languageProvider: () -> String = { "ru" },
 ) {
     val name: String = "YummyAnime"
-    val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL.copy(
+    val capabilities: CatalogCapabilities = CatalogCapabilities.FULL.copy(
         features = setOf(
-            MetadataSourceFeature.LATEST_RELEASES,
-            MetadataSourceFeature.SCHEDULE,
+            CatalogFeature.LATEST_RELEASES,
+            CatalogFeature.SCHEDULE,
         ),
     )
 

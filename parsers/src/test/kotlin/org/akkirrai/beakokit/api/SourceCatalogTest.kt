@@ -4,7 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -90,7 +90,7 @@ class SourceCatalogTest {
     private class FakeSource(
         override val info: SourceInfo,
     ) : AnimeSource {
-        override val capabilities = MetadataSourceCapabilities(
+        override val catalogCapabilities = CatalogCapabilities(
             supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
             supportedFilters = emptySet(),
         )

@@ -30,7 +30,7 @@ class AnimeSourceRuntime internal constructor(
         get() = playbackSource != null
 
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> =
-        source.search(source.capabilities.adapt(request)).map(::scopeTitle)
+        source.search(source.catalogCapabilities.adapt(request)).map(::scopeTitle)
 
     suspend fun search(query: String): List<AnimeTitle> = source.search(query).map(::scopeTitle)
 

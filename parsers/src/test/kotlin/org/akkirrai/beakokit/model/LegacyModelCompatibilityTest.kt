@@ -13,4 +13,15 @@ class LegacyModelCompatibilityTest {
         assertEquals(AnimeTitle::class, org.akkirrai.animeresolver.model.AnimeTitle::class)
         assertEquals(PlayerLink::class, org.akkirrai.animeresolver.model.PlayerLink::class)
     }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `legacy capability names resolve to catalog capabilities`() {
+        val beakoLegacy: MetadataSourceCapabilities = CatalogCapabilities.FULL
+        val resolverLegacy: org.akkirrai.animeresolver.model.MetadataSourceCapabilities = beakoLegacy
+        val feature: MetadataSourceFeature = CatalogFeature.LATEST_RELEASES
+
+        assertEquals(CatalogCapabilities.FULL, resolverLegacy)
+        assertEquals(CatalogFeature.LATEST_RELEASES, feature)
+    }
 }

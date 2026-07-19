@@ -92,19 +92,19 @@ enum class AnimeSearchFilter {
     YEAR_RANGE,
 }
 
-enum class MetadataSourceFeature {
+enum class CatalogFeature {
     LATEST_RELEASES,
     SCHEDULE,
 }
 
-data class MetadataSourceCapabilities(
+data class CatalogCapabilities(
     val supportedSorts: Set<AnimeSearchSort>,
     val supportedFilters: Set<AnimeSearchFilter>,
-    val features: Set<MetadataSourceFeature> = emptySet(),
+    val features: Set<CatalogFeature> = emptySet(),
     val fallbackSort: AnimeSearchSort = AnimeSearchSort.RELEVANCE,
 ) {
     init {
-        require(supportedSorts.isNotEmpty()) { "A metadata source must support at least one sort" }
+        require(supportedSorts.isNotEmpty()) { "A catalog source must support at least one sort" }
         require(fallbackSort in supportedSorts) { "Fallback sort must be supported" }
     }
 
@@ -127,7 +127,7 @@ data class MetadataSourceCapabilities(
     )
 
     companion object {
-        val FULL = MetadataSourceCapabilities(
+        val FULL = CatalogCapabilities(
             supportedSorts = AnimeSearchSort.entries.toSet(),
             supportedFilters = AnimeSearchFilter.entries.toSet(),
         )
@@ -139,8 +139,14 @@ data class AnimeSearchFilterCatalog(
     val typeOptions: List<SearchFilterOption> = emptyList(),
     val statusOptions: List<SearchFilterOption> = emptyList(),
     val genreOptions: List<SearchFilterOption> = emptyList(),
-    val capabilities: MetadataSourceCapabilities = MetadataSourceCapabilities.FULL,
+    val capabilities: CatalogCapabilities = CatalogCapabilities.FULL,
 )
+
+@Deprecated("Use CatalogFeature", ReplaceWith("CatalogFeature"))
+typealias MetadataSourceFeature = CatalogFeature
+
+@Deprecated("Use CatalogCapabilities", ReplaceWith("CatalogCapabilities"))
+typealias MetadataSourceCapabilities = CatalogCapabilities
 
 data class SearchFilterOption(
     val id: String,

@@ -16,8 +16,8 @@ import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
-import org.akkirrai.beakokit.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.http.bodyOrThrow
 import org.akkirrai.beakokit.http.resolveUrl
@@ -36,7 +36,7 @@ internal class AniLibertyCatalogClient(
     private val mirrors = MirrorRequestExecutor("AniLiberty", baseUrls, logger)
 
     val name: String = "AniLiberty"
-    val capabilities = MetadataSourceCapabilities(
+    val capabilities = CatalogCapabilities(
         supportedSorts = SUPPORTED_SORTS,
         supportedFilters = setOf(
             AnimeSearchFilter.TYPE,
@@ -45,8 +45,8 @@ internal class AniLibertyCatalogClient(
             AnimeSearchFilter.YEAR_RANGE,
         ),
         features = setOf(
-            MetadataSourceFeature.LATEST_RELEASES,
-            MetadataSourceFeature.SCHEDULE,
+            CatalogFeature.LATEST_RELEASES,
+            CatalogFeature.SCHEDULE,
         ),
     )
 

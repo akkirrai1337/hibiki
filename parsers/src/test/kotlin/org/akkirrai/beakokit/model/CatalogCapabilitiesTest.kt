@@ -4,10 +4,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class MetadataSourceCapabilitiesTest {
+class CatalogCapabilitiesTest {
     @Test
     fun `unsupported request options are silently removed`() {
-        val capabilities = MetadataSourceCapabilities(
+        val capabilities = CatalogCapabilities(
             supportedSorts = setOf(AnimeSearchSort.RELEVANCE, AnimeSearchSort.RATING),
             supportedFilters = setOf(
                 AnimeSearchFilter.STATUS,

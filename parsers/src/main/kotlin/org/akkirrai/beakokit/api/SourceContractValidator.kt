@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.api
 
-import org.akkirrai.beakokit.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.CatalogFeature
 
 class SourceContractException(
     val violations: List<String>,
@@ -23,9 +23,9 @@ object SourceContractValidator {
             add("LATEST_RELEASES must match implementation of LatestSource")
         }
 
-        val metadataDeclaresLatest = MetadataSourceFeature.LATEST_RELEASES in source.capabilities.features
-        if (declaresLatest != metadataDeclaresLatest) {
-            add("LATEST_RELEASES must match metadata capabilities during legacy migration")
+        val catalogDeclaresLatest = CatalogFeature.LATEST_RELEASES in source.catalogCapabilities.features
+        if (declaresLatest != catalogDeclaresLatest) {
+            add("LATEST_RELEASES must match catalog capabilities")
         }
     }
 

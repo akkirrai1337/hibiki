@@ -13,7 +13,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.Episode
@@ -124,7 +124,7 @@ class AnimeSourceRuntimeTest {
             languages = setOf(SourceLanguage.RUSSIAN),
         )
         var requestedDetailsId: String? = null
-        override val capabilities = CAPABILITIES
+        override val catalogCapabilities = CAPABILITIES
         override suspend fun search(query: String): List<AnimeTitle> = listOf(TITLE)
         override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = catalog
         override suspend fun getById(id: String): AnimeTitle {
@@ -145,7 +145,7 @@ class AnimeSourceRuntimeTest {
     }
 
     private companion object {
-        val CAPABILITIES = MetadataSourceCapabilities(
+        val CAPABILITIES = CatalogCapabilities(
             supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
             supportedFilters = setOf(
                 AnimeSearchFilter.STATUS,

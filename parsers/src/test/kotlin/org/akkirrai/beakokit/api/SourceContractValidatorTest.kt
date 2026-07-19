@@ -1,7 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -27,7 +27,7 @@ class SourceContractValidatorTest {
             languages = setOf(SourceLanguage.ENGLISH),
             capabilities = setOf(SourceCapability.PLAYBACK),
         )
-        override val capabilities = MetadataSourceCapabilities(
+        override val catalogCapabilities = CatalogCapabilities(
             supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
             supportedFilters = emptySet(),
         )

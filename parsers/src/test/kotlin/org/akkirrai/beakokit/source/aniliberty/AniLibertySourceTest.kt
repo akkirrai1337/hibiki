@@ -9,7 +9,7 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeTitle
-import org.akkirrai.beakokit.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId
@@ -42,8 +42,8 @@ class AniLibertySourceTest {
                 setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
                 source.info.capabilities,
             )
-            assertTrue(MetadataSourceFeature.LATEST_RELEASES in source.capabilities.features)
-            assertTrue(MetadataSourceFeature.SCHEDULE in source.capabilities.features)
+            assertTrue(CatalogFeature.LATEST_RELEASES in source.catalogCapabilities.features)
+            assertTrue(CatalogFeature.SCHEDULE in source.catalogCapabilities.features)
         } finally {
             client.close()
         }
