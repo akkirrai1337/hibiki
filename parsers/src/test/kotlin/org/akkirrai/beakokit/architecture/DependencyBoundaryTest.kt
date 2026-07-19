@@ -29,23 +29,22 @@ class DependencyBoundaryTest {
     }
 
     @Test
-    fun `legacy resolver namespace contains compatibility declarations only`() {
-        val sourceRoot = findSourceRoot(
-            Path.of("src", "main", "kotlin", "org", "akkirrai", "animeresolver"),
-            Path.of("parsers", "src", "main", "kotlin", "org", "akkirrai", "animeresolver"),
+    fun `legacy resolver namespace has no production sources`() {
+        val kotlinRoot = findSourceRoot(
+            Path.of("src", "main", "kotlin"),
+            Path.of("parsers", "src", "main", "kotlin"),
         )
-        val implementationDeclaration = Regex("^\\s*(?:class|interface|object|fun)\\s", RegexOption.MULTILINE)
-        val violations = Files.walk(sourceRoot).use { paths ->
+        val legacyRoot = kotlinRoot.resolve(Path.of("org", "akkirrai", "animeresolver"))
+        val legacySources = if (legacyRoot.exists()) Files.walk(legacyRoot).use { paths ->
             paths
                 .filter { it.isRegularFile() && it.extension == "kt" }
-                .filter { implementationDeclaration.containsMatchIn(it.readText()) }
-                .map(sourceRoot::relativize)
+                .map(kotlinRoot::relativize)
                 .toList()
-        }
+        } else emptyList()
 
         assertTrue(
-            violations.isEmpty(),
-            "The legacy resolver namespace must remain a typealias-only compatibility layer: $violations",
+            legacySources.isEmpty(),
+            "AnimeResolver production sources must not return: $legacySources",
         )
     }
 
