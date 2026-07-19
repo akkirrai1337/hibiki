@@ -198,17 +198,6 @@ data class ProviderMatch(
     val episodeCount: Int?,
 )
 
-data class ProviderFailure(
-    val providerName: String,
-    val message: String,
-    val statusCode: Int?,
-)
-
-data class SourceDiscovery(
-    val matches: List<ProviderMatch>,
-    val failures: List<ProviderFailure>,
-)
-
 data class Episode(
     val id: String,
     val number: Double,
