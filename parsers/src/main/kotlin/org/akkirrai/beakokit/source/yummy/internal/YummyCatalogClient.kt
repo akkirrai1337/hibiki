@@ -20,16 +20,16 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.AnimeTrailerTitle
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
-import org.akkirrai.animeresolver.model.MetadataSourceFeature
-import org.akkirrai.animeresolver.model.RelatedAnimeTitle
-import org.akkirrai.animeresolver.model.SearchFilterOption
-import org.akkirrai.animeresolver.model.TitleRating
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeTrailerTitle
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.RelatedAnimeTitle
+import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.beakokit.model.TitleRating
 import org.akkirrai.animeresolver.network.bodyOrThrow
 
 internal class YummyCatalogClient(

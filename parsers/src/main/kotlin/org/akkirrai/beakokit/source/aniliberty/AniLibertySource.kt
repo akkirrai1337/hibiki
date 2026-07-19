@@ -1,13 +1,13 @@
 package org.akkirrai.beakokit.source.aniliberty
 
 import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.ProviderMatch
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.ProviderMatch
 import org.akkirrai.beakokit.source.aniliberty.internal.AniLibertyCatalogClient
 import org.akkirrai.beakokit.source.aniliberty.internal.AniLibertyPlaybackClient
 import org.akkirrai.beakokit.api.AnimeSource

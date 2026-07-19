@@ -2,9 +2,9 @@ package org.akkirrai.beakokit.api
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.MetadataSourceCapabilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.source.aniliberty
 
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeTitle
 
 data class AniLibertyScheduleEntry(
     val release: AnimeTitle,

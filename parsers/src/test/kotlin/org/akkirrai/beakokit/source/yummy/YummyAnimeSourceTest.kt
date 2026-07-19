@@ -8,7 +8,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceId

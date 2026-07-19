@@ -10,8 +10,8 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

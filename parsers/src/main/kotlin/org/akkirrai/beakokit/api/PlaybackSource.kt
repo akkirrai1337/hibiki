@@ -1,8 +1,8 @@
 package org.akkirrai.beakokit.api
 
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.PlayerLink
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
 
 /** A source-owned voiceover or release group available for watching a title. */
 data class PlaybackGroup(

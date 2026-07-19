@@ -1,8 +1,8 @@
 package org.akkirrai.beakokit.api
 
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.MetadataSourceCapabilities
-import org.akkirrai.animeresolver.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.MetadataSourceCapabilities
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith

@@ -9,9 +9,9 @@ import io.ktor.http.parametersOf
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.AnimeReleaseStatus
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContains

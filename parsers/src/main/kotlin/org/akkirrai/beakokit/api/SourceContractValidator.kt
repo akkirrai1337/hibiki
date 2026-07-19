@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.api
 
-import org.akkirrai.animeresolver.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.MetadataSourceFeature
 
 class SourceContractException(
     val violations: List<String>,

@@ -1,7 +1,7 @@
 package org.akkirrai.beakokit.testkit
 
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.PlayerLink
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource

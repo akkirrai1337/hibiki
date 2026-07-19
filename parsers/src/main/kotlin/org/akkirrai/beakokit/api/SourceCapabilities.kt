@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.api
 
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeTitle
 
 /** Stable source-owned capabilities used by a host before executing an operation. */
 enum class SourceCapability {
