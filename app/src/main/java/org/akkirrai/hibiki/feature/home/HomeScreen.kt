@@ -751,21 +751,17 @@ private fun ContinueWatchingCard(
                             movieLabel = stringResource(R.string.anime_meta_movie),
                         )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (meta.isNotBlank()) {
                                 Text(
                                     text = meta,
-                                    modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
                             }
                             AnimeSourceBadge(titleId = anime.id)
                         }
