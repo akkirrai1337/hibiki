@@ -73,6 +73,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
@@ -198,6 +199,7 @@ fun CatalogScreen(
                                 LibraryStatusPosterFooter(category)
                             }
                         },
+                        onItemVisible = viewModel::enrichDescription,
                     )
 
                     if (state.isLoadingMore) {
@@ -545,6 +547,7 @@ class CatalogViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CatalogUiState(isLoading = true))
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
+    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
 
     init {
         viewModelScope.launch {
@@ -614,6 +617,24 @@ class CatalogViewModel(
         if (_uiState.value.selectedSort == sort) return
         _uiState.update { it.copy(selectedSort = sort, items = emptyList(), currentPage = 0, canLoadMore = false) }
         load()
+    }
+
+    fun enrichDescription(anime: Anime) {
+        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { repository.enrichDescription(anime) }
+                .onSuccess { enriched ->
+                    if (enriched.description.isNullOrBlank()) return@onSuccess
+                    _uiState.update { state ->
+                        state.copy(
+                            items = state.items.map { card ->
+                                if (card.anime.id == enriched.id) card.copy(anime = enriched) else card
+                            },
+                        )
+                    }
+                }
+                .onFailure { descriptionRequests.remove(anime.id) }
+        }
     }
 
     fun applyFilters(filters: AnimeSearchFilters) {

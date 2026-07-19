@@ -63,6 +63,9 @@ class CatalogRepository(
         )
     }
 
+    suspend fun enrichDescription(anime: Anime): Anime =
+        searchRepository.getDetails(anime.id, anime)
+
     fun close() {
         searchRepository.close()
         homeRepository.close()

@@ -84,6 +84,7 @@ class AnimeWatchRepository(
         KodikExtractor(client),
         AksorExtractor(client),
         appContext?.let(::AllohaWebViewExtractor),
+        appContext?.let(::AnimePaheWebViewExtractor),
         SibnetExtractor(client),
         CvhExtractor(client),
         VkExtractor(client),

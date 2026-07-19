@@ -91,9 +91,14 @@ class HomeRepository(
 
         ensureInternetConnection()
 
-        val trendingOffset = trendingOffsetForSeed(selectionSeed)
+        val source = currentSource()
+        val trendingOffset = if (source.source.catalogCapabilities.supports(AnimeSearchSort.RATING)) {
+            trendingOffsetForSeed(selectionSeed)
+        } else {
+            0
+        }
         AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-        val catalog = currentSource().search(
+        val catalog = source.search(
             AnimeSearchRequest(
                 limit = HOME_TRENDING_WINDOW_SIZE,
                 offset = trendingOffset,

@@ -23,6 +23,7 @@ class BuiltInSourcesTest {
                     BuiltInSources.YUMMY_ANIME_ID,
                     BuiltInSources.ANI_LIBERTY_ID,
                     BuiltInSources.ANIMEGO_ID,
+                    BuiltInSources.ANIMEPAHE_ID,
                 ),
                 BuiltInSources.catalog.sources.map { it.id },
             )

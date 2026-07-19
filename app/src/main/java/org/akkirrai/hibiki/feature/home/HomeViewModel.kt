@@ -77,7 +77,8 @@ class HomeViewModel(
                     }
                     PerfLogger.mark(
                         event = "Home refresh failed",
-                        details = "duration=${System.currentTimeMillis() - startedAt}ms, error=${throwable::class.java.simpleName}",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
+                            "error=${throwable::class.java.simpleName}:${throwable.message}",
                     )
                 }
         }
@@ -348,7 +349,8 @@ class HomeViewModel(
                     }
                     PerfLogger.mark(
                         event = "Home load failed",
-                        details = "duration=${System.currentTimeMillis() - startedAt}ms, error=${throwable::class.java.simpleName}",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
+                            "error=${throwable::class.java.simpleName}:${throwable.message}",
                     )
                 }
         }

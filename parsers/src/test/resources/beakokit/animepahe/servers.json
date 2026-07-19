@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "servers": [
+    {"name":"Sub-Megaplay","resolution":"Multi","url":"https://megaplay.buzz/stream/fixture/sub"},
+    {"name":"Dub-Megaplay","resolution":"Multi","url":"https://megaplay.buzz/stream/fixture/dub"}
+  ]
+}

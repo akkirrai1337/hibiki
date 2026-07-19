@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -278,8 +279,12 @@ fun LazyListScope.verticalAnimeListContent(
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    onItemVisible: ((Anime) -> Unit)? = null,
 ) {
     items(items, key = Anime::id) { anime ->
+        LaunchedEffect(anime.id) {
+            onItemVisible?.invoke(anime)
+        }
         VerticalAnimeListItem(
             anime = anime,
             metaText = metaText(anime),
