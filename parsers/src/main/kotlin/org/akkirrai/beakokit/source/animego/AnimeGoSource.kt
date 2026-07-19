@@ -71,6 +71,7 @@ class AnimeGoSource(
             id = SourceId("animego"),
             name = "AnimeGo",
             languages = setOf(SourceLanguage.RUSSIAN),
+            primaryLanguage = SourceLanguage.RUSSIAN,
             website = DEFAULT_BASE_URL,
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,

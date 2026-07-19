@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source
 import org.akkirrai.hibiki.R
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.source.animego.AnimeGoSource
 import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
@@ -21,7 +22,7 @@ class AnimeSourceRegistryTest {
         )
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
         assertEquals(sources.map { it.info }, AnimeSourceRegistry.catalog.sources)
-        assertTrue(sources.all { it.language == "RU" })
+        assertTrue(sources.all { it.language == SourceLanguage.RUSSIAN })
         assertTrue(sources.all { it.supportsPlayback })
         assertEquals(
             AniLibertySource.INFO,

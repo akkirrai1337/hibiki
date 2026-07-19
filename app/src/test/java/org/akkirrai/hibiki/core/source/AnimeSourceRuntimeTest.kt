@@ -122,6 +122,7 @@ class AnimeSourceRuntimeTest {
             id = SourceId("ani-liberty"),
             name = "Test",
             languages = setOf(SourceLanguage.RUSSIAN),
+            primaryLanguage = SourceLanguage.RUSSIAN,
         )
         var requestedDetailsId: String? = null
         override val catalogCapabilities = CAPABILITIES

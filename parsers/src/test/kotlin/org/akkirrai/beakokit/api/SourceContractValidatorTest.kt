@@ -25,6 +25,7 @@ class SourceContractValidatorTest {
             id = SourceId("invalid-source"),
             name = "Invalid",
             languages = setOf(SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.ENGLISH,
             capabilities = setOf(SourceCapability.PLAYBACK),
         )
         override val catalogCapabilities = CatalogCapabilities(

@@ -117,6 +117,7 @@ class YummyAnimeSource(
             id = SourceId("yummy-anime"),
             name = "YummyAnime",
             languages = setOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.RUSSIAN,
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,
                 SourceCapability.PLAYBACK,

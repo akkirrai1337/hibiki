@@ -84,6 +84,7 @@ class SourceCatalogTest {
         id = SourceId(id),
         name = "Test",
         languages = setOf(SourceLanguage.RUSSIAN),
+        primaryLanguage = SourceLanguage.RUSSIAN,
         website = "https://example.com",
     )
 

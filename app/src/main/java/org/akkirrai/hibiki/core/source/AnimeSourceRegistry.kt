@@ -32,8 +32,8 @@ data class AnimeSourceDescriptor(
     val name: String
         get() = info.name
 
-    val language: String
-        get() = info.languages.first().tag.uppercase()
+    val language: SourceLanguage
+        get() = info.primaryLanguage
 
     val supportsPlayback: Boolean
         get() = SourceCapability.PLAYBACK in info.capabilities

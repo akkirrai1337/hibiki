@@ -25,12 +25,16 @@ data class SourceInfo(
     val id: SourceId,
     val name: String,
     val languages: Set<SourceLanguage>,
+    val primaryLanguage: SourceLanguage,
     val website: String? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
 ) {
     init {
         require(name.isNotBlank()) { "Source name must not be blank" }
         require(languages.isNotEmpty()) { "Source must declare at least one language" }
+        require(primaryLanguage in languages) {
+            "Primary source language must be included in supported languages: $primaryLanguage"
+        }
         require(website == null || website.startsWith("https://")) {
             "Source website must use HTTPS: $website"
         }

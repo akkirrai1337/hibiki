@@ -41,6 +41,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -56,12 +59,7 @@ fun SourcesScreen(
     val preferences = LocalAppPreferences.current
     val selectedSource = LocalAppPreferencesState.current.animeSource
     val haptic = LocalHapticFeedback.current
-    val russianSources = AnimeSourceRegistry.sources.filter { it.language == "RU" }
-    var russianSourcesExpanded by rememberSaveable { mutableStateOf(true) }
-    val russianSourcesArrowRotation by animateFloatAsState(
-        targetValue = if (russianSourcesExpanded) 0f else -90f,
-        label = "russian_sources_arrow",
-    )
+    val sourcesByLanguage = groupSourcesByLanguage(AnimeSourceRegistry.sources)
 
     Box(
         modifier = modifier
@@ -89,55 +87,17 @@ fun SourcesScreen(
                     )
                 }
             }
-            item(key = "ru_sources") {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .clickable { russianSourcesExpanded = !russianSourcesExpanded }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_sources_language_ru),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier
-                                .requiredSize(16.dp)
-                                .graphicsLayer { rotationZ = russianSourcesArrowRotation },
-                        )
-                    }
-                    AnimatedVisibility(visible = russianSourcesExpanded) {
-                        Column(
-                            modifier = Modifier.padding(top = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            russianSources.forEachIndexed { index, source ->
-                                SourceItem(
-                                    source = source,
-                                    selected = source.id == selectedSource,
-                                    shape = when {
-                                        russianSources.size == 1 -> RoundedCornerShape(24.dp)
-                                        index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
-                                        index == russianSources.lastIndex -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                                        else -> RoundedCornerShape(8.dp)
-                                    },
-                                    onClick = {
-                                        preferences.setAnimeSource(source.id)
-                                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                    },
-                                )
-                            }
-                        }
-                    }
+            SOURCE_LANGUAGE_SECTIONS.forEach { section ->
+                item(key = "${section.language.tag}_sources") {
+                    SourceLanguageSection(
+                        section = section,
+                        sources = sourcesByLanguage[section.language].orEmpty(),
+                        selectedSource = selectedSource,
+                        onSourceSelected = { source ->
+                            preferences.setAnimeSource(source.id)
+                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        },
+                    )
                 }
             }
         }
@@ -147,6 +107,83 @@ fun SourcesScreen(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 12.dp, top = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun SourceLanguageSection(
+    section: SourceLanguageSectionConfig,
+    sources: List<AnimeSourceDescriptor>,
+    selectedSource: SourceId,
+    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
+) {
+    var expanded by rememberSaveable(section.language.tag) { mutableStateOf(true) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 0f else -90f,
+        label = "${section.language.tag}_sources_arrow",
+    )
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(section.labelRes),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .requiredSize(16.dp)
+                    .graphicsLayer { rotationZ = arrowRotation },
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier.padding(top = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (sources.isEmpty()) {
+                    EmptySourceLanguageItem()
+                } else {
+                    sources.forEachIndexed { index, source ->
+                        SourceItem(
+                            source = source,
+                            selected = source.id == selectedSource,
+                            shape = sourceItemShape(index = index, count = sources.size),
+                            onClick = { onSourceSelected(source) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptySourceLanguageItem() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_sources_empty),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -199,3 +236,36 @@ private fun SourceRadio(selected: Boolean) {
         if (selected) drawCircle(color = color, radius = size.minDimension * 0.25f)
     }
 }
+
+private fun sourceItemShape(index: Int, count: Int): RoundedCornerShape = when {
+    count == 1 -> RoundedCornerShape(24.dp)
+    index == 0 -> RoundedCornerShape(
+        topStart = 24.dp,
+        topEnd = 24.dp,
+        bottomStart = 8.dp,
+        bottomEnd = 8.dp,
+    )
+    index == count - 1 -> RoundedCornerShape(
+        topStart = 8.dp,
+        topEnd = 8.dp,
+        bottomStart = 24.dp,
+        bottomEnd = 24.dp,
+    )
+    else -> RoundedCornerShape(8.dp)
+}
+
+internal fun groupSourcesByLanguage(
+    sources: List<AnimeSourceDescriptor>,
+): Map<SourceLanguage, List<AnimeSourceDescriptor>> = SOURCE_LANGUAGE_SECTIONS.associate { section ->
+    section.language to sources.filter { source -> source.language == section.language }
+}
+
+private data class SourceLanguageSectionConfig(
+    val language: SourceLanguage,
+    @param:StringRes val labelRes: Int,
+)
+
+private val SOURCE_LANGUAGE_SECTIONS = listOf(
+    SourceLanguageSectionConfig(SourceLanguage.RUSSIAN, R.string.settings_sources_language_ru),
+    SourceLanguageSectionConfig(SourceLanguage.ENGLISH, R.string.settings_sources_language_en),
+)

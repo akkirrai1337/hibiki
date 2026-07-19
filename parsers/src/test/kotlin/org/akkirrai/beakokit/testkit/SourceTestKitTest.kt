@@ -171,6 +171,7 @@ class SourceTestKitTest {
             id = SourceId("fixture-source"),
             name = "Fixture",
             languages = setOf(SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.ENGLISH,
             capabilities = setOf(SourceCapability.LATEST_RELEASES),
         )
 

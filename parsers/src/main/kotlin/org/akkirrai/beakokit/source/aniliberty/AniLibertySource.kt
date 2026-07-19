@@ -104,6 +104,7 @@ class AniLibertySource(
             id = SourceId("ani-liberty"),
             name = "AniLiberty",
             languages = setOf(SourceLanguage.RUSSIAN),
+            primaryLanguage = SourceLanguage.RUSSIAN,
             website = "https://anilibria.top",
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,
