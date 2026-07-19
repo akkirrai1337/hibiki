@@ -2,9 +2,9 @@ package org.akkirrai.hibiki.feature.catalog
 
 import android.content.Context
 import io.ktor.client.HttpClient
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory

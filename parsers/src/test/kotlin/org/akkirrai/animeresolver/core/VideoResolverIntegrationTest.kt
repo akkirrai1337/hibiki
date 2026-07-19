@@ -1,13 +1,13 @@
 package org.akkirrai.animeresolver.core
 
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
-import org.akkirrai.animeresolver.model.ProviderMatch
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.StreamValidationResult
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.ProviderMatch
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.StreamValidationResult
+import org.akkirrai.beakokit.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -6,8 +6,8 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

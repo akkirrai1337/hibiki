@@ -73,9 +73,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import org.akkirrai.animeresolver.model.SearchFilterOption
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext

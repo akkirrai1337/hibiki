@@ -8,8 +8,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.core.TitleMatcher
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.matching.TitleMatcher
+import org.akkirrai.beakokit.model.AnimeTitle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

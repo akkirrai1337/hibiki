@@ -3,12 +3,12 @@ package org.akkirrai.animeresolver.core
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.ProviderFailure
-import org.akkirrai.animeresolver.model.ProviderMatch
-import org.akkirrai.animeresolver.model.SourceDiscovery
-import org.akkirrai.animeresolver.model.StreamValidationResult
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.ProviderFailure
+import org.akkirrai.beakokit.model.ProviderMatch
+import org.akkirrai.beakokit.model.SourceDiscovery
+import org.akkirrai.beakokit.model.StreamValidationResult
 
 class VideoResolver(
     providers: List<VideoProvider>,

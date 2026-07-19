@@ -1,10 +1,10 @@
 package org.akkirrai.animeresolver.extractor
 
 import org.akkirrai.animeresolver.core.PlayerExtractor
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoStream
 
 class DirectHlsExtractor : PlayerExtractor {
     override fun supports(link: PlayerLink): Boolean = link.type == PlayerType.DIRECT_HLS

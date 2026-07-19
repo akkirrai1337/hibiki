@@ -1,6 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState

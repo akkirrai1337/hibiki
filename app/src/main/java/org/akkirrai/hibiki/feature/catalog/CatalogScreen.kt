@@ -90,8 +90,8 @@ import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.MetadataSourceFeature
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.MetadataSourceFeature
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
@@ -694,7 +694,7 @@ data class CatalogUiState(
     val isLoading: Boolean = false,
     val title: String = "",
     val description: String? = null,
-    val filterCatalog: org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog? = null,
+    val filterCatalog: org.akkirrai.beakokit.model.AnimeSearchFilterCatalog? = null,
     val filters: AnimeSearchFilters = AnimeSearchFilters(),
     val query: String = "",
     val selectedSort: CatalogSort = CatalogSort.Popular,
@@ -720,7 +720,7 @@ private val CatalogSort.searchSort: AnimeSearchSort
     }
 
 private fun availableCatalogSorts(
-    capabilities: org.akkirrai.animeresolver.model.MetadataSourceCapabilities,
+    capabilities: org.akkirrai.beakokit.model.MetadataSourceCapabilities,
 ): List<CatalogSort> {
     return CatalogSort.entries.filter { sort ->
         when (sort) {

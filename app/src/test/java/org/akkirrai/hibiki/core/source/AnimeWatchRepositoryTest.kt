@@ -2,8 +2,8 @@ package org.akkirrai.hibiki.core.source
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

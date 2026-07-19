@@ -25,7 +25,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
-import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.animeresolver.network.bodyOrThrow
 import org.akkirrai.animeresolver.network.toReadableHttpErrorDetails
 

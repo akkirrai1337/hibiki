@@ -16,11 +16,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.akkirrai.animeresolver.core.PlayerExtractor
-import org.akkirrai.animeresolver.core.SourceException
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.animeresolver.network.hostOf
 import org.akkirrai.animeresolver.network.normalizeUrl
 import org.akkirrai.animeresolver.network.pathOf

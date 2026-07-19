@@ -8,12 +8,12 @@ import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.SearchFilterOption
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import java.util.concurrent.ConcurrentHashMap
 
@@ -103,13 +103,13 @@ class AnimeSourceRuntimeManager(
 
 private fun AnimeSearchFilterCatalog.sanitized(preferEnglish: Boolean): AnimeSearchFilterCatalog = copy(
     sortOptions = sortOptions.sanitizeOptions(preferEnglish),
-    typeOptions = typeOptions.takeIf { capabilities.supports(org.akkirrai.animeresolver.model.AnimeSearchFilter.TYPE) }
+    typeOptions = typeOptions.takeIf { capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.TYPE) }
         .orEmpty().sanitizeOptions(preferEnglish),
-    statusOptions = statusOptions.takeIf { capabilities.supports(org.akkirrai.animeresolver.model.AnimeSearchFilter.STATUS) }
+    statusOptions = statusOptions.takeIf { capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.STATUS) }
         .orEmpty().sanitizeOptions(preferEnglish, isStatus = true),
     genreOptions = genreOptions.takeIf {
-        capabilities.supports(org.akkirrai.animeresolver.model.AnimeSearchFilter.INCLUDED_GENRES) ||
-            capabilities.supports(org.akkirrai.animeresolver.model.AnimeSearchFilter.EXCLUDED_GENRES)
+        capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.INCLUDED_GENRES) ||
+            capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.EXCLUDED_GENRES)
     }.orEmpty().sanitizeOptions(preferEnglish),
 )
 

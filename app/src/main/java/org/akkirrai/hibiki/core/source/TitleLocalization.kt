@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.AnimeReleaseStatus
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.hibiki.app.settings.LanguageMode
 
 fun AnimeTitle.localizedDisplayName(languageMode: LanguageMode, systemLanguage: String?): String {

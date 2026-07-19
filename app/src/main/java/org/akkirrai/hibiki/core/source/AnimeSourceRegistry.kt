@@ -15,7 +15,7 @@ import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.R

@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import org.akkirrai.animeresolver.core.PlayerExtractor
-import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.animeresolver.extractor.AksorExtractor
 import org.akkirrai.animeresolver.extractor.AniBoomExtractor
 import org.akkirrai.animeresolver.extractor.CvhExtractor
@@ -21,12 +21,12 @@ import org.akkirrai.animeresolver.extractor.DirectMp4Extractor
 import org.akkirrai.animeresolver.extractor.KodikExtractor
 import org.akkirrai.animeresolver.extractor.SibnetExtractor
 import org.akkirrai.animeresolver.extractor.VkExtractor
-import org.akkirrai.animeresolver.model.Episode
-import org.akkirrai.animeresolver.model.AnimeTitle
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoSegment
-import org.akkirrai.animeresolver.model.VideoSegmentType
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoSegment
+import org.akkirrai.beakokit.model.VideoSegmentType
 import org.akkirrai.animeresolver.validator.HttpStreamValidator
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -209,7 +209,7 @@ class AnimeWatchRepository(
                     val streams = extractor.extractVariants(link)
                         .filterNot { it.url in excludedStreamUrls }
                         .sortedWith(
-                            compareByDescending<org.akkirrai.animeresolver.model.VideoStream> {
+                            compareByDescending<org.akkirrai.beakokit.model.VideoStream> {
                                 matchesPreferredQuality(it.quality, preferredQuality)
                             }.thenByDescending {
                                 it.quality?.filter(Char::isDigit)?.toIntOrNull() ?: 0
@@ -591,15 +591,15 @@ class AnimeWatchRepository(
 
 
     private fun selectPlaybackSegments(
-        apiSegments: List<org.akkirrai.animeresolver.model.VideoSegment>,
-        extractedSegments: List<org.akkirrai.animeresolver.model.VideoSegment>,
-    ): List<org.akkirrai.animeresolver.model.VideoSegment> {
+        apiSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
+        extractedSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
+    ): List<org.akkirrai.beakokit.model.VideoSegment> {
         val preferred = apiSegments.ifEmpty { extractedSegments }
         return preferred
             .filter { segment -> segment.endMs > segment.startMs }
             .filter { segment -> segment.startMs >= 0L }
             .filterNot { segment ->
-                segment.startMs == 0L && segment.type != org.akkirrai.animeresolver.model.VideoSegmentType.UNKNOWN
+                segment.startMs == 0L && segment.type != org.akkirrai.beakokit.model.VideoSegmentType.UNKNOWN
             }
     }
 

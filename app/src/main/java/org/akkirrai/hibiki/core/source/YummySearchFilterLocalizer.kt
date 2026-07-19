@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.SearchFilterOption
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.SearchFilterOption
 
 internal object YummySearchFilterLocalizer {
     fun localize(

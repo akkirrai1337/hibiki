@@ -10,9 +10,9 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import org.akkirrai.animeresolver.core.StreamValidator
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.StreamValidationResult
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.StreamValidationResult
+import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.animeresolver.network.resolveUrl
 
 class HttpStreamValidator(

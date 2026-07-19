@@ -8,8 +8,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

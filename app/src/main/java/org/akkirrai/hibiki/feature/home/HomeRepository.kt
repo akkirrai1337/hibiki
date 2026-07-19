@@ -4,11 +4,11 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.animeresolver.model.AnimeSearchFilterCatalog
-import org.akkirrai.animeresolver.model.AnimeSearchRequest
-import org.akkirrai.animeresolver.model.AnimeSearchSort
-import org.akkirrai.animeresolver.model.AnimeReleaseStatus
-import org.akkirrai.animeresolver.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
+import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode

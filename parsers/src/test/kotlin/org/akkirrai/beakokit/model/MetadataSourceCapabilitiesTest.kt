@@ -1,4 +1,4 @@
-package org.akkirrai.animeresolver.model
+package org.akkirrai.beakokit.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

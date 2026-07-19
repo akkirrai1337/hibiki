@@ -10,11 +10,11 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoSegmentType
-import org.akkirrai.animeresolver.core.SourceException
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoSegmentType
+import org.akkirrai.beakokit.api.SourceException
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

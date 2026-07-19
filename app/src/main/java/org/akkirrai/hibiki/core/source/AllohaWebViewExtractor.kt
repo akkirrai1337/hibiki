@@ -15,11 +15,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.akkirrai.animeresolver.core.PlayerExtractor
-import org.akkirrai.animeresolver.core.SourceException
-import org.akkirrai.animeresolver.model.PlayerLink
-import org.akkirrai.animeresolver.model.PlayerType
-import org.akkirrai.animeresolver.model.StreamType
-import org.akkirrai.animeresolver.model.VideoStream
+import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.animeresolver.network.hostOf
 import org.akkirrai.animeresolver.network.normalizeUrl
 import org.akkirrai.animeresolver.network.originOf
