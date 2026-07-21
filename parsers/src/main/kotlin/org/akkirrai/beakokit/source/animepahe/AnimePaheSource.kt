@@ -12,6 +12,10 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceOperation
 import org.akkirrai.beakokit.api.SourceCacheTtl
+import org.akkirrai.beakokit.api.ConfigurableSource
+import org.akkirrai.beakokit.api.SourceConfigField
+import org.akkirrai.beakokit.api.SourceConfigSchema
+import org.akkirrai.beakokit.api.SourceConfigValueKind
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -28,7 +32,7 @@ object AnimePaheConfig {
 @SourceEntry(id = "animepahe", order = 3)
 class AnimePaheSource(
     context: SourceContext,
-) : AnimeSource, LatestSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource {
     private val execution = context.sourceExecutionPolicy
     private val client = AnimePaheClient(
         client = context.httpClient,
@@ -37,6 +41,7 @@ class AnimePaheSource(
     )
 
     override val info: SourceInfo = INFO
+    override val configSchema: SourceConfigSchema = CONFIG_SCHEMA
     override val catalogCapabilities: CatalogCapabilities
         get() = client.capabilities
 
@@ -70,6 +75,10 @@ class AnimePaheSource(
 
     companion object {
         private const val DEFAULT_BASE_URL = "https://animepahetv.to"
+
+        val CONFIG_SCHEMA = SourceConfigSchema(
+            listOf(SourceConfigField(AnimePaheConfig.BASE_URL, SourceConfigValueKind.HTTPS_URL)),
+        )
 
         val INFO = SourceInfo(
             id = SourceId("animepahe"),

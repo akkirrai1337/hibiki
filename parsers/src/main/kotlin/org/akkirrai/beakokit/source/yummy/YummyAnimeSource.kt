@@ -23,6 +23,10 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceEntry
 import org.akkirrai.beakokit.api.SourceOperation
 import org.akkirrai.beakokit.api.SourceCacheTtl
+import org.akkirrai.beakokit.api.ConfigurableSource
+import org.akkirrai.beakokit.api.SourceConfigField
+import org.akkirrai.beakokit.api.SourceConfigSchema
+import org.akkirrai.beakokit.api.SourceConfigValueKind
 
 object YummyAnimeConfig {
     const val APPLICATION_TOKEN = "application_token"
@@ -33,7 +37,7 @@ object YummyAnimeConfig {
 @SourceEntry(id = "yummy-anime", order = 0)
 class YummyAnimeSource(
     context: SourceContext,
-) : AnimeSource, LatestSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource {
     private val execution = context.sourceExecutionPolicy
     private val applicationToken = context.config.secret(YummyAnimeConfig.APPLICATION_TOKEN)
     private val baseUrl = context.config.value(YummyAnimeConfig.BASE_URL) ?: DEFAULT_BASE_URL
@@ -59,6 +63,7 @@ class YummyAnimeSource(
     )
 
     override val info: SourceInfo = INFO
+    override val configSchema: SourceConfigSchema = CONFIG_SCHEMA
     override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
 
@@ -115,6 +120,13 @@ class YummyAnimeSource(
 
     companion object {
         private const val DEFAULT_BASE_URL = "https://api.yani.tv"
+
+        val CONFIG_SCHEMA = SourceConfigSchema(
+            listOf(
+                SourceConfigField(YummyAnimeConfig.APPLICATION_TOKEN, SourceConfigValueKind.SECRET),
+                SourceConfigField(YummyAnimeConfig.BASE_URL, SourceConfigValueKind.HTTPS_URL),
+            ),
+        )
 
         val INFO = SourceInfo(
             id = SourceId("yummy-anime"),

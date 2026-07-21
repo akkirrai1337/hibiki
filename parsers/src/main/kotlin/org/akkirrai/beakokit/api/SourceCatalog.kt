@@ -11,6 +11,7 @@ data class SourceCatalogEntry(
     fun create(context: SourceContext): AnimeSource {
         val source = factory.create(context)
         check(source.info == info) { "Factory metadata does not match catalog entry: ${info.id}" }
+        (source as? ConfigurableSource)?.configSchema?.requireValid(context.config)
         SourceContractValidator.requireValid(source)
         return source
     }

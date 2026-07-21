@@ -75,6 +75,32 @@ class SourceCatalogTest {
         }
     }
 
+    @Test
+    fun `catalog validates configurable source settings before exposing it`() {
+        val info = sourceInfo("configured-source")
+        val catalog = SourceCatalog(
+            listOf(SourceCatalogEntry(info, SourceFactory { ConfigurableFakeSource(info) })),
+        )
+        val client = HttpClient(MockEngine { error("Network must not be called") })
+
+        try {
+            val error = assertFailsWith<SourceConfigException> {
+                catalog.create(
+                    info.id,
+                    DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                        config = MapSourceConfig(values = mapOf("base_url" to "http://example.com")),
+                    ),
+                )
+            }
+
+            assertEquals(listOf("Config base_url must use an HTTPS URL"), error.violations)
+        } finally {
+            client.close()
+        }
+    }
+
     private fun sourceEntry(info: SourceInfo) = SourceCatalogEntry(
         info = info,
         factory = SourceFactory { error("Factory must not be called") },
@@ -88,7 +114,7 @@ class SourceCatalogTest {
         website = "https://example.com",
     )
 
-    private class FakeSource(
+    private open class FakeSource(
         override val info: SourceInfo,
     ) : AnimeSource {
         override val catalogCapabilities = CatalogCapabilities(
@@ -99,5 +125,13 @@ class SourceCatalogTest {
         override suspend fun search(query: String): List<AnimeTitle> = emptyList()
 
         override suspend fun getById(id: String): AnimeTitle = error("Not used")
+    }
+
+    private class ConfigurableFakeSource(
+        info: SourceInfo,
+    ) : FakeSource(info), ConfigurableSource {
+        override val configSchema = SourceConfigSchema(
+            listOf(SourceConfigField("base_url", SourceConfigValueKind.HTTPS_URL, required = true)),
+        )
     }
 }

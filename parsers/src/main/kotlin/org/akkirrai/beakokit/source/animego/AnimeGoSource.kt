@@ -12,6 +12,10 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceOperation
 import org.akkirrai.beakokit.api.SourceCacheTtl
+import org.akkirrai.beakokit.api.ConfigurableSource
+import org.akkirrai.beakokit.api.SourceConfigField
+import org.akkirrai.beakokit.api.SourceConfigSchema
+import org.akkirrai.beakokit.api.SourceConfigValueKind
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -28,13 +32,14 @@ object AnimeGoConfig {
 @SourceEntry(id = "animego", order = 2)
 class AnimeGoSource(
     context: SourceContext,
-) : AnimeSource, LatestSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource {
     private val execution = context.sourceExecutionPolicy
     private val baseUrl = context.config.value(AnimeGoConfig.BASE_URL) ?: DEFAULT_BASE_URL
     private val catalog = AnimeGoCatalogClient(context.httpClient, baseUrl)
     private val playback = AnimeGoPlaybackClient(context.httpClient, baseUrl)
 
     override val info: SourceInfo = INFO
+    override val configSchema: SourceConfigSchema = CONFIG_SCHEMA
     override val catalogCapabilities: CatalogCapabilities
         get() = catalog.capabilities
 
@@ -68,6 +73,10 @@ class AnimeGoSource(
 
     companion object {
         private const val DEFAULT_BASE_URL = "https://animego.me"
+
+        val CONFIG_SCHEMA = SourceConfigSchema(
+            listOf(SourceConfigField(AnimeGoConfig.BASE_URL, SourceConfigValueKind.HTTPS_URL)),
+        )
 
         val INFO = SourceInfo(
             id = SourceId("animego"),

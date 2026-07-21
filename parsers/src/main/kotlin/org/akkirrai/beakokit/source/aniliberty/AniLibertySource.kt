@@ -22,12 +22,16 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceEntry
 import org.akkirrai.beakokit.api.SourceOperation
 import org.akkirrai.beakokit.api.SourceCacheTtl
+import org.akkirrai.beakokit.api.ConfigurableSource
+import org.akkirrai.beakokit.api.SourceConfigField
+import org.akkirrai.beakokit.api.SourceConfigSchema
+import org.akkirrai.beakokit.api.SourceConfigValueKind
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 @SourceEntry(id = "ani-liberty", order = 1)
 class AniLibertySource(
     context: SourceContext,
-) : AnimeSource, LatestSource, PlaybackSource {
+) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource {
     private val execution = context.sourceExecutionPolicy
     private val baseUrls = context.config.value(BASE_URLS_KEY)
         ?.split(',')
@@ -44,6 +48,7 @@ class AniLibertySource(
     )
 
     override val info: SourceInfo = INFO
+    override val configSchema: SourceConfigSchema = CONFIG_SCHEMA
     override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
 
@@ -95,6 +100,10 @@ class AniLibertySource(
     ) }
 
     companion object {
+        val CONFIG_SCHEMA = SourceConfigSchema(
+            listOf(SourceConfigField(BASE_URLS_KEY, SourceConfigValueKind.TEXT)),
+        )
+
         const val BASE_URLS_KEY = "api_base_urls"
 
         private val DEFAULT_BASE_URLS = listOf(
