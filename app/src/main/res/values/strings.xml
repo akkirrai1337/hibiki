@@ -390,10 +390,8 @@
     <string name="onboarding_notifications_title">Notifications</string>
     <string name="onboarding_notifications_description">Get notified about new episodes and updates to anime in your library.</string>
     <string name="onboarding_notifications_allow">Allow notifications</string>
-    <string name="onboarding_notifications_not_now">Not now</string>
     <string name="onboarding_notifications_enabled">Notifications are enabled</string>
     <string name="onboarding_notifications_denied">You can enable notifications later in system settings.</string>
-    <string name="onboarding_notifications_skipped">Notifications will remain off. You can enable them later in settings.</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_done">Done</string>

@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,8 +49,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -147,15 +150,18 @@ fun FirstLaunchOnboarding(
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
                     val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                    (slideInHorizontally(
-                        animationSpec = tween(260),
-                        initialOffsetX = { width -> direction * width / 4 },
-                    ) + fadeIn(animationSpec = tween(260))) togetherWith
-                        (slideOutHorizontally(
-                            animationSpec = tween(220),
-                            targetOffsetX = { width -> -direction * width / 4 },
-                        ) + fadeOut(animationSpec = tween(220)))
+                    (
+                        (slideInHorizontally(
+                            animationSpec = tween(260),
+                            initialOffsetX = { width -> direction * width / 4 },
+                        ) + fadeIn(animationSpec = tween(260))) togetherWith
+                            (slideOutHorizontally(
+                                animationSpec = tween(220),
+                                targetOffsetX = { width -> -direction * width / 4 },
+                            ) + fadeOut(animationSpec = tween(220)))
+                        ).using(SizeTransform(clip = false))
                 },
+                contentAlignment = Alignment.Center,
                 label = "onboarding_step",
             ) { currentStep ->
                 when (currentStep) {
@@ -181,6 +187,9 @@ fun FirstLaunchOnboarding(
                 }
             }
 
+            // Keep the footer mounted on every step. Removing it on the welcome
+            // page changes the AnimatedContent height during the first transition
+            // and makes the outgoing page visibly jump upward.
             OnboardingFooter(
                 step = step,
                 nextEnabled = selectedSource != null,
@@ -216,13 +225,20 @@ private fun WelcomeStep(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.hibiki_app_icon),
-            contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier
-                .size(156.dp)
-                .clip(CircleShape),
-        )
+        Surface(
+            modifier = Modifier.size(156.dp),
+            shape = CircleShape,
+            color = Color.White,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.hibiki_app_icon),
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                contentScale = ContentScale.Fit,
+            )
+        }
         Spacer(Modifier.height(40.dp))
         Text(
             text = stringResource(R.string.onboarding_welcome_title),
@@ -309,7 +325,6 @@ private fun NotificationsStep(
     onRequestPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var skipped by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -340,17 +355,8 @@ private fun NotificationsStep(
         Spacer(Modifier.height(32.dp))
         when (permissionState) {
             NotificationPermissionState.NOT_ASKED -> {
-                if (skipped) {
-                    PermissionStatus(
-                        text = stringResource(R.string.onboarding_notifications_skipped),
-                    )
-                } else {
-                    Button(onClick = onRequestPermission) {
-                        Text(stringResource(R.string.onboarding_notifications_allow))
-                    }
-                    TextButton(onClick = { skipped = true }) {
-                        Text(stringResource(R.string.onboarding_notifications_not_now))
-                    }
+                Button(onClick = onRequestPermission) {
+                    Text(stringResource(R.string.onboarding_notifications_allow))
                 }
             }
 
@@ -391,6 +397,10 @@ private fun OnboardingFooter(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // The navigation buttons make non-welcome steps taller. Reserve their
+            // height on every step so the weighted page area never resizes while
+            // AnimatedContent is transitioning.
+            .height(72.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
