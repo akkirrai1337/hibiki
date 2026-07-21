@@ -49,6 +49,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         release {
             isMinifyEnabled = false
             if (hasReleaseSigning) {
