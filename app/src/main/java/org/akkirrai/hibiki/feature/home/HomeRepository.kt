@@ -25,8 +25,8 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRuntime
 import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
-import org.akkirrai.hibiki.core.source.localizedDisplayName
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import org.akkirrai.hibiki.core.source.localizedDisplayName
 
 class HomeRepository(
     context: Context,
@@ -375,12 +375,7 @@ class HomeRepository(
 
     private fun sourceLanguage(): String = if (preferEnglish()) "en" else "ru"
 
-    private fun displayTitle(title: AnimeTitle): String {
-        return title.localizedDisplayName(
-            languageMode = appPreferences.state.value.languageMode,
-            systemLanguage = appContext.resources.configuration.locales[0]?.language,
-        )
-    }
+    private fun displayTitle(title: AnimeTitle): String = title.displayName
 
     private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 

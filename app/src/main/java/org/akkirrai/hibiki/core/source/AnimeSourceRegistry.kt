@@ -17,7 +17,6 @@ import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -137,15 +136,7 @@ object AnimeSourceRegistry {
         config: SourceConfig = SourceConfig.EMPTY,
     ): DefaultSourceContext = DefaultSourceContext(
         httpClient = client,
-        preferredLanguages = listOf(
-            when (AppPreferences.readState(context).languageMode) {
-                LanguageMode.ENGLISH -> SourceLanguage.ENGLISH
-                LanguageMode.RUSSIAN -> SourceLanguage.RUSSIAN
-                LanguageMode.SYSTEM -> if (
-                    context.resources.configuration.locales[0]?.language == "en"
-                ) SourceLanguage.ENGLISH else SourceLanguage.RUSSIAN
-            },
-        ),
+        preferredLanguages = listOf(catalog.require(sourceId).primaryLanguage),
         config = config,
         logger = SourceLogger { level, message, throwable ->
             val tag = "BeakoKit/${sourceId.value}"

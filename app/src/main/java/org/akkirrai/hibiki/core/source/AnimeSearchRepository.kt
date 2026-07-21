@@ -146,10 +146,7 @@ class AnimeSearchRepository(
             ?: if (preferEnglish) "Unknown" else "Неизвестно"
         return Anime(
             id = canonicalId,
-            title = localizedDisplayName(
-                languageMode = appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
-                systemLanguage = appContext?.resources?.configuration?.locales?.get(0)?.language,
-            ),
+            title = displayName,
             subtitle = buildSubtitle(fallback?.subtitle),
             episodesLabel = if (resolvedStatus.isAnnouncementStatus()) {
                 if (preferEnglish) "announcement" else "анонс"
@@ -163,7 +160,7 @@ class AnimeSearchRepository(
                 ?.takeIf { it.isNotBlank() && it != posterUrl },
             description = description ?: fallback?.description,
             genres = genres.ifEmpty { fallback?.genres.orEmpty() },
-            alternativeTitles = buildAlternativeTitles(preferEnglish, fallback?.alternativeTitles.orEmpty()),
+            alternativeTitles = buildAlternativeTitles(fallback?.alternativeTitles.orEmpty()),
             ratings = ratings.map { rating ->
                 AnimeRating(
                     source = rating.source,
@@ -196,14 +193,8 @@ class AnimeSearchRepository(
         )
     }
 
-    private fun AnimeTitle.buildAlternativeTitles(
-        preferEnglish: Boolean,
-        fallbackTitles: List<String>,
-    ): List<String> {
-        val primaryTitle = localizedDisplayName(
-            languageMode = appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
-            systemLanguage = appContext?.resources?.configuration?.locales?.get(0)?.language,
-        )
+    private fun AnimeTitle.buildAlternativeTitles(fallbackTitles: List<String>): List<String> {
+        val primaryTitle = displayName
         return buildList {
             russianName?.let(::add)
             englishName?.let(::add)
