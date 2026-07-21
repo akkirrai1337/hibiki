@@ -10,6 +10,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -449,10 +450,16 @@ private fun StepIndicator(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(stepCount) { index ->
+            val isCurrent = index == currentStep
+            val indicatorWidth by animateDpAsState(
+                targetValue = if (isCurrent) 28.dp else 8.dp,
+                animationSpec = tween(durationMillis = 250),
+                label = "onboarding_indicator_width_$index",
+            )
             Surface(
-                modifier = Modifier.size(width = if (index == currentStep) 28.dp else 8.dp, height = 8.dp),
+                modifier = Modifier.size(width = indicatorWidth, height = 8.dp),
                 shape = CircleShape,
-                color = if (index == currentStep) {
+                color = if (isCurrent) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
