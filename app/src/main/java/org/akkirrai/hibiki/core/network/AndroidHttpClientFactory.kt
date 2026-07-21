@@ -2,42 +2,11 @@ package org.akkirrai.hibiki.core.network
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.UserAgent
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
+import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 
 object AndroidHttpClientFactory {
     fun create(): HttpClient = HttpClient(OkHttp) {
-        expectSuccess = false
-
-        install(UserAgent) {
-            agent = "Hibiki/0.1 Android"
-        }
-        install(HttpTimeout) {
-            connectTimeoutMillis = 10_000
-            requestTimeoutMillis = 30_000
-            socketTimeoutMillis = 30_000
-        }
-        install(HttpRequestRetry) {
-            maxRetries = 2
-            retryIf { _, response ->
-                response.status == HttpStatusCode.TooManyRequests ||
-                    response.status.value in 500..599
-            }
-            retryOnExceptionIf { _, cause -> cause is java.io.IOException }
-            exponentialDelay()
-        }
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                    explicitNulls = false
-                }
-            )
-        }
+        installBeakoKitHttpDefaults(BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android"))
     }
 }
