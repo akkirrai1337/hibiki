@@ -54,4 +54,45 @@ class SourceConfigSchemaTest {
             )
         }
     }
+
+    @Test
+    fun `schema validates comma separated HTTPS URL lists`() {
+        val schema = SourceConfigSchema(
+            listOf(SourceConfigField("mirrors", SourceConfigValueKind.HTTPS_URL_LIST)),
+        )
+
+        assertEquals(
+            emptyList(),
+            schema.violations(MapSourceConfig(values = mapOf("mirrors" to "https://one.example, https://two.example"))),
+        )
+        assertEquals(
+            listOf("Config mirrors must be a comma-separated list of HTTPS URLs"),
+            schema.violations(MapSourceConfig(values = mapOf("mirrors" to "https://one.example,,http://two.example"))),
+        )
+    }
+
+    @Test
+    fun `schema validates closed value sets without applying them to secrets`() {
+        val schema = SourceConfigSchema(
+            listOf(
+                SourceConfigField(
+                    key = "api_mode",
+                    kind = SourceConfigValueKind.TEXT,
+                    allowedValues = setOf("stable", "preview"),
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf("Config api_mode must be one of: preview, stable"),
+            schema.violations(MapSourceConfig(values = mapOf("api_mode" to "legacy"))),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            SourceConfigField(
+                key = "token",
+                kind = SourceConfigValueKind.SECRET,
+                allowedValues = setOf("not-secret"),
+            )
+        }
+    }
 }

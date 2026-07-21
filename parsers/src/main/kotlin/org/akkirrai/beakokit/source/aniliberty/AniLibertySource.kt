@@ -101,7 +101,7 @@ class AniLibertySource(
 
     companion object {
         val CONFIG_SCHEMA = SourceConfigSchema(
-            listOf(SourceConfigField(BASE_URLS_KEY, SourceConfigValueKind.TEXT)),
+            listOf(SourceConfigField(BASE_URLS_KEY, SourceConfigValueKind.HTTPS_URL_LIST)),
         )
 
         const val BASE_URLS_KEY = "api_base_urls"
