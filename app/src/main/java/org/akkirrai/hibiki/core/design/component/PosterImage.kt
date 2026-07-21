@@ -2,12 +2,17 @@ package org.akkirrai.hibiki.core.design.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.SubcomposeAsyncImage
 import androidx.compose.material3.MaterialTheme
+import coil.compose.AsyncImage
 import coil.request.ErrorResult
 import org.akkirrai.hibiki.core.log.AppLogger
 
@@ -22,74 +27,53 @@ fun PosterImage(
 ) {
     val normalizedPrimary = primaryUrl?.takeIf(String::isNotBlank)
     val normalizedFallback = fallbackUrl?.takeIf(String::isNotBlank)
+    var activeUrl by remember(normalizedPrimary, normalizedFallback) {
+        mutableStateOf(normalizedPrimary ?: normalizedFallback)
+    }
+    var isLoading by remember(normalizedPrimary, normalizedFallback) {
+        mutableStateOf(activeUrl != null)
+    }
 
-    when {
-        normalizedPrimary != null -> {
-            SubcomposeAsyncImage(
-                model = normalizedPrimary,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                contentScale = contentScale,
-                loading = { placeholder() },
-                onError = { state ->
-                    logPosterFailure(
-                        stage = "primary",
-                        url = normalizedPrimary,
-                        fallbackUrl = normalizedFallback,
-                        throwable = (state.result as? ErrorResult)?.throwable,
-                    )
-                },
-                error = {
-                    if (normalizedFallback != null && normalizedFallback != normalizedPrimary) {
-                        SubcomposeAsyncImage(
-                            model = normalizedFallback,
-                            contentDescription = contentDescription,
-                            modifier = modifier,
-                            contentScale = contentScale,
-                            loading = { placeholder() },
-                            onError = { state ->
-                                logPosterFailure(
-                                    stage = "fallback",
-                                    url = normalizedFallback,
-                                    fallbackUrl = null,
-                                    throwable = (state.result as? ErrorResult)?.throwable,
-                                )
-                            },
-                            error = { placeholder() }
-                        )
-                    } else {
-                        logPosterFailure(
-                            stage = "primary-no-fallback",
-                            url = normalizedPrimary,
-                            fallbackUrl = normalizedFallback,
-                            throwable = null,
-                        )
-                        placeholder()
-                    }
+    if (activeUrl == null) {
+        placeholder()
+        return
+    }
+
+    Box(modifier = modifier) {
+        AsyncImage(
+            model = activeUrl,
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = contentScale,
+            onLoading = { isLoading = true },
+            onSuccess = { isLoading = false },
+            onError = { state ->
+                val failedUrl = activeUrl
+                val canUseFallback = failedUrl == normalizedPrimary &&
+                    normalizedFallback != null && normalizedFallback != normalizedPrimary
+
+                logPosterFailure(
+                    stage = when {
+                        canUseFallback -> "primary"
+                        failedUrl == normalizedFallback && normalizedPrimary == null -> "fallback-only"
+                        failedUrl == normalizedFallback -> "fallback"
+                        else -> "primary-no-fallback"
+                    },
+                    url = failedUrl,
+                    fallbackUrl = normalizedFallback.takeIf { canUseFallback },
+                    throwable = (state.result as? ErrorResult)?.throwable,
+                )
+
+                if (canUseFallback) {
+                    activeUrl = normalizedFallback
+                    isLoading = true
                 }
-            )
-        }
+            },
+        )
 
-        normalizedFallback != null -> {
-            SubcomposeAsyncImage(
-                model = normalizedFallback,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                contentScale = contentScale,
-                loading = { placeholder() },
-                onError = { state ->
-                    logPosterFailure(
-                        stage = "fallback-only",
-                        url = normalizedFallback,
-                        fallbackUrl = null,
-                        throwable = (state.result as? ErrorResult)?.throwable,
-                    )
-                },
-                error = { placeholder() }
-            )
+        if (isLoading) {
+            placeholder()
         }
-
-        else -> placeholder()
     }
 }
 
