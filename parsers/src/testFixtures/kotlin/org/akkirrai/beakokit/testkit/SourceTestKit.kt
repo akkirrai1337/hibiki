@@ -12,6 +12,9 @@ import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceContractValidator
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.playback.PlaybackResolver
+import org.akkirrai.beakokit.playback.ResolvedPlaybackStream
+import kotlin.reflect.KClass
 
 data class PlaybackContractSnapshot(
     val groups: List<PlaybackGroup>,
@@ -26,6 +29,11 @@ data class CatalogContractSnapshot(
 data class PaginationContractSnapshot(
     val firstPage: List<AnimeTitle>,
     val secondPage: List<AnimeTitle>,
+)
+
+data class PlayableStreamContractSnapshot(
+    val playback: PlaybackContractSnapshot,
+    val resolved: ResolvedPlaybackStream,
 )
 
 /** Reusable contract assertions for fixture-backed source tests. */
@@ -185,6 +193,33 @@ object SourceTestKit {
         return details
     }
 
+    /** Verifies metadata fields that are optional in the core model but required by a given fixture. */
+    suspend fun assertDetailsMetadataContract(
+        source: AnimeSource,
+        id: String,
+        requireDescription: Boolean = false,
+        requirePoster: Boolean = false,
+    ): AnimeTitle {
+        val details = assertDetailsContract(source, id)
+        return assertTitleMetadataContract(details, requireDescription, requirePoster)
+    }
+
+    fun assertTitleMetadataContract(
+        details: AnimeTitle,
+        requireDescription: Boolean = false,
+        requirePoster: Boolean = false,
+    ): AnimeTitle {
+        val description = details.description?.trim()
+        val poster = details.posterUrl?.trim()
+        assertContract(!requireDescription || !description.isNullOrBlank()) {
+            "Details for ${details.id} must include a description"
+        }
+        assertContract(!requirePoster || !poster.isNullOrBlank()) {
+            "Details for ${details.id} must include a poster URL"
+        }
+        return details
+    }
+
     suspend fun assertLatestContract(source: AnimeSource, limit: Int): List<AnimeTitle> {
         assertContract(limit > 0) { "Latest limit must be positive" }
         val latest = source as? LatestSource
@@ -232,6 +267,39 @@ object SourceTestKit {
         return PlaybackContractSnapshot(groups, links)
     }
 
+    /** Resolves and validates a real playable stream from the first contract-valid episode. */
+    suspend fun assertPlayableStreamContract(
+        source: AnimeSource,
+        title: AnimeTitle,
+        resolver: PlaybackResolver,
+    ): PlayableStreamContractSnapshot {
+        val playback = assertPlaybackContract(source, title)
+        val resolved = resolver.resolve(playback.firstEpisodeLinks)
+        assertContract(resolved.validation.success) { "Playback resolver returned an unvalidated stream" }
+        assertContract(resolved.validation.finalUrl.isNotBlank()) { "Resolved stream URL must not be blank" }
+        return PlayableStreamContractSnapshot(playback, resolved)
+    }
+
+    /** Asserts a source or playback failure by its public exception type without hiding other failures. */
+    suspend fun <T : Throwable> assertFailureContract(
+        expectedType: KClass<T>,
+        block: suspend () -> Unit,
+    ): T {
+        try {
+            block()
+        } catch (error: Throwable) {
+            if (expectedType.isInstance(error)) {
+                @Suppress("UNCHECKED_CAST")
+                return error as T
+            }
+            throw AssertionError(
+                "Expected ${expectedType.simpleName}, got ${error::class.simpleName}: ${error.message}",
+                error,
+            )
+        }
+        throw AssertionError("Expected ${expectedType.simpleName}, but operation completed successfully")
+    }
+
     private fun assertTitles(titles: List<AnimeTitle>, label: String) {
         assertContract(titles.map(AnimeTitle::id).distinct().size == titles.size) {
             "Source returned duplicate ids in $label"
@@ -267,6 +335,12 @@ object SourceTestKit {
         assertContract(title.id.isNotBlank()) { "Source returned a blank title id in $label" }
         assertContract(title.displayName.isNotBlank()) {
             "Source returned a blank display name for ${title.id} in $label"
+        }
+        assertContract(title.description == null || title.description.isNotBlank()) {
+            "Source returned a blank description for ${title.id} in $label"
+        }
+        assertContract(title.posterUrl == null || title.posterUrl.isNotBlank()) {
+            "Source returned a blank poster URL for ${title.id} in $label"
         }
     }
 

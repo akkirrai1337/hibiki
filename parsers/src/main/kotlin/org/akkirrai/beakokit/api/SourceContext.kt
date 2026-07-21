@@ -12,6 +12,8 @@ interface SourceContext {
         get() = SourceHealthReporter.NONE
     val challengeSessionProvider: ChallengeSessionProvider
         get() = ChallengeSessionProvider.UNSUPPORTED
+    val sourceExecutionPolicy: SourceExecutionPolicy
+        get() = SourceExecutionPolicy.NONE
 }
 
 /** Source-scoped values supplied by the host; secrets are deliberately read separately. */
@@ -58,6 +60,8 @@ data class DefaultSourceContext(
     override val logger: SourceLogger = SourceLogger.NONE,
     override val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     override val challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
+    override val sourceExecutionPolicy: SourceExecutionPolicy =
+        HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
 ) : SourceContext {
     init {
         require(preferredLanguages.isNotEmpty()) { "At least one preferred language is required" }

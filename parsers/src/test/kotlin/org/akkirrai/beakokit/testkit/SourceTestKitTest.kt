@@ -7,13 +7,26 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.PlaybackGroup
+import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.StreamExtractor
+import org.akkirrai.beakokit.api.StreamValidator
+import org.akkirrai.beakokit.playback.NoPlayerLinksException
+import org.akkirrai.beakokit.playback.PlaybackResolver
+import org.akkirrai.beakokit.playback.extractor.DirectHlsExtractor
 import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.StreamValidationResult
+import org.akkirrai.beakokit.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -156,6 +169,61 @@ class SourceTestKitTest {
         }
     }
 
+    @Test
+    fun `metadata contract can require description and poster`() = runBlocking {
+        val richTitle = title("42").copy(
+            description = "Fixture description",
+            posterUrl = "https://images.test/poster.jpg",
+        )
+
+        val details = SourceTestKit.assertDetailsMetadataContract(
+            source = FakeCatalogSource(listOf(richTitle)),
+            id = "42",
+            requireDescription = true,
+            requirePoster = true,
+        )
+
+        assertEquals("Fixture description", details.description)
+    }
+
+    @Test
+    fun `playable stream contract resolves a valid episode stream`() = runBlocking {
+        val title = title("42")
+        val source = FakePlaybackSource(title, listOf(PlayerLink(
+            url = "https://video.test/episode.m3u8",
+            type = PlayerType.DIRECT_HLS,
+            quality = "720p",
+        )))
+        val resolver = PlaybackResolver(
+            extractors = listOf<StreamExtractor>(DirectHlsExtractor()),
+            validator = object : StreamValidator {
+                override suspend fun validate(stream: VideoStream) = StreamValidationResult(
+                    success = true,
+                    streamType = StreamType.HLS,
+                    quality = stream.quality,
+                    finalUrl = stream.url,
+                    statusCode = 200,
+                    message = "OK",
+                )
+            },
+        )
+
+        val snapshot = SourceTestKit.assertPlayableStreamContract(source, title, resolver)
+
+        assertEquals("https://video.test/episode.m3u8", snapshot.resolved.validation.finalUrl)
+    }
+
+    @Test
+    fun `failure contract preserves the expected typed playback error`() = runBlocking {
+        val resolver = PlaybackResolver(emptyList(), object : StreamValidator {
+            override suspend fun validate(stream: VideoStream): StreamValidationResult = error("Not called")
+        })
+
+        SourceTestKit.assertFailureContract(NoPlayerLinksException::class) {
+            resolver.resolve(emptyList())
+        }
+    }
+
     private class FakeCatalogSource(
         private val titles: List<AnimeTitle>,
         override val catalogCapabilities: CatalogCapabilities = CatalogCapabilities(
@@ -185,6 +253,21 @@ class SourceTestKitTest {
         override suspend fun getById(id: String): AnimeTitle = titles.first { it.id == id }
 
         override suspend fun latest(limit: Int): List<AnimeTitle> = titles.take(limit)
+    }
+
+    private class FakePlaybackSource(
+        private val title: AnimeTitle,
+        private val links: List<PlayerLink>,
+    ) : AnimeSource by FakeCatalogSource(listOf(title)), PlaybackSource {
+        override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = listOf(
+            PlaybackGroup("group", "Fixture voiceover", listOf(Episode("episode", 1.0, null))),
+        )
+
+        override suspend fun getPlayerLinks(
+            title: AnimeTitle,
+            group: PlaybackGroup,
+            episode: Episode,
+        ): List<PlayerLink> = links
     }
 
     private fun title(id: String) = AnimeTitle(

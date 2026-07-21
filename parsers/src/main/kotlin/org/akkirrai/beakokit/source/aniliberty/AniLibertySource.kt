@@ -20,14 +20,14 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceEntry
-import org.akkirrai.beakokit.api.track
+import org.akkirrai.beakokit.api.SourceOperation
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 @SourceEntry(id = "ani-liberty", order = 1)
 class AniLibertySource(
     context: SourceContext,
 ) : AnimeSource, LatestSource, PlaybackSource {
-    private val health = context.sourceHealthReporter
+    private val execution = context.sourceExecutionPolicy
     private val baseUrls = context.config.value(BASE_URLS_KEY)
         ?.split(',')
         ?.map(String::trim)
@@ -46,24 +46,24 @@ class AniLibertySource(
     override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
 
-    override suspend fun search(query: String): List<AnimeTitle> = health.track(INFO.id) { metadata.search(query) }
+    override suspend fun search(query: String): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH) { metadata.search(query) }
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = health.track(INFO.id) { metadata.search(request) }
+    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH) { metadata.search(request) }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog =
-        health.track(INFO.id) { metadata.getSearchFilterCatalog() }
+        execution.execute(INFO.id, SourceOperation.FILTER_CATALOG) { metadata.getSearchFilterCatalog() }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = health.track(INFO.id) { metadata.latest(limit) }
+    override suspend fun latest(limit: Int): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.LATEST) { metadata.latest(limit) }
 
-    override suspend fun getById(id: String): AnimeTitle = health.track(INFO.id) { metadata.getById(id) }
+    override suspend fun getById(id: String): AnimeTitle = execution.execute(INFO.id, SourceOperation.DETAILS) { metadata.getById(id) }
 
-    suspend fun weeklySchedule(): List<AniLibertyScheduleEntry> = health.track(INFO.id) { metadata.weeklySchedule() }
+    suspend fun weeklySchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE) { metadata.weeklySchedule() }
 
-    suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = health.track(INFO.id) { metadata.currentSchedule() }
+    suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE) { metadata.currentSchedule() }
 
-    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = health.track(INFO.id) {
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = execution.execute(INFO.id, SourceOperation.PLAYBACK_GROUPS) {
         val match = playbackProvider.search(title).maxByOrNull(ProviderMatch::confidence)
-            ?: return@track emptyList()
+            ?: return@execute emptyList()
         val episodes = playbackProvider.getEpisodes(match)
         if (episodes.isEmpty()) emptyList() else listOf(
             PlaybackGroup(
@@ -79,7 +79,7 @@ class AniLibertySource(
         title: AnimeTitle,
         group: PlaybackGroup,
         episode: Episode,
-    ): List<PlayerLink> = health.track(INFO.id) { playbackProvider.getPlayerLinks(
+    ): List<PlayerLink> = execution.execute(INFO.id, SourceOperation.PLAYER_LINKS) { playbackProvider.getPlayerLinks(
         match = ProviderMatch(
             providerId = playbackProvider.id,
             providerName = playbackProvider.name,

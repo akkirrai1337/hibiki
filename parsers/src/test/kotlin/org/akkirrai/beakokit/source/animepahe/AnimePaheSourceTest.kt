@@ -39,6 +39,11 @@ class AnimePaheSourceTest {
                 source,
                 AnimeSearchRequest(query = "Test", limit = 5),
             )
+            SourceTestKit.assertTitleMetadataContract(
+                catalog.details,
+                requireDescription = true,
+                requirePoster = true,
+            )
             val latest = SourceTestKit.assertLatestContract(source, limit = 2)
             val playback = SourceTestKit.assertPlaybackContract(source, catalog.details)
             val filters = SourceTestKit.assertFilterCatalogContract(source)
