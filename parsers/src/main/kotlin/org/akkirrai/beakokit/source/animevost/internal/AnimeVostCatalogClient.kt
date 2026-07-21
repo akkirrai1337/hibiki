@@ -18,6 +18,7 @@ import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 
 internal class AnimeVostCatalogClient(
     private val client: HttpClient,
@@ -44,8 +45,10 @@ internal class AnimeVostCatalogClient(
     suspend fun getById(id: String): AnimeTitle {
         val path = id.trim().takeIf(TITLE_PATH::matches)
             ?: throw SourceException("AnimeVost title id is invalid: $id", kind = SourceErrorKind.NOT_FOUND)
-        val title = parseCards(getHtml("/$path"))
+        val html = getHtml("/$path")
+        val title = parseCards(html)
             .firstOrNull { it.id == path }
+            ?: parseDetails(path, html)
             ?: throw SourceException("AnimeVost title was not found: $id", kind = SourceErrorKind.NOT_FOUND)
         return title
     }
@@ -75,21 +78,26 @@ internal class AnimeVostCatalogClient(
     }
 
     private fun parseCards(html: String): List<AnimeTitle> = Jsoup.parse(html, baseUrl)
-        .select(".shortstory")
+        .select(".shortstory, article.post")
         .mapNotNull { card ->
             val link = card.selectFirst(".shortstoryHead h1, .shortstoryHead h2")
-                ?.selectFirst("a[href*=/tip/]") ?: return@mapNotNull null
+                ?.selectFirst("a[href*=/tip/]")
+                ?: card.selectFirst("span > a[href*=/tip/]")
+                ?: return@mapNotNull null
             val id = link.absUrl("href")
                 .substringAfter(baseUrl.trimEnd('/'), missingDelimiterValue = "")
                 .substringBefore('?')
                 .removePrefix("/")
                 .takeIf(TITLE_PATH::matches)
                 ?: return@mapNotNull null
-            val rawName = link.text().trim().takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val rawName = link.text().trim().takeIf(String::isNotBlank)
+                ?: card.selectFirst("h2")?.text()?.trim()?.takeIf(String::isNotBlank)
+                ?: return@mapNotNull null
             val names = rawName.substringBefore('[').trim().split('/', limit = 2).map(String::trim)
             val russianName = names.first().takeIf(String::isNotBlank) ?: return@mapNotNull null
             val content = card.selectFirst(".shortstoryContent") ?: card
             val originalName = content.selectFirst("h4")?.text()?.trim()?.takeIf(String::isNotBlank)
+            val categories = content.select(".short-categori a")
             AnimeTitle(
                 id = id,
                 russianName = russianName,
@@ -97,17 +105,58 @@ internal class AnimeVostCatalogClient(
                 originalName = originalName ?: names.getOrNull(1) ?: russianName,
                 japaneseName = null,
                 synonyms = emptyList(),
-                year = content.fieldValue("Год выхода")?.take(4)?.toIntOrNull(),
-                type = content.fieldValue("Тип")?.toType(),
+                year = content.fieldValue("Год выхода")?.take(4)?.toIntOrNull()
+                    ?: categories.firstNotNullOfOrNull { YEAR_PATH.find(it.absUrl("href"))?.groupValues?.get(1)?.toIntOrNull() },
+                type = content.fieldValue("Тип")?.toType()
+                    ?: categories.firstOrNull { it.absUrl("href").contains("/tip/") }?.text()?.toType(),
                 episodeCount = EPISODE_COUNT.find(rawName)?.groupValues?.get(1)?.toIntOrNull(),
-                posterUrl = content.selectFirst("img.imgRadius")?.absUrl("src")?.takeIf(String::isNotBlank),
-                status = null,
+                posterUrl = content.selectFirst("img.imgRadius")?.absUrl("src")?.takeIf(String::isNotBlank)
+                    ?: BACKGROUND_IMAGE.find(card.attr("style"))?.groupValues?.get(1)?.let { image ->
+                        URI(baseUrl).resolve(image).toString()
+                    },
+                status = "ongoing".takeIf {
+                    categories.any { category -> category.absUrl("href").contains("/ongoing/") }
+                },
                 description = content.select("p")
                     .firstOrNull { it.selectFirst("strong") == null && it.text().trim().length >= DESCRIPTION_MIN_LENGTH }
                     ?.text()?.trim(),
-                genres = content.fieldValue("Жанр")?.split(',')?.map(String::trim)?.filter(String::isNotBlank).orEmpty(),
+                genres = content.fieldValue("Жанр")?.split(',')?.map(String::trim)?.filter(String::isNotBlank)
+                    ?: categories.filter { it.absUrl("href").contains("/zhanr/") }.map(Element::text),
             )
         }.distinctBy(AnimeTitle::id)
+
+    private fun parseDetails(path: String, html: String): AnimeTitle? {
+        val document = Jsoup.parse(html, baseUrl)
+        val rawName = document.selectFirst(".playerTitle h1, h1")?.text()?.trim()?.takeIf(String::isNotBlank)
+            ?: return null
+        val names = rawName.substringBefore('[').trim().split('/', limit = 2).map(String::trim)
+        val russianName = names.first().takeIf(String::isNotBlank) ?: return null
+        val progress = EPISODE_PROGRESS.find(rawName)
+        val availableEpisodes = progress?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val totalEpisodes = progress?.groupValues?.getOrNull(2)?.toIntOrNull()
+        return AnimeTitle(
+            id = path,
+            russianName = russianName,
+            englishName = names.getOrNull(1)?.takeIf(String::isNotBlank),
+            originalName = names.getOrNull(1)?.takeIf(String::isNotBlank) ?: russianName,
+            japaneseName = null,
+            synonyms = emptyList(),
+            year = null,
+            type = path.substringAfter("tip/").substringBefore('/').toType(),
+            episodeCount = totalEpisodes,
+            posterUrl = document.selectFirst("meta[property='og:image']")?.attr("content")?.trim()
+                ?.takeIf(String::isNotBlank)
+                ?.let { image -> URI(baseUrl).resolve(image).toString() },
+            status = when {
+                NEXT_EPISODE.containsMatchIn(rawName) -> "ongoing"
+                availableEpisodes != null && totalEpisodes != null && availableEpisodes < totalEpisodes -> "ongoing"
+                totalEpisodes != null -> "released"
+                else -> null
+            },
+            description = document.selectFirst("meta[property='og:description']")?.attr("content")?.trim()?.takeIf(String::isNotBlank),
+            availableEpisodeCount = availableEpisodes,
+        )
+    }
 
     private fun Element.fieldValue(label: String): String? = select("p")
         .firstOrNull { it.selectFirst("strong")?.text()?.removeSuffix(":")?.trim() == label }
@@ -128,5 +177,9 @@ internal class AnimeVostCatalogClient(
         const val BROWSER_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36"
         val TITLE_PATH = Regex("tip/[a-z-]+/\\d+-[^/]+\\.html")
         val EPISODE_COUNT = Regex("\\[\\s*\\d+\\s+из\\s+(\\d+)")
+        val EPISODE_PROGRESS = Regex("\\[\\s*(?:\\d+\\s*-\\s*)?(\\d+)\\s+из\\s+(\\d+)")
+        val NEXT_EPISODE = Regex("\\[\\s*\\d+\\s+серия\\s*-")
+        val YEAR_PATH = Regex("/god/(\\d{4})/")
+        val BACKGROUND_IMAGE = Regex("background-image:\\s*url\\(['\"]?([^'\")]+)")
     }
 }

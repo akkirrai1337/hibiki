@@ -10,6 +10,7 @@ import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class AnimeVostSourceTest {
     @Test
@@ -41,6 +42,37 @@ class AnimeVostSourceTest {
             assertEquals(2, playback.groups.single().episodes.size)
             assertEquals(PlayerType.DIRECT_MP4, playback.firstEpisodeLinks.first().type)
             assertEquals("https://video.animevost.test/720/episode-1.mp4", playback.firstEpisodeLinks.first().url)
+        }
+    }
+
+    @Test
+    fun `latest parses AnimeVost current post cards`() = runBlocking {
+        SourceFixtureHost(
+            routes = listOf(
+                FixtureRoute.fromResource("/", "beakokit/animevost/latest-current.html"),
+                FixtureRoute.fromResource(
+                    "/tip/tv/3982-sora-wa-akai-kawa-no-hotori.html",
+                    "beakokit/animevost/details-current.html",
+                ),
+            ),
+            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            values = mapOf(AnimeVostConfig.BASE_URL to "https://animevost.test"),
+        ).use { host ->
+            val title = AnimeVostSource(host.context).latest(limit = 1).single()
+
+            assertEquals("tip/tv/3982-sora-wa-akai-kawa-no-hotori.html", title.id)
+            assertEquals(2026, title.year)
+            assertEquals("tv", title.type)
+            assertEquals("https://animevost.test/uploads/posts/2026-07/cover.jpg", title.posterUrl)
+            assertEquals(listOf("Драма"), title.genres)
+            assertNotNull(title.russianName)
+
+            val details = AnimeVostSource(host.context).getById(title.id)
+            assertEquals(12, details.episodeCount)
+            assertEquals(3, details.availableEpisodeCount)
+            assertEquals("ongoing", details.status)
+            assertEquals("https://animevost.test/uploads/posts/2026-07/detail.jpg", details.posterUrl)
+            assertEquals("Актуальное описание тайтла.", details.description)
         }
     }
 }

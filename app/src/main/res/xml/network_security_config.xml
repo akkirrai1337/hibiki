@@ -4,5 +4,7 @@
     <!-- Legacy Alloha/CDN mirrors may still redirect HLS chunks through this host over HTTP. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">solodcdn.com</domain>
+        <!-- AnimeVost's playlist currently returns direct streams from this HTTP-only CDN. -->
+        <domain includeSubdomains="true">video.animetop.info</domain>
     </domain-config>
 </network-security-config>
