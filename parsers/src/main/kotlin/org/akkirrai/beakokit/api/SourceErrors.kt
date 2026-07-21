@@ -17,7 +17,7 @@ open class SourceException(
     val kind: SourceErrorKind = SourceErrorKind.UNKNOWN,
 ) : RuntimeException(message, cause)
 
-class SourceUnavailableException(
+open class SourceUnavailableException(
     message: String,
     cause: Throwable? = null,
 ) : SourceException(

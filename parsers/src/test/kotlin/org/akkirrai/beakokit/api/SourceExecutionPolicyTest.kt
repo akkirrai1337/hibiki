@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SourceExecutionPolicyTest {
     private val sourceId = SourceId("execution-test")
@@ -50,5 +51,58 @@ class SourceExecutionPolicyTest {
         assertEquals(42, result)
         assertEquals(sourceId, capturedSourceId)
         assertEquals(SourceOperation.PLAYER_LINKS, capturedOperation)
+    }
+
+    @Test
+    fun `transient failures open a circuit and a later recovery probe closes it`() = runBlocking {
+        var now = 0L
+        var attempts = 0
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            policy = SourceResiliencePolicy(minimumIntervalMillis = 0, failureThreshold = 2, cooldownMillis = 100),
+            nowMillis = { now },
+        )
+
+        repeat(2) {
+            assertFailsWith<SourceException> {
+                policy.execute(sourceId, SourceOperation.SEARCH) {
+                    attempts += 1
+                    throw SourceException("temporary", kind = SourceErrorKind.NETWORK)
+                }
+            }
+        }
+        assertEquals(SourceCircuitState.OPEN, policy.circuit(sourceId).state)
+        assertFailsWith<SourceCircuitOpenException> {
+            policy.execute(sourceId, SourceOperation.SEARCH) { attempts += 1 }
+        }
+        assertEquals(2, attempts)
+
+        now = 100
+        assertEquals("recovered", policy.execute(sourceId, SourceOperation.SEARCH) {
+            attempts += 1
+            "recovered"
+        })
+        assertEquals(SourceCircuitState.CLOSED, policy.circuit(sourceId).state)
+        assertEquals(3, attempts)
+    }
+
+    @Test
+    fun `policy spaces operations for the same source`() = runBlocking {
+        var now = 0L
+        val waits = mutableListOf<Long>()
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            policy = SourceResiliencePolicy(minimumIntervalMillis = 50),
+            nowMillis = { now },
+            wait = { duration ->
+                waits += duration
+                now += duration
+            },
+        )
+
+        policy.execute(sourceId, SourceOperation.SEARCH) { Unit }
+        policy.execute(sourceId, SourceOperation.DETAILS) { Unit }
+
+        assertEquals(listOf(50L), waits)
     }
 }
