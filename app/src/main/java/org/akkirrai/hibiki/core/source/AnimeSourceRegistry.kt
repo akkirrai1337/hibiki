@@ -33,6 +33,9 @@ data class AnimeSourceDescriptor(
     val name: String
         get() = info.name
 
+    val iconUrl: String?
+        get() = info.iconUrl
+
     val language: SourceLanguage
         get() = info.primaryLanguage
 

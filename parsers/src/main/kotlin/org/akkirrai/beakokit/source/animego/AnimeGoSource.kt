@@ -73,6 +73,7 @@ class AnimeGoSource(
             languages = setOf(SourceLanguage.RUSSIAN),
             primaryLanguage = SourceLanguage.RUSSIAN,
             website = DEFAULT_BASE_URL,
+            iconUrl = "$DEFAULT_BASE_URL/favicon.ico",
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,
                 SourceCapability.PLAYBACK,

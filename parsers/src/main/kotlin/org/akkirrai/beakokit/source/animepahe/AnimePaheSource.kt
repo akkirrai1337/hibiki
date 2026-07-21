@@ -74,6 +74,7 @@ class AnimePaheSource(
             languages = setOf(SourceLanguage.ENGLISH),
             primaryLanguage = SourceLanguage.ENGLISH,
             website = DEFAULT_BASE_URL,
+            iconUrl = "$DEFAULT_BASE_URL/favicon.ico",
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,
                 SourceCapability.PLAYBACK,

@@ -27,6 +27,8 @@ data class SourceInfo(
     val languages: Set<SourceLanguage>,
     val primaryLanguage: SourceLanguage,
     val website: String? = null,
+    /** HTTPS URL of an icon hosted by the source website. */
+    val iconUrl: String? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
 ) {
     init {
@@ -37,6 +39,9 @@ data class SourceInfo(
         }
         require(website == null || website.startsWith("https://")) {
             "Source website must use HTTPS: $website"
+        }
+        require(iconUrl == null || iconUrl.startsWith("https://")) {
+            "Source icon URL must use HTTPS: $iconUrl"
         }
     }
 }
