@@ -21,6 +21,7 @@ import org.akkirrai.beakokit.playback.extractor.DirectMp4Extractor
 import org.akkirrai.beakokit.playback.extractor.KodikExtractor
 import org.akkirrai.beakokit.playback.extractor.SibnetExtractor
 import org.akkirrai.beakokit.playback.extractor.VkExtractor
+import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -90,6 +91,7 @@ class AnimeWatchRepository(
         VkExtractor(client),
     )
     private val validator = HttpStreamValidator(client)
+    private val playbackResolver = PlaybackResolver(extractors, validator)
     private val loadMutex = Mutex()
 
     fun getCachedSources(animeId: String): WatchSourcesCacheSnapshot? {
@@ -203,100 +205,39 @@ class AnimeWatchRepository(
             throw SourceException(appString(R.string.watch_error_no_players))
         }
 
-        val errors = mutableListOf<String>()
-        for (link in links) {
-            val extractor = extractors.firstOrNull { it.supports(link) }
-            if (extractor == null) {
-                errors += appString(
-                    R.string.watch_error_extractor_missing,
-                    link.playerName ?: appString(R.string.watch_player_fallback_name),
-                )
-                continue
-            }
-
-            val playback = runCatching {
-                withTimeout(resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName)) {
-                    val streams = extractor.extractVariants(link)
-                        .filterNot { it.url in excludedStreamUrls }
-                        .sortedWith(
-                            compareByDescending<org.akkirrai.beakokit.model.VideoStream> {
-                                matchesPreferredQuality(it.quality, preferredQuality)
-                            }.thenByDescending {
-                                it.quality?.filter(Char::isDigit)?.toIntOrNull() ?: 0
-                            }
-                        )
-                    if (streams.isEmpty()) {
-                        throw SourceException(appString(R.string.watch_error_stream_unavailable))
-                    }
-                    val availableQualityLabels = streams
-                        .mapNotNull { it.quality?.trim()?.takeIf(String::isNotBlank) }
-                        .distinct()
-                    streams.firstNotNullOfOrNull { stream ->
-                        val validation = validator.validate(stream)
-                        AppLogger.d(
-                            TAG,
-                            buildString {
-                                append("validate stream: player=")
-                                append(link.playerName)
-                                append(", type=")
-                                append(stream.type)
-                                append(", quality=")
-                                append(stream.quality)
-                                append(", success=")
-                                append(validation.success)
-                                append(", status=")
-                                append(validation.statusCode)
-                                append(", streamHost=")
-                                append(validation.finalUrl.safeHost())
-                                append(", headerNames=")
-                                append(stream.headers.safeHeaderNames())
-                                append(", message=")
-                                append(validation.message)
-                            },
-                        )
-                        if (!validation.success) return@firstNotNullOfOrNull null
-                        PlaybackStream(
-                            animeTitle = payload.title.displayName,
-                            sourceTitle = payload.source.title,
-                            episodeTitle = episode.title?.takeIf(String::isNotBlank)
-                                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
-                            streamUrl = validation.finalUrl,
-                            streamType = validation.streamType.toPlaybackType(),
-                            qualityLabel = validation.quality ?: stream.quality ?: link.quality,
-                            availableQualityLabels = (
-                                availableQualityLabels + (validation.quality ?: stream.quality ?: link.quality)
-                            ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
-                            headers = stream.headers.ifEmpty { link.headers },
-                            segments = selectPlaybackSegments(
-                                apiSegments = link.segments,
-                                extractedSegments = stream.segments,
-                            ).map { segment -> segment.toPlaybackSegment() },
-                            videoId = link.videoId,
-                        )
-                    } ?: throw SourceException(appString(R.string.watch_error_stream_unavailable))
-                }
-            }.getOrElse { error ->
-                errors += when (error) {
-                    is TimeoutCancellationException -> appString(
-                        R.string.watch_error_timeout,
-                        link.playerName ?: appString(R.string.watch_player_fallback_name),
-                    )
-                    is CancellationException -> throw error
-                    else -> error.message ?: appString(R.string.watch_error_open_player_failed)
-                }
-                null
-            }
-
-            if (playback != null) {
-                cachedStreams[cacheKey] = CachedPlaybackStream(
-                    stream = playback,
-                    cachedAt = System.currentTimeMillis(),
-                )
-                return playback
-            }
-        }
-
-        throw SourceException(errors.firstOrNull() ?: appString(R.string.watch_error_stream_unavailable))
+        val resolved = playbackResolver.resolve(
+            links = links,
+            excludedStreamUrls = excludedStreamUrls,
+            preferredQuality = preferredQuality,
+            attemptTimeoutMillis = { link -> resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName) },
+        )
+        AppLogger.d(
+            TAG,
+            "validated stream: player=${resolved.link.playerName}, type=${resolved.validation.streamType}, " +
+                "quality=${resolved.validation.quality}, status=${resolved.validation.statusCode}, " +
+                "streamHost=${resolved.validation.finalUrl.safeHost()}, " +
+                "headerNames=${resolved.stream.headers.safeHeaderNames()}",
+        )
+        val playback = PlaybackStream(
+            animeTitle = payload.title.displayName,
+            sourceTitle = payload.source.title,
+            episodeTitle = episode.title?.takeIf(String::isNotBlank)
+                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
+            streamUrl = resolved.validation.finalUrl,
+            streamType = resolved.validation.streamType.toPlaybackType(),
+            qualityLabel = resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality,
+            availableQualityLabels = (
+                resolved.availableQualityLabels + (resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality)
+            ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
+            headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
+            segments = selectPlaybackSegments(
+                apiSegments = resolved.link.segments,
+                extractedSegments = resolved.stream.segments,
+            ).map { segment -> segment.toPlaybackSegment() },
+            videoId = resolved.link.videoId,
+        )
+        cachedStreams[cacheKey] = CachedPlaybackStream(stream = playback, cachedAt = System.currentTimeMillis())
+        return playback
     }
 
     suspend fun resolveFastestStream(
