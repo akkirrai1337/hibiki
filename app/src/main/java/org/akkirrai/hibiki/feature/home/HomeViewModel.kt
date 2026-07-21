@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
 import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
@@ -38,9 +39,11 @@ class HomeViewModel(
         HomeUiState(isLoading = true)
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val descriptionUpdates = Channel<Anime>(Channel.UNLIMITED)
 
     init {
         PerfLogger.mark("HomeViewModel created")
+        observeDescriptionUpdates()
         load()
         loadSearchFilterCatalog()
         observeLanguageChanges()
@@ -153,13 +156,7 @@ class HomeViewModel(
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
                     if (enriched.description.isNullOrBlank()) return@onSuccess
-                    _uiState.update { state ->
-                        state.copy(
-                            featuredAnime = state.featuredAnime.replace(enriched),
-                            trending = state.trending.replace(enriched),
-                            recentlyUpdated = state.recentlyUpdated.replace(enriched),
-                        )
-                    }
+                    descriptionUpdates.trySend(enriched)
                 }
                 .onFailure { descriptionRequests.remove(anime.id) }
         }
@@ -393,12 +390,50 @@ class HomeViewModel(
     override fun onCleared() {
         searchJob?.cancel()
         recentDescriptionsJob?.cancel()
+        descriptionUpdates.close()
         repository.close()
         super.onCleared()
     }
 
-    private fun List<Anime>.replace(enriched: Anime): List<Anime> = map { anime ->
-        if (anime.id == enriched.id) enriched else anime
+    private fun observeDescriptionUpdates() {
+        viewModelScope.launch {
+            for (firstUpdate in descriptionUpdates) {
+                val updates = linkedMapOf(firstUpdate.id to firstUpdate)
+                delay(DESCRIPTION_UPDATE_BATCH_WINDOW_MS)
+                while (true) {
+                    val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
+                    updates[nextUpdate.id] = nextUpdate
+                }
+                _uiState.update { state -> state.replaceDescriptions(updates) }
+            }
+        }
+    }
+
+    private fun HomeUiState.replaceDescriptions(updates: Map<String, Anime>): HomeUiState {
+        val updatedFeatured = featuredAnime.replaceDescriptions(updates)
+        val updatedTrending = trending.replaceDescriptions(updates)
+        val updatedRecent = recentlyUpdated.replaceDescriptions(updates)
+        return if (
+            updatedFeatured === featuredAnime &&
+            updatedTrending === trending &&
+            updatedRecent === recentlyUpdated
+        ) {
+            this
+        } else {
+            copy(
+                featuredAnime = updatedFeatured,
+                trending = updatedTrending,
+                recentlyUpdated = updatedRecent,
+            )
+        }
+    }
+
+    private fun List<Anime>.replaceDescriptions(updates: Map<String, Anime>): List<Anime> {
+        var changed = false
+        val updatedItems = map { anime ->
+            updates[anime.id]?.also { changed = true } ?: anime
+        }
+        return if (changed) updatedItems else this
     }
 
     private fun observeLanguageChanges() {
@@ -438,6 +473,7 @@ class HomeViewModel(
         const val SEARCH_PAGE_SIZE = 24
         const val TRENDING_PAGE_SIZE = 20
         const val RECENT_UPDATES_PAGE_SIZE = 12
+        const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
         const val RANDOM_HISTORY_SIZE = 20
     }
 
