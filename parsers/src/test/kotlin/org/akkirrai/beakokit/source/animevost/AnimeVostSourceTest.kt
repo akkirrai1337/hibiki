@@ -82,4 +82,19 @@ class AnimeVostSourceTest {
             assertEquals(expectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond, details.nextEpisodeAt)
         }
     }
+
+    @Test
+    fun `blank catalog request uses AnimeVost listing pages for its offset`() = runBlocking {
+        SourceFixtureHost(
+            routes = listOf(
+                FixtureRoute.fromResource("/page/2/", "beakokit/animevost/latest-page-2.html"),
+            ),
+            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            values = mapOf(AnimeVostConfig.BASE_URL to "https://animevost.test"),
+        ).use { host ->
+            val results = AnimeVostSource(host.context).search(AnimeSearchRequest(offset = 10, limit = 1))
+
+            assertEquals(listOf("tip/tv/3908-gaikotsu-kishi-sama-2.html"), results.map { it.id })
+        }
+    }
 }

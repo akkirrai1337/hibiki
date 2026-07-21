@@ -228,6 +228,7 @@ fun HomeScreen(
                                 LibraryStatusPosterFooter(category)
                             }
                         },
+                        onItemVisible = viewModel::enrichDescription,
                     )
                 }
             } else {

@@ -201,6 +201,7 @@ fun LazyListScope.searchStateVerticalListContent(
     loadMoreLoadingLabel: String? = null,
     loadMoreModifier: Modifier = Modifier,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    onItemVisible: ((Anime) -> Unit)? = null,
 ) {
     when (state) {
         SearchUiState.Idle -> if (idleTitle != null && idleMessage != null && idleIcon != null) {
@@ -248,6 +249,9 @@ fun LazyListScope.searchStateVerticalListContent(
                 }
             }
             items(state.items, key = { it.id }) { anime ->
+                LaunchedEffect(anime.id) {
+                    onItemVisible?.invoke(anime)
+                }
                 VerticalAnimeListItem(
                     anime = anime,
                     metaText = metaText(anime),

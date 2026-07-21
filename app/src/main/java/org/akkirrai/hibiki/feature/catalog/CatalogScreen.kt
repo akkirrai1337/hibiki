@@ -624,7 +624,10 @@ class CatalogViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
-                    if (enriched.description.isNullOrBlank()) return@onSuccess
+                    if (enriched.description.isNullOrBlank()) {
+                        descriptionRequests.remove(anime.id)
+                        return@onSuccess
+                    }
                     _uiState.update { state ->
                         state.copy(
                             items = state.items.map { card ->

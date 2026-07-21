@@ -66,7 +66,7 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    )
+                    ).preserveLoadedDescriptions(current)
                     enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home refresh finished",
@@ -155,7 +155,10 @@ class HomeViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
-                    if (enriched.description.isNullOrBlank()) return@onSuccess
+                    if (enriched.description.isNullOrBlank()) {
+                        descriptionRequests.remove(anime.id)
+                        return@onSuccess
+                    }
                     descriptionUpdates.trySend(enriched)
                 }
                 .onFailure { descriptionRequests.remove(anime.id) }
@@ -351,7 +354,7 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    )
+                    ).preserveLoadedDescriptions(current)
                     enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home load finished",
@@ -413,10 +416,12 @@ class HomeViewModel(
         val updatedFeatured = featuredAnime.replaceDescriptions(updates)
         val updatedTrending = trending.replaceDescriptions(updates)
         val updatedRecent = recentlyUpdated.replaceDescriptions(updates)
+        val updatedSearchResult = searchResult.replaceDescriptions(updates)
         return if (
             updatedFeatured === featuredAnime &&
             updatedTrending === trending &&
-            updatedRecent === recentlyUpdated
+            updatedRecent === recentlyUpdated &&
+            updatedSearchResult === searchResult
         ) {
             this
         } else {
@@ -424,8 +429,34 @@ class HomeViewModel(
                 featuredAnime = updatedFeatured,
                 trending = updatedTrending,
                 recentlyUpdated = updatedRecent,
+                searchResult = updatedSearchResult,
             )
         }
+    }
+
+    private fun HomeUiState.preserveLoadedDescriptions(previous: HomeUiState): HomeUiState {
+        val descriptions = (previous.featuredAnime + previous.trending + previous.recentlyUpdated)
+            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
+            .toMap()
+        if (descriptions.isEmpty()) return this
+        return copy(
+            featuredAnime = featuredAnime.withDescriptions(descriptions),
+            trending = trending.withDescriptions(descriptions),
+            recentlyUpdated = recentlyUpdated.withDescriptions(descriptions),
+        )
+    }
+
+    private fun List<Anime>.withDescriptions(descriptions: Map<String, String>): List<Anime> = map { anime ->
+        if (anime.description.isNullOrBlank()) {
+            descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
+        } else {
+            anime
+        }
+    }
+
+    private fun SearchUiState.replaceDescriptions(updates: Map<String, Anime>): SearchUiState = when (this) {
+        is SearchUiState.Content -> copy(items = items.replaceDescriptions(updates))
+        else -> this
     }
 
     private fun List<Anime>.replaceDescriptions(updates: Map<String, Anime>): List<Anime> {

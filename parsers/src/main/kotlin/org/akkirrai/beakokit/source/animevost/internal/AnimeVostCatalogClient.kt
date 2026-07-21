@@ -35,14 +35,29 @@ internal class AnimeVostCatalogClient(
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
         val adapted = capabilities.adapt(request)
         val query = adapted.query.trim()
-        if (query.isBlank()) return latest(adapted.limit)
+        if (query.isBlank()) return latest(offset = adapted.offset, limit = adapted.limit)
         return parseCards(getHtml("/xfsearch/${query.encodeURLPath()}/"))
             .drop(adapted.offset.coerceAtLeast(0))
             .take(adapted.limit.coerceIn(1, MAX_RESULTS))
     }
 
-    suspend fun latest(limit: Int): List<AnimeTitle> =
-        parseCards(getHtml("/")).take(limit.coerceIn(1, MAX_RESULTS))
+    suspend fun latest(limit: Int): List<AnimeTitle> = latest(offset = 0, limit = limit)
+
+    private suspend fun latest(offset: Int, limit: Int): List<AnimeTitle> {
+        val requestedLimit = limit.coerceIn(1, MAX_RESULTS)
+        var page = offset.coerceAtLeast(0) / LISTING_PAGE_SIZE + 1
+        var skip = offset.coerceAtLeast(0) % LISTING_PAGE_SIZE
+        val result = mutableListOf<AnimeTitle>()
+        while (result.size < requestedLimit) {
+            val cards = parseCards(getHtml(if (page == 1) "/" else "/page/$page/"))
+            if (cards.isEmpty()) break
+            result += cards.drop(skip).take(requestedLimit - result.size)
+            if (cards.size < LISTING_PAGE_SIZE) break
+            page += 1
+            skip = 0
+        }
+        return result.distinctBy(AnimeTitle::id)
+    }
 
     suspend fun getById(id: String): AnimeTitle {
         val path = id.trim().takeIf(TITLE_PATH::matches)
@@ -187,6 +202,7 @@ internal class AnimeVostCatalogClient(
 
     private companion object {
         const val MAX_RESULTS = 50
+        const val LISTING_PAGE_SIZE = 10
         const val DESCRIPTION_MIN_LENGTH = 40
         const val BROWSER_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36"
         val TITLE_PATH = Regex("tip/[a-z-]+/\\d+-[^/]+\\.html")

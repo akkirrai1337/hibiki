@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -33,7 +35,8 @@ class AnimeSearchRepository(
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
-    private val detailsMutex = Mutex()
+    private val detailsMutexes = ConcurrentHashMap<String, Mutex>()
+    private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
     suspend fun search(query: String): List<Anime> {
         return search(query = query, limit = SEARCH_PAGE_SIZE, offset = 0)
@@ -94,30 +97,34 @@ class AnimeSearchRepository(
             return it
         }
 
-        return detailsMutex.withLock {
+        return detailsMutexes.computeIfAbsent(cacheKey) { Mutex() }.withLock {
             getCachedDetails(cacheKey)?.let { return@withLock it }
 
-            ensureInternetConnection()
+            detailsRequestSlots.withPermit {
+                getCachedDetails(cacheKey)?.let { return@withPermit it }
 
-            val source = sourceManager?.forTitle(id) ?: currentSource()
-            val title = runCatching { source.details(id) }
-                .getOrElse {
-                    source.search(fallback.title)
-                        .bestMatchFor(fallback.title)
-                        ?: throw it
-                }
-            val trailer = title.trailer?.toAnimeTrailer()
-            val anime = title.toAnime(
-                    canonicalId = title.id,
-                    preferEnglish = preferEnglish(),
-                    fallback = fallback,
-                    trailer = trailer ?: fallback.trailer,
+                ensureInternetConnection()
+
+                val source = sourceManager?.forTitle(id) ?: currentSource()
+                val title = runCatching { source.details(id) }
+                    .getOrElse {
+                        source.search(fallback.title)
+                            .bestMatchFor(fallback.title)
+                            ?: throw it
+                    }
+                val trailer = title.trailer?.toAnimeTrailer()
+                val anime = title.toAnime(
+                        canonicalId = title.id,
+                        preferEnglish = preferEnglish(),
+                        fallback = fallback,
+                        trailer = trailer ?: fallback.trailer,
+                    )
+
+                detailsCache[cacheKey] = CachedAnime(
+                    anime = anime,
                 )
-
-            detailsCache[cacheKey] = CachedAnime(
-                anime = anime,
-            )
-            anime
+                anime
+            }
         }
     }
 
@@ -402,6 +409,7 @@ class AnimeSearchRepository(
         const val TAG = "AnimeSearchRepository"
         const val SEARCH_CACHE_VERSION = 2
         const val SEARCH_PAGE_SIZE = 20
+        const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
         const val DETAILS_CACHE_VERSION = 1
         const val LEGACY_ID_MATCH_CONFIDENCE = 0.72
     }
