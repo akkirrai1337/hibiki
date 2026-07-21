@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -82,6 +83,7 @@ class AnimeSourceRuntime internal constructor(
 class AnimeSourceRuntimeManager(
     context: Context,
     private val client: HttpClient,
+    private val sourceHealthReporter: SourceHealthReporter = HibikiSourceHealth.store.reporter,
 ) {
     private val appContext = context.applicationContext
     private val runtimes = ConcurrentHashMap<SourceId, AnimeSourceRuntime>()
@@ -97,7 +99,7 @@ class AnimeSourceRuntimeManager(
             ?: runtime(AppPreferences.DEFAULT_ANIME_SOURCE_ID)
 
     fun runtime(sourceId: SourceId): AnimeSourceRuntime = runtimes.getOrPut(sourceId) {
-        AnimeSourceRegistry.createRuntime(appContext, client, sourceId)
+        AnimeSourceRegistry.createRuntime(appContext, client, sourceId, sourceHealthReporter)
     }
 }
 

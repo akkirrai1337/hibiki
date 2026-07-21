@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -93,6 +94,7 @@ object AnimeSourceRegistry {
         context: Context,
         client: HttpClient,
         sourceId: SourceId = AppPreferences.readState(context).animeSource,
+        sourceHealthReporter: SourceHealthReporter = HibikiSourceHealth.store.reporter,
     ): AnimeSourceRuntime {
         val appContext = context.applicationContext
         val registration = registration(sourceId)
@@ -103,6 +105,7 @@ object AnimeSourceRegistry {
                 client = client,
                 sourceId = sourceId,
                 config = createSourceConfig(appContext, sourceId),
+                sourceHealthReporter = sourceHealthReporter,
             ),
         )
         val runtime = AnimeSourceRuntime(
@@ -134,6 +137,7 @@ object AnimeSourceRegistry {
         client: HttpClient,
         sourceId: SourceId,
         config: SourceConfig = SourceConfig.EMPTY,
+        sourceHealthReporter: SourceHealthReporter,
     ): DefaultSourceContext = DefaultSourceContext(
         httpClient = client,
         preferredLanguages = listOf(catalog.require(sourceId).primaryLanguage),
@@ -147,6 +151,7 @@ object AnimeSourceRegistry {
             }
         },
         challengeSessionProvider = AndroidChallengeSessionProvider(context),
+        sourceHealthReporter = sourceHealthReporter,
     )
 
     private fun createSourceConfig(context: Context, sourceId: SourceId): SourceConfig = when (sourceId) {

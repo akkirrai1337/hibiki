@@ -59,4 +59,13 @@ class SourceHealthTest {
         assertEquals(SourceHealthCheckState.NOT_CHECKED, health.checkState)
         assertNull(health.lastError)
     }
+
+    @Test
+    fun `observable states publish completed source health`() = runBlocking {
+        val reporter = InMemorySourceHealthReporter()
+
+        reporter.track(sourceId) { "ok" }
+
+        assertEquals(SourceAvailability.AVAILABLE, reporter.states.value[sourceId]?.availability)
+    }
 }
