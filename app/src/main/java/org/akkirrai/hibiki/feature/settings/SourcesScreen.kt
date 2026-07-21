@@ -55,9 +55,11 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 fun SourcesScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedSourceOverride: SourceId? = null,
+    onSourceSelected: ((SourceId) -> Unit)? = null,
 ) {
     val preferences = LocalAppPreferences.current
-    val selectedSource = LocalAppPreferencesState.current.animeSource
+    val selectedSource = selectedSourceOverride ?: LocalAppPreferencesState.current.animeSource
     val haptic = LocalHapticFeedback.current
     val sourcesByLanguage = groupSourcesByLanguage(AnimeSourceRegistry.sources)
 
@@ -94,7 +96,7 @@ fun SourcesScreen(
                         sources = sourcesByLanguage[section.language].orEmpty(),
                         selectedSource = selectedSource,
                         onSourceSelected = { source ->
-                            preferences.setAnimeSource(source.id)
+                            onSourceSelected?.invoke(source.id) ?: preferences.setAnimeSource(source.id)
                             haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         },
                     )

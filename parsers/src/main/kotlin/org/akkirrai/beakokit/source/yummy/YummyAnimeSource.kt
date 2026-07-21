@@ -116,7 +116,7 @@ class YummyAnimeSource(
         val INFO = SourceInfo(
             id = SourceId("yummy-anime"),
             name = "YummyAnime",
-            languages = setOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            languages = setOf(SourceLanguage.RUSSIAN),
             primaryLanguage = SourceLanguage.RUSSIAN,
             capabilities = setOf(
                 SourceCapability.LATEST_RELEASES,

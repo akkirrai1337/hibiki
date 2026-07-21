@@ -37,6 +37,10 @@ class AnimeSourceRegistryTest {
             AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).info,
         )
         assertEquals(
+            setOf(SourceLanguage.RUSSIAN),
+            YummyAnimeSource.INFO.languages,
+        )
+        assertEquals(
             AnimeGoSource.INFO,
             AnimeSourceRegistry.descriptor(SourceId("animego")).info,
         )

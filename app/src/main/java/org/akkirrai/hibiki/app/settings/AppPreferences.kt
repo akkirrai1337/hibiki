@@ -30,12 +30,21 @@ enum class VideoScaleMode {
     fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
 }
 
+enum class NotificationPermissionState {
+    NOT_ASKED,
+    GRANTED,
+    DENIED,
+}
+
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useSystemColorScheme: Boolean = true,
     val useAmoledTheme: Boolean = false,
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val animeSource: SourceId = AppPreferences.DEFAULT_ANIME_SOURCE_ID,
+    val hasExplicitAnimeSource: Boolean = false,
+    val onboardingCompleted: Boolean = false,
+    val notificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     val autoSkipSegments: Boolean = false,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
@@ -45,7 +54,9 @@ data class AppPreferencesState(
 )
 
 class AppPreferences(context: Context) {
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).also { preferences ->
+        initializeOnboardingState(preferences)
+    }
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_THEME_MODE,
@@ -53,6 +64,8 @@ class AppPreferences(context: Context) {
             KEY_USE_AMOLED_THEME,
             KEY_LANGUAGE_MODE,
             KEY_ANIME_SOURCE,
+            KEY_ONBOARDING_COMPLETED,
+            KEY_NOTIFICATION_PERMISSION_STATE,
             KEY_AUTO_SKIP_SEGMENTS,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_PLAYBACK_SPEED,
@@ -91,6 +104,23 @@ class AppPreferences(context: Context) {
         prefs.edit().putString(KEY_ANIME_SOURCE, source.value).apply()
         _state.value = readState(prefs)
         _animeSourceChanges.tryEmit(source)
+    }
+
+    fun completeOnboarding(source: SourceId) {
+        prefs.edit()
+            .putString(KEY_ANIME_SOURCE, source.value)
+            .putBoolean(KEY_ONBOARDING_COMPLETED, true)
+            .apply()
+        _state.value = readState(prefs)
+        _animeSourceChanges.tryEmit(source)
+    }
+
+    fun restartOnboarding() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, false).apply()
+    }
+
+    fun setNotificationPermissionState(state: NotificationPermissionState) {
+        prefs.edit().putString(KEY_NOTIFICATION_PERMISSION_STATE, state.name).apply()
     }
 
     fun setAutoSkipSegments(enabled: Boolean) {
@@ -148,6 +178,16 @@ class AppPreferences(context: Context) {
         private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
         private const val KEY_LANGUAGE_MODE = "language_mode"
         private const val KEY_ANIME_SOURCE = "anime_source"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_NOTIFICATION_PERMISSION_STATE = "notification_permission_state"
+
+        private fun initializeOnboardingState(prefs: SharedPreferences) {
+            if (prefs.contains(KEY_ONBOARDING_COMPLETED)) return
+            // A cleared app data directory must behave like a fresh install. Existing
+            // users are recognized only when their old preferences are still present.
+            val isExistingInstall = prefs.all.isNotEmpty()
+            prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, isExistingInstall).apply()
+        }
 
         fun readState(context: Context): AppPreferencesState {
             return readState(
@@ -168,6 +208,14 @@ class AppPreferences(context: Context) {
                 animeSource = SourceId.parseStored(
                     prefs.getString(KEY_ANIME_SOURCE, DEFAULT_ANIME_SOURCE_ID.value),
                 ) ?: DEFAULT_ANIME_SOURCE_ID,
+                hasExplicitAnimeSource = prefs.contains(KEY_ANIME_SOURCE),
+                onboardingCompleted = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false),
+                notificationPermissionState = prefs
+                    .getString(KEY_NOTIFICATION_PERMISSION_STATE, NotificationPermissionState.NOT_ASKED.name)
+                    ?.let { stored ->
+                        runCatching { NotificationPermissionState.valueOf(stored) }.getOrNull()
+                    }
+                    ?: NotificationPermissionState.NOT_ASKED,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),

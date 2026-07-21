@@ -72,6 +72,8 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 @Composable
 fun HibikiApp(
     onCheckForUpdates: () -> Unit = {},
+    onConfigureNotifications: () -> Unit = {},
+    onRestartOnboarding: () -> Unit = {},
 ) {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
@@ -110,6 +112,8 @@ fun HibikiApp(
             isTopLevelDestination = isTopLevelDestination,
             currentTopLevel = currentTopLevel,
             onCheckForUpdates = onCheckForUpdates,
+            onConfigureNotifications = onConfigureNotifications,
+            onRestartOnboarding = onRestartOnboarding,
         )
     }
 }
@@ -122,6 +126,8 @@ private fun HibikiNavHost(
     isTopLevelDestination: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
     onCheckForUpdates: () -> Unit = {},
+    onConfigureNotifications: () -> Unit = {},
+    onRestartOnboarding: () -> Unit = {},
 ) {
     val baseScreenModifier = Modifier
         .fillMaxSize()
@@ -255,6 +261,8 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.SOURCES_ROUTE)
                         }
                     },
+                    onConfigureNotifications = onConfigureNotifications,
+                    onRestartOnboarding = onRestartOnboarding,
                 )
             }
         }

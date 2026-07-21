@@ -1,7 +1,16 @@
+import org.gradle.api.tasks.Copy
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization")
+}
+
+val hibikiIconResDir = layout.buildDirectory.dir("generated/res/hibikiIcon").get().asFile
+val syncHibikiIcon = tasks.register<Copy>("syncHibikiIcon") {
+    from(rootProject.file("fastlane/metadata/android/en-US/images/icon.png"))
+    into(hibikiIconResDir.resolve("drawable-nodpi"))
+    rename { "hibiki_app_icon.png" }
 }
 
 fun releaseSigningValue(name: String): String? =
@@ -20,6 +29,7 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 android {
+    sourceSets["main"].res.srcDir(hibikiIconResDir)
     namespace = "org.akkirrai.hibiki"
     compileSdk {
         version = release(37)
@@ -76,6 +86,10 @@ android {
         compose = true
         buildConfig = true
     }
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncHibikiIcon)
 }
 
 kotlin {

@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import java.io.File
 import androidx.activity.ComponentActivity
@@ -33,6 +34,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.LocalThemeMode
+import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.update.AppUpdate
@@ -41,6 +43,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
+import org.akkirrai.hibiki.feature.onboarding.FirstLaunchOnboarding
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -80,15 +83,52 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { _: Boolean -> }
+    ) { granted ->
+        appPreferences.setNotificationPermissionState(
+            if (granted) NotificationPermissionState.GRANTED else NotificationPermissionState.DENIED,
+        )
+    }
 
-    private fun requestNotificationPermissionOnFirstLaunch() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
-        val prefs = getPreferences(Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_NOTIFICATIONS_ASKED, false)) return
-        prefs.edit().putBoolean(KEY_NOTIFICATIONS_ASKED, true).apply()
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            appPreferences.setNotificationPermissionState(NotificationPermissionState.GRANTED)
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            appPreferences.setNotificationPermissionState(NotificationPermissionState.GRANTED)
+            return
+        }
         requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun configureNotifications() {
+        val state = AppPreferences.readState(this).notificationPermissionState
+        if (state == NotificationPermissionState.NOT_ASKED) {
+            requestNotificationPermission()
+        } else {
+            startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
+            )
+        }
+    }
+
+    private fun synchronizeNotificationPermissionState() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            appPreferences.setNotificationPermissionState(NotificationPermissionState.GRANTED)
+            return
+        }
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        val storedState = AppPreferences.readState(this).notificationPermissionState
+        when {
+            granted -> appPreferences.setNotificationPermissionState(NotificationPermissionState.GRANTED)
+            storedState == NotificationPermissionState.GRANTED -> {
+                appPreferences.setNotificationPermissionState(NotificationPermissionState.DENIED)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +145,7 @@ class MainActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
+        synchronizeNotificationPermissionState()
 
         setContent {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides this@MainActivity) {
@@ -115,10 +156,22 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        HibikiApp(
-                            onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                        )
-                        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
+                        if (preferences.onboardingCompleted) {
+                            HibikiApp(
+                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                onConfigureNotifications = ::configureNotifications,
+                                onRestartOnboarding = appPreferences::restartOnboarding,
+                            )
+                        } else {
+                            FirstLaunchOnboarding(
+                                initialSource = preferences.animeSource
+                                    .takeIf { preferences.hasExplicitAnimeSource },
+                                notificationPermissionState = preferences.notificationPermissionState,
+                                onRequestNotificationPermission = ::requestNotificationPermission,
+                                onComplete = appPreferences::completeOnboarding,
+                            )
+                        }
+                        if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
                             availableUpdate?.let { update ->
                                 AppUpdateDialog(
                                     update = update,
@@ -133,7 +186,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        requestNotificationPermissionOnFirstLaunch()
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
             ContextCompat.registerReceiver(
                 this,
@@ -147,6 +199,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        synchronizeNotificationPermissionState()
         requestHighestRefreshRate()
     }
 
@@ -386,7 +439,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        private const val KEY_NOTIFICATIONS_ASKED = "notifications_permission_asked"
         private const val UPDATE_PREFERENCES = "app_update"
         private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
         private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"

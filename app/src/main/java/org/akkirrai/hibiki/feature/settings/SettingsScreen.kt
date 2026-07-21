@@ -28,6 +28,8 @@ import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
@@ -82,6 +84,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
+import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
@@ -96,6 +99,8 @@ fun SettingsScreen(
     bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
     onOpenSources: () -> Unit = {},
+    onConfigureNotifications: () -> Unit = {},
+    onRestartOnboarding: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -176,7 +181,7 @@ fun SettingsScreen(
 
         item(key = "preferences") {
             SettingsSection(title = stringResource(R.string.settings_preferences)) {
-                SettingsItems(count = 2) { index, shape ->
+                SettingsItems(count = 4) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.Language,
@@ -200,6 +205,24 @@ fun SettingsScreen(
                             shape = shape,
                             showNavigationArrow = true,
                             onClick = onOpenSources,
+                        )
+
+                        2 -> SettingsActionItem(
+                            icon = Icons.Outlined.Notifications,
+                            title = stringResource(R.string.settings_notifications),
+                            subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
+                            shape = shape,
+                            showNavigationArrow = true,
+                            onClick = onConfigureNotifications,
+                        )
+
+                        3 -> SettingsActionItem(
+                            icon = Icons.Outlined.RestartAlt,
+                            title = stringResource(R.string.settings_restart_onboarding),
+                            subtitle = stringResource(R.string.settings_restart_onboarding_summary),
+                            shape = shape,
+                            showNavigationArrow = true,
+                            onClick = onRestartOnboarding,
                         )
                     }
                 }
@@ -305,6 +328,15 @@ fun SettingsScreen(
         )
     }
 }
+
+@Composable
+private fun notificationPermissionLabel(state: NotificationPermissionState): String = stringResource(
+    when (state) {
+        NotificationPermissionState.NOT_ASKED -> R.string.settings_notifications_not_asked
+        NotificationPermissionState.GRANTED -> R.string.settings_notifications_enabled
+        NotificationPermissionState.DENIED -> R.string.settings_notifications_disabled
+    },
+)
 
 @Composable
 private fun SettingsSection(
