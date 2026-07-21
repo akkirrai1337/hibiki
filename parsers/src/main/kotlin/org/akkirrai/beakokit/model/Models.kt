@@ -13,6 +13,7 @@ data class AnimeTitle(
     val posterUrl: String?,
     val status: String?,
     val description: String?,
+    /** Unix timestamp in seconds for the next scheduled episode, when the source provides one. */
     val nextEpisodeAt: Long? = null,
     val genres: List<String> = emptyList(),
     val ratings: List<TitleRating> = emptyList(),

@@ -19,6 +19,8 @@ import org.akkirrai.beakokit.model.SearchFilterOption
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URI
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 internal class AnimeVostCatalogClient(
     private val client: HttpClient,
@@ -134,6 +136,7 @@ internal class AnimeVostCatalogClient(
         val progress = EPISODE_PROGRESS.find(rawName)
         val availableEpisodes = progress?.groupValues?.getOrNull(1)?.toIntOrNull()
         val totalEpisodes = progress?.groupValues?.getOrNull(2)?.toIntOrNull()
+        val nextEpisodeAt = parseNextEpisodeAt(rawName)
         return AnimeTitle(
             id = path,
             russianName = russianName,
@@ -148,14 +151,25 @@ internal class AnimeVostCatalogClient(
                 ?.takeIf(String::isNotBlank)
                 ?.let { image -> URI(baseUrl).resolve(image).toString() },
             status = when {
-                NEXT_EPISODE.containsMatchIn(rawName) -> "ongoing"
+                nextEpisodeAt != null -> "ongoing"
                 availableEpisodes != null && totalEpisodes != null && availableEpisodes < totalEpisodes -> "ongoing"
                 totalEpisodes != null -> "released"
                 else -> null
             },
             description = document.selectFirst("meta[property='og:description']")?.attr("content")?.trim()?.takeIf(String::isNotBlank),
+            nextEpisodeAt = nextEpisodeAt,
             availableEpisodeCount = availableEpisodes,
         )
+    }
+
+    private fun parseNextEpisodeAt(rawName: String): Long? {
+        val match = NEXT_EPISODE_DATE.find(rawName) ?: return null
+        val day = match.groupValues[1].toIntOrNull() ?: return null
+        val month = RUSSIAN_MONTHS[match.groupValues[2].lowercase()] ?: return null
+        val today = LocalDate.now(ZoneOffset.UTC)
+        val date = runCatching { LocalDate.of(today.year, month, day) }.getOrNull() ?: return null
+        val nextDate = if (date.isBefore(today)) date.plusYears(1) else date
+        return nextDate.atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond
     }
 
     private fun Element.fieldValue(label: String): String? = select("p")
@@ -178,7 +192,12 @@ internal class AnimeVostCatalogClient(
         val TITLE_PATH = Regex("tip/[a-z-]+/\\d+-[^/]+\\.html")
         val EPISODE_COUNT = Regex("\\[\\s*\\d+\\s+из\\s+(\\d+)")
         val EPISODE_PROGRESS = Regex("\\[\\s*(?:\\d+\\s*-\\s*)?(\\d+)\\s+из\\s+(\\d+)")
-        val NEXT_EPISODE = Regex("\\[\\s*\\d+\\s+серия\\s*-")
+        val NEXT_EPISODE_DATE = Regex("\\[\\s*\\d+\\s+серия\\s*-\\s*(\\d{1,2})\\s+([а-яё]+)")
+        val RUSSIAN_MONTHS = mapOf(
+            "января" to 1, "февраля" to 2, "марта" to 3, "апреля" to 4,
+            "мая" to 5, "июня" to 6, "июля" to 7, "августа" to 8,
+            "сентября" to 9, "октября" to 10, "ноября" to 11, "декабря" to 12,
+        )
         val YEAR_PATH = Regex("/god/(\\d{4})/")
         val BACKGROUND_IMAGE = Regex("background-image:\\s*url\\(['\"]?([^'\")]+)")
     }

@@ -8,6 +8,8 @@ import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -73,6 +75,11 @@ class AnimeVostSourceTest {
             assertEquals("ongoing", details.status)
             assertEquals("https://animevost.test/uploads/posts/2026-07/detail.jpg", details.posterUrl)
             assertEquals("Актуальное описание тайтла.", details.description)
+            val today = LocalDate.now(ZoneOffset.UTC)
+            val expectedDate = LocalDate.of(today.year, 7, 28).let { date ->
+                if (date.isBefore(today)) date.plusYears(1) else date
+            }
+            assertEquals(expectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond, details.nextEpisodeAt)
         }
     }
 }
