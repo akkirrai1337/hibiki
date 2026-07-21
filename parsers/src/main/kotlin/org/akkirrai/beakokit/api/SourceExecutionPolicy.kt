@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 /** Public source operations governed by the shared runtime policy. */
 enum class SourceOperation {
+    HEALTH_CHECK,
     SEARCH,
     FILTER_CATALOG,
     DETAILS,

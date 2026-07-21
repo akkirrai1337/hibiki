@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.testkit
 
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.AnimeSource
+import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
@@ -44,6 +45,15 @@ class SourceTestKitTest {
 
         assertEquals("42", snapshot.details.id)
         assertEquals(listOf("42"), latest.map(AnimeTitle::id))
+    }
+
+    @Test
+    fun `health check contract runs an opt-in probe`() = runBlocking {
+        val source = FakeHealthCheckSource()
+
+        SourceTestKit.assertHealthCheckContract(source)
+
+        assertEquals(1, source.checks)
     }
 
     @Test
@@ -253,6 +263,30 @@ class SourceTestKitTest {
         override suspend fun getById(id: String): AnimeTitle = titles.first { it.id == id }
 
         override suspend fun latest(limit: Int): List<AnimeTitle> = titles.take(limit)
+    }
+
+    private class FakeHealthCheckSource : AnimeSource, HealthCheckSource {
+        var checks: Int = 0
+            private set
+
+        override val info = SourceInfo(
+            id = SourceId("health-fixture-source"),
+            name = "Health fixture",
+            languages = setOf(SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.ENGLISH,
+        )
+        override val catalogCapabilities = CatalogCapabilities(
+            supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
+            supportedFilters = emptySet(),
+        )
+
+        override suspend fun checkHealth() {
+            checks += 1
+        }
+
+        override suspend fun search(query: String): List<AnimeTitle> = emptyList()
+
+        override suspend fun getById(id: String): AnimeTitle = error("Not used")
     }
 
     private class FakePlaybackSource(

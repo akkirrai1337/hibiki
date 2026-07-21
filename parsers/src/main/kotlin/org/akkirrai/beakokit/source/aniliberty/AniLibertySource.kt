@@ -26,12 +26,13 @@ import org.akkirrai.beakokit.api.ConfigurableSource
 import org.akkirrai.beakokit.api.SourceConfigField
 import org.akkirrai.beakokit.api.SourceConfigSchema
 import org.akkirrai.beakokit.api.SourceConfigValueKind
+import org.akkirrai.beakokit.api.HealthCheckSource
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 @SourceEntry(id = "ani-liberty", order = 1)
 class AniLibertySource(
     context: SourceContext,
-) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource {
+) : AnimeSource, LatestSource, PlaybackSource, ConfigurableSource, HealthCheckSource {
     private val execution = context.sourceExecutionPolicy
     private val baseUrls = context.config.value(BASE_URLS_KEY)
         ?.split(',')
@@ -51,6 +52,13 @@ class AniLibertySource(
     override val configSchema: SourceConfigSchema = CONFIG_SCHEMA
     override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
+
+    override suspend fun checkHealth() {
+        execution.execute(INFO.id, SourceOperation.HEALTH_CHECK) {
+            // The public latest endpoint is small, read-only and served by the same API mirrors.
+            metadata.latest(limit = 1)
+        }
+    }
 
     override suspend fun search(query: String): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH, "query:$query", SourceCacheTtl.SEARCH_MILLIS) { metadata.search(query) }
 

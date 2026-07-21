@@ -7,6 +7,7 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.api.AnimeSource
+import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
@@ -46,6 +47,13 @@ object SourceTestKit {
         assertContract(source.info.id == expectedId) {
             "Expected source id $expectedId, got ${source.info.id}"
         }
+    }
+
+    /** Runs an opt-in lightweight source availability check without assuming every source supports it. */
+    suspend fun assertHealthCheckContract(source: AnimeSource) {
+        val healthCheck = source as? HealthCheckSource
+            ?: throw AssertionError("${source.info.id} does not implement HealthCheckSource")
+        healthCheck.checkHealth()
     }
 
     suspend fun assertCatalogContract(

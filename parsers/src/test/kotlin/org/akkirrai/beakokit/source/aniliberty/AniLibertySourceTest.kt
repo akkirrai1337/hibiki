@@ -79,6 +79,7 @@ class AniLibertySourceTest {
         ).use { host ->
             val source = AniLibertySource(host.context)
 
+            SourceTestKit.assertHealthCheckContract(source)
             val catalog = SourceTestKit.assertCatalogContract(
                 source,
                 AnimeSearchRequest(query = "Test", limit = 5),
