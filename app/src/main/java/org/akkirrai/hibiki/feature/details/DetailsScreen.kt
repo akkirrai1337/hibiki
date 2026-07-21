@@ -413,7 +413,6 @@ fun DetailsScreen(
                     is RelatedSection -> {
                         RelatedAnimeList(
                             items = section.items,
-                            currentAnime = uiModel.anime,
                             title = stringResource(R.string.details_related),
                             onAnimeClick = onRelatedAnimeClick,
                         )
@@ -1502,16 +1501,12 @@ private fun GenresSection(
 @Composable
 private fun RelatedAnimeList(
     items: List<RelatedAnime>,
-    currentAnime: Anime? = null,
     title: String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val displayItems = remember(items, currentAnime) {
-        listOfNotNull(currentAnime?.toRelatedAnime()) +
-            items.filterNot { it.id == currentAnime?.id }
-    }
+    val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(32.dp))
         DetailSectionTitle(
@@ -1923,19 +1918,6 @@ private fun RelatedAnime.toAnime(): Anime = Anime(
     posterUrl = posterUrl,
     posterFallbackUrl = posterFallbackUrl
 )
-
-private fun Anime.toRelatedAnime(): RelatedAnime {
-    val metadata = subtitle.split('•').map(String::trim)
-    return RelatedAnime(
-        id = id,
-        title = title,
-        posterUrl = posterUrl,
-        posterFallbackUrl = posterFallbackUrl,
-        type = metadata.firstOrNull(),
-        year = metadata.firstOrNull { it.length == 4 && it.all(Char::isDigit) }?.toIntOrNull(),
-        status = status,
-    )
-}
 
 private suspend fun extractTitleSeedColor(
     context: Context,
