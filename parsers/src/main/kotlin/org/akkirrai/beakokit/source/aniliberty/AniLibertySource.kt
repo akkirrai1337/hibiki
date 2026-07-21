@@ -21,6 +21,7 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceEntry
 import org.akkirrai.beakokit.api.SourceOperation
+import org.akkirrai.beakokit.api.SourceCacheTtl
 
 /** First source packaged around the BeakoKit contract instead of host-side registration metadata. */
 @SourceEntry(id = "ani-liberty", order = 1)
@@ -46,22 +47,22 @@ class AniLibertySource(
     override val catalogCapabilities: CatalogCapabilities
         get() = metadata.capabilities
 
-    override suspend fun search(query: String): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH) { metadata.search(query) }
+    override suspend fun search(query: String): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH, "query:$query", SourceCacheTtl.SEARCH_MILLIS) { metadata.search(query) }
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH) { metadata.search(request) }
+    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH, "request:$request", SourceCacheTtl.SEARCH_MILLIS) { metadata.search(request) }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog =
-        execution.execute(INFO.id, SourceOperation.FILTER_CATALOG) { metadata.getSearchFilterCatalog() }
+        execution.execute(INFO.id, SourceOperation.FILTER_CATALOG, "default", SourceCacheTtl.FILTER_CATALOG_MILLIS) { metadata.getSearchFilterCatalog() }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.LATEST) { metadata.latest(limit) }
+    override suspend fun latest(limit: Int): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.LATEST, "limit:$limit", SourceCacheTtl.LATEST_MILLIS) { metadata.latest(limit) }
 
-    override suspend fun getById(id: String): AnimeTitle = execution.execute(INFO.id, SourceOperation.DETAILS) { metadata.getById(id) }
+    override suspend fun getById(id: String): AnimeTitle = execution.execute(INFO.id, SourceOperation.DETAILS, id, SourceCacheTtl.DETAILS_MILLIS) { metadata.getById(id) }
 
-    suspend fun weeklySchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE) { metadata.weeklySchedule() }
+    suspend fun weeklySchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE, "weekly", SourceCacheTtl.SCHEDULE_MILLIS) { metadata.weeklySchedule() }
 
-    suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE) { metadata.currentSchedule() }
+    suspend fun currentSchedule(): List<AniLibertyScheduleEntry> = execution.execute(INFO.id, SourceOperation.SCHEDULE, "current", SourceCacheTtl.SCHEDULE_MILLIS) { metadata.currentSchedule() }
 
-    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = execution.execute(INFO.id, SourceOperation.PLAYBACK_GROUPS) {
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = execution.execute(INFO.id, SourceOperation.PLAYBACK_GROUPS, title.id, SourceCacheTtl.PLAYBACK_GROUPS_MILLIS) {
         val match = playbackProvider.search(title).maxByOrNull(ProviderMatch::confidence)
             ?: return@execute emptyList()
         val episodes = playbackProvider.getEpisodes(match)

@@ -7,6 +7,7 @@ import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceExecutionPolicy
 import org.akkirrai.beakokit.api.ResilientSourceExecutionPolicy
+import org.akkirrai.beakokit.api.CachingSourceExecutionPolicy
 
 /** Application-owned, shared state for health reported by every built-in source runtime. */
 class AnimeSourceHealthStore(
@@ -18,7 +19,9 @@ class AnimeSourceHealthStore(
     val reporter: SourceHealthReporter
         get() = delegate
 
-    val executionPolicy: SourceExecutionPolicy = ResilientSourceExecutionPolicy(delegate)
+    val executionPolicy: SourceExecutionPolicy = CachingSourceExecutionPolicy(
+        delegate = ResilientSourceExecutionPolicy(delegate),
+    )
 
     fun health(sourceId: SourceId): SourceHealth = delegate.health(sourceId)
 }

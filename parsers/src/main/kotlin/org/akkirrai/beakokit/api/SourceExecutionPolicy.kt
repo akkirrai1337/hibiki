@@ -24,6 +24,15 @@ interface SourceExecutionPolicy {
         block: suspend () -> T,
     ): T
 
+    /** Optional safe-result cache hook. Callers must not use it for personalised or expiring URLs. */
+    suspend fun <T> execute(
+        sourceId: SourceId,
+        operation: SourceOperation,
+        cacheKey: String,
+        cacheTtlMillis: Long,
+        block: suspend () -> T,
+    ): T = execute(sourceId, operation, block)
+
     companion object {
         val NONE: SourceExecutionPolicy = object : SourceExecutionPolicy {
             override suspend fun <T> execute(

@@ -11,6 +11,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceOperation
+import org.akkirrai.beakokit.api.SourceCacheTtl
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -40,9 +41,9 @@ class AnimePaheSource(
         get() = client.capabilities
 
     override suspend fun search(query: String): List<AnimeTitle> =
-        execution.execute(INFO.id, SourceOperation.SEARCH) { client.search(AnimeSearchRequest(query = query)) }
+        execution.execute(INFO.id, SourceOperation.SEARCH, "query:$query", SourceCacheTtl.SEARCH_MILLIS) { client.search(AnimeSearchRequest(query = query)) }
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH) { client.search(request) }
+    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.SEARCH, "request:$request", SourceCacheTtl.SEARCH_MILLIS) { client.search(request) }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog =
         AnimeSearchFilterCatalog(
@@ -50,11 +51,11 @@ class AnimePaheSource(
             capabilities = client.capabilities,
         )
 
-    override suspend fun getById(id: String): AnimeTitle = execution.execute(INFO.id, SourceOperation.DETAILS) { client.getById(id) }
+    override suspend fun getById(id: String): AnimeTitle = execution.execute(INFO.id, SourceOperation.DETAILS, id, SourceCacheTtl.DETAILS_MILLIS) { client.getById(id) }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.LATEST) { client.latest(limit) }
+    override suspend fun latest(limit: Int): List<AnimeTitle> = execution.execute(INFO.id, SourceOperation.LATEST, "limit:$limit", SourceCacheTtl.LATEST_MILLIS) { client.latest(limit) }
 
-    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = execution.execute(INFO.id, SourceOperation.PLAYBACK_GROUPS) {
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = execution.execute(INFO.id, SourceOperation.PLAYBACK_GROUPS, title.id, SourceCacheTtl.PLAYBACK_GROUPS_MILLIS) {
         val episodes = client.getEpisodes(title.id)
         if (episodes.isEmpty()) emptyList() else listOf(
             PlaybackGroup(id = title.id, title = "English dub", episodes = episodes),
