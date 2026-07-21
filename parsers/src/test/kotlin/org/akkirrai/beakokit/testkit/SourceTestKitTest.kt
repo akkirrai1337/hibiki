@@ -184,13 +184,23 @@ class SourceTestKitTest {
         val richTitle = title("42").copy(
             description = "Fixture description",
             posterUrl = "https://images.test/poster.jpg",
+            status = "ongoing",
+            episodeCount = 12,
+            availableEpisodeCount = 3,
+            nextEpisodeAt = 1_784_160_000L,
         )
 
         val details = SourceTestKit.assertDetailsMetadataContract(
             source = FakeCatalogSource(listOf(richTitle)),
             id = "42",
-            requireDescription = true,
-            requirePoster = true,
+            requirements = TitleMetadataRequirements(
+                description = true,
+                poster = true,
+                releaseStatus = true,
+                episodeCount = true,
+                availableEpisodeCount = true,
+                nextEpisodeAt = true,
+            ),
         )
 
         assertEquals("Fixture description", details.description)

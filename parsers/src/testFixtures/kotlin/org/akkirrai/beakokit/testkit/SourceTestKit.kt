@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
@@ -16,6 +17,17 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.ResolvedPlaybackStream
 import kotlin.reflect.KClass
+import java.net.URI
+
+/** Source-specific details fields that a fixture is expected to provide. */
+data class TitleMetadataRequirements(
+    val description: Boolean = false,
+    val poster: Boolean = false,
+    val releaseStatus: Boolean = false,
+    val episodeCount: Boolean = false,
+    val availableEpisodeCount: Boolean = false,
+    val nextEpisodeAt: Boolean = false,
+)
 
 data class PlaybackContractSnapshot(
     val groups: List<PlaybackGroup>,
@@ -209,21 +221,57 @@ object SourceTestKit {
         requirePoster: Boolean = false,
     ): AnimeTitle {
         val details = assertDetailsContract(source, id)
-        return assertTitleMetadataContract(details, requireDescription, requirePoster)
+        return assertTitleMetadataContract(
+            details,
+            TitleMetadataRequirements(description = requireDescription, poster = requirePoster),
+        )
     }
+
+    suspend fun assertDetailsMetadataContract(
+        source: AnimeSource,
+        id: String,
+        requirements: TitleMetadataRequirements,
+    ): AnimeTitle = assertTitleMetadataContract(assertDetailsContract(source, id), requirements)
 
     fun assertTitleMetadataContract(
         details: AnimeTitle,
         requireDescription: Boolean = false,
         requirePoster: Boolean = false,
+    ): AnimeTitle = assertTitleMetadataContract(
+        details,
+        TitleMetadataRequirements(description = requireDescription, poster = requirePoster),
+    )
+
+    fun assertTitleMetadataContract(
+        details: AnimeTitle,
+        requirements: TitleMetadataRequirements,
     ): AnimeTitle {
         val description = details.description?.trim()
         val poster = details.posterUrl?.trim()
-        assertContract(!requireDescription || !description.isNullOrBlank()) {
+        assertContract(!requirements.description || !description.isNullOrBlank()) {
             "Details for ${details.id} must include a description"
         }
-        assertContract(!requirePoster || !poster.isNullOrBlank()) {
+        assertContract(!requirements.poster || !poster.isNullOrBlank()) {
             "Details for ${details.id} must include a poster URL"
+        }
+        assertContract(!requirements.poster || poster.isHttpUrl()) {
+            "Details for ${details.id} must include an absolute HTTP(S) poster URL"
+        }
+        assertContract(!requirements.releaseStatus || details.releaseStatus != AnimeReleaseStatus.UNKNOWN) {
+            "Details for ${details.id} must include a known release status"
+        }
+        assertContract(!requirements.episodeCount || details.episodeCount?.let { it > 0 } == true) {
+            "Details for ${details.id} must include a positive episode count"
+        }
+        assertContract(!requirements.availableEpisodeCount || details.availableEpisodeCount?.let { it >= 0 } == true) {
+            "Details for ${details.id} must include the available episode count"
+        }
+        val availableEpisodes = details.availableEpisodeCount
+        assertContract(!requirements.availableEpisodeCount || details.episodeCount == null || availableEpisodes!! <= details.episodeCount) {
+            "Details for ${details.id} report more available episodes than total episodes"
+        }
+        assertContract(!requirements.nextEpisodeAt || details.nextEpisodeAt.isEpochSeconds()) {
+            "Details for ${details.id} must include nextEpisodeAt as a Unix timestamp in seconds"
         }
         return details
     }
@@ -272,6 +320,15 @@ object SourceTestKit {
         val links = playback.getPlayerLinks(title, firstGroup, firstGroup.episodes.first())
         assertContract(links.isNotEmpty()) { "Playback source returned no links for its first episode" }
         assertContract(links.all { it.url.isNotBlank() }) { "Player links must have non-blank URLs" }
+        links.forEach { link ->
+            val uri = runCatching { URI(link.url) }.getOrNull()
+            assertContract(uri?.isAbsolute == true && uri.host != null && uri.scheme in setOf("http", "https")) {
+                "Player link must be an absolute HTTP(S) URL: ${link.url}"
+            }
+            assertContract(uri!!.scheme != "http" || uri.host in source.info.networkRequirements.cleartextPlaybackHosts) {
+                "Source ${source.info.id} returned cleartext playback host ${uri.host} without declaring it"
+            }
+        }
         return PlaybackContractSnapshot(groups, links)
     }
 
@@ -351,6 +408,16 @@ object SourceTestKit {
             "Source returned a blank poster URL for ${title.id} in $label"
         }
     }
+
+    private fun String?.isHttpUrl(): Boolean = runCatching {
+        val uri = URI(this)
+        uri.isAbsolute && uri.host != null && uri.scheme in setOf("http", "https")
+    }.getOrDefault(false)
+
+    private fun Long?.isEpochSeconds(): Boolean = this != null && this in MIN_EPOCH_SECONDS..MAX_EPOCH_SECONDS
+
+    private const val MIN_EPOCH_SECONDS = 946_684_800L // 2000-01-01
+    private const val MAX_EPOCH_SECONDS = 4_102_444_800L // 2100-01-01
 
     private inline fun assertContract(condition: Boolean, lazyMessage: () -> String) {
         if (!condition) throw AssertionError(lazyMessage())

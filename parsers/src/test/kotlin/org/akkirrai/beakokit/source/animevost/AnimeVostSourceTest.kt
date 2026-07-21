@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
+import org.akkirrai.beakokit.testkit.TitleMetadataRequirements
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.test.Test
@@ -22,7 +23,7 @@ class AnimeVostSourceTest {
                 FixtureRoute.fromResource("/", "beakokit/animevost/latest.html"),
                 FixtureRoute.fromResource("/xfsearch/naruto/", "beakokit/animevost/search.html"),
                 FixtureRoute.fromResource("/tip/tv/123-naruto.html", "beakokit/animevost/details.html"),
-                FixtureRoute.fromResource("/v1/playlist", "beakokit/animevost/playlist.json", method = io.ktor.http.HttpMethod.Post),
+                FixtureRoute.fromResource("/v1/playlist", "beakokit/animevost/playlist-http.json", method = io.ktor.http.HttpMethod.Post),
             ),
             preferredLanguages = listOf(SourceLanguage.RUSSIAN),
             values = mapOf(
@@ -43,7 +44,7 @@ class AnimeVostSourceTest {
             assertEquals(listOf("tip/tv/123-naruto.html"), latest.map { it.id })
             assertEquals(2, playback.groups.single().episodes.size)
             assertEquals(PlayerType.DIRECT_MP4, playback.firstEpisodeLinks.first().type)
-            assertEquals("https://video.animevost.test/720/episode-1.mp4", playback.firstEpisodeLinks.first().url)
+            assertEquals("http://video.animetop.info/720/episode-1.mp4", playback.firstEpisodeLinks.first().url)
         }
     }
 
@@ -56,6 +57,7 @@ class AnimeVostSourceTest {
                     "/tip/tv/3982-sora-wa-akai-kawa-no-hotori.html",
                     "beakokit/animevost/details-current.html",
                 ),
+                FixtureRoute.fromResource("/page/2/", "beakokit/animevost/latest-page-2.html"),
             ),
             preferredLanguages = listOf(SourceLanguage.RUSSIAN),
             values = mapOf(AnimeVostConfig.BASE_URL to "https://animevost.test"),
@@ -69,7 +71,18 @@ class AnimeVostSourceTest {
             assertEquals(listOf("Драма"), title.genres)
             assertNotNull(title.russianName)
 
-            val details = AnimeVostSource(host.context).getById(title.id)
+            val details = SourceTestKit.assertDetailsMetadataContract(
+                source = AnimeVostSource(host.context),
+                id = title.id,
+                requirements = TitleMetadataRequirements(
+                    description = true,
+                    poster = true,
+                    releaseStatus = true,
+                    episodeCount = true,
+                    availableEpisodeCount = true,
+                    nextEpisodeAt = true,
+                ),
+            )
             assertEquals(12, details.episodeCount)
             assertEquals(3, details.availableEpisodeCount)
             assertEquals("ongoing", details.status)
@@ -80,21 +93,13 @@ class AnimeVostSourceTest {
                 if (date.isBefore(today)) date.plusYears(1) else date
             }
             assertEquals(expectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond, details.nextEpisodeAt)
-        }
-    }
 
-    @Test
-    fun `blank catalog request uses AnimeVost listing pages for its offset`() = runBlocking {
-        SourceFixtureHost(
-            routes = listOf(
-                FixtureRoute.fromResource("/page/2/", "beakokit/animevost/latest-page-2.html"),
-            ),
-            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
-            values = mapOf(AnimeVostConfig.BASE_URL to "https://animevost.test"),
-        ).use { host ->
-            val results = AnimeVostSource(host.context).search(AnimeSearchRequest(offset = 10, limit = 1))
-
-            assertEquals(listOf("tip/tv/3908-gaikotsu-kishi-sama-2.html"), results.map { it.id })
+            val pagination = SourceTestKit.assertPaginationContract(
+                source = AnimeVostSource(host.context),
+                request = AnimeSearchRequest(limit = 10),
+            )
+            assertEquals(listOf("tip/tv/3982-sora-wa-akai-kawa-no-hotori.html"), pagination.firstPage.map { it.id })
+            assertEquals(listOf("tip/tv/3908-gaikotsu-kishi-sama-2.html"), pagination.secondPage.map { it.id })
         }
     }
 }

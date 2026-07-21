@@ -16,6 +16,7 @@ import org.akkirrai.beakokit.api.SourceEntry
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceNetworkRequirements
 import org.akkirrai.beakokit.api.SourceOperation
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -102,6 +103,9 @@ class AnimeVostSource(
             website = DEFAULT_BASE_URL,
             iconUrl = "$DEFAULT_BASE_URL/favicon.ico",
             capabilities = setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
+            networkRequirements = SourceNetworkRequirements(
+                cleartextPlaybackHosts = setOf("video.animetop.info"),
+            ),
         )
     }
 }

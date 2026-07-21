@@ -20,6 +20,22 @@ value class SourceLanguage(val tag: String) {
     }
 }
 
+/** Platform-neutral network requirements that a host must explicitly approve. */
+data class SourceNetworkRequirements(
+    /** Hosts from which this source may intentionally return cleartext HTTP playback URLs. */
+    val cleartextPlaybackHosts: Set<String> = emptySet(),
+) {
+    init {
+        require(cleartextPlaybackHosts.all { host -> HOST_PATTERN.matches(host) }) {
+            "Cleartext playback hosts must be lowercase host names"
+        }
+    }
+
+    companion object {
+        private val HOST_PATTERN = Regex("[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+")
+    }
+}
+
 /** Platform-neutral metadata that can move with a source into a standalone repository. */
 data class SourceInfo(
     val id: SourceId,
@@ -30,6 +46,7 @@ data class SourceInfo(
     /** HTTPS URL of an icon hosted by the source website. */
     val iconUrl: String? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
+    val networkRequirements: SourceNetworkRequirements = SourceNetworkRequirements(),
 ) {
     init {
         require(name.isNotBlank()) { "Source name must not be blank" }
