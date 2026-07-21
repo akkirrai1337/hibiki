@@ -126,7 +126,12 @@ private fun formatEpochDateShort(resources: Resources, value: Long): String {
         daysAgo <= 0 -> resources.getString(R.string.local_profile_date_today)
         daysAgo == 1 -> resources.getString(R.string.local_profile_date_yesterday)
         daysAgo < 7 -> resources.getString(R.string.local_profile_date_days_ago_short, daysAgo)
-        else -> date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
+        else -> date.format(
+            DateTimeFormatter.ofPattern(
+                "d MMM",
+                resources.configuration.locales[0] ?: Locale.getDefault(),
+            )
+        )
     }
 }
 

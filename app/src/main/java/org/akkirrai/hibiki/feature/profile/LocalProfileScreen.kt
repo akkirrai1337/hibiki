@@ -77,6 +77,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
 
 private enum class LocalProfileTab(val titleRes: Int) {
@@ -105,7 +107,13 @@ fun LocalProfileScreen(
         uri?.let { viewModel.updateProfileAvatar(it.toString()) }
     }
     val context = LocalContext.current
-    val snapshot = remember(context.resources, state.data) { buildProfileSnapshot(context.resources, state.data) }
+    val appLanguage = LocalAppLanguage.current
+    val localizedResources = remember(context, appLanguage) {
+        context.withLanguage(appLanguage).resources
+    }
+    val snapshot = remember(localizedResources, state.data) {
+        buildProfileSnapshot(localizedResources, state.data)
+    }
     val pagerState = rememberPagerState(pageCount = { LocalProfileTab.entries.size })
     val scope = rememberCoroutineScope()
     val statusInsets = WindowInsets.statusBars.asPaddingValues()
