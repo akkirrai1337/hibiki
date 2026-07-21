@@ -294,6 +294,13 @@ class HomeRepository(
         }
     }
 
+    suspend fun enrichDescription(anime: Anime): Anime {
+        val description = currentSource().details(anime.id).description
+            ?.takeIf(String::isNotBlank)
+            ?: return anime
+        return anime.copy(description = description)
+    }
+
     private fun toHomeAnime(title: AnimeTitle): Anime {
         val subtitle = buildList {
             title.type?.toDisplayType()?.let(::add)

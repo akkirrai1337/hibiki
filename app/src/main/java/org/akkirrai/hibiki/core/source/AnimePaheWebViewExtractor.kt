@@ -51,9 +51,16 @@ class AnimePaheWebViewExtractor(
         var settle: Runnable? = null
 
         fun destroy() {
-            webView?.stopLoading()
-            webView?.destroy()
-            webView = null
+            fun destroyOnMain() {
+                webView?.stopLoading()
+                webView?.destroy()
+                webView = null
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                destroyOnMain()
+            } else {
+                handler.post(::destroyOnMain)
+            }
         }
 
         fun deliver(result: CapturedStream?) {

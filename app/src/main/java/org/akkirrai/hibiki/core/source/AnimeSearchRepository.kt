@@ -58,7 +58,10 @@ class AnimeSearchRepository(
 
         val preferEnglish = preferEnglish()
         val results = currentSource().search(normalizedRequest)
-            .map { title -> title.toAnime(preferEnglish = preferEnglish) }
+            .map { title ->
+                getCachedDetails(detailsCacheKey(title.id))
+                    ?: title.toAnime(preferEnglish = preferEnglish)
+            }
 
         searchCache[cacheKey] = CachedSearchResults(items = results)
         return results

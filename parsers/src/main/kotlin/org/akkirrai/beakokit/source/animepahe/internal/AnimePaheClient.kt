@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -36,6 +37,7 @@ internal class AnimePaheClient(
 ) {
     private val http = AnimePaheHttpClient(client, sessionProvider)
     private val summaries = ConcurrentHashMap<String, AnimeTitle>()
+    private val dubPlayerIds = ConcurrentHashMap<String, String>()
 
     val capabilities = CatalogCapabilities(
         supportedSorts = setOf(AnimeSearchSort.RELEVANCE),
@@ -67,6 +69,18 @@ internal class AnimePaheClient(
     suspend fun getEpisodes(titleId: String): List<Episode> {
         val session = sessionId(titleId)
         val firstPage = releasePage(session, 1)
+        val firstEpisodeSession = firstPage.array("data").orEmpty()
+            .asSequence()
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { it.string("session") }
+            .firstOrNull()
+        if (firstEpisodeSession != null) {
+            val playHtml = http.get(url("/play/$session/$firstEpisodeSession")) {
+                header(HttpHeaders.Referrer, url("/anime/$session"))
+            }
+            parseDubEpisodes(playHtml, session).takeIf(List<Episode>::isNotEmpty)?.let { return it }
+        }
+
         val episodes = mutableListOf<Episode>()
         var page = 1
         var root = firstPage
@@ -87,7 +101,7 @@ internal class AnimePaheClient(
             header(HttpHeaders.Referrer, url("/play/${episode.id}"))
             header(X_REQUESTED_WITH, XML_HTTP_REQUEST)
         })
-        return root.array("servers").orEmpty().mapNotNull { element ->
+        val links = root.array("servers").orEmpty().mapNotNull { element ->
             val server = element as? JsonObject ?: return@mapNotNull null
             val name = server.string("name") ?: return@mapNotNull null
             if (!name.startsWith("Dub-", ignoreCase = true)) return@mapNotNull null
@@ -101,6 +115,10 @@ internal class AnimePaheClient(
                 translation = "English dub",
             )
         }.distinctBy(PlayerLink::url)
+        if (links.isNotEmpty()) return links
+
+        val playerId = dubPlayerIds[episodeSession] ?: loadDubPlayerId(episode)
+        return playerId?.let { synthesizeDubLinks(it, endpoint) }.orEmpty()
     }
 
     private suspend fun loadHtmlPages(
@@ -166,7 +184,10 @@ internal class AnimePaheClient(
 
     private fun parseDetails(id: String, html: String): AnimeTitle {
         val document = Jsoup.parse(html, baseUrl)
-        val name = document.selectFirst(".page-detail h1 span, .page-detail h1")?.text()?.trim()
+        val name = document.selectFirst(".page-detail h1 > span:not(.sr-only)")?.text()?.trim()
+            ?: document.selectFirst(".page-detail h1")?.let { heading ->
+                heading.clone().also { it.select(".sr-only").remove() }.text().trim()
+            }
             ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
             ?: summaries[id]?.originalName
             ?: throw SourceException("AnimePahe title is missing for $id", kind = SourceErrorKind.PARSE)
@@ -194,6 +215,47 @@ internal class AnimePaheClient(
             description = document.selectFirst(".anime-synopsis")?.text()?.trim()?.takeIf(String::isNotBlank),
             genres = document.select(".anime-genre a").map { it.text().trim() }.filter(String::isNotBlank),
             studios = info?.select("a[href*=/studio/]")?.map { it.text().trim() }?.filter(String::isNotBlank).orEmpty(),
+        )
+    }
+
+    private fun parseDubEpisodes(html: String, titleSession: String): List<Episode> {
+        val arrayText = PLAY_EPISODES.find(html)?.groupValues?.getOrNull(1) ?: return emptyList()
+        val array = runCatching { JSON.parseToJsonElement(arrayText) as? JsonArray }.getOrNull() ?: return emptyList()
+        return array.mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            if (item.boolean("is_dub") != true && !item.hasDubMainServer()) return@mapNotNull null
+            val session = item.string("md5_id") ?: return@mapNotNull null
+            val number = item.number("chapter_number") ?: return@mapNotNull null
+            item.string("s_id")?.let { dubPlayerIds[session] = it }
+            Episode(
+                id = "$titleSession/$session",
+                number = number,
+                title = item.string("title"),
+            )
+        }.distinctBy(Episode::id).sortedBy(Episode::number)
+    }
+
+    private suspend fun loadDubPlayerId(episode: Episode): String? {
+        val titleSession = episode.id.substringBefore('/').takeIf(SESSION_ID::matches) ?: return null
+        val episodeSession = episode.id.substringAfter('/', "").takeIf(SESSION_ID::matches) ?: return null
+        val playHtml = http.get(url("/play/$titleSession/$episodeSession")) {
+            header(HttpHeaders.Referrer, url("/anime/$titleSession"))
+        }
+        parseDubEpisodes(playHtml, titleSession)
+        return dubPlayerIds[episodeSession]
+    }
+
+    private fun synthesizeDubLinks(playerId: String, endpoint: String): List<PlayerLink> = listOf(
+        "Megaplay" to "https://megaplay.buzz/stream/s-2/$playerId/dub",
+        "Vidplay" to "https://vidwish.live/stream/s-2/$playerId/dub",
+    ).map { (name, playerUrl) ->
+        PlayerLink(
+            url = playerUrl,
+            type = PlayerType.EMBED,
+            quality = null,
+            headers = mapOf(HttpHeaders.Referrer to endpoint),
+            playerName = name,
+            translation = "English dub",
         )
     }
 
@@ -245,6 +307,12 @@ internal class AnimePaheClient(
         ?.jsonPrimitive?.contentOrNull?.trim()?.takeIf(String::isNotBlank)
     private fun JsonObject.int(name: String): Int? = get(name)?.jsonPrimitive?.intOrNull
     private fun JsonObject.number(name: String): Double? = get(name)?.jsonPrimitive?.doubleOrNull
+    private fun JsonObject.boolean(name: String): Boolean? = get(name)?.jsonPrimitive?.booleanOrNull
+    private fun JsonObject.hasDubMainServer(): Boolean {
+        val servers = string("main_servers") ?: return false
+        val root = runCatching { JSON.parseToJsonElement(servers) as? JsonObject }.getOrNull() ?: return false
+        return root.array("dub").orEmpty().isNotEmpty()
+    }
     private fun JsonObject.array(name: String): JsonArray? = get(name) as? JsonArray
 
     private fun sessionId(id: String): String = id.trim().trim('/').substringBefore('/')
@@ -264,6 +332,7 @@ internal class AnimePaheClient(
         val YEAR = Regex("(?:19|20)\\d{2}")
         const val X_REQUESTED_WITH = "X-Requested-With"
         const val XML_HTTP_REQUEST = "XMLHttpRequest"
+        val PLAY_EPISODES = Regex("allEpisodes:\\s*(\\[.*?])\\s*,\\s*episodesPerDropdown", RegexOption.DOT_MATCHES_ALL)
         val JSON = Json { ignoreUnknownKeys = true; isLenient = true }
     }
 }

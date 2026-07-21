@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.PerfLogger
+import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
 
@@ -86,6 +88,7 @@ class HomeViewModel(
 
     private var searchJob: Job? = null
     private var recentDescriptionsJob: Job? = null
+    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
     private val recentRandomIds = ArrayDeque<String>()
 
     fun onSearchQueryChange(value: String) {
@@ -141,6 +144,24 @@ class HomeViewModel(
 
             _uiState.update { it.copy(searchResult = SearchUiState.Loading) }
             loadFirstSearchPage(activeQuery, activeFilters)
+        }
+    }
+
+    fun enrichDescription(anime: Anime) {
+        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { repository.enrichDescription(anime) }
+                .onSuccess { enriched ->
+                    if (enriched.description.isNullOrBlank()) return@onSuccess
+                    _uiState.update { state ->
+                        state.copy(
+                            featuredAnime = state.featuredAnime.replace(enriched),
+                            trending = state.trending.replace(enriched),
+                            recentlyUpdated = state.recentlyUpdated.replace(enriched),
+                        )
+                    }
+                }
+                .onFailure { descriptionRequests.remove(anime.id) }
         }
     }
 
@@ -374,6 +395,10 @@ class HomeViewModel(
         recentDescriptionsJob?.cancel()
         repository.close()
         super.onCleared()
+    }
+
+    private fun List<Anime>.replace(enriched: Anime): List<Anime> = map { anime ->
+        if (anime.id == enriched.id) enriched else anime
     }
 
     private fun observeLanguageChanges() {

@@ -1789,8 +1789,7 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
     val year = parts.getOrNull(1).orEmpty()
 
     val rawEpisodes = anime.episodesLabel
-        .replace("episodes", localizedEpisodeWord, ignoreCase = true)
-        .replace("episode", localizedEpisodeWord, ignoreCase = true)
+        .replace(Regex("\\bepisodes?\\b", RegexOption.IGNORE_CASE), localizedEpisodeWord)
         .takeIf { it.isNotBlank() && it != UNKNOWN_VALUE }
         .orEmpty()
 

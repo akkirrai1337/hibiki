@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
@@ -24,7 +25,9 @@ class AnimePaheSourceTest {
                 jsonRoute("/viewApi", "releases-1.json", mapOf("m" to "release", "id" to "test-session", "page" to "1")),
                 htmlRoute("/anime/test-session", "details.html"),
                 htmlRoute("/anime/another-session", "another-details.html"),
+                htmlRoute("/play/test-session/episode-one", "play.html"),
                 jsonRoute("/anime/get-servers/episode-one", "servers.json"),
+                jsonRoute("/anime/get-servers/episode-two", "servers-sub-only.json"),
             ),
             preferredLanguages = listOf(SourceLanguage.ENGLISH),
             values = mapOf(AnimePaheConfig.BASE_URL to "https://animepahe.test"),
@@ -47,12 +50,23 @@ class AnimePaheSourceTest {
             assertEquals("test-session", catalog.details.id)
             assertEquals("Test Show", catalog.details.originalName)
             assertEquals("A fixture synopsis for AnimePahe.", catalog.details.description)
+            assertEquals(2, catalog.details.episodeCount)
+            assertEquals(AnimeReleaseStatus.RELEASED, catalog.details.releaseStatus)
             assertEquals("https://cdn.test/test.jpg", catalog.details.posterUrl)
             assertEquals(listOf("test-session", "another-session"), latest.map { it.id })
             assertEquals(2, playback.groups.single().episodes.size)
             assertEquals(PlayerType.EMBED, playback.firstEpisodeLinks.single().type)
             assertEquals(null, playback.firstEpisodeLinks.single().quality)
             assertEquals("English dub", playback.firstEpisodeLinks.single().translation)
+            val group = source.getPlaybackGroups(catalog.details).single()
+            val secondEpisodeLinks = source.getPlayerLinks(catalog.details, group, group.episodes[1])
+            assertEquals(
+                listOf(
+                    "https://megaplay.buzz/stream/s-2/1465/dub",
+                    "https://vidwish.live/stream/s-2/1465/dub",
+                ),
+                secondEpisodeLinks.map { it.url },
+            )
             assertEquals(listOf("relevance"), filters.sortOptions.map { it.id })
             assertEquals(listOf("test-session"), pagination.firstPage.map { it.id })
             assertEquals(listOf("another-session"), pagination.secondPage.map { it.id })
