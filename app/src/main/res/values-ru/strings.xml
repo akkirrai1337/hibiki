@@ -368,7 +368,7 @@
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>
     <string name="settings_sources_empty">Источников пока нет</string>
-    <string name="onboarding_welcome_title">Добро пожаловать в Hibiki</string>
+    <string name="onboarding_welcome_title">Добро пожаловать в hibiki</string>
     <string name="onboarding_welcome_description">Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр.</string>
     <string name="onboarding_get_started">Начать настройку</string>
     <string name="onboarding_source_title">Источник аниме</string>
@@ -382,7 +382,7 @@
     <string name="onboarding_source_language_en">Контент на английском языке</string>
     <string name="onboarding_source_languages_ru_en">Контент на русском и английском языках</string>
     <string name="onboarding_notifications_title">Уведомления</string>
-    <string name="onboarding_notifications_description">Узнавайте о новых сериях и обновлениях аниме из вашей библиотеки.</string>
+    <string name="onboarding_notifications_description">Получайте уведомления после завершения загрузок.</string>
     <string name="onboarding_notifications_allow">Разрешить уведомления</string>
     <string name="onboarding_notifications_enabled">Уведомления включены</string>
     <string name="onboarding_notifications_denied">Уведомления можно включить позже в системных настройках.</string>

@@ -374,7 +374,7 @@
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>
     <string name="settings_sources_empty">No sources yet</string>
-    <string name="onboarding_welcome_title">Welcome to Hibiki</string>
+    <string name="onboarding_welcome_title">Welcome to hibiki</string>
     <string name="onboarding_welcome_description">Let’s set up the app in a couple of steps so you can start watching right away.</string>
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_source_title">Anime source</string>
@@ -388,7 +388,7 @@
     <string name="onboarding_source_language_en">English-language content</string>
     <string name="onboarding_source_languages_ru_en">Russian and English content</string>
     <string name="onboarding_notifications_title">Notifications</string>
-    <string name="onboarding_notifications_description">Get notified about new episodes and updates to anime in your library.</string>
+    <string name="onboarding_notifications_description">Get notified when downloads are complete.</string>
     <string name="onboarding_notifications_allow">Allow notifications</string>
     <string name="onboarding_notifications_enabled">Notifications are enabled</string>
     <string name="onboarding_notifications_denied">You can enable notifications later in system settings.</string>

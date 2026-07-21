@@ -185,6 +185,7 @@ fun FirstLaunchOnboarding(
                         onRequestPermission = onRequestNotificationPermission,
                         modifier = Modifier.fillMaxSize(),
                     )
+
                 }
             }
 
@@ -206,7 +207,7 @@ fun FirstLaunchOnboarding(
                         OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCE.name
                         OnboardingStep.SOURCE -> stepName = OnboardingStep.NOTIFICATIONS.name
                         OnboardingStep.NOTIFICATIONS -> selectedSource?.let(onComplete)
-                    }
+                        }
                 },
             )
         }
@@ -257,65 +258,6 @@ private fun WelcomeStep(
         Spacer(Modifier.height(36.dp))
         Button(onClick = onStart) {
             Text(stringResource(R.string.onboarding_get_started))
-        }
-    }
-}
-
-@Composable
-private fun SourceStep(
-    sources: List<AnimeSourceDescriptor>,
-    selectedSource: SourceId?,
-    localizedSourcesMissing: Boolean,
-    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
-    onShowAllSources: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Icon(
-                imageVector = Icons.Rounded.VideoLibrary,
-                contentDescription = null,
-                modifier = Modifier.size(88.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = stringResource(R.string.onboarding_source_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(
-                    if (localizedSourcesMissing) {
-                        R.string.onboarding_source_no_match
-                    } else {
-                        R.string.onboarding_source_description
-                    },
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-        items(sources, key = { it.id.value }) { source ->
-            SourceChoiceCard(
-                source = source,
-                selected = source.id == selectedSource,
-                onClick = { onSourceSelected(source) },
-            )
-        }
-        item {
-            TextButton(onClick = onShowAllSources) {
-                Text(stringResource(R.string.onboarding_view_all_sources))
-            }
         }
     }
 }
@@ -385,6 +327,65 @@ private fun PermissionStatus(text: String) {
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+@Composable
+private fun SourceStep(
+    sources: List<AnimeSourceDescriptor>,
+    selectedSource: SourceId?,
+    localizedSourcesMissing: Boolean,
+    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
+    onShowAllSources: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+    ) {
+        item {
+            Icon(
+                imageVector = Icons.Rounded.VideoLibrary,
+                contentDescription = null,
+                modifier = Modifier.size(88.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = stringResource(R.string.onboarding_source_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(
+                    if (localizedSourcesMissing) {
+                        R.string.onboarding_source_no_match
+                    } else {
+                        R.string.onboarding_source_description
+                    },
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+        items(sources, key = { it.id.value }) { source ->
+            SourceChoiceCard(
+                source = source,
+                selected = source.id == selectedSource,
+                onClick = { onSourceSelected(source) },
+            )
+        }
+        item {
+            TextButton(onClick = onShowAllSources) {
+                Text(stringResource(R.string.onboarding_view_all_sources))
+            }
+        }
     }
 }
 
