@@ -410,8 +410,8 @@ fun PlayerScreen(
         keepControlsVisible()
         resetAccumulatedDoubleTapSeek()
         val resumePositionMs = if (preservePosition) currentPlaybackPositionMs() else 0L
-        saveCurrentPlaybackProgress()
         exoPlayer.pause()
+        saveCurrentPlaybackProgress()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         action(resumePositionMs)

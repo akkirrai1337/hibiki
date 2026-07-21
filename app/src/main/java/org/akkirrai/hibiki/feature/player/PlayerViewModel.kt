@@ -308,9 +308,12 @@ class PlayerViewModel(
         watchedSeconds: List<Long> = emptyList(),
     ) {
         val safePositionMs = positionMs.coerceAtLeast(0L)
-        if (durationMs <= 0L || safePositionMs <= 0L) {
+        if (safePositionMs <= 0L) {
             return
         }
+        // ExoPlayer may not know the duration yet. Keep that as 0 so the
+        // repository can still resume from the saved position later.
+        val safeDurationMs = durationMs.coerceAtLeast(0L)
         val state = _uiState.value
         val playback = state.playback ?: return
         val episode = state.episodes.firstOrNull { it.id == state.currentEpisodeId } ?: return
@@ -331,7 +334,7 @@ class PlayerViewModel(
             sourceTitle = playback.sourceTitle,
             quality = playback.qualityLabel,
             positionMs = safePositionMs,
-            durationMs = durationMs,
+            durationMs = safeDurationMs,
         )
     }
 
