@@ -105,4 +105,34 @@ class SourceExecutionPolicyTest {
 
         assertEquals(listOf(50L), waits)
     }
+
+    @Test
+    fun `default policy does not serialize source operations`() = runBlocking {
+        val waits = mutableListOf<Long>()
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            nowMillis = { 1_000L },
+            wait = { duration -> waits += duration },
+        )
+
+        policy.execute(sourceId, SourceOperation.SEARCH) { Unit }
+        policy.execute(sourceId, SourceOperation.DETAILS) { Unit }
+
+        assertEquals(emptyList(), waits)
+    }
+
+    @Test
+    fun `first operation is not delayed by the request interval`() = runBlocking {
+        val waits = mutableListOf<Long>()
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            policy = SourceResiliencePolicy(minimumIntervalMillis = 250),
+            nowMillis = { 1_000L },
+            wait = { duration -> waits += duration },
+        )
+
+        assertEquals("loaded", policy.execute(sourceId, SourceOperation.SEARCH) { "loaded" })
+
+        assertEquals(emptyList(), waits)
+    }
 }

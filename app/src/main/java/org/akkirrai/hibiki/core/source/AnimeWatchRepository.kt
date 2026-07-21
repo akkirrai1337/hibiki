@@ -131,6 +131,7 @@ class AnimeWatchRepository(
                 sources
             }.onFailure { error ->
                 inFlight.completeExceptionally(error)
+                if (error is CancellationException) throw error
             }
             loadMutex.withLock {
                 if (inFlightLoads[cacheKey] === inFlight) {

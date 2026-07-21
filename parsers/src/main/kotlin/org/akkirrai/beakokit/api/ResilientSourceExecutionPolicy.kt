@@ -8,7 +8,12 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 data class SourceResiliencePolicy(
-    val minimumIntervalMillis: Long = 250,
+    /**
+     * Optional per-source request spacing. It is disabled by default because source operations
+     * such as card-detail enrichment must not be globally serialised. Enable it only for a source
+     * whose server has a known request-rate requirement.
+     */
+    val minimumIntervalMillis: Long = 0,
     val failureThreshold: Int = 3,
     val cooldownMillis: Long = 30_000,
 ) {
@@ -45,8 +50,9 @@ class SourceCircuitOpenException(
 )
 
 /**
- * Shared source runtime policy with per-source request spacing and a transient-failure circuit breaker.
- * It intentionally only gates public source operations; source-specific parsing remains unchanged.
+ * Shared source runtime policy with optional per-source request spacing and a transient-failure
+ * circuit breaker. It intentionally only gates public source operations; source-specific parsing
+ * remains unchanged.
  */
 class ResilientSourceExecutionPolicy(
     private val healthReporter: SourceHealthReporter,
@@ -95,7 +101,11 @@ class ResilientSourceExecutionPolicy(
                 recoveryProbeInFlight = true
             }
 
-            val waitMillis = (lastStartedAt + policy.minimumIntervalMillis - beforeWait).coerceAtLeast(0)
+            val waitMillis = if (lastStartedAt == Long.MIN_VALUE) {
+                0L
+            } else {
+                (lastStartedAt + policy.minimumIntervalMillis - beforeWait).coerceAtLeast(0)
+            }
             if (waitMillis > 0) wait(waitMillis)
             lastStartedAt = nowMillis()
         }
