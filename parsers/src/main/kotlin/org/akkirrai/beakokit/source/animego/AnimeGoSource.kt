@@ -10,6 +10,7 @@ import org.akkirrai.beakokit.api.SourceEntry
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.track
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -27,6 +28,7 @@ object AnimeGoConfig {
 class AnimeGoSource(
     context: SourceContext,
 ) : AnimeSource, LatestSource, PlaybackSource {
+    private val health = context.sourceHealthReporter
     private val baseUrl = context.config.value(AnimeGoConfig.BASE_URL) ?: DEFAULT_BASE_URL
     private val catalog = AnimeGoCatalogClient(context.httpClient, baseUrl)
     private val playback = AnimeGoPlaybackClient(context.httpClient, baseUrl)
@@ -36,20 +38,19 @@ class AnimeGoSource(
         get() = catalog.capabilities
 
     override suspend fun search(query: String): List<AnimeTitle> =
-        catalog.search(AnimeSearchRequest(query = query))
+        health.track(INFO.id) { catalog.search(AnimeSearchRequest(query = query)) }
 
-    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = catalog.search(request)
+    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = health.track(INFO.id) { catalog.search(request) }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = catalog.filterCatalog()
 
-    override suspend fun getById(id: String): AnimeTitle = catalog.getById(id)
+    override suspend fun getById(id: String): AnimeTitle = health.track(INFO.id) { catalog.getById(id) }
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = catalog.latest(limit)
+    override suspend fun latest(limit: Int): List<AnimeTitle> = health.track(INFO.id) { catalog.latest(limit) }
 
-    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> = health.track(INFO.id) {
         val episodes = playback.getEpisodes(title.id)
-        if (episodes.isEmpty()) return emptyList()
-        return listOf(
+        if (episodes.isEmpty()) emptyList() else listOf(
             PlaybackGroup(
                 id = title.id,
                 title = INFO.name,
@@ -62,7 +63,7 @@ class AnimeGoSource(
         title: AnimeTitle,
         group: PlaybackGroup,
         episode: Episode,
-    ): List<PlayerLink> = playback.getPlayerLinks(episode)
+    ): List<PlayerLink> = health.track(INFO.id) { playback.getPlayerLinks(episode) }
 
     companion object {
         private const val DEFAULT_BASE_URL = "https://animego.me"

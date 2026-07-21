@@ -8,6 +8,8 @@ interface SourceContext {
     val preferredLanguages: List<SourceLanguage>
     val config: SourceConfig
     val logger: SourceLogger
+    val sourceHealthReporter: SourceHealthReporter
+        get() = SourceHealthReporter.NONE
     val challengeSessionProvider: ChallengeSessionProvider
         get() = ChallengeSessionProvider.UNSUPPORTED
 }
@@ -54,6 +56,7 @@ data class DefaultSourceContext(
     override val preferredLanguages: List<SourceLanguage>,
     override val config: SourceConfig = SourceConfig.EMPTY,
     override val logger: SourceLogger = SourceLogger.NONE,
+    override val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     override val challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
 ) : SourceContext {
     init {
