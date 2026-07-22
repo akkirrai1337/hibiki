@@ -2,6 +2,9 @@ package org.akkirrai.hibiki.shared
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.jetbrains.compose.resources.stringResource
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.shared_ui_ready
 import org.akkirrai.hibiki.shared.design.component.AppCard
 import org.akkirrai.hibiki.shared.design.component.AppSection
 
@@ -13,7 +16,7 @@ import org.akkirrai.hibiki.shared.design.component.AppSection
 fun HibikiSharedSmoke() {
     AppSection(title = "Hibiki") {
         AppCard {
-            Text("Shared UI is ready")
+            Text(stringResource(Res.string.shared_ui_ready))
         }
     }
 }
