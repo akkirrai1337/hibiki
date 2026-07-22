@@ -22,5 +22,9 @@ class AnimeCatalogRepositoryTest {
                 ),
             ).items.map { it.title },
         )
+        assertEquals(
+            listOf("Adventure", "Comedy", "Drama", "Fantasy", "Mystery", "Romance", "Slice of life", "Thriller"),
+            repository.filterCatalog().genreOptions.map { it.id },
+        )
     }
 }
