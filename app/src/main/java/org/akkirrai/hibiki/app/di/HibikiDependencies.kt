@@ -4,6 +4,7 @@ import android.content.Context
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.AndroidAnimeCatalogRepository
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
@@ -17,6 +18,8 @@ class HibikiDependencies(
     private val appContext = context.applicationContext
 
     fun animeSearchRepository(): AnimeSearchRepository = AnimeSearchRepository(appContext)
+
+    fun animeCatalogRepository(): AndroidAnimeCatalogRepository = AndroidAnimeCatalogRepository(appContext)
 
     fun animeWatchRepository(): AnimeWatchRepository = AnimeWatchRepository(appContext)
 
