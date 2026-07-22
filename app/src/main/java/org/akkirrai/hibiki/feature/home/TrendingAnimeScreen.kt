@@ -52,6 +52,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
@@ -267,7 +268,7 @@ private fun TrendingErrorState(
 }
 
 class TrendingAnimeViewModel(
-    private val repository: HomeRepository,
+    private val repository: HomeDataRepository,
     private val context: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrendingAnimeUiState(isLoading = true))
@@ -300,7 +301,7 @@ class TrendingAnimeViewModel(
                 repository.loadTrendingPage(
                     offset = 0,
                     limit = TRENDING_PAGE_LIMIT,
-                    filter = selectedFilter,
+                    filterTypeAlias = selectedFilter.typeAlias,
                 )
             }
                 .onSuccess { items ->
@@ -339,7 +340,7 @@ class TrendingAnimeViewModel(
                 repository.loadTrendingPage(
                     offset = offset,
                     limit = TRENDING_PAGE_LIMIT,
-                    filter = selectedFilter,
+                    filterTypeAlias = selectedFilter.typeAlias,
                 )
             }
                 .onSuccess { nextItems ->

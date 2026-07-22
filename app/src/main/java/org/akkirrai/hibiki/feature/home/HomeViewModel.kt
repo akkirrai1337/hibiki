@@ -27,9 +27,10 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.HomePresenter
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
 
 class HomeViewModel(
-    private val repository: HomeRepository,
+    private val repository: HomeDataRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext

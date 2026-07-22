@@ -34,11 +34,12 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
 
 class HomeRepository(
     context: Context,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
-) {
+) : HomeDataRepository {
     @Volatile
     private var cachedHomeContent: CachedHomeContent? = null
 
@@ -56,7 +57,7 @@ class HomeRepository(
     private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
     private val libraryRepository = LibraryRepository(appContext)
 
-    fun fallbackHomeState(): HomeUiState {
+    override fun fallbackHomeState(): HomeUiState {
         return HomeUiState(
             featuredAnime = MockAnimeData.trending.take(FEATURED_COUNT),
             continueAnime = loadStoredContinueAnime(),
@@ -66,7 +67,7 @@ class HomeRepository(
         )
     }
 
-    suspend fun refreshHomeState(): HomeUiState {
+    override suspend fun refreshHomeState(): HomeUiState {
         AppLogger.d(TAG, "refreshHomeState: clearing cache")
         ensureInternetConnection()
         cachedHomeContent = null
@@ -76,7 +77,7 @@ class HomeRepository(
         return loadHomeState()
     }
 
-    suspend fun loadHomeState(): HomeUiState {
+    override suspend fun loadHomeState(): HomeUiState {
         AppLogger.d(TAG, "loadHomeState: called")
         val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
             currentHomeSelectionSeed = it
@@ -157,13 +158,13 @@ class HomeRepository(
         )
     }
 
-    suspend fun search(query: String): List<Anime> {
+    override suspend fun search(query: String): List<Anime> {
         AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()
         return searchRepository.search(query)
     }
 
-    suspend fun search(
+    override suspend fun search(
         query: String,
         filters: AnimeSearchFilters,
         limit: Int,
@@ -187,10 +188,10 @@ class HomeRepository(
         )
     }
 
-    suspend fun getSearchFilterCatalog(): AnimeCatalogFilterCatalog =
+    override suspend fun getSearchFilterCatalog(): AnimeCatalogFilterCatalog =
         searchRepository.getSearchFilterCatalog().toShared()
 
-    fun close() {
+    override fun close() {
         searchRepository.close()
     }
 
@@ -245,9 +246,9 @@ class HomeRepository(
         }
     }
 
-    suspend fun loadRecentlyUpdatedPage(
+    override suspend fun loadRecentlyUpdatedPage(
         offset: Int,
-        limit: Int = HOME_SECTION_LIMIT,
+        limit: Int,
     ): List<Anime> {
         val sourceId = selectedSourceId()
         val catalog = cachedRecentUpdates
@@ -260,7 +261,7 @@ class HomeRepository(
     }
 
     private suspend fun loadRecentlyUpdated(): List<Anime> =
-        loadRecentlyUpdatedPage(offset = 0)
+        loadRecentlyUpdatedPage(offset = 0, limit = HOME_SECTION_LIMIT)
 
     private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
         return currentSource()
@@ -268,25 +269,25 @@ class HomeRepository(
             .map(::toHomeAnime)
     }
 
-    suspend fun loadTrendingPage(
+    override suspend fun loadTrendingPage(
         offset: Int,
-        limit: Int = HOME_FULL_SECTION_LIMIT,
-        filter: TrendingFilter = TrendingFilter.All,
+        limit: Int,
+        filterTypeAlias: String?,
     ): List<Anime> {
-        AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
+        AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filterTypeAlias")
         val catalog = currentSource().search(
             AnimeSearchRequest(
                 limit = limit,
                 offset = offset,
                 sort = AnimeSearchSort.RATING,
-                typeAliases = listOfNotNull(filter.typeAlias),
+                typeAliases = listOfNotNull(filterTypeAlias),
             ),
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
         return catalog.map(::toHomeAnime)
     }
 
-    suspend fun loadRandomAnime(excludedIds: Set<String>): Anime? {
+    override suspend fun loadRandomAnime(excludedIds: Set<String>): Anime? {
         ensureInternetConnection()
         repeat(RANDOM_CATALOG_ATTEMPTS) {
             val catalog = currentSource().search(
@@ -304,7 +305,7 @@ class HomeRepository(
         return null
     }
 
-    suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
+    override suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
         return coroutineScope {
             items.map { anime ->
                 async {
@@ -319,7 +320,7 @@ class HomeRepository(
         }
     }
 
-    suspend fun enrichDescription(anime: Anime): Anime =
+    override suspend fun enrichDescription(anime: Anime): Anime =
         searchRepository.getDetails(anime.id, anime)
 
     private fun toHomeAnime(title: AnimeTitle): Anime {
