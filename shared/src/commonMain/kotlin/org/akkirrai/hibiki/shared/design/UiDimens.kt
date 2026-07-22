@@ -1,7 +1,8 @@
-package org.akkirrai.hibiki.core.design
+package org.akkirrai.hibiki.shared.design
 
 import androidx.compose.ui.unit.dp
 
+/** Shared layout tokens. They deliberately do not depend on either platform. */
 object UiDimens {
     val ScreenPadding = 12.dp
     val SearchBarTopPadding = 14.dp
