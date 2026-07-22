@@ -47,6 +47,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
@@ -116,9 +117,8 @@ import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
 import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
-import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
@@ -336,11 +336,20 @@ private fun LazyListScope.homeFeedContent(
             }
         }
     }
-    verticalAnimeListContent(
+    appVerticalAnimeListContent(
         items = trending,
         metaText = metaText,
         onAnimeClick = onAnimeClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        trailingIcon = Icons.Outlined.ChevronRight,
+        posterContent = { anime ->
+            AnimeBackground(
+                imageUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
         posterFooterContent = posterFooterContent,
     )
     if (isTrendingLoadingMore) {
