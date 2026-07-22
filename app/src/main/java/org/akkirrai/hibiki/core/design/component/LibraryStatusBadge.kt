@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalContext
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryRepository
 
 @Composable

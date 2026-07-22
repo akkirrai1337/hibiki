@@ -97,6 +97,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)

@@ -12,6 +12,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.profile.LocalProfileData
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.labelResId
 
 internal fun buildProfileSnapshot(
     resources: Resources,
