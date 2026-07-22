@@ -23,12 +23,14 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.components.resources)
+            implementation(libs.kotlinx.coroutines.core)
         }
         val desktopMain by getting {
             dependencies {

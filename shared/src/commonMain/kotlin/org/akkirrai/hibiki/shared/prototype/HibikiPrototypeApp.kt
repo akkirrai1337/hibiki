@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -30,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -55,22 +58,25 @@ private enum class PrototypeTab(val textKey: AppTextKey) {
 }
 
 @Composable
-fun HibikiPrototypeApp(modifier: Modifier = Modifier) {
+fun HibikiPrototypeApp(
+    modifier: Modifier = Modifier,
+    repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+) {
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
     var query by remember { mutableStateOf("") }
-    val filteredItems = remember(query) {
-        if (query.isBlank()) PrototypeCatalog.items else PrototypeCatalog.items.filter {
-            it.title.contains(query, ignoreCase = true) || it.subtitle.contains(query, ignoreCase = true)
-        }
+    var catalogItems by remember(repository) { mutableStateOf(repository.initialItems) }
+
+    LaunchedEffect(repository, query) {
+        catalogItems = repository.search(query)
     }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         BoxWithConstraints {
             val compact = maxWidth < 760.dp
             if (compact) {
-                CompactPrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, filteredItems)
+                CompactPrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, catalogItems)
             } else {
-                WidePrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, filteredItems)
+                WidePrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, catalogItems)
             }
         }
     }
@@ -82,7 +88,7 @@ private fun WidePrototypeLayout(
     onTabSelected: (PrototypeTab) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
-    items: List<org.akkirrai.hibiki.shared.model.Anime>,
+    items: List<Anime>,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         PrototypeSidebar(selectedTab, onTabSelected)
@@ -97,7 +103,7 @@ private fun CompactPrototypeLayout(
     onTabSelected: (PrototypeTab) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
-    items: List<org.akkirrai.hibiki.shared.model.Anime>,
+    items: List<Anime>,
 ) {
     Scaffold(
         bottomBar = {
@@ -171,7 +177,7 @@ private fun PrototypeContent(
     selectedTab: PrototypeTab,
     query: String,
     onQueryChange: (String) -> Unit,
-    items: List<org.akkirrai.hibiki.shared.model.Anime>,
+    items: List<Anime>,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -246,7 +252,7 @@ private fun PrototypeSettingsCard() {
 }
 
 @Composable
-private fun AnimePrototypeCard(anime: org.akkirrai.hibiki.shared.model.Anime) {
+private fun AnimePrototypeCard(anime: Anime) {
     androidx.compose.material3.Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = RoundedCornerShape(UiDimens.MediumCorner),
