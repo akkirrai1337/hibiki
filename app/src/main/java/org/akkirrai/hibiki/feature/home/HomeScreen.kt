@@ -11,8 +11,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,12 +39,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
@@ -85,16 +80,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -108,7 +100,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
@@ -123,14 +114,12 @@ import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
-import org.akkirrai.hibiki.shared.design.component.AppPageIndicator
-import org.akkirrai.hibiki.shared.design.component.AppFeaturedCard
+import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
-import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
@@ -433,115 +422,30 @@ private fun FeaturedCarousel(
     autoAdvanceEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { items.size },
-    )
-
-    val progress = remember { Animatable(0f) }
-
-    var indicatorPage by remember { mutableStateOf(0) }
     val featuredHeight = 240.dp
-
-    LaunchedEffect(autoAdvanceEnabled) {
-        PerfLogger.mark("Home featured carousel active changed", "active=$autoAdvanceEnabled")
-    }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }
-            .collect { page ->
-                if (page != indicatorPage) {
-                    progress.stop()
-                    progress.snapTo(0f)
-                    indicatorPage = page
-                }
-            }
-    }
-
-    var timerRestartKey by remember { mutableStateOf(0) }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.isScrollInProgress }
-            .collect { scrolling ->
-                if (!scrolling) timerRestartKey++
-            }
-    }
-
-    LaunchedEffect(timerRestartKey, items.size, autoAdvanceEnabled) {
-        if (!autoAdvanceEnabled || items.size <= 1) {
-            progress.stop()
-            PerfLogger.mark(
-                event = "Home featured carousel timer stopped",
-                details = "active=$autoAdvanceEnabled, items=${items.size}",
-            )
-            return@LaunchedEffect
-        }
-
-        if (pagerState.isScrollInProgress) {
-            snapshotFlow { pagerState.isScrollInProgress }
-                .first { !it }
-        }
-
-        progress.snapTo(0f)
-
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = FEATURED_AUTO_ADVANCE_MS,
-                easing = LinearEasing,
-            ),
-        )
-
-        if (!pagerState.isScrollInProgress && pagerState.settledPage == indicatorPage) {
-            val nextPage = (indicatorPage + 1) % items.size
-            progress.snapTo(0f)
-            pagerState.animateScrollToPage(nextPage)
-        }
-    }
-
-    Box(modifier = modifier) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(featuredHeight),
-            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
-            pageSpacing = 12.dp,
-            beyondViewportPageCount = 1,
-        ) { page ->
-            val anime = items[page]
-            AppFeaturedCard(
+    AppFeaturedCarousel(
+        items = items,
+        featuredLabel = stringResource(R.string.home_featured_label),
+        metaText = { anime ->
+            buildHomeMeta(
                 anime = anime,
-                featuredLabel = stringResource(R.string.home_featured_label),
-                meta = buildHomeMeta(
-                    anime = anime,
-                    announcementLabel = stringResource(R.string.anime_meta_announcement),
-                    movieLabel = stringResource(R.string.anime_meta_movie),
-                ),
-                height = featuredHeight,
-                onClick = { onAnimeClick(anime) },
-                imageContent = {
-                    AnimeBackground(
-                        imageUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                        fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                        contentDescription = anime.title,
-                        modifier = Modifier.matchParentSize(),
-                    )
-                },
+                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                movieLabel = stringResource(R.string.anime_meta_movie),
             )
-        }
-
-        if (items.size > 1) {
-            AppPageIndicator(
-                totalPages = items.size,
-                currentPage = indicatorPage,
-                progress = progress.value,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp),
+        },
+        onAnimeClick = onAnimeClick,
+        autoAdvanceEnabled = autoAdvanceEnabled,
+        modifier = modifier,
+        height = featuredHeight,
+        imageContent = { anime ->
+            AnimeBackground(
+                imageUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.matchParentSize(),
             )
-        }
-    }
+        },
+    )
 }
 
 @Composable
