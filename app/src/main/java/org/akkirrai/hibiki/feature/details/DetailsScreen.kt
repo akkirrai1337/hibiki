@@ -150,6 +150,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.akkirrai.hibiki.shared.details.DetailsUiState
 import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
@@ -368,14 +369,16 @@ fun DetailsScreen(
                 ) {
             item {
                 DetailHeroSection(
-                    anime = uiModel.anime,
+                    detailsState = DetailsUiState(
+                        anime = uiModel.anime,
+                        libraryCategory = libraryCategory,
+                        resumeState = resumeState,
+                    ),
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
                     canWatch = canWatch,
-                    libraryCategory = libraryCategory,
-                    resumeState = resumeState,
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
                     listState = listState,
@@ -504,14 +507,12 @@ private fun DetailsStatusBarScrim(
 
 @Composable
 private fun DetailHeroSection(
-    anime: Anime,
+    detailsState: DetailsUiState,
     heroInfo: HeroInfo,
     description: String,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     canWatch: Boolean,
-    libraryCategory: LibraryCategory?,
-    resumeState: TitleWatchState?,
     resumeFrame: File?,
     isTitleDetailsSheetOpen: Boolean,
     listState: LazyListState,
@@ -522,6 +523,9 @@ private fun DetailHeroSection(
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
 ) {
+    val anime = detailsState.anime
+    val libraryCategory = detailsState.libraryCategory
+    val resumeState = detailsState.resumeState
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
         derivedStateOf {
@@ -549,8 +553,7 @@ private fun DetailHeroSection(
                 .height(heroHeight),
         ) {
             DetailHeroMedia(
-                anime = anime,
-                resumeState = resumeState,
+                detailsState = detailsState,
                 resumeFrame = resumeFrame,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
@@ -578,7 +581,7 @@ private fun DetailHeroSection(
                     .background(MaterialTheme.colorScheme.background)
             )
             PosterHeroInline(
-                anime = anime,
+                anime = detailsState.anime,
                 height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
                 modifier = Modifier
@@ -587,7 +590,7 @@ private fun DetailHeroSection(
                     .padding(start = 16.dp),
             )
             DetailHeroTextContent(
-                anime = anime,
+                anime = detailsState.anime,
                 description = description,
                 nextEpisodeEta = nextEpisodeEta,
                 nextEpisodeNumber = nextEpisodeNumber,
@@ -825,13 +828,14 @@ private fun NestedScrollableContent(
 
 @Composable
 private fun DetailHeroMedia(
-    anime: Anime,
-    resumeState: TitleWatchState?,
+    detailsState: DetailsUiState,
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val anime = detailsState.anime
+    val resumeState = detailsState.resumeState
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     Box(
         modifier = modifier

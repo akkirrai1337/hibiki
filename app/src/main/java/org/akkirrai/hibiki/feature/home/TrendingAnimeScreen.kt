@@ -101,6 +101,8 @@ fun TrendingAnimeScreen(
             errorTitle = stringResource(R.string.trending_error_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
+            errorIcon = Icons.Outlined.WarningAmber,
+            errorIconTint = MaterialTheme.colorScheme.error,
             content = {
                 LazyColumn(
                     state = listState,

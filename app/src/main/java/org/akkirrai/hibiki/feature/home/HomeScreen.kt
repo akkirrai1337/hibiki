@@ -399,15 +399,13 @@ private fun HomeErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.design.component.AppErrorState(
         title = stringResource(R.string.home_error_title),
         message = message,
-        modifier = modifier
-            .fillMaxSize()
-            .padding(UiDimens.ScreenPadding),
-        actionLabel = stringResource(R.string.search_retry),
-        onActionClick = onRetry,
-        iconSlot = {
+        retryLabel = stringResource(R.string.search_retry),
+        onRetry = onRetry,
+        modifier = modifier,
+        iconContent = {
             Box(
                 modifier = Modifier
                     .size(72.dp)

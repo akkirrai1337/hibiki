@@ -152,26 +152,16 @@ fun CatalogScreen(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            state.isLoading && state.items.isEmpty() -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            state.error != null && state.items.isEmpty() -> {
-                AppMessageState(
-                    title = stringResource(R.string.catalog_error_title),
-                    message = state.error.orEmpty(),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(UiDimens.ScreenPadding),
-                    actionLabel = stringResource(R.string.search_retry),
-                    onActionClick = viewModel::load,
-                    icon = Icons.Outlined.WarningAmber,
-                    iconTint = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            else -> {
+        org.akkirrai.hibiki.shared.design.component.AppContentState(
+            isLoading = state.isLoading,
+            hasContent = state.items.isNotEmpty(),
+            errorMessage = state.error,
+            errorTitle = stringResource(R.string.catalog_error_title),
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::load,
+            errorIcon = Icons.Outlined.WarningAmber,
+            errorIconTint = MaterialTheme.colorScheme.error,
+            content = {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -182,7 +172,7 @@ fun CatalogScreen(
                         bottom = bottomContentPadding + UiDimens.ScreenPadding,
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                    content = {
                     appVerticalAnimeListContent(
                         items = state.items,
                         metaText = { anime -> anime.buildCardMeta(
@@ -263,9 +253,10 @@ fun CatalogScreen(
                             }
                         }
                     }
-                }
-            }
-        }
+                    },
+                )
+            },
+        )
 
         AppTopScrim(
             modifier = Modifier.align(Alignment.TopStart),

@@ -111,47 +111,13 @@ private fun SearchBar(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit
 ) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .clip(RoundedCornerShape(UiDimens.MediumCorner)),
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = {
-            Text(
-                text = stringResource(R.string.search_placeholder),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingIcon = {
-            IconButton(onClick = onSearch) {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = stringResource(R.string.cd_search),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        shape = RoundedCornerShape(UiDimens.MediumCorner),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            focusedIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            disabledIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            cursorColor = MaterialTheme.colorScheme.primary
-        )
+    org.akkirrai.hibiki.shared.search.AppSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        onSearch = onSearch,
+        placeholder = stringResource(R.string.search_placeholder),
+        searchContentDescription = stringResource(R.string.cd_search),
+        searchIcon = Icons.Outlined.Search,
     )
 }
 
