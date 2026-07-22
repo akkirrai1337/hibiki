@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.shared.design.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 
 @Composable
 fun AppSection(
@@ -26,7 +25,7 @@ fun AppSection(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = title,
@@ -53,7 +52,7 @@ fun AppCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(contentPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             content()
         }
@@ -69,7 +68,7 @@ fun AppChipCloud(
     AppCard(modifier = modifier, contentPadding = PaddingValues(14.dp)) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items.forEach { item ->
                 AppTonalSurface(
@@ -79,7 +78,7 @@ fun AppChipCloud(
                         text = item,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
