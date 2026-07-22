@@ -141,20 +141,11 @@ fun AppFloatingTitlePill(
     modifier: Modifier = Modifier,
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
-    AppFloatingPill(
+    org.akkirrai.hibiki.shared.design.component.AppFloatingTitlePill(
+        text = text,
         modifier = modifier,
         containerColor = containerColor,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = AppFloatingHeaderDefaults.TitleHorizontalPadding),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    )
 }
 
 @Composable
@@ -163,13 +154,9 @@ fun AppFloatingPill(
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .height(AppFloatingHeaderDefaults.ControlHeight)
-            .clip(RoundedCornerShape(AppFloatingHeaderDefaults.ControlRadius))
-            .background(containerColor),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
+    org.akkirrai.hibiki.shared.design.component.AppFloatingPill(
+        modifier = modifier,
+        containerColor = containerColor,
+        content = content,
+    )
 }

@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.core.design.component
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
@@ -12,18 +11,18 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.shared.design.component.AppBackButton as SharedBackButton
 
 @Composable
 fun AppBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier,
-    ) {
+) = SharedBackButton(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    iconContent = {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
             contentDescription = stringResource(R.string.cd_back),
@@ -33,5 +32,5 @@ fun AppBackButton(
                 blendMode = BlendMode.Difference
             },
         )
-    }
-}
+    },
+)
