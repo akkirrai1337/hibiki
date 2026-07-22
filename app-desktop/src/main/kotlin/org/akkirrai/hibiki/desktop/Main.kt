@@ -21,7 +21,8 @@ fun main() = application {
     ) {
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             Surface {
-                HibikiPrototypeApp()
+                val settingsStore = androidx.compose.runtime.remember { DesktopSettingsStore() }
+                HibikiPrototypeApp(settingsStore = settingsStore)
             }
         }
     }

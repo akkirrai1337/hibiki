@@ -59,6 +59,9 @@ import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.settings.AppSettingsState
+import org.akkirrai.hibiki.shared.settings.AppSettingsStore
+import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -75,14 +78,16 @@ private enum class PrototypeTab(val textKey: AppTextKey) {
 fun HibikiPrototypeApp(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
 ) {
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
     var selectedAnime by remember { mutableStateOf<Anime?>(null) }
-    var languageMode by remember { mutableStateOf(LanguageMode.SYSTEM) }
-    var darkTheme by remember { mutableStateOf(false) }
+    val initialSettings = remember(settingsStore) { settingsStore.load() }
+    var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
+    var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -98,8 +103,14 @@ fun HibikiPrototypeApp(
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 BoxWithConstraints {
                     val compact = maxWidth < 760.dp
-                    val onLanguageModeChange = { mode: LanguageMode -> languageMode = mode }
-                    val onThemeChange = { dark: Boolean -> darkTheme = dark }
+                    val onLanguageModeChange = { mode: LanguageMode ->
+                        languageMode = mode
+                        settingsStore.save(AppSettingsState(mode, darkTheme))
+                    }
+                    val onThemeChange = { dark: Boolean ->
+                        darkTheme = dark
+                        settingsStore.save(AppSettingsState(languageMode, dark))
+                    }
                     if (compact) {
                     CompactPrototypeLayout(
                         selectedTab,
