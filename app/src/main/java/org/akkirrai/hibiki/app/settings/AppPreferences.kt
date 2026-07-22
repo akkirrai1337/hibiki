@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.akkirrai.beakokit.api.SourceId
+typealias LanguageMode = org.akkirrai.hibiki.shared.settings.LanguageMode
 
 enum class ThemeMode {
     SYSTEM,
@@ -16,11 +17,6 @@ enum class ThemeMode {
     DARK
 }
 
-enum class LanguageMode(val tag: String?) {
-    SYSTEM(null),
-    RUSSIAN("ru"),
-    ENGLISH("en")
-}
 
 enum class VideoScaleMode {
     FIT,
