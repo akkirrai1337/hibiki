@@ -8,7 +8,7 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
-class LibraryRepository(context: Context) {
+class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.LibraryRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getLibraryEntries(): List<LibraryEntry> {
@@ -87,6 +87,9 @@ class LibraryRepository(context: Context) {
             .putLongIfAbsent(libraryAddedAtKey(normalizedAnime.id), System.currentTimeMillis())
             .apply()
     }
+
+    /** Shared CMP read boundary; the richer Android API remains available to Android callers. */
+    override suspend fun getEntries(): List<LibraryEntry> = getLibraryEntries()
 
     /** Imports an entry which does not exist locally while preserving its remote timestamp. */
     fun importLibraryEntry(
