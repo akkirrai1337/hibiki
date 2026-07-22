@@ -483,26 +483,7 @@ private fun DetailsStatusBarScrim(
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
-    val density = LocalDensity.current
-    val distanceUntilOpaquePx = with(density) { 168.dp.toPx() }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
-    val alpha by remember(listState, distanceUntilOpaquePx) {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) {
-                0.74f
-            } else {
-                0.74f * (listState.firstVisibleItemScrollOffset / distanceUntilOpaquePx)
-                    .coerceIn(0f, 1f)
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(statusBarHeight)
-            .background(MaterialTheme.colorScheme.background.copy(alpha = alpha)),
-    )
+    org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim(listState = listState, modifier = modifier)
 }
 
 @Composable
@@ -694,61 +675,16 @@ private fun DetailHeroActions(
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            onClick = onLibraryClick,
-            modifier = Modifier.size(56.dp),
-            shape = CircleShape,
-            color = if (isInLibrary) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-            contentColor = if (isInLibrary) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.primary
-            },
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringResource(R.string.details_favorite),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-        }
-        OutlinedButton(
-            onClick = onPrimaryClick,
-            enabled = canWatch,
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
-            shape = CircleShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                containerColor = Color.Transparent,
-            ),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.details_watch),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-            )
-        }
-    }
+    org.akkirrai.hibiki.shared.details.DetailsHeroActions(
+        isInLibrary = isInLibrary,
+        canWatch = canWatch,
+        libraryLabel = stringResource(R.string.details_favorite),
+        watchLabel = stringResource(R.string.details_watch),
+        libraryIcon = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+        primaryIcon = Icons.Filled.PlayArrow,
+        onLibraryClick = onLibraryClick,
+        onPrimaryClick = onPrimaryClick,
+    )
 }
 
 @Composable
@@ -757,35 +693,16 @@ private fun NextEpisodeChip(
     eta: String,
     modifier: Modifier = Modifier,
 ) {
-    val chipColor = Color(0xFF80DF87)
     val text = if (episode != null) {
         stringResource(R.string.details_next_episode_countdown_numbered, episode, eta)
     } else {
         stringResource(R.string.details_next_episode_countdown, eta)
     }
-
-    Row(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(chipColor.copy(alpha = 0.2f))
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.hourglass),
-            contentDescription = null,
-            modifier = Modifier.size(15.dp),
-            tint = chipColor,
-        )
-        Text(
-            text = text,
-            color = chipColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip(
+        text = text,
+        icon = ImageVector.vectorResource(R.drawable.hourglass),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -795,35 +712,12 @@ private fun NestedScrollableContent(
     gradientColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable (Modifier) -> Unit,
 ) {
-    Box(modifier) {
-        content(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = gradientSize)
-        )
-        Box(
-            modifier = Modifier
-                .height(gradientSize)
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(gradientColor, Color.Transparent),
-                    )
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .height(gradientSize)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, gradientColor),
-                    )
-                ),
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent(
+        modifier = modifier,
+        gradientSize = gradientSize,
+        gradientColor = gradientColor,
+        content = content,
+    )
 }
 
 @Composable
@@ -960,45 +854,13 @@ private fun HeroRatingsLine(
 ) {
     val rating = ratings.firstOrNull()
     if (rating == null && viewCount.isNullOrZero()) return
-
-    Row(
+    org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine(
+        rating = rating?.let { formatRating(it.value) },
+        viewCount = viewCount?.takeIf { it > 0 }?.let(::formatCount),
+        ratingIcon = Icons.Filled.Star,
+        viewCountIcon = Icons.Outlined.Visibility,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        rating?.let {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = Color(0xFFFFC107),
-            )
-            Text(
-                text = formatRating(it.value),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        viewCount?.takeIf { it > 0 }?.let {
-            if (rating != null) {
-                Text(
-                    text = "•",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
-            Icon(
-                imageVector = Icons.Outlined.Visibility,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = formatCount(it),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
+    )
 }
 
 private fun Long?.isNullOrZero(): Boolean = this == null || this == 0L
@@ -1010,77 +872,57 @@ private fun DetailContentCard(
     modifier: Modifier = Modifier,
 ) {
     val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-        DetailSectionTitle(
-            text = stringResource(R.string.details_information),
-            modifier = Modifier.padding(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
-        )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_status),
-                    value = heroInfo.status.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.Check,
-                    accent = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_episodes_released),
-                    value = heroInfo.episodes.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.FormatListNumbered,
-                    accent = MaterialTheme.colorScheme.primary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_type),
-                    value = heroInfo.type,
-                    icon = Icons.Outlined.BookmarkBorder,
-                    accent = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_release_date),
-                        value = releaseDate,
-                        icon = Icons.Filled.DateRange,
-                        accent = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            sourceMaterial?.let { source ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_source_material),
-                        value = source,
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
-                        accent = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-            }
-            heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_studio),
-                        value = studio,
-                        icon = Icons.Filled.Business,
-                        accent = Color(0xFFFF9800),
-                    )
-                }
-            }
-        }
-    }
+    val emptyValue = stringResource(R.string.search_filters_not_selected)
+    val informationItems = listOfNotNull(
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_status),
+            value = heroInfo.status.ifBlank { emptyValue },
+            icon = Icons.Outlined.Check,
+            accent = MaterialTheme.colorScheme.tertiary,
+        ),
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_episodes_released),
+            value = heroInfo.episodes.ifBlank { emptyValue },
+            icon = Icons.Outlined.FormatListNumbered,
+            accent = MaterialTheme.colorScheme.primary,
+        ),
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_type),
+            value = heroInfo.type,
+            icon = Icons.Outlined.BookmarkBorder,
+            accent = MaterialTheme.colorScheme.secondary,
+        ),
+        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_release_date),
+                value = releaseDate,
+                icon = Icons.Filled.DateRange,
+                accent = MaterialTheme.colorScheme.primary,
+            )
+        },
+        sourceMaterial?.let { source ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_source_material),
+                value = source,
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                accent = MaterialTheme.colorScheme.tertiary,
+            )
+        },
+        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_studio),
+                value = studio,
+                icon = Icons.Filled.Business,
+                accent = Color(0xFFFF9800),
+            )
+        },
+    )
+    org.akkirrai.hibiki.shared.details.DetailsInformationSection(
+        title = stringResource(R.string.details_information),
+        items = informationItems,
+        horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1088,23 +930,7 @@ private fun DetailSectionTitle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 4.dp, height = 24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsSectionTitle(text = text, modifier = modifier)
 }
 
 @Composable
@@ -1114,49 +940,12 @@ private fun DetailInfoPill(
     icon: ImageVector,
     accent: Color,
 ) {
-    Surface(
-        modifier = Modifier.height(56.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-                .height(40.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Surface(
-                modifier = Modifier.size(36.dp),
-                shape = CircleShape,
-                color = accent.copy(alpha = 0.12f),
-                contentColor = accent,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.details.DetailsInfoPill(
+        label = label,
+        value = value,
+        icon = icon,
+        accent = accent,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1469,38 +1258,12 @@ private fun GenresSection(
     genres: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(24.dp))
-        DetailSectionTitle(
-            text = stringResource(R.string.details_genres),
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(genres.distinct(), key = { it }) { genre ->
-                Surface(
-                    modifier = Modifier.height(32.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = genre,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.details.DetailsGenresSection(
+        genres = genres,
+        title = stringResource(R.string.details_genres),
+        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1512,64 +1275,35 @@ private fun RelatedAnimeList(
 ) {
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(32.dp))
-        DetailSectionTitle(
-            text = title,
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
+    val relatedItems = displayItems.map { related ->
+        org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeItem(
+            id = related.id,
+            title = related.title,
+            metadata = formatRelatedAnimeMetadata(
+                year = related.year,
+                type = related.type,
+                status = related.status,
+                announcementLabel = announcementLabel,
+            ),
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp),
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(displayItems, key = RelatedAnime::id) { related ->
-                Column(
-                    modifier = Modifier
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onAnimeClick(related.toAnime()) }
-                        .padding(bottom = 8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        NetworkImage(
-                            imageUrl = related.posterUrl,
-                            fallbackUrl = related.posterFallbackUrl,
-                            contentDescription = related.title,
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = formatRelatedAnimeMetadata(
-                            year = related.year,
-                            type = related.type,
-                            status = related.status,
-                            announcementLabel = announcementLabel,
-                        ),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = related.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
     }
+    val relatedById = displayItems.associateBy(RelatedAnime::id)
+    org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
+        items = relatedItems,
+        title = title,
+        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+        onItemClick = { item -> relatedById[item.id]?.let { onAnimeClick(it.toAnime()) } },
+        poster = { item ->
+            relatedById[item.id]?.let { related ->
+                NetworkImage(
+                    imageUrl = related.posterUrl,
+                    fallbackUrl = related.posterFallbackUrl,
+                    contentDescription = related.title,
+                )
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1580,24 +1314,15 @@ private fun FavoriteCircleButton(
     size: androidx.compose.ui.unit.Dp = 41.dp,
     iconSize: androidx.compose.ui.unit.Dp = 18.dp,
 ) {
-    val isInLibrary = libraryCategory != null
-    Box(
-        modifier = modifier
-            .size(size)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = libraryCategory.iconOrDefault(),
-            contentDescription = stringResource(R.string.details_favorite),
-            modifier = Modifier.size(iconSize),
-            tint = if (isInLibrary) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
-            }
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButton(
+        icon = libraryCategory.iconOrDefault(),
+        isInLibrary = libraryCategory != null,
+        contentDescription = stringResource(R.string.details_favorite),
+        onClick = onClick,
+        modifier = modifier,
+        size = size,
+        iconSize = iconSize,
+    )
 }
 
 private data class WatchCtaState(
