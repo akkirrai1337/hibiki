@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -342,58 +343,176 @@ private fun PrototypeContent(
         }
         if (selectedAnime != null) {
             AnimeDetailsPanel(selectedAnime, isDetailsLoading, detailsError, onBackFromDetails)
-        } else if (selectedTab == AppDestination.SETTINGS) {
-            Spacer(Modifier.height(24.dp))
-            PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
         } else {
-            Spacer(Modifier.height(20.dp))
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text(appText(AppTextKey.SearchPlaceholder)) },
-            )
-            if (filterCatalog?.genreOptions?.isNotEmpty() == true) {
-                Spacer(Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filterCatalog.genreOptions) { option ->
-                        FilterChip(
-                            selected = option.id in filters.includedGenreAliases,
-                            onClick = {
-                                val selected = option.id in filters.includedGenreAliases
-                                onFiltersChange(
-                                    filters.copy(
-                                        includedGenreAliases = if (selected) {
-                                            filters.includedGenreAliases - option.id
-                                        } else {
-                                            filters.includedGenreAliases + option.id
-                                        },
-                                    ),
-                                )
-                            },
-                            label = { Text(option.title) },
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(24.dp))
-            SectionHeader(
-                title = if (selectedTab == AppDestination.HOME) appText(AppTextKey.ContinueWatching) else appText(AppTextKey.ExploreCatalog),
-                actionLabel = appText(AppTextKey.SeeAll),
-                onActionClick = { },
-            )
-            Spacer(Modifier.height(12.dp))
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 210.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
+            when (selectedTab) {
+                AppDestination.HOME -> HomeScreen(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    items = items,
+                    filters = filters,
+                    filterCatalog = filterCatalog,
+                    onFiltersChange = onFiltersChange,
+                    onAnimeClick = onAnimeClick,
+                )
+                AppDestination.SEARCH -> SearchScreen(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    items = items,
+                    filters = filters,
+                    filterCatalog = filterCatalog,
+                    onFiltersChange = onFiltersChange,
+                    onAnimeClick = onAnimeClick,
+                )
+                AppDestination.LIBRARY -> LibraryScreen(
+                    items = items,
+                    onAnimeClick = onAnimeClick,
+                )
+                AppDestination.SETTINGS -> SettingsScreen(
+                    languageMode = languageMode,
+                    onLanguageModeChange = onLanguageModeChange,
+                    darkTheme = darkTheme,
+                    onThemeChange = onThemeChange,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ColumnScope.HomeScreen(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
+    onAnimeClick: (Anime) -> Unit,
+) {
+    CatalogScreenContent(
+        query = query,
+        onQueryChange = onQueryChange,
+        items = items,
+        filters = filters,
+        filterCatalog = filterCatalog,
+        onFiltersChange = onFiltersChange,
+        onAnimeClick = onAnimeClick,
+        sectionTitle = appText(AppTextKey.ContinueWatching),
+    )
+}
+
+@Composable
+private fun ColumnScope.SearchScreen(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
+    onAnimeClick: (Anime) -> Unit,
+) {
+    CatalogScreenContent(
+        query = query,
+        onQueryChange = onQueryChange,
+        items = items,
+        filters = filters,
+        filterCatalog = filterCatalog,
+        onFiltersChange = onFiltersChange,
+        onAnimeClick = onAnimeClick,
+        sectionTitle = appText(AppTextKey.ExploreCatalog),
+    )
+}
+
+@Composable
+private fun ColumnScope.LibraryScreen(
+    items: List<Anime>,
+    onAnimeClick: (Anime) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(
+            title = appText(AppTextKey.Library),
+            actionLabel = appText(AppTextKey.SeeAll),
+            onActionClick = { },
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 210.dp),
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    languageMode: LanguageMode,
+    onLanguageModeChange: (LanguageMode) -> Unit,
+    darkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
+) {
+    Spacer(Modifier.height(24.dp))
+    PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
+}
+
+@Composable
+private fun ColumnScope.CatalogScreenContent(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
+    onAnimeClick: (Anime) -> Unit,
+    sectionTitle: String,
+) {
+    Spacer(Modifier.height(20.dp))
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        placeholder = { Text(appText(AppTextKey.SearchPlaceholder)) },
+    )
+    if (filterCatalog?.genreOptions?.isNotEmpty() == true) {
+        Spacer(Modifier.height(10.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(filterCatalog.genreOptions) { option ->
+                FilterChip(
+                    selected = option.id in filters.includedGenreAliases,
+                    onClick = {
+                        val selected = option.id in filters.includedGenreAliases
+                        onFiltersChange(
+                            filters.copy(
+                                includedGenreAliases = if (selected) {
+                                    filters.includedGenreAliases - option.id
+                                } else {
+                                    filters.includedGenreAliases + option.id
+                                },
+                            ),
+                        )
+                    },
+                    label = { Text(option.title) },
+                )
+            }
+        }
+    }
+    Spacer(Modifier.height(24.dp))
+    SectionHeader(
+        title = sectionTitle,
+        actionLabel = appText(AppTextKey.SeeAll),
+        onActionClick = { },
+    )
+    Spacer(Modifier.height(12.dp))
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 210.dp),
+        modifier = Modifier.weight(1f),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
     }
 }
 
