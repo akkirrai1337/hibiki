@@ -362,8 +362,6 @@
     <string name="settings_notifications_not_asked">Разрешение ещё не запрашивалось</string>
     <string name="settings_notifications_enabled">Включены</string>
     <string name="settings_notifications_disabled">Выключены · Открыть системные настройки</string>
-    <string name="settings_restart_onboarding">Показать приветствие снова</string>
-    <string name="settings_restart_onboarding_summary">Повторить начальную настройку без сброса текущего источника</string>
     <string name="settings_experimental">Экспериментальное</string>
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>

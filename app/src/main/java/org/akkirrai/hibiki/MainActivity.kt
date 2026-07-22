@@ -160,7 +160,6 @@ class MainActivity : ComponentActivity() {
                             HibikiApp(
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                 onConfigureNotifications = ::configureNotifications,
-                                onRestartOnboarding = appPreferences::restartOnboarding,
                             )
                         } else {
                             FirstLaunchOnboarding(

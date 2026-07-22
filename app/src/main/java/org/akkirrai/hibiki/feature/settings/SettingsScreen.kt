@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
@@ -100,7 +99,6 @@ fun SettingsScreen(
     onCheckForUpdates: () -> Unit = {},
     onOpenSources: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
-    onRestartOnboarding: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -181,7 +179,7 @@ fun SettingsScreen(
 
         item(key = "preferences") {
             SettingsSection(title = stringResource(R.string.settings_preferences)) {
-                SettingsItems(count = 4) { index, shape ->
+                SettingsItems(count = 3) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.Language,
@@ -216,14 +214,6 @@ fun SettingsScreen(
                             onClick = onConfigureNotifications,
                         )
 
-                        3 -> SettingsActionItem(
-                            icon = Icons.Outlined.RestartAlt,
-                            title = stringResource(R.string.settings_restart_onboarding),
-                            subtitle = stringResource(R.string.settings_restart_onboarding_summary),
-                            shape = shape,
-                            showNavigationArrow = true,
-                            onClick = onRestartOnboarding,
-                        )
                     }
                 }
             }

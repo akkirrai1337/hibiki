@@ -115,10 +115,6 @@ class AppPreferences(context: Context) {
         _animeSourceChanges.tryEmit(source)
     }
 
-    fun restartOnboarding() {
-        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, false).apply()
-    }
-
     fun setNotificationPermissionState(state: NotificationPermissionState) {
         prefs.edit().putString(KEY_NOTIFICATION_PERMISSION_STATE, state.name).apply()
     }

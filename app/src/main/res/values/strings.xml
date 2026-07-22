@@ -368,8 +368,6 @@
     <string name="settings_notifications_not_asked">Permission has not been requested</string>
     <string name="settings_notifications_enabled">Enabled</string>
     <string name="settings_notifications_disabled">Disabled · Open system settings</string>
-    <string name="settings_restart_onboarding">Show welcome setup again</string>
-    <string name="settings_restart_onboarding_summary">Review the initial setup without resetting your current source</string>
     <string name="settings_experimental">Experimental</string>
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>
