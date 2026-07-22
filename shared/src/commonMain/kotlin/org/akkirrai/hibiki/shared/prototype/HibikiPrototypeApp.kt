@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +85,6 @@ fun HibikiPrototypeApp(
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
-    var selectedAnime by remember { mutableStateOf<Anime?>(null) }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
@@ -121,9 +121,11 @@ fun HibikiPrototypeApp(
                         state.filters,
                         state.filterCatalog,
                         presenter::updateFilters,
-                        selectedAnime,
-                        { selectedAnime = it },
-                        { selectedAnime = null },
+                        state.selectedAnime,
+                        presenter::openDetails,
+                        presenter::closeDetails,
+                        state.isDetailsLoading,
+                        state.detailsError,
                         languageMode,
                         onLanguageModeChange,
                         darkTheme,
@@ -139,9 +141,11 @@ fun HibikiPrototypeApp(
                         state.filters,
                         state.filterCatalog,
                         presenter::updateFilters,
-                        selectedAnime,
-                        { selectedAnime = it },
-                        { selectedAnime = null },
+                        state.selectedAnime,
+                        presenter::openDetails,
+                        presenter::closeDetails,
+                        state.isDetailsLoading,
+                        state.detailsError,
                         languageMode,
                         onLanguageModeChange,
                         darkTheme,
@@ -167,6 +171,8 @@ private fun WidePrototypeLayout(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    isDetailsLoading: Boolean,
+    detailsError: String?,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
@@ -186,6 +192,8 @@ private fun WidePrototypeLayout(
             selectedAnime,
             onAnimeClick,
             onBackFromDetails,
+            isDetailsLoading,
+            detailsError,
             languageMode,
             onLanguageModeChange,
             darkTheme,
@@ -208,6 +216,8 @@ private fun CompactPrototypeLayout(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    isDetailsLoading: Boolean,
+    detailsError: String?,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
@@ -240,6 +250,8 @@ private fun CompactPrototypeLayout(
             selectedAnime,
             onAnimeClick,
             onBackFromDetails,
+            isDetailsLoading,
+            detailsError,
             languageMode,
             onLanguageModeChange,
             darkTheme,
@@ -308,6 +320,8 @@ private fun PrototypeContent(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    isDetailsLoading: Boolean,
+    detailsError: String?,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
@@ -333,7 +347,7 @@ private fun PrototypeContent(
             }
         }
         if (selectedAnime != null) {
-            AnimeDetailsPanel(selectedAnime, onBackFromDetails)
+            AnimeDetailsPanel(selectedAnime, isDetailsLoading, detailsError, onBackFromDetails)
         } else if (selectedTab == PrototypeTab.SETTINGS) {
             Spacer(Modifier.height(24.dp))
             PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
@@ -465,7 +479,7 @@ private fun AnimePrototypeCard(anime: Anime, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AnimeDetailsPanel(anime: Anime, onBack: () -> Unit) {
+private fun AnimeDetailsPanel(anime: Anime, isLoading: Boolean, error: String?, onBack: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -479,6 +493,12 @@ private fun AnimeDetailsPanel(anime: Anime, onBack: () -> Unit) {
                 Text(anime.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(anime.subtitle, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${anime.status} · ${anime.episodesLabel}", color = MaterialTheme.colorScheme.primary)
+                if (isLoading) {
+                    CircularProgressIndicator()
+                }
+                error?.let { message ->
+                    Text(message, color = MaterialTheme.colorScheme.error)
+                }
                 anime.description?.let { description ->
                     Text(description, style = MaterialTheme.typography.bodyLarge)
                 }

@@ -20,6 +20,9 @@ data class AnimeCatalogUiState(
     val canLoadMore: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val selectedAnime: Anime? = null,
+    val isDetailsLoading: Boolean = false,
+    val detailsError: String? = null,
     val filterCatalog: AnimeCatalogFilterCatalog? = null,
     val isFilterCatalogLoading: Boolean = false,
 )
@@ -37,6 +40,7 @@ class AnimeCatalogPresenter(
 
     private var searchJob: Job? = null
     private var filterCatalogJob: Job? = null
+    private var detailsJob: Job? = null
 
     fun onQueryChange(query: String) {
         _state.update { it.copy(query = query, error = null) }
@@ -60,6 +64,32 @@ class AnimeCatalogPresenter(
     fun updateFilters(filters: AnimeSearchFilters) {
         _state.update { it.copy(filters = filters, error = null) }
         search()
+    }
+
+    fun openDetails(anime: Anime) {
+        detailsJob?.cancel()
+        detailsJob = scope.launch {
+            _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
+            try {
+                val details = repository.getDetails(anime.id, anime)
+                _state.update { it.copy(selectedAnime = details, isDetailsLoading = false) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (throwable: Throwable) {
+                _state.update {
+                    it.copy(
+                        selectedAnime = anime,
+                        isDetailsLoading = false,
+                        detailsError = throwable.message ?: "Details request failed",
+                    )
+                }
+            }
+        }
+    }
+
+    fun closeDetails() {
+        detailsJob?.cancel()
+        _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
     }
 
     fun search() {
@@ -145,6 +175,7 @@ class AnimeCatalogPresenter(
     fun close() {
         searchJob?.cancel()
         filterCatalogJob?.cancel()
+        detailsJob?.cancel()
     }
 
     private companion object {

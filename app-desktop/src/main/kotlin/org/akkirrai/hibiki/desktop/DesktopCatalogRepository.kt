@@ -30,6 +30,9 @@ class DesktopCatalogRepository : AnimeCatalogRepository, AutoCloseable {
 
     override val initialItems: List<Anime> = emptyList()
 
+    override suspend fun getDetails(id: String, fallback: Anime): Anime =
+        source.getById(id).toSharedAnime()
+
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
         val titles = source.search(

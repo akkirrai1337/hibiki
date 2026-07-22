@@ -27,6 +27,8 @@ class AndroidAnimeCatalogRepository(
 
     override val initialItems: List<Anime> = emptyList()
 
+    override suspend fun getDetails(id: String, fallback: Anime): Anime = delegate.getDetails(id, fallback)
+
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
         delegate.getSearchFilterCatalog().let { catalog ->
             AnimeCatalogFilterCatalog(
