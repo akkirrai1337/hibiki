@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,9 @@ import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.library.LibraryEntry
+import org.akkirrai.hibiki.shared.library.LibraryPresenter
+import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
@@ -74,11 +78,14 @@ import org.akkirrai.hibiki.shared.navigation.AppDestination
 fun HibikiAppShell(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    libraryRepository: LibraryRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
 ) {
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
+    val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
+    val libraryState by libraryPresenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
@@ -88,6 +95,10 @@ fun HibikiAppShell(
         presenter.loadFilterCatalog()
         presenter.search()
         onDispose { presenter.close() }
+    }
+
+    LaunchedEffect(libraryRepository) {
+        libraryPresenter.updateEntries(libraryRepository.getEntries())
     }
 
     CompositionLocalProvider(LocalAppTextResolver provides DefaultAppTextResolver(languageMode)) {
@@ -125,6 +136,7 @@ fun HibikiAppShell(
                         onLanguageModeChange,
                         darkTheme,
                         onThemeChange,
+                        libraryState.visibleEntries,
                     )
                     } else {
                     WideAppLayout(
@@ -145,6 +157,7 @@ fun HibikiAppShell(
                         onLanguageModeChange,
                         darkTheme,
                         onThemeChange,
+                        libraryState.visibleEntries,
                     )
                     }
                 }
@@ -172,6 +185,7 @@ private fun WideAppLayout(
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    libraryEntries: List<LibraryEntry>,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -193,6 +207,7 @@ private fun WideAppLayout(
             onLanguageModeChange,
             darkTheme,
             onThemeChange,
+            libraryEntries,
             Modifier.weight(1f),
         )
     }
@@ -217,6 +232,7 @@ private fun CompactAppLayout(
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    libraryEntries: List<LibraryEntry>,
 ) {
     Scaffold(
         bottomBar = {
@@ -251,6 +267,7 @@ private fun CompactAppLayout(
             onLanguageModeChange,
             darkTheme,
             onThemeChange,
+            libraryEntries,
             Modifier.padding(padding),
         )
     }
@@ -321,6 +338,7 @@ private fun AppDestinationContent(
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    libraryEntries: List<LibraryEntry>,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -364,7 +382,7 @@ private fun AppDestinationContent(
                     onAnimeClick = onAnimeClick,
                 )
                 AppDestination.LIBRARY -> LibraryScreen(
-                    items = items,
+                    entries = libraryEntries,
                     onAnimeClick = onAnimeClick,
                 )
                 AppDestination.SETTINGS -> SettingsScreen(
@@ -424,7 +442,7 @@ private fun ColumnScope.SearchScreen(
 
 @Composable
 private fun ColumnScope.LibraryScreen(
-    items: List<Anime>,
+    entries: List<LibraryEntry>,
     onAnimeClick: (Anime) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -440,7 +458,9 @@ private fun ColumnScope.LibraryScreen(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            items(items) { anime -> AnimeCatalogCard(anime, onClick = { onAnimeClick(anime) }) }
+            items(entries) { entry ->
+                AnimeCatalogCard(entry.anime, onClick = { onAnimeClick(entry.anime) })
+            }
         }
     }
 }
