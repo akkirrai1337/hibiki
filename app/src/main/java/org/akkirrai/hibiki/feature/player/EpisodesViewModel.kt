@@ -6,23 +6,23 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.shared.player.EpisodesPresenter
+import org.akkirrai.hibiki.shared.player.EpisodesScreenState
+import org.akkirrai.hibiki.shared.player.EpisodesUiState
 
 class EpisodesViewModel(
     private val sourceId: String,
     private val repository: AnimeWatchRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(EpisodesScreenState())
-    val uiState: StateFlow<EpisodesScreenState> = _uiState.asStateFlow()
+    private val presenter = EpisodesPresenter()
+    val uiState: StateFlow<EpisodesScreenState> = presenter.state
 
     init {
         load()
@@ -30,7 +30,7 @@ class EpisodesViewModel(
 
     fun load() {
         val offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(sourceId)
-        _uiState.update {
+        presenter.update {
             it.copy(
                 result = if (offlineEpisodes.isEmpty()) {
                     EpisodesUiState.Loading
@@ -46,7 +46,7 @@ class EpisodesViewModel(
                         primary = episodes,
                         secondary = offlineDownloadRepository.getOfflineEpisodes(sourceId),
                     )
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             result = if (merged.isEmpty()) {
                                 EpisodesUiState.Empty
@@ -58,7 +58,7 @@ class EpisodesViewModel(
                 }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) return@onFailure
-                    _uiState.update {
+                    presenter.update {
                         val offline = offlineDownloadRepository.getOfflineEpisodes(sourceId)
                         it.copy(
                             result = if (offline.isNotEmpty()) {
@@ -101,15 +101,4 @@ class EpisodesViewModel(
             ) as T
         }
     }
-}
-
-data class EpisodesScreenState(
-    val result: EpisodesUiState = EpisodesUiState.Loading,
-)
-
-sealed interface EpisodesUiState {
-    data object Loading : EpisodesUiState
-    data object Empty : EpisodesUiState
-    data class Error(val message: String) : EpisodesUiState
-    data class Content(val items: List<WatchEpisode>) : EpisodesUiState
 }

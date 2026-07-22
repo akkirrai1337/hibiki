@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
+import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
