@@ -21,6 +21,9 @@ kotlin {
     }
 
     sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)

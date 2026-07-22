@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.model
+package org.akkirrai.hibiki.shared.model
 
 data class Anime(
     val id: String,

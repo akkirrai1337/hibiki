@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.model
+package org.akkirrai.hibiki.shared.model
 
 data class WatchSource(
     val sourceId: String,
@@ -8,11 +8,7 @@ data class WatchSource(
     val isPriority: Boolean = false,
 )
 
-data class WatchEpisode(
-    val id: String,
-    val number: Double,
-    val title: String?,
-)
+data class WatchEpisode(val id: String, val number: Double, val title: String?)
 
 data class PlaybackStream(
     val animeTitle: String,
@@ -27,33 +23,18 @@ data class PlaybackStream(
     val videoId: Long? = null,
 )
 
-data class PlaybackSegment(
-    val type: PlaybackSegmentType,
-    val startMs: Long,
-    val endMs: Long,
-)
+data class PlaybackSegment(val type: PlaybackSegmentType, val startMs: Long, val endMs: Long)
 
-enum class PlaybackSegmentType {
-    Opening,
-    Ending,
-    Unknown,
-}
+enum class PlaybackSegmentType { Opening, Ending, Unknown }
 
-data class PlaybackLinkOption(
-    val playerName: String?,
-    val qualityLabel: String?,
-)
+data class PlaybackLinkOption(val playerName: String?, val qualityLabel: String?)
 
 data class PlaybackSettingsOptions(
     val voiceovers: List<WatchSource> = emptyList(),
     val links: List<PlaybackLinkOption> = emptyList(),
 )
 
-enum class PlaybackStreamType {
-    HLS,
-    MP4,
-    DASH,
-}
+enum class PlaybackStreamType { HLS, MP4, DASH }
 
 data class TitleWatchState(
     val titleId: String,
@@ -90,8 +71,4 @@ data class WatchSourceSelection(
     val autoSelect: Boolean = true,
 )
 
-enum class EpisodeProgressStatus {
-    NotStarted,
-    InProgress,
-    Watched,
-}
+enum class EpisodeProgressStatus { NotStarted, InProgress, Watched }
