@@ -73,6 +73,7 @@ fun HibikiPrototypeApp(
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
+    var selectedAnime by remember { mutableStateOf<Anime?>(null) }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -93,6 +94,9 @@ fun HibikiPrototypeApp(
                     state.filters,
                     state.filterCatalog,
                     presenter::updateFilters,
+                    selectedAnime,
+                    { selectedAnime = it },
+                    { selectedAnime = null },
                 )
             } else {
                 WidePrototypeLayout(
@@ -104,6 +108,9 @@ fun HibikiPrototypeApp(
                     state.filters,
                     state.filterCatalog,
                     presenter::updateFilters,
+                    selectedAnime,
+                    { selectedAnime = it },
+                    { selectedAnime = null },
                 )
             }
         }
@@ -120,6 +127,9 @@ private fun WidePrototypeLayout(
     filters: AnimeSearchFilters,
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
+    selectedAnime: Anime?,
+    onAnimeClick: (Anime) -> Unit,
+    onBackFromDetails: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         PrototypeSidebar(selectedTab, onTabSelected)
@@ -132,6 +142,9 @@ private fun WidePrototypeLayout(
             filters,
             filterCatalog,
             onFiltersChange,
+            selectedAnime,
+            onAnimeClick,
+            onBackFromDetails,
             Modifier.weight(1f),
         )
     }
@@ -147,6 +160,9 @@ private fun CompactPrototypeLayout(
     filters: AnimeSearchFilters,
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
+    selectedAnime: Anime?,
+    onAnimeClick: (Anime) -> Unit,
+    onBackFromDetails: () -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -172,6 +188,9 @@ private fun CompactPrototypeLayout(
             filters,
             filterCatalog,
             onFiltersChange,
+            selectedAnime,
+            onAnimeClick,
+            onBackFromDetails,
             Modifier.padding(padding),
         )
     }
@@ -233,6 +252,9 @@ private fun PrototypeContent(
     filters: AnimeSearchFilters,
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
+    selectedAnime: Anime?,
+    onAnimeClick: (Anime) -> Unit,
+    onBackFromDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -253,7 +275,9 @@ private fun PrototypeContent(
                 Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
             }
         }
-        if (selectedTab == PrototypeTab.SETTINGS) {
+        if (selectedAnime != null) {
+            AnimeDetailsPanel(selectedAnime, onBackFromDetails)
+        } else if (selectedTab == PrototypeTab.SETTINGS) {
             Spacer(Modifier.height(24.dp))
             PrototypeSettingsCard()
         } else {
@@ -302,7 +326,7 @@ private fun PrototypeContent(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                items(items) { anime -> AnimePrototypeCard(anime) }
+                items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
             }
         }
     }
@@ -330,8 +354,9 @@ private fun PrototypeSettingsCard() {
 }
 
 @Composable
-private fun AnimePrototypeCard(anime: Anime) {
+private fun AnimePrototypeCard(anime: Anime, onClick: () -> Unit) {
     androidx.compose.material3.Card(
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = RoundedCornerShape(UiDimens.MediumCorner),
     ) {
@@ -352,6 +377,37 @@ private fun AnimePrototypeCard(anime: Anime) {
                 Text(anime.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(anime.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${anime.status} · ${anime.episodesLabel}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimeDetailsPanel(anime: Anime, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        TextButton(onClick = onBack) { Text("← ${appText(AppTextKey.Home)}") }
+        androidx.compose.material3.Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(UiDimens.MediumCorner),
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(anime.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(anime.subtitle, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${anime.status} · ${anime.episodesLabel}", color = MaterialTheme.colorScheme.primary)
+                anime.description?.let { description ->
+                    Text(description, style = MaterialTheme.typography.bodyLarge)
+                }
+                if (anime.genres.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(anime.genres) { genre ->
+                            FilterChip(selected = false, onClick = { }, label = { Text(genre) })
+                        }
+                    }
+                }
+                Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
             }
         }
     }
