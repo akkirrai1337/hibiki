@@ -72,3 +72,9 @@ data class WatchSourceSelection(
 )
 
 enum class EpisodeProgressStatus { NotStarted, InProgress, Watched }
+
+fun EpisodeWatchProgress.progressStatus(): EpisodeProgressStatus = when {
+    durationMs <= 0L || positionMs <= 0L -> EpisodeProgressStatus.NotStarted
+    positionMs >= (durationMs - 1_000L).coerceAtLeast(0L) -> EpisodeProgressStatus.Watched
+    else -> EpisodeProgressStatus.InProgress
+}

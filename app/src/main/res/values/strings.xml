@@ -459,4 +459,6 @@
     <string name="update_download_failed">The update could not be downloaded</string>
     <string name="update_not_available">You already have the latest version</string>
     <string name="update_check_failed">Could not check for updates</string>
+    <string name="local_profile_summary_library">Library</string>
+    <string name="local_profile_summary_episodes">Episodes</string>
 </resources>

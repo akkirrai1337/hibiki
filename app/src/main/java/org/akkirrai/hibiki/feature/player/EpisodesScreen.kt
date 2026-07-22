@@ -67,14 +67,13 @@ import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
+import org.akkirrai.hibiki.shared.model.progressStatus
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
-
-private const val WATCHED_END_TOLERANCE_MS = 1_000L
 
 @Composable
 fun EpisodesScreen(
@@ -417,11 +416,7 @@ private fun PassiveDownloadStateIcon() {
 private fun resolveEpisodeStatus(
     progress: EpisodeWatchProgress?,
 ): EpisodeProgressStatus {
-    return when {
-        progress == null || progress.positionMs == 0L -> EpisodeProgressStatus.NotStarted
-        progress.isWatchedToEnd() -> EpisodeProgressStatus.Watched
-        else -> EpisodeProgressStatus.InProgress
-    }
+    return progress?.progressStatus() ?: EpisodeProgressStatus.NotStarted
 }
 
 @Composable
@@ -483,10 +478,6 @@ private fun buildEpisodeSubtitle(
         OfflineEpisodeDownloadState.Failed -> stringResource(R.string.watch_status_failed)
     }
     return downloadLabel
-}
-
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
 }
 
 private fun formatDuration(durationMs: Long): String {

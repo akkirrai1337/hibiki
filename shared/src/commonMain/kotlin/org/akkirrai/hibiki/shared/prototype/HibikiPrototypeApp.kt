@@ -494,7 +494,12 @@ private fun SettingsScreen(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(8.dp))
-        LocalProfileSummary(data = profileData)
+        LocalProfileSummary(
+            data = profileData,
+            fallbackName = appText(AppTextKey.AppName),
+            libraryLabel = appText(AppTextKey.ProfileLibrary),
+            episodesLabel = appText(AppTextKey.ProfileEpisodes),
+        )
     SettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
     }
 }

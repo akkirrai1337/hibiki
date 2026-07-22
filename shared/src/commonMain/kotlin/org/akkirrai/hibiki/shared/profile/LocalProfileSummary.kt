@@ -13,15 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.text.AppTextKey
-import org.akkirrai.hibiki.shared.text.appText
-
 /** Stateless profile summary shared by Android and Desktop hosts. */
 @Composable
 fun LocalProfileSummary(
     data: LocalProfileData,
+    fallbackName: String,
+    libraryLabel: String,
+    episodesLabel: String,
     modifier: Modifier = Modifier,
 ) {
+    val stats = data.stats()
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -29,17 +30,17 @@ fun LocalProfileSummary(
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = data.profileName.ifBlank { appText(AppTextKey.AppName) },
+                text = data.profileName.ifBlank { fallbackName },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "${appText(AppTextKey.ProfileLibrary)}: ${data.library.size}",
+                    text = "$libraryLabel: ${stats.libraryTotal}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "${appText(AppTextKey.ProfileEpisodes)}: ${data.episodeProgress.size}",
+                    text = "$episodesLabel: ${stats.completedEpisodes}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

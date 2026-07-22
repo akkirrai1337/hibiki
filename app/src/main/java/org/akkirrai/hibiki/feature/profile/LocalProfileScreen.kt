@@ -80,6 +80,7 @@ import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
+import org.akkirrai.hibiki.shared.profile.LocalProfileSummary
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -187,6 +188,13 @@ fun LocalProfileScreen(
                         )
                     }
                 }
+                LocalProfileSummary(
+                    data = state.data,
+                    fallbackName = stringResource(R.string.app_name),
+                    libraryLabel = stringResource(R.string.local_profile_summary_library),
+                    episodesLabel = stringResource(R.string.local_profile_summary_episodes),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = AnimiteLargePadding),
+                )
                 PrimaryTabRow(
                     selectedTabIndex = pagerState.currentPage,
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
