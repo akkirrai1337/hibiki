@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -131,6 +132,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -159,15 +161,22 @@ fun HomeScreen(
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
-    val homeListState = rememberLazyListState()
+    val selectedSourceId = LocalAppPreferencesState.current.animeSource
+    val homeListState = remember(selectedSourceId) { LazyListState() }
 
-    LaunchedEffect(homeListState, state.trending.size, state.isTrendingLoadingMore) {
+    LaunchedEffect(
+        homeListState,
+        state.trending.size,
+        state.isTrendingLoadingMore,
+        state.isLoading,
+        isSearchActive,
+    ) {
         snapshotFlow {
             val layout = homeListState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= layout.totalItemsCount - 4
+            homeListState.isScrollInProgress && lastVisible >= layout.totalItemsCount - 4
         }.collect { nearEnd ->
-            if (nearEnd && !isSearchActive) viewModel.loadMoreTrending()
+            if (nearEnd && !state.isLoading && !isSearchActive) viewModel.loadMoreTrending()
         }
     }
 

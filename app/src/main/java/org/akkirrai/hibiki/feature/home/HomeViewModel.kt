@@ -50,8 +50,12 @@ class HomeViewModel(
         observeSourceChanges()
     }
 
+    private var homeLoadJob: Job? = null
+    private var filterCatalogJob: Job? = null
+
     fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
+        homeLoadJob?.cancel()
+        homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home refresh started")
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -271,7 +275,7 @@ class HomeViewModel(
 
     fun loadMoreTrending() {
         val current = uiState.value
-        if (current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
+        if (current.isLoading || current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isTrendingLoadingMore = true) }
             val page = runCatching {
@@ -338,7 +342,8 @@ class HomeViewModel(
     }
 
     fun load() {
-        viewModelScope.launch(Dispatchers.IO) {
+        homeLoadJob?.cancel()
+        homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home load started")
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -378,6 +383,8 @@ class HomeViewModel(
 
     override fun onCleared() {
         searchJob?.cancel()
+        homeLoadJob?.cancel()
+        filterCatalogJob?.cancel()
         descriptionUpdates.close()
         repository.close()
         super.onCleared()
@@ -482,7 +489,8 @@ class HomeViewModel(
     }
 
     private fun loadSearchFilterCatalog() {
-        viewModelScope.launch {
+        filterCatalogJob?.cancel()
+        filterCatalogJob = viewModelScope.launch {
             _uiState.update { it.copy(isSearchFilterCatalogLoading = true) }
             val catalog = runCatching {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
@@ -512,6 +520,8 @@ class HomeViewModel(
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                     searchJob?.cancel()
+                    homeLoadJob?.cancel()
+                    filterCatalogJob?.cancel()
                     recentRandomIds.clear()
                     _uiState.update {
                         it.copy(
