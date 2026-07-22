@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
@@ -82,7 +85,9 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.PosterImage
+import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
@@ -185,7 +190,7 @@ fun CatalogScreen(
                         }
                     }
 
-                    verticalAnimeListContent(
+                    appVerticalAnimeListContent(
                         items = state.items.map { it.anime },
                         metaText = { anime -> anime.buildCardMeta(
                                 announcementLabel = announcementLabel,
@@ -194,6 +199,28 @@ fun CatalogScreen(
                                 separator = " • ",
                         ) },
                         onAnimeClick = onAnimeClick,
+                        trailingIcon = Icons.Outlined.ChevronRight,
+                        posterContent = { anime ->
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    PosterPlaceholder(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(2f / 3f),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Image,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                            )
+                        },
                         posterFooterContent = { anime ->
                             libraryStatusByAnimeId[anime.id]?.let { category ->
                                 LibraryStatusPosterFooter(category)
