@@ -124,6 +124,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppPageIndicator
+import org.akkirrai.hibiki.shared.design.component.AppFeaturedCard
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
@@ -509,11 +510,24 @@ private fun FeaturedCarousel(
             beyondViewportPageCount = 1,
         ) { page ->
             val anime = items[page]
-            FeaturedAnimeCard(
+            AppFeaturedCard(
                 anime = anime,
-                bannerUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                featuredLabel = stringResource(R.string.home_featured_label),
+                meta = buildHomeMeta(
+                    anime = anime,
+                    announcementLabel = stringResource(R.string.anime_meta_announcement),
+                    movieLabel = stringResource(R.string.anime_meta_movie),
+                ),
                 height = featuredHeight,
                 onClick = { onAnimeClick(anime) },
+                imageContent = {
+                    AnimeBackground(
+                        imageUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                        fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                        contentDescription = anime.title,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                },
             )
         }
 
@@ -526,129 +540,6 @@ private fun FeaturedCarousel(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 12.dp),
             )
-        }
-    }
-}
-
-@Composable
-private fun FeaturedAnimeCard(
-    anime: Anime,
-    bannerUrl: String?,
-    height: Dp,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
-        ) {
-            AnimeBackground(
-                imageUrl = bannerUrl,
-                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier.matchParentSize()
-            )
-
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.12f),
-                                0.35f to Color.Black.copy(alpha = 0.30f),
-                                0.70f to Color.Black.copy(alpha = 0.60f),
-                                1f to Color.Black.copy(alpha = 0.88f),
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.30f),
-                                0.45f to Color.Black.copy(alpha = 0.10f),
-                                1f to Color.Black.copy(alpha = 0f),
-                            )
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(
-                        start = 18.dp,
-                        end = 18.dp,
-                        top = 18.dp,
-                        bottom = 42.dp,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.home_featured_label),
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            offset = androidx.compose.ui.geometry.Offset(0f, 2f),
-                            blurRadius = 8f,
-                        )
-                    ),
-                    color = Color.White
-                )
-
-                AnimeTitleText(
-                    text = anime.title,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            offset = androidx.compose.ui.geometry.Offset(0f, 2f),
-                            blurRadius = 10f,
-                        )
-                    ),
-                    color = Color.White,
-                    baseMaxLines = 3,
-                    extraLongTitleLines = 0,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                val meta = buildHomeMeta(
-                    anime = anime,
-                    announcementLabel = stringResource(R.string.anime_meta_announcement),
-                    movieLabel = stringResource(R.string.anime_meta_movie),
-                )
-                if (meta.isNotBlank()) {
-                    Text(
-                        text = meta,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.50f),
-                                offset = androidx.compose.ui.geometry.Offset(0f, 1f),
-                                blurRadius = 6f,
-                            )
-                        ),
-                        color = Color.White.copy(alpha = 0.82f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
         }
     }
 }
