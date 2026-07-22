@@ -42,10 +42,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
@@ -53,6 +50,9 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
+import org.akkirrai.hibiki.shared.home.TrendingFilter
+import org.akkirrai.hibiki.shared.home.TrendingPresenter
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
@@ -271,26 +271,26 @@ class TrendingAnimeViewModel(
     private val repository: HomeDataRepository,
     private val context: Context,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(TrendingAnimeUiState(isLoading = true))
-    val uiState: StateFlow<TrendingAnimeUiState> = _uiState.asStateFlow()
+    private val presenter = TrendingPresenter(TrendingAnimeUiState(isLoading = true))
+    val uiState: StateFlow<TrendingAnimeUiState> = presenter.state
 
     init {
         load()
     }
 
     fun selectFilter(filter: TrendingFilter) {
-        if (filter == _uiState.value.selectedFilter) return
-        _uiState.value = TrendingAnimeUiState(
+        if (filter == presenter.state.value.selectedFilter) return
+        presenter.setState(TrendingAnimeUiState(
             isLoading = true,
             selectedFilter = filter,
-        )
+        ))
         load()
     }
 
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
-            val selectedFilter = _uiState.value.selectedFilter
-            _uiState.update {
+            val selectedFilter = presenter.state.value.selectedFilter
+            presenter.update {
                 it.copy(
                     isLoading = true,
                     errorMessage = null,
@@ -305,15 +305,15 @@ class TrendingAnimeViewModel(
                 )
             }
                 .onSuccess { items ->
-                    _uiState.value = TrendingAnimeUiState(
+                    presenter.setState(TrendingAnimeUiState(
                         isLoading = false,
                         selectedFilter = selectedFilter,
                         items = items,
                         canLoadMore = items.size >= TRENDING_PAGE_LIMIT,
-                    )
+                    ))
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoading = false,
                             errorMessage = throwable.message ?: context.getString(R.string.trending_error_title),
@@ -324,13 +324,13 @@ class TrendingAnimeViewModel(
     }
 
     fun loadMore() {
-        val currentState = _uiState.value
+        val currentState = presenter.state.value
         if (currentState.isLoading || currentState.isLoadingMore || !currentState.canLoadMore) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val offset = _uiState.value.items.size
-            val selectedFilter = _uiState.value.selectedFilter
-            _uiState.update {
+            val offset = presenter.state.value.items.size
+            val selectedFilter = presenter.state.value.selectedFilter
+            presenter.update {
                 it.copy(
                     isLoadingMore = true,
                     loadMoreError = null,
@@ -344,7 +344,7 @@ class TrendingAnimeViewModel(
                 )
             }
                 .onSuccess { nextItems ->
-                    _uiState.update { state ->
+                    presenter.update { state ->
                         val mergedItems = (state.items + nextItems).distinctBy(Anime::id)
                         state.copy(
                             isLoadingMore = false,
@@ -355,7 +355,7 @@ class TrendingAnimeViewModel(
                     }
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoadingMore = false,
                             loadMoreError = throwable.message ?: context.getString(R.string.trending_load_more_error),
@@ -387,16 +387,6 @@ class TrendingAnimeViewModel(
         const val TRENDING_PAGE_LIMIT = 100
     }
 }
-
-data class TrendingAnimeUiState(
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedFilter: TrendingFilter = TrendingFilter.All,
-    val items: List<Anime> = emptyList(),
-    val isLoadingMore: Boolean = false,
-    val canLoadMore: Boolean = false,
-    val loadMoreError: String? = null,
-)
 
 @Composable
 private fun buildTrendingMeta(anime: Anime): String {
