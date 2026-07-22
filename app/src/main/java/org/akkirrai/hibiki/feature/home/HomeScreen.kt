@@ -103,6 +103,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
@@ -263,6 +264,7 @@ fun HomeScreen(
                             continueAnime = continueAnime,
                             trending = state.trending,
                             isTrendingLoadingMore = state.isTrendingLoadingMore,
+                            onLoadMoreTrending = viewModel::loadMoreTrending,
                             isActive = isActive,
                             onAnimeClick = onAnimeClick,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
@@ -315,6 +317,7 @@ private fun LazyListScope.homeFeedContent(
     continueAnime: Anime?,
     trending: List<Anime>,
     isTrendingLoadingMore: Boolean,
+    onLoadMoreTrending: () -> Unit,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
@@ -354,12 +357,12 @@ private fun LazyListScope.homeFeedContent(
     )
     if (isTrendingLoadingMore) {
         item {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
+            AppLoadMoreState(
+                isLoading = true,
+                errorMessage = null,
+                errorIcon = Icons.Outlined.WarningAmber,
+                onRetry = onLoadMoreTrending,
+            )
         }
     }
 }

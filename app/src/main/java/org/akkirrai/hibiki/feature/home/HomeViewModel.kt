@@ -28,6 +28,11 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.mergeAnimePreservingOrder
+import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates
+import org.akkirrai.hibiki.shared.home.mergeMissingDescriptions
+import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
+import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
 
 class HomeViewModel(
     private val repository: HomeDataRepository,
@@ -69,7 +74,7 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    ).preserveLoadedDescriptions(current))
+                    ).preserveHomeDescriptions(current))
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -241,8 +246,11 @@ class HomeViewModel(
                     state.copy(
                         searchResult = current.copy(
                             items = (
-                                current.items + nextItems.take(SEARCH_PAGE_SIZE)
-                            ).distinctBy { it.id },
+                                mergeAnimePreservingOrder(
+                                    current.items,
+                                    nextItems.take(SEARCH_PAGE_SIZE),
+                                )
+                            ),
                             canLoadMore = nextItems.size > SEARCH_PAGE_SIZE,
                             isLoadingMore = false,
                             loadMoreError = null,
@@ -281,7 +289,7 @@ class HomeViewModel(
             }.getOrElse { emptyList() }
             presenter.update { state ->
                 state.copy(
-                    trending = (state.trending + page).distinctBy { it.id },
+                    trending = mergeAnimePreservingOrder(state.trending, page),
                     isTrendingLoadingMore = false,
                     canLoadMoreTrending = page.size >= TRENDING_PAGE_SIZE,
                     trendingNextOffset = current.trendingNextOffset + page.size,
@@ -357,7 +365,7 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    ).preserveLoadedDescriptions(current))
+                    ).preserveHomeDescriptions(current))
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -397,43 +405,9 @@ class HomeViewModel(
                     val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
                     updates[nextUpdate.id] = nextUpdate
                 }
-                presenter.update { state -> state.replaceDescriptions(updates) }
+                presenter.update { state -> state.applyHomeDescriptionUpdates(updates) }
             }
         }
-    }
-
-    private fun HomeUiState.replaceDescriptions(updates: Map<String, Anime>): HomeUiState {
-        val updatedFeatured = featuredAnime.replaceDescriptions(updates)
-        val updatedTrending = trending.replaceDescriptions(updates)
-        val updatedRecent = recentlyUpdated.replaceDescriptions(updates)
-        val updatedSearchResult = searchResult.replaceDescriptions(updates)
-        return if (
-            updatedFeatured === featuredAnime &&
-            updatedTrending === trending &&
-            updatedRecent === recentlyUpdated &&
-            updatedSearchResult === searchResult
-        ) {
-            this
-        } else {
-            copy(
-                featuredAnime = updatedFeatured,
-                trending = updatedTrending,
-                recentlyUpdated = updatedRecent,
-                searchResult = updatedSearchResult,
-            )
-        }
-    }
-
-    private fun HomeUiState.preserveLoadedDescriptions(previous: HomeUiState): HomeUiState {
-        val descriptions = (previous.featuredAnime + previous.trending + previous.recentlyUpdated)
-            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
-            .toMap()
-        if (descriptions.isEmpty()) return this
-        return copy(
-            featuredAnime = featuredAnime.withDescriptions(descriptions),
-            trending = trending.withDescriptions(descriptions),
-            recentlyUpdated = recentlyUpdated.withDescriptions(descriptions),
-        )
     }
 
     /**
@@ -446,30 +420,9 @@ class HomeViewModel(
             .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
             .toMap()
         return state.copy(
-            featuredAnime = state.featuredAnime.withDescriptions(descriptions),
+            featuredAnime = state.featuredAnime.mergeMissingDescriptions(descriptions),
             trending = enrichedTrending,
         )
-    }
-
-    private fun List<Anime>.withDescriptions(descriptions: Map<String, String>): List<Anime> = map { anime ->
-        if (anime.description.isNullOrBlank()) {
-            descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
-        } else {
-            anime
-        }
-    }
-
-    private fun SearchUiState.replaceDescriptions(updates: Map<String, Anime>): SearchUiState = when (this) {
-        is SearchUiState.Content -> copy(items = items.replaceDescriptions(updates))
-        else -> this
-    }
-
-    private fun List<Anime>.replaceDescriptions(updates: Map<String, Anime>): List<Anime> {
-        var changed = false
-        val updatedItems = map { anime ->
-            updates[anime.id]?.also { changed = true } ?: anime
-        }
-        return if (changed) updatedItems else this
     }
 
     private fun observeLanguageChanges() {

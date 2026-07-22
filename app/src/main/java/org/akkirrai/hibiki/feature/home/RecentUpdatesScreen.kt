@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppMessageState
@@ -94,14 +96,12 @@ fun RecentUpdatesScreen(
                 )
                 if (state.isRecentUpdatesLoadingMore) {
                     item(key = "recent_updates_loading_more") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
-                        }
+                        AppLoadMoreState(
+                            isLoading = true,
+                            errorMessage = null,
+                            errorIcon = Icons.Outlined.WarningAmber,
+                            onRetry = viewModel::loadMoreRecentUpdates,
+                        )
                     }
                 }
             }

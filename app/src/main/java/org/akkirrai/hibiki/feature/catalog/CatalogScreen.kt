@@ -98,6 +98,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
@@ -214,43 +215,23 @@ fun CatalogScreen(
 
                     if (state.isLoadingMore) {
                         item(key = "catalog_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            }
+                            AppLoadMoreState(
+                                isLoading = true,
+                                errorMessage = null,
+                                errorIcon = Icons.Outlined.WarningAmber,
+                                onRetry = viewModel::loadMore,
+                            )
                         }
                     }
 
                     if (state.isLoadingMore && state.error != null) {
                         item(key = "catalog_load_more_error") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(onClick = viewModel::loadMore)
-                                    .padding(vertical = 12.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.WarningAmber,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Text(
-                                    text = state.error.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
+                            AppLoadMoreState(
+                                isLoading = false,
+                                errorMessage = state.error,
+                                errorIcon = Icons.Outlined.WarningAmber,
+                                onRetry = viewModel::loadMore,
+                            )
                         }
                     }
                     },
