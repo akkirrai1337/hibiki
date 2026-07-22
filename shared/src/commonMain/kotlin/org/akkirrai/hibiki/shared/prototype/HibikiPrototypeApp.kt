@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +55,9 @@ import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
+import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -74,6 +78,7 @@ fun HibikiPrototypeApp(
     val state by presenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
     var selectedAnime by remember { mutableStateOf<Anime?>(null) }
+    var languageMode by remember { mutableStateOf(LanguageMode.SYSTEM) }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -81,37 +86,44 @@ fun HibikiPrototypeApp(
         onDispose { presenter.close() }
     }
 
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        BoxWithConstraints {
-            val compact = maxWidth < 760.dp
-            if (compact) {
-                CompactPrototypeLayout(
-                    selectedTab,
-                    { selectedTab = it },
-                    state.query,
-                    presenter::onQueryChange,
-                    state.items,
-                    state.filters,
-                    state.filterCatalog,
-                    presenter::updateFilters,
-                    selectedAnime,
-                    { selectedAnime = it },
-                    { selectedAnime = null },
-                )
-            } else {
-                WidePrototypeLayout(
-                    selectedTab,
-                    { selectedTab = it },
-                    state.query,
-                    presenter::onQueryChange,
-                    state.items,
-                    state.filters,
-                    state.filterCatalog,
-                    presenter::updateFilters,
-                    selectedAnime,
-                    { selectedAnime = it },
-                    { selectedAnime = null },
-                )
+    CompositionLocalProvider(LocalAppTextResolver provides DefaultAppTextResolver(languageMode)) {
+        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            BoxWithConstraints {
+                val compact = maxWidth < 760.dp
+                val onLanguageModeChange = { mode: LanguageMode -> languageMode = mode }
+                if (compact) {
+                    CompactPrototypeLayout(
+                        selectedTab,
+                        { selectedTab = it },
+                        state.query,
+                        presenter::onQueryChange,
+                        state.items,
+                        state.filters,
+                        state.filterCatalog,
+                        presenter::updateFilters,
+                        selectedAnime,
+                        { selectedAnime = it },
+                        { selectedAnime = null },
+                        languageMode,
+                        onLanguageModeChange,
+                    )
+                } else {
+                    WidePrototypeLayout(
+                        selectedTab,
+                        { selectedTab = it },
+                        state.query,
+                        presenter::onQueryChange,
+                        state.items,
+                        state.filters,
+                        state.filterCatalog,
+                        presenter::updateFilters,
+                        selectedAnime,
+                        { selectedAnime = it },
+                        { selectedAnime = null },
+                        languageMode,
+                        onLanguageModeChange,
+                    )
+                }
             }
         }
     }
@@ -130,6 +142,8 @@ private fun WidePrototypeLayout(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    languageMode: LanguageMode,
+    onLanguageModeChange: (LanguageMode) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         PrototypeSidebar(selectedTab, onTabSelected)
@@ -145,6 +159,8 @@ private fun WidePrototypeLayout(
             selectedAnime,
             onAnimeClick,
             onBackFromDetails,
+            languageMode,
+            onLanguageModeChange,
             Modifier.weight(1f),
         )
     }
@@ -163,6 +179,8 @@ private fun CompactPrototypeLayout(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    languageMode: LanguageMode,
+    onLanguageModeChange: (LanguageMode) -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -191,6 +209,8 @@ private fun CompactPrototypeLayout(
             selectedAnime,
             onAnimeClick,
             onBackFromDetails,
+            languageMode,
+            onLanguageModeChange,
             Modifier.padding(padding),
         )
     }
@@ -255,6 +275,8 @@ private fun PrototypeContent(
     selectedAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    languageMode: LanguageMode,
+    onLanguageModeChange: (LanguageMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -279,7 +301,7 @@ private fun PrototypeContent(
             AnimeDetailsPanel(selectedAnime, onBackFromDetails)
         } else if (selectedTab == PrototypeTab.SETTINGS) {
             Spacer(Modifier.height(24.dp))
-            PrototypeSettingsCard()
+            PrototypeSettingsCard(languageMode, onLanguageModeChange)
         } else {
             Spacer(Modifier.height(20.dp))
             OutlinedTextField(
@@ -333,7 +355,10 @@ private fun PrototypeContent(
 }
 
 @Composable
-private fun PrototypeSettingsCard() {
+private fun PrototypeSettingsCard(
+    languageMode: LanguageMode,
+    onLanguageModeChange: (LanguageMode) -> Unit,
+) {
     androidx.compose.material3.Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -347,7 +372,25 @@ private fun PrototypeSettingsCard() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HorizontalDivider()
-            TextButton(onClick = { }) { Text(appText(AppTextKey.LanguageSystem)) }
+            TextButton(
+                onClick = {
+                    onLanguageModeChange(
+                        when (languageMode) {
+                            LanguageMode.RUSSIAN -> LanguageMode.ENGLISH
+                            LanguageMode.ENGLISH -> LanguageMode.RUSSIAN
+                            LanguageMode.SYSTEM -> LanguageMode.RUSSIAN
+                        },
+                    )
+                },
+            ) {
+                Text(
+                    when (languageMode) {
+                        LanguageMode.SYSTEM -> appText(AppTextKey.LanguageSystem)
+                        LanguageMode.ENGLISH -> appText(AppTextKey.LanguageEnglish)
+                        LanguageMode.RUSSIAN -> appText(AppTextKey.LanguageRussian)
+                    },
+                )
+            }
             TextButton(onClick = { }) { Text(appText(AppTextKey.ThemeSystem)) }
         }
     }

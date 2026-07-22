@@ -23,6 +23,8 @@ enum class AppTextKey {
     SettingsTitle,
     SettingsDescription,
     LanguageSystem,
+    LanguageEnglish,
+    LanguageRussian,
     ThemeSystem,
     DesktopPreview,
 }
@@ -74,6 +76,8 @@ class DefaultAppTextResolver(
                 "This shared screen is the place for language, theme, account, and playback settings. Android and Windows hosts can provide their own storage behind the same contract."
             }
             AppTextKey.LanguageSystem -> if (russian) "Язык: системный" else "Language: System"
+            AppTextKey.LanguageEnglish -> if (russian) "Язык: английский" else "Language: English"
+            AppTextKey.LanguageRussian -> if (russian) "Язык: русский" else "Language: Russian"
             AppTextKey.ThemeSystem -> if (russian) "Тема: системная" else "Theme: Follow system"
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
         }
