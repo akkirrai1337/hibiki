@@ -270,7 +270,6 @@ fun HomeScreen(
                                     LibraryStatusPosterFooter(category)
                                 }
                             },
-                            onItemVisible = viewModel::enrichDescription,
                         )
                     }
                 }
@@ -319,7 +318,6 @@ private fun LazyListScope.homeFeedContent(
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
     posterFooterContent: @Composable (Anime) -> Unit,
-    onItemVisible: (Anime) -> Unit,
 ) {
     item {
         if (featuredAnime.isNotEmpty()) {
@@ -343,7 +341,6 @@ private fun LazyListScope.homeFeedContent(
         onAnimeClick = onAnimeClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
         posterFooterContent = posterFooterContent,
-        onItemVisible = onItemVisible,
     )
     if (isTrendingLoadingMore) {
         item {

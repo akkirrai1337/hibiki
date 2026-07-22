@@ -2,6 +2,9 @@ package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -284,22 +287,22 @@ class HomeRepository(
     }
 
     suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
-        return items.map { anime ->
-            runCatching { currentSource().details(anime.id) }
-                .getOrNull()
-                ?.description
-                ?.takeIf(String::isNotBlank)
-                ?.let { description -> anime.copy(description = description) }
-                ?: anime
+        return coroutineScope {
+            items.map { anime ->
+                async {
+                    if (!anime.description.isNullOrBlank()) {
+                        anime
+                    } else {
+                        runCatching { searchRepository.getDetails(anime.id, anime) }
+                            .getOrDefault(anime)
+                    }
+                }
+            }.awaitAll()
         }
     }
 
-    suspend fun enrichDescription(anime: Anime): Anime {
-        val description = currentSource().details(anime.id).description
-            ?.takeIf(String::isNotBlank)
-            ?: return anime
-        return anime.copy(description = description)
-    }
+    suspend fun enrichDescription(anime: Anime): Anime =
+        searchRepository.getDetails(anime.id, anime)
 
     private fun toHomeAnime(title: AnimeTitle): Anime {
         val subtitle = buildList {

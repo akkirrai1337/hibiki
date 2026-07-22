@@ -57,8 +57,9 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.refreshHomeState() }
                 .onSuccess { state ->
+                    val preparedState = prepareHomeFeed(state)
                     val current = _uiState.value
-                    _uiState.value = state.copy(
+                    _uiState.value = preparedState.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -67,7 +68,6 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveLoadedDescriptions(current)
-                    enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -90,7 +90,6 @@ class HomeViewModel(
     }
 
     private var searchJob: Job? = null
-    private var recentDescriptionsJob: Job? = null
     private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
     private val recentRandomIds = ArrayDeque<String>()
 
@@ -345,8 +344,9 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.loadHomeState() }
                 .onSuccess { state ->
+                    val preparedState = prepareHomeFeed(state)
                     val current = _uiState.value
-                    _uiState.value = state.copy(
+                    _uiState.value = preparedState.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -355,7 +355,6 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveLoadedDescriptions(current)
-                    enrichRecentDescriptions()
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -377,22 +376,8 @@ class HomeViewModel(
         }
     }
 
-    private fun enrichRecentDescriptions() {
-        recentDescriptionsJob?.cancel()
-        val ids = _uiState.value.recentlyUpdated.map { it.id }
-        if (ids.isEmpty()) return
-        recentDescriptionsJob = viewModelScope.launch(Dispatchers.IO) {
-            val enriched = repository.enrichDescriptions(_uiState.value.recentlyUpdated)
-            _uiState.update { current ->
-                if (current.recentlyUpdated.map { it.id } != ids) current
-                else current.copy(recentlyUpdated = enriched)
-            }
-        }
-    }
-
     override fun onCleared() {
         searchJob?.cancel()
-        recentDescriptionsJob?.cancel()
         descriptionUpdates.close()
         repository.close()
         super.onCleared()
@@ -443,6 +428,21 @@ class HomeViewModel(
             featuredAnime = featuredAnime.withDescriptions(descriptions),
             trending = trending.withDescriptions(descriptions),
             recentlyUpdated = recentlyUpdated.withDescriptions(descriptions),
+        )
+    }
+
+    /**
+     * The first Home frame is rendered only after the visible feed has stable metadata. This
+     * prevents cards from changing height while the user is already interacting with the list.
+     */
+    private suspend fun prepareHomeFeed(state: HomeUiState): HomeUiState {
+        val enrichedTrending = repository.enrichDescriptions(state.trending)
+        val descriptions = enrichedTrending
+            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
+            .toMap()
+        return state.copy(
+            featuredAnime = state.featuredAnime.withDescriptions(descriptions),
+            trending = enrichedTrending,
         )
     }
 
