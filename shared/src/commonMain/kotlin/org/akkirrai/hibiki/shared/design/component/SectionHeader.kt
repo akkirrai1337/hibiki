@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.shared.design.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +60,7 @@ fun SectionHeader(
                 text = actionLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = actionColor,
-                modifier = Modifier.clickable(enabled = onActionClick != null) { onActionClick?.invoke() }
+                modifier = Modifier.clickable(enabled = onActionClick != null) { onActionClick?.invoke() },
             )
         }
     }
