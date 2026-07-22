@@ -30,6 +30,10 @@ import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.localizedDisplayName
+import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 
 class HomeRepository(
     context: Context,
@@ -183,13 +187,27 @@ class HomeRepository(
         )
     }
 
-    suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
-        return searchRepository.getSearchFilterCatalog()
-    }
+    suspend fun getSearchFilterCatalog(): AnimeCatalogFilterCatalog =
+        searchRepository.getSearchFilterCatalog().toShared()
 
     fun close() {
         searchRepository.close()
     }
+
+    private fun AnimeSearchFilterCatalog.toShared(): AnimeCatalogFilterCatalog =
+        AnimeCatalogFilterCatalog(
+            sortOptions = sortOptions.map { it.toShared() },
+            typeOptions = typeOptions.map { it.toShared() },
+            statusOptions = statusOptions.map { it.toShared() },
+            genreOptions = genreOptions.map { it.toShared() },
+            capabilities = AnimeCatalogCapabilities(
+                supportedSorts = capabilities.supportedSorts.map { it.name.lowercase() }.toSet(),
+                supportedFilters = capabilities.supportedFilters.map { AnimeCatalogFilter.valueOf(it.name) }.toSet(),
+            ),
+        )
+
+    private fun org.akkirrai.beakokit.model.SearchFilterOption.toShared(): AnimeCatalogFilterOption =
+        AnimeCatalogFilterOption(id = id, title = title)
 
     private suspend fun loadContinueAnime(): Anime? {
         val progress = watchStateRepository.getRecentTitleWatchState() ?: return null

@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.feature.search
 
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
-import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 
 data class SearchScreenState(
     val query: String = "",

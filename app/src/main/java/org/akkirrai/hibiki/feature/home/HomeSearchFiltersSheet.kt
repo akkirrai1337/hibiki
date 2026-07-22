@@ -73,9 +73,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
-import org.akkirrai.beakokit.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
@@ -83,6 +82,10 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
@@ -115,6 +118,29 @@ fun HomeSearchFiltersSheet(
 fun AnimeSearchFiltersSheet(
     initialFilters: AnimeSearchFilters,
     filterCatalog: AnimeSearchFilterCatalog?,
+    isFilterCatalogLoading: Boolean,
+    onApply: (AnimeSearchFilters) -> Unit,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimeSearchFiltersSheet(
+        initialFilters = initialFilters,
+        filterCatalog = filterCatalog?.toSharedCatalog(),
+        isFilterCatalogLoading = isFilterCatalogLoading,
+        onApply = onApply,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+    )
+}
+
+@OptIn(
+    ExperimentalLayoutApi::class,
+    ExperimentalMaterial3Api::class,
+)
+@Composable
+fun AnimeSearchFiltersSheet(
+    initialFilters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
     isFilterCatalogLoading: Boolean,
     onApply: (AnimeSearchFilters) -> Unit,
     onDismissRequest: () -> Unit,
@@ -188,7 +214,7 @@ fun AnimeSearchFiltersSheet(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 24.dp),
                 ) {
-                    if (capabilities.supports(AnimeSearchFilter.TYPE) && typeEntries.isNotEmpty()) {
+                    if (capabilities.supports(AnimeCatalogFilter.TYPE) && typeEntries.isNotEmpty()) {
                         AppConnectedToggleFilter(
                             title = stringResource(R.string.search_filters_type),
                             entries = typeEntries,
@@ -201,7 +227,7 @@ fun AnimeSearchFiltersSheet(
 
                     if (
                         catalog.genreOptions.isNotEmpty() &&
-                        capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES)
+                        capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES)
                     ) {
                         AppThreeStateChipFilter(
                             title = stringResource(R.string.search_filters_genres),
@@ -217,11 +243,11 @@ fun AnimeSearchFiltersSheet(
                             id = { it.id },
                             text = { appFilterOptionText(it.title) },
                             maxCollapsedItems = 15,
-                            allowExclusion = capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES),
+                            allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
                         )
                     }
 
-                    if (capabilities.supports(AnimeSearchFilter.YEAR_RANGE)) {
+                    if (capabilities.supports(AnimeCatalogFilter.YEAR_RANGE)) {
                         YearFilter(
                             year = year,
                             yearRange = FILTER_YEAR_RANGE,
@@ -229,7 +255,7 @@ fun AnimeSearchFiltersSheet(
                         )
                     }
 
-                    if (capabilities.supports(AnimeSearchFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
+                    if (capabilities.supports(AnimeCatalogFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
                         AppThreeStateChipFilter(
                             title = stringResource(R.string.search_filters_status),
                             options = catalog.statusOptions,
@@ -278,19 +304,19 @@ fun AnimeSearchFiltersSheet(
                                 onApply(
                                     pendingFilters.copy(
                                         typeAlias = animeType?.alias
-                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.TYPE) },
+                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.TYPE) },
                                         statusAlias = includedStatuses.firstOrNull()
-                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.STATUS) },
+                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.STATUS) },
                                         includedGenreAliases = pendingFilters.includedGenreAliases
-                                            .takeIf { capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES) }
+                                            .takeIf { capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES) }
                                             .orEmpty(),
                                         excludedGenreAliases = pendingFilters.excludedGenreAliases
-                                            .takeIf { capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES) }
+                                            .takeIf { capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES) }
                                             .orEmpty(),
                                         yearFrom = year
-                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.YEAR_RANGE) },
+                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) },
                                         yearTo = year
-                                            ?.takeIf { capabilities.supports(AnimeSearchFilter.YEAR_RANGE) },
+                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) },
                                     )
                                 )
                                 scope.launch {
@@ -317,6 +343,21 @@ fun AnimeSearchFiltersSheet(
         }
     }
 }
+
+private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalog =
+    AnimeCatalogFilterCatalog(
+        sortOptions = sortOptions.map(SearchFilterOption::toSharedOption),
+        typeOptions = typeOptions.map(SearchFilterOption::toSharedOption),
+        statusOptions = statusOptions.map(SearchFilterOption::toSharedOption),
+        genreOptions = genreOptions.map(SearchFilterOption::toSharedOption),
+        capabilities = AnimeCatalogCapabilities(
+            supportedSorts = capabilities.supportedSorts.map { it.name.lowercase() }.toSet(),
+            supportedFilters = capabilities.supportedFilters.map { AnimeCatalogFilter.valueOf(it.name) }.toSet(),
+        ),
+    )
+
+private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
+    AnimeCatalogFilterOption(id = id, title = title)
 
 @Composable
 private fun YearFilter(
@@ -468,11 +509,11 @@ private fun FilterYearPaginator(
 @Composable
 private fun ThreeStateChipFilter(
     title: String,
-    options: List<SearchFilterOption>,
+    options: List<AnimeCatalogFilterOption>,
     included: Set<String>,
     excluded: Set<String>,
     onChange: (Set<String>, Set<String>) -> Unit,
-    optionIcon: @Composable ((SearchFilterOption) -> ImageVector?)? = null,
+    optionIcon: @Composable ((AnimeCatalogFilterOption) -> ImageVector?)? = null,
     maxCollapsedItems: Int? = null,
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
@@ -542,13 +583,13 @@ private fun ThreeStateChipFilter(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChipFilterFlowRow(
-    options: List<SearchFilterOption>,
+    options: List<AnimeCatalogFilterOption>,
     color: Color,
     icon: ImageVector,
     title: String,
-    onClick: (SearchFilterOption) -> Unit,
+    onClick: (AnimeCatalogFilterOption) -> Unit,
     modifier: Modifier = Modifier,
-    optionIcon: @Composable ((SearchFilterOption) -> ImageVector?)? = null,
+    optionIcon: @Composable ((AnimeCatalogFilterOption) -> ImageVector?)? = null,
 ) {
     AnimatedContent(targetState = options, label = "filter_chips") { current ->
         if (current.isNotEmpty()) {

@@ -16,7 +16,9 @@ enum class AnimeCatalogFilter {
 data class AnimeCatalogCapabilities(
     val supportedSorts: Set<String> = setOf("relevance"),
     val supportedFilters: Set<AnimeCatalogFilter> = emptySet(),
-)
+) {
+    fun supports(filter: AnimeCatalogFilter): Boolean = filter in supportedFilters
+}
 
 data class AnimeCatalogFilterCatalog(
     val sortOptions: List<AnimeCatalogFilterOption> = emptyList(),

@@ -38,7 +38,7 @@ import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
 
 @Composable

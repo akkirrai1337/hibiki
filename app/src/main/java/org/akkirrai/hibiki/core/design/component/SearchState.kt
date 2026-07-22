@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 
 @Composable
 fun AppSearchPlaceholder(

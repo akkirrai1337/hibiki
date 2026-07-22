@@ -27,7 +27,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 
 class HomeViewModel(
     private val repository: HomeRepository,

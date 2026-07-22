@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AndroidAnimeCatalogRepository
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
