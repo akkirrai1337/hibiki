@@ -17,6 +17,15 @@ class LocalProfilePresenter(
     private val _state = MutableStateFlow(initialState)
     val state: StateFlow<LocalProfileUiState> = _state.asStateFlow()
 
+    suspend fun load(repository: LocalProfileDataRepository) {
+        _state.update { it.copy(isLoading = true) }
+        try {
+            setData(repository.load())
+        } finally {
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
     fun setData(data: LocalProfileData) {
         _state.value = LocalProfileUiState(data = data, isLoading = false)
     }

@@ -22,8 +22,7 @@ class LocalProfileViewModel(
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
-            val data = repository.getData()
-            presenter.setData(data)
+            presenter.load(repository)
         }
     }
 

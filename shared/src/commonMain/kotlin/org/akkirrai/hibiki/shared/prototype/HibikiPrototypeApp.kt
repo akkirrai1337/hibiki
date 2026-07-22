@@ -64,6 +64,10 @@ import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.library.LibraryPresenter
 import org.akkirrai.hibiki.shared.library.LibraryRepository
+import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
+import org.akkirrai.hibiki.shared.profile.LocalProfileData
+import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
+import org.akkirrai.hibiki.shared.profile.LocalProfileSummary
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
@@ -79,6 +83,7 @@ fun HibikiAppShell(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
     libraryRepository: LibraryRepository,
+    profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
 ) {
     val scope = rememberCoroutineScope()
@@ -86,6 +91,8 @@ fun HibikiAppShell(
     val state by presenter.state.collectAsState()
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
+    val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
+    val profileState by profilePresenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
@@ -99,6 +106,10 @@ fun HibikiAppShell(
 
     LaunchedEffect(libraryRepository) {
         libraryPresenter.updateEntries(libraryRepository.getEntries())
+    }
+
+    LaunchedEffect(profileRepository) {
+        profilePresenter.load(profileRepository)
     }
 
     CompositionLocalProvider(LocalAppTextResolver provides DefaultAppTextResolver(languageMode)) {
@@ -137,6 +148,7 @@ fun HibikiAppShell(
                         darkTheme,
                         onThemeChange,
                         libraryState.visibleEntries,
+                        profileState.data,
                     )
                     } else {
                     WideAppLayout(
@@ -158,6 +170,7 @@ fun HibikiAppShell(
                         darkTheme,
                         onThemeChange,
                         libraryState.visibleEntries,
+                        profileState.data,
                     )
                     }
                 }
@@ -186,6 +199,7 @@ private fun WideAppLayout(
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
+    profileData: LocalProfileData,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -208,6 +222,7 @@ private fun WideAppLayout(
             darkTheme,
             onThemeChange,
             libraryEntries,
+            profileData,
             Modifier.weight(1f),
         )
     }
@@ -233,6 +248,7 @@ private fun CompactAppLayout(
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
+    profileData: LocalProfileData,
 ) {
     Scaffold(
         bottomBar = {
@@ -268,6 +284,7 @@ private fun CompactAppLayout(
             darkTheme,
             onThemeChange,
             libraryEntries,
+            profileData,
             Modifier.padding(padding),
         )
     }
@@ -339,6 +356,7 @@ private fun AppDestinationContent(
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
+    profileData: LocalProfileData,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -386,6 +404,7 @@ private fun AppDestinationContent(
                     onAnimeClick = onAnimeClick,
                 )
                 AppDestination.SETTINGS -> SettingsScreen(
+                    profileData = profileData,
                     languageMode = languageMode,
                     onLanguageModeChange = onLanguageModeChange,
                     darkTheme = darkTheme,
@@ -467,13 +486,17 @@ private fun ColumnScope.LibraryScreen(
 
 @Composable
 private fun SettingsScreen(
+    profileData: LocalProfileData,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
 ) {
-    Spacer(Modifier.height(24.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(8.dp))
+        LocalProfileSummary(data = profileData)
     SettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
+    }
 }
 
 @Composable

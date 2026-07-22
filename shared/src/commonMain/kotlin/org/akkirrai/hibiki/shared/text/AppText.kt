@@ -29,6 +29,8 @@ enum class AppTextKey {
     ThemeLight,
     ThemeDark,
     DesktopPreview,
+    ProfileLibrary,
+    ProfileEpisodes,
 }
 
 interface AppTextResolver {
@@ -84,6 +86,8 @@ class DefaultAppTextResolver(
             AppTextKey.ThemeLight -> if (russian) "Тема: светлая" else "Theme: Light"
             AppTextKey.ThemeDark -> if (russian) "Тема: тёмная" else "Theme: Dark"
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
+            AppTextKey.ProfileLibrary -> if (russian) "Библиотека" else "Library"
+            AppTextKey.ProfileEpisodes -> if (russian) "Эпизоды" else "Episodes"
         }
     }
 }
