@@ -53,6 +53,7 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
@@ -126,48 +127,14 @@ fun TrendingAnimeScreen(
                         },
                     )
 
-                    if (state.isLoadingMore) {
-                        item(key = "trending_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.loadMoreError != null) {
-                        item(key = "trending_load_more_error") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.loadMore() }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.WarningAmber,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                    Text(
-                                        text = state.loadMoreError.orEmpty(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
+                    if (state.isLoadingMore || state.loadMoreError != null) {
+                        item(key = "trending_load_more_state") {
+                            AppLoadMoreState(
+                                isLoading = state.isLoadingMore,
+                                errorMessage = state.loadMoreError,
+                                errorIcon = Icons.Outlined.WarningAmber,
+                                onRetry = viewModel::loadMore,
+                            )
                         }
                     }
                 },

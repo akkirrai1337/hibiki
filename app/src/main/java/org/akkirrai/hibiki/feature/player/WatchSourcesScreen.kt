@@ -3,13 +3,10 @@ package org.akkirrai.hibiki.feature.player
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.SubtitlesOff
@@ -35,6 +32,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.shared.player.WatchSourcesList
 
 @Composable
 fun WatchSourcesScreen(
@@ -89,26 +87,22 @@ fun WatchSourcesScreen(
             }
 
             else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = 68.dp,
-                        bottom = 12.dp,
-                    ),
-                ) {
-                    items(state.items, key = WatchSource::sourceId) { source ->
-                        WatchSourceRow(
-                            source = source,
-                            enabled = !navigationLocked,
-                            onClick = {
-                                if (navigationLocked) return@WatchSourceRow
-                                navigationLockedState.value = true
-                                onSourceClick(source)
-                            }
-                        )
-                    }
-                    if (state.hasMoreItems) {
-                        item {
+                WatchSourcesList(
+                    sources = state.items,
+                    enabled = !navigationLocked,
+                    horizontalPadding = UiDimens.ScreenPadding,
+                    episodeSummary = { source ->
+                        source.episodeCount?.let { count ->
+                            "· $count ${stringResource(R.string.watch_episodes_short)}"
+                        }
+                    },
+                    onSourceClick = { source ->
+                        if (navigationLocked) return@WatchSourcesList
+                        navigationLockedState.value = true
+                        onSourceClick(source)
+                    },
+                    loadMoreContent = if (state.hasMoreItems) {
+                        {
                             AppLoadMoreBlock(
                                 label = stringResource(R.string.watch_sources_load_more),
                                 onClick = viewModel::loadMore,
@@ -119,17 +113,11 @@ fun WatchSourcesScreen(
                                 ),
                             )
                         }
-                    }
-                    if (state.isLoading && state.items.isNotEmpty()) {
-                        item {
-                            AppCenteredLoading(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 18.dp)
-                            )
-                        }
-                    }
-                }
+                    } else null,
+                    loadingContent = if (state.isLoading && state.items.isNotEmpty()) {
+                        { AppCenteredLoading() }
+                    } else null,
+                )
             }
         }
     }

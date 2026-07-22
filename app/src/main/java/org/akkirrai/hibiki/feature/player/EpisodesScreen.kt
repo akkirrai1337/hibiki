@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.feature.player
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
@@ -67,7 +64,8 @@ import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
-import org.akkirrai.hibiki.shared.model.progressStatus
+import org.akkirrai.hibiki.shared.player.EpisodesList
+import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -192,16 +190,14 @@ fun EpisodesScreen(
                         episodeCount = result.items.size,
                     )
                 }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 68.dp, bottom = 12.dp),
-                ) {
-                    items(result.items, key = WatchEpisode::id) { episode ->
+                EpisodesList(
+                    episodes = result.items,
+                    episodeContent = { episode ->
                         val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
                         EpisodeRow(
                             episode = episode,
                             progress = progress,
-                            status = resolveEpisodeStatus(
+                            status = resolveEpisodeProgressStatus(
                                 progress = progress,
                             ),
                             downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
@@ -241,8 +237,8 @@ fun EpisodesScreen(
                                 }
                             },
                         )
-                    }
-                }
+                    },
+                )
             }
         }
     }
@@ -449,12 +445,6 @@ private fun PassiveDownloadStateIcon() {
     )
 }
 
-
-private fun resolveEpisodeStatus(
-    progress: EpisodeWatchProgress?,
-): EpisodeProgressStatus {
-    return progress?.progressStatus() ?: EpisodeProgressStatus.NotStarted
-}
 
 @Composable
 private fun buildEpisodeHeadline(

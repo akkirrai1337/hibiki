@@ -15,6 +15,9 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.shared.player.hasMoreWatchSources
+import org.akkirrai.hibiki.shared.player.mergeWatchSources
+import org.akkirrai.hibiki.shared.player.visibleWatchSources
 
 class WatchSourcesViewModel(
     private val animeId: String,
@@ -51,11 +54,11 @@ class WatchSourcesViewModel(
 
     private fun loadSources(forceRefresh: Boolean) {
         val cached = repository.getCachedSources(animeId)
-        val cachedSources = mergeSources(
+        val cachedSources = mergeWatchSources(
             primary = cached?.sources.orEmpty(),
             secondary = offlineDownloadRepository.getOfflineSources(animeId),
         )
-        val cachedVisibleItems = visibleItems(cachedSources, showAllItems = false)
+        val cachedVisibleItems = visibleWatchSources(cachedSources, showAllItems = false)
         if (forceRefresh) {
             presenter.setState(WatchSourcesScreenState(
                 allItems = emptyList(),
@@ -72,7 +75,7 @@ class WatchSourcesViewModel(
                 items = cachedVisibleItems,
                 isLoading = cached == null,
                 isLoadingMore = false,
-                hasMoreItems = hasMoreItems(
+                hasMoreItems = hasMoreWatchSources(
                     allItems = cachedSources,
                     visibleItems = cachedVisibleItems,
                     showAllItems = false,
@@ -88,7 +91,7 @@ class WatchSourcesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 repository.loadSources(animeId = animeId) { updated ->
-                    val merged = mergeSources(
+                    val merged = mergeWatchSources(
                         primary = updated,
                         secondary = offlineDownloadRepository.getOfflineSources(animeId),
                     )
@@ -102,7 +105,7 @@ class WatchSourcesViewModel(
                     }
                 }
             }.onSuccess { sources ->
-                val merged = mergeSources(
+                val merged = mergeWatchSources(
                     primary = sources,
                     secondary = offlineDownloadRepository.getOfflineSources(animeId),
                 )
@@ -150,13 +153,13 @@ class WatchSourcesViewModel(
         isLoadingMore: Boolean,
         showAllItems: Boolean,
     ): WatchSourcesScreenState {
-        val visibleItems = visibleItems(sources, showAllItems)
+        val visibleItems = visibleWatchSources(sources, showAllItems)
         return copy(
             allItems = sources,
             items = visibleItems,
             isLoading = isLoading,
             isLoadingMore = isLoadingMore,
-            hasMoreItems = hasMoreItems(
+            hasMoreItems = hasMoreWatchSources(
                 allItems = sources,
                 visibleItems = visibleItems,
                 showAllItems = showAllItems,
@@ -164,35 +167,6 @@ class WatchSourcesViewModel(
             showAllItems = showAllItems,
             errorMessage = null,
         )
-    }
-
-    private fun visibleItems(
-        allItems: List<WatchSource>,
-        showAllItems: Boolean,
-    ): List<WatchSource> {
-        if (showAllItems) {
-            return allItems
-        }
-        return allItems.take(INITIAL_VISIBLE_SOURCE_COUNT)
-    }
-
-    private fun hasMoreItems(
-        allItems: List<WatchSource>,
-        visibleItems: List<WatchSource>,
-        showAllItems: Boolean,
-    ): Boolean {
-        if (showAllItems) return false
-        return allItems.size > visibleItems.size
-    }
-
-    private fun mergeSources(
-        primary: List<WatchSource>,
-        secondary: List<WatchSource>,
-    ): List<WatchSource> {
-        return (primary + secondary)
-            .associateBy(WatchSource::sourceId)
-            .values
-            .toList()
     }
 
     class Factory(
@@ -210,9 +184,6 @@ class WatchSourcesViewModel(
         }
     }
 
-    private companion object {
-        const val INITIAL_VISIBLE_SOURCE_COUNT = 6
-    }
 }
 
 internal fun Throwable.toUiMessage(): String {

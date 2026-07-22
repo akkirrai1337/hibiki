@@ -15,6 +15,7 @@ import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.EpisodesPresenter
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
+import org.akkirrai.hibiki.shared.player.mergeWatchEpisodes
 
 class EpisodesViewModel(
     private val sourceId: String,
@@ -42,7 +43,7 @@ class EpisodesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.getEpisodes(sourceId) }
                 .onSuccess { episodes ->
-                    val merged = mergeEpisodes(
+                    val merged = mergeWatchEpisodes(
                         primary = episodes,
                         secondary = offlineDownloadRepository.getOfflineEpisodes(sourceId),
                     )
@@ -70,16 +71,6 @@ class EpisodesViewModel(
                     }
                 }
         }
-    }
-
-    private fun mergeEpisodes(
-        primary: List<WatchEpisode>,
-        secondary: List<WatchEpisode>,
-    ): List<WatchEpisode> {
-        return (primary + secondary)
-            .associateBy(WatchEpisode::id)
-            .values
-            .sortedBy(WatchEpisode::number)
     }
 
     override fun onCleared() {

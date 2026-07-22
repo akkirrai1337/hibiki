@@ -24,6 +24,10 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.shared.player.PlayerPresenter
 import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
+import org.akkirrai.hibiki.shared.player.settingsOptionsKey
+import org.akkirrai.hibiki.shared.player.resolveCurrentEpisode
+import org.akkirrai.hibiki.shared.player.resolveResumablePlaybackPosition
 
 class PlayerViewModel(
     sourceId: String,
@@ -81,11 +85,16 @@ class PlayerViewModel(
                 return@launch
             }
             val episodes = episodesResult.getOrDefault(currentState.episodes)
+            val savedEpisodeNumber = watchStateRepository.getEpisodeProgress(
+                titleId,
+                state.currentEpisodeId,
+            )?.episodeNumber
             val effectiveEpisode = resolveCurrentEpisode(
                 requestedEpisodeId = state.currentEpisodeId,
                 requestedEpisodeNumber = state.currentEpisodeNumber,
                 episodes = episodes,
                 currentEpisodes = currentState.episodes,
+                savedEpisodeNumber = savedEpisodeNumber,
             )
             val effectiveEpisodeId = effectiveEpisode?.id ?: state.currentEpisodeId
             val effectiveEpisodeNumber = effectiveEpisode?.number ?: state.currentEpisodeNumber
@@ -356,11 +365,21 @@ class PlayerViewModel(
     }
 
     fun playPreviousEpisode() {
-        adjacentEpisode(offset = -1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
+        resolveAdjacentEpisode(
+            episodes = presenter.state.value.episodes,
+            currentEpisodeId = presenter.state.value.currentEpisodeId,
+            currentEpisodeNumber = presenter.state.value.currentEpisodeNumber,
+            offset = -1,
+        )?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     fun playNextEpisode() {
-        adjacentEpisode(offset = 1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
+        resolveAdjacentEpisode(
+            episodes = presenter.state.value.episodes,
+            currentEpisodeId = presenter.state.value.currentEpisodeId,
+            currentEpisodeNumber = presenter.state.value.currentEpisodeNumber,
+            offset = 1,
+        )?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     override fun onCleared() {
@@ -394,41 +413,6 @@ class PlayerViewModel(
         return resumablePlaybackPositionMs(progress.positionMs, progress.durationMs)
     }
 
-    private fun adjacentEpisode(offset: Int): WatchEpisode? {
-        val state = presenter.state.value
-        val currentIndex = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-        if (currentIndex != -1) {
-            return state.episodes.getOrNull(currentIndex + offset)
-        }
-        val currentEpisodeNumber = state.currentEpisodeNumber ?: return null
-        return if (offset < 0) {
-            state.episodes
-                .filter { it.number < currentEpisodeNumber }
-                .maxByOrNull { it.number }
-        } else {
-            state.episodes
-                .filter { it.number > currentEpisodeNumber }
-                .minByOrNull { it.number }
-        }
-    }
-
-    private fun resolveCurrentEpisode(
-        requestedEpisodeId: String,
-        requestedEpisodeNumber: Double?,
-        episodes: List<WatchEpisode>,
-        currentEpisodes: List<WatchEpisode>,
-    ): WatchEpisode? {
-        episodes.firstOrNull { it.id == requestedEpisodeId }?.let { return it }
-
-        val knownEpisodeNumber = requestedEpisodeNumber
-            ?: currentEpisodes.firstOrNull { it.id == requestedEpisodeId }?.number
-            ?: watchStateRepository.getEpisodeProgress(titleId, requestedEpisodeId)?.episodeNumber
-
-        return knownEpisodeNumber?.let { episodeNumber ->
-            episodes.firstOrNull { it.number == episodeNumber }
-        }
-    }
-
     class Factory(
         private val sourceId: String,
         private val episodeId: String,
@@ -452,23 +436,8 @@ class PlayerViewModel(
 }
 
 internal fun resumablePlaybackPositionMs(positionMs: Long, durationMs: Long): Long? {
-    val position = positionMs.coerceAtLeast(0L).takeIf { it > 0L } ?: return null
-    if (durationMs <= 0L) return position
-    val duration = durationMs.coerceAtLeast(1L)
-    val resetThresholdMs = maxOf(PLAYBACK_END_WINDOW_MS, duration * PLAYBACK_END_PERCENT / 100L)
-    return position.takeIf { duration - position > resetThresholdMs }
+    return resolveResumablePlaybackPosition(positionMs, durationMs)
 }
-
-private fun PlayerUiState.settingsOptionsKey(): String =
-    buildString {
-        append(currentSourceId)
-        append(':')
-        append(currentEpisodeId)
-        append(':')
-        append(selectedPlayerName.orEmpty())
-        append(':')
-        append(selectedQualityLabel.orEmpty())
-    }
 
 private fun <T> Result<T>.throwIfCancelled(): Result<T> {
     val error = exceptionOrNull()
@@ -477,5 +446,3 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
-private const val PLAYBACK_END_WINDOW_MS = 30_000L
-private const val PLAYBACK_END_PERCENT = 5L
