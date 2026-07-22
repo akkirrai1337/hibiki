@@ -96,6 +96,11 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
 import org.akkirrai.hibiki.shared.settings.AppSettingsItemHeader
 import org.akkirrai.hibiki.shared.settings.AppSettingsItemRow
+import org.akkirrai.hibiki.shared.settings.AppSettingsActionItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
+import org.akkirrai.hibiki.shared.settings.AppSettingsSwitchItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsToggleItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsVerticalItem
 import kotlinx.coroutines.launch
 
 @Composable
@@ -341,27 +346,23 @@ private fun SettingsVerticalItem(
     shape: Shape,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        AppSettingsItemHeader(
-            iconContent = {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            },
-            title = title,
-        )
-        content()
-    }
+    AppSettingsVerticalItem(
+        headerContent = {
+            AppSettingsItemHeader(
+                iconContent = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                title = title,
+            )
+        },
+        shape = shape,
+        content = content,
+    )
 }
 
 @Composable
@@ -373,7 +374,7 @@ private fun SettingsSwitchItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    AppSettingsItemRow(
+    AppSettingsSwitchItem(
         iconContent = {
             Icon(
                 imageVector = icon,
@@ -382,31 +383,16 @@ private fun SettingsSwitchItem(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         },
+        title = title,
+        checked = checked,
         shape = shape,
-        onClick = {
-            onCheckedChange(!checked)
+        onCheckedChange = { enabled ->
+            onCheckedChange(enabled)
             haptic.performHapticFeedback(
-                if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
             )
         },
-        trailing = {
-            AppSettingsSwitch(
-                checked = checked,
-                onCheckedChange = {
-                    onCheckedChange(it)
-                    haptic.performHapticFeedback(
-                        if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                    )
-                },
-            )
-        },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-    }
+    )
 }
 
 @Composable
@@ -419,7 +405,7 @@ private fun DiscordSettingsItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    AppSettingsItemRow(
+    AppSettingsToggleItem(
         iconContent = {
             Icon(
                 imageVector = icon,
@@ -428,26 +414,17 @@ private fun DiscordSettingsItem(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         },
+        title = title,
+        checked = checked,
         shape = shape,
         onClick = onClick,
-        trailing = {
-            AppSettingsSwitch(
-                checked = checked,
-                onCheckedChange = { enabled ->
-                    onCheckedChange(enabled)
-                    haptic.performHapticFeedback(
-                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                    )
-                },
+        onCheckedChange = { enabled ->
+            onCheckedChange(enabled)
+            haptic.performHapticFeedback(
+                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
             )
         },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-    }
+    )
 }
 
 @Composable
@@ -459,7 +436,7 @@ private fun SettingsActionItem(
     showNavigationArrow: Boolean = false,
     onClick: () -> Unit,
 ) {
-    AppSettingsItemRow(
+    AppSettingsActionItem(
         iconContent = {
             Icon(
                 imageVector = icon,
@@ -468,8 +445,9 @@ private fun SettingsActionItem(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         },
+        title = title,
+        subtitle = subtitle,
         shape = shape,
-        onClick = onClick,
         trailing = if (showNavigationArrow) {
             {
                 Icon(
@@ -481,20 +459,8 @@ private fun SettingsActionItem(
         } else {
             null
         },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-        subtitle?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -692,57 +658,25 @@ private fun SettingsAboutItem(
             .toBitmap(config = Bitmap.Config.ARGB_8888)
             .asImageBitmap()
     }
-    val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val background = if (isDarkMode) Color(0x190FFF66) else Color(0x59FFC0CB)
-    val textColor = if (isDarkMode) Color(0xFF3BFF84) else Color(0xFFDA6482)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(background)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        ) {
-        Image(
-            bitmap = appIcon,
-            contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor,
+    AppSettingsAboutCard(
+        appName = stringResource(R.string.app_name),
+        versionName = versionName,
+        appIconContent = {
+            Image(
+                bitmap = appIcon,
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.size(48.dp),
             )
-            Text(
-                text = "v$versionName",
-                style = MaterialTheme.typography.labelMedium,
-                color = textColor.copy(alpha = 0.75f),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .clickable(onClick = onGitHubClick),
-            contentAlignment = Alignment.Center,
-        ) {
+        },
+        githubIconContent = {
             Image(
                 painter = painterResource(R.drawable.ic_github),
                 contentDescription = stringResource(R.string.settings_github),
                 modifier = Modifier.size(26.dp),
             )
-        }
-    }
+        },
+        onGitHubClick = onGitHubClick,
+    )
 }
 
 @Composable

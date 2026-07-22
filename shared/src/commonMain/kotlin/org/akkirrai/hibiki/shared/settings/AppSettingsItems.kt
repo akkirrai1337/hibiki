@@ -17,6 +17,24 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 @Composable
+fun AppSettingsVerticalItem(
+    headerContent: @Composable () -> Unit,
+    shape: Shape,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer, shape)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        headerContent()
+        content()
+    }
+}
+
+@Composable
 fun AppSettingsItemRow(
     iconContent: @Composable () -> Unit,
     shape: Shape,
@@ -56,6 +74,91 @@ fun AppSettingsItemHeader(
         Text(
             text = title,
             modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+    }
+}
+
+@Composable
+fun AppSettingsActionItem(
+    iconContent: @Composable () -> Unit,
+    title: String,
+    subtitle: String? = null,
+    shape: Shape,
+    trailing: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    AppSettingsItemRow(
+        iconContent = iconContent,
+        shape = shape,
+        onClick = onClick,
+        trailing = trailing,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+        subtitle?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+fun AppSettingsSwitchItem(
+    iconContent: @Composable () -> Unit,
+    title: String,
+    checked: Boolean,
+    shape: Shape,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    AppSettingsItemRow(
+        iconContent = iconContent,
+        shape = shape,
+        onClick = { onCheckedChange(!checked) },
+        trailing = {
+            AppSettingsSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        )
+    }
+}
+
+@Composable
+fun AppSettingsToggleItem(
+    iconContent: @Composable () -> Unit,
+    title: String,
+    checked: Boolean,
+    shape: Shape,
+    onClick: () -> Unit,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    AppSettingsItemRow(
+        iconContent = iconContent,
+        shape = shape,
+        onClick = onClick,
+        trailing = {
+            AppSettingsSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    ) {
+        Text(
+            text = title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
         )
