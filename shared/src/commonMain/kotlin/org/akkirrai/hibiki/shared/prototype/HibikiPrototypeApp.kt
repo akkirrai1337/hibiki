@@ -29,10 +29,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +47,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -62,21 +65,36 @@ fun HibikiPrototypeApp(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
 ) {
+    val scope = rememberCoroutineScope()
+    val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
+    val state by presenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
-    var query by remember { mutableStateOf("") }
-    var catalogItems by remember(repository) { mutableStateOf(repository.initialItems) }
 
-    LaunchedEffect(repository, query) {
-        catalogItems = repository.search(query)
+    DisposableEffect(presenter) {
+        presenter.loadFilterCatalog()
+        presenter.search()
+        onDispose { presenter.close() }
     }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         BoxWithConstraints {
             val compact = maxWidth < 760.dp
             if (compact) {
-                CompactPrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, catalogItems)
+                CompactPrototypeLayout(
+                    selectedTab,
+                    { selectedTab = it },
+                    state.query,
+                    presenter::onQueryChange,
+                    state.items,
+                )
             } else {
-                WidePrototypeLayout(selectedTab, { selectedTab = it }, query, { query = it }, catalogItems)
+                WidePrototypeLayout(
+                    selectedTab,
+                    { selectedTab = it },
+                    state.query,
+                    presenter::onQueryChange,
+                    state.items,
+                )
             }
         }
     }
