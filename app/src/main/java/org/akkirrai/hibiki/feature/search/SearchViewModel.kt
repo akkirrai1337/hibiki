@@ -8,10 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
@@ -20,14 +17,16 @@ import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AndroidAnimeCatalogRepository
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
+import org.akkirrai.hibiki.shared.search.SearchPresenter
+import org.akkirrai.hibiki.shared.search.SearchScreenState
 
 class SearchViewModel(
     private val repository: AnimeSearchRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext
-    private val _uiState = MutableStateFlow(SearchScreenState())
-    val uiState: StateFlow<SearchScreenState> = _uiState.asStateFlow()
+    private val presenter = SearchPresenter()
+    val uiState: StateFlow<SearchScreenState> = presenter.state
     private val catalogRepository = AndroidAnimeCatalogRepository(repository)
     private val catalogPresenter = AnimeCatalogPresenter(catalogRepository, viewModelScope, SEARCH_PAGE_SIZE)
     private var searchJob: Job? = null
@@ -51,14 +50,14 @@ class SearchViewModel(
                         isLoadingMore = presenterState.isLoading,
                     )
                 }
-                _uiState.update { it.copy(result = result) }
+                presenter.update { it.copy(result = result) }
             }
         }
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                 searchJob?.cancel()
                 catalogPresenter.clear()
-                _uiState.update { state -> state.copy(result = SearchUiState.Idle, filterCatalog = null) }
+                presenter.update { state -> state.copy(result = SearchUiState.Idle, filterCatalog = null) }
                 loadFilterCatalog()
                 if (currentSearchQuery() != null) search()
             }
@@ -66,11 +65,11 @@ class SearchViewModel(
     }
 
     fun onQueryChange(value: String) {
-        _uiState.update { state -> state.copy(query = value) }
+        presenter.update { state -> state.copy(query = value) }
         if (value.isBlank() || value.trim().length < MIN_QUERY_LENGTH) {
             searchJob?.cancel()
             catalogPresenter.clear()
-            _uiState.update { it.copy(result = SearchUiState.Idle) }
+            presenter.update { it.copy(result = SearchUiState.Idle) }
             return
         }
         scheduleSearch(immediate = false)
@@ -83,7 +82,7 @@ class SearchViewModel(
     private fun scheduleSearch(immediate: Boolean) {
         searchJob?.cancel()
         if (currentSearchQuery() == null) {
-            _uiState.update { it.copy(result = SearchUiState.Idle) }
+            presenter.update { it.copy(result = SearchUiState.Idle) }
             return
         }
 
@@ -91,7 +90,7 @@ class SearchViewModel(
             if (!immediate) delay(SEARCH_DEBOUNCE_MS)
             val activeQuery = currentSearchQuery()
             if (activeQuery == null) {
-                _uiState.update { it.copy(result = SearchUiState.Idle) }
+                presenter.update { it.copy(result = SearchUiState.Idle) }
                 return@launch
             }
 
@@ -130,13 +129,13 @@ class SearchViewModel(
 
     private fun loadFilterCatalog() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isFilterCatalogLoading = true) }
+            presenter.update { it.copy(isFilterCatalogLoading = true) }
             val catalog = runCatching {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.getSearchFilterCatalog()
+                    catalogRepository.filterCatalog()
                 }
             }.getOrNull()
-            _uiState.update {
+            presenter.update {
                 it.copy(
                     filterCatalog = catalog ?: it.filterCatalog,
                     isFilterCatalogLoading = false,
