@@ -43,6 +43,20 @@ class AnimeCatalogPresenter(
         search()
     }
 
+    fun clear() {
+        searchJob?.cancel()
+        _state.update {
+            it.copy(
+                query = "",
+                items = repository.initialItems,
+                page = 1,
+                canLoadMore = false,
+                isLoading = false,
+                error = null,
+            )
+        }
+    }
+
     fun updateFilters(filters: AnimeSearchFilters) {
         _state.update { it.copy(filters = filters, error = null) }
         search()

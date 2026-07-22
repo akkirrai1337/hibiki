@@ -5,7 +5,6 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,12 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.core.source.AndroidAnimeCatalogRepository
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 
 class SearchViewModel(
     private val repository: AnimeSearchRepository,
@@ -28,15 +28,36 @@ class SearchViewModel(
     private val appContext = context.applicationContext
     private val _uiState = MutableStateFlow(SearchScreenState())
     val uiState: StateFlow<SearchScreenState> = _uiState.asStateFlow()
+    private val catalogRepository = AndroidAnimeCatalogRepository(repository)
+    private val catalogPresenter = AnimeCatalogPresenter(catalogRepository, viewModelScope, SEARCH_PAGE_SIZE)
     private var searchJob: Job? = null
-    private var loadMoreJob: Job? = null
 
     init {
         loadFilterCatalog()
         viewModelScope.launch {
+            catalogPresenter.state.collect { presenterState ->
+                val activeQuery = uiState.value.query.trim()
+                if (presenterState.query != activeQuery) return@collect
+                val result = when {
+                    activeQuery.length < MIN_QUERY_LENGTH -> SearchUiState.Idle
+                    presenterState.error != null -> SearchUiState.Error(
+                        presenterState.error ?: appString(R.string.error_search_failed),
+                    )
+                    presenterState.isLoading && presenterState.items.isEmpty() -> SearchUiState.Loading
+                    presenterState.items.isEmpty() -> SearchUiState.Empty
+                    else -> SearchUiState.Content(
+                        items = presenterState.items,
+                        canLoadMore = presenterState.canLoadMore,
+                        isLoadingMore = presenterState.isLoading,
+                    )
+                }
+                _uiState.update { it.copy(result = result) }
+            }
+        }
+        viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                 searchJob?.cancel()
-                loadMoreJob?.cancel()
+                catalogPresenter.clear()
                 _uiState.update { state -> state.copy(result = SearchUiState.Idle, filterCatalog = null) }
                 loadFilterCatalog()
                 if (currentSearchQuery() != null) search()
@@ -48,6 +69,7 @@ class SearchViewModel(
         _uiState.update { state -> state.copy(query = value) }
         if (value.isBlank() || value.trim().length < MIN_QUERY_LENGTH) {
             searchJob?.cancel()
+            catalogPresenter.clear()
             _uiState.update { it.copy(result = SearchUiState.Idle) }
             return
         }
@@ -73,40 +95,7 @@ class SearchViewModel(
                 return@launch
             }
 
-            loadMoreJob?.cancel()
-            _uiState.update { it.copy(result = SearchUiState.Loading) }
-            loadFirstSearchPage(activeQuery)
-        }
-    }
-
-    private suspend fun loadFirstSearchPage(activeQuery: String) {
-        try {
-            val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                repository.search(
-                    query = activeQuery,
-                    limit = SEARCH_PAGE_SIZE,
-                    offset = 0,
-                )
-            }
-            if (activeQuery != uiState.value.query.trim()) return
-            val result = if (items.isEmpty()) {
-                SearchUiState.Empty
-            } else {
-                SearchUiState.Content(
-                    items = items,
-                    canLoadMore = items.size >= SEARCH_PAGE_SIZE,
-                )
-            }
-            _uiState.update { it.copy(result = result) }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (throwable: Throwable) {
-            if (activeQuery != uiState.value.query.trim()) return
-            val message = when (throwable) {
-                is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
-                else -> throwable.message ?: appString(R.string.error_search_failed)
-            }
-            _uiState.update { it.copy(result = SearchUiState.Error(message)) }
+            catalogPresenter.onQueryChange(activeQuery)
         }
     }
 
@@ -114,52 +103,13 @@ class SearchViewModel(
         .takeIf { it.length >= MIN_QUERY_LENGTH }
 
     fun loadMore() {
-        val query = uiState.value.query.trim()
-        val content = uiState.value.result as? SearchUiState.Content ?: return
-        if (query.isBlank() || content.isLoadingMore || !content.canLoadMore) return
-
-        loadMoreJob?.cancel()
-        loadMoreJob = viewModelScope.launch {
-            _uiState.update { state ->
-                val current = state.result as? SearchUiState.Content ?: return@update state
-                state.copy(result = current.copy(isLoadingMore = true))
-            }
-
-            try {
-                val nextItems = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.search(
-                        query = query,
-                        limit = SEARCH_PAGE_SIZE,
-                        offset = content.items.size,
-                    )
-                }
-                if (query != uiState.value.query.trim()) return@launch
-                _uiState.update { state ->
-                    val current = state.result as? SearchUiState.Content ?: return@update state
-                    val merged = (current.items + nextItems).distinctBy { it.id }
-                    state.copy(
-                        result = current.copy(
-                            items = merged,
-                            canLoadMore = nextItems.size >= SEARCH_PAGE_SIZE,
-                            isLoadingMore = false,
-                        )
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Throwable) {
-                _uiState.update { state ->
-                    val current = state.result as? SearchUiState.Content ?: return@update state
-                    state.copy(result = current.copy(isLoadingMore = false))
-                }
-            }
-        }
+        catalogPresenter.loadMore()
     }
 
     override fun onCleared() {
         searchJob?.cancel()
-        loadMoreJob?.cancel()
-        repository.close()
+        catalogPresenter.close()
+        catalogRepository.close()
         super.onCleared()
     }
 

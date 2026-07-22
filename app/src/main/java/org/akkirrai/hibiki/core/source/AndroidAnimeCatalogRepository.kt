@@ -15,14 +15,15 @@ import org.akkirrai.hibiki.shared.model.Anime
 
 /** Android data-source adapter for the platform-neutral catalog contract. */
 class AndroidAnimeCatalogRepository(
-    context: Context,
-    client: HttpClient? = null,
+    private val delegate: AnimeSearchRepository,
 ) : AnimeCatalogRepository {
-    private val delegate = if (client == null) {
-        AnimeSearchRepository(context.applicationContext)
-    } else {
-        AnimeSearchRepository(context.applicationContext, client)
-    }
+    constructor(context: Context, client: HttpClient? = null) : this(
+        delegate = if (client == null) {
+            AnimeSearchRepository(context.applicationContext)
+        } else {
+            AnimeSearchRepository(context.applicationContext, client)
+        },
+    )
 
     override val initialItems: List<Anime> = emptyList()
 
