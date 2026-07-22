@@ -200,7 +200,7 @@ private fun PrototypeSidebar(selectedTab: PrototypeTab, onTabSelected: (Prototyp
         }
         Spacer(Modifier.weight(1f))
         Text(
-            text = "CMP Desktop preview",
+            text = appText(AppTextKey.DesktopPreview),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -241,9 +241,9 @@ private fun PrototypeContent(
                 Text(appText(selectedTab.textKey), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text(
                     text = if (selectedTab == PrototypeTab.SETTINGS) {
-                        "Shared preferences and platform options"
+                        appText(AppTextKey.SettingsSubtitle)
                     } else {
-                        "A shared catalog experience for Android and Windows"
+                        appText(AppTextKey.PrototypeSubtitle)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -291,7 +291,7 @@ private fun PrototypeContent(
             Spacer(Modifier.height(24.dp))
             SectionHeader(
                 title = if (selectedTab == PrototypeTab.HOME) appText(AppTextKey.ContinueWatching) else appText(AppTextKey.ExploreCatalog),
-                actionLabel = "See all",
+                actionLabel = appText(AppTextKey.SeeAll),
                 onActionClick = { },
             )
             Spacer(Modifier.height(12.dp))
@@ -316,15 +316,15 @@ private fun PrototypeSettingsCard() {
         shape = RoundedCornerShape(UiDimens.MediumCorner),
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Platform-ready preferences", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(appText(AppTextKey.SettingsTitle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                "This shared screen is the place for language, theme, account, and playback settings. Android and Windows hosts can provide their own storage behind the same contract.",
+                appText(AppTextKey.SettingsDescription),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HorizontalDivider()
-            TextButton(onClick = { }) { Text("Language: System") }
-            TextButton(onClick = { }) { Text("Theme: Follow system") }
+            TextButton(onClick = { }) { Text(appText(AppTextKey.LanguageSystem)) }
+            TextButton(onClick = { }) { Text(appText(AppTextKey.ThemeSystem)) }
         }
     }
 }

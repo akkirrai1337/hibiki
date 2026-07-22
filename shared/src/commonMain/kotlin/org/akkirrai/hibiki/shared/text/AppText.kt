@@ -17,6 +17,14 @@ enum class AppTextKey {
     ExploreCatalog,
     SearchPlaceholder,
     PrototypeNotice,
+    PrototypeSubtitle,
+    SeeAll,
+    SettingsSubtitle,
+    SettingsTitle,
+    SettingsDescription,
+    LanguageSystem,
+    ThemeSystem,
+    DesktopPreview,
 }
 
 interface AppTextResolver {
@@ -48,6 +56,26 @@ class DefaultAppTextResolver(
             } else {
                 "Prototype: content is currently sample data"
             }
+            AppTextKey.PrototypeSubtitle -> if (russian) {
+                "Общий каталог для Android и Windows"
+            } else {
+                "A shared catalog experience for Android and Windows"
+            }
+            AppTextKey.SeeAll -> if (russian) "Все" else "See all"
+            AppTextKey.SettingsSubtitle -> if (russian) {
+                "Общие настройки и параметры платформы"
+            } else {
+                "Shared preferences and platform options"
+            }
+            AppTextKey.SettingsTitle -> if (russian) "Настройки hibiki" else "Platform-ready preferences"
+            AppTextKey.SettingsDescription -> if (russian) {
+                "Здесь будут настройки языка, темы, аккаунта и воспроизведения. Android и Windows смогут хранить их через общий контракт."
+            } else {
+                "This shared screen is the place for language, theme, account, and playback settings. Android and Windows hosts can provide their own storage behind the same contract."
+            }
+            AppTextKey.LanguageSystem -> if (russian) "Язык: системный" else "Language: System"
+            AppTextKey.ThemeSystem -> if (russian) "Тема: системная" else "Theme: Follow system"
+            AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
         }
     }
 }
