@@ -94,20 +94,14 @@ fun TrendingAnimeScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        when {
-            state.isLoading && state.items.isEmpty() -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            state.errorMessage != null && state.items.isEmpty() -> {
-                TrendingErrorState(
-                    title = stringResource(R.string.trending_error_title),
-                    message = state.errorMessage.orEmpty(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            else -> {
+        org.akkirrai.hibiki.shared.design.component.AppContentState(
+            isLoading = state.isLoading,
+            hasContent = state.items.isNotEmpty(),
+            errorMessage = state.errorMessage,
+            errorTitle = stringResource(R.string.trending_error_title),
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::load,
+            content = {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -118,7 +112,7 @@ fun TrendingAnimeScreen(
                         bottom = UiDimens.ScreenPadding,
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                    content = {
                     verticalAnimeListContent(
                         items = state.items,
                         metaText = { anime -> buildTrendingMeta(anime) },
@@ -174,9 +168,10 @@ fun TrendingAnimeScreen(
                             }
                         }
                     }
-                }
-            }
-        }
+                },
+            )
+            },
+        )
 
         AppFloatingHeader(
             title = stringResource(R.string.home_trending),

@@ -62,16 +62,15 @@ fun RecentUpdatesScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            state.isLoading && state.recentlyUpdated.isEmpty() -> AppCenteredLoading(Modifier.fillMaxSize())
-            state.errorMessage != null && state.recentlyUpdated.isEmpty() -> AppMessageState(
-                title = stringResource(R.string.home_error_title),
-                message = state.errorMessage.orEmpty(),
-                modifier = Modifier.fillMaxSize().padding(UiDimens.ScreenPadding),
-                actionLabel = stringResource(R.string.search_retry),
-                onActionClick = viewModel::refresh,
-            )
-            else -> LazyColumn(
+        org.akkirrai.hibiki.shared.design.component.AppContentState(
+            isLoading = state.isLoading,
+            hasContent = state.recentlyUpdated.isNotEmpty(),
+            errorMessage = state.errorMessage,
+            errorTitle = stringResource(R.string.home_error_title),
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::refresh,
+        ) {
+            LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 84.dp, bottom = UiDimens.ScreenPadding),

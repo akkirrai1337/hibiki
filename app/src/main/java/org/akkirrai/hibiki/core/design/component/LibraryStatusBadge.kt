@@ -50,27 +50,5 @@ fun rememberLibraryStatusByAnimeId(): Map<String, LibraryCategory> {
 @Composable
 fun LibraryStatusPosterFooter(category: LibraryCategory) {
     val label = stringResource(category.labelResId)
-    val isLongLabel = label.length > 8
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isLongLabel) Arrangement.Center else Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (!isLongLabel) {
-            Icon(
-                imageVector = category.icon(),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = if (isLongLabel) 12.sp else MaterialTheme.typography.bodySmall.fontSize),
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter(label, category.icon())
 }
