@@ -33,37 +33,28 @@ internal fun RecentLibraryCard(
     items: List<RecentLibraryItem>,
     showTitle: Boolean = true,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-            if (showTitle) {
-                Text(
-                    text = stringResource(R.string.yummy_account_recent_additions_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            if (items.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(28.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    EmptyState(text = stringResource(R.string.yummy_account_recent_library_empty))
-                }
-            } else {
-                items.forEach { item ->
-                    RecentLibraryRow(item)
-                }
-            }
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryCard(
+        title = if (showTitle) stringResource(R.string.yummy_account_recent_additions_title) else null,
+        emptyText = stringResource(R.string.yummy_account_recent_library_empty),
+        isEmpty = items.isEmpty(),
+        content = { items.forEach { RecentLibraryRow(it) } },
+    )
 }
 
 @Composable
-private fun RecentLibraryRow(
+private fun RecentLibraryRow(item: RecentLibraryItem) {
+    org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryRow(
+        title = item.title,
+        statusLabel = item.statusLabel,
+        statusColor = item.color,
+        ratingLabel = item.ratingLabel,
+        dateLabel = item.dateLabel,
+        poster = { RecentPoster(item) },
+    )
+}
+
+@Composable
+private fun RecentLibraryRowLegacy(
     item: RecentLibraryItem,
 ) {
     Row(

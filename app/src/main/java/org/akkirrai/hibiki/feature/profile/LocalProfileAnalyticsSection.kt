@@ -117,40 +117,15 @@ private fun AnalyticsDonutPager(
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.yummy_account_segment_stats),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PageArrowButton(
-                    enabled = currentPage > 0,
-                    onClick = { currentPage -= 1 },
-                    isBack = true,
-                    size = 32.dp,
-                )
-                Text(
-                    text = "${currentPage + 1}/${pages.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                PageArrowButton(
-                    enabled = currentPage < pages.lastIndex,
-                    onClick = { currentPage += 1 },
-                    isBack = false,
-                    size = 32.dp,
-                )
-            }
-        }
+        org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPagerHeader(
+            title = stringResource(R.string.yummy_account_segment_stats),
+            currentPage = currentPage,
+            pageCount = pages.size,
+            backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            onPrevious = { currentPage -= 1 },
+            onNext = { currentPage += 1 },
+        )
         AnimatedContent(
             targetState = currentPage,
             modifier = Modifier
@@ -229,28 +204,13 @@ private fun LegendGrid(
     columns: Int,
     modifier: Modifier = Modifier,
 ) {
-    val safeColumns = columns.coerceAtLeast(1)
-    Column(
+    org.akkirrai.hibiki.shared.profile.ProfileLegendGrid(
+        items = items.map { item ->
+            org.akkirrai.hibiki.shared.profile.ProfileLegendGridItem(item.label, item.valueLabel, item.color)
+        },
+        columns = columns,
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        items.chunked(safeColumns).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                row.forEach { item ->
-                    LegendItem(
-                        item = item,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat((safeColumns - row.size).coerceAtLeast(0)) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -268,6 +228,25 @@ private fun LegendItem(
 
 @Composable
 private fun SegmentDonut(
+    segments: List<AnalyticsSegment>,
+    centerPrimary: String,
+    centerSecondary: String,
+    modifier: Modifier = Modifier,
+    muted: Boolean = false,
+) {
+    org.akkirrai.hibiki.shared.profile.ProfileSegmentDonut(
+        segments = segments.map { segment ->
+            org.akkirrai.hibiki.shared.profile.ProfileDonutSegment(segment.weight, segment.color)
+        },
+        centerPrimary = centerPrimary,
+        centerSecondary = centerSecondary,
+        modifier = modifier,
+        muted = muted,
+    )
+}
+
+@Composable
+private fun SegmentDonutLegacy(
     segments: List<AnalyticsSegment>,
     centerPrimary: String,
     centerSecondary: String,
@@ -328,6 +307,26 @@ private fun SegmentDonut(
 
 @Composable
 private fun ActivityBarChart(
+    days: List<ActivityDay>,
+    dayWidth: Dp,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+    muted: Boolean = false,
+) {
+    org.akkirrai.hibiki.shared.profile.ProfileActivityBarChart(
+        days = days.map { org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(it.dateLabel, it.episodeCount) },
+        dayWidth = dayWidth,
+        listState = listState,
+        dayGap = ACTIVITY_CHART_DAY_GAP,
+        minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
+        activeColor = if (muted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f) else Color(0xFFFF7A86),
+        inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun ActivityBarChartLegacy(
     days: List<ActivityDay>,
     dayWidth: Dp,
     listState: LazyListState,

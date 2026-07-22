@@ -303,6 +303,31 @@ private fun LocalAvatar(
     onEditClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    org.akkirrai.hibiki.shared.profile.ProfileAvatar(
+        ratio = ratio,
+        isEditing = isEditing,
+        editIcon = Icons.Rounded.Edit,
+        editContentDescription = stringResource(R.string.local_profile_change_avatar),
+        onEditClick = onEditClick,
+        modifier = modifier,
+        avatarContent = {
+            if (avatarUri.isNullOrBlank()) {
+                Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            } else {
+                AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        },
+    )
+}
+
+@Composable
+private fun LocalAvatarLegacy(
+    ratio: Float,
+    avatarUri: String?,
+    isEditing: Boolean,
+    onEditClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val scrimAlpha by animateFloatAsState(
         targetValue = if (isEditing) 0.38f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -354,35 +379,11 @@ private fun LocalAvatar(
 
 @Composable
 private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
-    val underlineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-    Column(modifier = Modifier.widthIn(min = 150.dp, max = 240.dp)) {
-        Text(
-            text = stringResource(R.string.local_profile_name),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-        BasicTextField(
-            value = name,
-            onValueChange = onNameChange,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.titleLarge.copy(
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp, bottom = 6.dp)
-                .drawBehind {
-                    drawLine(
-                        color = underlineColor,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                },
-        )
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileNameEditor(
+        label = stringResource(R.string.local_profile_name),
+        name = name,
+        onNameChange = onNameChange,
+    )
 }
 
 @Composable
@@ -418,13 +419,9 @@ private fun ProfileActionButton(
 /** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
 @Composable
 private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        verticalArrangement = Arrangement.spacedBy(AnimiteMediumPadding),
+    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+        bottomContentPadding = bottomContentPadding,
+        verticalSpacing = AnimiteMediumPadding,
     ) {
         LocalStatsRow(snapshot)
         GenreBars(snapshot.genreSegments)
@@ -434,15 +431,13 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
 
 @Composable
 private fun LocalStatsRow(snapshot: LocalProfileSnapshot) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        LocalStat(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel)
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
+        items = listOf(
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString()),
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString()),
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel),
+        ),
+    )
 }
 
 @Composable
@@ -462,13 +457,9 @@ private fun GenreBars(items: List<DistributionSegment>) {
 
 @Composable
 private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-    ) { AnalyticsCard(snapshot) }
+    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
+        AnalyticsCard(snapshot)
+    }
 }
 
 @Composable
@@ -478,13 +469,7 @@ private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPaddi
             Text(stringResource(R.string.local_profile_empty_favorites), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
-        Column(
-            Modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-                .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        ) {
+        org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
             RecentLibraryCard(items = items, showTitle = false)
         }
     }

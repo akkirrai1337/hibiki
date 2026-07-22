@@ -518,11 +518,7 @@ private fun buildEpisodeSubtitle(
 }
 
 private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0L) return "00:00"
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return org.akkirrai.hibiki.shared.player.formatEpisodeDuration(durationMs)
 }
 
 private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {

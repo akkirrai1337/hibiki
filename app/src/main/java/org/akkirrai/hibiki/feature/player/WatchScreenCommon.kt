@@ -101,12 +101,12 @@ internal fun WatchEmptyState(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.player.WatchEmptyState(
         title = title,
         message = message,
         icon = icon,
-        modifier = modifier.padding(horizontal = 24.dp),
-        actionLabel = onRetry?.let { stringResource(R.string.search_retry) },
-        onActionClick = onRetry,
+        retryLabel = onRetry?.let { stringResource(R.string.search_retry) },
+        onRetry = onRetry,
+        modifier = modifier,
     )
 }

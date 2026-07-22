@@ -1337,11 +1337,7 @@ private fun resolveSelectedSource(
     sources: List<WatchSource>,
     selection: WatchSourceSelection,
 ): WatchSource? {
-    if (sources.isEmpty()) return null
-    return when {
-        selection.autoSelect -> sources.first()
-        else -> sources.firstOrNull { it.sourceId == selection.sourceId } ?: sources.first()
-    }
+    return org.akkirrai.hibiki.shared.player.resolveWatchSource(sources, selection)
 }
 
 @Composable
@@ -1386,12 +1382,22 @@ private fun buildWatchCtaState(
 private fun filterProgressItemsForSelectedSource(
     progressItems: List<EpisodeWatchProgress>,
     selectedSource: WatchSource?,
+): List<EpisodeWatchProgress> = org.akkirrai.hibiki.shared.player.filterProgressForSource(progressItems, selectedSource)
+
+private fun resolveSelectedSourceProgress(
+    fallbackProgress: TitleWatchState?,
+    selectedSourceProgressItems: List<EpisodeWatchProgress>,
+): TitleWatchState? = org.akkirrai.hibiki.shared.player.resolveSourceProgress(fallbackProgress, selectedSourceProgressItems)
+
+private fun filterProgressItemsForSelectedSourceLegacy(
+    progressItems: List<EpisodeWatchProgress>,
+    selectedSource: WatchSource?,
 ): List<EpisodeWatchProgress> {
     if (selectedSource == null) return progressItems
     return progressItems.filter { it.sourceId == selectedSource.sourceId }
 }
 
-private fun resolveSelectedSourceProgress(
+private fun resolveSelectedSourceProgressLegacy(
     fallbackProgress: TitleWatchState?,
     selectedSourceProgressItems: List<EpisodeWatchProgress>,
 ): TitleWatchState? {
@@ -1412,6 +1418,11 @@ private fun resolveSelectedSourceProgress(
 }
 
 private fun resolveNextEpisodeNumber(
+    progressItems: List<EpisodeWatchProgress>,
+    episodeCount: Int?,
+): Double? = org.akkirrai.hibiki.shared.player.resolveNextEpisodeNumber(progressItems, episodeCount)
+
+private fun resolveNextEpisodeNumberLegacy(
     progressItems: List<EpisodeWatchProgress>,
     episodeCount: Int?,
 ): Double? {
@@ -1442,33 +1453,13 @@ private fun findResumeWatchState(
     repository: WatchStateRepository,
     titleId: String,
 ): TitleWatchState? {
-    val latest = repository.getEpisodeProgress(titleId)
-        .asSequence()
-        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
-        .maxByOrNull(EpisodeWatchProgress::updatedAt)
-        ?: return null
-    return TitleWatchState(
-        titleId = latest.titleId,
-        episodeId = latest.episodeId,
-        episodeNumber = latest.episodeNumber,
-        sourceId = latest.sourceId,
-        voiceoverId = latest.voiceoverId,
-        sourceTitle = latest.sourceTitle,
-        quality = latest.quality,
-        positionMs = latest.positionMs,
-        durationMs = latest.durationMs,
-        updatedAt = latest.updatedAt,
-    )
+    return org.akkirrai.hibiki.shared.player.resolveResumeWatchState(repository.getEpisodeProgress(titleId))
 }
 
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
 
 private fun formatEpisodeNumber(number: Double): String {
-    return if (number % 1.0 == 0.0) {
-        number.toInt().toString()
-    } else {
-        number.toString()
-    }
+    return org.akkirrai.hibiki.shared.player.formatEpisodeNumber(number)
 }
 
 private fun formatPlaybackPosition(positionMs: Long): String {
