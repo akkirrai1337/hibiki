@@ -71,7 +71,7 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 
 @Composable
-fun HibikiApp(
+fun HibikiAppShell(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
@@ -107,7 +107,7 @@ fun HibikiApp(
                         settingsStore.save(AppSettingsState(languageMode, dark))
                     }
                     if (compact) {
-                    CompactPrototypeLayout(
+                    CompactAppLayout(
                         selectedTab,
                         { selectedTab = it },
                         state.query,
@@ -127,7 +127,7 @@ fun HibikiApp(
                         onThemeChange,
                     )
                     } else {
-                    WidePrototypeLayout(
+                    WideAppLayout(
                         selectedTab,
                         { selectedTab = it },
                         state.query,
@@ -154,7 +154,7 @@ fun HibikiApp(
 }
 
 @Composable
-private fun WidePrototypeLayout(
+private fun WideAppLayout(
     selectedTab: AppDestination,
     onTabSelected: (AppDestination) -> Unit,
     query: String,
@@ -174,9 +174,9 @@ private fun WidePrototypeLayout(
     onThemeChange: (Boolean) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
-        PrototypeSidebar(selectedTab, onTabSelected)
+        AppSidebar(selectedTab, onTabSelected)
         HorizontalDivider(modifier = Modifier.fillMaxHeight().width(1.dp))
-        PrototypeContent(
+        AppDestinationContent(
             selectedTab,
             query,
             onQueryChange,
@@ -199,7 +199,7 @@ private fun WidePrototypeLayout(
 }
 
 @Composable
-private fun CompactPrototypeLayout(
+private fun CompactAppLayout(
     selectedTab: AppDestination,
     onTabSelected: (AppDestination) -> Unit,
     query: String,
@@ -234,7 +234,7 @@ private fun CompactPrototypeLayout(
             }
         },
     ) { padding ->
-        PrototypeContent(
+        AppDestinationContent(
             selectedTab,
             query,
             onQueryChange,
@@ -257,7 +257,7 @@ private fun CompactPrototypeLayout(
 }
 
 @Composable
-private fun PrototypeSidebar(selectedTab: AppDestination, onTabSelected: (AppDestination) -> Unit) {
+private fun AppSidebar(selectedTab: AppDestination, onTabSelected: (AppDestination) -> Unit) {
     Column(
         modifier = Modifier.width(220.dp).fillMaxHeight().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -304,7 +304,7 @@ private fun NavigationItem(tab: AppDestination, selected: Boolean, onClick: () -
 }
 
 @Composable
-private fun PrototypeContent(
+private fun AppDestinationContent(
     selectedTab: AppDestination,
     query: String,
     onQueryChange: (String) -> Unit,
@@ -440,7 +440,7 @@ private fun ColumnScope.LibraryScreen(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
+            items(items) { anime -> AnimeCatalogCard(anime, onClick = { onAnimeClick(anime) }) }
         }
     }
 }
@@ -453,7 +453,7 @@ private fun SettingsScreen(
     onThemeChange: (Boolean) -> Unit,
 ) {
     Spacer(Modifier.height(24.dp))
-    PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
+    SettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
 }
 
 @Composable
@@ -512,12 +512,12 @@ private fun ColumnScope.CatalogScreenContent(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        items(items) { anime -> AnimePrototypeCard(anime, onClick = { onAnimeClick(anime) }) }
+        items(items) { anime -> AnimeCatalogCard(anime, onClick = { onAnimeClick(anime) }) }
     }
 }
 
 @Composable
-private fun PrototypeSettingsCard(
+private fun SettingsCard(
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
@@ -563,7 +563,7 @@ private fun PrototypeSettingsCard(
 }
 
 @Composable
-private fun AnimePrototypeCard(anime: Anime, onClick: () -> Unit) {
+private fun AnimeCatalogCard(anime: Anime, onClick: () -> Unit) {
     androidx.compose.material3.Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
