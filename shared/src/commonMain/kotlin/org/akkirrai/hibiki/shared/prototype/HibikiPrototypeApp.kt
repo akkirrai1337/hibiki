@@ -72,6 +72,8 @@ import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
+import org.akkirrai.hibiki.shared.settings.AppSettingsCard
+import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
 import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -500,7 +502,21 @@ private fun SettingsScreen(
             libraryLabel = appText(AppTextKey.ProfileLibrary),
             episodesLabel = appText(AppTextKey.ProfileEpisodes),
         )
-    SettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
+        AppSettingsCard(
+            languageMode = languageMode,
+            onLanguageModeChange = onLanguageModeChange,
+            darkTheme = darkTheme,
+            onThemeChange = onThemeChange,
+            labels = AppSettingsCardLabels(
+                title = appText(AppTextKey.SettingsTitle),
+                description = appText(AppTextKey.SettingsDescription),
+                languageSystem = appText(AppTextKey.LanguageSystem),
+                languageEnglish = appText(AppTextKey.LanguageEnglish),
+                languageRussian = appText(AppTextKey.LanguageRussian),
+                themeLight = appText(AppTextKey.ThemeLight),
+                themeDark = appText(AppTextKey.ThemeDark),
+            ),
+        )
     }
 }
 
@@ -561,52 +577,6 @@ private fun ColumnScope.CatalogScreenContent(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         items(items) { anime -> AnimeCatalogCard(anime, onClick = { onAnimeClick(anime) }) }
-    }
-}
-
-@Composable
-private fun SettingsCard(
-    languageMode: LanguageMode,
-    onLanguageModeChange: (LanguageMode) -> Unit,
-    darkTheme: Boolean,
-    onThemeChange: (Boolean) -> Unit,
-) {
-    androidx.compose.material3.Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(UiDimens.MediumCorner),
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(appText(AppTextKey.SettingsTitle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Text(
-                appText(AppTextKey.SettingsDescription),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            HorizontalDivider()
-            TextButton(
-                onClick = {
-                    onLanguageModeChange(
-                        when (languageMode) {
-                            LanguageMode.RUSSIAN -> LanguageMode.ENGLISH
-                            LanguageMode.ENGLISH -> LanguageMode.RUSSIAN
-                            LanguageMode.SYSTEM -> LanguageMode.RUSSIAN
-                        },
-                    )
-                },
-            ) {
-                Text(
-                    when (languageMode) {
-                        LanguageMode.SYSTEM -> appText(AppTextKey.LanguageSystem)
-                        LanguageMode.ENGLISH -> appText(AppTextKey.LanguageEnglish)
-                        LanguageMode.RUSSIAN -> appText(AppTextKey.LanguageRussian)
-                    },
-                )
-            }
-            TextButton(onClick = { onThemeChange(!darkTheme) }) {
-                Text(if (darkTheme) appText(AppTextKey.ThemeDark) else appText(AppTextKey.ThemeLight))
-            }
-        }
     }
 }
 
