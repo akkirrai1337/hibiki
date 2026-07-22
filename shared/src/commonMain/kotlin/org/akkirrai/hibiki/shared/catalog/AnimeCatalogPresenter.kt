@@ -19,6 +19,7 @@ data class AnimeCatalogUiState(
     val page: Int = 1,
     val canLoadMore: Boolean = false,
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: String? = null,
     val selectedAnime: Anime? = null,
     val isDetailsLoading: Boolean = false,
@@ -43,8 +44,12 @@ class AnimeCatalogPresenter(
     private var detailsJob: Job? = null
 
     fun onQueryChange(query: String) {
-        _state.update { it.copy(query = query, error = null) }
+        setQuery(query)
         search()
+    }
+
+    fun setQuery(query: String) {
+        _state.update { it.copy(query = query, error = null) }
     }
 
     fun clear() {
@@ -56,14 +61,25 @@ class AnimeCatalogPresenter(
                 page = 1,
                 canLoadMore = false,
                 isLoading = false,
+                isLoadingMore = false,
                 error = null,
             )
         }
     }
 
     fun updateFilters(filters: AnimeSearchFilters) {
-        _state.update { it.copy(filters = filters, error = null) }
+        setFilters(filters)
         search()
+    }
+
+    fun setFilters(filters: AnimeSearchFilters) {
+        _state.update { it.copy(filters = filters, error = null) }
+    }
+
+    fun updateItem(updated: Anime) {
+        _state.update { state ->
+            state.copy(items = state.items.map { item -> if (item.id == updated.id) updated else item })
+        }
     }
 
     fun openDetails(anime: Anime) {
@@ -96,7 +112,7 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         searchJob = scope.launch {
             val current = state.value
-            _state.update { it.copy(isLoading = true, error = null, page = 1) }
+            _state.update { it.copy(isLoading = true, isLoadingMore = false, error = null, page = 1) }
             try {
                 val result = repository.search(
                     AnimeCatalogQuery(
@@ -112,12 +128,13 @@ class AnimeCatalogPresenter(
                         page = result.page,
                         canLoadMore = result.canLoadMore,
                         isLoading = false,
+                        isLoadingMore = false,
                     )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
-                _state.update { it.copy(isLoading = false, error = throwable.message ?: "Catalog request failed") }
+                _state.update { it.copy(isLoading = false, isLoadingMore = false, error = throwable.message ?: "Catalog request failed") }
             }
         }
     }
@@ -127,7 +144,7 @@ class AnimeCatalogPresenter(
         if (current.isLoading || !current.canLoadMore) return
         searchJob?.cancel()
         searchJob = scope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true, isLoadingMore = true, error = null) }
             try {
                 val result = repository.search(
                     AnimeCatalogQuery(
@@ -143,12 +160,13 @@ class AnimeCatalogPresenter(
                         page = result.page,
                         canLoadMore = result.canLoadMore,
                         isLoading = false,
+                        isLoadingMore = false,
                     )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
-                _state.update { it.copy(isLoading = false, error = throwable.message ?: "Catalog request failed") }
+                _state.update { it.copy(isLoading = false, isLoadingMore = false, error = throwable.message ?: "Catalog request failed") }
             }
         }
     }

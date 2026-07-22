@@ -70,13 +70,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
@@ -98,6 +96,14 @@ import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.CatalogFeature
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
@@ -574,155 +580,59 @@ class CatalogViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CatalogUiState(isLoading = true))
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
-    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
+    private val presenter = AnimeCatalogPresenter(
+        repository = repository,
+        scope = viewModelScope,
+        pageSize = 50,
+    )
 
     init {
         viewModelScope.launch {
+            presenter.state.collect { state ->
+                _uiState.value = state.toCatalogUiState(errorContext)
+            }
+        }
+        viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
-                    _uiState.update { state ->
-                        state.copy(
-                            filterCatalog = null,
-                            filters = AnimeSearchFilters(),
-                            items = emptyList(),
-                            currentPage = 0,
-                            canLoadMore = false,
-                        )
-                    }
-                    load()
-                }
-        }
-    }
-
-    fun load() {
-        val currentState = _uiState.value
-        val filters = currentState.filters
-        val query = currentState.query
-        val sort = currentState.selectedSort
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                    loadMoreError = null,
-                )
-            }
-            runCatching {
-                repository.loadPage(
-                    page = 1,
-                    filters = filters,
-                    query = query,
-                    sort = sort,
-                )
-            }.onSuccess { page ->
-                _uiState.update { state ->
-                    state.copy(
-                        isLoading = false,
-                        title = "",
-                        description = page.description,
-                        filterCatalog = page.filterCatalog,
-                        items = page.items,
-                        currentPage = page.currentPage,
-                        canLoadMore = page.canLoadMore,
-                    )
-                }
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = throwable.message ?: errorContext.getString(R.string.catalog_error_title),
-                    )
-                }
+                presenter.clear()
+                presenter.setFilters(AnimeSearchFilters())
+                presenter.setQuery("")
+                presenter.loadFilterCatalog()
+                presenter.search()
             }
         }
+        presenter.loadFilterCatalog()
     }
 
-    fun updateQuery(query: String) {
-        _uiState.update { it.copy(query = query, items = emptyList(), currentPage = 0, canLoadMore = false) }
-    }
+    fun load() = presenter.search()
+
+    fun updateQuery(query: String) = presenter.setQuery(query)
 
     fun selectSort(sort: CatalogSort) {
         if (_uiState.value.selectedSort == sort) return
-        _uiState.update { it.copy(selectedSort = sort, items = emptyList(), currentPage = 0, canLoadMore = false) }
+        presenter.setFilters(presenter.state.value.filters.copy(sortAlias = sort.alias))
         load()
     }
 
     fun enrichDescription(anime: Anime) {
-        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
-        viewModelScope.launch(Dispatchers.IO) {
+        if (!anime.description.isNullOrBlank()) return
+        viewModelScope.launch {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
-                    if (enriched.description.isNullOrBlank()) {
-                        descriptionRequests.remove(anime.id)
-                        return@onSuccess
-                    }
-                    _uiState.update { state ->
-                        state.copy(
-                            items = state.items.map { card ->
-                                if (card.anime.id == enriched.id) card.copy(anime = enriched) else card
-                            },
-                        )
-                    }
+                    if (!enriched.description.isNullOrBlank()) presenter.updateItem(enriched)
                 }
-                .onFailure { descriptionRequests.remove(anime.id) }
         }
     }
 
     fun applyFilters(filters: AnimeSearchFilters) {
-        _uiState.update {
-            it.copy(
-                filters = filters,
-                items = emptyList(),
-                currentPage = 0,
-                canLoadMore = false,
-            )
-        }
+        presenter.setFilters(filters.copy(sortAlias = _uiState.value.selectedSort.alias))
         load()
     }
 
-    fun loadMore() {
-        val state = _uiState.value
-        if (state.isLoading || state.isLoadingMore || !state.canLoadMore) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val nextPage = state.currentPage + 1
-            _uiState.update {
-                it.copy(
-                    isLoadingMore = true,
-                    loadMoreError = null,
-                )
-            }
-            runCatching {
-                repository.loadPage(
-                    page = nextPage,
-                    filters = state.filters,
-                    query = state.query,
-                    sort = state.selectedSort,
-                )
-            }.onSuccess { page ->
-                _uiState.update { current ->
-                    val merged = (current.items + page.items).distinctBy { it.anime.id }
-                    current.copy(
-                        isLoadingMore = false,
-                        title = current.title,
-                        description = page.description ?: current.description,
-                        filterCatalog = current.filterCatalog ?: page.filterCatalog,
-                        items = merged,
-                        currentPage = page.currentPage,
-                        canLoadMore = page.canLoadMore,
-                    )
-                }
-            }.onFailure { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isLoadingMore = false,
-                        loadMoreError = throwable.message ?: errorContext.getString(R.string.catalog_load_more_error),
-                    )
-                }
-            }
-        }
-    }
+    fun loadMore() = presenter.loadMore()
 
     override fun onCleared() {
+        presenter.close()
         repository.close()
         super.onCleared()
     }
@@ -757,10 +667,84 @@ data class CatalogUiState(
     val loadMoreError: String? = null,
 )
 
+private fun AnimeCatalogUiState.toCatalogUiState(
+    errorContext: android.content.Context,
+): CatalogUiState {
+    val errorText = error?.takeIf(String::isNotBlank)
+    return CatalogUiState(
+        isLoading = (isLoading || isFilterCatalogLoading) && !isLoadingMore,
+        filterCatalog = filterCatalog?.toLegacyCatalog(),
+        filters = filters,
+        query = query,
+        selectedSort = filters.sortAlias.toCatalogSort(),
+        items = items.map(::CatalogAnimeCard),
+        currentPage = page,
+        canLoadMore = canLoadMore,
+        isLoadingMore = isLoadingMore,
+        errorMessage = if (!isLoadingMore && errorText != null) {
+            errorText ?: errorContext.getString(R.string.catalog_error_title)
+        } else {
+            null
+        },
+        loadMoreError = if (isLoadingMore) errorText else null,
+    )
+}
+
+private fun AnimeCatalogFilterCatalog.toLegacyCatalog(): AnimeSearchFilterCatalog {
+    val supportedSorts = capabilities.supportedSorts.mapNotNull { alias ->
+        when (alias.lowercase()) {
+            "relevance" -> AnimeSearchSort.RELEVANCE
+            "popular", "rating" -> AnimeSearchSort.RATING
+            "alphabetical", "title" -> AnimeSearchSort.TITLE
+            "year", "updated" -> AnimeSearchSort.YEAR
+            "votes" -> AnimeSearchSort.VOTES
+            "views" -> AnimeSearchSort.VIEWS
+            "comments" -> AnimeSearchSort.COMMENTS
+            else -> null
+        }
+    }.toSet().ifEmpty { setOf(AnimeSearchSort.RELEVANCE) }
+    val supportsUpdated = capabilities.supportedSorts.any { it.equals("updated", ignoreCase = true) }
+    val fallbackSort = supportedSorts.firstOrNull() ?: AnimeSearchSort.RELEVANCE
+
+    return AnimeSearchFilterCatalog(
+        sortOptions = sortOptions.map { SearchFilterOption(it.id, it.title) },
+        typeOptions = typeOptions.map { SearchFilterOption(it.id, it.title) },
+        statusOptions = statusOptions.map { SearchFilterOption(it.id, it.title) },
+        genreOptions = genreOptions.map { SearchFilterOption(it.id, it.title) },
+        capabilities = CatalogCapabilities(
+            supportedSorts = supportedSorts,
+            supportedFilters = capabilities.supportedFilters.mapNotNull { filter ->
+                when (filter) {
+                    SharedAnimeCatalogFilter.TYPE -> AnimeSearchFilter.TYPE
+                    SharedAnimeCatalogFilter.STATUS -> AnimeSearchFilter.STATUS
+                    SharedAnimeCatalogFilter.INCLUDED_GENRES -> AnimeSearchFilter.INCLUDED_GENRES
+                    SharedAnimeCatalogFilter.EXCLUDED_GENRES -> AnimeSearchFilter.EXCLUDED_GENRES
+                    SharedAnimeCatalogFilter.YEAR_RANGE -> AnimeSearchFilter.YEAR_RANGE
+                }
+            }.toSet(),
+            features = if (supportsUpdated) setOf(CatalogFeature.LATEST_RELEASES) else emptySet(),
+            fallbackSort = fallbackSort,
+        ),
+    )
+}
+
 enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
     Alphabetical(R.string.catalog_sort_alphabetical),
     Popular(R.string.catalog_sort_popular),
     Updated(R.string.catalog_sort_updated),
+}
+
+private val CatalogSort.alias: String
+    get() = when (this) {
+        CatalogSort.Alphabetical -> "alphabetical"
+        CatalogSort.Popular -> "popular"
+        CatalogSort.Updated -> "updated"
+    }
+
+private fun String.toCatalogSort(): CatalogSort = when (lowercase()) {
+    "alphabetical", "title" -> CatalogSort.Alphabetical
+    "updated", "latest", "latest_releases" -> CatalogSort.Updated
+    else -> CatalogSort.Popular
 }
 
 private val CatalogSort.searchSort: AnimeSearchSort
