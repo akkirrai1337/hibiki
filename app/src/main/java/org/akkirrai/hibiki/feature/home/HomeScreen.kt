@@ -115,6 +115,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
+import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
@@ -453,128 +454,33 @@ private fun ContinueWatchingCard(
     anime: Anime?,
     onClick: () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        HomeSectionHeader(
-            title = stringResource(R.string.home_continue_title),
-            icon = Icons.Outlined.History,
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+    AppContinueWatchingCard(
+        anime = anime,
+        sectionTitle = stringResource(R.string.home_continue_title),
+        emptyTitle = stringResource(R.string.home_continue_empty_title),
+        emptyMessage = stringResource(R.string.home_continue_empty_message),
+        openHint = stringResource(R.string.home_open_title_hint),
+        meta = anime?.let {
+            buildHomeMeta(
+                anime = it,
+                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                movieLabel = stringResource(R.string.anime_meta_movie),
             )
-        ) {
-            if (anime == null) {
-                EmptyContinueContent()
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onClick)
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AnimePoster(
-                        anime = anime,
-                        modifier = Modifier
-                            .width(72.dp)
-                            .aspectRatio(2f / 3f)
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .align(Alignment.CenterVertically),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        AnimeTitleText(
-                            text = anime.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            baseMaxLines = 3,
-                            extraLongTitleLines = 0,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-
-                        val meta = buildHomeMeta(
-                            anime = anime,
-                            announcementLabel = stringResource(R.string.anime_meta_announcement),
-                            movieLabel = stringResource(R.string.anime_meta_movie),
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (meta.isNotBlank()) {
-                                Text(
-                                    text = meta,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            AnimeSourceBadge(titleId = anime.id)
-                        }
-
-                        Text(
-                            text = stringResource(R.string.home_open_title_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                }
+        }.orEmpty(),
+        sectionIcon = Icons.Outlined.History,
+        onClick = onClick,
+        imageContent = {
+            anime?.let { currentAnime ->
+                AnimePoster(
+                    anime = currentAnime,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyContinueContent() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppTonalSurface(
-            modifier = Modifier
-                .size(56.dp),
-            shape = RoundedCornerShape(UiDimens.MediumCorner),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.home_continue_empty_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(R.string.home_continue_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+        },
+        trailingContent = {
+            anime?.let { AnimeSourceBadge(titleId = it.id) }
+        },
+    )
 }
 
 @Composable
