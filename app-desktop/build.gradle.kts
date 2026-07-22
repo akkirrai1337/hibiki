@@ -26,5 +26,22 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "org.akkirrai.hibiki.desktop.MainKt"
+
+        nativeDistributions {
+            packageName = "hibiki"
+            packageVersion = "2.1.0"
+            description = "A shared anime catalog for Android and Windows"
+            vendor = "hibiki"
+            targetFormats(
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+            )
+            windows {
+                menuGroup = "hibiki"
+                shortcut = true
+                menu = true
+                perUserInstall = true
+            }
+        }
     }
 }
