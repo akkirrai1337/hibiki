@@ -452,17 +452,11 @@ private fun EmptyLibraryState(
     title: String,
     body: String,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.library.LibraryEmptyState(
         title = title,
         message = body,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 42.dp, start = UiDimens.ScreenPadding, end = UiDimens.ScreenPadding),
-        titleStyle = MaterialTheme.typography.titleLarge,
-        messageModifier = Modifier.padding(top = 6.dp, start = 28.dp, end = 28.dp),
-        messageMaxLines = 2,
-        messageOverflow = TextOverflow.Ellipsis,
-        iconSlot = {
+        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        iconContent = {
             Box(
                 modifier = Modifier
                     .size(64.dp)

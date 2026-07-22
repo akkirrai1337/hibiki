@@ -27,32 +27,17 @@ fun AnimeSourceBadge(
     val source = remember(titleId) {
         AnimeSourceRegistry.descriptorForStoredTitle(titleId)
     }
-    Surface(
+    org.akkirrai.hibiki.shared.design.component.AppSourceBadge(
+        title = source.name,
         modifier = modifier,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        iconContent = {
             AsyncImage(
                 model = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
                 error = painterResource(source.iconRes),
                 contentDescription = null,
-                modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape),
+                modifier = Modifier.size(14.dp).clip(CircleShape),
             )
-            Text(
-                text = source.name,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+        },
+    )
 }

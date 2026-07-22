@@ -118,21 +118,13 @@ fun AppFloatingIconButton(
     modifier: Modifier = Modifier,
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
-    Box(
-        modifier = modifier
-            .size(AppFloatingHeaderDefaults.ControlHeight)
-            .clip(CircleShape)
-            .background(containerColor)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(AppFloatingHeaderDefaults.ControlIconSize),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    org.akkirrai.hibiki.shared.design.component.AppFloatingIconButton(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = containerColor,
+    )
 }
 
 @Composable
