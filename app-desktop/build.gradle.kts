@@ -19,8 +19,10 @@ java {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(project(":parsers"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
+    implementation(libs.ktor.client.cio)
 }
 
 compose.desktop {

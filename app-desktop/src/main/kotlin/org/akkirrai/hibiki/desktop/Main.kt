@@ -14,15 +14,19 @@ import org.akkirrai.hibiki.shared.prototype.HibikiPrototypeApp
  * Desktop entry point for the shared Hibiki prototype.
  */
 fun main() = application {
+    val catalogRepository = DesktopCatalogRepository()
     Window(
-        onCloseRequest = ::exitApplication,
+        onCloseRequest = {
+            catalogRepository.close()
+            exitApplication()
+        },
         title = "hibiki",
         state = rememberWindowState(width = 1180.dp, height = 760.dp),
     ) {
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             Surface {
                 val settingsStore = androidx.compose.runtime.remember { DesktopSettingsStore() }
-                HibikiPrototypeApp(settingsStore = settingsStore)
+                HibikiPrototypeApp(repository = catalogRepository, settingsStore = settingsStore)
             }
         }
     }
