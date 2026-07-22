@@ -52,6 +52,9 @@ import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
+import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
+import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
@@ -79,6 +82,7 @@ fun HibikiPrototypeApp(
     var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
     var selectedAnime by remember { mutableStateOf<Anime?>(null) }
     var languageMode by remember { mutableStateOf(LanguageMode.SYSTEM) }
+    var darkTheme by remember { mutableStateOf(false) }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -87,11 +91,16 @@ fun HibikiPrototypeApp(
     }
 
     CompositionLocalProvider(LocalAppTextResolver provides DefaultAppTextResolver(languageMode)) {
-        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            BoxWithConstraints {
-                val compact = maxWidth < 760.dp
-                val onLanguageModeChange = { mode: LanguageMode -> languageMode = mode }
-                if (compact) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) HibikiDarkColorScheme else HibikiLightColorScheme,
+            typography = HibikiTypography,
+        ) {
+            Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                BoxWithConstraints {
+                    val compact = maxWidth < 760.dp
+                    val onLanguageModeChange = { mode: LanguageMode -> languageMode = mode }
+                    val onThemeChange = { dark: Boolean -> darkTheme = dark }
+                    if (compact) {
                     CompactPrototypeLayout(
                         selectedTab,
                         { selectedTab = it },
@@ -106,8 +115,10 @@ fun HibikiPrototypeApp(
                         { selectedAnime = null },
                         languageMode,
                         onLanguageModeChange,
+                        darkTheme,
+                        onThemeChange,
                     )
-                } else {
+                    } else {
                     WidePrototypeLayout(
                         selectedTab,
                         { selectedTab = it },
@@ -122,7 +133,10 @@ fun HibikiPrototypeApp(
                         { selectedAnime = null },
                         languageMode,
                         onLanguageModeChange,
+                        darkTheme,
+                        onThemeChange,
                     )
+                    }
                 }
             }
         }
@@ -144,6 +158,8 @@ private fun WidePrototypeLayout(
     onBackFromDetails: () -> Unit,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
+    darkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         PrototypeSidebar(selectedTab, onTabSelected)
@@ -161,6 +177,8 @@ private fun WidePrototypeLayout(
             onBackFromDetails,
             languageMode,
             onLanguageModeChange,
+            darkTheme,
+            onThemeChange,
             Modifier.weight(1f),
         )
     }
@@ -181,6 +199,8 @@ private fun CompactPrototypeLayout(
     onBackFromDetails: () -> Unit,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
+    darkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -211,6 +231,8 @@ private fun CompactPrototypeLayout(
             onBackFromDetails,
             languageMode,
             onLanguageModeChange,
+            darkTheme,
+            onThemeChange,
             Modifier.padding(padding),
         )
     }
@@ -277,6 +299,8 @@ private fun PrototypeContent(
     onBackFromDetails: () -> Unit,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
+    darkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -301,7 +325,7 @@ private fun PrototypeContent(
             AnimeDetailsPanel(selectedAnime, onBackFromDetails)
         } else if (selectedTab == PrototypeTab.SETTINGS) {
             Spacer(Modifier.height(24.dp))
-            PrototypeSettingsCard(languageMode, onLanguageModeChange)
+            PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
         } else {
             Spacer(Modifier.height(20.dp))
             OutlinedTextField(
@@ -358,6 +382,8 @@ private fun PrototypeContent(
 private fun PrototypeSettingsCard(
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
+    darkTheme: Boolean,
+    onThemeChange: (Boolean) -> Unit,
 ) {
     androidx.compose.material3.Card(
         modifier = Modifier.fillMaxWidth(),
@@ -391,7 +417,9 @@ private fun PrototypeSettingsCard(
                     },
                 )
             }
-            TextButton(onClick = { }) { Text(appText(AppTextKey.ThemeSystem)) }
+            TextButton(onClick = { onThemeChange(!darkTheme) }) {
+                Text(if (darkTheme) appText(AppTextKey.ThemeDark) else appText(AppTextKey.ThemeLight))
+            }
         }
     }
 }

@@ -26,6 +26,8 @@ enum class AppTextKey {
     LanguageEnglish,
     LanguageRussian,
     ThemeSystem,
+    ThemeLight,
+    ThemeDark,
     DesktopPreview,
 }
 
@@ -79,6 +81,8 @@ class DefaultAppTextResolver(
             AppTextKey.LanguageEnglish -> if (russian) "Язык: английский" else "Language: English"
             AppTextKey.LanguageRussian -> if (russian) "Язык: русский" else "Language: Russian"
             AppTextKey.ThemeSystem -> if (russian) "Тема: системная" else "Theme: Follow system"
+            AppTextKey.ThemeLight -> if (russian) "Тема: светлая" else "Theme: Light"
+            AppTextKey.ThemeDark -> if (russian) "Тема: тёмная" else "Theme: Dark"
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
         }
     }
