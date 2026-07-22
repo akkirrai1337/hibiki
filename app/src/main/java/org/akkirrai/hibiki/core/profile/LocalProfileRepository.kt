@@ -3,12 +3,10 @@ package org.akkirrai.hibiki.core.profile
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
-import org.akkirrai.hibiki.core.source.LibraryCategory
-import org.akkirrai.hibiki.core.source.WatchStateRepository.DailyWatchActivity
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
+import org.akkirrai.hibiki.shared.profile.LocalLibraryItem
+import org.akkirrai.hibiki.shared.profile.LocalProfileData
 
 /** Source-independent data owned by Hibiki and used by the local profile. */
 class LocalProfileRepository(
@@ -64,18 +62,3 @@ class LocalProfileRepository(
         const val PROFILE_AVATAR_URI_KEY = "profile_avatar_uri"
     }
 }
-
-data class LocalProfileData(
-    val profileName: String = "",
-    val profileAvatarUri: String? = null,
-    val episodeProgress: List<EpisodeWatchProgress> = emptyList(),
-    val activity: List<DailyWatchActivity> = emptyList(),
-    val library: List<LocalLibraryItem> = emptyList(),
-)
-
-data class LocalLibraryItem(
-    val id: String,
-    val anime: Anime,
-    val categories: Set<LibraryCategory>,
-    val addedAt: Long?,
-)

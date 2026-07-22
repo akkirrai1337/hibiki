@@ -5,41 +5,39 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.core.profile.LocalProfileData
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
+import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
+import org.akkirrai.hibiki.shared.profile.LocalProfileUiState
 
 class LocalProfileViewModel(
     private val repository: LocalProfileRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(LocalProfileUiState(isLoading = true))
-    val uiState: StateFlow<LocalProfileUiState> = _uiState.asStateFlow()
+    private val presenter = LocalProfilePresenter(LocalProfileUiState(isLoading = true))
+    val uiState: StateFlow<LocalProfileUiState> = presenter.state
 
     init { refresh() }
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             val data = repository.getData()
-            _uiState.update { LocalProfileUiState(data = data, isLoading = false) }
+            presenter.setData(data)
         }
     }
 
     fun updateProfileName(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val profileName = repository.updateProfileName(name)
-            _uiState.update { state -> state.copy(data = state.data.copy(profileName = profileName)) }
+            presenter.updateProfileName(profileName)
         }
     }
 
     fun updateProfileAvatar(uri: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateProfileAvatar(uri)
-            _uiState.update { state -> state.copy(data = state.data.copy(profileAvatarUri = uri)) }
+            presenter.updateProfileAvatar(uri)
         }
     }
 
@@ -50,8 +48,3 @@ class LocalProfileViewModel(
         ) as T
     }
 }
-
-data class LocalProfileUiState(
-    val data: LocalProfileData = LocalProfileData(),
-    val isLoading: Boolean = false,
-)

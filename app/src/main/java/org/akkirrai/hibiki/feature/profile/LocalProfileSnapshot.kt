@@ -10,7 +10,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.profile.LocalProfileData
+import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -24,7 +24,7 @@ internal fun buildProfileSnapshot(
         val date = today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
         ActivityDay(
             date.format(ACTIVITY_DATE_FORMATTER),
-            activityByDate[date]?.let { activity ->
+            activityByDate[date.toString()]?.let { activity ->
                 activity.completedEpisodes.takeIf { it > 0 } ?: if (activity.watchedMs > 0L) 1 else 0
             } ?: 0,
         )

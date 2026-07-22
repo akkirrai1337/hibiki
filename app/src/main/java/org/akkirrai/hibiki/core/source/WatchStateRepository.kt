@@ -7,6 +7,7 @@ import java.time.ZoneId
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
+import org.akkirrai.hibiki.shared.profile.DailyWatchActivity
 
 private const val PROGRESS_PREFIX = "progress_"
 private const val EPISODE_KEY_SEPARATOR = "|episode|"
@@ -363,7 +364,7 @@ class WatchStateRepository(context: Context) {
                     ?: return@mapNotNull null
                 val watchedMs = prefs.getLong(key, 0L).coerceAtLeast(0L)
                 val completed = prefs.getStringSet(completedActivityKey(date), emptySet()).orEmpty().size
-                DailyWatchActivity(date = date, watchedMs = watchedMs, completedEpisodes = completed)
+                DailyWatchActivity(date = date.toString(), watchedMs = watchedMs, completedEpisodes = completed)
             }
             .sortedBy(DailyWatchActivity::date)
             .toList()
@@ -419,11 +420,5 @@ class WatchStateRepository(context: Context) {
             expiredKeys.forEach(::remove)
         }.apply()
     }
-
-    data class DailyWatchActivity(
-        val date: LocalDate,
-        val watchedMs: Long,
-        val completedEpisodes: Int,
-    )
 
 }
