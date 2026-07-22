@@ -213,31 +213,14 @@ private fun PageArrowButton(
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
 ) {
-    Surface(
+    org.akkirrai.hibiki.shared.profile.ProfilePageArrowButton(
+        icon = if (isBack) Icons.AutoMirrored.Outlined.KeyboardArrowLeft
+        else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+        enabled = enabled,
+        onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.28f else 0.12f),
-    ) {
-        IconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.size(size),
-        ) {
-            Icon(
-                imageVector = if (isBack) {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowLeft
-                } else {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight
-                },
-                contentDescription = null,
-                tint = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.46f)
-                },
-            )
-        }
-    }
+        size = size,
+    )
 }
 
 @Composable
@@ -275,34 +258,12 @@ private fun LegendItem(
     item: AnalyticsSegment,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    org.akkirrai.hibiki.shared.profile.ProfileLegendItem(
+        label = item.label,
+        valueLabel = item.valueLabel,
+        color = item.color,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(item.color),
-        )
-        Text(
-            text = item.label,
-            modifier = Modifier.widthIn(max = 132.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = item.valueLabel,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-    }
+    )
 }
 
 @Composable

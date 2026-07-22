@@ -21,18 +21,7 @@ internal fun WatchDownloadIconButton(
     active: Boolean,
     onClick: () -> Unit,
 ) {
-    WatchDownloadBadge(active = active) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(42.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-    }
+    org.akkirrai.hibiki.shared.player.DownloadIconButton(icon, contentDescription, active, onClick)
 }
 
 @Composable
@@ -40,38 +29,14 @@ internal fun WatchDownloadStateIcon(
     icon: ImageVector,
     contentDescription: String,
 ) {
-    WatchDownloadBadge(active = true) {
-        Box(
-            modifier = Modifier.size(42.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-    }
+    org.akkirrai.hibiki.shared.player.DownloadStateIcon(icon, contentDescription)
 }
 
 @Composable
 internal fun WatchDownloadProgressBadge(
     progress: Float,
 ) {
-    WatchDownloadBadge(active = true) {
-        Box(
-            modifier = Modifier.size(42.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.size(22.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-        }
-    }
+    org.akkirrai.hibiki.shared.player.DownloadProgressBadge(progress)
 }
 
 @Composable

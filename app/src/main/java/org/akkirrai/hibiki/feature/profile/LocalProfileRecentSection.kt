@@ -123,14 +123,7 @@ private fun RecentLibraryRow(
 private fun RecentPoster(
     item: RecentLibraryItem,
 ) {
-    Box(
-        modifier = Modifier
-            .width(50.dp)
-            .height(68.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
-        contentAlignment = Alignment.Center,
-    ) {
+    org.akkirrai.hibiki.shared.profile.ProfileRecentPosterFrame {
         val posterUrl = normalizePosterUrl(item.posterUrl)
         if (posterUrl == null) {
             Box(
@@ -171,10 +164,5 @@ private fun RecentPoster(
 private fun EmptyState(
     text: String,
 ) {
-    Text(
-        text = text,
-        modifier = Modifier.fillMaxWidth(),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    org.akkirrai.hibiki.shared.profile.ProfileEmptyState(text)
 }

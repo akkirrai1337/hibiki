@@ -406,18 +406,13 @@ private fun ProfileActionButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = CircleShape) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(40.dp)
-                .clickable(onClick = onClick)
-                .padding(AnimiteSmallPadding)
-                .then(iconModifier),
-        )
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileActionButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        iconModifier = iconModifier,
+    )
 }
 
 /** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
@@ -452,47 +447,17 @@ private fun LocalStatsRow(snapshot: LocalProfileSnapshot) {
 
 @Composable
 private fun LocalStat(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.SpaceEvenly, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-        Text(value, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileStat(label = label, value = value)
 }
 
 /** Direct port of AboutTab.Genres: labels column alongside proportional rounded bars. */
 @Composable
 private fun GenreBars(items: List<DistributionSegment>) {
-    if (items.isEmpty()) return
-    Row(Modifier.height(IntrinsicSize.Max)) {
-        Column(horizontalAlignment = Alignment.End) {
-            items.forEach { item ->
-                Text(item.label, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f), style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(start = AnimiteSmallPadding, end = AnimiteLargePadding)
-                .widthIn(max = 250.dp),
-            verticalArrangement = Arrangement.spacedBy(AnimiteTinyPadding),
-        ) {
-            val highest = items.maxOf { it.count }.coerceAtLeast(1)
-            items.forEach { item ->
-                val weight = item.count / highest.toFloat()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(weight)
-                        .weight(1f)
-                        .drawBehind {
-                            drawRoundRect(
-                                color = item.color,
-                                size = Size(size.width, size.height),
-                                cornerRadius = CornerRadius(size.height),
-                            )
-                        },
-                )
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
+        items = items.map { item ->
+            org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(item.label, item.count, item.color)
+        },
+    )
 }
 
 @Composable

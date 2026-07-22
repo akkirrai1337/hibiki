@@ -262,6 +262,43 @@ private fun EpisodeRow(
     onResumeClick: () -> Unit,
     onRemoveClick: () -> Unit,
 ) {
+    val visibleDownloadState = if (
+        downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
+    ) OfflineEpisodeDownloadState.NotDownloaded else downloadState
+    org.akkirrai.hibiki.shared.player.EpisodeRow(
+        headline = buildEpisodeHeadline(episode, progress, status),
+        subtitle = buildEpisodeSubtitle(visibleDownloadState).takeIf(String::isNotBlank),
+        inProgress = status == EpisodeProgressStatus.InProgress,
+        enabled = enabled,
+        showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed,
+        onClick = onClick,
+        downloadAction = {
+            EpisodeDownloadAction(
+                state = downloadState,
+                controlsEnabled = showDownloadControls,
+                onDownloadClick = onDownloadClick,
+                onPauseClick = onPauseClick,
+                onResumeClick = onResumeClick,
+                onRemoveClick = onRemoveClick,
+            )
+        },
+    )
+}
+
+@Composable
+private fun EpisodeRowLegacy(
+    episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
+    status: EpisodeProgressStatus,
+    downloadState: OfflineEpisodeDownloadState,
+    showDownloadControls: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

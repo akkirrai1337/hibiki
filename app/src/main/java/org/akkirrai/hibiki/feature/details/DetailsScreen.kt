@@ -1003,21 +1003,18 @@ private fun PosterHeroInline(
     onPosterClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .width(140.dp)
-            .height(height)
-            .clickable(onClick = onPosterClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
+    org.akkirrai.hibiki.shared.details.DetailsPosterCard(
+        height = height,
+        onClick = onPosterClick,
+        modifier = modifier,
+        poster = {
         NetworkImage(
             imageUrl = anime.posterUrl,
             fallbackUrl = anime.posterFallbackUrl,
             contentDescription = anime.title,
         )
-    }
+        },
+    )
 }
 
 @Composable

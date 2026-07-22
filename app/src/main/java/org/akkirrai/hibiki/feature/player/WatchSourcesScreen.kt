@@ -141,6 +141,23 @@ private fun WatchSourceRow(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
+    org.akkirrai.hibiki.shared.player.WatchSourceRow(
+        title = source.title,
+        episodeSummary = source.episodeCount?.let { count ->
+            "Â· $count ${stringResource(R.string.watch_episodes_short)}"
+        },
+        enabled = enabled,
+        horizontalPadding = UiDimens.ScreenPadding,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun WatchSourceRowLegacy(
+    source: WatchSource,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
