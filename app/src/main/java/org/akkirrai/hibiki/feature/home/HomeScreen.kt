@@ -123,6 +123,7 @@ import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
+import org.akkirrai.hibiki.shared.design.component.AppPageIndicator
 import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
@@ -517,7 +518,7 @@ private fun FeaturedCarousel(
         }
 
         if (items.size > 1) {
-            FeaturedIndicator(
+            AppPageIndicator(
                 totalPages = items.size,
                 currentPage = indicatorPage,
                 progress = progress.value,
@@ -525,54 +526,6 @@ private fun FeaturedCarousel(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 12.dp),
             )
-        }
-    }
-}
-
-@Composable
-private fun FeaturedIndicator(
-    totalPages: Int,
-    currentPage: Int,
-    progress: Float,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (i in 0 until totalPages) {
-            if (i == currentPage) {
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                        ),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(fraction = progress.coerceIn(0f, 1f))
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                    )
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                        ),
-                )
-            }
-            if (i < totalPages - 1) {
-                Spacer(modifier = Modifier.width(6.dp))
-            }
         }
     }
 }
