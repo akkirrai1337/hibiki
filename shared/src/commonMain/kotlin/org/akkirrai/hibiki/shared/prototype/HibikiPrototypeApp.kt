@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -50,6 +52,8 @@ import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -86,6 +90,9 @@ fun HibikiPrototypeApp(
                     state.query,
                     presenter::onQueryChange,
                     state.items,
+                    state.filters,
+                    state.filterCatalog,
+                    presenter::updateFilters,
                 )
             } else {
                 WidePrototypeLayout(
@@ -94,6 +101,9 @@ fun HibikiPrototypeApp(
                     state.query,
                     presenter::onQueryChange,
                     state.items,
+                    state.filters,
+                    state.filterCatalog,
+                    presenter::updateFilters,
                 )
             }
         }
@@ -107,11 +117,23 @@ private fun WidePrototypeLayout(
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         PrototypeSidebar(selectedTab, onTabSelected)
         HorizontalDivider(modifier = Modifier.fillMaxHeight().width(1.dp))
-        PrototypeContent(selectedTab, query, onQueryChange, items, Modifier.weight(1f))
+        PrototypeContent(
+            selectedTab,
+            query,
+            onQueryChange,
+            items,
+            filters,
+            filterCatalog,
+            onFiltersChange,
+            Modifier.weight(1f),
+        )
     }
 }
 
@@ -122,6 +144,9 @@ private fun CompactPrototypeLayout(
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -139,7 +164,16 @@ private fun CompactPrototypeLayout(
             }
         },
     ) { padding ->
-        PrototypeContent(selectedTab, query, onQueryChange, items, Modifier.padding(padding))
+        PrototypeContent(
+            selectedTab,
+            query,
+            onQueryChange,
+            items,
+            filters,
+            filterCatalog,
+            onFiltersChange,
+            Modifier.padding(padding),
+        )
     }
 }
 
@@ -196,6 +230,9 @@ private fun PrototypeContent(
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
+    filters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    onFiltersChange: (AnimeSearchFilters) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
@@ -228,6 +265,29 @@ private fun PrototypeContent(
                 singleLine = true,
                 placeholder = { Text(appText(AppTextKey.SearchPlaceholder)) },
             )
+            if (filterCatalog?.genreOptions?.isNotEmpty() == true) {
+                Spacer(Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filterCatalog.genreOptions) { option ->
+                        FilterChip(
+                            selected = option.id in filters.includedGenreAliases,
+                            onClick = {
+                                val selected = option.id in filters.includedGenreAliases
+                                onFiltersChange(
+                                    filters.copy(
+                                        includedGenreAliases = if (selected) {
+                                            filters.includedGenreAliases - option.id
+                                        } else {
+                                            filters.includedGenreAliases + option.id
+                                        },
+                                    ),
+                                )
+                            },
+                            label = { Text(option.title) },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(24.dp))
             SectionHeader(
                 title = if (selectedTab == PrototypeTab.HOME) appText(AppTextKey.ContinueWatching) else appText(AppTextKey.ExploreCatalog),
