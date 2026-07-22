@@ -91,7 +91,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
+import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -413,11 +413,18 @@ private fun LibraryAnimeCard(
 ) {
     val anime = entry.anime
     val meta = anime.buildLibraryMeta()
-    VerticalAnimeListItem(
+    AppVerticalAnimeListItem(
         anime = anime,
         metaText = "",
         onClick = onClick,
         modifier = modifier,
+        trailingIcon = Icons.Outlined.ChevronRight,
+        posterContent = {
+            AnimePoster(
+                anime = anime,
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
         metaContent = {
             Row(
