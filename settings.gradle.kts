@@ -27,4 +27,6 @@ rootProject.name = "hibiki"
 include(":app")
 include(":parsers")
 include(":beakokit-processor")
+include(":shared")
+include(":app-desktop")
  
