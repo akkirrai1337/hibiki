@@ -67,16 +67,10 @@ import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
-
-private enum class PrototypeTab(val textKey: AppTextKey) {
-    HOME(AppTextKey.Home),
-    SEARCH(AppTextKey.Search),
-    LIBRARY(AppTextKey.Library),
-    SETTINGS(AppTextKey.Settings),
-}
+import org.akkirrai.hibiki.shared.navigation.AppDestination
 
 @Composable
-fun HibikiPrototypeApp(
+fun HibikiApp(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
@@ -84,7 +78,7 @@ fun HibikiPrototypeApp(
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
-    var selectedTab by remember { mutableStateOf(PrototypeTab.HOME) }
+    var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
@@ -160,8 +154,8 @@ fun HibikiPrototypeApp(
 
 @Composable
 private fun WidePrototypeLayout(
-    selectedTab: PrototypeTab,
-    onTabSelected: (PrototypeTab) -> Unit,
+    selectedTab: AppDestination,
+    onTabSelected: (AppDestination) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -205,8 +199,8 @@ private fun WidePrototypeLayout(
 
 @Composable
 private fun CompactPrototypeLayout(
-    selectedTab: PrototypeTab,
-    onTabSelected: (PrototypeTab) -> Unit,
+    selectedTab: AppDestination,
+    onTabSelected: (AppDestination) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -229,7 +223,7 @@ private fun CompactPrototypeLayout(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                PrototypeTab.values().forEach { tab ->
+                AppDestination.entries.forEach { tab ->
                     FilterChip(
                         selected = tab == selectedTab,
                         onClick = { onTabSelected(tab) },
@@ -262,7 +256,7 @@ private fun CompactPrototypeLayout(
 }
 
 @Composable
-private fun PrototypeSidebar(selectedTab: PrototypeTab, onTabSelected: (PrototypeTab) -> Unit) {
+private fun PrototypeSidebar(selectedTab: AppDestination, onTabSelected: (AppDestination) -> Unit) {
     Column(
         modifier = Modifier.width(220.dp).fillMaxHeight().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -279,7 +273,7 @@ private fun PrototypeSidebar(selectedTab: PrototypeTab, onTabSelected: (Prototyp
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(14.dp))
-        PrototypeTab.values().forEach { tab ->
+        AppDestination.entries.forEach { tab ->
             NavigationItem(tab, selectedTab == tab, { onTabSelected(tab) })
         }
         Spacer(Modifier.weight(1f))
@@ -292,7 +286,7 @@ private fun PrototypeSidebar(selectedTab: PrototypeTab, onTabSelected: (Prototyp
 }
 
 @Composable
-private fun NavigationItem(tab: PrototypeTab, selected: Boolean, onClick: () -> Unit) {
+private fun NavigationItem(tab: AppDestination, selected: Boolean, onClick: () -> Unit) {
     AppTonalSurface(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
@@ -310,7 +304,7 @@ private fun NavigationItem(tab: PrototypeTab, selected: Boolean, onClick: () -> 
 
 @Composable
 private fun PrototypeContent(
-    selectedTab: PrototypeTab,
+    selectedTab: AppDestination,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -333,7 +327,7 @@ private fun PrototypeContent(
             Column(modifier = Modifier.weight(1f)) {
                 Text(appText(selectedTab.textKey), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    text = if (selectedTab == PrototypeTab.SETTINGS) {
+                    text = if (selectedTab == AppDestination.SETTINGS) {
                         appText(AppTextKey.SettingsSubtitle)
                     } else {
                         appText(AppTextKey.PrototypeSubtitle)
@@ -342,13 +336,13 @@ private fun PrototypeContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (selectedTab != PrototypeTab.SETTINGS) {
+            if (selectedTab != AppDestination.SETTINGS) {
                 Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
             }
         }
         if (selectedAnime != null) {
             AnimeDetailsPanel(selectedAnime, isDetailsLoading, detailsError, onBackFromDetails)
-        } else if (selectedTab == PrototypeTab.SETTINGS) {
+        } else if (selectedTab == AppDestination.SETTINGS) {
             Spacer(Modifier.height(24.dp))
             PrototypeSettingsCard(languageMode, onLanguageModeChange, darkTheme, onThemeChange)
         } else {
@@ -385,7 +379,7 @@ private fun PrototypeContent(
             }
             Spacer(Modifier.height(24.dp))
             SectionHeader(
-                title = if (selectedTab == PrototypeTab.HOME) appText(AppTextKey.ContinueWatching) else appText(AppTextKey.ExploreCatalog),
+                title = if (selectedTab == AppDestination.HOME) appText(AppTextKey.ContinueWatching) else appText(AppTextKey.ExploreCatalog),
                 actionLabel = appText(AppTextKey.SeeAll),
                 onActionClick = { },
             )

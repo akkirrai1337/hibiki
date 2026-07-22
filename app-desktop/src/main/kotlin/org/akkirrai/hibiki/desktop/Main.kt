@@ -8,7 +8,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
-import org.akkirrai.hibiki.shared.prototype.HibikiPrototypeApp
+import org.akkirrai.hibiki.shared.app.HibikiApp
 
 /**
  * Desktop entry point for the shared Hibiki prototype.
@@ -26,7 +26,7 @@ fun main() = application {
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             Surface {
                 val settingsStore = androidx.compose.runtime.remember { DesktopSettingsStore() }
-                HibikiPrototypeApp(repository = catalogRepository, settingsStore = settingsStore)
+                HibikiApp(repository = catalogRepository, settingsStore = settingsStore)
             }
         }
     }
