@@ -70,10 +70,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
@@ -92,7 +89,6 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
-import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.CatalogFeature
@@ -119,6 +115,8 @@ fun CatalogScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
+    val selectedSort = state.filters.sortAlias.toCatalogSort()
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     var isFilterSheetOpen by remember { mutableStateOf(false) }
@@ -126,13 +124,13 @@ fun CatalogScreen(
     var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    val availableSorts = remember(state.filterCatalog?.capabilities) {
-        state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+    val availableSorts = remember(legacyFilterCatalog?.capabilities) {
+        legacyFilterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
 
-    LaunchedEffect(availableSorts, state.selectedSort) {
-        if (state.selectedSort !in availableSorts) {
-            val capabilities = state.filterCatalog?.capabilities
+    LaunchedEffect(availableSorts, selectedSort) {
+        if (selectedSort !in availableSorts) {
+            val capabilities = legacyFilterCatalog?.capabilities
             val fallback = availableSorts.firstOrNull { it.searchSort == capabilities?.fallbackSort }
                 ?: availableSorts.firstOrNull()
             fallback?.let(viewModel::selectSort)
@@ -159,10 +157,10 @@ fun CatalogScreen(
                 AppCenteredLoading(modifier = Modifier.fillMaxSize())
             }
 
-            state.errorMessage != null && state.items.isEmpty() -> {
+            state.error != null && state.items.isEmpty() -> {
                 AppMessageState(
                     title = stringResource(R.string.catalog_error_title),
-                    message = state.errorMessage.orEmpty(),
+                    message = state.error.orEmpty(),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(UiDimens.ScreenPadding),
@@ -185,19 +183,8 @@ fun CatalogScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (state.description != null) {
-                        item(key = "catalog_description") {
-                            Text(
-                                text = state.description.orEmpty(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                    }
-
                     appVerticalAnimeListContent(
-                        items = state.items.map { it.anime },
+                        items = state.items,
                         metaText = { anime -> anime.buildCardMeta(
                                 announcementLabel = announcementLabel,
                                 movieLabel = movieLabel,
@@ -251,7 +238,7 @@ fun CatalogScreen(
                         }
                     }
 
-                    if (state.loadMoreError != null) {
+                    if (state.isLoadingMore && state.error != null) {
                         item(key = "catalog_load_more_error") {
                             Row(
                                 modifier = Modifier
@@ -269,7 +256,7 @@ fun CatalogScreen(
                                 )
                                 Spacer(modifier = Modifier.size(6.dp))
                                 Text(
-                                    text = state.loadMoreError.orEmpty(),
+                                    text = state.error.orEmpty(),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -318,7 +305,7 @@ fun CatalogScreen(
                 label = "catalog_sort_alpha",
             )
             CatalogSortControl(
-                selectedSort = state.selectedSort,
+                selectedSort = selectedSort,
                 availableSorts = availableSorts,
                 expanded = isSortMenuOpen,
                 onExpandedChange = { isSortMenuOpen = it },
@@ -334,8 +321,8 @@ fun CatalogScreen(
     if (isFilterSheetOpen) {
         AnimeSearchFiltersSheet(
             initialFilters = state.filters,
-            filterCatalog = state.filterCatalog,
-            isFilterCatalogLoading = state.isLoading && state.filterCatalog == null,
+            filterCatalog = legacyFilterCatalog,
+            isFilterCatalogLoading = state.isLoading && legacyFilterCatalog == null,
             onApply = viewModel::applyFilters,
             onDismissRequest = { isFilterSheetOpen = false },
         )
@@ -345,7 +332,7 @@ fun CatalogScreen(
 @Composable
 private fun CatalogPaginationEffect(
     listState: androidx.compose.foundation.lazy.LazyListState,
-    state: CatalogUiState,
+    state: AnimeCatalogUiState,
     onLoadMore: () -> Unit,
 ) {
     val latestState by rememberUpdatedState(state)
@@ -358,7 +345,7 @@ private fun CatalogPaginationEffect(
                 !latestState.isLoading &&
                 !latestState.isLoadingMore &&
                 latestState.canLoadMore &&
-                latestState.loadMoreError == null
+                latestState.error == null
         }.collect { shouldLoadMore ->
             if (shouldLoadMore) onLoadMore()
         }
@@ -576,22 +563,15 @@ private val CatalogSort.icon: ImageVector
 
 class CatalogViewModel(
     private val repository: CatalogRepository,
-    private val errorContext: android.content.Context,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CatalogUiState(isLoading = true))
-    val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
     private val presenter = AnimeCatalogPresenter(
         repository = repository,
         scope = viewModelScope,
         pageSize = 50,
     )
+    val uiState: StateFlow<AnimeCatalogUiState> = presenter.state
 
     init {
-        viewModelScope.launch {
-            presenter.state.collect { state ->
-                _uiState.value = state.toCatalogUiState(errorContext)
-            }
-        }
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                 presenter.clear()
@@ -609,7 +589,7 @@ class CatalogViewModel(
     fun updateQuery(query: String) = presenter.setQuery(query)
 
     fun selectSort(sort: CatalogSort) {
-        if (_uiState.value.selectedSort == sort) return
+        if (uiState.value.filters.sortAlias.toCatalogSort() == sort) return
         presenter.setFilters(presenter.state.value.filters.copy(sortAlias = sort.alias))
         load()
     }
@@ -625,7 +605,7 @@ class CatalogViewModel(
     }
 
     fun applyFilters(filters: AnimeSearchFilters) {
-        presenter.setFilters(filters.copy(sortAlias = _uiState.value.selectedSort.alias))
+        presenter.setFilters(filters.copy(sortAlias = uiState.value.filters.sortAlias))
         load()
     }
 
@@ -642,52 +622,11 @@ class CatalogViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            val localizedContext = context.applicationContext.withAppPreferencesLanguage()
             return CatalogViewModel(
                 repository = CatalogRepository(context.applicationContext),
-                errorContext = localizedContext,
             ) as T
         }
     }
-}
-
-data class CatalogUiState(
-    val isLoading: Boolean = false,
-    val title: String = "",
-    val description: String? = null,
-    val filterCatalog: org.akkirrai.beakokit.model.AnimeSearchFilterCatalog? = null,
-    val filters: AnimeSearchFilters = AnimeSearchFilters(),
-    val query: String = "",
-    val selectedSort: CatalogSort = CatalogSort.Popular,
-    val items: List<CatalogAnimeCard> = emptyList(),
-    val currentPage: Int = 0,
-    val canLoadMore: Boolean = false,
-    val isLoadingMore: Boolean = false,
-    val errorMessage: String? = null,
-    val loadMoreError: String? = null,
-)
-
-private fun AnimeCatalogUiState.toCatalogUiState(
-    errorContext: android.content.Context,
-): CatalogUiState {
-    val errorText = error?.takeIf(String::isNotBlank)
-    return CatalogUiState(
-        isLoading = (isLoading || isFilterCatalogLoading) && !isLoadingMore,
-        filterCatalog = filterCatalog?.toLegacyCatalog(),
-        filters = filters,
-        query = query,
-        selectedSort = filters.sortAlias.toCatalogSort(),
-        items = items.map(::CatalogAnimeCard),
-        currentPage = page,
-        canLoadMore = canLoadMore,
-        isLoadingMore = isLoadingMore,
-        errorMessage = if (!isLoadingMore && errorText != null) {
-            errorText ?: errorContext.getString(R.string.catalog_error_title)
-        } else {
-            null
-        },
-        loadMoreError = if (isLoadingMore) errorText else null,
-    )
 }
 
 private fun AnimeCatalogFilterCatalog.toLegacyCatalog(): AnimeSearchFilterCatalog {

@@ -34,9 +34,8 @@ class CatalogRepository(
         filters: AnimeSearchFilters = AnimeSearchFilters(),
         query: String = "",
         sort: CatalogSort = CatalogSort.Popular,
-    ): CatalogPage {
+    ): AnimeCatalogPage {
         val pageIndex = page.coerceAtLeast(1)
-        val catalog = searchRepository.getSearchFilterCatalog()
         val offset = (pageIndex - 1) * CATALOG_PAGE_SIZE
         val anime = when (sort) {
             CatalogSort.Updated -> homeRepository.loadRecentlyUpdatedPage(
@@ -63,12 +62,9 @@ class CatalogRepository(
             )
         }
 
-        return CatalogPage(
-            title = "",
-            description = null,
-            filterCatalog = catalog,
-            items = anime.map(::CatalogAnimeCard),
-            currentPage = pageIndex,
+        return AnimeCatalogPage(
+            items = anime,
+            page = pageIndex,
             canLoadMore = anime.size >= CATALOG_PAGE_SIZE,
         )
     }
@@ -83,16 +79,11 @@ class CatalogRepository(
         searchRepository.getSearchFilterCatalog().toSharedCatalog()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
-        val page = loadPage(
+        return loadPage(
             page = query.page,
             filters = query.filters,
             query = query.text,
             sort = query.filters.sortAlias.toCatalogSort(),
-        )
-        return AnimeCatalogPage(
-            items = page.items.map(CatalogAnimeCard::anime),
-            page = page.currentPage,
-            canLoadMore = page.canLoadMore,
         )
     }
 
@@ -137,16 +128,3 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
         ),
     )
 }
-
-data class CatalogPage(
-    val title: String,
-    val description: String?,
-    val filterCatalog: AnimeSearchFilterCatalog,
-    val items: List<CatalogAnimeCard>,
-    val currentPage: Int,
-    val canLoadMore: Boolean,
-)
-
-data class CatalogAnimeCard(
-    val anime: Anime,
-)
