@@ -85,7 +85,7 @@ import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge

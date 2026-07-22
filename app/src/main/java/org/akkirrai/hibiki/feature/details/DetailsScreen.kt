@@ -122,7 +122,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
