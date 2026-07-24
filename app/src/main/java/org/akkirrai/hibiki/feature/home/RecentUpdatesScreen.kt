@@ -3,12 +3,16 @@ package org.akkirrai.hibiki.feature.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -26,8 +30,10 @@ import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
@@ -78,7 +84,7 @@ fun RecentUpdatesScreen(
                 contentPadding = PaddingValues(top = 84.dp, bottom = UiDimens.ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                verticalAnimeListContent(
+                appVerticalAnimeListContent(
                     items = state.recentlyUpdated,
                     metaText = { anime ->
                         anime.buildCardMeta(
@@ -87,7 +93,29 @@ fun RecentUpdatesScreen(
                         )
                     },
                     onAnimeClick = onAnimeClick,
+                    trailingIcon = Icons.Outlined.ChevronRight,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                    posterContent = { anime ->
+                        PosterImage(
+                            primaryUrl = anime.posterUrl,
+                            fallbackUrl = anime.posterFallbackUrl,
+                            contentDescription = anime.title,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                PosterPlaceholder(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(2f / 3f),
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Outlined.Image,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                        )
+                    },
                     posterFooterContent = { anime ->
                         libraryStatusByAnimeId[anime.id]?.let { category ->
                             LibraryStatusPosterFooter(category)

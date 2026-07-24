@@ -2,40 +2,36 @@ package org.akkirrai.hibiki.feature.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
+import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
@@ -76,11 +72,12 @@ fun SearchScreen(
             )
         }
 
-        searchStateVerticalListContent(
+        appSearchStateVerticalListContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
             metaText = { anime -> buildSearchMeta(anime, announcementLabel, movieLabel) },
             onLoadMore = viewModel::loadMore,
+            onRetrySearch = viewModel::search,
             loadMoreLabel = loadMoreLabel,
             resultsCountLabel = { count ->
                 pluralStringResource(R.plurals.search_results_count, count, count)
@@ -93,9 +90,32 @@ fun SearchScreen(
             emptyMessage = emptyMessage,
             emptyIcon = Icons.Outlined.SearchOff,
             errorModifier = Modifier.padding(top = 24.dp),
-            errorActionLabel = retryLabel,
-            onErrorActionClick = viewModel::search,
+            errorRetryLabel = retryLabel,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+            trailingIcon = Icons.Outlined.ChevronRight,
+            posterContent = { anime ->
+                PosterImage(
+                    primaryUrl = anime.posterUrl,
+                    fallbackUrl = anime.posterFallbackUrl,
+                    contentDescription = anime.title,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f)
+                                .background(MaterialTheme.colorScheme.surfaceContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                )
+            },
             posterFooterContent = { anime ->
                 libraryStatusByAnimeId[anime.id]?.let { category ->
                     LibraryStatusPosterFooter(category)
