@@ -27,8 +27,7 @@ import org.akkirrai.hibiki.shared.model.SearchUiState
 
 /**
  * Platform-neutral [LazyListScope] content for a search screen that renders
- * [SearchUiState] states. Used on Android (replacing the previous Android-only
- * [searchStateVerticalListContent](./app/.../VerticalAnimeList.kt)) and on Desktop.
+ * [SearchUiState] states. Used on Android and Desktop.
  *
  * @param state the current search state.
  * @param onAnimeClick callback when an anime card is tapped.

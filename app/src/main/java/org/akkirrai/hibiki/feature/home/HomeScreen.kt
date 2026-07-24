@@ -119,7 +119,7 @@ import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
 import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
+import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
@@ -213,11 +213,12 @@ fun HomeScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    searchStateVerticalListContent(
+                    appSearchStateVerticalListContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                         onLoadMore = viewModel::loadMoreSearchResults,
+                        onRetrySearch = {},
                         loadMoreLabel = searchLoadMoreLabel,
                         resultsCountLabel = { count ->
                             pluralStringResource(R.plurals.search_results_count, count, count)
@@ -225,6 +226,29 @@ fun HomeScreen(
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = Icons.Outlined.SearchOff,
+                        posterContent = { anime ->
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(2f / 3f)
+                                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Image,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                            )
+                        },
                         posterFooterContent = { anime ->
                             libraryStatusByAnimeId[anime.id]?.let { category ->
                                 LibraryStatusPosterFooter(category)
