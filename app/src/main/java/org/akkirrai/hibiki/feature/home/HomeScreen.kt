@@ -112,7 +112,7 @@ import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
-import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
+import org.akkirrai.hibiki.shared.design.component.AppPosterCard
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
@@ -542,7 +542,7 @@ private fun AnimeSection(
             contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding)
         ) {
             items(items, key = { it.id }) { anime ->
-                AnimePosterCardItem(
+                AppPosterCard(
                     anime = anime,
                     metaText = buildHomeMeta(
                         anime = anime,
@@ -550,12 +550,13 @@ private fun AnimeSection(
                         movieLabel = stringResource(R.string.anime_meta_movie),
                     ),
                     onClick = { onAnimeClick(anime) },
-                    width = 118.dp,
+                    modifier = Modifier.width(118.dp),
                     titleBaseMaxLines = 2,
                     titleExtraLongTitleLines = 0,
                     titleOverflow = TextOverflow.Ellipsis,
                     reservedTitleLines = 3,
                     reserveMetaLine = true,
+                    imageContent = { PosterCardImage(anime) },
                 )
             }
         }
@@ -614,6 +615,48 @@ private fun AnimePoster(
             contentDescription = anime.title,
             modifier = Modifier.fillMaxSize(),
             placeholder = { AnimeImagePlaceholder() }
+        )
+    }
+}
+
+@Composable
+private fun PosterCardImage(anime: Anime) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(2f / 3f)
+            .clip(RoundedCornerShape(UiDimens.CardCorner))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        PosterImage(
+            primaryUrl = anime.posterUrl,
+            fallbackUrl = anime.posterFallbackUrl,
+            contentDescription = anime.title,
+            modifier = Modifier.fillMaxSize(),
+            placeholder = { PosterPlaceholder() },
+        )
+    }
+}
+
+@Composable
+private fun PosterPlaceholder() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(UiDimens.ScreenPadding),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Image,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.poster_placeholder),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
