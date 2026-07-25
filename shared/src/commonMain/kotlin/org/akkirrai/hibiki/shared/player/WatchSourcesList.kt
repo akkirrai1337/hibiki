@@ -1,15 +1,17 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.source.sourceItemShape
 
 @Composable
 fun WatchSourcesList(
@@ -26,14 +28,16 @@ fun WatchSourcesList(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 68.dp, bottom = 12.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 56.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        items(sources, key = WatchSource::sourceId) { source ->
+        itemsIndexed(sources, key = { _, source -> source.sourceId }) { index, source ->
             WatchSourceRow(
                 title = source.title,
                 episodeSummary = episodeSummary(source),
                 enabled = enabled,
                 horizontalPadding = horizontalPadding,
+                shape = sourceItemShape(index, sources.size),
                 onClick = { onSourceClick(source) },
             )
         }

@@ -2,10 +2,10 @@ package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,8 +17,13 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun DownloadIconButton(icon: ImageVector, contentDescription: String, active: Boolean, onClick: () -> Unit) {
     DownloadBadge(active = active) {
-        IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
-            Icon(icon, contentDescription, Modifier.size(21.dp))
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription, Modifier.size(20.dp))
         }
     }
 }
@@ -26,8 +31,8 @@ fun DownloadIconButton(icon: ImageVector, contentDescription: String, active: Bo
 @Composable
 fun DownloadStateIcon(icon: ImageVector, contentDescription: String) {
     DownloadBadge(active = true) {
-        Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription, Modifier.size(21.dp))
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription, Modifier.size(20.dp))
         }
     }
 }
@@ -35,10 +40,10 @@ fun DownloadStateIcon(icon: ImageVector, contentDescription: String) {
 @Composable
 fun DownloadProgressBadge(progress: Float) {
     DownloadBadge(active = true) {
-        Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,

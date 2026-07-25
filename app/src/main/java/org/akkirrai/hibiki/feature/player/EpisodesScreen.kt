@@ -196,7 +196,7 @@ fun EpisodesScreen(
                 }
                 EpisodesList(
                     episodes = result.items,
-                    episodeContent = { episode ->
+                    episodeContent = { episode, shape ->
                         val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
                         EpisodeRow(
                             episode = episode,
@@ -206,6 +206,7 @@ fun EpisodesScreen(
                             ),
                             downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
                             showDownloadControls = downloadControlsVisible,
+                            shape = shape,
                             enabled = !navigationLocked,
                             onClick = {
                                 if (navigationLocked) return@EpisodeRow
@@ -255,6 +256,7 @@ private fun EpisodeRow(
     status: EpisodeProgressStatus,
     downloadState: OfflineEpisodeDownloadState,
     showDownloadControls: Boolean,
+    shape: androidx.compose.foundation.shape.RoundedCornerShape,
     enabled: Boolean,
     onClick: () -> Unit,
     onDownloadClick: () -> Unit,
@@ -271,6 +273,7 @@ private fun EpisodeRow(
         inProgress = status == EpisodeProgressStatus.InProgress,
         enabled = enabled,
         showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed,
+        shape = shape,
         onClick = onClick,
         downloadAction = {
             EpisodeDownloadAction(

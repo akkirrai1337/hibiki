@@ -10,18 +10,18 @@ import androidx.compose.ui.unit.dp
  * Compose target.
  */
 fun sourceItemShape(index: Int, count: Int): RoundedCornerShape = when {
-    count == 1 -> RoundedCornerShape(24.dp)
+    count == 1 -> RoundedCornerShape(20.dp)
     index == 0 -> RoundedCornerShape(
-        topStart = 24.dp,
-        topEnd = 24.dp,
-        bottomStart = 8.dp,
-        bottomEnd = 8.dp,
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = 6.dp,
+        bottomEnd = 6.dp,
     )
     index == count - 1 -> RoundedCornerShape(
-        topStart = 8.dp,
-        topEnd = 8.dp,
-        bottomStart = 24.dp,
-        bottomEnd = 24.dp,
+        topStart = 6.dp,
+        topEnd = 6.dp,
+        bottomStart = 20.dp,
+        bottomEnd = 20.dp,
     )
-    else -> RoundedCornerShape(8.dp)
+    else -> RoundedCornerShape(6.dp)
 }
