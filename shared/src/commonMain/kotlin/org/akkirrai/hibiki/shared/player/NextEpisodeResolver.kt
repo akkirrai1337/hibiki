@@ -9,6 +9,3 @@ fun resolveNextEpisodeNumber(progressItems: List<EpisodeWatchProgress>, episodeC
     val inferred = lastWatched + 1.0
     return if (episodeCount == null || inferred <= episodeCount.toDouble()) inferred else null
 }
-
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean =
-    durationMs > 0L && positionMs >= (durationMs - 1_000L).coerceAtLeast(0L)

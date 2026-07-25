@@ -123,6 +123,14 @@ import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.details.isNullOrZero
+import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
+import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber as resolveNextEpisodeNumberFromLabel
+import org.akkirrai.hibiki.shared.model.toAnime
+import org.akkirrai.hibiki.shared.player.isWatchedToEnd
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
@@ -299,7 +307,7 @@ fun DetailsScreen(
         buildHeroInfo(currentAnime, localizedEpisodeWord)
     }
     val description = remember(currentAnime) {
-        buildDescription(currentAnime)
+        resolveAnimeDescription(currentAnime)
     }
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
         AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
@@ -852,18 +860,15 @@ private fun HeroRatingsLine(
     viewCount: Long?,
     modifier: Modifier = Modifier,
 ) {
-    val rating = ratings.firstOrNull()
-    if (rating == null && viewCount.isNullOrZero()) return
+    val data = resolveDetailsHeroRatings(ratings, viewCount) ?: return
     org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine(
-        rating = rating?.let { formatRating(it.value) },
-        viewCount = viewCount?.takeIf { it > 0 }?.let(::formatCount),
+        rating = data.rating,
+        viewCount = data.viewCount,
         ratingIcon = Icons.Filled.Star,
         viewCountIcon = Icons.Outlined.Visibility,
         modifier = modifier,
     )
 }
-
-private fun Long?.isNullOrZero(): Boolean = this == null || this == 0L
 
 @Composable
 private fun DetailContentCard(
@@ -922,29 +927,6 @@ private fun DetailContentCard(
         items = informationItems,
         horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun DetailSectionTitle(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsSectionTitle(text = text, modifier = modifier)
-}
-
-@Composable
-private fun DetailInfoPill(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    accent: Color,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsInfoPill(
-        label = label,
-        value = value,
-        icon = icon,
-        accent = accent,
     )
 }
 
@@ -1333,13 +1315,6 @@ private enum class WatchPrimaryAction {
     OpenPlayer,
 }
 
-private fun resolveSelectedSource(
-    sources: List<WatchSource>,
-    selection: WatchSourceSelection,
-): WatchSource? {
-    return org.akkirrai.hibiki.shared.player.resolveWatchSource(sources, selection)
-}
-
 @Composable
 private fun buildWatchCtaState(
     progress: TitleWatchState?,
@@ -1379,99 +1354,16 @@ private fun buildWatchCtaState(
     )
 }
 
-private fun filterProgressItemsForSelectedSource(
-    progressItems: List<EpisodeWatchProgress>,
-    selectedSource: WatchSource?,
-): List<EpisodeWatchProgress> = org.akkirrai.hibiki.shared.player.filterProgressForSource(progressItems, selectedSource)
-
-private fun resolveSelectedSourceProgress(
-    fallbackProgress: TitleWatchState?,
-    selectedSourceProgressItems: List<EpisodeWatchProgress>,
-): TitleWatchState? = org.akkirrai.hibiki.shared.player.resolveSourceProgress(fallbackProgress, selectedSourceProgressItems)
-
-private fun filterProgressItemsForSelectedSourceLegacy(
-    progressItems: List<EpisodeWatchProgress>,
-    selectedSource: WatchSource?,
-): List<EpisodeWatchProgress> {
-    if (selectedSource == null) return progressItems
-    return progressItems.filter { it.sourceId == selectedSource.sourceId }
-}
-
-private fun resolveSelectedSourceProgressLegacy(
-    fallbackProgress: TitleWatchState?,
-    selectedSourceProgressItems: List<EpisodeWatchProgress>,
-): TitleWatchState? {
-    val latest = selectedSourceProgressItems.maxByOrNull(EpisodeWatchProgress::updatedAt)
-        ?: return fallbackProgress
-    return TitleWatchState(
-        titleId = latest.titleId,
-        episodeId = latest.episodeId,
-        episodeNumber = latest.episodeNumber,
-        sourceId = latest.sourceId,
-        voiceoverId = latest.voiceoverId,
-        sourceTitle = latest.sourceTitle,
-        quality = latest.quality,
-        positionMs = latest.positionMs,
-        durationMs = latest.durationMs,
-        updatedAt = latest.updatedAt,
-    )
-}
-
 private fun resolveNextEpisodeNumber(
     progressItems: List<EpisodeWatchProgress>,
     episodeCount: Int?,
 ): Double? = org.akkirrai.hibiki.shared.player.resolveNextEpisodeNumber(progressItems, episodeCount)
-
-private fun resolveNextEpisodeNumberLegacy(
-    progressItems: List<EpisodeWatchProgress>,
-    episodeCount: Int?,
-): Double? {
-    val watchedNumbers = progressItems
-        .filter(EpisodeWatchProgress::isWatchedToEnd)
-        .map(EpisodeWatchProgress::episodeNumber)
-    val lastWatched = watchedNumbers.maxOrNull() ?: return 1.0
-    val nextSavedEpisode = progressItems
-        .map(EpisodeWatchProgress::episodeNumber)
-        .filter { it > lastWatched }
-        .minOrNull()
-    if (nextSavedEpisode != null) {
-        return nextSavedEpisode
-    }
-    val inferredNextEpisode = lastWatched + 1.0
-    return if (episodeCount == null || inferredNextEpisode <= episodeCount.toDouble()) {
-        inferredNextEpisode
-    } else {
-        null
-    }
-}
-
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
-}
 
 private fun findResumeWatchState(
     repository: WatchStateRepository,
     titleId: String,
 ): TitleWatchState? {
     return org.akkirrai.hibiki.shared.player.resolveResumeWatchState(repository.getEpisodeProgress(titleId))
-}
-
-private const val WATCHED_END_TOLERANCE_MS = 1_000L
-
-private fun formatEpisodeNumber(number: Double): String {
-    return org.akkirrai.hibiki.shared.player.formatEpisodeNumber(number)
-}
-
-private fun formatPlaybackPosition(positionMs: Long): String {
-    val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
-    val hours = totalSeconds / 3_600L
-    val minutes = totalSeconds % 3_600L / 60L
-    val seconds = totalSeconds % 60L
-    return if (hours > 0L) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
-    }
 }
 
 @Composable
@@ -1527,10 +1419,6 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
     )
 }
 
-private fun buildDescription(anime: Anime): String {
-    return anime.description?.takeIf(String::isNotBlank).orEmpty()
-}
-
 private fun String.isKnownValue(): Boolean {
     val normalized = trim()
     return normalized.isNotEmpty() &&
@@ -1539,13 +1427,6 @@ private fun String.isKnownValue(): Boolean {
 }
 
 private fun isKnownReleaseDate(value: String): Boolean = value.isKnownValue()
-
-private fun watchSourcesAvailable(
-    selectedSource: WatchSource?,
-    selection: WatchSourceSelection,
-): Boolean {
-    return selectedSource != null || !selection.sourceTitle.isNullOrBlank()
-}
 
 private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean {
     val values = listOf(status, episodesLabel).map { it.trim().lowercase(Locale.getDefault()) }
@@ -1617,26 +1498,6 @@ private fun localizedSourceMaterial(sourceMaterial: String?): String? {
     }
 }
 
-private fun formatRating(value: Double): String = String.format(Locale.US, "%.2f", value)
-
-private fun formatCount(value: Long): String {
-    return when {
-        value >= 1_000_000L -> String.format(Locale.US, "%.1fM", value / 1_000_000.0)
-        value >= 1_000L -> String.format(Locale.US, "%.1fK", value / 1_000.0)
-        else -> value.toString()
-    }
-}
-
-private fun RelatedAnime.toAnime(): Anime = Anime(
-    id = id,
-    title = title,
-    subtitle = "",
-    episodesLabel = "",
-    status = status.orEmpty(),
-    posterUrl = posterUrl,
-    posterFallbackUrl = posterFallbackUrl
-)
-
 private suspend fun extractTitleSeedColor(
     context: Context,
     imageUrls: List<String>,
@@ -1694,12 +1555,7 @@ internal fun isOngoingStatus(status: String): Boolean {
 }
 
 internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
-    val releasedEpisodes = Regex("""\d+""")
-        .find(episodesLabel)
-        ?.value
-        ?.toIntOrNull()
-        ?: return null
-    return releasedEpisodes.takeIf { it >= 0 }?.plus(1)
+    return resolveNextEpisodeNumberFromLabel(episodesLabel)
 }
 
 internal fun formatRelatedAnimeMetadata(
@@ -1722,7 +1578,6 @@ internal fun formatRelatedAnimeMetadata(
 }
 
 private const val DEFAULT_TYPE = "TV"
-private const val DEFAULT_YEAR = "Unknown"
 private const val UNKNOWN_VALUE = "Unknown"
 
 private data class DetailsScreenSavedState(

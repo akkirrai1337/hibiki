@@ -143,15 +143,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.net.URI
-import kotlin.math.max
-import kotlin.math.min
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.app.settings.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
@@ -176,6 +175,7 @@ import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
+import org.akkirrai.hibiki.shared.player.playerSettingsPageTransition
 import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntryRow
 import org.akkirrai.hibiki.shared.player.PlayerSettingsHeader as SharedPlayerSettingsHeader
@@ -1907,17 +1907,6 @@ private fun PlayerSettingsChoiceRow(
     )
 }
 
-private fun AnimatedContentTransitionScope<PlayerSettingsDestination>.playerSettingsPageTransition(): ContentTransform {
-    val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
-    return (
-        slideInHorizontally(animationSpec = tween(180)) { width -> direction * width / 5 } +
-            fadeIn(animationSpec = tween(140))
-        ).togetherWith(
-            slideOutHorizontally(animationSpec = tween(180)) { width -> -direction * width / 5 } +
-                fadeOut(animationSpec = tween(120))
-        ).using(SizeTransform(clip = false))
-}
-
 @Composable
 private fun SpacerBox(size: Dp) {
     Box(modifier = Modifier.size(size))
@@ -2162,11 +2151,9 @@ private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: F
 
     val containerAspectRatio = textureView.width.toFloat() / textureView.height
     val aspectRatioFactor = videoAspectRatio / containerAspectRatio
-    val (scaleX, scaleY) = when (mode) {
-        VideoScaleMode.FIT -> min(1f, aspectRatioFactor) to min(1f, 1f / aspectRatioFactor)
-        VideoScaleMode.CROP -> max(1f, aspectRatioFactor) to max(1f, 1f / aspectRatioFactor)
-        VideoScaleMode.STRETCH -> 1f to 1f
-    }
+    val factors = resolveVideoScaleFactors(mode, aspectRatioFactor)
+    val scaleX = factors.scaleX
+    val scaleY = factors.scaleY
     val target = TextureVideoScale(mode, scaleX, scaleY)
     if (textureView.tag == target) return
 

@@ -14,3 +14,6 @@ fun resolveWatchSource(
         sources.firstOrNull { it.sourceId == selection.sourceId } ?: sources.first()
     }
 }
+
+fun hasWatchSource(selectedSource: WatchSource?, selection: WatchSourceSelection): Boolean =
+    selectedSource != null || !selection.sourceTitle.isNullOrBlank()

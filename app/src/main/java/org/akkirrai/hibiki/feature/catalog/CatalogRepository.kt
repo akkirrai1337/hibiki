@@ -13,6 +13,8 @@ import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.feature.home.HomeRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPage
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
+import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
@@ -97,11 +99,7 @@ class CatalogRepository(
     }
 }
 
-private fun String.toCatalogSort(): CatalogSort = when (lowercase()) {
-    "alphabetical", "title" -> CatalogSort.Alphabetical
-    "updated", "latest", "latest_releases" -> CatalogSort.Updated
-    else -> CatalogSort.Popular
-}
+private fun String.toCatalogSort(): CatalogSort = catalogSortFromAlias(this)
 
 private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalog {
     val sortAliases = capabilities.supportedSorts

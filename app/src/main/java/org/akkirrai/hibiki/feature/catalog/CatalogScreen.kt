@@ -97,6 +97,8 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
+import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
@@ -639,11 +641,12 @@ private fun AnimeCatalogFilterCatalog.toLegacyCatalog(): AnimeSearchFilterCatalo
     )
 }
 
-enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
-    Alphabetical(R.string.catalog_sort_alphabetical),
-    Popular(R.string.catalog_sort_popular),
-    Updated(R.string.catalog_sort_updated),
-}
+private val CatalogSort.labelRes: Int
+    get() = when (this) {
+        CatalogSort.Alphabetical -> R.string.catalog_sort_alphabetical
+        CatalogSort.Popular -> R.string.catalog_sort_popular
+        CatalogSort.Updated -> R.string.catalog_sort_updated
+    }
 
 private val CatalogSort.alias: String
     get() = when (this) {
@@ -652,11 +655,7 @@ private val CatalogSort.alias: String
         CatalogSort.Updated -> "updated"
     }
 
-private fun String.toCatalogSort(): CatalogSort = when (lowercase()) {
-    "alphabetical", "title" -> CatalogSort.Alphabetical
-    "updated", "latest", "latest_releases" -> CatalogSort.Updated
-    else -> CatalogSort.Popular
-}
+private fun String.toCatalogSort(): CatalogSort = catalogSortFromAlias(this)
 
 private val CatalogSort.searchSort: AnimeSearchSort
     get() = when (this) {

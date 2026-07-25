@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.hibiki.shared.player.VideoScaleMode
 typealias LanguageMode = org.akkirrai.hibiki.shared.settings.LanguageMode
 
 enum class ThemeMode {
@@ -17,14 +18,6 @@ enum class ThemeMode {
     DARK
 }
 
-
-enum class VideoScaleMode {
-    FIT,
-    CROP,
-    STRETCH;
-
-    fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
-}
 
 enum class NotificationPermissionState {
     NOT_ASKED,
