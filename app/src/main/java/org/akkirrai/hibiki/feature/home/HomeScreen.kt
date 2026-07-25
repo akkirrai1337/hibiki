@@ -147,6 +147,7 @@ fun HomeScreen(
     val isImeVisible = WindowInsets.isImeVisible
     val isSearchActive = state.searchQuery.isNotBlank() ||
         state.searchResult !is SearchUiState.Idle
+    val hasSearchFilters = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
@@ -156,6 +157,10 @@ fun HomeScreen(
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val homeListState = remember(selectedSourceId) { LazyListState() }
+
+    LaunchedEffect(hasSearchFilters) {
+        if (!hasSearchFilters) showSearchFilters = false
+    }
 
     LaunchedEffect(
         homeListState,
@@ -318,6 +323,7 @@ fun HomeScreen(
                 focusManager.clearFocus(force = true)
                 showSearchFilters = true
             },
+            showFilterButton = hasSearchFilters,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
