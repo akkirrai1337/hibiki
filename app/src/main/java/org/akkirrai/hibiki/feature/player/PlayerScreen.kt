@@ -165,6 +165,11 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
+import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
+import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
+import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1077,7 +1082,7 @@ fun PlayerScreen(
                 color = Color.Black.copy(alpha = 0.62f)
             ) {
                 Text(
-                    text = buildSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
+                    text = formatSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
@@ -2120,13 +2125,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices
     }
 }
 
-private enum class PlayerSettingsDestination(@param:StringRes val titleResId: Int) {
-    Root(R.string.watch_player_settings_root),
-    Speed(R.string.watch_player_settings_speed),
-    Voiceover(R.string.watch_player_settings_voiceover),
-    Player(R.string.watch_player_settings_player),
-    Quality(R.string.watch_player_settings_quality),
-}
+private val PlayerSettingsDestination.titleResId: Int
+    get() = when (this) {
+        PlayerSettingsDestination.Root -> R.string.watch_player_settings_root
+        PlayerSettingsDestination.Speed -> R.string.watch_player_settings_speed
+        PlayerSettingsDestination.Voiceover -> R.string.watch_player_settings_voiceover
+        PlayerSettingsDestination.Player -> R.string.watch_player_settings_player
+        PlayerSettingsDestination.Quality -> R.string.watch_player_settings_quality
+    }
 
 @Composable
 private fun PlayerBottomOverlay(
@@ -2186,7 +2192,7 @@ private fun PlayerBottomOverlay(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = "${formatDuration(sliderPositionMs)} / ${formatDuration(durationMs)}",
+                    text = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
                     modifier = Modifier.padding(top = 1.dp),
                     color = Color.White.copy(alpha = 0.78f),
                     style = MaterialTheme.typography.labelMedium
@@ -2504,79 +2510,14 @@ private fun PlaylistBottomSheet(
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = PLAYER_PLAYLIST_SHEET_MAX_HEIGHT),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = UiDimens.ScreenPadding,
-                top = 4.dp,
-                end = UiDimens.ScreenPadding,
-                bottom = 16.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(episodes, key = WatchEpisode::id) { episode ->
-                EpisodeSheetRow(
-                    episode = episode,
-                    selected = episode.id == currentEpisodeId,
-                    onClick = { onEpisodeClick(episode.id) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EpisodeSheetRow(
-    episode: WatchEpisode,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val titleColor = if (selected) {
-        Color.White
-    } else {
-        Color.White.copy(alpha = 0.92f)
-    }
-    val subtitleColor = if (selected) {
-        Color.White
-    } else {
-        Color.White.copy(alpha = 0.72f)
-    }
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .clip(RoundedCornerShape(18.dp)),
-        color = if (selected) {
-            Color.White.copy(alpha = 0.10f)
-        } else {
-            Color.White.copy(alpha = 0.03f)
-        }
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)
-        ) {
-            Text(
-                text = buildEpisodeTitle(episode),
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            episode.title?.takeIf(String::isNotBlank)?.let { subtitle ->
-                Text(
-                    text = subtitle,
-                    modifier = Modifier.padding(top = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = subtitleColor,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        PlaylistEpisodesList(
+            currentEpisodeId = currentEpisodeId,
+            episodes = episodes,
+            maxHeight = PLAYER_PLAYLIST_SHEET_MAX_HEIGHT,
+            horizontalPadding = UiDimens.ScreenPadding,
+            headline = ::buildEpisodeTitle,
+            onEpisodeClick = onEpisodeClick,
+        )
     }
 }
 
@@ -2640,31 +2581,11 @@ private fun localizedEpisodeTitle(title: String): String {
     }
 }
 
-private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0) {
-        return "00:00"
-    }
-    val totalSeconds = durationMs / 1000
-    val hours = totalSeconds / 3600
-    val minutes = totalSeconds % 3600 / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
-    }
-}
-
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
-
-private fun buildSkipSegmentKey(
-    episodeId: String,
-    segment: PlaybackSegment,
-): String = "$episodeId:${segment.type}:${segment.startMs}:${segment.endMs}"
 
 private fun createPictureInPictureAction(
     context: Context,
@@ -2755,9 +2676,4 @@ private fun Map<String, String>.safeHeaderNames(): String {
         .filter(String::isNotBlank)
         .sorted()
         .joinToString(prefix = "[", postfix = "]")
-}
-
-private fun buildSeekDeltaLabel(deltaMs: Long): String {
-    val sign = if (deltaMs >= 0L) "+" else "-"
-    return sign + formatDuration(kotlin.math.abs(deltaMs))
 }
