@@ -35,7 +35,9 @@ data class LibraryUiState(
                 statusOptions = categoryEntries.map { it.anime.status.trim() }
                     .filter(String::isNotBlank).distinct().sorted(),
                 genreOptions = categoryEntries.flatMap { it.anime.genres }
-                    .map(String::trim).filter(String::isNotBlank).distinct().sorted(),
+                    .map(String::trim)
+                    .filter { it.isNotBlank() && !it.equals("unknown", ignoreCase = true) }
+                    .distinct().sorted(),
             )
         }
 }

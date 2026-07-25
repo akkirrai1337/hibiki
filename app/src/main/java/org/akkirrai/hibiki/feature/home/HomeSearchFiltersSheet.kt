@@ -148,6 +148,7 @@ fun AnimeSearchFiltersSheet(
     isFilterCatalogLoading: Boolean,
     onApply: (AnimeSearchFilters) -> Unit,
     onDismissRequest: () -> Unit,
+    optionText: @Composable (AnimeCatalogFilterOption) -> String = { appFilterOptionText(it.title) },
     modifier: Modifier = Modifier,
 ) {
     val appLanguage = LocalAppLanguage.current
@@ -242,7 +243,7 @@ fun AnimeSearchFiltersSheet(
                                 )
                             },
                             id = { it.id },
-                            text = { appFilterOptionText(it.title) },
+                            text = optionText,
                             maxCollapsedItems = 15,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
                             singleList = true,
@@ -267,7 +268,7 @@ fun AnimeSearchFiltersSheet(
                             excluded = emptySet(),
                             onChange = { included, _ -> includedStatuses = included },
                             id = { it.id },
-                            text = { appFilterOptionText(it.title) },
+                            text = optionText,
                             optionIcon = { statusIcon(it.id) },
                             allowExclusion = false,
                             singleList = true,

@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -96,6 +97,14 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildLibraryMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.catalog.AnimeStatus
+import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
+import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
@@ -189,6 +198,7 @@ fun LibraryScreen(
         LibrarySearchFiltersSheet(
             catalog = state.filterCatalog,
             currentFilters = state.searchFilters,
+            languageMode = languageMode,
             onDismiss = { isFilterDialogVisible = false },
             onApply = { filters ->
                 viewModel.applySearchFilters(filters)
@@ -200,114 +210,92 @@ fun LibraryScreen(
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LibrarySearchFiltersSheet(
     catalog: LibraryFilterCatalog,
     currentFilters: LibrarySearchFilters,
+    languageMode: LanguageMode,
     onDismiss: () -> Unit,
     onApply: (LibrarySearchFilters) -> Unit,
 ) {
-    var pendingFilters by remember(currentFilters) { mutableStateOf(currentFilters) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val scope = rememberCoroutineScope()
-
-    AppFilterBottomSheet(
-        sheetState = sheetState,
+    val isRussian = when (languageMode) {
+        LanguageMode.RUSSIAN -> true
+        LanguageMode.ENGLISH -> false
+        LanguageMode.SYSTEM -> LocalConfiguration.current.locales[0]?.language == "ru"
+    }
+    val sharedCatalog = catalog.toSharedFilterCatalog(isRussian)
+    val sharedFilters = currentFilters.toSharedFilters()
+    AnimeSearchFiltersSheet(
+        initialFilters = sharedFilters,
+        filterCatalog = sharedCatalog,
+        isFilterCatalogLoading = false,
+        onApply = { filters -> onApply(filters.toLibraryFilters(catalog)) },
         onDismissRequest = onDismiss,
-    ) { sheetContentModifier ->
-        Column(
-            modifier = sheetContentModifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp),
-        ) {
-            AppConnectedToggleFilter(
-                title = stringResource(R.string.search_filters_type),
-                entries = catalog.typeOptions,
-                selected = pendingFilters.type,
-                onSelected = { pendingFilters = pendingFilters.copy(type = it) },
-                icon = { ImageVector.vectorResource(libraryTypeIcon(it)) },
-                text = { appFilterOptionText(it).uppercase() },
-            )
+        optionText = { it.title },
+    )
+}
 
-            AppConnectedToggleFilter(
-                title = stringResource(R.string.search_filters_status),
-                entries = catalog.statusOptions,
-                selected = pendingFilters.status,
-                onSelected = { pendingFilters = pendingFilters.copy(status = it) },
-                icon = { ImageVector.vectorResource(libraryStatusIcon(it)) },
-                text = { appFilterOptionText(it) },
-            )
+private fun LibraryFilterCatalog.toSharedFilterCatalog(isRussian: Boolean): AnimeCatalogFilterCatalog {
+    val statuses = statusOptions.map { status ->
+        AnimeCatalogFilterOption(
+            id = statusAlias(status),
+            title = libraryStatusLabel(status, isRussian),
+        )
+    }.distinctBy(AnimeCatalogFilterOption::id)
+    return AnimeCatalogFilterCatalog(
+        typeOptions = typeOptions.map { AnimeCatalogFilterOption(it.lowercase(), it.uppercase()) },
+        statusOptions = statuses,
+        genreOptions = genreOptions.map { AnimeCatalogFilterOption(it, it) },
+        capabilities = AnimeCatalogCapabilities(
+            supportedFilters = setOf(
+                AnimeCatalogFilter.TYPE,
+                AnimeCatalogFilter.STATUS,
+                AnimeCatalogFilter.INCLUDED_GENRES,
+                AnimeCatalogFilter.EXCLUDED_GENRES,
+                AnimeCatalogFilter.YEAR_RANGE,
+            ),
+        ),
+    )
+}
 
-            AppThreeStateChipFilter(
-                title = stringResource(R.string.search_filters_genres),
-                options = catalog.genreOptions,
-                included = pendingFilters.includedGenres,
-                excluded = pendingFilters.excludedGenres,
-                onChange = { included, excluded ->
-                    pendingFilters = pendingFilters.copy(
-                        includedGenres = included,
-                        excludedGenres = excluded,
-                    )
-                },
-                id = { it },
-                text = { appFilterOptionText(it) },
-                maxCollapsedItems = 15,
-            )
+private fun LibrarySearchFilters.toSharedFilters(): AnimeSearchFilters = AnimeSearchFilters(
+    typeAlias = type?.lowercase(),
+    statusAlias = status?.let(::statusAlias),
+    includedGenreAliases = includedGenres,
+    excludedGenreAliases = excludedGenres,
+    yearFrom = yearFrom,
+    yearTo = yearTo,
+)
 
-            FlowRow(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .align(Alignment.CenterHorizontally),
-                horizontalArrangement = Arrangement.Center,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(
-                    onClick = { pendingFilters = LibrarySearchFilters() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    ),
-                ) {
-                    Icon(ImageVector.vectorResource(R.drawable.animite_reset), null, Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.search_filters_reset), fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(modifier = Modifier.size(16.dp))
-                Button(
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onApply(pendingFilters)
-                        }
-                    },
-                ) {
-                    Icon(ImageVector.vectorResource(R.drawable.animite_done), null, Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.search_filters_apply), fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
+private fun AnimeSearchFilters.toLibraryFilters(catalog: LibraryFilterCatalog): LibrarySearchFilters =
+    LibrarySearchFilters(
+        type = typeAlias?.let { alias -> catalog.typeOptions.firstOrNull { it.equals(alias, ignoreCase = true) } },
+        status = statusAlias?.let { alias -> catalog.statusOptions.firstOrNull { statusAlias(it) == alias } },
+        includedGenres = includedGenreAliases,
+        excludedGenres = excludedGenreAliases,
+        yearFrom = yearFrom,
+        yearTo = yearTo,
+    )
+
+private fun statusAlias(value: String): String {
+    val normalized = value.trim().lowercase()
+    return when {
+        normalized.contains("ongoing") || normalized.contains("releasing") || normalized.contains("airing") || normalized.contains("онгоинг") -> "ongoing"
+        normalized.contains("released") || normalized.contains("finished") || normalized.contains("completed") || normalized.contains("вышел") || normalized.contains("заверш") -> "released"
+        normalized.contains("announced") || normalized.contains("not_yet") || normalized.contains("анонс") -> "announced"
+        normalized.contains("cancel") || normalized.contains("отмен") -> "cancelled"
+        normalized.contains("hiatus") || normalized.contains("перерыв") -> "hiatus"
+        else -> normalized
     }
 }
 
-private fun libraryTypeIcon(type: String): Int = when (type.trim().lowercase()) {
-    "tv" -> R.drawable.animite_tv
-    "ona" -> R.drawable.animite_ona
-    "ova" -> R.drawable.animite_ova
-    "movie", "film" -> R.drawable.animite_movie
-    else -> R.drawable.animite_tv
-}
-
-private fun libraryStatusIcon(status: String): Int = when (status.trim().lowercase()) {
-    "released", "finished", "completed" -> R.drawable.animite_finished
-    "ongoing", "releasing", "airing" -> R.drawable.animite_releasing
-    "announced", "not_yet_released", "not-yet-released" -> R.drawable.animite_not_yet_released
-    "cancelled", "canceled" -> R.drawable.animite_cancelled
-    "hiatus", "paused" -> R.drawable.animite_hiatus
-    else -> R.drawable.animite_finished
+private fun libraryStatusLabel(value: String, isRussian: Boolean): String = when (statusAlias(value)) {
+    "ongoing" -> if (isRussian) "Онгоинг" else "Ongoing"
+    "released" -> if (isRussian) "Вышел" else "Released"
+    "announced" -> if (isRussian) "Анонс" else "Announced"
+    "cancelled" -> if (isRussian) "Отменено" else "Cancelled"
+    "hiatus" -> if (isRussian) "Перерыв" else "Hiatus"
+    else -> value
 }
 
 @Composable

@@ -7,6 +7,8 @@ data class LibrarySearchFilters(
     val status: String? = null,
     val includedGenres: Set<String> = emptySet(),
     val excludedGenres: Set<String> = emptySet(),
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
 ) {
     fun matches(entry: LibraryEntry): Boolean {
         val anime = entry.anime
@@ -15,11 +17,15 @@ data class LibrarySearchFilters(
         val animeGenres = anime.genres.map(String::trim).filter(String::isNotBlank).toSet()
         val includesMatch = includedGenres.isEmpty() || includedGenres.all { it in animeGenres }
         val excludesMatch = excludedGenres.none { it in animeGenres }
-        return typeMatches && statusMatches && includesMatch && excludesMatch
+        val year = anime.extractLibraryYear()
+        val yearMatches = (yearFrom == null && yearTo == null) ||
+            (year != null && yearFrom?.let { year >= it } != false && yearTo?.let { year <= it } != false)
+        return typeMatches && statusMatches && includesMatch && excludesMatch && yearMatches
     }
 
     fun hasActiveFilters(): Boolean =
-        type != null || status != null || includedGenres.isNotEmpty() || excludedGenres.isNotEmpty()
+        type != null || status != null || includedGenres.isNotEmpty() || excludedGenres.isNotEmpty() ||
+            yearFrom != null || yearTo != null
 }
 
 data class LibraryFilterCatalog(
@@ -36,3 +42,8 @@ fun Anime.extractLibraryType(): String? {
             value.isNotBlank() && value.any(Char::isLetter) && value.none(Char::isDigit)
         }
 }
+
+fun Anime.extractLibraryYear(): Int? = Regex("\\b(?:19|20)\\d{2}\\b")
+    .find(listOfNotNull(subtitle, releaseDate).joinToString(" "))
+    ?.value
+    ?.toIntOrNull()
