@@ -461,4 +461,6 @@
     <string name="local_profile_stat_days">ДНИ\nПРОСМОТРА</string>
     <string name="local_profile_stat_time">ВРЕМЯ\nПРОСМОТРА</string>
     <string name="local_profile_empty_favorites">Пока нет любимых тайтлов</string>
+    <string name="local_profile_summary_library">Библиотека</string>
+    <string name="local_profile_summary_episodes">Эпизоды</string>
 </resources>

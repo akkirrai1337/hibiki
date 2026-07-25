@@ -90,6 +90,17 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
+import org.akkirrai.hibiki.shared.settings.AppSettingsSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsItems
+import org.akkirrai.hibiki.shared.settings.SettingsSection
+import org.akkirrai.hibiki.shared.settings.themeModeOptions
+import org.akkirrai.hibiki.shared.settings.languageModeOptions
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconVerticalItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import kotlinx.coroutines.launch
 
 @Composable
@@ -137,17 +148,17 @@ fun SettingsScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        item(key = "appearance") {
-            SettingsSection(title = stringResource(R.string.settings_appearance)) {
-                SettingsItems(count = 3) { index, shape ->
+        item(key = SettingsSection.Appearance.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
+                AppSettingsItems(count = 3) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.DarkMode,
                             title = stringResource(R.string.settings_theme),
                             shape = shape,
                         ) {
-                            SettingsSegmentedControl(
-                                options = listOf(ThemeMode.DARK, ThemeMode.LIGHT, ThemeMode.SYSTEM),
+                            AppSettingsSegmentedControl(
+                                options = themeModeOptions,
                                 selectedOption = preferences.themeMode,
                                 label = ::themeModeLabel,
                                 onSelect = { mode ->
@@ -177,17 +188,17 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "preferences") {
-            SettingsSection(title = stringResource(R.string.settings_preferences)) {
-                SettingsItems(count = 3) { index, shape ->
+        item(key = SettingsSection.Preferences.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
+                AppSettingsItems(count = 3) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.Language,
                             title = stringResource(R.string.settings_language),
                             shape = shape,
                         ) {
-                            SettingsSegmentedControl(
-                                options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
+                            AppSettingsSegmentedControl(
+                                options = languageModeOptions,
                                 selectedOption = preferences.languageMode,
                                 label = ::languageModeLabel,
                                 onSelect = { mode ->
@@ -219,9 +230,9 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "player") {
-            SettingsSection(title = stringResource(R.string.settings_player)) {
-                SettingsItems(count = 1) { _, _ ->
+        item(key = SettingsSection.Player.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_player)) {
+                AppSettingsItems(count = 1) { _, _ ->
                     SettingsSwitchItem(
                         icon = Icons.Outlined.SkipNext,
                         title = stringResource(R.string.settings_auto_skip_segments),
@@ -233,9 +244,9 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "experimental") {
-            SettingsSection(title = stringResource(R.string.settings_experimental)) {
-                SettingsItems(count = 1) { _, shape ->
+        item(key = SettingsSection.Experimental.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_experimental)) {
+                AppSettingsItems(count = 1) { _, shape ->
                     DiscordSettingsItem(
                         icon = ImageVector.vectorResource(R.drawable.ic_discord),
                         title = stringResource(R.string.discord_rpc_title),
@@ -257,9 +268,9 @@ fun SettingsScreen(
         }
 
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            item(key = "updates") {
-                SettingsSection(title = stringResource(R.string.settings_updates)) {
-                    SettingsItems(count = 1) { _, _ ->
+            item(key = SettingsSection.Updates.key) {
+                AppSettingsSection(title = stringResource(R.string.settings_updates)) {
+                    AppSettingsItems(count = 1) { _, _ ->
                         SettingsActionItem(
                             icon = Icons.Outlined.Update,
                             title = stringResource(R.string.settings_check_updates),
@@ -271,9 +282,9 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "support") {
-            SettingsSection(title = stringResource(R.string.settings_support)) {
-                SettingsItems(count = 1) { _, _ ->
+            item(key = SettingsSection.Support.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_support)) {
+                AppSettingsItems(count = 1) { _, _ ->
                     SettingsActionItem(
                         icon = Icons.Outlined.Share,
                         title = stringResource(R.string.settings_export_logs),
@@ -292,8 +303,8 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "about") {
-            SettingsSection(title = stringResource(R.string.settings_about)) {
+        item(key = SettingsSection.About.key) {
+            AppSettingsSection(title = stringResource(R.string.settings_about)) {
                 SettingsAboutItem(
                     versionName = versionName,
                     onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
@@ -329,63 +340,18 @@ private fun notificationPermissionLabel(state: NotificationPermissionState): Str
 )
 
 @Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            text = title,
-            color = MaterialTheme.colorScheme.onBackground,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        content()
-    }
-}
-
-@Composable
-private fun SettingsItems(
-    count: Int,
-    content: @Composable ColumnScope.(index: Int, shape: Shape) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        repeat(count) { index ->
-            content(index, settingsItemShape(index, count))
-        }
-    }
-}
-
-private fun settingsItemShape(index: Int, count: Int): Shape {
-    if (count == 1) return RoundedCornerShape(24.dp)
-    return RoundedCornerShape(
-        topStart = if (index == 0) 24.dp else 4.dp,
-        topEnd = if (index == 0) 24.dp else 4.dp,
-        bottomStart = if (index == count - 1) 24.dp else 4.dp,
-        bottomEnd = if (index == count - 1) 24.dp else 4.dp,
-    )
-}
-
-@Composable
 private fun SettingsVerticalItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     shape: Shape,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        SettingsItemHeader(icon = icon, title = title)
-        content()
-    }
+    AppSettingsIconVerticalItem(
+        icon = icon,
+        title = title,
+        shape = shape,
+        content = content,
+    )
 }
 
 @Composable
@@ -397,33 +363,18 @@ private fun SettingsSwitchItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    SettingsItemRow(
+    AppSettingsIconSwitchItem(
         icon = icon,
+        title = title,
+        checked = checked,
         shape = shape,
-        onClick = {
-            onCheckedChange(!checked)
+        onCheckedChange = { enabled ->
+            onCheckedChange(enabled)
             haptic.performHapticFeedback(
-                if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
             )
         },
-        trailing = {
-            SettingsSwitch(
-                checked = checked,
-                onCheckedChange = {
-                    onCheckedChange(it)
-                    haptic.performHapticFeedback(
-                        if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                    )
-                },
-            )
-        },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-    }
+    )
 }
 
 @Composable
@@ -436,28 +387,19 @@ private fun DiscordSettingsItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    SettingsItemRow(
+    AppSettingsIconToggleItem(
         icon = icon,
+        title = title,
+        checked = checked,
         shape = shape,
         onClick = onClick,
-        trailing = {
-            SettingsSwitch(
-                checked = checked,
-                onCheckedChange = { enabled ->
-                    onCheckedChange(enabled)
-                    haptic.performHapticFeedback(
-                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                    )
-                },
+        onCheckedChange = { enabled ->
+            onCheckedChange(enabled)
+            haptic.performHapticFeedback(
+                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
             )
         },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-    }
+    )
 }
 
 @Composable
@@ -469,10 +411,11 @@ private fun SettingsActionItem(
     showNavigationArrow: Boolean = false,
     onClick: () -> Unit,
 ) {
-    SettingsItemRow(
+    AppSettingsIconActionItem(
         icon = icon,
+        title = title,
+        subtitle = subtitle,
         shape = shape,
-        onClick = onClick,
         trailing = if (showNavigationArrow) {
             {
                 Icon(
@@ -481,80 +424,9 @@ private fun SettingsActionItem(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else {
-            null
-        },
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-        subtitle?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsItemRow(
-    icon: ImageVector,
-    shape: Shape,
-    onClick: () -> Unit,
-    trailing: (@Composable () -> Unit)? = null,
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            content = content,
-        )
-        trailing?.invoke()
-    }
-}
-
-@Composable
-private fun SettingsItemHeader(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
-    }
+        } else null,
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -741,102 +613,6 @@ private fun discordRpcStatusLabel(status: DiscordRpcConnectionStatus): String = 
 )
 
 @Composable
-private fun SettingsSwitch(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Switch(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        thumbContent = if (checked) {
-            {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun <T> SettingsSegmentedControl(
-    options: List<T>,
-    selectedOption: T,
-    label: @Composable (T) -> String,
-    onSelect: (T) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        options.forEachIndexed { index, option ->
-            val selected = option == selectedOption
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(
-                        if (selected) {
-                            CircleShape
-                        } else {
-                            segmentShape(index, options.lastIndex)
-                        },
-                    )
-                    .background(
-                        if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.background
-                        },
-                    )
-                    .clickable { onSelect(option) }
-                    .padding(horizontal = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label(option),
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f)
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-private fun segmentShape(index: Int, lastIndex: Int): Shape {
-    return when (index) {
-        0 -> RoundedCornerShape(
-            topStart = 16.dp,
-            bottomStart = 16.dp,
-            topEnd = 6.dp,
-            bottomEnd = 6.dp,
-        )
-
-        lastIndex -> RoundedCornerShape(
-            topStart = 6.dp,
-            bottomStart = 6.dp,
-            topEnd = 16.dp,
-            bottomEnd = 16.dp,
-        )
-
-        else -> RoundedCornerShape(6.dp)
-    }
-}
-
-@Composable
 private fun SettingsAboutItem(
     versionName: String,
     onGitHubClick: () -> Unit,
@@ -848,57 +624,25 @@ private fun SettingsAboutItem(
             .toBitmap(config = Bitmap.Config.ARGB_8888)
             .asImageBitmap()
     }
-    val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val background = if (isDarkMode) Color(0x190FFF66) else Color(0x59FFC0CB)
-    val textColor = if (isDarkMode) Color(0xFF3BFF84) else Color(0xFFDA6482)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(background)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        ) {
-        Image(
-            bitmap = appIcon,
-            contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor,
+    AppSettingsAboutCard(
+        appName = stringResource(R.string.app_name),
+        versionName = versionName,
+        appIconContent = {
+            Image(
+                bitmap = appIcon,
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.size(48.dp),
             )
-            Text(
-                text = "v$versionName",
-                style = MaterialTheme.typography.labelMedium,
-                color = textColor.copy(alpha = 0.75f),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .clickable(onClick = onGitHubClick),
-            contentAlignment = Alignment.Center,
-        ) {
+        },
+        githubIconContent = {
             Image(
                 painter = painterResource(R.drawable.ic_github),
                 contentDescription = stringResource(R.string.settings_github),
                 modifier = Modifier.size(26.dp),
             )
-        }
-    }
+        },
+        onGitHubClick = onGitHubClick,
+    )
 }
 
 @Composable

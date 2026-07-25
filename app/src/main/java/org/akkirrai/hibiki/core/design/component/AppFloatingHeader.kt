@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 object AppFloatingHeaderDefaults {
     val ControlHeight: Dp = 48.dp
@@ -118,21 +118,13 @@ fun AppFloatingIconButton(
     modifier: Modifier = Modifier,
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
-    Box(
-        modifier = modifier
-            .size(AppFloatingHeaderDefaults.ControlHeight)
-            .clip(CircleShape)
-            .background(containerColor)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(AppFloatingHeaderDefaults.ControlIconSize),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    org.akkirrai.hibiki.shared.design.component.AppFloatingIconButton(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = containerColor,
+    )
 }
 
 @Composable
@@ -141,20 +133,11 @@ fun AppFloatingTitlePill(
     modifier: Modifier = Modifier,
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
 ) {
-    AppFloatingPill(
+    org.akkirrai.hibiki.shared.design.component.AppFloatingTitlePill(
+        text = text,
         modifier = modifier,
         containerColor = containerColor,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = AppFloatingHeaderDefaults.TitleHorizontalPadding),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    )
 }
 
 @Composable
@@ -163,13 +146,9 @@ fun AppFloatingPill(
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .height(AppFloatingHeaderDefaults.ControlHeight)
-            .clip(RoundedCornerShape(AppFloatingHeaderDefaults.ControlRadius))
-            .background(containerColor),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
+    org.akkirrai.hibiki.shared.design.component.AppFloatingPill(
+        modifier = modifier,
+        containerColor = containerColor,
+        content = content,
+    )
 }

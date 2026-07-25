@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.update.AppUpdate
+import org.akkirrai.hibiki.shared.update.formatDownloadSize
 
 @Composable
 fun AppUpdateDialog(
@@ -67,7 +68,7 @@ fun AppUpdateDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 UpdateInfoPill(
                     version = update.version,
-                    size = formatFileSize(update.apkSizeBytes),
+                    size = formatDownloadSize(update.apkSizeBytes),
                 )
                 if (isDownloading) {
                     LinearProgressIndicator(
@@ -132,9 +133,4 @@ private fun UpdateInfoPill(
             )
         }
     }
-}
-
-private fun formatFileSize(bytes: Long): String {
-    val mib = bytes / (1024.0 * 1024.0)
-    return "%.1f MB".format(java.util.Locale.getDefault(), mib)
 }

@@ -3,6 +3,9 @@ package org.akkirrai.hibiki.core.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.akkirrai.hibiki.shared.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.buildLibraryMeta
+import org.akkirrai.hibiki.shared.model.isAnnouncement
 
 class AnimePresentationTest {
     @Test

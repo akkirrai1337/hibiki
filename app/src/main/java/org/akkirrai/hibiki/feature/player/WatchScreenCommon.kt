@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
@@ -15,14 +18,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 
@@ -54,26 +61,23 @@ internal fun WatchScreenScaffold(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .navigationBarsPadding()
-    ) {
-        content()
-
-        WatchBackButton(
-            onBackClick = onBackClick,
-            enabled = !navigationLocked,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(
-                    start = UiDimens.ScreenPadding,
-                    top = 8.dp
-                )
-        )
-    }
+    org.akkirrai.hibiki.shared.player.WatchScreenScaffold(
+        onBackClick = onBackClick,
+        backEnabled = !navigationLocked,
+        backIconContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = stringResource(R.string.cd_back),
+                tint = Color.White,
+                modifier = Modifier.graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    blendMode = BlendMode.Difference
+                },
+            )
+        },
+        modifier = modifier,
+        content = content,
+    )
 }
 
 @Composable
@@ -97,12 +101,12 @@ internal fun WatchEmptyState(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.player.WatchEmptyState(
         title = title,
         message = message,
         icon = icon,
-        modifier = modifier.padding(horizontal = 24.dp),
-        actionLabel = onRetry?.let { stringResource(R.string.search_retry) },
-        onActionClick = onRetry,
+        retryLabel = onRetry?.let { stringResource(R.string.search_retry) },
+        onRetry = onRetry,
+        modifier = modifier,
     )
 }

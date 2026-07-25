@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -50,6 +49,13 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.shared.source.sourceItemShape
+import org.akkirrai.hibiki.shared.source.SourceSelectionIndicator
+import org.akkirrai.hibiki.shared.source.SourceEmptyState
+import org.akkirrai.hibiki.shared.source.SourceItemCard
+import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
+import org.akkirrai.hibiki.shared.source.SourceScreenHeader
+import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
 fun SourcesScreen(
@@ -74,20 +80,9 @@ fun SourcesScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item(key = "header") {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_sources),
-                        modifier = Modifier.padding(start = 60.dp),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                SourceScreenHeader(
+                    title = stringResource(R.string.settings_sources),
+                )
             }
             SOURCE_LANGUAGE_SECTIONS.forEach { section ->
                 item(key = "${section.language.tag}_sources") {
@@ -126,22 +121,11 @@ private fun SourceLanguageSection(
         label = "${section.language.tag}_sources_arrow",
     )
 
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .clickable { expanded = !expanded }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(section.labelRes),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+    SharedSourceLanguageSection(
+        title = stringResource(section.labelRes),
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        trailingContent = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
                 contentDescription = null,
@@ -150,14 +134,10 @@ private fun SourceLanguageSection(
                     .requiredSize(16.dp)
                     .graphicsLayer { rotationZ = arrowRotation },
             )
-        }
-        AnimatedVisibility(visible = expanded) {
-            Column(
-                modifier = Modifier.padding(top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+        },
+    ) {
                 if (sources.isEmpty()) {
-                    EmptySourceLanguageItem()
+                    SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
                 } else {
                     sources.forEachIndexed { index, source ->
                         SourceItem(
@@ -168,25 +148,6 @@ private fun SourceLanguageSection(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptySourceLanguageItem() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = RoundedCornerShape(24.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_sources_empty),
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -197,20 +158,12 @@ private fun SourceItem(
     shape: RoundedCornerShape,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+    SourceItemCard(
+        name = source.name,
+        selected = selected,
         shape = shape,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        onClick = onClick,
+        iconContent = {
             AsyncImage(
                 model = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
@@ -218,49 +171,17 @@ private fun SourceItem(
                 contentDescription = null,
                 modifier = Modifier.size(48.dp).clip(CircleShape),
             )
-            Text(
-                text = source.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            SourceRadio(selected = selected)
-        }
-    }
-}
-
-@Composable
-private fun SourceRadio(selected: Boolean) {
-    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-    androidx.compose.foundation.Canvas(modifier = Modifier.size(24.dp)) {
-        drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
-        if (selected) drawCircle(color = color, radius = size.minDimension * 0.25f)
-    }
-}
-
-private fun sourceItemShape(index: Int, count: Int): RoundedCornerShape = when {
-    count == 1 -> RoundedCornerShape(24.dp)
-    index == 0 -> RoundedCornerShape(
-        topStart = 24.dp,
-        topEnd = 24.dp,
-        bottomStart = 8.dp,
-        bottomEnd = 8.dp,
+        },
     )
-    index == count - 1 -> RoundedCornerShape(
-        topStart = 8.dp,
-        topEnd = 8.dp,
-        bottomStart = 24.dp,
-        bottomEnd = 24.dp,
-    )
-    else -> RoundedCornerShape(8.dp)
 }
 
 internal fun groupSourcesByLanguage(
     sources: List<AnimeSourceDescriptor>,
-): Map<SourceLanguage, List<AnimeSourceDescriptor>> = SOURCE_LANGUAGE_SECTIONS.associate { section ->
-    section.language to sources.filter { source -> source.language == section.language }
-}
+): Map<SourceLanguage, List<AnimeSourceDescriptor>> = groupItemsByKeys(
+    items = sources,
+    keys = SOURCE_LANGUAGE_SECTIONS.map(SourceLanguageSectionConfig::language),
+    keyOf = AnimeSourceDescriptor::language,
+)
 
 private data class SourceLanguageSectionConfig(
     val language: SourceLanguage,

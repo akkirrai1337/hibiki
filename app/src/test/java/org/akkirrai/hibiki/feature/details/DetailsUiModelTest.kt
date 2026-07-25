@@ -6,9 +6,10 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 
 class DetailsUiModelTest {
-    private val hero = HeroInfo("TV", "2024", "12 episodes", "Ongoing", "Studio")
+    private val hero = DetailsHeroInfo("TV", "2024", "12 episodes", "Ongoing", "Studio")
 
     @Test
     fun `content sections follow source capabilities and keep their order`() {

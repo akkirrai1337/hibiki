@@ -9,10 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.model.PlaybackStream
@@ -25,6 +22,12 @@ import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.player.PlayerPresenter
+import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
+import org.akkirrai.hibiki.shared.player.settingsOptionsKey
+import org.akkirrai.hibiki.shared.player.resolveCurrentEpisode
+import org.akkirrai.hibiki.shared.player.resolveResumablePlaybackPosition
 
 class PlayerViewModel(
     sourceId: String,
@@ -40,7 +43,7 @@ class PlayerViewModel(
     private var settingsLoadJob: Job? = null
     private val savedSelection = watchStateRepository.getSelectedSource(titleId)
         .takeIf { it.sourceId == sourceId }
-    private val _uiState = MutableStateFlow(
+    private val presenter = PlayerPresenter(
         PlayerUiState(
             currentSourceId = sourceId,
             currentEpisodeId = episodeId,
@@ -49,7 +52,7 @@ class PlayerViewModel(
             selectedQualityLabel = savedSelection?.quality,
         )
     )
-    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<PlayerUiState> = presenter.state
 
     init {
         restoreSavedSeek()
@@ -61,8 +64,8 @@ class PlayerViewModel(
         excludedStreamUrls: Set<String> = emptySet(),
     ) {
         loadJob?.cancel()
-        val state = _uiState.value
-        _uiState.update {
+        val state = presenter.state.value
+        presenter.update {
             it.copy(
                 isLoading = true,
                 errorMessage = null,
@@ -77,16 +80,21 @@ class PlayerViewModel(
                     .takeIf { it.isNotEmpty() }
                     ?: repository.getEpisodes(state.currentSourceId)
             }.throwIfCancelled()
-            val currentState = _uiState.value
+            val currentState = presenter.state.value
             if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
                 return@launch
             }
             val episodes = episodesResult.getOrDefault(currentState.episodes)
+            val savedEpisodeNumber = watchStateRepository.getEpisodeProgress(
+                titleId,
+                state.currentEpisodeId,
+            )?.episodeNumber
             val effectiveEpisode = resolveCurrentEpisode(
                 requestedEpisodeId = state.currentEpisodeId,
                 requestedEpisodeNumber = state.currentEpisodeNumber,
                 episodes = episodes,
                 currentEpisodes = currentState.episodes,
+                savedEpisodeNumber = savedEpisodeNumber,
             )
             val effectiveEpisodeId = effectiveEpisode?.id ?: state.currentEpisodeId
             val effectiveEpisodeNumber = effectiveEpisode?.number ?: state.currentEpisodeNumber
@@ -122,7 +130,7 @@ class PlayerViewModel(
                         episodeId = effectiveEpisodeId,
                         episodes = episodes,
                     )
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoading = false,
                             playback = stream,
@@ -147,7 +155,7 @@ class PlayerViewModel(
                         "[viewmodel.load.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
                         throwable
                     )
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoading = false,
                             playback = null,
@@ -167,11 +175,11 @@ class PlayerViewModel(
         resumePositionMs: Long = 0L,
         episodeNumberHint: Double? = null,
     ) {
-        if (episodeId == _uiState.value.currentEpisodeId && _uiState.value.playback != null) {
+        if (episodeId == presenter.state.value.currentEpisodeId && presenter.state.value.playback != null) {
             return
         }
         settingsLoadJob?.cancel()
-        _uiState.update { currentState ->
+        presenter.update { currentState ->
             currentState.copy(
                 currentEpisodeId = episodeId,
                 currentEpisodeNumber = episodeNumberHint
@@ -188,7 +196,7 @@ class PlayerViewModel(
     }
 
     fun recoverFromPlaybackError(streamUrl: String?) {
-        val state = _uiState.value
+        val state = presenter.state.value
         if (state.isLoading || state.recoveryAttempted) {
             return
         }
@@ -197,13 +205,13 @@ class PlayerViewModel(
     }
 
     fun loadSettingsOptions() {
-        val state = _uiState.value
+        val state = presenter.state.value
         val optionsKey = state.settingsOptionsKey()
         if (state.settingsOptionsKey == optionsKey || state.isSettingsLoading) {
             return
         }
         settingsLoadJob?.cancel()
-        _uiState.update { it.copy(isSettingsLoading = true) }
+        presenter.update { it.copy(isSettingsLoading = true) }
         settingsLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val result = runCatching {
                 repository.getPlaybackSettingsOptions(
@@ -212,13 +220,13 @@ class PlayerViewModel(
                 )
             }.throwIfCancelled()
             currentCoroutineContext().ensureActive()
-            val updatedState = _uiState.value
+            val updatedState = presenter.state.value
             if (updatedState.currentSourceId != state.currentSourceId || updatedState.currentEpisodeId != state.currentEpisodeId) {
                 return@launch
             }
             result
                 .onSuccess { options ->
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isSettingsLoading = false,
                             settingsOptions = options,
@@ -233,7 +241,7 @@ class PlayerViewModel(
                         "[viewmodel.settings.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
                         throwable
                     )
-                    _uiState.update {
+                    presenter.update {
                         it.copy(isSettingsLoading = false)
                     }
                 }
@@ -241,12 +249,13 @@ class PlayerViewModel(
     }
 
     fun selectVoiceover(source: WatchSource, resumePositionMs: Long = 0L) {
-        val currentEpisode = _uiState.value.episodes.firstOrNull { it.id == _uiState.value.currentEpisodeId } ?: return
+        val currentState = presenter.state.value
+        val currentEpisode = currentState.episodes.firstOrNull { it.id == currentState.currentEpisodeId } ?: return
         settingsLoadJob?.cancel()
         viewModelScope.launch(Dispatchers.IO) {
             val episodes = repository.getEpisodes(source.sourceId)
             val matching = episodes.firstOrNull { it.number == currentEpisode.number } ?: episodes.firstOrNull() ?: return@launch
-            _uiState.update {
+            presenter.update {
                 it.copy(
                     currentSourceId = source.sourceId,
                     currentEpisodeId = matching.id,
@@ -274,7 +283,7 @@ class PlayerViewModel(
 
     fun selectPlayer(playerName: String?, resumePositionMs: Long = 0L) {
         settingsLoadJob?.cancel()
-        _uiState.update {
+        presenter.update {
             it.copy(
                 selectedPlayerName = playerName,
                 playback = null,
@@ -289,7 +298,7 @@ class PlayerViewModel(
     }
 
     fun selectQuality(qualityLabel: String?, resumePositionMs: Long = 0L) {
-        _uiState.update {
+        presenter.update {
             it.copy(
                 selectedQualityLabel = qualityLabel,
                 playback = null,
@@ -314,7 +323,7 @@ class PlayerViewModel(
         // ExoPlayer may not know the duration yet. Keep that as 0 so the
         // repository can still resume from the saved position later.
         val safeDurationMs = durationMs.coerceAtLeast(0L)
-        val state = _uiState.value
+        val state = presenter.state.value
         val playback = state.playback ?: return
         val episode = state.episodes.firstOrNull { it.id == state.currentEpisodeId } ?: return
         watchStateRepository.saveSelectedSource(
@@ -339,7 +348,7 @@ class PlayerViewModel(
     }
 
     private fun persistSelection() {
-        val state = _uiState.value
+        val state = presenter.state.value
         val previousSelection = watchStateRepository.getSelectedSource(titleId)
         watchStateRepository.saveSelectedSource(
             titleId = titleId,
@@ -352,15 +361,25 @@ class PlayerViewModel(
     }
 
     fun consumePendingSeek() {
-        _uiState.update { it.copy(pendingSeekMs = 0L) }
+        presenter.update { it.copy(pendingSeekMs = 0L) }
     }
 
     fun playPreviousEpisode() {
-        adjacentEpisode(offset = -1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
+        resolveAdjacentEpisode(
+            episodes = presenter.state.value.episodes,
+            currentEpisodeId = presenter.state.value.currentEpisodeId,
+            currentEpisodeNumber = presenter.state.value.currentEpisodeNumber,
+            offset = -1,
+        )?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     fun playNextEpisode() {
-        adjacentEpisode(offset = 1)?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
+        resolveAdjacentEpisode(
+            episodes = presenter.state.value.episodes,
+            currentEpisodeId = presenter.state.value.currentEpisodeId,
+            currentEpisodeNumber = presenter.state.value.currentEpisodeNumber,
+            offset = 1,
+        )?.let { selectEpisode(it.id, episodeNumberHint = it.number) }
     }
 
     override fun onCleared() {
@@ -371,12 +390,12 @@ class PlayerViewModel(
     }
 
     private fun restoreSavedSeek() {
-        val state = _uiState.value
+        val state = presenter.state.value
         val savedSeekMs = findSavedSeekMs(
             episodeId = state.currentEpisodeId,
             episodes = state.episodes,
         ) ?: return
-        _uiState.update { it.copy(pendingSeekMs = savedSeekMs) }
+        presenter.update { it.copy(pendingSeekMs = savedSeekMs) }
     }
 
     private fun findSavedSeekMs(
@@ -392,41 +411,6 @@ class PlayerViewModel(
         }
         val progress = exactProgress ?: numberProgress ?: return null
         return resumablePlaybackPositionMs(progress.positionMs, progress.durationMs)
-    }
-
-    private fun adjacentEpisode(offset: Int): WatchEpisode? {
-        val state = _uiState.value
-        val currentIndex = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-        if (currentIndex != -1) {
-            return state.episodes.getOrNull(currentIndex + offset)
-        }
-        val currentEpisodeNumber = state.currentEpisodeNumber ?: return null
-        return if (offset < 0) {
-            state.episodes
-                .filter { it.number < currentEpisodeNumber }
-                .maxByOrNull { it.number }
-        } else {
-            state.episodes
-                .filter { it.number > currentEpisodeNumber }
-                .minByOrNull { it.number }
-        }
-    }
-
-    private fun resolveCurrentEpisode(
-        requestedEpisodeId: String,
-        requestedEpisodeNumber: Double?,
-        episodes: List<WatchEpisode>,
-        currentEpisodes: List<WatchEpisode>,
-    ): WatchEpisode? {
-        episodes.firstOrNull { it.id == requestedEpisodeId }?.let { return it }
-
-        val knownEpisodeNumber = requestedEpisodeNumber
-            ?: currentEpisodes.firstOrNull { it.id == requestedEpisodeId }?.number
-            ?: watchStateRepository.getEpisodeProgress(titleId, requestedEpisodeId)?.episodeNumber
-
-        return knownEpisodeNumber?.let { episodeNumber ->
-            episodes.firstOrNull { it.number == episodeNumber }
-        }
     }
 
     class Factory(
@@ -452,42 +436,8 @@ class PlayerViewModel(
 }
 
 internal fun resumablePlaybackPositionMs(positionMs: Long, durationMs: Long): Long? {
-    val position = positionMs.coerceAtLeast(0L).takeIf { it > 0L } ?: return null
-    if (durationMs <= 0L) return position
-    val duration = durationMs.coerceAtLeast(1L)
-    val resetThresholdMs = maxOf(PLAYBACK_END_WINDOW_MS, duration * PLAYBACK_END_PERCENT / 100L)
-    return position.takeIf { duration - position > resetThresholdMs }
+    return resolveResumablePlaybackPosition(positionMs, durationMs)
 }
-
-data class PlayerUiState(
-    val isLoading: Boolean = true,
-    val playback: PlaybackStream? = null,
-    val animeTitle: String = "",
-    val episodes: List<WatchEpisode> = emptyList(),
-    val currentSourceId: String = "",
-    val currentEpisodeId: String = "",
-    val currentEpisodeNumber: Double? = null,
-    val pendingSeekMs: Long = 0L,
-    val errorMessage: String? = null,
-    val failedStreamUrls: Set<String> = emptySet(),
-    val recoveryAttempted: Boolean = false,
-    val isSettingsLoading: Boolean = false,
-    val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
-    val settingsOptionsKey: String? = null,
-    val selectedPlayerName: String? = null,
-    val selectedQualityLabel: String? = null,
-)
-
-private fun PlayerUiState.settingsOptionsKey(): String =
-    buildString {
-        append(currentSourceId)
-        append(':')
-        append(currentEpisodeId)
-        append(':')
-        append(selectedPlayerName.orEmpty())
-        append(':')
-        append(selectedQualityLabel.orEmpty())
-    }
 
 private fun <T> Result<T>.throwIfCancelled(): Result<T> {
     val error = exceptionOrNull()
@@ -496,5 +446,3 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 }
 
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
-private const val PLAYBACK_END_WINDOW_MS = 30_000L
-private const val PLAYBACK_END_PERCENT = 5L

@@ -1,8 +1,6 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
-import androidx.annotation.StringRes
-import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.AnimeTrailer
@@ -10,7 +8,7 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
-class LibraryRepository(context: Context) {
+class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.LibraryRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getLibraryEntries(): List<LibraryEntry> {
@@ -89,6 +87,9 @@ class LibraryRepository(context: Context) {
             .putLongIfAbsent(libraryAddedAtKey(normalizedAnime.id), System.currentTimeMillis())
             .apply()
     }
+
+    /** Shared CMP read boundary; the richer Android API remains available to Android callers. */
+    override suspend fun getEntries(): List<LibraryEntry> = getLibraryEntries()
 
     /** Imports an entry which does not exist locally while preserving its remote timestamp. */
     fun importLibraryEntry(
@@ -473,27 +474,5 @@ class LibraryRepository(context: Context) {
     }
 }
 
-data class LibraryEntry(
-    val anime: Anime,
-    val category: LibraryCategory,
-    val addedAt: Long? = null,
-)
-
-enum class LibraryCategory(
-    val storageValue: String,
-    @param:StringRes val labelResId: Int,
-) {
-    Watching("watching", R.string.library_category_watching),
-    Planned("planned", R.string.library_category_planned),
-    Completed("completed", R.string.library_category_completed),
-    Dropped("dropped", R.string.library_category_dropped),
-    OnHold("on_hold", R.string.library_category_on_hold),
-    Favorite("favorite", R.string.library_category_favorite),
-    Saved("saved", R.string.library_category_saved);
-
-    companion object {
-        fun fromStorageValue(value: String): LibraryCategory? {
-            return entries.firstOrNull { it.storageValue == value }
-        }
-    }
-}
+typealias LibraryEntry = org.akkirrai.hibiki.shared.library.LibraryEntry
+typealias LibraryCategory = org.akkirrai.hibiki.shared.library.LibraryCategory

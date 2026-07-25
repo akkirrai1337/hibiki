@@ -3,12 +3,17 @@ package org.akkirrai.hibiki.feature.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,15 +25,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
 fun RecentUpdatesScreen(
@@ -62,22 +70,21 @@ fun RecentUpdatesScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            state.isLoading && state.recentlyUpdated.isEmpty() -> AppCenteredLoading(Modifier.fillMaxSize())
-            state.errorMessage != null && state.recentlyUpdated.isEmpty() -> AppMessageState(
-                title = stringResource(R.string.home_error_title),
-                message = state.errorMessage.orEmpty(),
-                modifier = Modifier.fillMaxSize().padding(UiDimens.ScreenPadding),
-                actionLabel = stringResource(R.string.search_retry),
-                onActionClick = viewModel::refresh,
-            )
-            else -> LazyColumn(
+        org.akkirrai.hibiki.shared.design.component.AppContentState(
+            isLoading = state.isLoading,
+            hasContent = state.recentlyUpdated.isNotEmpty(),
+            errorMessage = state.errorMessage,
+            errorTitle = stringResource(R.string.home_error_title),
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::refresh,
+        ) {
+            LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 84.dp, bottom = UiDimens.ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                verticalAnimeListContent(
+                appVerticalAnimeListContent(
                     items = state.recentlyUpdated,
                     metaText = { anime ->
                         anime.buildCardMeta(
@@ -86,7 +93,29 @@ fun RecentUpdatesScreen(
                         )
                     },
                     onAnimeClick = onAnimeClick,
+                    trailingIcon = Icons.Outlined.ChevronRight,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                    posterContent = { anime ->
+                        PosterImage(
+                            primaryUrl = anime.posterUrl,
+                            fallbackUrl = anime.posterFallbackUrl,
+                            contentDescription = anime.title,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                PosterPlaceholder(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(2f / 3f),
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Outlined.Image,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                        )
+                    },
                     posterFooterContent = { anime ->
                         libraryStatusByAnimeId[anime.id]?.let { category ->
                             LibraryStatusPosterFooter(category)
@@ -95,14 +124,12 @@ fun RecentUpdatesScreen(
                 )
                 if (state.isRecentUpdatesLoadingMore) {
                     item(key = "recent_updates_loading_more") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
-                        }
+                        AppLoadMoreState(
+                            isLoading = true,
+                            errorMessage = null,
+                            errorIcon = Icons.Outlined.WarningAmber,
+                            onRetry = viewModel::loadMoreRecentUpdates,
+                        )
                     }
                 }
             }

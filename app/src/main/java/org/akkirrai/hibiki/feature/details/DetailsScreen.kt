@@ -118,11 +118,18 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.iconOrDefault
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.details.isNullOrZero
+import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
+import org.akkirrai.hibiki.shared.model.toAnime
+import org.akkirrai.hibiki.shared.player.isWatchedToEnd
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
@@ -136,6 +143,7 @@ import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
@@ -149,6 +157,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.akkirrai.hibiki.shared.details.DetailsUiState
+import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.details.isOngoingStatus
+import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
+import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
+import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
@@ -294,10 +310,10 @@ fun DetailsScreen(
     }
 
     val heroInfo = remember(currentAnime, localizedEpisodeWord) {
-        buildHeroInfo(currentAnime, localizedEpisodeWord)
+        resolveDetailsHeroInfo(currentAnime, localizedEpisodeWord)
     }
     val description = remember(currentAnime) {
-        buildDescription(currentAnime)
+        resolveAnimeDescription(currentAnime)
     }
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
         AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
@@ -367,14 +383,16 @@ fun DetailsScreen(
                 ) {
             item {
                 DetailHeroSection(
-                    anime = uiModel.anime,
+                    detailsState = DetailsUiState(
+                        anime = uiModel.anime,
+                        libraryCategory = libraryCategory,
+                        resumeState = resumeState,
+                    ),
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
                     canWatch = canWatch,
-                    libraryCategory = libraryCategory,
-                    resumeState = resumeState,
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
                     listState = listState,
@@ -479,38 +497,17 @@ private fun DetailsStatusBarScrim(
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
-    val density = LocalDensity.current
-    val distanceUntilOpaquePx = with(density) { 168.dp.toPx() }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
-    val alpha by remember(listState, distanceUntilOpaquePx) {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) {
-                0.74f
-            } else {
-                0.74f * (listState.firstVisibleItemScrollOffset / distanceUntilOpaquePx)
-                    .coerceIn(0f, 1f)
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(statusBarHeight)
-            .background(MaterialTheme.colorScheme.background.copy(alpha = alpha)),
-    )
+    org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim(listState = listState, modifier = modifier)
 }
 
 @Composable
 private fun DetailHeroSection(
-    anime: Anime,
-    heroInfo: HeroInfo,
+    detailsState: DetailsUiState,
+    heroInfo: DetailsHeroInfo,
     description: String,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     canWatch: Boolean,
-    libraryCategory: LibraryCategory?,
-    resumeState: TitleWatchState?,
     resumeFrame: File?,
     isTitleDetailsSheetOpen: Boolean,
     listState: LazyListState,
@@ -521,6 +518,9 @@ private fun DetailHeroSection(
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
 ) {
+    val anime = detailsState.anime
+    val libraryCategory = detailsState.libraryCategory
+    val resumeState = detailsState.resumeState
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
         derivedStateOf {
@@ -548,8 +548,7 @@ private fun DetailHeroSection(
                 .height(heroHeight),
         ) {
             DetailHeroMedia(
-                anime = anime,
-                resumeState = resumeState,
+                detailsState = detailsState,
                 resumeFrame = resumeFrame,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
@@ -577,7 +576,7 @@ private fun DetailHeroSection(
                     .background(MaterialTheme.colorScheme.background)
             )
             PosterHeroInline(
-                anime = anime,
+                anime = detailsState.anime,
                 height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
                 modifier = Modifier
@@ -586,7 +585,7 @@ private fun DetailHeroSection(
                     .padding(start = 16.dp),
             )
             DetailHeroTextContent(
-                anime = anime,
+                anime = detailsState.anime,
                 description = description,
                 nextEpisodeEta = nextEpisodeEta,
                 nextEpisodeNumber = nextEpisodeNumber,
@@ -690,61 +689,16 @@ private fun DetailHeroActions(
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            onClick = onLibraryClick,
-            modifier = Modifier.size(56.dp),
-            shape = CircleShape,
-            color = if (isInLibrary) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-            contentColor = if (isInLibrary) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.primary
-            },
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringResource(R.string.details_favorite),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-        }
-        OutlinedButton(
-            onClick = onPrimaryClick,
-            enabled = canWatch,
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
-            shape = CircleShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                containerColor = Color.Transparent,
-            ),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.details_watch),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-            )
-        }
-    }
+    org.akkirrai.hibiki.shared.details.DetailsHeroActions(
+        isInLibrary = isInLibrary,
+        canWatch = canWatch,
+        libraryLabel = stringResource(R.string.details_favorite),
+        watchLabel = stringResource(R.string.details_watch),
+        libraryIcon = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+        primaryIcon = Icons.Filled.PlayArrow,
+        onLibraryClick = onLibraryClick,
+        onPrimaryClick = onPrimaryClick,
+    )
 }
 
 @Composable
@@ -753,35 +707,16 @@ private fun NextEpisodeChip(
     eta: String,
     modifier: Modifier = Modifier,
 ) {
-    val chipColor = Color(0xFF80DF87)
     val text = if (episode != null) {
         stringResource(R.string.details_next_episode_countdown_numbered, episode, eta)
     } else {
         stringResource(R.string.details_next_episode_countdown, eta)
     }
-
-    Row(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(chipColor.copy(alpha = 0.2f))
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.hourglass),
-            contentDescription = null,
-            modifier = Modifier.size(15.dp),
-            tint = chipColor,
-        )
-        Text(
-            text = text,
-            color = chipColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip(
+        text = text,
+        icon = ImageVector.vectorResource(R.drawable.hourglass),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -791,46 +726,24 @@ private fun NestedScrollableContent(
     gradientColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable (Modifier) -> Unit,
 ) {
-    Box(modifier) {
-        content(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = gradientSize)
-        )
-        Box(
-            modifier = Modifier
-                .height(gradientSize)
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(gradientColor, Color.Transparent),
-                    )
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .height(gradientSize)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, gradientColor),
-                    )
-                ),
-        )
-    }
+    org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent(
+        modifier = modifier,
+        gradientSize = gradientSize,
+        gradientColor = gradientColor,
+        content = content,
+    )
 }
 
 @Composable
 private fun DetailHeroMedia(
-    anime: Anime,
-    resumeState: TitleWatchState?,
+    detailsState: DetailsUiState,
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val anime = detailsState.anime
+    val resumeState = detailsState.resumeState
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     Box(
         modifier = modifier
@@ -953,205 +866,74 @@ private fun HeroRatingsLine(
     viewCount: Long?,
     modifier: Modifier = Modifier,
 ) {
-    val rating = ratings.firstOrNull()
-    if (rating == null && viewCount.isNullOrZero()) return
-
-    Row(
+    val data = resolveDetailsHeroRatings(ratings, viewCount) ?: return
+    org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine(
+        rating = data.rating,
+        viewCount = data.viewCount,
+        ratingIcon = Icons.Filled.Star,
+        viewCountIcon = Icons.Outlined.Visibility,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        rating?.let {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = Color(0xFFFFC107),
-            )
-            Text(
-                text = formatRating(it.value),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        viewCount?.takeIf { it > 0 }?.let {
-            if (rating != null) {
-                Text(
-                    text = "•",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
-            Icon(
-                imageVector = Icons.Outlined.Visibility,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = formatCount(it),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
+    )
 }
-
-private fun Long?.isNullOrZero(): Boolean = this == null || this == 0L
 
 @Composable
 private fun DetailContentCard(
     anime: Anime,
-    heroInfo: HeroInfo,
+    heroInfo: DetailsHeroInfo,
     modifier: Modifier = Modifier,
 ) {
     val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-        DetailSectionTitle(
-            text = stringResource(R.string.details_information),
-            modifier = Modifier.padding(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
-        )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_status),
-                    value = heroInfo.status.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.Check,
-                    accent = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_episodes_released),
-                    value = heroInfo.episodes.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.FormatListNumbered,
-                    accent = MaterialTheme.colorScheme.primary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_type),
-                    value = heroInfo.type,
-                    icon = Icons.Outlined.BookmarkBorder,
-                    accent = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_release_date),
-                        value = releaseDate,
-                        icon = Icons.Filled.DateRange,
-                        accent = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            sourceMaterial?.let { source ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_source_material),
-                        value = source,
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
-                        accent = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-            }
-            heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_studio),
-                        value = studio,
-                        icon = Icons.Filled.Business,
-                        accent = Color(0xFFFF9800),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DetailSectionTitle(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
+    val emptyValue = stringResource(R.string.search_filters_not_selected)
+    val informationItems = listOfNotNull(
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_status),
+            value = heroInfo.status.ifBlank { emptyValue },
+            icon = Icons.Outlined.Check,
+            accent = MaterialTheme.colorScheme.tertiary,
+        ),
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_episodes_released),
+            value = heroInfo.episodes.ifBlank { emptyValue },
+            icon = Icons.Outlined.FormatListNumbered,
+            accent = MaterialTheme.colorScheme.primary,
+        ),
+        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+            label = stringResource(R.string.details_type),
+            value = heroInfo.type,
+            icon = Icons.Outlined.BookmarkBorder,
+            accent = MaterialTheme.colorScheme.secondary,
+        ),
+        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_release_date),
+                value = releaseDate,
+                icon = Icons.Filled.DateRange,
+                accent = MaterialTheme.colorScheme.primary,
+            )
+        },
+        sourceMaterial?.let { source ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_source_material),
+                value = source,
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                accent = MaterialTheme.colorScheme.tertiary,
+            )
+        },
+        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
+            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
+                label = stringResource(R.string.details_studio),
+                value = studio,
+                icon = Icons.Filled.Business,
+                accent = Color(0xFFFF9800),
+            )
+        },
+    )
+    org.akkirrai.hibiki.shared.details.DetailsInformationSection(
+        title = stringResource(R.string.details_information),
+        items = informationItems,
+        horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 4.dp, height = 24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
-private fun DetailInfoPill(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    accent: Color,
-) {
-    Surface(
-        modifier = Modifier.height(56.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-                .height(40.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Surface(
-                modifier = Modifier.size(36.dp),
-                shape = CircleShape,
-                color = accent.copy(alpha = 0.12f),
-                contentColor = accent,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1209,21 +991,18 @@ private fun PosterHeroInline(
     onPosterClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .width(140.dp)
-            .height(height)
-            .clickable(onClick = onPosterClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
+    org.akkirrai.hibiki.shared.details.DetailsPosterCard(
+        height = height,
+        onClick = onPosterClick,
+        modifier = modifier,
+        poster = {
         NetworkImage(
             imageUrl = anime.posterUrl,
             fallbackUrl = anime.posterFallbackUrl,
             contentDescription = anime.title,
         )
-    }
+        },
+    )
 }
 
 @Composable
@@ -1464,38 +1243,12 @@ private fun GenresSection(
     genres: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(24.dp))
-        DetailSectionTitle(
-            text = stringResource(R.string.details_genres),
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(genres.distinct(), key = { it }) { genre ->
-                Surface(
-                    modifier = Modifier.height(32.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = genre,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.details.DetailsGenresSection(
+        genres = genres,
+        title = stringResource(R.string.details_genres),
+        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1507,64 +1260,35 @@ private fun RelatedAnimeList(
 ) {
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(32.dp))
-        DetailSectionTitle(
-            text = title,
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
+    val relatedItems = displayItems.map { related ->
+        org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeItem(
+            id = related.id,
+            title = related.title,
+            metadata = formatRelatedAnimeMetadata(
+                year = related.year,
+                type = related.type,
+                status = related.status,
+                announcementLabel = announcementLabel,
+            ),
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp),
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(displayItems, key = RelatedAnime::id) { related ->
-                Column(
-                    modifier = Modifier
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onAnimeClick(related.toAnime()) }
-                        .padding(bottom = 8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        NetworkImage(
-                            imageUrl = related.posterUrl,
-                            fallbackUrl = related.posterFallbackUrl,
-                            contentDescription = related.title,
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = formatRelatedAnimeMetadata(
-                            year = related.year,
-                            type = related.type,
-                            status = related.status,
-                            announcementLabel = announcementLabel,
-                        ),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = related.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
     }
+    val relatedById = displayItems.associateBy(RelatedAnime::id)
+    org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
+        items = relatedItems,
+        title = title,
+        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+        onItemClick = { item -> relatedById[item.id]?.let { onAnimeClick(it.toAnime()) } },
+        poster = { item ->
+            relatedById[item.id]?.let { related ->
+                NetworkImage(
+                    imageUrl = related.posterUrl,
+                    fallbackUrl = related.posterFallbackUrl,
+                    contentDescription = related.title,
+                )
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1575,185 +1299,22 @@ private fun FavoriteCircleButton(
     size: androidx.compose.ui.unit.Dp = 41.dp,
     iconSize: androidx.compose.ui.unit.Dp = 18.dp,
 ) {
-    val isInLibrary = libraryCategory != null
-    Box(
-        modifier = modifier
-            .size(size)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = libraryCategory.iconOrDefault(),
-            contentDescription = stringResource(R.string.details_favorite),
-            modifier = Modifier.size(iconSize),
-            tint = if (isInLibrary) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
-            }
-        )
-    }
-}
-
-private data class WatchCtaState(
-    val label: String,
-    val secondaryLabel: String? = null,
-    val action: WatchPrimaryAction,
-)
-
-private enum class WatchPrimaryAction {
-    OpenEpisodes,
-    OpenPlayer,
-}
-
-private fun resolveSelectedSource(
-    sources: List<WatchSource>,
-    selection: WatchSourceSelection,
-): WatchSource? {
-    if (sources.isEmpty()) return null
-    return when {
-        selection.autoSelect -> sources.first()
-        else -> sources.firstOrNull { it.sourceId == selection.sourceId } ?: sources.first()
-    }
-}
-
-@Composable
-private fun buildWatchCtaState(
-    progress: TitleWatchState?,
-    progressItems: List<EpisodeWatchProgress>,
-    selectedSource: WatchSource?,
-): WatchCtaState {
-    if (progress == null || selectedSource == null) {
-        return WatchCtaState(label = stringResource(R.string.details_watch), action = WatchPrimaryAction.OpenEpisodes)
-    }
-    val inProgressEpisode = progressItems
-        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
-        .maxByOrNull(EpisodeWatchProgress::updatedAt)
-    if (inProgressEpisode != null) {
-        val remainingMinutes = ((inProgressEpisode.durationMs - inProgressEpisode.positionMs).coerceAtLeast(0L) / 60_000L)
-            .coerceAtLeast(1L)
-        return WatchCtaState(
-            label = stringResource(R.string.details_watch_continue_episode, formatEpisodeNumber(inProgressEpisode.episodeNumber)),
-            secondaryLabel = stringResource(R.string.details_watch_remaining, remainingMinutes),
-            action = WatchPrimaryAction.OpenPlayer,
-        )
-    }
-
-    val nextEpisodeNumber = resolveNextEpisodeNumber(
-        progressItems = progressItems,
-        episodeCount = selectedSource.episodeCount,
+    org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButton(
+        icon = libraryCategory.iconOrDefault(),
+        isInLibrary = libraryCategory != null,
+        contentDescription = stringResource(R.string.details_favorite),
+        onClick = onClick,
+        modifier = modifier,
+        size = size,
+        iconSize = iconSize,
     )
-    if (nextEpisodeNumber != null) {
-        return WatchCtaState(
-            label = stringResource(R.string.details_watch_continue_episode, formatEpisodeNumber(nextEpisodeNumber)),
-            action = WatchPrimaryAction.OpenEpisodes,
-        )
-    }
-
-    return WatchCtaState(
-        label = stringResource(R.string.details_watch_rewatch),
-        action = WatchPrimaryAction.OpenEpisodes,
-    )
-}
-
-private fun filterProgressItemsForSelectedSource(
-    progressItems: List<EpisodeWatchProgress>,
-    selectedSource: WatchSource?,
-): List<EpisodeWatchProgress> {
-    if (selectedSource == null) return progressItems
-    return progressItems.filter { it.sourceId == selectedSource.sourceId }
-}
-
-private fun resolveSelectedSourceProgress(
-    fallbackProgress: TitleWatchState?,
-    selectedSourceProgressItems: List<EpisodeWatchProgress>,
-): TitleWatchState? {
-    val latest = selectedSourceProgressItems.maxByOrNull(EpisodeWatchProgress::updatedAt)
-        ?: return fallbackProgress
-    return TitleWatchState(
-        titleId = latest.titleId,
-        episodeId = latest.episodeId,
-        episodeNumber = latest.episodeNumber,
-        sourceId = latest.sourceId,
-        voiceoverId = latest.voiceoverId,
-        sourceTitle = latest.sourceTitle,
-        quality = latest.quality,
-        positionMs = latest.positionMs,
-        durationMs = latest.durationMs,
-        updatedAt = latest.updatedAt,
-    )
-}
-
-private fun resolveNextEpisodeNumber(
-    progressItems: List<EpisodeWatchProgress>,
-    episodeCount: Int?,
-): Double? {
-    val watchedNumbers = progressItems
-        .filter(EpisodeWatchProgress::isWatchedToEnd)
-        .map(EpisodeWatchProgress::episodeNumber)
-    val lastWatched = watchedNumbers.maxOrNull() ?: return 1.0
-    val nextSavedEpisode = progressItems
-        .map(EpisodeWatchProgress::episodeNumber)
-        .filter { it > lastWatched }
-        .minOrNull()
-    if (nextSavedEpisode != null) {
-        return nextSavedEpisode
-    }
-    val inferredNextEpisode = lastWatched + 1.0
-    return if (episodeCount == null || inferredNextEpisode <= episodeCount.toDouble()) {
-        inferredNextEpisode
-    } else {
-        null
-    }
-}
-
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
 }
 
 private fun findResumeWatchState(
     repository: WatchStateRepository,
     titleId: String,
 ): TitleWatchState? {
-    val latest = repository.getEpisodeProgress(titleId)
-        .asSequence()
-        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
-        .maxByOrNull(EpisodeWatchProgress::updatedAt)
-        ?: return null
-    return TitleWatchState(
-        titleId = latest.titleId,
-        episodeId = latest.episodeId,
-        episodeNumber = latest.episodeNumber,
-        sourceId = latest.sourceId,
-        voiceoverId = latest.voiceoverId,
-        sourceTitle = latest.sourceTitle,
-        quality = latest.quality,
-        positionMs = latest.positionMs,
-        durationMs = latest.durationMs,
-        updatedAt = latest.updatedAt,
-    )
-}
-
-private const val WATCHED_END_TOLERANCE_MS = 1_000L
-
-private fun formatEpisodeNumber(number: Double): String {
-    return if (number % 1.0 == 0.0) {
-        number.toInt().toString()
-    } else {
-        number.toString()
-    }
-}
-
-private fun formatPlaybackPosition(positionMs: Long): String {
-    val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
-    val hours = totalSeconds / 3_600L
-    val minutes = totalSeconds % 3_600L / 60L
-    val seconds = totalSeconds % 60L
-    return if (hours > 0L) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
-    }
+    return org.akkirrai.hibiki.shared.player.resolveResumeWatchState(repository.getEpisodeProgress(titleId))
 }
 
 @Composable
@@ -1764,76 +1325,6 @@ private fun buildSourceSelectorLabel(
     val title = selectedSource?.title ?: if (selection.autoSelect) stringResource(R.string.watch_source_auto_title) else stringResource(R.string.watch_source_fallback)
     val qualitySuffix = selectedSource?.qualityLabel?.let { " · $it" }.orEmpty()
     return "$title$qualitySuffix"
-}
-
-internal data class HeroInfo(
-    val type: String,
-    val releaseDate: String,
-    val episodes: String,
-    val status: String,
-    val studio: String,
-)
-
-private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo {
-    val parts = anime.subtitle
-        .split(Regex("\\s*[·|]\\s*"))
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-
-    val type = parts.getOrNull(0)?.uppercase().orEmpty().ifBlank { DEFAULT_TYPE }
-    val year = parts.getOrNull(1).orEmpty()
-
-    val rawEpisodes = anime.episodesLabel
-        .replace(Regex("\\bepisodes?\\b", RegexOption.IGNORE_CASE), localizedEpisodeWord)
-        .takeIf { it.isNotBlank() && it != UNKNOWN_VALUE }
-        .orEmpty()
-
-    val episodeCount = Regex("""\d+""")
-        .find(rawEpisodes)
-        ?.value
-        ?.toIntOrNull()
-
-    val episodes = rawEpisodes
-        .takeIf { episodeCount == null || episodeCount > 0 }
-        .orEmpty()
-
-    val status = anime.status.takeUnless { it.isBlank() || it == UNKNOWN_VALUE }.orEmpty()
-    return HeroInfo(
-        type = type,
-        releaseDate = anime.releaseDate
-            ?.takeIf(::isKnownReleaseDate)
-            ?: year.takeIf(::isKnownReleaseDate).orEmpty(),
-        episodes = episodes,
-        status = status,
-        studio = anime.studios.joinToString(", "),
-    )
-}
-
-private fun buildDescription(anime: Anime): String {
-    return anime.description?.takeIf(String::isNotBlank).orEmpty()
-}
-
-private fun String.isKnownValue(): Boolean {
-    val normalized = trim()
-    return normalized.isNotEmpty() &&
-        !normalized.equals(UNKNOWN_VALUE, ignoreCase = true) &&
-        normalized != "0"
-}
-
-private fun isKnownReleaseDate(value: String): Boolean = value.isKnownValue()
-
-private fun watchSourcesAvailable(
-    selectedSource: WatchSource?,
-    selection: WatchSourceSelection,
-): Boolean {
-    return selectedSource != null || !selection.sourceTitle.isNullOrBlank()
-}
-
-private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean {
-    val values = listOf(status, episodesLabel).map { it.trim().lowercase(Locale.getDefault()) }
-    return values.any { value ->
-        value == "анонс" || value == "announcement" || value == "announced" || value == "anons"
-    }
 }
 
 @Composable
@@ -1899,26 +1390,6 @@ private fun localizedSourceMaterial(sourceMaterial: String?): String? {
     }
 }
 
-private fun formatRating(value: Double): String = String.format(Locale.US, "%.2f", value)
-
-private fun formatCount(value: Long): String {
-    return when {
-        value >= 1_000_000L -> String.format(Locale.US, "%.1fM", value / 1_000_000.0)
-        value >= 1_000L -> String.format(Locale.US, "%.1fK", value / 1_000.0)
-        else -> value.toString()
-    }
-}
-
-private fun RelatedAnime.toAnime(): Anime = Anime(
-    id = id,
-    title = title,
-    subtitle = "",
-    episodesLabel = "",
-    status = status.orEmpty(),
-    posterUrl = posterUrl,
-    posterFallbackUrl = posterFallbackUrl
-)
-
 private suspend fun extractTitleSeedColor(
     context: Context,
     imageUrls: List<String>,
@@ -1954,58 +1425,6 @@ private suspend fun extractTitleSeedColor(
     }
     return null
 }
-
-internal fun String.toAbsoluteImageUrl(): String? {
-    val value = trim().trim('"').replace("\\/", "/").takeIf(String::isNotBlank) ?: return null
-    return when {
-        value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true) -> value
-        value.startsWith("//") -> "https:$value"
-        else -> null
-    }
-}
-
-internal fun isOngoingStatus(status: String): Boolean {
-    val normalized = status.trim().lowercase(Locale.ROOT)
-    return normalized.contains("ongoing") ||
-        normalized.contains("airing") ||
-        normalized.contains("releasing") ||
-        normalized.contains("онгоинг") ||
-        normalized.contains("онґоінг") ||
-        normalized.contains("выходит") ||
-        normalized.contains("триває")
-}
-
-internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
-    val releasedEpisodes = Regex("""\d+""")
-        .find(episodesLabel)
-        ?.value
-        ?.toIntOrNull()
-        ?: return null
-    return releasedEpisodes.takeIf { it >= 0 }?.plus(1)
-}
-
-internal fun formatRelatedAnimeMetadata(
-    year: Int?,
-    type: String?,
-    status: String? = null,
-    announcementLabel: String = "announcement",
-): String {
-    val releaseLabel = year
-        ?.takeIf { it > 0 }
-        ?.toString()
-        ?: announcementLabel.takeIf { isAnnouncementStatus(status.orEmpty()) }
-    val typeLabel = type
-        ?.trim()
-        ?.takeIf(String::isNotBlank)
-        ?.replace('_', ' ')
-        ?.replace('-', ' ')
-        ?.uppercase(Locale.ROOT)
-    return listOfNotNull(releaseLabel, typeLabel).joinToString(" • ")
-}
-
-private const val DEFAULT_TYPE = "TV"
-private const val DEFAULT_YEAR = "Unknown"
-private const val UNKNOWN_VALUE = "Unknown"
 
 private data class DetailsScreenSavedState(
     val anime: Anime,

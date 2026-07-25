@@ -6,24 +6,26 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
+import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.shared.player.hasMoreWatchSources
+import org.akkirrai.hibiki.shared.player.mergeWatchSources
+import org.akkirrai.hibiki.shared.player.visibleWatchSources
 
 class WatchSourcesViewModel(
     private val animeId: String,
     private val repository: AnimeWatchRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(WatchSourcesScreenState())
-    val uiState: StateFlow<WatchSourcesScreenState> = _uiState.asStateFlow()
+    private val presenter = WatchSourcesPresenter()
+    val uiState: StateFlow<WatchSourcesScreenState> = presenter.state
 
     init {
         load()
@@ -34,11 +36,11 @@ class WatchSourcesViewModel(
     }
 
     fun retry() {
-        val current = _uiState.value
+        val current = presenter.state.value
         if (current.items.isEmpty()) {
             loadSources(forceRefresh = true)
         } else {
-            _uiState.update {
+            presenter.update {
                 it.copy(
                     showAllItems = true,
                     items = it.allItems,
@@ -52,13 +54,13 @@ class WatchSourcesViewModel(
 
     private fun loadSources(forceRefresh: Boolean) {
         val cached = repository.getCachedSources(animeId)
-        val cachedSources = mergeSources(
+        val cachedSources = mergeWatchSources(
             primary = cached?.sources.orEmpty(),
             secondary = offlineDownloadRepository.getOfflineSources(animeId),
         )
-        val cachedVisibleItems = visibleItems(cachedSources, showAllItems = false)
+        val cachedVisibleItems = visibleWatchSources(cachedSources, showAllItems = false)
         if (forceRefresh) {
-            _uiState.value = WatchSourcesScreenState(
+            presenter.setState(WatchSourcesScreenState(
                 allItems = emptyList(),
                 items = emptyList(),
                 isLoading = true,
@@ -66,21 +68,21 @@ class WatchSourcesViewModel(
                 hasMoreItems = false,
                 showAllItems = false,
                 errorMessage = null,
-            )
+            ))
         } else {
-            _uiState.value = WatchSourcesScreenState(
+            presenter.setState(WatchSourcesScreenState(
                 allItems = cachedSources,
                 items = cachedVisibleItems,
                 isLoading = cached == null,
                 isLoadingMore = false,
-                hasMoreItems = hasMoreItems(
+                hasMoreItems = hasMoreWatchSources(
                     allItems = cachedSources,
                     visibleItems = cachedVisibleItems,
                     showAllItems = false,
                 ),
                 showAllItems = false,
                 errorMessage = null,
-            )
+            ))
         }
         if (!forceRefresh && cached != null) {
             return
@@ -89,11 +91,11 @@ class WatchSourcesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 repository.loadSources(animeId = animeId) { updated ->
-                    val merged = mergeSources(
+                    val merged = mergeWatchSources(
                         primary = updated,
                         secondary = offlineDownloadRepository.getOfflineSources(animeId),
                     )
-                    _uiState.update { state ->
+                    presenter.update { state ->
                         state.withSources(
                             sources = merged,
                             isLoading = true,
@@ -103,11 +105,11 @@ class WatchSourcesViewModel(
                     }
                 }
             }.onSuccess { sources ->
-                val merged = mergeSources(
+                val merged = mergeWatchSources(
                     primary = sources,
                     secondary = offlineDownloadRepository.getOfflineSources(animeId),
                 )
-                _uiState.update { state ->
+                presenter.update { state ->
                     state.withSources(
                         sources = merged,
                         isLoading = false,
@@ -117,7 +119,7 @@ class WatchSourcesViewModel(
                 }
             }.onFailure { throwable ->
                 if (throwable is CancellationException) return@onFailure
-                _uiState.update {
+                presenter.update {
                     it.copy(
                         isLoading = false,
                         isLoadingMore = false,
@@ -129,7 +131,7 @@ class WatchSourcesViewModel(
     }
 
     fun loadMore() {
-        _uiState.update {
+        presenter.update {
             it.copy(
                 showAllItems = true,
                 items = it.allItems,
@@ -151,13 +153,13 @@ class WatchSourcesViewModel(
         isLoadingMore: Boolean,
         showAllItems: Boolean,
     ): WatchSourcesScreenState {
-        val visibleItems = visibleItems(sources, showAllItems)
+        val visibleItems = visibleWatchSources(sources, showAllItems)
         return copy(
             allItems = sources,
             items = visibleItems,
             isLoading = isLoading,
             isLoadingMore = isLoadingMore,
-            hasMoreItems = hasMoreItems(
+            hasMoreItems = hasMoreWatchSources(
                 allItems = sources,
                 visibleItems = visibleItems,
                 showAllItems = showAllItems,
@@ -165,35 +167,6 @@ class WatchSourcesViewModel(
             showAllItems = showAllItems,
             errorMessage = null,
         )
-    }
-
-    private fun visibleItems(
-        allItems: List<WatchSource>,
-        showAllItems: Boolean,
-    ): List<WatchSource> {
-        if (showAllItems) {
-            return allItems
-        }
-        return allItems.take(INITIAL_VISIBLE_SOURCE_COUNT)
-    }
-
-    private fun hasMoreItems(
-        allItems: List<WatchSource>,
-        visibleItems: List<WatchSource>,
-        showAllItems: Boolean,
-    ): Boolean {
-        if (showAllItems) return false
-        return allItems.size > visibleItems.size
-    }
-
-    private fun mergeSources(
-        primary: List<WatchSource>,
-        secondary: List<WatchSource>,
-    ): List<WatchSource> {
-        return (primary + secondary)
-            .associateBy(WatchSource::sourceId)
-            .values
-            .toList()
     }
 
     class Factory(
@@ -211,20 +184,7 @@ class WatchSourcesViewModel(
         }
     }
 
-    private companion object {
-        const val INITIAL_VISIBLE_SOURCE_COUNT = 6
-    }
 }
-
-data class WatchSourcesScreenState(
-    val allItems: List<WatchSource> = emptyList(),
-    val items: List<WatchSource> = emptyList(),
-    val isLoading: Boolean = true,
-    val isLoadingMore: Boolean = false,
-    val hasMoreItems: Boolean = false,
-    val showAllItems: Boolean = false,
-    val errorMessage: String? = null,
-)
 
 internal fun Throwable.toUiMessage(): String {
     return when (this) {

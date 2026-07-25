@@ -101,6 +101,7 @@ kotlin {
 
 dependencies {
     implementation(project(":parsers"))
+    implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)

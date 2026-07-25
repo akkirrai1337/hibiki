@@ -2,44 +2,41 @@ package org.akkirrai.hibiki.feature.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
+import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
+import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
 fun SearchScreen(
@@ -69,18 +66,27 @@ fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            SearchBar(
+            AppSearchField(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::search
+                onSearch = viewModel::search,
+                placeholder = stringResource(R.string.search_placeholder),
+                searchContentDescription = stringResource(R.string.cd_search),
+                searchIcon = Icons.Outlined.Search,
             )
         }
 
-        searchStateVerticalListContent(
+        appSearchStateVerticalListContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
-            metaText = { anime -> buildSearchMeta(anime, announcementLabel, movieLabel) },
+            metaText = { anime ->
+                anime.buildCardMeta(
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
+                )
+            },
             onLoadMore = viewModel::loadMore,
+            onRetrySearch = viewModel::search,
             loadMoreLabel = loadMoreLabel,
             resultsCountLabel = { count ->
                 pluralStringResource(R.plurals.search_results_count, count, count)
@@ -93,9 +99,32 @@ fun SearchScreen(
             emptyMessage = emptyMessage,
             emptyIcon = Icons.Outlined.SearchOff,
             errorModifier = Modifier.padding(top = 24.dp),
-            errorActionLabel = retryLabel,
-            onErrorActionClick = viewModel::search,
+            errorRetryLabel = retryLabel,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+            trailingIcon = Icons.Outlined.ChevronRight,
+            posterContent = { anime ->
+                PosterImage(
+                    primaryUrl = anime.posterUrl,
+                    fallbackUrl = anime.posterFallbackUrl,
+                    contentDescription = anime.title,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f)
+                                .background(MaterialTheme.colorScheme.surfaceContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                )
+            },
             posterFooterContent = { anime ->
                 libraryStatusByAnimeId[anime.id]?.let { category ->
                     LibraryStatusPosterFooter(category)
@@ -103,65 +132,4 @@ fun SearchScreen(
             },
         )
     }
-}
-
-@Composable
-private fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit
-) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .clip(RoundedCornerShape(UiDimens.MediumCorner)),
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = {
-            Text(
-                text = stringResource(R.string.search_placeholder),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingIcon = {
-            IconButton(onClick = onSearch) {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = stringResource(R.string.cd_search),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        shape = RoundedCornerShape(UiDimens.MediumCorner),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            focusedIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            disabledIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
-            cursorColor = MaterialTheme.colorScheme.primary
-        )
-    )
-}
-
-private fun buildSearchMeta(
-    anime: Anime,
-    announcementLabel: String,
-    movieLabel: String,
-): String {
-    return anime.buildCardMeta(
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
-    )
 }

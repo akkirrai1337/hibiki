@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,25 +45,29 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
+import org.akkirrai.hibiki.shared.home.TrendingFilter
+import org.akkirrai.hibiki.shared.home.TrendingPresenter
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.PosterImage
+import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
 fun TrendingAnimeScreen(
@@ -93,20 +100,16 @@ fun TrendingAnimeScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        when {
-            state.isLoading && state.items.isEmpty() -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            state.errorMessage != null && state.items.isEmpty() -> {
-                TrendingErrorState(
-                    title = stringResource(R.string.trending_error_title),
-                    message = state.errorMessage.orEmpty(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            else -> {
+        org.akkirrai.hibiki.shared.design.component.AppContentState(
+            isLoading = state.isLoading,
+            hasContent = state.items.isNotEmpty(),
+            errorMessage = state.errorMessage,
+            errorTitle = stringResource(R.string.trending_error_title),
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::load,
+            errorIcon = Icons.Outlined.WarningAmber,
+            errorIconTint = MaterialTheme.colorScheme.error,
+            content = {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -117,11 +120,33 @@ fun TrendingAnimeScreen(
                         bottom = UiDimens.ScreenPadding,
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    verticalAnimeListContent(
+                    content = {
+                    appVerticalAnimeListContent(
                         items = state.items,
                         metaText = { anime -> buildTrendingMeta(anime) },
                         onAnimeClick = onAnimeClick,
+                        trailingIcon = Icons.Outlined.ChevronRight,
+                        posterContent = { anime ->
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    PosterPlaceholder(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(2f / 3f),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Image,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                            )
+                        },
                         posterFooterContent = { anime ->
                             libraryStatusByAnimeId[anime.id]?.let { category ->
                                 LibraryStatusPosterFooter(category)
@@ -129,53 +154,20 @@ fun TrendingAnimeScreen(
                         },
                     )
 
-                    if (state.isLoadingMore) {
-                        item(key = "trending_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            }
+                    if (state.isLoadingMore || state.loadMoreError != null) {
+                        item(key = "trending_load_more_state") {
+                            AppLoadMoreState(
+                                isLoading = state.isLoadingMore,
+                                errorMessage = state.loadMoreError,
+                                errorIcon = Icons.Outlined.WarningAmber,
+                                onRetry = viewModel::loadMore,
+                            )
                         }
                     }
-
-                    if (state.loadMoreError != null) {
-                        item(key = "trending_load_more_error") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.loadMore() }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.WarningAmber,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                    Text(
-                                        text = state.loadMoreError.orEmpty(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                },
+            )
+            },
+        )
 
         AppFloatingHeader(
             title = stringResource(R.string.home_trending),
@@ -267,29 +259,29 @@ private fun TrendingErrorState(
 }
 
 class TrendingAnimeViewModel(
-    private val repository: HomeRepository,
+    private val repository: HomeDataRepository,
     private val context: Context,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(TrendingAnimeUiState(isLoading = true))
-    val uiState: StateFlow<TrendingAnimeUiState> = _uiState.asStateFlow()
+    private val presenter = TrendingPresenter(TrendingAnimeUiState(isLoading = true))
+    val uiState: StateFlow<TrendingAnimeUiState> = presenter.state
 
     init {
         load()
     }
 
     fun selectFilter(filter: TrendingFilter) {
-        if (filter == _uiState.value.selectedFilter) return
-        _uiState.value = TrendingAnimeUiState(
+        if (filter == presenter.state.value.selectedFilter) return
+        presenter.setState(TrendingAnimeUiState(
             isLoading = true,
             selectedFilter = filter,
-        )
+        ))
         load()
     }
 
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
-            val selectedFilter = _uiState.value.selectedFilter
-            _uiState.update {
+            val selectedFilter = presenter.state.value.selectedFilter
+            presenter.update {
                 it.copy(
                     isLoading = true,
                     errorMessage = null,
@@ -300,19 +292,19 @@ class TrendingAnimeViewModel(
                 repository.loadTrendingPage(
                     offset = 0,
                     limit = TRENDING_PAGE_LIMIT,
-                    filter = selectedFilter,
+                    filterTypeAlias = selectedFilter.typeAlias,
                 )
             }
                 .onSuccess { items ->
-                    _uiState.value = TrendingAnimeUiState(
+                    presenter.setState(TrendingAnimeUiState(
                         isLoading = false,
                         selectedFilter = selectedFilter,
                         items = items,
                         canLoadMore = items.size >= TRENDING_PAGE_LIMIT,
-                    )
+                    ))
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoading = false,
                             errorMessage = throwable.message ?: context.getString(R.string.trending_error_title),
@@ -323,13 +315,13 @@ class TrendingAnimeViewModel(
     }
 
     fun loadMore() {
-        val currentState = _uiState.value
+        val currentState = presenter.state.value
         if (currentState.isLoading || currentState.isLoadingMore || !currentState.canLoadMore) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val offset = _uiState.value.items.size
-            val selectedFilter = _uiState.value.selectedFilter
-            _uiState.update {
+            val offset = presenter.state.value.items.size
+            val selectedFilter = presenter.state.value.selectedFilter
+            presenter.update {
                 it.copy(
                     isLoadingMore = true,
                     loadMoreError = null,
@@ -339,11 +331,11 @@ class TrendingAnimeViewModel(
                 repository.loadTrendingPage(
                     offset = offset,
                     limit = TRENDING_PAGE_LIMIT,
-                    filter = selectedFilter,
+                    filterTypeAlias = selectedFilter.typeAlias,
                 )
             }
                 .onSuccess { nextItems ->
-                    _uiState.update { state ->
+                    presenter.update { state ->
                         val mergedItems = (state.items + nextItems).distinctBy(Anime::id)
                         state.copy(
                             isLoadingMore = false,
@@ -354,7 +346,7 @@ class TrendingAnimeViewModel(
                     }
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
+                    presenter.update {
                         it.copy(
                             isLoadingMore = false,
                             loadMoreError = throwable.message ?: context.getString(R.string.trending_load_more_error),
@@ -386,16 +378,6 @@ class TrendingAnimeViewModel(
         const val TRENDING_PAGE_LIMIT = 100
     }
 }
-
-data class TrendingAnimeUiState(
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedFilter: TrendingFilter = TrendingFilter.All,
-    val items: List<Anime> = emptyList(),
-    val isLoadingMore: Boolean = false,
-    val canLoadMore: Boolean = false,
-    val loadMoreError: String? = null,
-)
 
 @Composable
 private fun buildTrendingMeta(anime: Anime): String {

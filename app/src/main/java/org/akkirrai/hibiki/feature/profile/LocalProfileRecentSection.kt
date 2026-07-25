@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.feature.profile
 
+import org.akkirrai.hibiki.shared.profile.normalizePosterUrl
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,104 +35,31 @@ internal fun RecentLibraryCard(
     items: List<RecentLibraryItem>,
     showTitle: Boolean = true,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-            if (showTitle) {
-                Text(
-                    text = stringResource(R.string.yummy_account_recent_additions_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            if (items.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(28.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    EmptyState(text = stringResource(R.string.yummy_account_recent_library_empty))
-                }
-            } else {
-                items.forEach { item ->
-                    RecentLibraryRow(item)
-                }
-            }
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryCard(
+        title = if (showTitle) stringResource(R.string.yummy_account_recent_additions_title) else null,
+        emptyText = stringResource(R.string.yummy_account_recent_library_empty),
+        isEmpty = items.isEmpty(),
+        content = { items.forEach { RecentLibraryRow(it) } },
+    )
 }
 
 @Composable
-private fun RecentLibraryRow(
-    item: RecentLibraryItem,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-            RecentPoster(item = item)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(item.color),
-                    )
-                    Text(
-                        text = item.statusLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    item.ratingLabel?.let { rating ->
-                        Text(
-                            text = "★ $rating",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = AccountWarmAccent,
-                        )
-                    }
-                }
-            }
-            Text(
-                text = item.dateLabel,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-    }
+private fun RecentLibraryRow(item: RecentLibraryItem) {
+    org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryRow(
+        title = item.title,
+        statusLabel = item.statusLabel,
+        statusColor = item.color,
+        ratingLabel = item.ratingLabel,
+        dateLabel = item.dateLabel,
+        poster = { RecentPoster(item) },
+    )
 }
 
 @Composable
 private fun RecentPoster(
     item: RecentLibraryItem,
 ) {
-    Box(
-        modifier = Modifier
-            .width(50.dp)
-            .height(68.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
-        contentAlignment = Alignment.Center,
-    ) {
+    org.akkirrai.hibiki.shared.profile.ProfileRecentPosterFrame {
         val posterUrl = normalizePosterUrl(item.posterUrl)
         if (posterUrl == null) {
             Box(
@@ -171,10 +100,5 @@ private fun RecentPoster(
 private fun EmptyState(
     text: String,
 ) {
-    Text(
-        text = text,
-        modifier = Modifier.fillMaxWidth(),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    org.akkirrai.hibiki.shared.profile.ProfileEmptyState(text)
 }

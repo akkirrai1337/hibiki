@@ -80,6 +80,7 @@ import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
+import org.akkirrai.hibiki.shared.profile.LocalProfileSummary
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -187,6 +188,13 @@ fun LocalProfileScreen(
                         )
                     }
                 }
+                LocalProfileSummary(
+                    data = state.data,
+                    fallbackName = stringResource(R.string.app_name),
+                    libraryLabel = stringResource(R.string.local_profile_summary_library),
+                    episodesLabel = stringResource(R.string.local_profile_summary_episodes),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = AnimiteLargePadding),
+                )
                 PrimaryTabRow(
                     selectedTabIndex = pagerState.currentPage,
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -295,86 +303,30 @@ private fun LocalAvatar(
     onEditClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (isEditing) 0.38f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "avatar_scrim",
+    org.akkirrai.hibiki.shared.profile.ProfileAvatar(
+        ratio = ratio,
+        isEditing = isEditing,
+        editIcon = Icons.Rounded.Edit,
+        editContentDescription = stringResource(R.string.local_profile_change_avatar),
+        onEditClick = onEditClick,
+        modifier = modifier,
+        avatarContent = {
+            if (avatarUri.isNullOrBlank()) {
+                Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            } else {
+                AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        },
     )
-    Box(
-        modifier = modifier.size(70.dp).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) },
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), shape = CircleShape) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)),
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (avatarUri.isNullOrBlank()) {
-                    Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                } else {
-                    AsyncImage(
-                        model = avatarUri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha)))
-            }
-        }
-        if (isEditing) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(32.dp)
-                    .clickable(onClick = onEditClick),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = stringResource(R.string.local_profile_change_avatar),
-                    modifier = Modifier.padding(7.dp),
-                )
-            }
-        }
-    }
 }
 
 @Composable
 private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
-    val underlineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-    Column(modifier = Modifier.widthIn(min = 150.dp, max = 240.dp)) {
-        Text(
-            text = stringResource(R.string.local_profile_name),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-        BasicTextField(
-            value = name,
-            onValueChange = onNameChange,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.titleLarge.copy(
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp, bottom = 6.dp)
-                .drawBehind {
-                    drawLine(
-                        color = underlineColor,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                },
-        )
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileNameEditor(
+        label = stringResource(R.string.local_profile_name),
+        name = name,
+        onNameChange = onNameChange,
+    )
 }
 
 @Composable
@@ -398,30 +350,21 @@ private fun ProfileActionButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = CircleShape) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(40.dp)
-                .clickable(onClick = onClick)
-                .padding(AnimiteSmallPadding)
-                .then(iconModifier),
-        )
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileActionButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        iconModifier = iconModifier,
+    )
 }
 
 /** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
 @Composable
 private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        verticalArrangement = Arrangement.spacedBy(AnimiteMediumPadding),
+    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+        bottomContentPadding = bottomContentPadding,
+        verticalSpacing = AnimiteMediumPadding,
     ) {
         LocalStatsRow(snapshot)
         GenreBars(snapshot.genreSegments)
@@ -431,71 +374,35 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
 
 @Composable
 private fun LocalStatsRow(snapshot: LocalProfileSnapshot) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        LocalStat(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel)
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
+        items = listOf(
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString()),
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString()),
+            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel),
+        ),
+    )
 }
 
 @Composable
 private fun LocalStat(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.SpaceEvenly, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-        Text(value, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileStat(label = label, value = value)
 }
 
 /** Direct port of AboutTab.Genres: labels column alongside proportional rounded bars. */
 @Composable
 private fun GenreBars(items: List<DistributionSegment>) {
-    if (items.isEmpty()) return
-    Row(Modifier.height(IntrinsicSize.Max)) {
-        Column(horizontalAlignment = Alignment.End) {
-            items.forEach { item ->
-                Text(item.label, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f), style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(start = AnimiteSmallPadding, end = AnimiteLargePadding)
-                .widthIn(max = 250.dp),
-            verticalArrangement = Arrangement.spacedBy(AnimiteTinyPadding),
-        ) {
-            val highest = items.maxOf { it.count }.coerceAtLeast(1)
-            items.forEach { item ->
-                val weight = item.count / highest.toFloat()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(weight)
-                        .weight(1f)
-                        .drawBehind {
-                            drawRoundRect(
-                                color = item.color,
-                                size = Size(size.width, size.height),
-                                cornerRadius = CornerRadius(size.height),
-                            )
-                        },
-                )
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
+        items = items.map { item ->
+            org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(item.label, item.count, item.color)
+        },
+    )
 }
 
 @Composable
 private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-    ) { AnalyticsCard(snapshot) }
+    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
+        AnalyticsCard(snapshot)
+    }
 }
 
 @Composable
@@ -505,13 +412,7 @@ private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPaddi
             Text(stringResource(R.string.local_profile_empty_favorites), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
-        Column(
-            Modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-                .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        ) {
+        org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
             RecentLibraryCard(items = items, showTitle = false)
         }
     }

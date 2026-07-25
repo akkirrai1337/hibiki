@@ -11,8 +11,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,17 +39,15 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
@@ -85,16 +81,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -108,30 +101,30 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
-import org.akkirrai.hibiki.core.design.component.AnimePosterCardItem
+import org.akkirrai.hibiki.shared.design.component.AppPosterCard
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
-import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.SectionHeader
+import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
+import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
+import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
-import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.SearchUiState
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -220,11 +213,12 @@ fun HomeScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    searchStateVerticalListContent(
+                    appSearchStateVerticalListContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                         onLoadMore = viewModel::loadMoreSearchResults,
+                        onRetrySearch = {},
                         loadMoreLabel = searchLoadMoreLabel,
                         resultsCountLabel = { count ->
                             pluralStringResource(R.plurals.search_results_count, count, count)
@@ -232,6 +226,29 @@ fun HomeScreen(
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = Icons.Outlined.SearchOff,
+                        posterContent = { anime ->
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(2f / 3f)
+                                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Image,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                            )
+                        },
                         posterFooterContent = { anime ->
                             libraryStatusByAnimeId[anime.id]?.let { category ->
                                 LibraryStatusPosterFooter(category)
@@ -271,6 +288,7 @@ fun HomeScreen(
                             continueAnime = continueAnime,
                             trending = state.trending,
                             isTrendingLoadingMore = state.isTrendingLoadingMore,
+                            onLoadMoreTrending = viewModel::loadMoreTrending,
                             isActive = isActive,
                             onAnimeClick = onAnimeClick,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
@@ -323,6 +341,7 @@ private fun LazyListScope.homeFeedContent(
     continueAnime: Anime?,
     trending: List<Anime>,
     isTrendingLoadingMore: Boolean,
+    onLoadMoreTrending: () -> Unit,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
@@ -344,21 +363,30 @@ private fun LazyListScope.homeFeedContent(
             }
         }
     }
-    verticalAnimeListContent(
+    appVerticalAnimeListContent(
         items = trending,
         metaText = metaText,
         onAnimeClick = onAnimeClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        trailingIcon = Icons.Outlined.ChevronRight,
+        posterContent = { anime ->
+            AnimeBackground(
+                imageUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
         posterFooterContent = posterFooterContent,
     )
     if (isTrendingLoadingMore) {
         item {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
+            AppLoadMoreState(
+                isLoading = true,
+                errorMessage = null,
+                errorIcon = Icons.Outlined.WarningAmber,
+                onRetry = onLoadMoreTrending,
+            )
         }
     }
 }
@@ -398,15 +426,13 @@ private fun HomeErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.design.component.AppErrorState(
         title = stringResource(R.string.home_error_title),
         message = message,
-        modifier = modifier
-            .fillMaxSize()
-            .padding(UiDimens.ScreenPadding),
-        actionLabel = stringResource(R.string.search_retry),
-        onActionClick = onRetry,
-        iconSlot = {
+        retryLabel = stringResource(R.string.search_retry),
+        onRetry = onRetry,
+        modifier = modifier,
+        iconContent = {
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -431,273 +457,30 @@ private fun FeaturedCarousel(
     autoAdvanceEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { items.size },
-    )
-
-    val progress = remember { Animatable(0f) }
-
-    var indicatorPage by remember { mutableStateOf(0) }
     val featuredHeight = 240.dp
-
-    LaunchedEffect(autoAdvanceEnabled) {
-        PerfLogger.mark("Home featured carousel active changed", "active=$autoAdvanceEnabled")
-    }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }
-            .collect { page ->
-                if (page != indicatorPage) {
-                    progress.stop()
-                    progress.snapTo(0f)
-                    indicatorPage = page
-                }
-            }
-    }
-
-    var timerRestartKey by remember { mutableStateOf(0) }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.isScrollInProgress }
-            .collect { scrolling ->
-                if (!scrolling) timerRestartKey++
-            }
-    }
-
-    LaunchedEffect(timerRestartKey, items.size, autoAdvanceEnabled) {
-        if (!autoAdvanceEnabled || items.size <= 1) {
-            progress.stop()
-            PerfLogger.mark(
-                event = "Home featured carousel timer stopped",
-                details = "active=$autoAdvanceEnabled, items=${items.size}",
-            )
-            return@LaunchedEffect
-        }
-
-        if (pagerState.isScrollInProgress) {
-            snapshotFlow { pagerState.isScrollInProgress }
-                .first { !it }
-        }
-
-        progress.snapTo(0f)
-
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = FEATURED_AUTO_ADVANCE_MS,
-                easing = LinearEasing,
-            ),
-        )
-
-        if (!pagerState.isScrollInProgress && pagerState.settledPage == indicatorPage) {
-            val nextPage = (indicatorPage + 1) % items.size
-            progress.snapTo(0f)
-            pagerState.animateScrollToPage(nextPage)
-        }
-    }
-
-    Box(modifier = modifier) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(featuredHeight),
-            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
-            pageSpacing = 12.dp,
-            beyondViewportPageCount = 1,
-        ) { page ->
-            val anime = items[page]
-            FeaturedAnimeCard(
+    AppFeaturedCarousel(
+        items = items,
+        featuredLabel = stringResource(R.string.home_featured_label),
+        metaText = { anime ->
+            buildHomeMeta(
                 anime = anime,
-                bannerUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                height = featuredHeight,
-                onClick = { onAnimeClick(anime) },
+                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                movieLabel = stringResource(R.string.anime_meta_movie),
             )
-        }
-
-        if (items.size > 1) {
-            FeaturedIndicator(
-                totalPages = items.size,
-                currentPage = indicatorPage,
-                progress = progress.value,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun FeaturedIndicator(
-    totalPages: Int,
-    currentPage: Int,
-    progress: Float,
-    modifier: Modifier = Modifier,
-) {
-    Row(
+        },
+        onAnimeClick = onAnimeClick,
+        autoAdvanceEnabled = autoAdvanceEnabled,
         modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (i in 0 until totalPages) {
-            if (i == currentPage) {
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                        ),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(fraction = progress.coerceIn(0f, 1f))
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                    )
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                        ),
-                )
-            }
-            if (i < totalPages - 1) {
-                Spacer(modifier = Modifier.width(6.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeaturedAnimeCard(
-    anime: Anime,
-    bannerUrl: String?,
-    height: Dp,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
-        ) {
+        height = featuredHeight,
+        imageContent = { anime ->
             AnimeBackground(
-                imageUrl = bannerUrl,
+                imageUrl = anime.posterUrl ?: anime.posterFallbackUrl,
                 fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
                 contentDescription = anime.title,
-                modifier = Modifier.matchParentSize()
+                modifier = Modifier.matchParentSize(),
             )
-
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.12f),
-                                0.35f to Color.Black.copy(alpha = 0.30f),
-                                0.70f to Color.Black.copy(alpha = 0.60f),
-                                1f to Color.Black.copy(alpha = 0.88f),
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.30f),
-                                0.45f to Color.Black.copy(alpha = 0.10f),
-                                1f to Color.Black.copy(alpha = 0f),
-                            )
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(
-                        start = 18.dp,
-                        end = 18.dp,
-                        top = 18.dp,
-                        bottom = 42.dp,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.home_featured_label),
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            offset = androidx.compose.ui.geometry.Offset(0f, 2f),
-                            blurRadius = 8f,
-                        )
-                    ),
-                    color = Color.White
-                )
-
-                AnimeTitleText(
-                    text = anime.title,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            offset = androidx.compose.ui.geometry.Offset(0f, 2f),
-                            blurRadius = 10f,
-                        )
-                    ),
-                    color = Color.White,
-                    baseMaxLines = 3,
-                    extraLongTitleLines = 0,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                val meta = buildHomeMeta(
-                    anime = anime,
-                    announcementLabel = stringResource(R.string.anime_meta_announcement),
-                    movieLabel = stringResource(R.string.anime_meta_movie),
-                )
-                if (meta.isNotBlank()) {
-                    Text(
-                        text = meta,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.50f),
-                                offset = androidx.compose.ui.geometry.Offset(0f, 1f),
-                                blurRadius = 6f,
-                            )
-                        ),
-                        color = Color.White.copy(alpha = 0.82f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -705,128 +488,33 @@ private fun ContinueWatchingCard(
     anime: Anime?,
     onClick: () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        HomeSectionHeader(
-            title = stringResource(R.string.home_continue_title),
-            icon = Icons.Outlined.History,
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+    AppContinueWatchingCard(
+        anime = anime,
+        sectionTitle = stringResource(R.string.home_continue_title),
+        emptyTitle = stringResource(R.string.home_continue_empty_title),
+        emptyMessage = stringResource(R.string.home_continue_empty_message),
+        openHint = stringResource(R.string.home_open_title_hint),
+        meta = anime?.let {
+            buildHomeMeta(
+                anime = it,
+                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                movieLabel = stringResource(R.string.anime_meta_movie),
             )
-        ) {
-            if (anime == null) {
-                EmptyContinueContent()
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onClick)
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AnimePoster(
-                        anime = anime,
-                        modifier = Modifier
-                            .width(72.dp)
-                            .aspectRatio(2f / 3f)
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .align(Alignment.CenterVertically),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        AnimeTitleText(
-                            text = anime.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            baseMaxLines = 3,
-                            extraLongTitleLines = 0,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-
-                        val meta = buildHomeMeta(
-                            anime = anime,
-                            announcementLabel = stringResource(R.string.anime_meta_announcement),
-                            movieLabel = stringResource(R.string.anime_meta_movie),
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (meta.isNotBlank()) {
-                                Text(
-                                    text = meta,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            AnimeSourceBadge(titleId = anime.id)
-                        }
-
-                        Text(
-                            text = stringResource(R.string.home_open_title_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                }
+        }.orEmpty(),
+        sectionIcon = Icons.Outlined.History,
+        onClick = onClick,
+        imageContent = {
+            anime?.let { currentAnime ->
+                AnimePoster(
+                    anime = currentAnime,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyContinueContent() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppTonalSurface(
-            modifier = Modifier
-                .size(56.dp),
-            shape = RoundedCornerShape(UiDimens.MediumCorner),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.home_continue_empty_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(R.string.home_continue_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+        },
+        trailingContent = {
+            anime?.let { AnimeSourceBadge(titleId = it.id) }
+        },
+    )
 }
 
 @Composable
@@ -854,7 +542,7 @@ private fun AnimeSection(
             contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding)
         ) {
             items(items, key = { it.id }) { anime ->
-                AnimePosterCardItem(
+                AppPosterCard(
                     anime = anime,
                     metaText = buildHomeMeta(
                         anime = anime,
@@ -862,12 +550,13 @@ private fun AnimeSection(
                         movieLabel = stringResource(R.string.anime_meta_movie),
                     ),
                     onClick = { onAnimeClick(anime) },
-                    width = 118.dp,
+                    modifier = Modifier.width(118.dp),
                     titleBaseMaxLines = 2,
                     titleExtraLongTitleLines = 0,
                     titleOverflow = TextOverflow.Ellipsis,
                     reservedTitleLines = 3,
                     reserveMetaLine = true,
+                    imageContent = { PosterCardImage(anime) },
                 )
             }
         }
@@ -926,6 +615,48 @@ private fun AnimePoster(
             contentDescription = anime.title,
             modifier = Modifier.fillMaxSize(),
             placeholder = { AnimeImagePlaceholder() }
+        )
+    }
+}
+
+@Composable
+private fun PosterCardImage(anime: Anime) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(2f / 3f)
+            .clip(RoundedCornerShape(UiDimens.CardCorner))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        PosterImage(
+            primaryUrl = anime.posterUrl,
+            fallbackUrl = anime.posterFallbackUrl,
+            contentDescription = anime.title,
+            modifier = Modifier.fillMaxSize(),
+            placeholder = { PosterPlaceholder() },
+        )
+    }
+}
+
+@Composable
+private fun PosterPlaceholder() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(UiDimens.ScreenPadding),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Image,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.poster_placeholder),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

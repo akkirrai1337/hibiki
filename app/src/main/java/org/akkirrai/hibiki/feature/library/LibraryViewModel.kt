@@ -8,10 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
@@ -21,6 +18,7 @@ import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.shared.library.LibraryPresenter
 
 class LibraryViewModel(
     context: Context,
@@ -42,8 +40,8 @@ class LibraryViewModel(
     private val searchRepository by searchRepositoryDelegate
     private val offlineDownloadRepository by offlineDownloadRepositoryDelegate
     private val offlineTitleMetadataRepository by offlineTitleMetadataRepositoryDelegate
-    private val _uiState = MutableStateFlow(LibraryUiState())
-    val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+    private val presenter = LibraryPresenter()
+    val uiState: StateFlow<LibraryUiState> = presenter.state
     private var syncJob: Job? = null
     private var lastStorageSyncAt = 0L
     private var lastDetailsRefreshAt = 0L
@@ -128,7 +126,7 @@ class LibraryViewModel(
 
         val startedAt = SystemClock.elapsedRealtime()
         PerfLogger.mark("Library details refresh started", "entries=${saved.size}")
-        _uiState.update { it.copy(isRefreshing = true) }
+        presenter.setRefreshing(true)
         try {
             val refreshed = saved
                 .groupBy { entry -> entry.anime.id }
@@ -158,59 +156,39 @@ class LibraryViewModel(
                         .map { category -> baseEntry.copy(anime = anime, category = category) }
                 }
             lastDetailsRefreshAt = SystemClock.elapsedRealtime()
-            _uiState.update {
-                it.copy(
-                    entries = refreshed,
-                    selectedCategory = preferredCategory(refreshed, it.selectedCategory),
-                    isRefreshing = false,
-                )
-            }
+            presenter.updateEntries(refreshed)
+            presenter.setRefreshing(false)
             PerfLogger.mark(
                 event = "Library details refresh finished",
                 details = "entries=${saved.size}, refreshed=${refreshed.size}, duration=${PerfLogger.elapsedMs(startedAt)}ms",
             )
         } finally {
-            _uiState.update { it.copy(isRefreshing = false) }
+            presenter.setRefreshing(false)
         }
     }
 
     fun selectCategory(category: LibraryCategory) {
-        _uiState.update { it.copy(selectedCategory = category) }
+        presenter.selectCategory(category)
     }
 
     private fun updateEntries(entries: List<LibraryEntry>) {
-        _uiState.update {
-            it.copy(
-                entries = entries,
-                selectedCategory = preferredCategory(entries, it.selectedCategory),
-            )
-        }
+        presenter.updateEntries(entries)
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        presenter.onSearchQueryChange(query)
     }
 
     fun clearSearch() {
-        _uiState.update { it.copy(searchQuery = "") }
+        presenter.clearSearch()
     }
 
     fun applySearchFilters(filters: LibrarySearchFilters) {
-        _uiState.update { it.copy(searchFilters = filters) }
+        presenter.applySearchFilters(filters)
     }
 
     fun resetSearchFilters() {
-        _uiState.update { it.copy(searchFilters = LibrarySearchFilters()) }
-    }
-
-    private fun preferredCategory(
-        entries: List<LibraryEntry>,
-        current: LibraryCategory,
-    ): LibraryCategory {
-        if (entries.any { it.category == current }) return current
-        return orderedLibraryCategories(entries)
-            .firstOrNull { category -> entries.any { it.category == category } }
-            ?: current
+        presenter.resetSearchFilters()
     }
 
     override fun onCleared() {
@@ -235,88 +213,6 @@ class LibraryViewModel(
                 offlineTitleMetadataRepository = dependencies.offlineTitleMetadataRepository(),
             ) as T
         }
-    }
-}
-
-data class LibraryUiState(
-    val entries: List<LibraryEntry> = emptyList(),
-    val selectedCategory: LibraryCategory = LibraryCategory.Watching,
-    val isRefreshing: Boolean = false,
-    val searchQuery: String = "",
-    val searchFilters: LibrarySearchFilters = LibrarySearchFilters(),
-) {
-    val orderedCategories: List<LibraryCategory>
-        get() = orderedLibraryCategories(entries)
-
-    val visibleEntries: List<LibraryEntry>
-        get() {
-            val normalizedQuery = searchQuery.trim()
-            return entries.filter { entry ->
-                entry.category == selectedCategory &&
-                    searchFilters.matches(entry) &&
-                    (
-                        normalizedQuery.isBlank() ||
-                            entry.anime.title.contains(normalizedQuery, ignoreCase = true) ||
-                            entry.anime.subtitle.contains(normalizedQuery, ignoreCase = true)
-                        )
-            }
-        }
-
-    val categoryCounts: Map<LibraryCategory, Int>
-        get() = entries.groupingBy { it.category }.eachCount()
-
-    val filterCatalog: LibraryFilterCatalog
-        get() {
-            val categoryEntries = entries.filter { it.category == selectedCategory }
-            return LibraryFilterCatalog(
-                typeOptions = categoryEntries.mapNotNull { it.anime.extractLibraryType() }.distinct().sorted(),
-                statusOptions = categoryEntries.map { it.anime.status.trim() }.filter(String::isNotBlank).distinct().sorted(),
-                genreOptions = categoryEntries.flatMap { it.anime.genres }.map(String::trim).filter(String::isNotBlank).distinct().sorted(),
-            )
-        }
-}
-
-data class LibrarySearchFilters(
-    val type: String? = null,
-    val status: String? = null,
-    val includedGenres: Set<String> = emptySet(),
-    val excludedGenres: Set<String> = emptySet(),
-) {
-    fun matches(entry: LibraryEntry): Boolean {
-        val anime = entry.anime
-        val typeMatches = type == null || anime.extractLibraryType() == type
-        val statusMatches = status == null || anime.status.equals(status, ignoreCase = true)
-        val animeGenres = anime.genres.map(String::trim).filter(String::isNotBlank).toSet()
-        val includesMatch = includedGenres.isEmpty() || includedGenres.all { it in animeGenres }
-        val excludesMatch = excludedGenres.none { it in animeGenres }
-        return typeMatches && statusMatches && includesMatch && excludesMatch
-    }
-
-    fun hasActiveFilters(): Boolean {
-        return type != null || status != null || includedGenres.isNotEmpty() || excludedGenres.isNotEmpty()
-    }
-}
-
-data class LibraryFilterCatalog(
-    val typeOptions: List<String> = emptyList(),
-    val statusOptions: List<String> = emptyList(),
-    val genreOptions: List<String> = emptyList(),
-)
-
-private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryType(): String? {
-    return subtitle
-        .split(Regex("\\s*[•·|]\\s*"))
-        .map(String::trim)
-        .firstOrNull { value ->
-            value.isNotBlank() && value.any(Char::isLetter) && value.none(Char::isDigit)
-        }
-}
-
-private fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> {
-    return if (entries.any { it.category == LibraryCategory.Saved }) {
-        listOf(LibraryCategory.Saved) + LibraryCategory.entries.filter { it != LibraryCategory.Saved }
-    } else {
-        LibraryCategory.entries.toList()
     }
 }
 

@@ -117,40 +117,15 @@ private fun AnalyticsDonutPager(
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.yummy_account_segment_stats),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PageArrowButton(
-                    enabled = currentPage > 0,
-                    onClick = { currentPage -= 1 },
-                    isBack = true,
-                    size = 32.dp,
-                )
-                Text(
-                    text = "${currentPage + 1}/${pages.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                PageArrowButton(
-                    enabled = currentPage < pages.lastIndex,
-                    onClick = { currentPage += 1 },
-                    isBack = false,
-                    size = 32.dp,
-                )
-            }
-        }
+        org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPagerHeader(
+            title = stringResource(R.string.yummy_account_segment_stats),
+            currentPage = currentPage,
+            pageCount = pages.size,
+            backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            onPrevious = { currentPage -= 1 },
+            onNext = { currentPage += 1 },
+        )
         AnimatedContent(
             targetState = currentPage,
             modifier = Modifier
@@ -213,31 +188,14 @@ private fun PageArrowButton(
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
 ) {
-    Surface(
+    org.akkirrai.hibiki.shared.profile.ProfilePageArrowButton(
+        icon = if (isBack) Icons.AutoMirrored.Outlined.KeyboardArrowLeft
+        else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+        enabled = enabled,
+        onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.28f else 0.12f),
-    ) {
-        IconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.size(size),
-        ) {
-            Icon(
-                imageVector = if (isBack) {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowLeft
-                } else {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight
-                },
-                contentDescription = null,
-                tint = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.46f)
-                },
-            )
-        }
-    }
+        size = size,
+    )
 }
 
 @Composable
@@ -246,28 +204,13 @@ private fun LegendGrid(
     columns: Int,
     modifier: Modifier = Modifier,
 ) {
-    val safeColumns = columns.coerceAtLeast(1)
-    Column(
+    org.akkirrai.hibiki.shared.profile.ProfileLegendGrid(
+        items = items.map { item ->
+            org.akkirrai.hibiki.shared.profile.ProfileLegendGridItem(item.label, item.valueLabel, item.color)
+        },
+        columns = columns,
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        items.chunked(safeColumns).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                row.forEach { item ->
-                    LegendItem(
-                        item = item,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat((safeColumns - row.size).coerceAtLeast(0)) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -275,34 +218,12 @@ private fun LegendItem(
     item: AnalyticsSegment,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    org.akkirrai.hibiki.shared.profile.ProfileLegendItem(
+        label = item.label,
+        valueLabel = item.valueLabel,
+        color = item.color,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(item.color),
-        )
-        Text(
-            text = item.label,
-            modifier = Modifier.widthIn(max = 132.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = item.valueLabel,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-    }
+    )
 }
 
 @Composable
@@ -313,56 +234,15 @@ private fun SegmentDonut(
     modifier: Modifier = Modifier,
     muted: Boolean = false,
 ) {
-    val trackColor = if (muted) {
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.58f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHighest
-    }
-    Box(
+    org.akkirrai.hibiki.shared.profile.ProfileSegmentDonut(
+        segments = segments.map { segment ->
+            org.akkirrai.hibiki.shared.profile.ProfileDonutSegment(segment.weight, segment.color)
+        },
+        centerPrimary = centerPrimary,
+        centerSecondary = centerSecondary,
         modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp),
-        ) {
-            val strokeWidth = 18.dp.toPx()
-            drawArc(
-                color = trackColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-            )
-            var startAngle = -90f
-            val safeTotal = segments.sumOf { it.weight.toDouble() }.toFloat().coerceAtLeast(1f)
-            segments.filter { it.weight > 0f }.forEach { segment ->
-                val sweep = segment.weight / safeTotal * 360f
-                drawArc(
-                    color = if (muted) segment.color.copy(alpha = 0.4f) else segment.color,
-                    startAngle = startAngle,
-                    sweepAngle = sweep,
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                )
-                startAngle += sweep
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = centerPrimary,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = centerSecondary,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-            )
-        }
-    }
+        muted = muted,
+    )
 }
 
 @Composable
@@ -373,75 +253,16 @@ private fun ActivityBarChart(
     modifier: Modifier = Modifier,
     muted: Boolean = false,
 ) {
-    val maxEpisodes = days.maxOfOrNull(ActivityDay::episodeCount)
-        ?.coerceAtLeast(ACTIVITY_CHART_MIN_SCALE_EPISODES)
-        ?: ACTIVITY_CHART_MIN_SCALE_EPISODES
-    val activeColor = if (muted) {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
-    } else {
-        Color(0xFFFF7A86)
-    }
-    val inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f)
-
-    LazyRow(
-        state = listState,
-        modifier = modifier.height(142.dp),
-        horizontalArrangement = Arrangement.spacedBy(ACTIVITY_CHART_DAY_GAP),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        items(
-            items = days,
-            key = ActivityDay::dateLabel,
-        ) { day ->
-            val barHeight = if (day.episodeCount > 0) {
-                (18 + (66 * day.episodeCount / maxEpisodes)).dp
-            } else {
-                10.dp
-            }
-            Column(
-                modifier = Modifier.width(dayWidth),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .height(114.dp)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = day.episodeCount.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(18.dp)
-                                .height(barHeight)
-                                .clip(RoundedCornerShape(7.dp))
-                                .background(if (day.episodeCount > 0) activeColor else inactiveColor),
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = day.dateLabel,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                    maxLines = 1,
-                    softWrap = false,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
+    org.akkirrai.hibiki.shared.profile.ProfileActivityBarChart(
+        days = days.map { org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(it.dateLabel, it.episodeCount) },
+        dayWidth = dayWidth,
+        listState = listState,
+        dayGap = ACTIVITY_CHART_DAY_GAP,
+        minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
+        activeColor = if (muted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f) else Color(0xFFFF7A86),
+        inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
+        modifier = modifier,
+    )
 }
 
 private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsPage> {

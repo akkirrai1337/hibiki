@@ -79,24 +79,25 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
-import org.akkirrai.hibiki.core.design.UiDimens
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.VerticalAnimeListItem
+import org.akkirrai.hibiki.shared.design.component.SectionHeader
+import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.buildLibraryMeta
-import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.shared.model.buildLibraryMeta
+import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -110,7 +111,6 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val languageMode = LocalAppLanguage.current
-    val visibleEntries = state.visibleEntries
     var isFilterDialogVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -132,20 +132,15 @@ fun LibraryScreen(
         }
     }
 
-    LazyColumn(
+    org.akkirrai.hibiki.shared.library.AppLibraryEntriesContent(
+        state = state,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = 0.dp,
-            bottom = bottomContentPadding
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                AppSearchTopBar(
+        bottomContentPadding = bottomContentPadding,
+        onEntryClick = { entry -> onAnimeClick(entry.anime) },
+        headerContent = {
+            org.akkirrai.hibiki.shared.library.AppLibraryHeader(
+                searchContent = {
+                    AppSearchTopBar(
                     query = state.searchQuery,
                     onQueryChange = viewModel::onSearchQueryChange,
                     onClear = viewModel::clearSearch,
@@ -155,36 +150,23 @@ fun LibraryScreen(
                         start = UiDimens.ScreenPadding,
                         end = UiDimens.ScreenPadding,
                     ),
-                )
-                LibraryCategoryChips(
-                    selectedCategory = state.selectedCategory,
-                    categories = state.orderedCategories,
-                    counts = state.categoryCounts,
-                    onCategoryClick = viewModel::selectCategory,
-                )
-            }
-        }
-
-        if (state.isRefreshing && state.entries.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                }
-            }
-        }
-
-        if (state.entries.isEmpty()) {
-            item {
+                    )
+                },
+                selected = state.selectedCategory,
+                categories = state.orderedCategories,
+                counts = state.categoryCounts,
+                label = { stringResource(it.labelResId) },
+                icon = { it.icon() },
+                onSelected = viewModel::selectCategory,
+            )
+        },
+        emptyContent = { filtered ->
+            if (!filtered) {
                 EmptyLibraryState(
                     title = stringResource(R.string.library_empty_title),
-                    body = stringResource(R.string.library_empty_body)
+                    body = stringResource(R.string.library_empty_body),
                 )
-            }
-        } else if (visibleEntries.isEmpty()) {
-            item {
+            } else {
                 EmptyLibraryState(
                     title = if (state.searchQuery.isBlank()) {
                         stringResource(R.string.library_section_empty_title)
@@ -198,19 +180,11 @@ fun LibraryScreen(
                     }
                 )
             }
-        } else {
-            items(
-                items = visibleEntries,
-                key = { it.anime.id }
-            ) { entry ->
-                LibraryAnimeCard(
-                    entry = entry,
-                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                    onClick = { onAnimeClick(entry.anime) }
-                )
-            }
-        }
-    }
+        },
+        entryContent = { entry, entryModifier ->
+            LibraryAnimeCard(entry = entry, modifier = entryModifier.padding(horizontal = UiDimens.ScreenPadding), onClick = { onAnimeClick(entry.anime) })
+        },
+    )
 
     if (isFilterDialogVisible) {
         LibrarySearchFiltersSheet(
@@ -226,69 +200,6 @@ fun LibraryScreen(
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
-
-@Composable
-private fun LibraryCategoryChips(
-    selectedCategory: LibraryCategory,
-    categories: List<LibraryCategory>,
-    counts: Map<LibraryCategory, Int>,
-    onCategoryClick: (LibraryCategory) -> Unit,
-) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(
-            start = UiDimens.ScreenPadding,
-            end = UiDimens.ScreenPadding,
-        )
-    ) {
-        items(categories) { category ->
-            val selected = category == selectedCategory
-            val count = counts[category] ?: 0
-            Surface(
-                modifier = Modifier.heightIn(min = 38.dp),
-                onClick = { onCategoryClick(category) },
-                shape = RoundedCornerShape(999.dp),
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-                } else {
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.18f)
-                },
-                contentColor = if (selected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)
-                    },
-                ),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = category.icon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = if (count > 0) "${stringResource(category.labelResId)} $count" else stringResource(category.labelResId),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -413,29 +324,20 @@ private fun LibraryAnimeCard(
 ) {
     val anime = entry.anime
     val meta = anime.buildLibraryMeta()
-    VerticalAnimeListItem(
+    org.akkirrai.hibiki.shared.library.AppLibraryAnimeCard(
         anime = anime,
-        metaText = "",
+        metaText = meta,
         onClick = onClick,
         modifier = modifier,
-        posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
-        metaContent = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (meta.isNotBlank()) {
-                    Text(
-                        text = meta,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                AnimeSourceBadge(titleId = anime.id)
-            }
+        trailingIcon = Icons.Outlined.ChevronRight,
+        posterContent = {
+            AnimePoster(
+                anime = anime,
+                modifier = Modifier.fillMaxSize(),
+            )
         },
+        posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
+        extraMetaContent = { AnimeSourceBadge(titleId = anime.id) },
     )
 }
 
@@ -444,17 +346,11 @@ private fun EmptyLibraryState(
     title: String,
     body: String,
 ) {
-    AppMessageState(
+    org.akkirrai.hibiki.shared.library.LibraryEmptyState(
         title = title,
         message = body,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 42.dp, start = UiDimens.ScreenPadding, end = UiDimens.ScreenPadding),
-        titleStyle = MaterialTheme.typography.titleLarge,
-        messageModifier = Modifier.padding(top = 6.dp, start = 28.dp, end = 28.dp),
-        messageMaxLines = 2,
-        messageOverflow = TextOverflow.Ellipsis,
-        iconSlot = {
+        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        iconContent = {
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -478,9 +374,8 @@ private fun AnimePoster(
     anime: Anime,
     modifier: Modifier = Modifier
 ) {
-    AppTonalSurface(
+    org.akkirrai.hibiki.shared.library.AppPosterSurface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
     ) {
         PosterImage(
             primaryUrl = anime.posterUrl,
@@ -496,17 +391,10 @@ private fun AnimePoster(
 private fun AnimeImagePlaceholder(
     modifier: Modifier = Modifier
 ) {
-    AppTonalSurface(
+    org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder(
+        icon = Icons.Outlined.Image,
         modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    )
 }
 
 @Composable
