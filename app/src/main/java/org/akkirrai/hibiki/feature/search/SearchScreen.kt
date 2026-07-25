@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
+import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
@@ -65,10 +66,13 @@ fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            SearchBar(
+            AppSearchField(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::search
+                onSearch = viewModel::search,
+                placeholder = stringResource(R.string.search_placeholder),
+                searchContentDescription = stringResource(R.string.cd_search),
+                searchIcon = Icons.Outlined.Search,
             )
         }
 
@@ -123,22 +127,6 @@ fun SearchScreen(
             },
         )
     }
-}
-
-@Composable
-private fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit
-) {
-    org.akkirrai.hibiki.shared.search.AppSearchField(
-        query = query,
-        onQueryChange = onQueryChange,
-        onSearch = onSearch,
-        placeholder = stringResource(R.string.search_placeholder),
-        searchContentDescription = stringResource(R.string.cd_search),
-        searchIcon = Icons.Outlined.Search,
-    )
 }
 
 private fun buildSearchMeta(

@@ -91,16 +91,16 @@ import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
-import org.akkirrai.hibiki.shared.settings.AppSettingsSwitch
 import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
-import org.akkirrai.hibiki.shared.settings.AppSettingsItemHeader
-import org.akkirrai.hibiki.shared.settings.AppSettingsItemRow
-import org.akkirrai.hibiki.shared.settings.AppSettingsActionItem
+import org.akkirrai.hibiki.shared.settings.SettingsSection
+import org.akkirrai.hibiki.shared.settings.themeModeOptions
+import org.akkirrai.hibiki.shared.settings.languageModeOptions
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconVerticalItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
+import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
-import org.akkirrai.hibiki.shared.settings.AppSettingsSwitchItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsToggleItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsVerticalItem
 import kotlinx.coroutines.launch
 
 @Composable
@@ -148,7 +148,7 @@ fun SettingsScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        item(key = "appearance") {
+        item(key = SettingsSection.Appearance.key) {
             AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
                 AppSettingsItems(count = 3) { index, shape ->
                     when (index) {
@@ -158,7 +158,7 @@ fun SettingsScreen(
                             shape = shape,
                         ) {
                             AppSettingsSegmentedControl(
-                                options = listOf(ThemeMode.DARK, ThemeMode.LIGHT, ThemeMode.SYSTEM),
+                                options = themeModeOptions,
                                 selectedOption = preferences.themeMode,
                                 label = ::themeModeLabel,
                                 onSelect = { mode ->
@@ -188,7 +188,7 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "preferences") {
+        item(key = SettingsSection.Preferences.key) {
             AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
                 AppSettingsItems(count = 3) { index, shape ->
                     when (index) {
@@ -198,7 +198,7 @@ fun SettingsScreen(
                             shape = shape,
                         ) {
                             AppSettingsSegmentedControl(
-                                options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
+                                options = languageModeOptions,
                                 selectedOption = preferences.languageMode,
                                 label = ::languageModeLabel,
                                 onSelect = { mode ->
@@ -230,7 +230,7 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "player") {
+        item(key = SettingsSection.Player.key) {
             AppSettingsSection(title = stringResource(R.string.settings_player)) {
                 AppSettingsItems(count = 1) { _, _ ->
                     SettingsSwitchItem(
@@ -244,7 +244,7 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "experimental") {
+        item(key = SettingsSection.Experimental.key) {
             AppSettingsSection(title = stringResource(R.string.settings_experimental)) {
                 AppSettingsItems(count = 1) { _, shape ->
                     DiscordSettingsItem(
@@ -268,7 +268,7 @@ fun SettingsScreen(
         }
 
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            item(key = "updates") {
+            item(key = SettingsSection.Updates.key) {
                 AppSettingsSection(title = stringResource(R.string.settings_updates)) {
                     AppSettingsItems(count = 1) { _, _ ->
                         SettingsActionItem(
@@ -282,7 +282,7 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "support") {
+            item(key = SettingsSection.Support.key) {
             AppSettingsSection(title = stringResource(R.string.settings_support)) {
                 AppSettingsItems(count = 1) { _, _ ->
                     SettingsActionItem(
@@ -303,7 +303,7 @@ fun SettingsScreen(
             }
         }
 
-        item(key = "about") {
+        item(key = SettingsSection.About.key) {
             AppSettingsSection(title = stringResource(R.string.settings_about)) {
                 SettingsAboutItem(
                     versionName = versionName,
@@ -346,20 +346,9 @@ private fun SettingsVerticalItem(
     shape: Shape,
     content: @Composable () -> Unit,
 ) {
-    AppSettingsVerticalItem(
-        headerContent = {
-            AppSettingsItemHeader(
-                iconContent = {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                },
-                title = title,
-            )
-        },
+    AppSettingsIconVerticalItem(
+        icon = icon,
+        title = title,
         shape = shape,
         content = content,
     )
@@ -374,15 +363,8 @@ private fun SettingsSwitchItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    AppSettingsSwitchItem(
-        iconContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        },
+    AppSettingsIconSwitchItem(
+        icon = icon,
         title = title,
         checked = checked,
         shape = shape,
@@ -405,15 +387,8 @@ private fun DiscordSettingsItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
-    AppSettingsToggleItem(
-        iconContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        },
+    AppSettingsIconToggleItem(
+        icon = icon,
         title = title,
         checked = checked,
         shape = shape,
@@ -436,15 +411,8 @@ private fun SettingsActionItem(
     showNavigationArrow: Boolean = false,
     onClick: () -> Unit,
 ) {
-    AppSettingsActionItem(
-        iconContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        },
+    AppSettingsIconActionItem(
+        icon = icon,
         title = title,
         subtitle = subtitle,
         shape = shape,
@@ -456,9 +424,7 @@ private fun SettingsActionItem(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else {
-            null
-        },
+        } else null,
         onClick = onClick,
     )
 }
