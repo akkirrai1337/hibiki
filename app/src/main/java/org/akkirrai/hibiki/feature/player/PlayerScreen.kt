@@ -167,9 +167,23 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
+import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
+import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
+import org.akkirrai.hibiki.shared.player.sortQualityLabels
+import org.akkirrai.hibiki.shared.player.uniquePlayerNames
+import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
+import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
 import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
+import org.akkirrai.hibiki.shared.player.PlayerSettingsEntryRow
+import org.akkirrai.hibiki.shared.player.PlayerSettingsHeader as SharedPlayerSettingsHeader
+import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
+import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayerSettingsChoiceRow
+import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
+import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
+import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1731,17 +1745,6 @@ private fun PlayerTopOverlay(
     }
 }
 
-private fun String.preventTrailingOrphanWrap(): String {
-    val trimmed = trim()
-    val lastSpaceIndex = trimmed.indexOfLast { it.isWhitespace() }
-    if (lastSpaceIndex <= 0 || lastSpaceIndex >= trimmed.lastIndex) return this
-    return buildString(trimmed.length) {
-        append(trimmed, 0, lastSpaceIndex)
-        append('\u00A0')
-        append(trimmed, lastSpaceIndex + 1, trimmed.length)
-    }
-}
-
 @Composable
 private fun PlayerSettingsSheet(
     destination: PlayerSettingsDestination,
@@ -1762,16 +1765,16 @@ private fun PlayerSettingsSheet(
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
 ) {
-    val speedValues = PLAYBACK_SPEEDS.map { speed ->
-        SelectableValue(
+    val speedValues = playbackSpeedOptions.map { speed ->
+        PlayerSettingsValue(
             id = speed.toString(),
-            label = if (speed == 1f) "1x" else "${speed}x",
+            label = formatPlaybackSpeed(speed),
             selected = selectedSpeed == speed,
             onClick = { onSelectSpeed(speed) },
         )
     }
     val voiceoverValues = options.voiceovers.map { source ->
-        SelectableValue(
+        PlayerSettingsValue(
             id = source.sourceId,
             label = source.title.ifBlank { source.sourceId },
             description = source.qualityLabel,
@@ -1779,21 +1782,17 @@ private fun PlayerSettingsSheet(
             onClick = { onSelectVoiceover(source) },
         )
     }
-    val playerValues = options.links.mapNotNull { link ->
-        val name = link.playerName ?: return@mapNotNull null
-        SelectableValue(
+    val playerValues = uniquePlayerNames(options.links).map { name ->
+        PlayerSettingsValue(
             id = name,
             label = name,
             selected = selectedPlayerName == name || (selectedPlayerName == null && options.links.firstOrNull()?.playerName == name),
             onClick = { onSelectPlayer(name) },
         )
-    }.distinctBy { it.id }
-    val qualityValues = (options.links.mapNotNull { it.qualityLabel } + availableQualityLabels)
-        .mapNotNull { it.trim().takeIf(String::isNotBlank) }
-        .distinct()
-        .sortedByDescending { value -> value.filter(Char::isDigit).toIntOrNull() ?: 0 }
+    }
+    val qualityValues = sortQualityLabels(options.links.mapNotNull { it.qualityLabel } + availableQualityLabels)
         .map { quality ->
-            SelectableValue(
+            PlayerSettingsValue(
                 id = quality,
                 label = quality,
                 selected = selectedQualityLabel == quality,
@@ -1865,30 +1864,12 @@ private fun PlayerSettingsHeader(
     showBack: Boolean,
     onBack: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 12.dp, top = 2.dp, end = 18.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (showBack) {
-            WatchBackButton(
-                onBackClick = onBack,
-            )
-        } else {
-            SpacerBox(8.dp)
-        }
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+    SharedPlayerSettingsHeader(
+        title = title,
+        showBack = showBack,
+        onBack = onBack,
+        backContent = { WatchBackButton(onBackClick = onBack) },
+    )
 }
 
 @Composable
@@ -1897,96 +1878,33 @@ private fun PlayerSettingsEntry(
     value: String,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier
-            .padding(horizontal = 12.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Clip,
-            )
-            Text(
-                text = value,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.62f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+    PlayerSettingsEntryRow(
+        title = title,
+        value = value,
+        onClick = onClick,
+        trailingContent = {
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
                 tint = Color.White.copy(alpha = 0.52f),
             )
-        }
-    }
+        },
+    )
 }
 
 @Composable
 private fun PlayerSettingsChoiceRow(
-    value: SelectableValue,
+    value: PlayerSettingsValue,
 ) {
-    Surface(
-        modifier = Modifier
-            .padding(horizontal = 12.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = value.onClick),
-        color = if (value.selected) {
-            Color.White.copy(alpha = 0.10f)
-        } else {
-            Color.Transparent
-        }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 13.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = value.label,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = if (value.selected) 1f else 0.86f),
-                fontWeight = if (value.selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            value.description?.let { description ->
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.54f),
-                    maxLines = 1,
-                )
-            }
-            if (value.selected) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                )
-            }
-        }
-    }
+    SharedPlayerSettingsChoiceRow(
+        label = value.label,
+        description = value.description,
+        selected = value.selected,
+        onClick = value.onClick,
+        selectedIndicator = {
+            Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White)
+        },
+    )
 }
 
 private fun AnimatedContentTransitionScope<PlayerSettingsDestination>.playerSettingsPageTransition(): ContentTransform {
@@ -2005,40 +1923,21 @@ private fun SpacerBox(size: Dp) {
     Box(modifier = Modifier.size(size))
 }
 
-private data class SelectableValue(
-    val id: String,
-    val label: String,
-    val description: String? = null,
-    val selected: Boolean,
-    val onClick: () -> Unit,
-)
-
-private data class PlayerSettingsEntryItem(
-    val id: String,
-    val title: String,
-    val value: String,
-    val onClick: () -> Unit,
-)
-
-private fun List<SelectableValue>.firstSelectedLabelOrDefault(defaultLabel: String = first().label): String {
-    return firstOrNull { it.selected }?.label ?: defaultLabel
-}
-
 @Composable
 private fun playerSettingsRootEntries(
-    speedValues: List<SelectableValue>,
-    voiceoverValues: List<SelectableValue>,
-    playerValues: List<SelectableValue>,
-    qualityValues: List<SelectableValue>,
+    speedValues: List<PlayerSettingsValue>,
+    voiceoverValues: List<PlayerSettingsValue>,
+    playerValues: List<PlayerSettingsValue>,
+    qualityValues: List<PlayerSettingsValue>,
     autoSkipSegments: Boolean,
     autoPlayNextEpisode: Boolean,
     onNavigate: (PlayerSettingsDestination) -> Unit,
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
-): List<PlayerSettingsEntryItem> = buildList {
+): List<PlayerSettingsEntry> = buildList {
     if (voiceoverValues.size > 1) {
         add(
-            PlayerSettingsEntryItem(
+            PlayerSettingsEntry(
                 id = PlayerSettingsDestination.Voiceover.name,
                 title = stringResource(R.string.watch_player_settings_voiceover),
                 value = voiceoverValues.firstSelectedLabelOrDefault(),
@@ -2048,7 +1947,7 @@ private fun playerSettingsRootEntries(
     }
     if (qualityValues.size > 1) {
         add(
-            PlayerSettingsEntryItem(
+            PlayerSettingsEntry(
                 id = PlayerSettingsDestination.Quality.name,
                 title = stringResource(R.string.watch_player_settings_quality),
                 value = qualityValues.firstSelectedLabelOrDefault(),
@@ -2057,7 +1956,7 @@ private fun playerSettingsRootEntries(
         )
     }
     add(
-        PlayerSettingsEntryItem(
+        PlayerSettingsEntry(
             id = PlayerSettingsDestination.Speed.name,
             title = stringResource(R.string.watch_player_settings_speed),
             value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
@@ -2065,7 +1964,7 @@ private fun playerSettingsRootEntries(
         )
     )
     add(
-        PlayerSettingsEntryItem(
+        PlayerSettingsEntry(
             id = "auto_skip",
             title = stringResource(R.string.watch_player_settings_auto_skip),
             value = stringResource(
@@ -2076,7 +1975,7 @@ private fun playerSettingsRootEntries(
         )
     )
     add(
-        PlayerSettingsEntryItem(
+        PlayerSettingsEntry(
             id = "auto_play_next",
             title = stringResource(R.string.watch_player_settings_auto_play_next),
             value = stringResource(
@@ -2088,7 +1987,7 @@ private fun playerSettingsRootEntries(
     )
     if (playerValues.isNotEmpty()) {
         add(
-            PlayerSettingsEntryItem(
+            PlayerSettingsEntry(
                 id = PlayerSettingsDestination.Player.name,
                 title = stringResource(R.string.watch_player_settings_player),
                 value = playerValues.firstSelectedLabelOrDefault(),
@@ -2100,14 +1999,14 @@ private fun playerSettingsRootEntries(
 
 private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
     destination: PlayerSettingsDestination,
-    rootEntries: List<PlayerSettingsEntryItem>,
-    speedValues: List<SelectableValue>,
-    voiceoverValues: List<SelectableValue>,
-    playerValues: List<SelectableValue>,
-    qualityValues: List<SelectableValue>,
+    rootEntries: List<PlayerSettingsEntry>,
+    speedValues: List<PlayerSettingsValue>,
+    voiceoverValues: List<PlayerSettingsValue>,
+    playerValues: List<PlayerSettingsValue>,
+    qualityValues: List<PlayerSettingsValue>,
 ) {
     when (destination) {
-        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
+        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntry::id) { entry ->
             PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
         }
         PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
@@ -2118,9 +2017,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices(
-    values: List<SelectableValue>,
+    values: List<PlayerSettingsValue>,
 ) {
-    items(values, key = SelectableValue::id) { value ->
+    items(values, key = PlayerSettingsValue::id) { value ->
         PlayerSettingsChoiceRow(value = value)
     }
 }
@@ -2548,32 +2447,24 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
 
 @Composable
 private fun buildEpisodeTitle(episode: WatchEpisode): String {
-    val number = if (episode.number % 1.0 == 0.0) {
-        episode.number.toInt().toString()
-    } else {
-        episode.number.toString()
-    }
+    val number = formatEpisodeNumber(episode.number)
     return stringResource(R.string.watch_episode_number, number)
 }
 
 @Composable
 private fun currentEpisodeSubtitle(state: PlayerUiState): String {
-    val playbackTitle = state.playback?.episodeTitle.orEmpty().trim()
-    if (playbackTitle.isNotBlank()) {
-        return localizedEpisodeTitle(playbackTitle)
-    }
-    val currentEpisode = state.episodes.firstOrNull { it.id == state.currentEpisodeId }
-        ?: return ""
-    return buildEpisodeTitle(currentEpisode)
+    return localizedEpisodeTitle(
+        resolveCurrentEpisodeTitle(
+            playbackTitle = state.playback?.episodeTitle,
+            currentEpisodeId = state.currentEpisodeId,
+            episodes = state.episodes,
+        ),
+    )
 }
 
 @Composable
 private fun localizedEpisodeTitle(title: String): String {
-    val fallbackEpisodeNumber = Regex("""^Episode\s+(.+)$""", RegexOption.IGNORE_CASE)
-        .matchEntire(title.trim())
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.takeIf(String::isNotBlank)
+    val fallbackEpisodeNumber = fallbackEpisodeNumberFromTitle(title)
     return if (fallbackEpisodeNumber != null) {
         stringResource(R.string.watch_episode_number, fallbackEpisodeNumber)
     } else {
@@ -2655,8 +2546,6 @@ private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_TIMELINE_TRACK_HEIGHT = 4.dp
 private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
 private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp
-private val PLAYBACK_SPEEDS = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
-
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')
