@@ -159,6 +159,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
+import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
@@ -304,7 +306,7 @@ fun DetailsScreen(
     }
 
     val heroInfo = remember(currentAnime, localizedEpisodeWord) {
-        buildHeroInfo(currentAnime, localizedEpisodeWord)
+        resolveDetailsHeroInfo(currentAnime, localizedEpisodeWord)
     }
     val description = remember(currentAnime) {
         resolveAnimeDescription(currentAnime)
@@ -497,7 +499,7 @@ private fun DetailsStatusBarScrim(
 @Composable
 private fun DetailHeroSection(
     detailsState: DetailsUiState,
-    heroInfo: HeroInfo,
+    heroInfo: DetailsHeroInfo,
     description: String,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
@@ -873,7 +875,7 @@ private fun HeroRatingsLine(
 @Composable
 private fun DetailContentCard(
     anime: Anime,
-    heroInfo: HeroInfo,
+    heroInfo: DetailsHeroInfo,
     modifier: Modifier = Modifier,
 ) {
     val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
@@ -1304,61 +1306,6 @@ private fun FavoriteCircleButton(
     )
 }
 
-private data class WatchCtaState(
-    val label: String,
-    val secondaryLabel: String? = null,
-    val action: WatchPrimaryAction,
-)
-
-private enum class WatchPrimaryAction {
-    OpenEpisodes,
-    OpenPlayer,
-}
-
-@Composable
-private fun buildWatchCtaState(
-    progress: TitleWatchState?,
-    progressItems: List<EpisodeWatchProgress>,
-    selectedSource: WatchSource?,
-): WatchCtaState {
-    if (progress == null || selectedSource == null) {
-        return WatchCtaState(label = stringResource(R.string.details_watch), action = WatchPrimaryAction.OpenEpisodes)
-    }
-    val inProgressEpisode = progressItems
-        .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
-        .maxByOrNull(EpisodeWatchProgress::updatedAt)
-    if (inProgressEpisode != null) {
-        val remainingMinutes = ((inProgressEpisode.durationMs - inProgressEpisode.positionMs).coerceAtLeast(0L) / 60_000L)
-            .coerceAtLeast(1L)
-        return WatchCtaState(
-            label = stringResource(R.string.details_watch_continue_episode, formatEpisodeNumber(inProgressEpisode.episodeNumber)),
-            secondaryLabel = stringResource(R.string.details_watch_remaining, remainingMinutes),
-            action = WatchPrimaryAction.OpenPlayer,
-        )
-    }
-
-    val nextEpisodeNumber = resolveNextEpisodeNumber(
-        progressItems = progressItems,
-        episodeCount = selectedSource.episodeCount,
-    )
-    if (nextEpisodeNumber != null) {
-        return WatchCtaState(
-            label = stringResource(R.string.details_watch_continue_episode, formatEpisodeNumber(nextEpisodeNumber)),
-            action = WatchPrimaryAction.OpenEpisodes,
-        )
-    }
-
-    return WatchCtaState(
-        label = stringResource(R.string.details_watch_rewatch),
-        action = WatchPrimaryAction.OpenEpisodes,
-    )
-}
-
-private fun resolveNextEpisodeNumber(
-    progressItems: List<EpisodeWatchProgress>,
-    episodeCount: Int?,
-): Double? = org.akkirrai.hibiki.shared.player.resolveNextEpisodeNumber(progressItems, episodeCount)
-
 private fun findResumeWatchState(
     repository: WatchStateRepository,
     titleId: String,
@@ -1375,58 +1322,6 @@ private fun buildSourceSelectorLabel(
     val qualitySuffix = selectedSource?.qualityLabel?.let { " · $it" }.orEmpty()
     return "$title$qualitySuffix"
 }
-
-internal data class HeroInfo(
-    val type: String,
-    val releaseDate: String,
-    val episodes: String,
-    val status: String,
-    val studio: String,
-)
-
-private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo {
-    val parts = anime.subtitle
-        .split(Regex("\\s*[·|]\\s*"))
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-
-    val type = parts.getOrNull(0)?.uppercase().orEmpty().ifBlank { DEFAULT_TYPE }
-    val year = parts.getOrNull(1).orEmpty()
-
-    val rawEpisodes = anime.episodesLabel
-        .replace(Regex("\\bepisodes?\\b", RegexOption.IGNORE_CASE), localizedEpisodeWord)
-        .takeIf { it.isNotBlank() && it != UNKNOWN_VALUE }
-        .orEmpty()
-
-    val episodeCount = Regex("""\d+""")
-        .find(rawEpisodes)
-        ?.value
-        ?.toIntOrNull()
-
-    val episodes = rawEpisodes
-        .takeIf { episodeCount == null || episodeCount > 0 }
-        .orEmpty()
-
-    val status = anime.status.takeUnless { it.isBlank() || it == UNKNOWN_VALUE }.orEmpty()
-    return HeroInfo(
-        type = type,
-        releaseDate = anime.releaseDate
-            ?.takeIf(::isKnownReleaseDate)
-            ?: year.takeIf(::isKnownReleaseDate).orEmpty(),
-        episodes = episodes,
-        status = status,
-        studio = anime.studios.joinToString(", "),
-    )
-}
-
-private fun String.isKnownValue(): Boolean {
-    val normalized = trim()
-    return normalized.isNotEmpty() &&
-        !normalized.equals(UNKNOWN_VALUE, ignoreCase = true) &&
-        normalized != "0"
-}
-
-private fun isKnownReleaseDate(value: String): Boolean = value.isKnownValue()
 
 private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean {
     val values = listOf(status, episodesLabel).map { it.trim().lowercase(Locale.getDefault()) }
@@ -1576,9 +1471,6 @@ internal fun formatRelatedAnimeMetadata(
         ?.uppercase(Locale.ROOT)
     return listOfNotNull(releaseLabel, typeLabel).joinToString(" • ")
 }
-
-private const val DEFAULT_TYPE = "TV"
-private const val UNKNOWN_VALUE = "Unknown"
 
 private data class DetailsScreenSavedState(
     val anime: Anime,

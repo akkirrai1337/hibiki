@@ -86,6 +86,8 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.catalog.AnimeStatus
+import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
@@ -151,7 +153,7 @@ fun AnimeSearchFiltersSheet(
     val scope = rememberCoroutineScope()
     var pendingFilters by remember(initialFilters) { mutableStateOf(initialFilters) }
     var animeType by rememberSaveable(initialFilters) {
-        mutableStateOf(FilterAnimeType.fromAlias(initialFilters.typeAlias))
+        mutableStateOf(AnimeTypeAlias.fromAlias(initialFilters.typeAlias))
     }
     var includedStatuses by remember(initialFilters) {
         mutableStateOf(setOfNotNull(initialFilters.statusAlias))
@@ -199,7 +201,7 @@ fun AnimeSearchFiltersSheet(
             else -> {
                 val catalog = filterCatalog
                 val capabilities = catalog.capabilities
-                val typeEntries = FilterAnimeType.entries.filter { type ->
+                val typeEntries = AnimeTypeAlias.entries.filter { type ->
                     catalog.typeOptions.any { it.id.equals(type.alias, ignoreCase = true) }
                 }
                 Column(
@@ -220,8 +222,8 @@ fun AnimeSearchFiltersSheet(
                             entries = typeEntries,
                             selected = animeType,
                             onSelected = { animeType = it },
-                            icon = { ImageVector.vectorResource(it.iconRes) },
-                            text = { it.label },
+                            icon = { ImageVector.vectorResource(typeIcon(it)) },
+                            text = { typeLabel(it) },
                         )
                     }
 
@@ -712,31 +714,23 @@ private fun CollapsibleRow(
 
 @Composable
 private fun statusIcon(alias: String): ImageVector {
-    val drawable = when (alias.trim().lowercase()) {
-        "released", "finished", "completed" -> R.drawable.animite_finished
-        "ongoing", "releasing", "airing" -> R.drawable.animite_releasing
-        "announced", "not_yet_released", "not-yet-released" -> R.drawable.animite_not_yet_released
-        "cancelled", "canceled" -> R.drawable.animite_cancelled
-        "hiatus", "paused" -> R.drawable.animite_hiatus
-        else -> R.drawable.animite_finished
+    val drawable = when (AnimeStatus.fromAlias(alias)) {
+        AnimeStatus.Finished -> R.drawable.animite_finished
+        AnimeStatus.Releasing -> R.drawable.animite_releasing
+        AnimeStatus.NotYetReleased -> R.drawable.animite_not_yet_released
+        AnimeStatus.Cancelled -> R.drawable.animite_cancelled
+        AnimeStatus.Hiatus -> R.drawable.animite_hiatus
     }
     return ImageVector.vectorResource(drawable)
 }
 
-private enum class FilterAnimeType(
-    val alias: String,
-    val label: String,
-    val iconRes: Int,
-) {
-    Tv("tv", "TV", R.drawable.animite_tv),
-    Ona("ona", "ONA", R.drawable.animite_ona),
-    Ova("ova", "OVA", R.drawable.animite_ova),
-    Movie("movie", "MOVIE", R.drawable.animite_movie);
+private fun typeLabel(type: AnimeTypeAlias): String = type.alias.uppercase()
 
-    companion object {
-        fun fromAlias(alias: String?): FilterAnimeType? = entries
-            .firstOrNull { it.alias == alias?.trim()?.lowercase() }
-    }
+private fun typeIcon(type: AnimeTypeAlias): Int = when (type) {
+    AnimeTypeAlias.Tv -> R.drawable.animite_tv
+    AnimeTypeAlias.Ona -> R.drawable.animite_ona
+    AnimeTypeAlias.Ova -> R.drawable.animite_ova
+    AnimeTypeAlias.Movie -> R.drawable.animite_movie
 }
 
 private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)

@@ -36,7 +36,7 @@ import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
 fun SearchScreen(
@@ -79,7 +79,12 @@ fun SearchScreen(
         appSearchStateVerticalListContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
-            metaText = { anime -> buildSearchMeta(anime, announcementLabel, movieLabel) },
+            metaText = { anime ->
+                anime.buildCardMeta(
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
+                )
+            },
             onLoadMore = viewModel::loadMore,
             onRetrySearch = viewModel::search,
             loadMoreLabel = loadMoreLabel,
@@ -127,15 +132,4 @@ fun SearchScreen(
             },
         )
     }
-}
-
-private fun buildSearchMeta(
-    anime: Anime,
-    announcementLabel: String,
-    movieLabel: String,
-): String {
-    return anime.buildCardMeta(
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
-    )
 }

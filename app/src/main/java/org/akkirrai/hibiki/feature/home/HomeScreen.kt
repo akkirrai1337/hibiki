@@ -124,7 +124,7 @@ import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
-import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

@@ -3,10 +3,11 @@ package org.akkirrai.hibiki.feature.details
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 
 internal data class DetailsUiModel(
     val anime: Anime,
-    val hero: HeroInfo,
+    val hero: DetailsHeroInfo,
     val description: String,
     val sections: List<DetailsSection>,
 )
@@ -29,7 +30,7 @@ internal data class SimilarSection(
 
 internal fun buildDetailsUiModel(
     anime: Anime,
-    hero: HeroInfo,
+    hero: DetailsHeroInfo,
     description: String,
     contentFeatures: Set<SourceCapability>,
 ): DetailsUiModel {
