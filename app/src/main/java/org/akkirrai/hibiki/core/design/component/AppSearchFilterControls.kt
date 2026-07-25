@@ -239,34 +239,39 @@ private fun <T> AppSingleListThreeStateFlowRow(
     val isDarkTheme = isSystemInDarkTheme()
     val includedColor = if (isDarkTheme) Color(0xFF80DF87) else Color(0xFF218739)
     val excludedColor = if (isDarkTheme) Color(0xFFFF9999) else Color(0xFFC62828)
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        options.forEach { option ->
-            val optionId = id(option)
-            val isIncluded = optionId in included
-            val isExcluded = allowExclusion && optionId in excluded
-            val color = when {
-                isIncluded -> includedColor
-                isExcluded -> excludedColor
-                else -> MaterialTheme.colorScheme.tertiary
-            }
-            val prefix = when {
-                isIncluded -> "+ "
-                isExcluded -> "− "
-                else -> ""
-            }
-            AppFilterChip(
-                color = color,
-                icon = optionIcon?.invoke(option),
-                text = prefix + text(option),
-            ) {
-                when {
-                    isIncluded -> onChange(included - optionId, if (allowExclusion) excluded + optionId else emptySet())
-                    isExcluded -> onChange(included, excluded - optionId)
-                    else -> onChange(included + optionId, excluded - optionId)
+    AnimatedContent(
+        targetState = Triple(options, included, excluded),
+        label = "single_list_three_state_filter",
+    ) { (currentOptions, currentIncluded, currentExcluded) ->
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            currentOptions.forEach { option ->
+                val optionId = id(option)
+                val isIncluded = optionId in currentIncluded
+                val isExcluded = allowExclusion && optionId in currentExcluded
+                val color = when {
+                    isIncluded -> includedColor
+                    isExcluded -> excludedColor
+                    else -> MaterialTheme.colorScheme.tertiary
+                }
+                val prefix = when {
+                    isIncluded -> "+ "
+                    isExcluded -> "− "
+                    else -> ""
+                }
+                AppFilterChip(
+                    color = color,
+                    icon = optionIcon?.invoke(option),
+                    text = prefix + text(option),
+                ) {
+                    when {
+                        isIncluded -> onChange(included - optionId, if (allowExclusion) excluded + optionId else emptySet())
+                        isExcluded -> onChange(included, excluded - optionId)
+                        else -> onChange(included + optionId, excluded - optionId)
+                    }
                 }
             }
         }
