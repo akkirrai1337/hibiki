@@ -26,6 +26,7 @@ class DetailsUiModelTest {
         )
 
         assertEquals(listOf("related", "similar"), model.sections.map(DetailsSection::key))
+        assertEquals("title", (model.sections.first() as RelatedSection).items.first().id)
     }
 
     @Test

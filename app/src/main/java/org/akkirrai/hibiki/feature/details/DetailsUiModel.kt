@@ -35,9 +35,13 @@ internal fun buildDetailsUiModel(
     contentFeatures: Set<SourceCapability>,
 ): DetailsUiModel {
     val relatedItems = if (SourceCapability.RELATED_TITLES in contentFeatures) {
-        (anime.franchiseAnime + anime.relatedAnime)
-            .filterNot { it.id == anime.id }
+        val sourceRelatedItems = (anime.franchiseAnime + anime.relatedAnime)
             .distinctBy(RelatedAnime::id)
+        if (sourceRelatedItems.isNotEmpty() && sourceRelatedItems.none { it.id == anime.id }) {
+            listOf(anime.toRelatedAnime()) + sourceRelatedItems
+        } else {
+            sourceRelatedItems
+        }
     } else {
         emptyList()
     }
@@ -69,3 +73,11 @@ internal fun buildDetailsUiModel(
         sections = sections,
     )
 }
+
+private fun Anime.toRelatedAnime(): RelatedAnime = RelatedAnime(
+    id = id,
+    title = title,
+    posterUrl = posterUrl,
+    posterFallbackUrl = posterFallbackUrl,
+    status = status,
+)
