@@ -321,63 +321,6 @@ private fun LocalAvatar(
 }
 
 @Composable
-private fun LocalAvatarLegacy(
-    ratio: Float,
-    avatarUri: String?,
-    isEditing: Boolean,
-    onEditClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (isEditing) 0.38f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "avatar_scrim",
-    )
-    Box(
-        modifier = modifier.size(70.dp).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) },
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), shape = CircleShape) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)),
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (avatarUri.isNullOrBlank()) {
-                    Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                } else {
-                    AsyncImage(
-                        model = avatarUri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha)))
-            }
-        }
-        if (isEditing) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(32.dp)
-                    .clickable(onClick = onEditClick),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = stringResource(R.string.local_profile_change_avatar),
-                    modifier = Modifier.padding(7.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
     org.akkirrai.hibiki.shared.profile.ProfileNameEditor(
         label = stringResource(R.string.local_profile_name),

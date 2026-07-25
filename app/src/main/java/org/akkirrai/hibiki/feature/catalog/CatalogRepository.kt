@@ -85,7 +85,7 @@ class CatalogRepository(
             page = query.page,
             filters = query.filters,
             query = query.text,
-            sort = query.filters.sortAlias.toCatalogSort(),
+            sort = catalogSortFromAlias(query.filters.sortAlias),
         )
     }
 
@@ -98,8 +98,6 @@ class CatalogRepository(
         const val CATALOG_PAGE_SIZE = 50
     }
 }
-
-private fun String.toCatalogSort(): CatalogSort = catalogSortFromAlias(this)
 
 private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalog {
     val sortAliases = capabilities.supportedSorts

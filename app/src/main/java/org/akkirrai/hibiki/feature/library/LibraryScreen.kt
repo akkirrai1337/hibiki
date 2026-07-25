@@ -95,8 +95,8 @@ import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.buildLibraryMeta
-import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.shared.model.buildLibraryMeta
+import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
 

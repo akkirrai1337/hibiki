@@ -12,18 +12,10 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 typealias LanguageMode = org.akkirrai.hibiki.shared.settings.LanguageMode
 
-enum class ThemeMode {
-    SYSTEM,
-    LIGHT,
-    DARK
-}
+typealias ThemeMode = org.akkirrai.hibiki.shared.settings.ThemeMode
 
 
-enum class NotificationPermissionState {
-    NOT_ASKED,
-    GRANTED,
-    DENIED,
-}
+typealias NotificationPermissionState = org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,

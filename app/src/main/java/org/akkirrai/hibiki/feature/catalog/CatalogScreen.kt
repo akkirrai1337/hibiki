@@ -99,6 +99,7 @@ import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
+import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
@@ -119,7 +120,7 @@ fun CatalogScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
-    val selectedSort = state.filters.sortAlias.toCatalogSort()
+    val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     var isFilterSheetOpen by remember { mutableStateOf(false) }
@@ -563,8 +564,8 @@ class CatalogViewModel(
     fun updateQuery(query: String) = presenter.setQuery(query)
 
     fun selectSort(sort: CatalogSort) {
-        if (uiState.value.filters.sortAlias.toCatalogSort() == sort) return
-        presenter.setFilters(presenter.state.value.filters.copy(sortAlias = sort.alias))
+        if (catalogSortFromAlias(uiState.value.filters.sortAlias) == sort) return
+        presenter.setFilters(presenter.state.value.filters.copy(sortAlias = sort.toAlias()))
         load()
     }
 
@@ -647,15 +648,6 @@ private val CatalogSort.labelRes: Int
         CatalogSort.Popular -> R.string.catalog_sort_popular
         CatalogSort.Updated -> R.string.catalog_sort_updated
     }
-
-private val CatalogSort.alias: String
-    get() = when (this) {
-        CatalogSort.Alphabetical -> "alphabetical"
-        CatalogSort.Popular -> "popular"
-        CatalogSort.Updated -> "updated"
-    }
-
-private fun String.toCatalogSort(): CatalogSort = catalogSortFromAlias(this)
 
 private val CatalogSort.searchSort: AnimeSearchSort
     get() = when (this) {

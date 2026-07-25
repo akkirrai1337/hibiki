@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.feature.profile
 
+import org.akkirrai.hibiki.shared.profile.normalizePosterUrl
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

@@ -11,3 +11,9 @@ fun catalogSortFromAlias(alias: String): CatalogSort = when (alias.lowercase()) 
     "updated", "latest", "latest_releases" -> CatalogSort.Updated
     else -> CatalogSort.Popular
 }
+
+fun CatalogSort.toAlias(): String = when (this) {
+    CatalogSort.Alphabetical -> "alphabetical"
+    CatalogSort.Popular -> "popular"
+    CatalogSort.Updated -> "updated"
+}

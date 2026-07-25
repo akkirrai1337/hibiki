@@ -11,6 +11,9 @@ import java.util.Locale
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
+import org.akkirrai.hibiki.shared.profile.primaryLibraryCategory
+import org.akkirrai.hibiki.shared.profile.formatProfileRating
+import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -44,11 +47,11 @@ internal fun buildProfileSnapshot(
         .filter { it.addedAt != null && it.anime.title.isNotBlank() }
         .sortedByDescending { it.addedAt }
         .map { item ->
-            val category = item.categories.primaryCategory()
+            val category = item.categories.primaryLibraryCategory()
             RecentLibraryItem(
                 title = item.anime.title,
                 posterUrl = item.anime.posterUrl,
-                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatRating),
+                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatProfileRating),
                 statusLabel = resources.getString(category.labelResId),
                 dateLabel = formatEpochDateShort(resources, requireNotNull(item.addedAt)),
                 color = category.color(),
@@ -66,7 +69,7 @@ internal fun buildProfileSnapshot(
             RecentLibraryItem(
                 title = item.anime.title,
                 posterUrl = item.anime.posterUrl,
-                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatRating),
+                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatProfileRating),
                 statusLabel = resources.getString(LibraryCategory.Favorite.labelResId),
                 dateLabel = item.addedAt?.let { formatEpochDateShort(resources, it) }.orEmpty(),
                 color = LibraryCategory.Favorite.color(),
@@ -98,9 +101,6 @@ internal fun buildProfileSnapshot(
     )
 }
 
-private fun Set<LibraryCategory>.primaryCategory(): LibraryCategory =
-    LibraryCategory.entries.firstOrNull { it != LibraryCategory.Saved && it in this } ?: LibraryCategory.Saved
-
 private fun LibraryCategory.color(): Color = when (this) {
     LibraryCategory.Watching -> Color(0xFF3DDC84)
     LibraryCategory.Planned -> Color(0xFF5DA9FF)
@@ -109,10 +109,6 @@ private fun LibraryCategory.color(): Color = when (this) {
     LibraryCategory.OnHold -> Color(0xFFC593FF)
     LibraryCategory.Favorite -> Color(0xFFFFB86A)
     LibraryCategory.Saved -> Color(0xFF9EA4B2)
-}
-
-internal fun normalizePosterUrl(rawUrl: String?): String? = rawUrl?.trim()?.takeIf {
-    it.startsWith("http://", true) || it.startsWith("https://", true)
 }
 
 private fun epochToLocalDate(value: Long): LocalDate {
@@ -138,11 +134,8 @@ private fun formatEpochDateShort(resources: Resources, value: Long): String {
 
 internal fun formatDurationLabel(resources: Resources, durationMs: Long): String = resources.getString(
     R.string.local_profile_duration_hours_short,
-    if (durationMs <= 0) "0" else String.format(Locale.US, "%.1f", durationMs / 3_600_000.0),
+    formatDurationHours(durationMs),
 )
-
-private fun formatRating(value: Double): String =
-    if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.2f", value)
 
 internal data class LocalProfileSnapshot(
     val watchTimeLabel: String,
