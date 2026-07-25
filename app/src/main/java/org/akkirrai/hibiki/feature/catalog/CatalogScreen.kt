@@ -131,6 +131,11 @@ fun CatalogScreen(
     val availableSorts = remember(legacyFilterCatalog?.capabilities) {
         legacyFilterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
+    val hasCatalogFilters = legacyFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
+
+    LaunchedEffect(hasCatalogFilters) {
+        if (!hasCatalogFilters) isFilterSheetOpen = false
+    }
 
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
@@ -273,6 +278,7 @@ fun CatalogScreen(
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
                 onFilterClick = { isFilterSheetOpen = true },
+                showFilterButton = hasCatalogFilters,
                 modifier = Modifier.zIndex(1f),
             )
             val sortOffsetY by animateDpAsState(

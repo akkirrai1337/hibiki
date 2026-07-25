@@ -34,6 +34,7 @@ fun AppSearchTopBar(
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
     onFilterClick: () -> Unit = {},
+    showFilterButton: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     org.akkirrai.hibiki.shared.design.component.AppSearchTopBar(
@@ -47,6 +48,7 @@ fun AppSearchTopBar(
         filterIcon = Icons.Outlined.FilterList,
         clearIcon = Icons.Outlined.Close,
         onFilterClick = onFilterClick,
+        showFilterButton = showFilterButton,
         modifier = modifier,
     )
 }

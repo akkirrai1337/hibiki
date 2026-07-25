@@ -35,6 +35,7 @@ fun AppSearchTopBar(
     filterIcon: ImageVector,
     clearIcon: ImageVector,
     onFilterClick: () -> Unit = {},
+    showFilterButton: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -89,16 +90,18 @@ fun AppSearchTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                IconButton(
-                    onClick = onFilterClick,
-                    modifier = Modifier.size(42.dp),
-                ) {
-                    Icon(
-                        imageVector = filterIcon,
-                        contentDescription = filterContentDescription,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (showFilterButton) {
+                    IconButton(
+                        onClick = onFilterClick,
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Icon(
+                            imageVector = filterIcon,
+                            contentDescription = filterContentDescription,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 if (query.isNotEmpty()) {
                     IconButton(
