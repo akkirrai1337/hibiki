@@ -58,9 +58,11 @@ class HomeViewModel(
     private var recentUpdatesLoadMoreJob: Job? = null
     private val descriptionJobs = ConcurrentHashMap.newKeySet<Job>()
     private var sourceGeneration = 0L
+    private var trendingLoadMoreCount = 0
 
     fun refresh() {
         homeLoadJob?.cancel()
+        trendingLoadMoreCount = 0
         val generation = sourceGeneration
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
@@ -297,7 +299,12 @@ class HomeViewModel(
 
     fun loadMoreTrending() {
         val current = uiState.value
-        if (current.isLoading || current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
+        if (
+            current.isLoading ||
+            current.isTrendingLoadingMore ||
+            !current.canLoadMoreTrending ||
+            trendingLoadMoreCount >= MAX_TRENDING_LOAD_MORE_COUNT
+        ) return
         val generation = sourceGeneration
         trendingLoadMoreJob?.cancel()
         trendingLoadMoreJob = viewModelScope.launch(Dispatchers.IO) {
@@ -307,6 +314,7 @@ class HomeViewModel(
                 repository.loadTrendingPage(offset = current.trendingNextOffset, limit = TRENDING_PAGE_SIZE)
             }.getOrElse { emptyList() }
             if (generation != sourceGeneration) return@launch
+            trendingLoadMoreCount++
             presenter.update { state ->
                 state.copy(
                     trending = mergeAnimePreservingOrder(state.trending, page),
@@ -374,6 +382,7 @@ class HomeViewModel(
 
     fun load() {
         homeLoadJob?.cancel()
+        trendingLoadMoreCount = 0
         val generation = sourceGeneration
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
@@ -475,6 +484,7 @@ class HomeViewModel(
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
         const val TRENDING_PAGE_SIZE = 20
+        const val MAX_TRENDING_LOAD_MORE_COUNT = 3
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
         const val RANDOM_HISTORY_SIZE = 20
