@@ -62,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -219,12 +218,7 @@ private fun LibrarySearchFiltersSheet(
     ) { sheetContentModifier ->
         Column(
             modifier = sheetContentModifier
-                .background(
-                    Brush.verticalGradient(
-                        0f to MaterialTheme.colorScheme.surfaceContainerHighest,
-                        1f to MaterialTheme.colorScheme.background,
-                    )
-                )
+                .background(MaterialTheme.colorScheme.background)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp),

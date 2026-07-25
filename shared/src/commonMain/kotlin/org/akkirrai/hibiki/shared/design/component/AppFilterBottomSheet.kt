@@ -32,7 +32,7 @@ fun AppFilterBottomSheet(
         sheetState = sheetState,
         modifier = modifier.fillMaxHeight(),
         shape = shape,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.background,
         scrimColor = Color.Black.copy(alpha = 0.56f),
         dragHandleContent = { expanded ->
             val handleColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -56,7 +56,7 @@ fun AppFilterBottomSheet(
     ) {
         content(
             Modifier
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         )
