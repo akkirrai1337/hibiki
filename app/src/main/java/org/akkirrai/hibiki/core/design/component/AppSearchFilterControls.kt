@@ -83,6 +83,7 @@ fun <T> AppConnectedToggleFilter(
     onSelected: (T?) -> Unit,
     icon: @Composable (T) -> ImageVector,
     text: @Composable (T) -> String,
+    allowClearSelection: Boolean = false,
 ) {
     AppCollapsibleFilterSection(title = title, onLongClick = { onSelected(null) }) {
         Row(
@@ -96,6 +97,7 @@ fun <T> AppConnectedToggleFilter(
                     isFirst = index == 0,
                     isLast = index == entries.lastIndex,
                     onSelected = onSelected,
+                    allowClearSelection = allowClearSelection,
                     icon = icon,
                     text = text,
                     modifier = Modifier.weight(1f),
@@ -112,6 +114,7 @@ private fun <T> AppConnectedToggleFilterItem(
     isFirst: Boolean,
     isLast: Boolean,
     onSelected: (T?) -> Unit,
+    allowClearSelection: Boolean,
     icon: @Composable (T) -> ImageVector,
     text: @Composable (T) -> String,
     modifier: Modifier = Modifier,
@@ -130,8 +133,8 @@ private fun <T> AppConnectedToggleFilterItem(
         if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "filter_content",
     )
-    Surface(
-        onClick = { onSelected(entry) },
+        Surface(
+        onClick = { onSelected(if (allowClearSelection && checked) null else entry) },
         shape = RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart),
         color = containerColor,
         contentColor = contentColor,

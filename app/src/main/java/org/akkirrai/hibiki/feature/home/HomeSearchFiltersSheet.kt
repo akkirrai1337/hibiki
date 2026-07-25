@@ -219,6 +219,7 @@ fun AnimeSearchFiltersSheet(
                             entries = typeEntries,
                             selected = animeType,
                             onSelected = { animeType = it },
+                            allowClearSelection = true,
                             icon = { ImageVector.vectorResource(typeIcon(it)) },
                             text = { typeLabel(it) },
                         )
