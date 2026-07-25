@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -89,6 +90,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
+import kotlin.math.roundToInt
 
 @OptIn(
     ExperimentalLayoutApi::class,
@@ -157,10 +159,11 @@ fun AnimeSearchFiltersSheet(
     var includedStatuses by remember(initialFilters) {
         mutableStateOf(setOfNotNull(initialFilters.statusAlias))
     }
-    var year by rememberSaveable(initialFilters) {
+    var yearRange by remember(initialFilters) {
         mutableStateOf(
-            initialFilters.yearFrom
-                ?.takeIf { it == initialFilters.yearTo }
+            initialFilters.yearFrom?.let { from ->
+                IntRange(from, initialFilters.yearTo ?: from)
+            } ?: FILTER_YEAR_RANGE
         )
     }
 
@@ -242,14 +245,15 @@ fun AnimeSearchFiltersSheet(
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
                             singleList = true,
                             optionSortKey = { it.title },
+                            groupByFirstLetter = true,
                         )
                     }
 
                     if (capabilities.supports(AnimeCatalogFilter.YEAR_RANGE)) {
                         YearFilter(
-                            year = year,
+                            selectedRange = yearRange,
                             yearRange = FILTER_YEAR_RANGE,
-                            onYearChange = { year = it },
+                            onRangeChange = { yearRange = it },
                         )
                     }
 
@@ -279,7 +283,7 @@ fun AnimeSearchFiltersSheet(
                             onClick = {
                                 pendingFilters = AnimeSearchFilters()
                                 animeType = null
-                                year = null
+                                yearRange = FILTER_YEAR_RANGE
                                 includedStatuses = emptySet()
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -313,10 +317,10 @@ fun AnimeSearchFiltersSheet(
                                         excludedGenreAliases = pendingFilters.excludedGenreAliases
                                             .takeIf { capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES) }
                                             .orEmpty(),
-                                        yearFrom = year
-                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) },
-                                        yearTo = year
-                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) },
+                                        yearFrom = yearRange.first
+                                            .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != FILTER_YEAR_RANGE },
+                                        yearTo = yearRange.last
+                                            .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != FILTER_YEAR_RANGE },
                                     )
                                 )
                                 scope.launch {
@@ -361,13 +365,16 @@ private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
 
 @Composable
 private fun YearFilter(
-    year: Int?,
+    selectedRange: IntRange,
     yearRange: IntRange,
-    onYearChange: (Int?) -> Unit,
+    onRangeChange: (IntRange) -> Unit,
 ) {
+    var sliderPosition by remember(selectedRange) {
+        mutableStateOf(selectedRange.first.toFloat()..selectedRange.last.toFloat())
+    }
     CollapsibleRow(
         title = stringResource(R.string.search_filters_year),
-        onLongClick = { onYearChange(null) },
+        onLongClick = { onRangeChange(yearRange) },
     ) {
         Column(
             modifier = Modifier
@@ -375,19 +382,35 @@ private fun YearFilter(
                 .padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AnimatedVisibility(year != null) {
-                Column {
-                    FilterYearPaginator(
-                        page = year,
-                        pageRange = yearRange,
-                        onPageChanged = onYearChange,
+            if (selectedRange == yearRange) {
+                Text(
+                    text = stringResource(R.string.search_filters_year_all),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "${stringResource(R.string.search_filters_year_from)} ${selectedRange.first}",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
                     )
-                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = "${stringResource(R.string.search_filters_year_to)} ${selectedRange.last}",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
                     text = yearRange.first.toString(),
@@ -395,15 +418,23 @@ private fun YearFilter(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Slider(
-                    value = (year ?: yearRange.first).toFloat(),
-                    onValueChange = { onYearChange(it.toInt()) },
+                RangeSlider(
+                    value = sliderPosition,
+                    onValueChange = { range ->
+                        sliderPosition = range
+                    },
+                    onValueChangeFinished = {
+                        val start = sliderPosition.start.roundToInt()
+                        val end = sliderPosition.endInclusive.roundToInt()
+                        onRangeChange(start..end)
+                    },
                     colors = SliderDefaults.colors(
-                        activeTrackColor = SliderDefaults.colors().inactiveTrackColor,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         inactiveTickColor = Color.Transparent,
                         activeTickColor = Color.Transparent,
                     ),
-                    steps = yearRange.count(),
+                    steps = (yearRange.count() - 2).coerceAtLeast(0),
                     valueRange = yearRange.first.toFloat()..yearRange.last.toFloat(),
                     modifier = Modifier.weight(1f),
                 )

@@ -95,6 +95,7 @@
     <string name="search_filters_year">Year</string>
     <string name="search_filters_year_from">From</string>
     <string name="search_filters_year_to">To</string>
+    <string name="search_filters_year_all">All years</string>
     <string name="search_filters_genres">Genres</string>
     <string name="search_filters_excluded_genres">Exclude genres</string>
     <string name="search_filters_include">Include</string>

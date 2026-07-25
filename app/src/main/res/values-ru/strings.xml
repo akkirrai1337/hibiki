@@ -87,6 +87,7 @@
     <string name="search_filters_year">Год</string>
     <string name="search_filters_year_from">От</string>
     <string name="search_filters_year_to">До</string>
+    <string name="search_filters_year_all">Все годы</string>
     <string name="search_filters_genres">Жанры</string>
     <string name="search_filters_excluded_genres">Исключить жанры</string>
     <string name="search_filters_include">Включить</string>

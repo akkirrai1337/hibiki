@@ -171,6 +171,7 @@ fun <T> AppThreeStateChipFilter(
     allowExclusion: Boolean = true,
     singleList: Boolean = false,
     optionSortKey: ((T) -> String)? = null,
+    groupByFirstLetter: Boolean = false,
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
     AppCollapsibleFilterSection(title = title, onLongClick = { onChange(emptySet(), emptySet()) }) {
@@ -184,16 +185,51 @@ fun <T> AppThreeStateChipFilter(
                 } else {
                     sortedOptions
                 }
-                AppSingleListThreeStateFlowRow(
-                    options = visibleOptions,
-                    included = included,
-                    excluded = excluded,
-                    id = id,
-                    text = text,
-                    optionIcon = optionIcon,
-                    onChange = onChange,
-                    allowExclusion = allowExclusion,
-                )
+                if (groupByFirstLetter) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        visibleOptions
+                            .groupBy { option ->
+                                optionSortKey?.invoke(option)
+                                    ?.trim()
+                                    ?.firstOrNull()
+                                    ?.uppercase()
+                                    ?.takeIf(String::isNotBlank)
+                                    ?: "#"
+                            }
+                            .toSortedMap()
+                            .forEach { (letter, groupOptions) ->
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = letter,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                    )
+                                    AppSingleListThreeStateFlowRow(
+                                        options = groupOptions,
+                                        included = included,
+                                        excluded = excluded,
+                                        id = id,
+                                        text = text,
+                                        optionIcon = optionIcon,
+                                        onChange = onChange,
+                                        allowExclusion = allowExclusion,
+                                    )
+                                }
+                            }
+                    }
+                } else {
+                    AppSingleListThreeStateFlowRow(
+                        options = visibleOptions,
+                        included = included,
+                        excluded = excluded,
+                        id = id,
+                        text = text,
+                        optionIcon = optionIcon,
+                        onChange = onChange,
+                        allowExclusion = allowExclusion,
+                    )
+                }
                 if (maxCollapsedItems != null && sortedOptions.size > maxCollapsedItems) {
                     IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
                         Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))
