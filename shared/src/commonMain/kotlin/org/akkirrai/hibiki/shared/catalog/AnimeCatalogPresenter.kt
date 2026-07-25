@@ -124,7 +124,7 @@ class AnimeCatalogPresenter(
                 )
                 _state.update {
                     it.copy(
-                        items = result.items,
+                        items = preserveLoadedDescriptions(it.items, result.items),
                         page = result.page,
                         canLoadMore = result.canLoadMore,
                         isLoading = false,
@@ -198,5 +198,26 @@ class AnimeCatalogPresenter(
 
     private companion object {
         const val DEFAULT_PAGE_SIZE = 20
+    }
+
+    private fun preserveLoadedDescriptions(
+        previousItems: List<Anime>,
+        updatedItems: List<Anime>,
+    ): List<Anime> {
+        val descriptions = previousItems
+            .mapNotNull { anime ->
+                anime.description
+                    ?.takeIf(String::isNotBlank)
+                    ?.let { description -> anime.id to description }
+            }
+            .toMap()
+
+        return updatedItems.map { anime ->
+            if (anime.description.isNullOrBlank()) {
+                descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
+            } else {
+                anime
+            }
+        }
     }
 }
