@@ -325,6 +325,10 @@ object AppLogger {
 
     private fun sanitize(value: String): String {
         return value
+            // Remove URL query parameters, which may contain signed links or credentials.
+            .replace(Regex("""(?i)(https?://[^\s<>\"']+)\?[^\s<>\"']*"""), "$1?<redacted>")
+            // Do not export user searches, filters, title identifiers, or local paths.
+            .replace(Regex("""(?i)(query|searchQuery|filters|request|id|titleId|episodeId|animeId|fallback\.title|streamUrl|path|uri|directory)\s*[:=]\s*[^,;)]*"""), "$1=<redacted>")
             .replace(Regex("""(?i)(authorization[:=]\s*)([^\s,;]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)(set-cookie[:=]\s*[^=]+=)([^;,\s]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)(yummy_token=)([^;,\s]+)"""), "$1<redacted>")
