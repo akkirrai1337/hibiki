@@ -128,7 +128,6 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.details.isNullOrZero
 import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
-import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber as resolveNextEpisodeNumberFromLabel
 import org.akkirrai.hibiki.shared.model.toAnime
 import org.akkirrai.hibiki.shared.player.isWatchedToEnd
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
@@ -161,6 +160,11 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.details.isOngoingStatus
+import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
+import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
+import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import com.materialkolor.PaletteStyle
 import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
@@ -1323,13 +1327,6 @@ private fun buildSourceSelectorLabel(
     return "$title$qualitySuffix"
 }
 
-private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean {
-    val values = listOf(status, episodesLabel).map { it.trim().lowercase(Locale.getDefault()) }
-    return values.any { value ->
-        value == "анонс" || value == "announcement" || value == "announced" || value == "anons"
-    }
-}
-
 @Composable
 private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
     val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
@@ -1427,49 +1424,6 @@ private suspend fun extractTitleSeedColor(
             )?.rgb
     }
     return null
-}
-
-internal fun String.toAbsoluteImageUrl(): String? {
-    val value = trim().trim('"').replace("\\/", "/").takeIf(String::isNotBlank) ?: return null
-    return when {
-        value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true) -> value
-        value.startsWith("//") -> "https:$value"
-        else -> null
-    }
-}
-
-internal fun isOngoingStatus(status: String): Boolean {
-    val normalized = status.trim().lowercase(Locale.ROOT)
-    return normalized.contains("ongoing") ||
-        normalized.contains("airing") ||
-        normalized.contains("releasing") ||
-        normalized.contains("онгоинг") ||
-        normalized.contains("онґоінг") ||
-        normalized.contains("выходит") ||
-        normalized.contains("триває")
-}
-
-internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
-    return resolveNextEpisodeNumberFromLabel(episodesLabel)
-}
-
-internal fun formatRelatedAnimeMetadata(
-    year: Int?,
-    type: String?,
-    status: String? = null,
-    announcementLabel: String = "announcement",
-): String {
-    val releaseLabel = year
-        ?.takeIf { it > 0 }
-        ?.toString()
-        ?: announcementLabel.takeIf { isAnnouncementStatus(status.orEmpty()) }
-    val typeLabel = type
-        ?.trim()
-        ?.takeIf(String::isNotBlank)
-        ?.replace('_', ' ')
-        ?.replace('-', ' ')
-        ?.uppercase(Locale.ROOT)
-    return listOfNotNull(releaseLabel, typeLabel).joinToString(" • ")
 }
 
 private data class DetailsScreenSavedState(

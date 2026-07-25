@@ -66,12 +66,7 @@ import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
-
-private enum class OnboardingStep {
-    WELCOME,
-    SOURCE,
-    NOTIFICATIONS,
-}
+import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
 
 @Composable
 fun FirstLaunchOnboarding(

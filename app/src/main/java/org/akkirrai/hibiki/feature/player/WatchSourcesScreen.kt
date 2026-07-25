@@ -139,38 +139,3 @@ private fun WatchSourceRow(
         onClick = onClick,
     )
 }
-
-@Composable
-private fun WatchSourceRowLegacy(
-    source: WatchSource,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = source.title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Medium
-        )
-        source.episodeCount?.let { count ->
-            Text(
-                text = "· $count ${stringResource(R.string.watch_episodes_short)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.58f),
-                maxLines = 1
-            )
-        }
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-}
-

@@ -66,6 +66,10 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
+import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
+import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
+import org.akkirrai.hibiki.shared.player.DownloadStateIcon as WatchDownloadStateIcon
+import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadProgressBadge
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -282,77 +286,6 @@ private fun EpisodeRow(
 }
 
 @Composable
-private fun EpisodeRowLegacy(
-    episode: WatchEpisode,
-    progress: EpisodeWatchProgress?,
-    status: EpisodeProgressStatus,
-    downloadState: OfflineEpisodeDownloadState,
-    showDownloadControls: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onRemoveClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(
-                horizontal = UiDimens.ScreenPadding,
-                vertical = 10.dp,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(
-                if (status == EpisodeProgressStatus.InProgress) 4.dp else 6.dp
-            )
-        ) {
-            Text(
-                text = buildEpisodeHeadline(episode, progress, status),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            val visibleDownloadState = if (
-                downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
-            ) {
-                OfflineEpisodeDownloadState.NotDownloaded
-            } else {
-                downloadState
-            }
-            val subtitle = buildEpisodeSubtitle(visibleDownloadState)
-            if (subtitle.isNotBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        if (showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed) {
-            EpisodeDownloadAction(
-                state = downloadState,
-                controlsEnabled = showDownloadControls,
-                onDownloadClick = onDownloadClick,
-                onPauseClick = onPauseClick,
-                onResumeClick = onResumeClick,
-                onRemoveClick = onRemoveClick,
-            )
-        }
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-}
-
-@Composable
 private fun EpisodeDownloadAction(
     state: OfflineEpisodeDownloadState,
     controlsEnabled: Boolean,
@@ -471,7 +404,7 @@ private fun buildEpisodeHeadline(
                     fontSize = MaterialTheme.typography.bodySmall.fontSize,
                 )
             ) {
-                append(" • ${formatDuration(progress.positionMs)} / ${formatDuration(progress.durationMs)}")
+                append(" • ${formatEpisodeDuration(progress.positionMs)} / ${formatEpisodeDuration(progress.durationMs)}")
             }
         }
     } else if (status == EpisodeProgressStatus.Watched) {
@@ -505,10 +438,6 @@ private fun buildEpisodeSubtitle(
         OfflineEpisodeDownloadState.Failed -> stringResource(R.string.watch_status_failed)
     }
     return downloadLabel
-}
-
-private fun formatDuration(durationMs: Long): String {
-    return org.akkirrai.hibiki.shared.player.formatEpisodeDuration(durationMs)
 }
 
 private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {

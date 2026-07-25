@@ -5,6 +5,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
+import org.akkirrai.hibiki.shared.details.isOngoingStatus
+import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
+import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 
 class DetailsScreenLogicTest {
     @Test
