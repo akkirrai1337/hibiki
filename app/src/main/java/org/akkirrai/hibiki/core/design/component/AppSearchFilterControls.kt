@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -168,10 +169,38 @@ fun <T> AppThreeStateChipFilter(
     optionIcon: @Composable ((T) -> ImageVector?)? = null,
     maxCollapsedItems: Int? = null,
     allowExclusion: Boolean = true,
+    singleList: Boolean = false,
+    optionSortKey: ((T) -> String)? = null,
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
     AppCollapsibleFilterSection(title = title, onLongClick = { onChange(emptySet(), emptySet()) }) {
         Column(modifier = Modifier.padding(top = 16.dp)) {
+            if (singleList) {
+                val sortedOptions = if (optionSortKey == null) options else options.sortedBy { optionSortKey(it).lowercase() }
+                val selectedIds = included + excluded
+                val visibleOptions = if (maxCollapsedItems != null && !showAllOptions) {
+                    (sortedOptions.take(maxCollapsedItems) + sortedOptions.filter { id(it) in selectedIds })
+                        .distinctBy(id)
+                } else {
+                    sortedOptions
+                }
+                AppSingleListThreeStateFlowRow(
+                    options = visibleOptions,
+                    included = included,
+                    excluded = excluded,
+                    id = id,
+                    text = text,
+                    optionIcon = optionIcon,
+                    onChange = onChange,
+                    allowExclusion = allowExclusion,
+                )
+                if (maxCollapsedItems != null && sortedOptions.size > maxCollapsedItems) {
+                    IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
+                        Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))
+                    }
+                }
+                return@Column
+            }
             val includedOptions = options.filter { id(it) in included }
             val effectiveExcluded = excluded.takeIf { allowExclusion }.orEmpty()
             val excludedOptions = options.filter { id(it) in effectiveExcluded }
@@ -189,6 +218,55 @@ fun <T> AppThreeStateChipFilter(
             if (maxCollapsedItems != null && allOptions.size > maxCollapsedItems) {
                 IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
                     Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T> AppSingleListThreeStateFlowRow(
+    options: List<T>,
+    included: Set<String>,
+    excluded: Set<String>,
+    id: (T) -> String,
+    text: @Composable (T) -> String,
+    optionIcon: @Composable ((T) -> ImageVector?)?,
+    onChange: (Set<String>, Set<String>) -> Unit,
+    allowExclusion: Boolean,
+) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val includedColor = if (isDarkTheme) Color(0xFF80DF87) else Color(0xFF218739)
+    val excludedColor = if (isDarkTheme) Color(0xFFFF9999) else Color(0xFFC62828)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { option ->
+            val optionId = id(option)
+            val isIncluded = optionId in included
+            val isExcluded = allowExclusion && optionId in excluded
+            val color = when {
+                isIncluded -> includedColor
+                isExcluded -> excludedColor
+                else -> MaterialTheme.colorScheme.tertiary
+            }
+            val prefix = when {
+                isIncluded -> "+ "
+                isExcluded -> "− "
+                else -> ""
+            }
+            AppFilterChip(
+                color = color,
+                icon = optionIcon?.invoke(option),
+                text = prefix + text(option),
+            ) {
+                when {
+                    isIncluded -> onChange(included - optionId, if (allowExclusion) excluded + optionId else emptySet())
+                    isExcluded -> onChange(included, excluded - optionId)
+                    else -> onChange(included + optionId, excluded - optionId)
                 }
             }
         }

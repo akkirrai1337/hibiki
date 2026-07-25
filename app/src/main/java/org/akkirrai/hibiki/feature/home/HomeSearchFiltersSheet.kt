@@ -246,6 +246,8 @@ fun AnimeSearchFiltersSheet(
                             text = { appFilterOptionText(it.title) },
                             maxCollapsedItems = 15,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
+                            singleList = true,
+                            optionSortKey = { it.title },
                         )
                     }
 
