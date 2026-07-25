@@ -149,6 +149,8 @@ fun AnimeSearchFiltersSheet(
     onApply: (AnimeSearchFilters) -> Unit,
     onDismissRequest: () -> Unit,
     optionText: @Composable (AnimeCatalogFilterOption) -> String = { appFilterOptionText(it.title) },
+    maxCollapsedGenreGroups: Int? = null,
+    maxCollapsedGenreItems: Int? = 15,
     modifier: Modifier = Modifier,
 ) {
     val appLanguage = LocalAppLanguage.current
@@ -244,7 +246,8 @@ fun AnimeSearchFiltersSheet(
                             },
                             id = { it.id },
                             text = optionText,
-                            maxCollapsedItems = 15,
+                            maxCollapsedItems = maxCollapsedGenreItems,
+                            maxCollapsedGroups = maxCollapsedGenreGroups,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
                             singleList = true,
                             optionSortKey = { it.title },

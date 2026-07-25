@@ -171,6 +171,7 @@ fun <T> AppThreeStateChipFilter(
     text: @Composable (T) -> String,
     optionIcon: @Composable ((T) -> ImageVector?)? = null,
     maxCollapsedItems: Int? = null,
+    maxCollapsedGroups: Int? = null,
     allowExclusion: Boolean = true,
     singleList: Boolean = false,
     optionSortKey: ((T) -> String)? = null,
@@ -189,17 +190,25 @@ fun <T> AppThreeStateChipFilter(
                     sortedOptions
                 }
                 if (groupByFirstLetter) {
+                    val groupedOptions = visibleOptions.groupBy { option ->
+                        optionSortKey?.invoke(option)
+                            ?.trim()
+                            ?.firstOrNull()
+                            ?.uppercase()
+                            ?.takeIf(String::isNotBlank)
+                            ?: "#"
+                    }.toSortedMap()
+                    val selectedGroupKeys = groupedOptions
+                        .filterValues { group -> group.any { id(it) in selectedIds } }
+                        .keys
+                    val visibleGroupKeys = if (maxCollapsedGroups != null && !showAllOptions) {
+                        (groupedOptions.keys.take(maxCollapsedGroups) + selectedGroupKeys).toSet()
+                    } else {
+                        groupedOptions.keys
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        visibleOptions
-                            .groupBy { option ->
-                                optionSortKey?.invoke(option)
-                                    ?.trim()
-                                    ?.firstOrNull()
-                                    ?.uppercase()
-                                    ?.takeIf(String::isNotBlank)
-                                    ?: "#"
-                            }
-                            .toSortedMap()
+                        groupedOptions
+                            .filterKeys { it in visibleGroupKeys }
                             .forEach { (letter, groupOptions) ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(
@@ -233,7 +242,17 @@ fun <T> AppThreeStateChipFilter(
                         allowExclusion = allowExclusion,
                     )
                 }
-                if (maxCollapsedItems != null && sortedOptions.size > maxCollapsedItems) {
+                val groupCount = if (groupByFirstLetter) {
+                    sortedOptions.map { option ->
+                        optionSortKey?.invoke(option)?.trim()?.firstOrNull()?.uppercase() ?: "#"
+                    }.distinct().size
+                } else {
+                    0
+                }
+                if (
+                    (maxCollapsedItems != null && sortedOptions.size > maxCollapsedItems) ||
+                    (maxCollapsedGroups != null && groupCount > maxCollapsedGroups)
+                ) {
                     IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
                         Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))
                     }

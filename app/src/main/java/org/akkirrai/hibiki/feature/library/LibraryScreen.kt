@@ -232,6 +232,8 @@ private fun LibrarySearchFiltersSheet(
         onApply = { filters -> onApply(filters.toLibraryFilters(catalog)) },
         onDismissRequest = onDismiss,
         optionText = { it.title },
+        maxCollapsedGenreGroups = 3,
+        maxCollapsedGenreItems = null,
     )
 }
 
