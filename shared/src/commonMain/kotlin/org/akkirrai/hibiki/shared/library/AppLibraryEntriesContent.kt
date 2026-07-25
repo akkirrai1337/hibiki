@@ -7,12 +7,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @Composable
 fun AppLibraryEntriesContent(
@@ -24,7 +33,32 @@ fun AppLibraryEntriesContent(
     headerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    var visibleLimit by remember { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
+    val visibleEntries = state.visibleEntries
+
+    LaunchedEffect(state.selectedCategory, state.searchQuery, state.searchFilters) {
+        visibleLimit = LIBRARY_PAGE_SIZE
+        listState.scrollToItem(0)
+    }
+
+    LaunchedEffect(listState, visibleEntries.size) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleIndex >= layoutInfo.totalItemsCount - 3
+        }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect {
+                if (visibleLimit < visibleEntries.size) {
+                    visibleLimit = (visibleLimit + LIBRARY_PAGE_SIZE).coerceAtMost(visibleEntries.size)
+                }
+            }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier,
         contentPadding = PaddingValues(bottom = bottomContentPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -39,12 +73,14 @@ fun AppLibraryEntriesContent(
         }
         if (state.entries.isEmpty()) {
             item { emptyContent(false) }
-        } else if (state.visibleEntries.isEmpty()) {
+        } else if (visibleEntries.isEmpty()) {
             item { emptyContent(true) }
         } else {
-            items(state.visibleEntries, key = { it.anime.id }) { entry ->
+            items(visibleEntries.take(visibleLimit), key = { it.anime.id }) { entry ->
                 entryContent(entry, Modifier)
             }
         }
     }
 }
+
+private const val LIBRARY_PAGE_SIZE = 12

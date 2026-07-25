@@ -13,13 +13,15 @@ data class LibraryUiState(
     val visibleEntries: List<LibraryEntry>
         get() {
             val normalizedQuery = searchQuery.trim()
-            return entries.filter { entry ->
-                entry.category == selectedCategory &&
-                    searchFilters.matches(entry) &&
-                    (normalizedQuery.isBlank() ||
-                        entry.anime.title.contains(normalizedQuery, ignoreCase = true) ||
-                        entry.anime.subtitle.contains(normalizedQuery, ignoreCase = true))
-            }
+            return entries
+                .filter { entry ->
+                    entry.category == selectedCategory &&
+                        searchFilters.matches(entry) &&
+                        (normalizedQuery.isBlank() ||
+                            entry.anime.title.contains(normalizedQuery, ignoreCase = true) ||
+                            entry.anime.subtitle.contains(normalizedQuery, ignoreCase = true))
+                }
+                .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
         }
 
     val categoryCounts: Map<LibraryCategory, Int>

@@ -125,10 +125,19 @@ class LibraryViewModel(
         }
 
         val startedAt = SystemClock.elapsedRealtime()
+        val activeCategory = presenter.state.value.selectedCategory
+        val activeEntries = saved
+            .filter { it.category == activeCategory }
+            .distinctBy { it.anime.id }
+            .take(LIBRARY_PAGE_SIZE)
+        if (activeEntries.isEmpty()) {
+            PerfLogger.mark("Library details refresh skipped", "reason=empty_active_category, category=$activeCategory")
+            return
+        }
         PerfLogger.mark("Library details refresh started", "entries=${saved.size}")
         presenter.setRefreshing(true)
         try {
-            val refreshed = saved
+            val refreshed = activeEntries
                 .groupBy { entry -> entry.anime.id }
                 .flatMap { (_, groupedEntries) ->
                     val baseEntry = groupedEntries.first()
@@ -156,7 +165,13 @@ class LibraryViewModel(
                         .map { category -> baseEntry.copy(anime = anime, category = category) }
                 }
             lastDetailsRefreshAt = SystemClock.elapsedRealtime()
-            presenter.updateEntries(refreshed)
+            val refreshedByEntry = refreshed.associateBy { entry ->
+                entry.category to entry.anime.id
+            }
+            val mergedEntries = saved.map { entry ->
+                refreshedByEntry[entry.category to entry.anime.id] ?: entry
+            }
+            presenter.updateEntries(mergedEntries)
             presenter.setRefreshing(false)
             PerfLogger.mark(
                 event = "Library details refresh finished",
@@ -169,6 +184,7 @@ class LibraryViewModel(
 
     fun selectCategory(category: LibraryCategory) {
         presenter.selectCategory(category)
+        syncFromStorage(force = true)
     }
 
     private fun updateEntries(entries: List<LibraryEntry>) {
@@ -218,3 +234,4 @@ class LibraryViewModel(
 
 private const val LOCAL_SYNC_THROTTLE_MS = 2_000L
 private const val DETAILS_REFRESH_INTERVAL_MS = 30 * 60 * 1_000L
+private const val LIBRARY_PAGE_SIZE = 12
