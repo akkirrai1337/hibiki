@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -14,7 +15,6 @@ import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.http.hostOf
 import org.akkirrai.beakokit.http.normalizeUrl
-import org.akkirrai.beakokit.http.originOf
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
@@ -44,7 +44,11 @@ class AnimePaheWebViewExtractor(
         pageHeaders: Map<String, String>,
     ): CapturedStream? = suspendCancellableCoroutine { continuation ->
         val handler = Handler(Looper.getMainLooper())
-        val playbackReferer = "${originOf(playerUrl).trimEnd('/')}/"
+        val fallbackReferer = pageHeaders.entries
+            .firstOrNull { it.key.equals("Referer", ignoreCase = true) || it.key.equals("Referrer", ignoreCase = true) }
+            ?.value
+            ?.takeIf(String::isNotBlank)
+            ?: playerUrl
         var webView: WebView? = null
         var delivered = false
         var captured: CapturedStream? = null
@@ -80,8 +84,16 @@ class AnimePaheWebViewExtractor(
             headers.removeCaseInsensitive("Referer")
             headers.removeCaseInsensitive("Referrer")
             headers.removeCaseInsensitive("User-Agent")
-            headers["Referer"] = playbackReferer
+            val requestReferer = request.requestHeaders.entries
+                .firstOrNull { it.key.equals("Referer", ignoreCase = true) || it.key.equals("Referrer", ignoreCase = true) }
+                ?.value
+                ?.takeIf(String::isNotBlank)
+                ?: fallbackReferer
+            headers["Referer"] = requestReferer
             headers["User-Agent"] = CHROME_USER_AGENT
+            val cookie = CookieManager.getInstance().getCookie(request.url.toString())
+                ?: CookieManager.getInstance().getCookie(playerUrl)
+            if (!cookie.isNullOrBlank()) headers["Cookie"] = cookie
             captured = CapturedStream(request.url.toString(), headers)
             settle?.let(handler::removeCallbacks)
             settle = Runnable { deliver(captured) }.also { handler.postDelayed(it, SETTLE_DELAY_MS) }

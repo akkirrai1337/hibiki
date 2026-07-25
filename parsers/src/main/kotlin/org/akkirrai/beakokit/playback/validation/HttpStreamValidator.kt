@@ -70,6 +70,20 @@ class HttpStreamValidator(
             return failure(stream, 200, "В media playlist нет сегментов")
         }
 
+        val firstSegment = playlist.lineSequence()
+            .map(String::trim)
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+            ?: return failure(stream, 200, "Media playlist contains no segments")
+        val segmentUrl = resolveUrl(playlistUrl, firstSegment)
+        val segmentResponse = client.get(segmentUrl) {
+            stream.headers.forEach { (name, value) -> header(name, value) }
+            header(HttpHeaders.Range, "bytes=0-1023")
+        }
+        val segmentBytes = segmentResponse.bodyAsBytes()
+        if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
+            return failure(stream, segmentResponse.status.value, "HLS first segment returned HTTP ${segmentResponse.status.value}")
+        }
+
         return StreamValidationResult(
             success = true,
             streamType = stream.type,
@@ -97,6 +111,43 @@ class HttpStreamValidator(
             }
             return failure(stream, rangeResponse.status.value, "$headSummary, Range GET не вернул данные")
         }
+        /*
+        val firstSegment = playlist.lineSequence()
+            .map(String::trim)
+            .first { it.isNotEmpty() && !it.startsWith("#") }
+        val segmentUrl = resolveUrl(playlistUrl, firstSegment)
+        val segmentResponse = client.get(segmentUrl) {
+            stream.headers.forEach { (name, value) -> header(name, value) }
+            header(HttpHeaders.Range, "bytes=0-1023")
+        }
+        val segmentBytes = segmentResponse.bodyAsBytes()
+        if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
+            return failure(
+                stream,
+                segmentResponse.status.value,
+                "HLS first segment Ð²ÐµÑ€Ð½ÑƒÐ» HTTP ${segmentResponse.status.value}",
+            )
+        }
+
+        val firstSegment = playlist.lineSequence()
+            .map(String::trim)
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+            ?: return failure(stream, 200, "Media playlist contains no segments")
+        val segmentUrl = resolveUrl(playlistUrl, firstSegment)
+        val segmentResponse = client.get(segmentUrl) {
+            stream.headers.forEach { (name, value) -> header(name, value) }
+            header(HttpHeaders.Range, "bytes=0-1023")
+        }
+        val segmentBytes = segmentResponse.bodyAsBytes()
+        if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
+            return failure(stream, segmentResponse.status.value, "HLS first segment returned HTTP ${segmentResponse.status.value}")
+        }
+
+        return StreamValidationResult(
+            success = true,
+            streamType = stream.type,
+            quality = stream.quality,
+            //
         return StreamValidationResult(
             success = true,
             streamType = stream.type,
@@ -108,6 +159,14 @@ class HttpStreamValidator(
             } else {
                 "HEAD вернул HTTP ${headResponse.status.value}, но Range GET успешно вернул данные"
             },
+        )*/
+        return StreamValidationResult(
+            success = true,
+            streamType = stream.type,
+            quality = stream.quality,
+            finalUrl = stream.url,
+            statusCode = rangeResponse.status.value,
+            message = "MP4 range request returned data",
         )
     }
 

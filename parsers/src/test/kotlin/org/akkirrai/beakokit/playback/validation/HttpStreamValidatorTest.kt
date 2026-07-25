@@ -33,7 +33,7 @@ class HttpStreamValidatorTest {
     }
 
     @Test
-    fun `master playlist selects highest bandwidth without fetching segment`() = runBlocking {
+    fun `master playlist selects highest bandwidth and validates first segment`() = runBlocking {
         val requestedUrls = mutableListOf<String>()
         val engine = MockEngine { request ->
             requestedUrls += request.url.toString()
@@ -58,6 +58,11 @@ class HttpStreamValidatorTest {
                     headers = headersOf(HttpHeaders.ContentType, "application/vnd.apple.mpegurl"),
                 )
 
+                "/high/segment-1.ts" -> respond(
+                    content = byteArrayOf(0, 1, 2, 3),
+                    status = HttpStatusCode.PartialContent,
+                )
+
                 else -> error("Unexpected URL: ${request.url}")
             }
         }
@@ -76,6 +81,7 @@ class HttpStreamValidatorTest {
             listOf(
                 "https://video.example/master.m3u8",
                 "https://video.example/high/index.m3u8",
+                "https://video.example/high/segment-1.ts",
             ),
             requestedUrls,
         )
@@ -83,7 +89,7 @@ class HttpStreamValidatorTest {
     }
 
     @Test
-    fun `direct media playlist succeeds when it contains at least one segment`() = runBlocking {
+    fun `direct media playlist succeeds when its first segment is available`() = runBlocking {
         val requestedUrls = mutableListOf<String>()
         val engine = MockEngine { request ->
             requestedUrls += request.url.toString()
@@ -97,7 +103,10 @@ class HttpStreamValidatorTest {
                     headers = headersOf(HttpHeaders.ContentType, "application/vnd.apple.mpegurl"),
                 )
 
-                "/segment-1.ts" -> error("Validator should not fetch HLS segments")
+                "/segment-1.ts" -> respond(
+                    content = byteArrayOf(0, 1, 2, 3),
+                    status = HttpStatusCode.PartialContent,
+                )
 
                 else -> error("Unexpected URL: ${request.url}")
             }
@@ -113,7 +122,13 @@ class HttpStreamValidatorTest {
         )
 
         assertTrue(result.success, result.message)
-        assertEquals(listOf("https://video.example/media.m3u8"), requestedUrls)
+        assertEquals(
+            listOf(
+                "https://video.example/media.m3u8",
+                "https://video.example/segment-1.ts",
+            ),
+            requestedUrls,
+        )
         client.close()
     }
 
