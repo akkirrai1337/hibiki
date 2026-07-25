@@ -29,8 +29,6 @@ import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.mergeAnimePreservingOrder
-import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates
-import org.akkirrai.hibiki.shared.home.mergeMissingDescriptions
 import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
 import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
 
@@ -55,18 +53,24 @@ class HomeViewModel(
 
     private var homeLoadJob: Job? = null
     private var filterCatalogJob: Job? = null
+    private var searchLoadMoreJob: Job? = null
+    private var trendingLoadMoreJob: Job? = null
+    private var recentUpdatesLoadMoreJob: Job? = null
+    private val descriptionJobs = ConcurrentHashMap.newKeySet<Job>()
+    private var sourceGeneration = 0L
 
     fun refresh() {
         homeLoadJob?.cancel()
+        val generation = sourceGeneration
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home refresh started")
             presenter.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.refreshHomeState() }
                 .onSuccess { state ->
-                    val preparedState = prepareHomeFeed(state)
+                    if (generation != sourceGeneration) return@onSuccess
                     val current = presenter.state.value
-                    presenter.setState(preparedState.copy(
+                    presenter.setState(state.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -75,12 +79,14 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveHomeDescriptions(current))
+                    scheduleDescriptionEnrichment(state)
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
+                    if (generation != sourceGeneration) return@onFailure
                     presenter.update {
                         it.copy(
                             isLoading = false,
@@ -152,15 +158,20 @@ class HomeViewModel(
             }
 
             presenter.update { it.copy(searchResult = SearchUiState.Loading) }
-            loadFirstSearchPage(activeQuery, activeFilters)
+            loadFirstSearchPage(activeQuery, activeFilters, sourceGeneration)
         }
     }
 
     fun enrichDescription(anime: Anime) {
         if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
-        viewModelScope.launch(Dispatchers.IO) {
+        val generation = sourceGeneration
+        val job = viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
+                    if (generation != sourceGeneration) {
+                        descriptionRequests.remove(anime.id)
+                        return@onSuccess
+                    }
                     if (enriched.description.isNullOrBlank()) {
                         descriptionRequests.remove(anime.id)
                         return@onSuccess
@@ -169,11 +180,14 @@ class HomeViewModel(
                 }
                 .onFailure { descriptionRequests.remove(anime.id) }
         }
+        descriptionJobs += job
+        job.invokeOnCompletion { descriptionJobs -= job }
     }
 
     private suspend fun loadFirstSearchPage(
         activeQuery: String,
         activeFilters: AnimeSearchFilters,
+        generation: Long,
     ) {
         try {
             val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
@@ -184,7 +198,7 @@ class HomeViewModel(
                     offset = 0,
                 )
             }
-            if (activeQuery != uiState.value.searchQuery.trim()) return
+            if (generation != sourceGeneration || activeQuery != uiState.value.searchQuery.trim()) return
             val result = if (items.isEmpty()) {
                 SearchUiState.Empty
             } else {
@@ -197,7 +211,7 @@ class HomeViewModel(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (throwable: Throwable) {
-            if (activeQuery != uiState.value.searchQuery.trim()) return
+            if (generation != sourceGeneration || activeQuery != uiState.value.searchQuery.trim()) return
             val message = when (throwable) {
                 is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
                 else -> throwable.message ?: appString(R.string.error_search_failed)
@@ -214,8 +228,10 @@ class HomeViewModel(
         val filters = uiState.value.searchFilters
         if (query.length < MIN_QUERY_LENGTH && !filters.hasActiveFilters()) return
         val offset = content.items.size
+        val generation = sourceGeneration
 
-        viewModelScope.launch {
+        searchLoadMoreJob?.cancel()
+        searchLoadMoreJob = viewModelScope.launch {
             presenter.update { state ->
                 val current = state.searchResult as? SearchUiState.Content ?: return@update state
                 state.copy(
@@ -235,7 +251,8 @@ class HomeViewModel(
                         offset = offset,
                     )
                 }
-                if (query != uiState.value.searchQuery.trim() ||
+                if (generation != sourceGeneration ||
+                    query != uiState.value.searchQuery.trim() ||
                     filters != uiState.value.searchFilters
                 ) {
                     return@launch
@@ -282,11 +299,15 @@ class HomeViewModel(
     fun loadMoreTrending() {
         val current = uiState.value
         if (current.isLoading || current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
-        viewModelScope.launch(Dispatchers.IO) {
+        val generation = sourceGeneration
+        trendingLoadMoreJob?.cancel()
+        trendingLoadMoreJob = viewModelScope.launch(Dispatchers.IO) {
+            if (generation != sourceGeneration) return@launch
             presenter.update { it.copy(isTrendingLoadingMore = true) }
             val page = runCatching {
                 repository.loadTrendingPage(offset = current.trendingNextOffset, limit = TRENDING_PAGE_SIZE)
             }.getOrElse { emptyList() }
+            if (generation != sourceGeneration) return@launch
             presenter.update { state ->
                 state.copy(
                     trending = mergeAnimePreservingOrder(state.trending, page),
@@ -302,7 +323,10 @@ class HomeViewModel(
         val current = uiState.value
         if (current.isRecentUpdatesLoadingMore || !current.canLoadMoreRecentUpdates) return
 
-        viewModelScope.launch(Dispatchers.IO) {
+        val generation = sourceGeneration
+        recentUpdatesLoadMoreJob?.cancel()
+        recentUpdatesLoadMoreJob = viewModelScope.launch(Dispatchers.IO) {
+            if (generation != sourceGeneration) return@launch
             presenter.update { it.copy(isRecentUpdatesLoadingMore = true, recentUpdatesLoadMoreError = null) }
             runCatching {
                 repository.loadRecentlyUpdatedPage(
@@ -310,6 +334,7 @@ class HomeViewModel(
                     limit = RECENT_UPDATES_PAGE_SIZE,
                 )
             }.onSuccess { page ->
+                if (generation != sourceGeneration) return@onSuccess
                 presenter.update { state ->
                     state.copy(
                         recentlyUpdated = (state.recentlyUpdated + page).distinctBy { it.id },
@@ -319,6 +344,7 @@ class HomeViewModel(
                     )
                 }
             }.onFailure { throwable ->
+                if (generation != sourceGeneration) return@onFailure
                 presenter.update {
                     it.copy(
                         isRecentUpdatesLoadingMore = false,
@@ -349,15 +375,16 @@ class HomeViewModel(
 
     fun load() {
         homeLoadJob?.cancel()
+        val generation = sourceGeneration
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home load started")
             presenter.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.loadHomeState() }
                 .onSuccess { state ->
-                    val preparedState = prepareHomeFeed(state)
+                    if (generation != sourceGeneration) return@onSuccess
                     val current = presenter.state.value
-                    presenter.setState(preparedState.copy(
+                    presenter.setState(state.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -366,12 +393,14 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveHomeDescriptions(current))
+                    scheduleDescriptionEnrichment(state)
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
+                    if (generation != sourceGeneration) return@onFailure
                     presenter.update {
                         it.copy(
                             isLoading = false,
@@ -388,6 +417,7 @@ class HomeViewModel(
     }
 
     override fun onCleared() {
+        cancelSourceBoundJobs()
         searchJob?.cancel()
         homeLoadJob?.cancel()
         filterCatalogJob?.cancel()
@@ -410,19 +440,10 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * The first Home frame is rendered only after the visible feed has stable metadata. This
-     * prevents cards from changing height while the user is already interacting with the list.
-     */
-    private suspend fun prepareHomeFeed(state: HomeUiState): HomeUiState {
-        val enrichedTrending = repository.enrichDescriptions(state.trending)
-        val descriptions = enrichedTrending
-            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
-            .toMap()
-        return state.copy(
-            featuredAnime = state.featuredAnime.mergeMissingDescriptions(descriptions),
-            trending = enrichedTrending,
-        )
+    private fun scheduleDescriptionEnrichment(state: HomeUiState) {
+        (state.featuredAnime + state.trending + state.recentlyUpdated)
+            .distinctBy(Anime::id)
+            .forEach(::enrichDescription)
     }
 
     private fun observeLanguageChanges() {
@@ -470,6 +491,8 @@ class HomeViewModel(
     private fun observeSourceChanges() {
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
+                    sourceGeneration += 1
+                    cancelSourceBoundJobs()
                     searchJob?.cancel()
                     homeLoadJob?.cancel()
                     filterCatalogJob?.cancel()
@@ -485,6 +508,18 @@ class HomeViewModel(
                     loadSearchFilterCatalog()
                 }
         }
+    }
+
+    private fun cancelSourceBoundJobs() {
+        homeLoadJob?.cancel()
+        filterCatalogJob?.cancel()
+        searchLoadMoreJob?.cancel()
+        trendingLoadMoreJob?.cancel()
+        recentUpdatesLoadMoreJob?.cancel()
+        descriptionJobs.forEach { it.cancel() }
+        descriptionJobs.clear()
+        descriptionRequests.clear()
+        while (descriptionUpdates.tryReceive().isSuccess) Unit
     }
 
     class Factory(
