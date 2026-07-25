@@ -79,7 +79,6 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveHomeDescriptions(current))
-                    scheduleDescriptionEnrichment(state)
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -393,7 +392,6 @@ class HomeViewModel(
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
                     ).preserveHomeDescriptions(current))
-                    scheduleDescriptionEnrichment(state)
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -438,12 +436,6 @@ class HomeViewModel(
                 presenter.update { state -> state.applyHomeDescriptionUpdates(updates) }
             }
         }
-    }
-
-    private fun scheduleDescriptionEnrichment(state: HomeUiState) {
-        (state.featuredAnime + state.trending + state.recentlyUpdated)
-            .distinctBy(Anime::id)
-            .forEach(::enrichDescription)
     }
 
     private fun observeLanguageChanges() {

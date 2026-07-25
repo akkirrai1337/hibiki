@@ -289,6 +289,7 @@ fun HomeScreen(
                             trending = state.trending,
                             isTrendingLoadingMore = state.isTrendingLoadingMore,
                             onLoadMoreTrending = viewModel::loadMoreTrending,
+                            onItemVisible = viewModel::enrichDescription,
                             isActive = isActive,
                             onAnimeClick = onAnimeClick,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
@@ -342,6 +343,7 @@ private fun LazyListScope.homeFeedContent(
     trending: List<Anime>,
     isTrendingLoadingMore: Boolean,
     onLoadMoreTrending: () -> Unit,
+    onItemVisible: (Anime) -> Unit,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
@@ -378,6 +380,7 @@ private fun LazyListScope.homeFeedContent(
             )
         },
         posterFooterContent = posterFooterContent,
+        onItemVisible = onItemVisible,
     )
     if (isTrendingLoadingMore) {
         item {
