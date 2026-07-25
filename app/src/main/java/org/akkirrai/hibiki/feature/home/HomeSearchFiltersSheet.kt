@@ -270,6 +270,8 @@ fun AnimeSearchFiltersSheet(
                             text = { appFilterOptionText(it.title) },
                             optionIcon = { statusIcon(it.id) },
                             allowExclusion = false,
+                            singleList = true,
+                            optionSortKey = { it.title },
                         )
                     }
 
