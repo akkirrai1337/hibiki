@@ -91,7 +91,7 @@ internal class YummyCatalogClient(
             parameter("offset", request.offset)
             request.sort.toYummySortParam(request.query)?.let { parameter("sort", it) }
             request.typeAliases.normalizedCsvOrNull()?.let { parameter("types", it) }
-            request.statusAliases.normalizedCsvOrNull()?.let { parameter("statuses", it) }
+            request.statusAliases.normalizedStatusCsvOrNull()?.let { parameter("statuses", it) }
             request.includedGenreAliases.normalizedCsvOrNull()?.let { parameter("genres", it) }
             request.excludedGenreAliases.normalizedCsvOrNull()?.let { parameter("genres_exclude", it) }
             request.yearFrom?.let { parameter("year_from", it) }
@@ -288,6 +288,18 @@ internal class YummyCatalogClient(
             .distinct()
             .takeIf(List<String>::isNotEmpty)
             ?.joinToString(",")
+    }
+
+    /** Yummy's catalog API uses its own status aliases, even when another source exposes
+     * the equivalent boolean-style aliases (for example `is_ongoing`). */
+    private fun List<String>.normalizedStatusCsvOrNull(): String? {
+        return map { alias ->
+            when (alias.trim().lowercase()) {
+                "is_ongoing", "airing", "currently_airing", "currently airing" -> "ongoing"
+                "is_not_ongoing", "completed", "finished" -> "released"
+                else -> alias.trim()
+            }
+        }.normalizedCsvOrNull()
     }
 
     private fun JsonObject.enumValues(vararg path: String): List<String> {

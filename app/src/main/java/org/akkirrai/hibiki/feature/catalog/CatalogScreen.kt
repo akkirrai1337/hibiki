@@ -242,6 +242,16 @@ fun CatalogScreen(
             },
         )
 
+        // Keep the current results visible while a filter request is running, but make the
+        // refresh state explicit instead of leaving the catalog looking unresponsive.
+        if (state.isLoading && !state.isLoadingMore && state.items.isNotEmpty()) {
+            AppCenteredLoading(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(Alignment.Center),
+            )
+        }
+
         AppTopScrim(
             modifier = Modifier.align(Alignment.TopStart),
         )
