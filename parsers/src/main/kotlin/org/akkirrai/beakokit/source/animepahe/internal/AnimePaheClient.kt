@@ -63,7 +63,16 @@ internal class AnimePaheClient(
     suspend fun getById(id: String): AnimeTitle {
         val session = sessionId(id)
         val parsed = parseDetails(session, http.get(url("/anime/$session")))
-        return merge(summaries[session], parsed).also { summaries[session] = it }
+        val merged = merge(summaries[session], parsed)
+        val withAvailableCount = if (merged.episodeCount == null && merged.availableEpisodeCount == null) {
+            val availableCount = runCatching { getEpisodes(session).size }
+                .getOrNull()
+                ?.takeIf { it > 0 }
+            merged.copy(availableEpisodeCount = availableCount)
+        } else {
+            merged
+        }
+        return withAvailableCount.also { summaries[session] = it }
     }
 
     suspend fun getEpisodes(titleId: String): List<Episode> {
