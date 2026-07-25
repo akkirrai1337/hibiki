@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.feature.home
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -370,8 +371,16 @@ private fun YearFilter(
     yearRange: IntRange,
     onRangeChange: (IntRange) -> Unit,
 ) {
-    var sliderPosition by remember(selectedRange) {
+    val animatedFromYear by animateIntAsState(selectedRange.first, label = "year_from_value")
+    val animatedToYear by animateIntAsState(selectedRange.last, label = "year_to_value")
+    var sliderPosition by remember {
         mutableStateOf(selectedRange.first.toFloat()..selectedRange.last.toFloat())
+    }
+    var isDragging by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedRange) {
+        if (!isDragging) {
+            sliderPosition = selectedRange.first.toFloat()..selectedRange.last.toFloat()
+        }
     }
     CollapsibleRow(
         title = stringResource(R.string.search_filters_year),
@@ -396,13 +405,13 @@ private fun YearFilter(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "${stringResource(R.string.search_filters_year_from)} ${selectedRange.first}",
+                        text = "${stringResource(R.string.search_filters_year_from)} $animatedFromYear",
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "${stringResource(R.string.search_filters_year_to)} ${selectedRange.last}",
+                        text = "${stringResource(R.string.search_filters_year_to)} $animatedToYear",
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -422,12 +431,12 @@ private fun YearFilter(
                 RangeSlider(
                     value = sliderPosition,
                     onValueChange = { range ->
+                        isDragging = true
                         sliderPosition = range
+                        onRangeChange(range.start.roundToInt()..range.endInclusive.roundToInt())
                     },
                     onValueChangeFinished = {
-                        val start = sliderPosition.start.roundToInt()
-                        val end = sliderPosition.endInclusive.roundToInt()
-                        onRangeChange(start..end)
+                        isDragging = false
                     },
                     colors = SliderDefaults.colors(
                         activeTrackColor = MaterialTheme.colorScheme.primary,

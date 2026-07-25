@@ -278,19 +278,15 @@ private fun <T> AppSingleListThreeStateFlowRow(
     val isDarkTheme = isSystemInDarkTheme()
     val includedColor = if (isDarkTheme) Color(0xFF80DF87) else Color(0xFF218739)
     val excludedColor = if (isDarkTheme) Color(0xFFFF9999) else Color(0xFFC62828)
-    AnimatedContent(
-        targetState = Triple(options, included, excluded),
-        label = "single_list_three_state_filter",
-    ) { (currentOptions, currentIncluded, currentExcluded) ->
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            currentOptions.forEach { option ->
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { option ->
                 val optionId = id(option)
-                val isIncluded = optionId in currentIncluded
-                val isExcluded = allowExclusion && optionId in currentExcluded
+                val isIncluded = optionId in included
+                val isExcluded = allowExclusion && optionId in excluded
                 val color = when {
                     isIncluded -> includedColor
                     isExcluded -> excludedColor
@@ -312,7 +308,6 @@ private fun <T> AppSingleListThreeStateFlowRow(
                         else -> onChange(included + optionId, excluded - optionId)
                     }
                 }
-            }
         }
     }
 }
@@ -335,9 +330,12 @@ private fun <T> AppChipFilterFlowRow(options: List<T>, color: Color, icon: Image
 
 @Composable
 private fun AppFilterChip(color: Color, icon: ImageVector?, text: String, onClick: () -> Unit) {
-    Row(modifier = Modifier.clip(CircleShape).combinedClickable(onClick = onClick, onLongClick = {}).background(color.copy(alpha = 0.2f)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        icon?.let { Icon(it, null, tint = color, modifier = Modifier.size(15.dp)) }
-        Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    val animatedColor by animateColorAsState(color, label = "filter_chip_color")
+    Row(modifier = Modifier.clip(CircleShape).combinedClickable(onClick = onClick, onLongClick = {}).background(animatedColor.copy(alpha = 0.2f)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        icon?.let { Icon(it, null, tint = animatedColor, modifier = Modifier.size(15.dp)) }
+        AnimatedContent(targetState = text, label = "filter_chip_text") { currentText ->
+            Text(currentText, color = animatedColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
     }
 }
 
