@@ -120,6 +120,8 @@ import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
 import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
+import org.akkirrai.hibiki.shared.home.appHomePersonalFeedContent
+import org.akkirrai.hibiki.shared.home.AppHomeScreen
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
@@ -157,6 +159,10 @@ fun HomeScreen(
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val recentlyWatchedTitle = stringResource(R.string.home_recently_watched)
     val recentlyAddedTitle = stringResource(R.string.home_recently_added)
+    val continueSectionTitle = stringResource(R.string.home_continue_title)
+    val continueEmptyTitle = stringResource(R.string.home_continue_empty_title)
+    val continueEmptyMessage = stringResource(R.string.home_continue_empty_message)
+    val continueOpenHint = stringResource(R.string.home_open_title_hint)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val homeListState = rememberSaveable(saver = LazyListState.Saver) {
@@ -194,13 +200,9 @@ fun HomeScreen(
         return
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = isSearchActive,
-            transitionSpec = { homeSearchContentTransition(targetState) },
-            label = "HomeSearchContent",
-        ) { searchActive ->
-            if (searchActive) {
+    AppHomeScreen(
+        searchActive = isSearchActive,
+        searchContent = {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
@@ -255,7 +257,8 @@ fun HomeScreen(
                         onItemVisible = viewModel::enrichDescription,
                     )
                 }
-            } else {
+        },
+        personalContent = {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
                     onRefresh = viewModel::refresh,
@@ -281,7 +284,7 @@ fun HomeScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        homeFeedContent(
+                        appHomePersonalFeedContent(
                             continueAnime = continueAnime,
                             recentlyWatched = recentlyWatched,
                             recentlyAddedToLibrary = recentlyAddedToLibrary,
@@ -290,186 +293,90 @@ fun HomeScreen(
                             recentlyAddedTitle = recentlyAddedTitle,
                             announcementLabel = announcementLabel,
                             movieLabel = movieLabel,
-                            onBrowseCatalog = onBrowseCatalog,
+                            continueSectionTitle = continueSectionTitle,
+                            continueEmptyTitle = continueEmptyTitle,
+                            continueEmptyMessage = continueEmptyMessage,
+                            continueOpenHint = continueOpenHint,
+                            continueIcon = Icons.Outlined.History,
+                            recentlyWatchedIcon = Icons.Outlined.History,
+                            recentlyAddedIcon = Icons.Outlined.VideoLibrary,
                             onOpenLibrary = onOpenLibrary,
+                            onEmptyContent = {
+                                AppMessageState(
+                                    title = stringResource(R.string.home_personal_empty_title),
+                                    message = stringResource(R.string.home_personal_empty_message),
+                                    actionLabel = stringResource(R.string.home_browse_catalog),
+                                    onActionClick = onBrowseCatalog,
+                                    icon = Icons.Outlined.VideoLibrary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 260.dp)
+                                        .padding(horizontal = UiDimens.ScreenPadding),
+                                )
+                            },
+                            continueImageContent = { currentAnime ->
+                                AnimePoster(
+                                    anime = currentAnime,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            },
+                            continueTrailingContent = { currentAnime ->
+                                AnimeSourceBadge(titleId = currentAnime.id)
+                            },
+                            posterContent = { anime ->
+                                PosterImage(
+                                    primaryUrl = anime.posterUrl,
+                                    fallbackUrl = anime.posterFallbackUrl,
+                                    contentDescription = anime.title,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(2f / 3f),
+                                    placeholder = {
+                                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                                    },
+                                )
+                            },
                         )
                     }
                 }
-            }
-        }
-
-        AppTopScrim(
-            modifier = Modifier.align(Alignment.TopCenter),
-            height = HOME_TOP_SEARCH_SCRIM_HEIGHT,
-        )
-
-        AppSearchTopBar(
-            query = state.searchQuery,
-            onQueryChange = viewModel::onSearchQueryChange,
-            onClear = viewModel::clearSearch,
-            onFilterClick = {
-                keyboardController?.hide()
-                focusManager.clearFocus(force = true)
-                showSearchFilters = true
-            },
-            showFilterButton = hasSearchFilters,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .padding(
-                    top = UiDimens.SearchBarTopPadding,
-                    start = UiDimens.ScreenPadding,
-                    end = UiDimens.ScreenPadding,
-                )
-        )
-
-        if (showSearchFilters) {
-            HomeSearchFiltersSheet(
-                viewModel = viewModel,
-                onDismissRequest = { showSearchFilters = false },
+        },
+        topScrimContent = {
+            AppTopScrim(
+                modifier = Modifier.align(Alignment.TopCenter),
+                height = HOME_TOP_SEARCH_SCRIM_HEIGHT,
             )
-        }
-    }
-}
-
-private fun LazyListScope.homeFeedContent(
-    continueAnime: Anime?,
-    recentlyWatched: List<Anime>,
-    recentlyAddedToLibrary: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    recentlyWatchedTitle: String,
-    recentlyAddedTitle: String,
-    announcementLabel: String,
-    movieLabel: String,
-    onBrowseCatalog: () -> Unit,
-    onOpenLibrary: () -> Unit,
-) {
-    continueAnime?.let { anime ->
-        item {
-            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
-                ContinueWatchingCard(anime = anime, onClick = { onAnimeClick(anime) })
-            }
-        }
-    }
-    homeAnimeSection(
-        title = recentlyWatchedTitle,
-        items = recentlyWatched,
-        onAnimeClick = onAnimeClick,
-        icon = Icons.Outlined.History,
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
-    )
-    homeAnimeSection(
-        title = recentlyAddedTitle,
-        items = recentlyAddedToLibrary,
-        onAnimeClick = onAnimeClick,
-        icon = Icons.Outlined.VideoLibrary,
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
-        onHeaderClick = onOpenLibrary,
-    )
-    if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
-        item {
-            AppMessageState(
-                title = stringResource(R.string.home_personal_empty_title),
-                message = stringResource(R.string.home_personal_empty_message),
-                actionLabel = stringResource(R.string.home_browse_catalog),
-                onActionClick = onBrowseCatalog,
-                icon = Icons.Outlined.VideoLibrary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 260.dp)
-                    .padding(horizontal = UiDimens.ScreenPadding),
-            )
-        }
-    }
-}
-
-private fun LazyListScope.homeAnimeSection(
-    title: String,
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    announcementLabel: String,
-    movieLabel: String,
-    onHeaderClick: (() -> Unit)? = null,
-) {
-    if (items.isEmpty()) return
-    item {
-        HomeAnimeSection(
-            title = title,
-            items = items,
-            onAnimeClick = onAnimeClick,
-            icon = icon,
-            announcementLabel = announcementLabel,
-            movieLabel = movieLabel,
-            onHeaderClick = onHeaderClick,
-        )
-    }
-}
-
-@Composable
-private fun HomeAnimeSection(
-    title: String,
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    announcementLabel: String,
-    movieLabel: String,
-    onHeaderClick: (() -> Unit)? = null,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = UiDimens.SectionSpacing),
-        verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing),
-    ) {
-        SectionHeader(
-            title = title,
-            actionLabel = onHeaderClick?.let { "\u203A" },
-            icon = icon,
-            modifier = Modifier
-                .padding(horizontal = UiDimens.ScreenPadding)
-                .clickable(enabled = onHeaderClick != null) {
-                    onHeaderClick?.invoke()
+        },
+        searchBarContent = {
+            AppSearchTopBar(
+                query = state.searchQuery,
+                onQueryChange = viewModel::onSearchQueryChange,
+                onClear = viewModel::clearSearch,
+                onFilterClick = {
+                    keyboardController?.hide()
+                    focusManager.clearFocus(force = true)
+                    showSearchFilters = true
                 },
-            titleStyle = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-        )
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val cardWidth = (maxWidth - 32.dp - UiDimens.ItemSpacing) / 2
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            ) {
-                items(items, key = Anime::id) { anime ->
-                    AppPosterAnimeCard(
-                        anime = anime,
-                        metaText = anime.buildCardMeta(
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                        ),
-                        onClick = { onAnimeClick(anime) },
-                        modifier = Modifier.width(cardWidth),
-                        posterContent = {
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(2f / 3f),
-                                placeholder = {
-                                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
-                                },
-                            )
-                        },
-                    )
-                }
+                showFilterButton = hasSearchFilters,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        top = UiDimens.SearchBarTopPadding,
+                        start = UiDimens.ScreenPadding,
+                        end = UiDimens.ScreenPadding,
+                    ),
+            )
+        },
+        filterContent = {
+            if (showSearchFilters) {
+                HomeSearchFiltersSheet(
+                    viewModel = viewModel,
+                    onDismissRequest = { showSearchFilters = false },
+                )
             }
-        }
-    }
+        },
+        modifier = modifier,
+    )
 }
 
 private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
@@ -528,40 +435,6 @@ private fun HomeErrorState(
                 )
             }
         }
-    )
-}
-
-@Composable
-private fun ContinueWatchingCard(
-    anime: Anime?,
-    onClick: () -> Unit
-) {
-    AppContinueWatchingCard(
-        anime = anime,
-        sectionTitle = stringResource(R.string.home_continue_title),
-        emptyTitle = stringResource(R.string.home_continue_empty_title),
-        emptyMessage = stringResource(R.string.home_continue_empty_message),
-        openHint = stringResource(R.string.home_open_title_hint),
-        meta = anime?.let {
-            buildHomeMeta(
-                anime = it,
-                announcementLabel = stringResource(R.string.anime_meta_announcement),
-                movieLabel = stringResource(R.string.anime_meta_movie),
-            )
-        }.orEmpty(),
-        sectionIcon = Icons.Outlined.History,
-        onClick = onClick,
-        imageContent = {
-            anime?.let { currentAnime ->
-                AnimePoster(
-                    anime = currentAnime,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        },
-        trailingContent = {
-            anime?.let { AnimeSourceBadge(titleId = it.id) }
-        },
     )
 }
 

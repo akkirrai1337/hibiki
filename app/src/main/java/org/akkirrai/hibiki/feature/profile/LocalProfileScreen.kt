@@ -80,6 +80,9 @@ import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
+import org.akkirrai.hibiki.shared.profile.AppProfileScreen
+import org.akkirrai.hibiki.shared.profile.AppProfileScreenIcons
+import org.akkirrai.hibiki.shared.profile.AppProfileScreenLabels
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -114,240 +117,50 @@ fun LocalProfileScreen(
     val snapshot = remember(localizedResources, state.data) {
         buildProfileSnapshot(localizedResources, state.data)
     }
-    val pagerState = rememberPagerState(pageCount = { LocalProfileTab.entries.size })
-    val scope = rememberCoroutineScope()
-    val statusInsets = WindowInsets.statusBars.asPaddingValues()
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-    ) {
-        if (state.isLoading) {
-            CircularProgressIndicator()
-            return@Box
-        }
-
-        NestedProfileBannerLayout(
-            banner = { ratio, bannerModifier ->
-                Box(
-                    modifier = bannerModifier.background(MaterialTheme.colorScheme.surfaceContainer),
-                ) {
-                    LocalAvatar(
-                        ratio = ratio,
-                        avatarUri = state.data.profileAvatarUri,
-                        isEditing = isEditingProfile,
-                        onEditClick = { avatarPicker.launch(arrayOf("image/*")) },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
-                }
-            },
-            bannerElevatedContent = { ratio ->
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = statusInsets.calculateTopPadding() + AnimiteLargePadding * ratio * 0.9f)
-                        .padding(end = AnimiteLargePadding),
-                    horizontalArrangement = Arrangement.spacedBy(AnimiteSmallPadding),
-                ) {
-                    ProfileActionButton(
-                        icon = if (isEditingProfile) Icons.Rounded.Check else Icons.Rounded.Edit,
-                        contentDescription = stringResource(if (isEditingProfile) R.string.action_save else R.string.local_profile_edit),
-                        onClick = {
-                            if (isEditingProfile) {
-                                viewModel.updateProfileName(editedName)
-                            } else {
-                                editedName = state.data.profileName
-                            }
-                            isEditingProfile = !isEditingProfile
-                        },
-                    )
-                    RotatingSettingsButton(onClick = onSettingsClick)
-                }
-            },
-            contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentPadding = PaddingValues(top = AnimiteLargePadding / 2),
-            content = {
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = AnimiteLargePadding),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (isEditingProfile) {
-                        ProfileNameEditor(
-                            name = editedName,
-                            onNameChange = { editedName = it },
-                        )
-                    } else {
-                        Text(
-                            text = state.data.profileName,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    divider = {},
-                ) {
-                    LocalProfileTab.entries.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = {
-                                Text(
-                                    text = stringResource(tab.titleRes),
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(
-                                        alpha = if (pagerState.currentPage == index) 1f else 0.5f,
-                                    ),
-                                    maxLines = 1,
-                                )
-                            },
-                            modifier = Modifier
-                                .padding(horizontal = 1.dp, vertical = AnimiteSmallPadding)
-                                .clip(CircleShape),
-                        )
-                    }
-                }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                ) { page ->
-                    when (LocalProfileTab.entries[page]) {
-                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
-                        LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
-                        LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
-                    }
-                }
-            }
-            },
-        )
-    }
-}
-
-/** Direct port of Animite's NestedScrollBannerLayout with its 168dp banner. */
-@Composable
-private fun NestedProfileBannerLayout(
-    banner: @Composable BoxScope.(Float, Modifier) -> Unit,
-    bannerElevatedContent: @Composable BoxScope.(Float) -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-    modifier: Modifier = Modifier,
-    maxBannerHeight: Dp = AnimiteBannerHeight,
-    contentPadding: PaddingValues = PaddingValues(),
-    contentBackgroundColor: Color = MaterialTheme.colorScheme.background,
-) {
-    val density = LocalDensity.current
-    var bannerHeightPx by remember { mutableFloatStateOf(with(density) { maxBannerHeight.toPx() }) }
-    var ratio by remember { mutableFloatStateOf(1f) }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
-    val minBannerHeightPx = with(density) { (statusBarHeight + AnimiteLargePadding).toPx() }
-    val maxBannerHeightPx = with(density) { maxBannerHeight.toPx() }
-
-    val nestedScrollConnection = remember(density, maxBannerHeightPx, minBannerHeightPx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y > 0f) return Offset.Zero
-                val previous = bannerHeightPx
-                bannerHeightPx = (bannerHeightPx + available.y).coerceIn(minBannerHeightPx, maxBannerHeightPx)
-                ratio = (bannerHeightPx - minBannerHeightPx) / (maxBannerHeightPx - minBannerHeightPx)
-                return if (previous != bannerHeightPx) available.copy(x = 0f) else Offset.Zero
-            }
-
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                val delta = when {
-                    available.y < 0f || consumed.y < 0f -> consumed.y
-                    available.y > 0f -> available.y
-                    else -> return Offset.Zero
-                }
-                val previous = bannerHeightPx
-                bannerHeightPx = (bannerHeightPx + delta).coerceIn(minBannerHeightPx, maxBannerHeightPx)
-                ratio = (bannerHeightPx - minBannerHeightPx) / (maxBannerHeightPx - minBannerHeightPx)
-                return Offset(0f, bannerHeightPx - previous)
-            }
-        }
-    }
-
-    Box(modifier.nestedScroll(nestedScrollConnection)) {
-        banner(
-            ratio,
-            Modifier.height(with(density) { bannerHeightPx.toDp() }).fillMaxWidth(),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = with(density) { bannerHeightPx.toDp() })
-                .background(contentBackgroundColor)
-                .padding(contentPadding),
-        ) { content() }
-        bannerElevatedContent(ratio)
-    }
-}
-
-@Composable
-private fun LocalAvatar(
-    ratio: Float,
-    avatarUri: String?,
-    isEditing: Boolean,
-    onEditClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileAvatar(
-        ratio = ratio,
-        isEditing = isEditing,
-        editIcon = Icons.Rounded.Edit,
-        editContentDescription = stringResource(R.string.local_profile_change_avatar),
-        onEditClick = onEditClick,
-        modifier = modifier,
+    AppProfileScreen(
+        state = state,
+        isEditing = isEditingProfile,
+        editedName = editedName,
+        labels = AppProfileScreenLabels(
+            overview = stringResource(R.string.local_profile_tab_overview),
+            activity = stringResource(R.string.local_profile_tab_activity),
+            favorites = stringResource(R.string.local_profile_tab_favorites),
+            edit = stringResource(R.string.local_profile_edit),
+            save = stringResource(R.string.action_save),
+            settings = stringResource(R.string.local_profile_settings),
+            changeAvatar = stringResource(R.string.local_profile_change_avatar),
+            profileName = stringResource(R.string.local_profile_name),
+        ),
+        icons = AppProfileScreenIcons(
+            edit = Icons.Rounded.Edit,
+            save = Icons.Rounded.Check,
+            settings = Icons.Rounded.Settings,
+            changeAvatar = Icons.Rounded.Edit,
+        ),
+        onEditedNameChange = { editedName = it },
+        onEditAction = {
+            if (isEditingProfile) viewModel.updateProfileName(editedName) else editedName = state.data.profileName
+            isEditingProfile = !isEditingProfile
+        },
+        onSettingsClick = onSettingsClick,
+        onAvatarEditClick = { avatarPicker.launch(arrayOf("image/*")) },
         avatarContent = {
-            if (avatarUri.isNullOrBlank()) {
+            if (state.data.profileAvatarUri.isNullOrBlank()) {
                 Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             } else {
-                AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                AsyncImage(
+                    model = state.data.profileAvatarUri,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         },
-    )
-}
-
-@Composable
-private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
-    org.akkirrai.hibiki.shared.profile.ProfileNameEditor(
-        label = stringResource(R.string.local_profile_name),
-        name = name,
-        onNameChange = onNameChange,
-    )
-}
-
-@Composable
-private fun RotatingSettingsButton(onClick: () -> Unit) {
-    ProfileActionButton(
-        icon = Icons.Rounded.Settings,
-        contentDescription = stringResource(R.string.local_profile_settings),
-        onClick = onClick,
-        iconModifier = Modifier.continuousRotation(
-            durationMillis = 10_000,
-            label = "settings_icon_rotation",
-        ),
-    )
-}
-
-@Composable
-private fun ProfileActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileActionButton(
-        icon = icon,
-        contentDescription = contentDescription,
-        onClick = onClick,
+        overviewContent = { padding -> LocalOverviewTab(snapshot, padding) },
+        activityContent = { padding -> LocalActivityTab(snapshot, padding) },
+        favoritesContent = { padding -> LocalFavoritesTab(snapshot.favoriteLibraryItems, padding) },
+        bottomContentPadding = bottomContentPadding,
         modifier = modifier,
-        iconModifier = iconModifier,
     )
 }
 

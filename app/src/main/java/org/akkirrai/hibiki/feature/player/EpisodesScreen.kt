@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
@@ -34,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -65,6 +67,9 @@ import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
+import org.akkirrai.hibiki.shared.player.AppEpisodesScreen
+import org.akkirrai.hibiki.shared.player.AppEpisodesScreenIcons
+import org.akkirrai.hibiki.shared.player.AppEpisodesScreenLabels
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
@@ -132,121 +137,100 @@ fun EpisodesScreen(
         }
     }
 
-    WatchScreenScaffold(
-        onBackClick = {
-            if (navigationLocked) return@WatchScreenScaffold
-            navigationLockedState.value = true
-            onBackClick()
-        },
-        navigationLocked = navigationLocked,
-        modifier = modifier,
-    ) {
-        AppFilledIconButton(
-            onClick = { downloadControlsVisible = !downloadControlsVisible },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(end = UiDimens.ScreenPadding, top = 8.dp)
-                .zIndex(1f),
-            style = if (downloadControlsVisible) {
-                AppFilledIconButtonStyle.PrimaryContainer
-            } else {
-                AppFilledIconButtonStyle.Surface
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Download,
-                contentDescription = stringResource(R.string.watch_download),
-            )
-        }
-
-        when (val result = state.result) {
-            EpisodesUiState.Loading -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            EpisodesUiState.Empty -> {
-                WatchEmptyState(
-                    title = sourceTitle,
-                    message = stringResource(R.string.watch_episodes_empty_title),
-                    icon = Icons.Outlined.VideoLibrary,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            is EpisodesUiState.Error -> {
-                WatchEmptyState(
-                    title = sourceTitle,
-                    message = result.message,
-                    icon = Icons.Outlined.VideoLibrary,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            is EpisodesUiState.Content -> {
-                val watchSourceFallback = stringResource(R.string.watch_source_fallback)
-                val downloadSource = remember(sourceId, sourceTitle, result.items.size) {
-                    WatchSource(
-                        sourceId = sourceId,
-                        title = sourceTitle.ifBlank { watchSourceFallback },
-                        episodeCount = result.items.size,
-                    )
-                }
-                EpisodesList(
-                    episodes = result.items,
-                    episodeContent = { episode, shape ->
-                        val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
-                        EpisodeRow(
-                            episode = episode,
-                            progress = progress,
-                            status = resolveEpisodeProgressStatus(
-                                progress = progress,
-                            ),
-                            downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
-                            showDownloadControls = downloadControlsVisible,
-                            shape = shape,
-                            enabled = !navigationLocked,
-                            onClick = {
-                                if (navigationLocked) return@EpisodeRow
-                                navigationLockedState.value = true
-                                onEpisodeClick(episode)
-                            },
-                            onDownloadClick = {
-                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    offlineDownloadRepository.enqueueEpisodes(
-                                        source = downloadSource,
-                                        episodes = listOf(episode),
-                                    )
-                                    offlineTitleMetadataRepository.get(titleId)?.let { cachedAnime ->
-                                        libraryRepository.saveToLibrary(cachedAnime, LibraryCategory.Saved)
-                                    }
-                                }
-                            },
-                            onPauseClick = {
-                                offlineDownloadRepository.pauseEpisode(sourceId, episode.id)
-                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Paused)
-                            },
-                            onResumeClick = {
-                                offlineDownloadRepository.resumeEpisode(sourceId, episode.id)
-                                downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
-                            },
-                            onRemoveClick = {
-                                offlineDownloadRepository.removeEpisode(sourceId, episode.id)
-                                val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
-                                downloadStates = updatedStates
-                                if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
-                                    libraryRepository.removeSavedFromLibrary(titleId)
-                                }
-                            },
-                        )
-                    },
-                )
-            }
-        }
+    val watchSourceFallback = stringResource(R.string.watch_source_fallback)
+    val contentSize = (state.result as? EpisodesUiState.Content)?.items?.size
+    val downloadSource = remember(sourceId, sourceTitle, contentSize) {
+        WatchSource(
+            sourceId = sourceId,
+            title = sourceTitle.ifBlank { watchSourceFallback },
+            episodeCount = contentSize,
+        )
     }
+    AppEpisodesScreen(
+        state = state,
+        labels = AppEpisodesScreenLabels(
+            sourceTitle = sourceTitle,
+            emptyMessage = stringResource(R.string.watch_episodes_empty_title),
+            retry = stringResource(R.string.search_retry),
+            download = stringResource(R.string.watch_download),
+        ),
+        icons = AppEpisodesScreenIcons(
+            back = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.cd_back),
+                    tint = Color.White,
+                )
+            },
+            empty = Icons.Outlined.VideoLibrary,
+        ),
+        enabled = !navigationLocked,
+        downloadControlsVisible = downloadControlsVisible,
+        onBackClick = {
+            if (!navigationLocked) {
+                navigationLockedState.value = true
+                onBackClick()
+            }
+        },
+        onRetry = viewModel::load,
+        onToggleDownloadControls = { downloadControlsVisible = !downloadControlsVisible },
+        downloadToggleContent = { toggleModifier, visible, label, onToggle ->
+            AppFilledIconButton(
+                onClick = onToggle,
+                modifier = toggleModifier
+                    .statusBarsPadding()
+                    .padding(end = UiDimens.ScreenPadding, top = 8.dp)
+                    .zIndex(1f),
+                style = if (visible) AppFilledIconButtonStyle.PrimaryContainer else AppFilledIconButtonStyle.Surface,
+            ) {
+                Icon(Icons.Outlined.Download, contentDescription = label)
+            }
+        },
+        episodeContent = { episode, shape ->
+            val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
+            EpisodeRow(
+                episode = episode,
+                progress = progress,
+                status = resolveEpisodeProgressStatus(progress = progress),
+                downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
+                showDownloadControls = downloadControlsVisible,
+                shape = shape,
+                enabled = !navigationLocked,
+                onClick = {
+                    if (!navigationLocked) {
+                        navigationLockedState.value = true
+                        onEpisodeClick(episode)
+                    }
+                },
+                onDownloadClick = {
+                    downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
+                    coroutineScope.launch(Dispatchers.IO) {
+                        offlineDownloadRepository.enqueueEpisodes(source = downloadSource, episodes = listOf(episode))
+                        offlineTitleMetadataRepository.get(titleId)?.let { cachedAnime ->
+                            libraryRepository.saveToLibrary(cachedAnime, LibraryCategory.Saved)
+                        }
+                    }
+                },
+                onPauseClick = {
+                    offlineDownloadRepository.pauseEpisode(sourceId, episode.id)
+                    downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Paused)
+                },
+                onResumeClick = {
+                    offlineDownloadRepository.resumeEpisode(sourceId, episode.id)
+                    downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
+                },
+                onRemoveClick = {
+                    offlineDownloadRepository.removeEpisode(sourceId, episode.id)
+                    val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
+                    downloadStates = updatedStates
+                    if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
+                        libraryRepository.removeSavedFromLibrary(titleId)
+                    }
+                },
+            )
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable

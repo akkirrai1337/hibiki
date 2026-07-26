@@ -164,6 +164,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.toAppPlayerHostState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
@@ -204,6 +205,7 @@ fun PlayerScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val hostState = state.toAppPlayerHostState()
     val context = LocalContext.current
     val appPreferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
@@ -289,9 +291,9 @@ fun PlayerScreen(
     val mediaSession = remember(exoPlayer) {
         MediaSession.Builder(context, exoPlayer).build()
     }
-    val hasNextEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-        .let { it != -1 && it < state.episodes.lastIndex }
-    val hasPreviousEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId } > 0
+    val currentEpisodeIndex = hostState.episodeIds.indexOf(hostState.episodeId)
+    val hasNextEpisode = currentEpisodeIndex != -1 && currentEpisodeIndex < hostState.episodeIds.lastIndex
+    val hasPreviousEpisode = currentEpisodeIndex > 0
     fun keepControlsVisible() {
         if (controlsLocked) return
         controlsVisible = true

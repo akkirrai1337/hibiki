@@ -67,6 +67,10 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreenIcons
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreenLabels
+import org.akkirrai.hibiki.shared.onboarding.OnboardingSourceOption
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -93,6 +97,13 @@ fun FirstLaunchOnboarding(
         } else {
             localizedSources
         }
+    }
+    val displayedSourceOptions = displayedSources.map { source ->
+        OnboardingSourceOption(
+            id = source.id.value,
+            name = source.name,
+            languageSummary = sourceLanguageSummary(source),
+        )
     }
 
     LaunchedEffect(localizedSources, initialSource) {
@@ -133,82 +144,71 @@ fun FirstLaunchOnboarding(
         return
     }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding(),
-        ) {
-            AnimatedContent(
-                targetState = step,
-                modifier = Modifier.weight(1f),
-                transitionSpec = {
-                    val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                    (
-                        (slideInHorizontally(
-                            animationSpec = tween(260),
-                            initialOffsetX = { width -> direction * width / 4 },
-                        ) + fadeIn(animationSpec = tween(260))) togetherWith
-                            (slideOutHorizontally(
-                                animationSpec = tween(220),
-                                targetOffsetX = { width -> -direction * width / 4 },
-                            ) + fadeOut(animationSpec = tween(220)))
-                        ).using(SizeTransform(clip = false))
-                },
-                contentAlignment = Alignment.Center,
-                label = "onboarding_step",
-            ) { currentStep ->
-                when (currentStep) {
-                    OnboardingStep.WELCOME -> WelcomeStep(
-                        onStart = { stepName = OnboardingStep.SOURCE.name },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-
-                    OnboardingStep.SOURCE -> SourceStep(
-                        sources = displayedSources,
-                        selectedSource = selectedSource,
-                        localizedSourcesMissing = localizedSources.isEmpty(),
-                        onSourceSelected = { selectedSourceValue = it.id.value },
-                        onShowAllSources = { showSourceList = true },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-
-                    OnboardingStep.NOTIFICATIONS -> NotificationsStep(
-                        permissionState = notificationPermissionState,
-                        onRequestPermission = onRequestNotificationPermission,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-
-                }
-            }
-
-            // Keep the footer mounted on every step. Removing it on the welcome
-            // page changes the AnimatedContent height during the first transition
-            // and makes the outgoing page visibly jump upward.
-            OnboardingFooter(
-                step = step,
-                nextEnabled = selectedSource != null,
-                onBack = {
-                    stepName = when (step) {
-                        OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-                        OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
-                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
-                    }
-                },
-                onNext = {
-                    when (step) {
-                        OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCE.name
-                        OnboardingStep.SOURCE -> stepName = OnboardingStep.NOTIFICATIONS.name
-                        OnboardingStep.NOTIFICATIONS -> selectedSource?.let(onComplete)
-                        }
-                },
+    AppOnboardingScreen(
+        step = step,
+        sources = displayedSourceOptions,
+        selectedSourceId = selectedSourceValue,
+        notificationPermissionState = notificationPermissionState,
+        labels = AppOnboardingScreenLabels(
+            welcomeTitle = stringResource(R.string.onboarding_welcome_title),
+            welcomeDescription = stringResource(R.string.onboarding_welcome_description),
+            getStarted = stringResource(R.string.onboarding_get_started),
+            sourceTitle = stringResource(R.string.onboarding_source_title),
+            sourceDescription = stringResource(R.string.onboarding_source_description),
+            sourceNoMatch = stringResource(R.string.onboarding_source_no_match),
+            viewAllSources = stringResource(R.string.onboarding_view_all_sources),
+            notificationsTitle = stringResource(R.string.onboarding_notifications_title),
+            notificationsDescription = stringResource(R.string.onboarding_notifications_description),
+            notificationsAllow = stringResource(R.string.onboarding_notifications_allow),
+            notificationsEnabled = stringResource(R.string.onboarding_notifications_enabled),
+            notificationsDenied = stringResource(R.string.onboarding_notifications_denied),
+            back = stringResource(R.string.onboarding_back),
+            next = stringResource(R.string.onboarding_next),
+            done = stringResource(R.string.onboarding_done),
+        ),
+        icons = AppOnboardingScreenIcons(
+            source = Icons.Rounded.VideoLibrary,
+            notifications = Icons.Rounded.NotificationsActive,
+        ),
+        appIconContent = {
+            Image(
+                painter = painterResource(R.drawable.hibiki_app_icon),
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
             )
-        }
-    }
+        },
+        sourceIconContent = { option ->
+            displayedSources.firstOrNull { it.id.value == option.id }?.let { source ->
+                AsyncImage(
+                    model = source.iconUrl,
+                    placeholder = painterResource(source.iconRes),
+                    error = painterResource(source.iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                )
+            }
+        },
+        onStart = { stepName = OnboardingStep.SOURCE.name },
+        onSourceSelected = { selectedSourceValue = it.id },
+        onShowAllSources = { showSourceList = true },
+        onRequestNotificationPermission = onRequestNotificationPermission,
+        onBack = {
+            stepName = when (step) {
+                OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
+                OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
+                OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
+            }
+        },
+        onNext = {
+            when (step) {
+                OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCE.name
+                OnboardingStep.SOURCE -> stepName = OnboardingStep.NOTIFICATIONS.name
+                OnboardingStep.NOTIFICATIONS -> selectedSource?.let(onComplete)
+            }
+        },
+        modifier = modifier.safeDrawingPadding(),
+    )
 
 }
 

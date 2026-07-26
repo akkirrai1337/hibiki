@@ -139,7 +139,7 @@ fun LibraryScreen(
         }
     }
 
-    org.akkirrai.hibiki.shared.library.AppLibraryEntriesContent(
+    org.akkirrai.hibiki.shared.library.AppLibraryScreen(
         state = state,
         modifier = modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,
@@ -191,20 +191,21 @@ fun LibraryScreen(
         entryContent = { entry, entryModifier ->
             LibraryAnimeCard(entry = entry, modifier = entryModifier, onClick = { onAnimeClick(entry.anime) })
         },
+        filterContent = if (isFilterDialogVisible) {
+            {
+                LibrarySearchFiltersSheet(
+                    catalog = state.filterCatalog,
+                    currentFilters = state.searchFilters,
+                    languageMode = languageMode,
+                    onDismiss = { isFilterDialogVisible = false },
+                    onApply = { filters ->
+                        viewModel.applySearchFilters(filters)
+                        isFilterDialogVisible = false
+                    },
+                )
+            }
+        } else null,
     )
-
-    if (isFilterDialogVisible) {
-        LibrarySearchFiltersSheet(
-            catalog = state.filterCatalog,
-            currentFilters = state.searchFilters,
-            languageMode = languageMode,
-            onDismiss = { isFilterDialogVisible = false },
-            onApply = { filters ->
-                viewModel.applySearchFilters(filters)
-                isFilterDialogVisible = false
-            },
-        )
-    }
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L

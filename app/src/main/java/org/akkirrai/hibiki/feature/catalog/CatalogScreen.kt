@@ -167,163 +167,106 @@ fun CatalogScreen(
         onVisibilityChange = { isSortVisible = it },
     )
 
-    Box(modifier = modifier.fillMaxSize()) {
-        org.akkirrai.hibiki.shared.design.component.AppContentState(
-            isLoading = state.isLoading,
-            hasContent = state.items.isNotEmpty(),
-            errorMessage = state.error,
+    org.akkirrai.hibiki.shared.catalog.AppCatalogScreen(
+            state = state,
+            listState = listState,
+            onAnimeClick = onAnimeClick,
+            onRetry = viewModel::load,
+            onLoadMore = viewModel::loadMore,
             errorTitle = stringResource(R.string.catalog_error_title),
             retryLabel = stringResource(R.string.search_retry),
-            onRetry = viewModel::load,
             errorIcon = Icons.Outlined.WarningAmber,
-            errorIconTint = MaterialTheme.colorScheme.error,
-            content = {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = CATALOG_CONTENT_TOP_PADDING,
-                        end = UiDimens.ScreenPadding,
-                        bottom = bottomContentPadding + UiDimens.ScreenPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    content = {
-                    appVerticalAnimeListContent(
-                        items = state.items,
-                        metaText = { anime -> anime.buildCardMeta(
-                                announcementLabel = announcementLabel,
-                                movieLabel = movieLabel,
-                                maxSubtitleParts = 2,
-                                separator = " • ",
-                        ) },
-                        onAnimeClick = onAnimeClick,
-                        posterContent = { anime ->
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = {
-                                    PosterPlaceholder(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                            )
-                        },
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
-                            }
-                        },
-                        onItemVisible = viewModel::enrichDescription,
-                    )
-
-                    if (state.isLoadingMore) {
-                        item(key = "catalog_loading_more") {
-                            AppLoadMoreState(
-                                isLoading = true,
-                                errorMessage = null,
-                                errorIcon = Icons.Outlined.WarningAmber,
-                                onRetry = viewModel::loadMore,
+            announcementLabel = announcementLabel,
+            movieLabel = movieLabel,
+            topContentPadding = CATALOG_CONTENT_TOP_PADDING,
+            bottomContentPadding = bottomContentPadding,
+            posterContent = { anime ->
+                PosterImage(
+                    primaryUrl = anime.posterUrl,
+                    fallbackUrl = anime.posterFallbackUrl,
+                    contentDescription = anime.title,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        PosterPlaceholder(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    }
-
-                    if (state.isLoadingMore && state.error != null) {
-                        item(key = "catalog_load_more_error") {
-                            AppLoadMoreState(
-                                isLoading = false,
-                                errorMessage = state.error,
-                                errorIcon = Icons.Outlined.WarningAmber,
-                                onRetry = viewModel::loadMore,
-                            )
-                        }
-                    }
                     },
                 )
             },
+            posterFooterContent = { anime ->
+                libraryStatusByAnimeId[anime.id]?.let { category ->
+                    LibraryStatusPosterFooter(category)
+                }
+            },
+            onItemVisible = viewModel::enrichDescription,
+            topScrimContent = {
+                AppTopScrim(modifier = Modifier.align(Alignment.TopStart))
+            },
+            headerContent = {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(
+                            top = CATALOG_HEADER_TOP_PADDING,
+                            start = UiDimens.ScreenPadding,
+                            end = UiDimens.ScreenPadding,
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(CATALOG_SORT_VERTICAL_GAP),
+                ) {
+                    AppSearchTopBar(
+                        query = state.query,
+                        onQueryChange = viewModel::updateQuery,
+                        onClear = { viewModel.updateQuery("") },
+                        onFilterClick = { isFilterSheetOpen = true },
+                        showFilterButton = hasCatalogFilters,
+                        modifier = Modifier.zIndex(1f),
+                    )
+                    val sortOffsetY by animateDpAsState(
+                        targetValue = if (isSortVisible) 0.dp else -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP),
+                        animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                        label = "catalog_sort_offset",
+                    )
+                    val sortAlpha by animateFloatAsState(
+                        targetValue = if (isSortVisible) 1f else 0f,
+                        animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                        label = "catalog_sort_alpha",
+                    )
+                    CatalogSortControl(
+                        selectedSort = selectedSort,
+                        availableSorts = availableSorts,
+                        expanded = isSortMenuOpen,
+                        onExpandedChange = { isSortMenuOpen = it },
+                        onSortSelected = viewModel::selectSort,
+                        modifier = Modifier.graphicsLayer {
+                            translationY = sortOffsetY.toPx()
+                            alpha = sortAlpha
+                        },
+                    )
+                }
+            },
+            overlayContent = {
+                if (isFilterSheetOpen) {
+                    AnimeSearchFiltersSheet(
+                        initialFilters = state.filters,
+                        filterCatalog = legacyFilterCatalog,
+                        isFilterCatalogLoading = state.isLoading && legacyFilterCatalog == null,
+                        onApply = viewModel::applyFilters,
+                        onDismissRequest = { isFilterSheetOpen = false },
+                    )
+                }
+            },
+            modifier = modifier,
         )
-
-        // Keep the current results visible while a filter request is running, but make the
-        // refresh state explicit instead of leaving the catalog looking unresponsive.
-        if (state.isLoading && !state.isLoadingMore && state.items.isNotEmpty()) {
-            AppCenteredLoading(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .align(Alignment.Center),
-            )
-        }
-
-        AppTopScrim(
-            modifier = Modifier.align(Alignment.TopStart),
-        )
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .padding(
-                    top = CATALOG_HEADER_TOP_PADDING,
-                    start = UiDimens.ScreenPadding,
-                    end = UiDimens.ScreenPadding,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CATALOG_SORT_VERTICAL_GAP),
-        ) {
-            AppSearchTopBar(
-                query = state.query,
-                onQueryChange = viewModel::updateQuery,
-                onClear = { viewModel.updateQuery("") },
-                onFilterClick = { isFilterSheetOpen = true },
-                showFilterButton = hasCatalogFilters,
-                modifier = Modifier.zIndex(1f),
-            )
-            val sortOffsetY by animateDpAsState(
-                targetValue = if (isSortVisible) {
-                    0.dp
-                } else {
-                    -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
-                },
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_offset",
-            )
-            val sortAlpha by animateFloatAsState(
-                targetValue = if (isSortVisible) 1f else 0f,
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_alpha",
-            )
-            CatalogSortControl(
-                selectedSort = selectedSort,
-                availableSorts = availableSorts,
-                expanded = isSortMenuOpen,
-                onExpandedChange = { isSortMenuOpen = it },
-                onSortSelected = viewModel::selectSort,
-                modifier = Modifier.graphicsLayer {
-                    translationY = sortOffsetY.toPx()
-                    alpha = sortAlpha
-                },
-            )
-        }
-    }
-
-    if (isFilterSheetOpen) {
-        AnimeSearchFiltersSheet(
-            initialFilters = state.filters,
-            filterCatalog = legacyFilterCatalog,
-            isFilterCatalogLoading = state.isLoading && legacyFilterCatalog == null,
-            onApply = viewModel::applyFilters,
-            onDismissRequest = { isFilterSheetOpen = false },
-        )
-    }
 }
 
 @Composable

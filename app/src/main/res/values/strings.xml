@@ -128,6 +128,7 @@
     <string name="search_filters_format_novel">Novel</string>
     <string name="search_filters_format_one_shot">One Shot</string>
     <string name="search_start_title">Start searching</string>
+    <string name="search_loading">Searching…</string>
     <string name="search_idle">Enter an anime title to find series in the connected source.</string>
     <string name="search_empty">Nothing found. Try another query or a shorter title.</string>
     <string name="search_retry">Retry</string>

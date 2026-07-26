@@ -12,16 +12,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
@@ -56,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -78,13 +75,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
-import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
-import org.akkirrai.hibiki.app.settings.NotificationPermissionState
-import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
@@ -96,11 +90,10 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsItems
 import org.akkirrai.hibiki.shared.settings.SettingsSection
 import org.akkirrai.hibiki.shared.settings.themeModeOptions
 import org.akkirrai.hibiki.shared.settings.languageModeOptions
-import org.akkirrai.hibiki.shared.settings.AppSettingsIconVerticalItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
-import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreenIcons
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreenLabels
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreenState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -132,177 +125,119 @@ fun SettingsScreen(
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
     }
+    val appIcon = remember(context) {
+        context.packageManager
+            .getApplicationIcon(context.packageName)
+            .toBitmap(config = Bitmap.Config.ARGB_8888)
+            .asImageBitmap()
+    }
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("SettingsScreen composed")
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            top = 24.dp,
-            end = 18.dp,
-            bottom = bottomContentPadding,
+    AppSettingsScreen(
+        state = AppSettingsScreenState(
+            themeMode = preferences.themeMode,
+            useSystemColorScheme = preferences.useSystemColorScheme,
+            useAmoledTheme = preferences.useAmoledTheme,
+            languageMode = preferences.languageMode,
+            notificationPermissionState = preferences.notificationPermissionState,
+            autoSkipSegments = preferences.autoSkipSegments,
+            discordRpcEnabled = preferences.discordRpcEnabled,
+            showUpdates = BuildConfig.GITHUB_UPDATES_ENABLED,
         ),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
-        item(key = SettingsSection.Appearance.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> SettingsVerticalItem(
-                            icon = Icons.Outlined.DarkMode,
-                            title = stringResource(R.string.settings_theme),
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = themeModeOptions,
-                                selectedOption = preferences.themeMode,
-                                label = ::themeModeLabel,
-                                onSelect = { mode ->
-                                    appPreferences.setThemeMode(mode)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
-
-                        1 -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Palette,
-                            title = stringResource(R.string.settings_use_system_color_scheme),
-                            checked = preferences.useSystemColorScheme,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setUseSystemColorScheme,
-                        )
-
-                        2 -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Contrast,
-                            title = stringResource(R.string.settings_amoled),
-                            checked = preferences.useAmoledTheme,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setUseAmoledTheme,
-                        )
-                    }
-                }
+        labels = AppSettingsScreenLabels(
+            appearance = stringResource(R.string.settings_appearance),
+            theme = stringResource(R.string.settings_theme),
+            themeSystem = stringResource(R.string.settings_theme_system),
+            themeLight = stringResource(R.string.settings_theme_light),
+            themeDark = stringResource(R.string.settings_theme_dark),
+            useSystemColorScheme = stringResource(R.string.settings_use_system_color_scheme),
+            amoled = stringResource(R.string.settings_amoled),
+            preferences = stringResource(R.string.settings_preferences),
+            language = stringResource(R.string.settings_language),
+            languageSystem = stringResource(R.string.settings_language_system),
+            languageEnglish = stringResource(R.string.settings_language_english),
+            languageRussian = stringResource(R.string.settings_language_russian),
+            notifications = stringResource(R.string.settings_notifications),
+            notificationsNotAsked = stringResource(R.string.settings_notifications_not_asked),
+            notificationsEnabled = stringResource(R.string.settings_notifications_enabled),
+            notificationsDisabled = stringResource(R.string.settings_notifications_disabled),
+            player = stringResource(R.string.settings_player),
+            autoSkipSegments = stringResource(R.string.settings_auto_skip_segments),
+            experimental = stringResource(R.string.settings_experimental),
+            discordRpc = stringResource(R.string.discord_rpc_title),
+            updates = stringResource(R.string.settings_updates),
+            checkForUpdates = stringResource(R.string.settings_check_updates),
+            support = stringResource(R.string.settings_support),
+            exportLogs = stringResource(R.string.settings_export_logs),
+            about = stringResource(R.string.settings_about),
+            appName = stringResource(R.string.app_name),
+            versionName = versionName,
+        ),
+        icons = AppSettingsScreenIcons(
+            theme = Icons.Outlined.DarkMode,
+            systemColorScheme = Icons.Outlined.Palette,
+            amoled = Icons.Outlined.Contrast,
+            language = Icons.Outlined.Language,
+            notifications = Icons.Outlined.Notifications,
+            autoSkipSegments = Icons.Outlined.SkipNext,
+            discordRpc = ImageVector.vectorResource(R.drawable.ic_discord),
+            update = Icons.Outlined.Update,
+            exportLogs = Icons.Outlined.Share,
+            chevron = Icons.Outlined.ChevronRight,
+        ),
+        appIconContent = {
+            Image(
+                bitmap = appIcon,
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.size(48.dp),
+            )
+        },
+        githubIconContent = {
+            Image(
+                painter = painterResource(R.drawable.ic_github),
+                contentDescription = stringResource(R.string.settings_github),
+                modifier = Modifier.size(26.dp),
+            )
+        },
+        onThemeModeChange = { mode ->
+            appPreferences.setThemeMode(mode)
+            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        },
+        onSystemColorSchemeChange = appPreferences::setUseSystemColorScheme,
+        onAmoledChange = appPreferences::setUseAmoledTheme,
+        onLanguageModeChange = { mode ->
+            appPreferences.setLanguageMode(mode)
+            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        },
+        onConfigureNotifications = onConfigureNotifications,
+        onAutoSkipSegmentsChange = { enabled ->
+            appPreferences.setAutoSkipSegments(enabled)
+            haptic.performHapticFeedback(if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+        },
+        onDiscordClick = { isDiscordAuthDialogOpen = true },
+        onDiscordEnabledChange = { enabled ->
+            if (!enabled) {
+                appPreferences.setDiscordRpcEnabled(false)
+            } else if (discordRpcManager.hasToken()) {
+                discordRpcManager.refreshAuthentication(enableOnSuccess = true)
+            } else {
+                isDiscordAuthDialogOpen = true
             }
-        }
-
-        item(key = SettingsSection.Preferences.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> SettingsVerticalItem(
-                            icon = Icons.Outlined.Language,
-                            title = stringResource(R.string.settings_language),
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = languageModeOptions,
-                                selectedOption = preferences.languageMode,
-                                label = ::languageModeLabel,
-                                onSelect = { mode ->
-                                    appPreferences.setLanguageMode(mode)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
-
-                        1 -> SettingsActionItem(
-                            icon = Icons.Outlined.Notifications,
-                            title = stringResource(R.string.settings_notifications),
-                            subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
-                            shape = shape,
-                            showNavigationArrow = true,
-                            onClick = onConfigureNotifications,
-                        )
-
-                    }
-                }
+            haptic.performHapticFeedback(if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+        },
+        onCheckForUpdates = onCheckForUpdates,
+        onExportLogs = {
+            AppLogger.shareLogs(context).onFailure {
+                Toast.makeText(context, R.string.settings_export_logs_failed, Toast.LENGTH_SHORT).show()
             }
-        }
-
-        item(key = SettingsSection.Player.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_player)) {
-                AppSettingsItems(count = 1) { _, _ ->
-                    SettingsSwitchItem(
-                        icon = Icons.Outlined.SkipNext,
-                        title = stringResource(R.string.settings_auto_skip_segments),
-                        checked = preferences.autoSkipSegments,
-                        shape = CircleShape,
-                        onCheckedChange = appPreferences::setAutoSkipSegments,
-                    )
-                }
-            }
-        }
-
-        item(key = SettingsSection.Experimental.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_experimental)) {
-                AppSettingsItems(count = 1) { _, shape ->
-                    DiscordSettingsItem(
-                        icon = ImageVector.vectorResource(R.drawable.ic_discord),
-                        title = stringResource(R.string.discord_rpc_title),
-                        checked = preferences.discordRpcEnabled,
-                        shape = shape,
-                        onClick = { isDiscordAuthDialogOpen = true },
-                        onCheckedChange = { enabled ->
-                            if (!enabled) {
-                                appPreferences.setDiscordRpcEnabled(false)
-                            } else if (discordRpcManager.hasToken()) {
-                                discordRpcManager.refreshAuthentication(enableOnSuccess = true)
-                            } else {
-                                isDiscordAuthDialogOpen = true
-                            }
-                        },
-                    )
-                }
-            }
-        }
-
-        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            item(key = SettingsSection.Updates.key) {
-                AppSettingsSection(title = stringResource(R.string.settings_updates)) {
-                    AppSettingsItems(count = 1) { _, _ ->
-                        SettingsActionItem(
-                            icon = Icons.Outlined.Update,
-                            title = stringResource(R.string.settings_check_updates),
-                            shape = CircleShape,
-                            onClick = onCheckForUpdates,
-                        )
-                    }
-                }
-            }
-        }
-
-            item(key = SettingsSection.Support.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_support)) {
-                AppSettingsItems(count = 1) { _, _ ->
-                    SettingsActionItem(
-                        icon = Icons.Outlined.Share,
-                        title = stringResource(R.string.settings_export_logs),
-                        shape = CircleShape,
-                        onClick = {
-                            AppLogger.shareLogs(context).onFailure {
-                                Toast.makeText(
-                                    context,
-                                    R.string.settings_export_logs_failed,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            }
-                        },
-                    )
-                }
-            }
-        }
-
-        item(key = SettingsSection.About.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_about)) {
-                SettingsAboutItem(
-                    versionName = versionName,
-                    onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
-                )
-            }
-        }
-    }
+        },
+        onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
+        modifier = modifier,
+        bottomContentPadding = bottomContentPadding,
+    )
 
     if (isDiscordAuthDialogOpen) {
         DiscordAuthDialog(
@@ -319,105 +254,6 @@ fun SettingsScreen(
             },
         )
     }
-}
-
-@Composable
-private fun notificationPermissionLabel(state: NotificationPermissionState): String = stringResource(
-    when (state) {
-        NotificationPermissionState.NOT_ASKED -> R.string.settings_notifications_not_asked
-        NotificationPermissionState.GRANTED -> R.string.settings_notifications_enabled
-        NotificationPermissionState.DENIED -> R.string.settings_notifications_disabled
-    },
-)
-
-@Composable
-private fun SettingsVerticalItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    shape: Shape,
-    content: @Composable () -> Unit,
-) {
-    AppSettingsIconVerticalItem(
-        icon = icon,
-        title = title,
-        shape = shape,
-        content = content,
-    )
-}
-
-@Composable
-private fun SettingsSwitchItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    checked: Boolean,
-    shape: Shape,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val haptic = LocalHapticFeedback.current
-    AppSettingsIconSwitchItem(
-        icon = icon,
-        title = title,
-        checked = checked,
-        shape = shape,
-        onCheckedChange = { enabled ->
-            onCheckedChange(enabled)
-            haptic.performHapticFeedback(
-                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-            )
-        },
-    )
-}
-
-@Composable
-private fun DiscordSettingsItem(
-    icon: ImageVector,
-    title: String,
-    checked: Boolean,
-    shape: Shape,
-    onClick: () -> Unit,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val haptic = LocalHapticFeedback.current
-    AppSettingsIconToggleItem(
-        icon = icon,
-        title = title,
-        checked = checked,
-        shape = shape,
-        onClick = onClick,
-        onCheckedChange = { enabled ->
-            onCheckedChange(enabled)
-            haptic.performHapticFeedback(
-                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-            )
-        },
-    )
-}
-
-@Composable
-private fun SettingsActionItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String? = null,
-    shape: Shape,
-    showNavigationArrow: Boolean = false,
-    onClick: () -> Unit,
-) {
-    AppSettingsIconActionItem(
-        icon = icon,
-        title = title,
-        subtitle = subtitle,
-        shape = shape,
-        trailing = if (showNavigationArrow) {
-            {
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else null,
-        onClick = onClick,
-    )
 }
 
 @Composable
@@ -602,60 +438,5 @@ private fun discordRpcStatusLabel(status: DiscordRpcConnectionStatus): String = 
         DiscordRpcConnectionStatus.Error -> R.string.discord_rpc_status_error
     },
 )
-
-@Composable
-private fun SettingsAboutItem(
-    versionName: String,
-    onGitHubClick: () -> Unit,
-) {
-    val context = LocalContext.current
-    val appIcon = remember(context) {
-        context.packageManager
-            .getApplicationIcon(context.packageName)
-            .toBitmap(config = Bitmap.Config.ARGB_8888)
-            .asImageBitmap()
-    }
-    AppSettingsAboutCard(
-        appName = stringResource(R.string.app_name),
-        versionName = versionName,
-        appIconContent = {
-            Image(
-                bitmap = appIcon,
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(48.dp),
-            )
-        },
-        githubIconContent = {
-            Image(
-                painter = painterResource(R.drawable.ic_github),
-                contentDescription = stringResource(R.string.settings_github),
-                modifier = Modifier.size(26.dp),
-            )
-        },
-        onGitHubClick = onGitHubClick,
-    )
-}
-
-@Composable
-private fun languageModeLabel(mode: LanguageMode): String {
-    return stringResource(
-        when (mode) {
-            LanguageMode.SYSTEM -> R.string.settings_language_system
-            LanguageMode.RUSSIAN -> R.string.settings_language_russian
-            LanguageMode.ENGLISH -> R.string.settings_language_english
-        },
-    )
-}
-
-@Composable
-private fun themeModeLabel(mode: ThemeMode): String {
-    return stringResource(
-        when (mode) {
-            ThemeMode.SYSTEM -> R.string.settings_theme_system
-            ThemeMode.LIGHT -> R.string.settings_theme_light
-            ThemeMode.DARK -> R.string.settings_theme_dark
-        },
-    )
-}
 
 private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"

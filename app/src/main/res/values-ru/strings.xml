@@ -117,6 +117,7 @@
     <string name="search_idle">Введите название аниме, чтобы найти тайтлы в подключенном источнике.</string>
     <string name="search_empty">Ничего не найдено. Попробуйте другой запрос или более короткое название.</string>
     <string name="search_retry">Повторить</string>
+    <string name="search_loading">Поиск…</string>
     <string name="search_load_more">Ещё</string>
     <plurals name="search_results_count">
         <item quantity="one">%d результат</item>

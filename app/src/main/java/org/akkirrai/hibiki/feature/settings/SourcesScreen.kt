@@ -25,6 +25,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +66,11 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
+import org.akkirrai.hibiki.shared.source.AppSourcesScreen
+import org.akkirrai.hibiki.shared.source.AppSourceOption
+import org.akkirrai.hibiki.shared.source.AppSourceSection
+import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
+import org.akkirrai.hibiki.shared.source.AppSourcesSearchScreen
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -89,76 +96,107 @@ fun SourcesScreen(
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val visibleSourcesByLanguage = sourcesByLanguage
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 12.dp,
-                top = 84.dp,
-                end = 12.dp,
-                bottom = bottomContentPadding + 32.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            if (isSearchMode) {
-                val visibleSections = searchState.sections.filter { section ->
-                    section.isLoading || section.error != null || section.items.isNotEmpty()
-                }
-                visibleSections.forEach { section ->
-                    item(key = "search_${section.source.id.value}") {
-                        SourceSearchSection(
-                            section = section,
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                            onRetry = { searchViewModel.retry(section.source.id) },
-                            onAnimeClick = onAnimeClick,
-                        )
-                    }
-                }
-                if (!searchState.isSearching && visibleSections.isEmpty()) {
-                    item(key = "search_empty") {
-                        AppMessageState(
-                            title = stringResource(R.string.sources_search_empty_title),
-                            message = stringResource(R.string.sources_search_empty_message),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                        )
-                    }
-                }
-            } else {
-                SOURCE_LANGUAGE_SECTIONS.forEach { section ->
-                    val sectionSources = visibleSourcesByLanguage[section.language]
-                        .orEmpty()
-                    if (sectionSources.isEmpty()) return@forEach
-                    item(key = "${section.language.tag}_sources") {
-                        SourceLanguageSection(
-                            section = section,
-                            sources = sectionSources,
-                            selectedSource = selectedSource,
-                            onSourceSelected = { source ->
-                                onSourceSelected?.invoke(source.id) ?: preferences.setAnimeSource(source.id)
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                            },
-                        )
-                    }
-                }
-            }
+    if (!isSearchMode) {
+        val staticSections = SOURCE_LANGUAGE_SECTIONS.map { section ->
+            AppSourceSection(
+                key = section.language.tag,
+                title = stringResource(section.labelRes),
+                sources = visibleSourcesByLanguage[section.language].orEmpty().map { source ->
+                    AppSourceOption(id = source.id.value, name = source.name)
+                },
+            )
         }
+        AppSourcesScreen(
+            sections = staticSections,
+            selectedSourceId = selectedSource.value,
+            sectionChevron = ImageVector.vectorResource(R.drawable.animite_drop_down),
+            emptyLabel = stringResource(R.string.settings_sources_empty),
+            sourceIconContent = { option ->
+                AnimeSourceRegistry.sources.firstOrNull { it.id.value == option.id }?.let { source ->
+                    AsyncImage(
+                        model = source.iconUrl,
+                        placeholder = painterResource(source.iconRes),
+                        error = painterResource(source.iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                    )
+                }
+            },
+            searchBarContent = {
+                SourcesSearchBar(
+                    query = query,
+                    onQueryChange = searchViewModel::onQueryChange,
+                    onClear = searchViewModel::clearQuery,
+                    showFilterButton = false,
+                    onFilterClick = {},
+                    modifier = Modifier,
+                )
+            },
+            onSourceSelected = { option ->
+                val sourceId = SourceId(option.id)
+                onSourceSelected?.invoke(sourceId) ?: preferences.setAnimeSource(sourceId)
+                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            },
+            modifier = modifier,
+        )
+        return
+    }
 
-        if (hasSourceSearch) {
+    AppSourcesSearchScreen(
+        sections = searchState.sections.map { section ->
+            AppSourceSearchSection(
+                id = section.source.id.value,
+                name = section.source.name,
+                items = section.items,
+                isLoading = section.isLoading,
+                hasError = section.error != null,
+            )
+        },
+        isSearching = searchState.isSearching,
+        searchBarContent = {
             SourcesSearchBar(
                 query = query,
                 onQueryChange = searchViewModel::onQueryChange,
                 onClear = searchViewModel::clearQuery,
                 showFilterButton = false,
                 onFilterClick = {},
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier,
             )
-        }
-    }
+        },
+        sourceIconContent = { section ->
+            AnimeSourceRegistry.sources.firstOrNull { it.id.value == section.id }?.let { source ->
+                AsyncImage(
+                    model = source.iconUrl,
+                    placeholder = painterResource(source.iconRes),
+                    error = painterResource(source.iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp).clip(CircleShape),
+                )
+            }
+        },
+        metaText = { anime -> anime.buildCardMeta(announcementLabel, movieLabel) },
+        posterContent = { anime ->
+            PosterImage(
+                primaryUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                },
+            )
+        },
+        onRetry = { sourceId -> searchViewModel.retry(SourceId(sourceId)) },
+        onAnimeClick = onAnimeClick,
+        loadingLabel = stringResource(R.string.search_loading),
+        errorLabel = stringResource(R.string.sources_search_failed),
+        retryLabel = stringResource(R.string.search_retry),
+        emptyTitle = stringResource(R.string.sources_search_empty_title),
+        emptyMessage = stringResource(R.string.sources_search_empty_message),
+        emptyIcon = Icons.Outlined.SearchOff,
+        bottomContentPadding = bottomContentPadding,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -228,87 +266,6 @@ private fun SourceLanguageSection(
                         )
                     }
                     if (rowSources.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SourceSearchSection(
-    section: SourceSearchSection,
-    announcementLabel: String,
-    movieLabel: String,
-    onRetry: () -> Unit,
-    onAnimeClick: (Anime) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AsyncImage(
-                model = section.source.iconUrl,
-                placeholder = painterResource(section.source.iconRes),
-                error = painterResource(section.source.iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp).clip(CircleShape),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = section.source.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-        when {
-            section.isLoading -> CircularProgressIndicator(
-                modifier = Modifier.padding(horizontal = 8.dp).size(24.dp),
-                strokeWidth = 2.dp,
-            )
-            section.error != null -> Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.sources_search_failed),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.search_retry))
-                }
-            }
-            section.items.isNotEmpty() -> LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            ) {
-                items(section.items, key = { it.id }) { anime ->
-                    AppPosterAnimeCard(
-                        anime = anime,
-                        metaText = anime.buildCardMeta(
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                        ),
-                        onClick = { onAnimeClick(anime) },
-                        modifier = Modifier.width(154.dp),
-                        posterContent = {
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxSize(),
-                                placeholder = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(MaterialTheme.colorScheme.surfaceContainer),
-                                    )
-                                },
-                            )
-                        },
-                    )
                 }
             }
         }

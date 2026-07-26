@@ -365,20 +365,10 @@ fun DetailsScreen(
         titleColorScheme
     }
     MaterialTheme(colorScheme = detailsColorScheme) {
-        Surface(
-            modifier = modifier
-                .fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground,
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = listState,
-                    contentPadding = PaddingValues(
-                        bottom = contentPadding.calculateBottomPadding() + 100.dp,
-                    ),
-                ) {
+        org.akkirrai.hibiki.shared.details.AppDetailsScreen(
+            listState = listState,
+            contentPadding = contentPadding,
+            content = {
             item {
                 DetailHeroSection(
                     detailsState = DetailsUiState(
@@ -456,51 +446,46 @@ fun DetailsScreen(
                     }
                 }
             }
+            },
+            statusBarScrimContent = {
+                DetailsStatusBarScrim(listState = listState, modifier = Modifier.align(Alignment.TopStart))
+            },
+            backContent = {
+                HeroOverlayBackButton(onClick = onBackClick, modifier = Modifier.align(Alignment.TopStart))
+            },
+            overlayContent = {
+                if (isPosterPreviewOpen) {
+                    PosterPreviewOverlay(
+                        anime = currentAnime,
+                        onDismiss = { isPosterPreviewOpen = false },
+                    )
                 }
-
-                DetailsStatusBarScrim(
-                    listState = listState,
-                    modifier = Modifier.align(Alignment.TopStart),
-                )
-
-                HeroOverlayBackButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.align(Alignment.TopStart),
-                )
-            }
-        }
-
-        if (isPosterPreviewOpen) {
-            PosterPreviewOverlay(
-                anime = currentAnime,
-                onDismiss = { isPosterPreviewOpen = false }
-            )
-        }
-
-        if (isTitleDetailsSheetOpen) {
-            TitleDetailsSheet(
-                title = currentAnime.title,
-                description = description,
-                onDismiss = { isTitleDetailsSheetOpen = false },
-            )
-        }
-
-        if (isLibrarySheetOpen) {
-            LibraryCategorySheet(
-                selectedCategory = libraryCategory,
-                onCategoryClick = { category ->
-                    libraryRepository.saveToLibrary(currentAnime, category)
-                    libraryCategory = category
-                    isLibrarySheetOpen = false
-                },
-                onRemoveClick = {
-                    libraryRepository.removeFromLibrary(currentAnime.id)
-                    libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
-                    isLibrarySheetOpen = false
-                },
-                onDismiss = { isLibrarySheetOpen = false }
-            )
-        }
+                if (isTitleDetailsSheetOpen) {
+                    TitleDetailsSheet(
+                        title = currentAnime.title,
+                        description = description,
+                        onDismiss = { isTitleDetailsSheetOpen = false },
+                    )
+                }
+                if (isLibrarySheetOpen) {
+                    LibraryCategorySheet(
+                        selectedCategory = libraryCategory,
+                        onCategoryClick = { category ->
+                            libraryRepository.saveToLibrary(currentAnime, category)
+                            libraryCategory = category
+                            isLibrarySheetOpen = false
+                        },
+                        onRemoveClick = {
+                            libraryRepository.removeFromLibrary(currentAnime.id)
+                            libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                            isLibrarySheetOpen = false
+                        },
+                        onDismiss = { isLibrarySheetOpen = false },
+                    )
+                }
+            },
+            modifier = modifier,
+        )
     }
 }
 
@@ -896,55 +881,35 @@ private fun DetailContentCard(
     heroInfo: DetailsHeroInfo,
     modifier: Modifier = Modifier,
 ) {
-    val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
-    val emptyValue = stringResource(R.string.search_filters_not_selected)
-    val informationItems = listOfNotNull(
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_status),
-            value = heroInfo.status.ifBlank { emptyValue },
-            icon = Icons.Outlined.Check,
-            accent = MaterialTheme.colorScheme.tertiary,
+    org.akkirrai.hibiki.shared.details.AppDetailsInformationCard(
+        heroInfo = heroInfo,
+        sourceMaterial = localizedSourceMaterial(anime.sourceMaterial),
+        labels = org.akkirrai.hibiki.shared.details.DetailsInformationLabels(
+            title = stringResource(R.string.details_information),
+            status = stringResource(R.string.details_status),
+            episodes = stringResource(R.string.details_episodes_released),
+            type = stringResource(R.string.details_type),
+            releaseDate = stringResource(R.string.details_release_date),
+            sourceMaterial = stringResource(R.string.details_source_material),
+            studio = stringResource(R.string.details_studio),
+            emptyValue = stringResource(R.string.search_filters_not_selected),
         ),
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_episodes_released),
-            value = heroInfo.episodes.ifBlank { emptyValue },
-            icon = Icons.Outlined.FormatListNumbered,
-            accent = MaterialTheme.colorScheme.primary,
+        icons = org.akkirrai.hibiki.shared.details.DetailsInformationIcons(
+            status = Icons.Outlined.Check,
+            episodes = Icons.Outlined.FormatListNumbered,
+            type = Icons.Outlined.BookmarkBorder,
+            releaseDate = Icons.Filled.DateRange,
+            sourceMaterial = Icons.AutoMirrored.Filled.MenuBook,
+            studio = Icons.Filled.Business,
         ),
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_type),
-            value = heroInfo.type,
-            icon = Icons.Outlined.BookmarkBorder,
-            accent = MaterialTheme.colorScheme.secondary,
+        accents = org.akkirrai.hibiki.shared.details.DetailsInformationAccents(
+            status = MaterialTheme.colorScheme.tertiary,
+            episodes = MaterialTheme.colorScheme.primary,
+            type = MaterialTheme.colorScheme.secondary,
+            releaseDate = MaterialTheme.colorScheme.primary,
+            sourceMaterial = MaterialTheme.colorScheme.tertiary,
+            studio = Color(0xFFFF9800),
         ),
-        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_release_date),
-                value = releaseDate,
-                icon = Icons.Filled.DateRange,
-                accent = MaterialTheme.colorScheme.primary,
-            )
-        },
-        sourceMaterial?.let { source ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_source_material),
-                value = source,
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                accent = MaterialTheme.colorScheme.tertiary,
-            )
-        },
-        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_studio),
-                value = studio,
-                icon = Icons.Filled.Business,
-                accent = Color(0xFFFF9800),
-            )
-        },
-    )
-    org.akkirrai.hibiki.shared.details.DetailsInformationSection(
-        title = stringResource(R.string.details_information),
-        items = informationItems,
         horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
         modifier = modifier,
     )
