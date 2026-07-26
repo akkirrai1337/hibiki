@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.details
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -166,7 +167,6 @@ import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
 import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import com.materialkolor.PaletteStyle
-import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -280,6 +280,9 @@ fun DetailsScreen(
         currentAnime.screenshots,
     ) {
         if (titleSeedColor == null) {
+            delay(80)
+        }
+        if (titleSeedColor == null) {
             extractTitleSeedColor(
                 context = context,
                 imageUrls = listOfNotNull(
@@ -361,12 +364,7 @@ fun DetailsScreen(
     } else {
         titleColorScheme
     }
-    val animatedDetailsColorScheme = animateColorScheme(
-        colorScheme = detailsColorScheme,
-        animationSpec = { tween(durationMillis = TITLE_COLOR_TRANSITION_DURATION_MILLIS) },
-    )
-
-    MaterialTheme(colorScheme = animatedDetailsColorScheme) {
+    MaterialTheme(colorScheme = detailsColorScheme) {
         Surface(
             modifier = modifier
                 .fillMaxSize(),
@@ -396,6 +394,20 @@ fun DetailsScreen(
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
                     listState = listState,
+                    onPosterLoaded = { drawable ->
+                        screenScope.launch(Dispatchers.Default) {
+                            val extractedColor = extractTitleSeedColor(drawable)
+                            if (extractedColor != null) {
+                                withContext(Dispatchers.Main.immediate) {
+                                    if (titleSeedColor == null) {
+                                        titleSeedColorCache[detailsStateKey] = extractedColor
+                                        storeTitleSeedColor(context, detailsStateKey, extractedColor)
+                                        titleSeedColor = extractedColor
+                                    }
+                                }
+                            }
+                        }
+                    },
                     onPosterClick = { isPosterPreviewOpen = true },
                     onTitleClick = { isTitleDetailsSheetOpen = true },
                     onLibraryClick = {
@@ -511,6 +523,7 @@ private fun DetailHeroSection(
     resumeFrame: File?,
     isTitleDetailsSheetOpen: Boolean,
     listState: LazyListState,
+    onPosterLoaded: (Drawable) -> Unit,
     onPosterClick: () -> Unit,
     onTitleClick: () -> Unit,
     onLibraryClick: () -> Unit,
@@ -579,6 +592,7 @@ private fun DetailHeroSection(
                 anime = detailsState.anime,
                 height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
+                onPosterLoaded = onPosterLoaded,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(y = posterTop + posterHeightOffset)
@@ -989,6 +1003,7 @@ private fun PosterHeroInline(
     anime: Anime,
     height: Dp,
     onPosterClick: () -> Unit,
+    onPosterLoaded: (Drawable) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     org.akkirrai.hibiki.shared.details.DetailsPosterCard(
@@ -1000,6 +1015,7 @@ private fun PosterHeroInline(
             imageUrl = anime.posterUrl,
             fallbackUrl = anime.posterFallbackUrl,
             contentDescription = anime.title,
+            onImageSuccess = onPosterLoaded,
         )
         },
     )
@@ -1426,6 +1442,24 @@ private suspend fun extractTitleSeedColor(
     return null
 }
 
+private fun extractTitleSeedColor(drawable: Drawable): Int? {
+    val bitmap = runCatching {
+        drawable.toBitmap(width = 96, height = 96)
+    }.getOrNull() ?: return null
+    val palette = runCatching {
+        Palette.from(bitmap)
+            .maximumColorCount(24)
+            .generate()
+    }.getOrNull() ?: return null
+    return (
+        palette.vibrantSwatch
+            ?: palette.lightVibrantSwatch
+            ?: palette.darkVibrantSwatch
+            ?: palette.mutedSwatch
+            ?: palette.dominantSwatch
+        )?.rgb
+}
+
 private data class DetailsScreenSavedState(
     val anime: Anime,
     val firstVisibleItemIndex: Int,
@@ -1453,7 +1487,6 @@ private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
-private const val TITLE_COLOR_TRANSITION_DURATION_MILLIS = 280
 private val DETAIL_CONTENT_START_PADDING = 24.dp
 private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
@@ -1464,12 +1497,14 @@ private fun NetworkImage(
     imageUrl: String?,
     fallbackUrl: String? = null,
     contentDescription: String?,
+    onImageSuccess: ((Drawable) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     PosterImage(
         primaryUrl = imageUrl,
         fallbackUrl = fallbackUrl,
         contentDescription = contentDescription,
+        onImageSuccess = onImageSuccess,
         modifier = modifier.fillMaxSize(),
         placeholder = { ImagePlaceholder() }
     )

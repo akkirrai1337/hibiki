@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.core.design.component
 
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.MaterialTheme
 import coil.compose.AsyncImage
 import coil.request.ErrorResult
+import coil.request.SuccessResult
 import org.akkirrai.hibiki.core.log.AppLogger
 
 @Composable
@@ -23,6 +25,7 @@ fun PosterImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
+    onImageSuccess: ((Drawable) -> Unit)? = null,
     placeholder: @Composable () -> Unit,
 ) {
     val normalizedPrimary = primaryUrl?.takeIf(String::isNotBlank)
@@ -46,7 +49,11 @@ fun PosterImage(
             modifier = Modifier.fillMaxSize(),
             contentScale = contentScale,
             onLoading = { isLoading = true },
-            onSuccess = { isLoading = false },
+            onSuccess = { state ->
+                isLoading = false
+                val drawable = (state.result as? SuccessResult)?.drawable
+                if (drawable != null) onImageSuccess?.invoke(drawable)
+            },
             onError = { state ->
                 val failedUrl = activeUrl
                 val canUseFallback = failedUrl == normalizedPrimary &&

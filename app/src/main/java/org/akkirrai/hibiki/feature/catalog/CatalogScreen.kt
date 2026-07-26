@@ -72,6 +72,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
@@ -561,10 +563,14 @@ class CatalogViewModel(
         pageSize = 50,
     )
     val uiState: StateFlow<AnimeCatalogUiState> = presenter.state
+    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
+    private var sourceGeneration = 0L
 
     init {
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
+                sourceGeneration += 1
+                descriptionRequests.clear()
                 presenter.clear()
                 presenter.setFilters(AnimeSearchFilters())
                 presenter.setQuery("")
@@ -586,12 +592,16 @@ class CatalogViewModel(
     }
 
     fun enrichDescription(anime: Anime) {
-        if (!anime.description.isNullOrBlank()) return
-        viewModelScope.launch {
+        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
+        val generation = sourceGeneration
+        viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
-                    if (!enriched.description.isNullOrBlank()) presenter.updateItem(enriched)
+                    if (generation == sourceGeneration && !enriched.description.isNullOrBlank()) {
+                        presenter.updateItem(enriched)
+                    }
                 }
+                .also { descriptionRequests.remove(anime.id) }
         }
     }
 
