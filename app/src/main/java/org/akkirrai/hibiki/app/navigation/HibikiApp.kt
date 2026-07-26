@@ -270,6 +270,7 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    bottomContentPadding = topLevelBottomContentPadding,
                     modifier = topLevelScreenModifier,
                 )
             }
@@ -288,22 +289,6 @@ private fun HibikiNavHost(
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
                     },
                     onConfigureNotifications = onConfigureNotifications,
-                )
-            }
-        }
-        composable(
-            route = AnimeNavType.SOURCES_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
-        ) { backStackEntry ->
-            DestinationScreenContainer {
-                SourcesScreen(
-                    onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
-                    },
-                    modifier = screenModifier,
                 )
             }
         }

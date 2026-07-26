@@ -10,7 +10,6 @@ object AnimeNavType {
     const val CATALOG_ROUTE = "catalog"
     const val RECENT_UPDATES_ROUTE = "recent_updates"
     const val SETTINGS_ROUTE = "settings"
-    const val SOURCES_ROUTE = "sources"
     const val EPISODES_ROUTE = "episodes"
     const val PLAYER_ROUTE = "player"
     const val ID_ARG = "id"

@@ -72,6 +72,7 @@ import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 @Composable
 fun SourcesScreen(
     onBackClick: (() -> Unit)? = null,
+    bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     modifier: Modifier = Modifier,
     selectedSourceOverride: SourceId? = null,
     onSourceSelected: ((SourceId) -> Unit)? = null,
@@ -108,7 +109,7 @@ fun SourcesScreen(
                 start = 12.dp,
                 top = 84.dp,
                 end = 12.dp,
-                bottom = 32.dp,
+                bottom = bottomContentPadding + 32.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
