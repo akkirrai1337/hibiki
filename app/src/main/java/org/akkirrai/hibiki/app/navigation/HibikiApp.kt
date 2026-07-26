@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraphBuilder
@@ -688,12 +689,12 @@ private fun NavHostController.navigateTopLevelDestination(
     currentTopLevel: TopLevelDestination,
     destination: TopLevelDestination,
 ) {
-    if (currentTopLevel == destination) return
+    if (currentDestination?.hierarchy?.any { it.route == destination.route } == true) return
 
-    if (popBackStack(destination.route, inclusive = false, saveState = true)) {
-        return
-    }
     navigate(destination.route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
         launchSingleTop = true
         restoreState = true
     }

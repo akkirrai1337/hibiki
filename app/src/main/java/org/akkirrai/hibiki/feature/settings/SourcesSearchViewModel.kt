@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
@@ -117,7 +118,7 @@ class SourcesSearchViewModel(
     }
 
     private suspend fun search(query: String, generation: Long) {
-        val sources = AnimeSourceRegistry.sources
+        val sources = AnimeSourceRegistry.sources.filterForQuery(query)
         if (generation != searchGeneration) return
         _uiState.update {
             it.copy(
@@ -209,6 +210,11 @@ class SourcesSearchViewModel(
             yearFrom = filters.yearFrom,
             yearTo = filters.yearTo,
         )
+    }
+
+    private fun List<AnimeSourceDescriptor>.filterForQuery(query: String): List<AnimeSourceDescriptor> {
+        if (!query.any { it in '\u0400'..'\u052F' }) return this
+        return filter { it.language == SourceLanguage.RUSSIAN }
     }
 
     class Factory(private val context: Context) : ViewModelProvider.Factory {
