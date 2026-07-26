@@ -94,7 +94,7 @@ import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.shared.model.buildLibraryMeta
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.settings.LanguageMode
@@ -306,7 +306,10 @@ private fun LibraryAnimeCard(
     onClick: () -> Unit
 ) {
     val anime = entry.anime
-    val meta = anime.buildLibraryMeta()
+    val meta = anime.buildCardMeta(
+        announcementLabel = stringResource(R.string.anime_meta_announcement),
+        movieLabel = stringResource(R.string.anime_meta_movie),
+    )
     org.akkirrai.hibiki.shared.library.AppLibraryAnimeCard(
         anime = anime,
         metaText = meta,
@@ -325,7 +328,6 @@ private fun LibraryAnimeCard(
             )
         },
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
-        extraMetaContent = {},
     )
 }
 

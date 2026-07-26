@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
 @Composable
 fun AppCompactPosterCard(
@@ -50,7 +51,7 @@ fun AppCompactPosterCard(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = anime.title,
+                text = anime.title.preventTrailingOrphanWrap(),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,

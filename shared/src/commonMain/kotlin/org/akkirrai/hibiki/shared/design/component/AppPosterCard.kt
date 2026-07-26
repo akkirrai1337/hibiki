@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
 @Composable
 fun AppPosterCard(
@@ -64,7 +65,7 @@ fun AppPosterCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = anime.title,
+                text = anime.title.preventTrailingOrphanWrap(),
                 style = titleStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 minLines = 1,

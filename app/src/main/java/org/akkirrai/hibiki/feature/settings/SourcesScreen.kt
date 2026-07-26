@@ -60,6 +60,7 @@ import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -87,6 +88,8 @@ fun SourcesScreen(
     val hasSourceSearch = true
     val query = searchState.query.trim()
     val isSearchMode = query.length >= 3 || searchState.filters.hasActiveFilters()
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
     var isFilterSheetVisible by rememberSaveable { mutableStateOf(false) }
     val visibleSourcesByLanguage = sourcesByLanguage
 
@@ -117,6 +120,8 @@ fun SourcesScreen(
                     item(key = "search_${section.source.id.value}") {
                         SourceSearchSection(
                             section = section,
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
                             onRetry = { searchViewModel.retry(section.source.id) },
                             onAnimeClick = onAnimeClick,
                         )
@@ -261,6 +266,8 @@ private fun SourceLanguageSection(
 @Composable
 private fun SourceSearchSection(
     section: SourceSearchSection,
+    announcementLabel: String,
+    movieLabel: String,
     onRetry: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
 ) {
@@ -309,7 +316,10 @@ private fun SourceSearchSection(
                 items(section.items, key = { it.id }) { anime ->
                     AppPosterAnimeCard(
                         anime = anime,
-                        metaText = "",
+                        metaText = anime.buildCardMeta(
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
+                        ),
                         onClick = { onAnimeClick(anime) },
                         modifier = Modifier.width(154.dp),
                         posterContent = {

@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
 @Composable
 fun AppVerticalAnimeListItem(
@@ -103,11 +104,11 @@ fun AppVerticalAnimeListItem(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = anime.title,
+                    text = anime.title.preventTrailingOrphanWrap(),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 3,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     onTextLayout = { layout ->
                         if (titleLineCount != layout.lineCount) titleLineCount = layout.lineCount
@@ -293,12 +294,12 @@ fun AppPosterAnimeCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = anime.title,
+                text = anime.title.preventTrailingOrphanWrap(),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             if (metaContent != null) {
@@ -306,8 +307,10 @@ fun AppPosterAnimeCard(
             } else if (metaText.isNotBlank()) {
                 Text(
                     text = metaText,
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

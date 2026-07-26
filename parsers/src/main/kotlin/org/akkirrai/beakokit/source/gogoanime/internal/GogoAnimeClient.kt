@@ -128,7 +128,9 @@ internal class GogoAnimeClient(
         .mapNotNull { card ->
             val link = card.selectFirst("p.name a[href^=/category/], .img a[href^=/category/]") ?: return@mapNotNull null
             val id = categoryId(link.absUrl("href")) ?: return@mapNotNull null
-            val name = link.attr("title").trim().ifBlank { link.text().trim() }.takeIf(String::isNotBlank)
+            val name = link.attr("title").trim().ifBlank { link.text().trim() }
+                .repairGogoMojibake()
+                .takeIf(String::isNotBlank)
                 ?: return@mapNotNull null
             AnimeTitle(
                 id = id,
@@ -155,6 +157,7 @@ internal class GogoAnimeClient(
             val match = EPISODE_PATH.matchEntire(pathOf(link.absUrl("href"))) ?: return@mapNotNull null
             val name = link.attr("title").trim().takeIf(String::isNotBlank)
                 ?: card.selectFirst("a[title]")?.attr("title")?.trim()
+            val repairedName = name?.repairGogoMojibake()
                 ?: return@mapNotNull null
             val poster = card.selectFirst(".img img")?.absUrl("src")?.takeIf(String::isNotBlank)
                 ?: BACKGROUND_IMAGE.find(card.selectFirst(".thumbnail-recent")?.attr("style").orEmpty())
@@ -163,8 +166,8 @@ internal class GogoAnimeClient(
             AnimeTitle(
                 id = match.groupValues[1],
                 russianName = null,
-                englishName = name,
-                originalName = name,
+                englishName = repairedName,
+                originalName = repairedName,
                 japaneseName = null,
                 synonyms = emptyList(),
                 year = null,
@@ -181,7 +184,7 @@ internal class GogoAnimeClient(
     private fun parseDetails(id: String, document: Document, availableCount: Int): AnimeTitle {
         val info = document.selectFirst(".anime_info_body_bg")
             ?: throw SourceException("GogoAnime details are missing for $id", kind = SourceErrorKind.PARSE)
-        val name = info.selectFirst("h1")?.text()?.trim()?.takeIf(String::isNotBlank)
+        val name = info.selectFirst("h1")?.text()?.trim()?.repairGogoMojibake()?.takeIf(String::isNotBlank)
             ?: throw SourceException("GogoAnime title is missing for $id", kind = SourceErrorKind.PARSE)
         val type = info.fieldValue("Type")?.lowercase()?.let { raw ->
             when (raw) {
@@ -296,7 +299,7 @@ internal class GogoAnimeClient(
     }
 
     private fun String.countGogoMojibakeMarkers(): Int = count {
-        it in GOGO_MOJIBAKE_MARKERS || it.code in C1_CONTROL_RANGE
+        it in GOGO_MOJIBAKE_MARKERS_SAFE || it.code in C1_CONTROL_RANGE
     }
 
     private fun validateSlug(id: String): String = id.trim().trim('/').takeIf(SLUG::matches)
@@ -316,8 +319,11 @@ internal class GogoAnimeClient(
         const val MAX_RESULTS = 50
         const val BROWSER_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36"
         val WINDOWS_1252: Charset = Charset.forName("windows-1252")
-        val GOGO_MOJIBAKE_MARKERS = setOf('Ã', 'Â', 'â', 'ð', 'Ð', 'Ñ', 'ã', 'ƒ', '�')
         val C1_CONTROL_RANGE = 0x80..0x9F
+        val GOGO_MOJIBAKE_MARKERS_SAFE = setOf(
+            '\u00C3', '\u00C2', '\u00E2', '\u00F0',
+            '\u00D0', '\u00D1', '\u00E3', '\u0192', '\uFFFD',
+        )
         val SLUG = Regex("[a-z0-9][a-z0-9-]*")
         val EPISODE_PATH = Regex("/(.+)-episode-(\\d+(?:\\.\\d+)?)$")
         val YEAR = Regex("\\b(?:19|20)\\d{2}\\b")

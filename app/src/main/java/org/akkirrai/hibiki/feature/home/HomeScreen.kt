@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -287,6 +288,8 @@ fun HomeScreen(
                             onAnimeClick = onAnimeClick,
                             recentlyWatchedTitle = recentlyWatchedTitle,
                             recentlyAddedTitle = recentlyAddedTitle,
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
                             onBrowseCatalog = onBrowseCatalog,
                             onOpenLibrary = onOpenLibrary,
                         )
@@ -336,6 +339,8 @@ private fun LazyListScope.homeFeedContent(
     onAnimeClick: (Anime) -> Unit,
     recentlyWatchedTitle: String,
     recentlyAddedTitle: String,
+    announcementLabel: String,
+    movieLabel: String,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
@@ -351,12 +356,16 @@ private fun LazyListScope.homeFeedContent(
         items = recentlyWatched,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.History,
+        announcementLabel = announcementLabel,
+        movieLabel = movieLabel,
     )
     homeAnimeSection(
         title = recentlyAddedTitle,
         items = recentlyAddedToLibrary,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.VideoLibrary,
+        announcementLabel = announcementLabel,
+        movieLabel = movieLabel,
         onHeaderClick = onOpenLibrary,
     )
     if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
@@ -381,6 +390,8 @@ private fun LazyListScope.homeAnimeSection(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    announcementLabel: String,
+    movieLabel: String,
     onHeaderClick: (() -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
@@ -390,6 +401,8 @@ private fun LazyListScope.homeAnimeSection(
             items = items,
             onAnimeClick = onAnimeClick,
             icon = icon,
+            announcementLabel = announcementLabel,
+            movieLabel = movieLabel,
             onHeaderClick = onHeaderClick,
         )
     }
@@ -401,6 +414,8 @@ private fun HomeAnimeSection(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    announcementLabel: String,
+    movieLabel: String,
     onHeaderClick: (() -> Unit)? = null,
 ) {
     Column(
@@ -422,30 +437,36 @@ private fun HomeAnimeSection(
                 fontWeight = FontWeight.SemiBold,
             ),
         )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
-            horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-        ) {
-            items(items, key = Anime::id) { anime ->
-                AppPosterAnimeCard(
-                    anime = anime,
-                    metaText = "",
-                    onClick = { onAnimeClick(anime) },
-                    modifier = Modifier.width(154.dp),
-                    posterContent = {
-                        PosterImage(
-                            primaryUrl = anime.posterUrl,
-                            fallbackUrl = anime.posterFallbackUrl,
-                            contentDescription = anime.title,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(2f / 3f),
-                            placeholder = {
-                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
-                            },
-                        )
-                    },
-                )
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val cardWidth = (maxWidth - 32.dp - UiDimens.ItemSpacing) / 2
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
+            ) {
+                items(items, key = Anime::id) { anime ->
+                    AppPosterAnimeCard(
+                        anime = anime,
+                        metaText = anime.buildCardMeta(
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
+                        ),
+                        onClick = { onAnimeClick(anime) },
+                        modifier = Modifier.width(cardWidth),
+                        posterContent = {
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(2f / 3f),
+                                placeholder = {
+                                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                                },
+                            )
+                        },
+                    )
+                }
             }
         }
     }
