@@ -189,7 +189,7 @@ fun SettingsScreen(
 
         item(key = SettingsSection.Preferences.key) {
             AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
-                AppSettingsItems(count = 3) { index, shape ->
+                AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.Language,

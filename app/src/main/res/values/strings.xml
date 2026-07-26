@@ -373,6 +373,7 @@
     <string name="settings_downloads_summary">Placeholder for offline storage settings</string>
     <string name="settings_sources">Anime source</string>
     <string name="sources_title">Sources</string>
+    <string name="sources_active">Active source</string>
     <string name="sources_search_empty_title">No source results</string>
     <string name="sources_search_empty_message">Try another title or check a shorter query.</string>
     <string name="sources_search_failed">This source could not be searched.</string>

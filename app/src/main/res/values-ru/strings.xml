@@ -473,6 +473,7 @@
     <string name="home_personal_empty_message">Начните смотреть аниме или добавьте тайтл в библиотеку.</string>
     <string name="home_browse_catalog">Открыть каталог</string>
     <string name="sources_title">Источники</string>
+    <string name="sources_active">Активный источник</string>
     <string name="sources_search_empty_title">Ничего не найдено</string>
     <string name="sources_search_empty_message">Попробуйте другое название или короткий запрос.</string>
     <string name="sources_search_failed">Не удалось выполнить поиск в этом источнике.</string>

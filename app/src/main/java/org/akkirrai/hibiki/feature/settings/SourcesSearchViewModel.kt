@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withPermit
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -37,6 +38,9 @@ data class SourcesSearchUiState(
     val sections: List<SourceSearchSection> = emptyList(),
     val isSearching: Boolean = false,
     val hasSearched: Boolean = false,
+    val filters: AnimeSearchFilters = AnimeSearchFilters(),
+    val filterCatalog: org.akkirrai.beakokit.model.AnimeSearchFilterCatalog? = null,
+    val isFilterCatalogLoading: Boolean = false,
 )
 
 class SourcesSearchViewModel(
@@ -48,13 +52,21 @@ class SourcesSearchViewModel(
     private val searchSlots = Semaphore(3)
     private var searchJob: Job? = null
     private var searchGeneration = 0L
+    private var loadedFilterSource: SourceId? = null
 
     fun onQueryChange(value: String) {
         val query = value.trimStart()
         searchJob?.cancel()
         searchGeneration += 1
-        _uiState.value = SourcesSearchUiState(query = query)
-        if (query.trim().length < MIN_QUERY_LENGTH) return
+        _uiState.update {
+            it.copy(
+                query = query,
+                sections = emptyList(),
+                isSearching = false,
+                hasSearched = false,
+            )
+        }
+        if (query.trim().length < MIN_QUERY_LENGTH && !_uiState.value.filters.hasActiveFilters()) return
 
         val generation = searchGeneration
         searchJob = viewModelScope.launch(Dispatchers.IO) {
@@ -64,6 +76,34 @@ class SourcesSearchViewModel(
     }
 
     fun clearQuery() = onQueryChange("")
+
+    fun applyFilters(filters: AnimeSearchFilters) {
+        searchJob?.cancel()
+        searchGeneration += 1
+        _uiState.update { it.copy(filters = filters) }
+        if (_uiState.value.query.trim().length < MIN_QUERY_LENGTH && !filters.hasActiveFilters()) return
+        val generation = searchGeneration
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            search(_uiState.value.query, generation)
+        }
+    }
+
+    fun loadFilterCatalog(sourceId: SourceId) {
+        if (loadedFilterSource == sourceId &&
+            (_uiState.value.filterCatalog != null || _uiState.value.isFilterCatalogLoading)
+        ) return
+        loadedFilterSource = sourceId
+        _uiState.update { it.copy(filterCatalog = null, isFilterCatalogLoading = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val catalog = runCatching { repository.getSearchFilterCatalog(sourceId) }.getOrNull()
+            _uiState.update {
+                it.copy(
+                    filterCatalog = catalog,
+                    isFilterCatalogLoading = false,
+                )
+            }
+        }
+    }
 
     fun retry(sourceId: SourceId) {
         val query = _uiState.value.query.trim()
@@ -95,7 +135,7 @@ class SourcesSearchViewModel(
                             val result = runCatching {
                                 repository.search(
                                     source.id,
-                                    AnimeSearchRequest(query = query, limit = RESULTS_PER_SOURCE, offset = 0),
+                                    request(query),
                                 )
                             }
                             if (generation != searchGeneration) return@withPermit
@@ -134,7 +174,7 @@ class SourcesSearchViewModel(
             val result = runCatching {
                 repository.search(
                     sourceId,
-                    AnimeSearchRequest(query = query, limit = RESULTS_PER_SOURCE, offset = 0),
+                request(query),
                 )
             }
             if (generation != searchGeneration) return@withPermit
@@ -154,6 +194,21 @@ class SourcesSearchViewModel(
         searchJob?.cancel()
         repository.close()
         super.onCleared()
+    }
+
+    private fun request(query: String): AnimeSearchRequest {
+        val filters = _uiState.value.filters
+        return AnimeSearchRequest(
+            query = query,
+            limit = RESULTS_PER_SOURCE,
+            offset = 0,
+            typeAliases = listOfNotNull(filters.typeAlias),
+            statusAliases = listOfNotNull(filters.statusAlias),
+            includedGenreAliases = filters.includedGenreAliases.toList(),
+            excludedGenreAliases = filters.excludedGenreAliases.toList(),
+            yearFrom = filters.yearFrom,
+            yearTo = filters.yearTo,
+        )
     }
 
     class Factory(private val context: Context) : ViewModelProvider.Factory {
