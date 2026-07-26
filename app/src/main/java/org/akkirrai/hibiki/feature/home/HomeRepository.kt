@@ -54,9 +54,10 @@ class HomeRepository(
     private val libraryRepository = LibraryRepository(appContext)
 
     override fun fallbackHomeState(): HomeUiState {
+        val continueAnime = loadStoredContinueAnime()
         return HomeUiState(
-            continueAnime = loadStoredContinueAnime(),
-            recentlyWatched = loadRecentlyWatched(),
+            continueAnime = continueAnime,
+            recentlyWatched = loadRecentlyWatched(excludedTitleId = continueAnime?.id),
             recentlyAddedToLibrary = loadRecentlyAddedToLibrary(),
         )
     }
@@ -67,9 +68,10 @@ class HomeRepository(
     }
 
     override suspend fun loadHomeState(): HomeUiState {
+        val continueAnime = loadStoredContinueAnime()
         return HomeUiState(
-            continueAnime = loadStoredContinueAnime(),
-            recentlyWatched = loadRecentlyWatched(),
+            continueAnime = continueAnime,
+            recentlyWatched = loadRecentlyWatched(excludedTitleId = continueAnime?.id),
             recentlyAddedToLibrary = loadRecentlyAddedToLibrary(),
         )
 
@@ -157,9 +159,12 @@ class HomeRepository(
                 .firstOrNull { it.anime.id == titleId }
                 ?.anime
 
-    private fun loadRecentlyWatched(): List<Anime> =
+    private fun loadRecentlyWatched(excludedTitleId: String? = null): List<Anime> =
         watchStateRepository
-            .getRecentTitleWatchStates(HOME_PERSONAL_SECTION_LIMIT)
+            .getRecentTitleWatchStates(
+                HOME_PERSONAL_SECTION_LIMIT + if (excludedTitleId != null) 1 else 0,
+            )
+            .filterNot { state -> state.titleId == excludedTitleId }
             .mapNotNull { state -> findStoredAnime(state.titleId) }
             .distinctBy(Anime::id)
 

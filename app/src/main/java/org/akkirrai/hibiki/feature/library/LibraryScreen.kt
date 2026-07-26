@@ -319,9 +319,15 @@ private fun LibraryAnimeCard(
                 anime = anime,
                 modifier = Modifier.fillMaxSize(),
             )
+            AnimeSourceBadge(
+                titleId = anime.id,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp),
+            )
         },
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
-        extraMetaContent = { AnimeSourceBadge(titleId = anime.id) },
+        extraMetaContent = {},
     )
 }
 
@@ -358,8 +364,8 @@ private fun AnimePoster(
     anime: Anime,
     modifier: Modifier = Modifier
 ) {
-    org.akkirrai.hibiki.shared.library.AppPosterSurface(
-        modifier = modifier,
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         PosterImage(
             primaryUrl = anime.posterUrl,

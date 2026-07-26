@@ -108,7 +108,6 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.ActiveSourceChip
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
@@ -126,8 +125,6 @@ import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.model.buildCardMeta
-import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -135,7 +132,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
     onBrowseCatalog: () -> Unit = {},
-    onOpenSources: () -> Unit = {},
+    onOpenLibrary: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     modifier: Modifier = Modifier
@@ -162,8 +159,6 @@ fun HomeScreen(
     val recentlyAddedTitle = stringResource(R.string.home_recently_added)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
-    val selectedSourceId = LocalAppPreferencesState.current.animeSource
-    val selectedSource = remember(selectedSourceId) { AnimeSourceRegistry.descriptor(selectedSourceId) }
     val homeListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
@@ -294,6 +289,7 @@ fun HomeScreen(
                             recentlyWatchedTitle = recentlyWatchedTitle,
                             recentlyAddedTitle = recentlyAddedTitle,
                             onBrowseCatalog = onBrowseCatalog,
+                            onOpenLibrary = onOpenLibrary,
                         )
                     }
                 }
@@ -325,17 +321,6 @@ fun HomeScreen(
                 )
         )
 
-        ActiveSourceChip(
-            source = selectedSource,
-            onClick = onOpenSources,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(
-                    top = UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight + 6.dp,
-                    end = UiDimens.ScreenPadding,
-                ),
-        )
-
         if (showSearchFilters) {
             HomeSearchFiltersSheet(
                 viewModel = viewModel,
@@ -353,6 +338,7 @@ private fun LazyListScope.homeFeedContent(
     recentlyWatchedTitle: String,
     recentlyAddedTitle: String,
     onBrowseCatalog: () -> Unit,
+    onOpenLibrary: () -> Unit,
 ) {
     continueAnime?.let { anime ->
         item {
@@ -365,11 +351,14 @@ private fun LazyListScope.homeFeedContent(
         title = recentlyWatchedTitle,
         items = recentlyWatched,
         onAnimeClick = onAnimeClick,
+        icon = Icons.Outlined.History,
     )
     homeAnimeSection(
         title = recentlyAddedTitle,
         items = recentlyAddedToLibrary,
         onAnimeClick = onAnimeClick,
+        icon = Icons.Outlined.VideoLibrary,
+        onHeaderClick = onOpenLibrary,
     )
     if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
         item {
@@ -392,6 +381,8 @@ private fun LazyListScope.homeAnimeSection(
     title: String,
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onHeaderClick: (() -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
     item {
@@ -399,6 +390,8 @@ private fun LazyListScope.homeAnimeSection(
             title = title,
             items = items,
             onAnimeClick = onAnimeClick,
+            icon = icon,
+            onHeaderClick = onHeaderClick,
         )
     }
 }
@@ -408,6 +401,8 @@ private fun HomeAnimeSection(
     title: String,
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onHeaderClick: (() -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -417,8 +412,13 @@ private fun HomeAnimeSection(
     ) {
         SectionHeader(
             title = title,
-            actionLabel = "\u203A",
-            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+            actionLabel = onHeaderClick?.let { "\u203A" },
+            icon = icon,
+            modifier = Modifier
+                .padding(horizontal = UiDimens.ScreenPadding)
+                .clickable(enabled = onHeaderClick != null) {
+                    onHeaderClick?.invoke()
+                },
             titleStyle = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold,
             ),

@@ -80,7 +80,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.ActiveSourceChip
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
@@ -95,7 +94,6 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.CatalogFeature
@@ -119,7 +117,6 @@ import me.saket.cascade.rememberCascadeState
 @Composable
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
-    onOpenSources: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: CatalogViewModel = viewModel(
@@ -130,7 +127,6 @@ fun CatalogScreen(
     val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
-    val selectedSource = remember(selectedSourceId) { AnimeSourceRegistry.descriptor(selectedSourceId) }
     val listState = rememberSaveable(selectedSourceId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
         androidx.compose.foundation.lazy.LazyListState()
     }
@@ -292,11 +288,6 @@ fun CatalogScreen(
                 onFilterClick = { isFilterSheetOpen = true },
                 showFilterButton = hasCatalogFilters,
                 modifier = Modifier.zIndex(1f),
-            )
-            ActiveSourceChip(
-                source = selectedSource,
-                onClick = onOpenSources,
-                modifier = Modifier.align(Alignment.End),
             )
             val sortOffsetY by animateDpAsState(
                 targetValue = if (isSortVisible) {

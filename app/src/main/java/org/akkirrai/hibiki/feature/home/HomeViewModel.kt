@@ -46,6 +46,7 @@ class HomeViewModel(
         PerfLogger.mark("HomeViewModel created")
         observeDescriptionUpdates()
         load()
+        loadSearchFilterCatalog()
         observeLanguageChanges()
         observeSourceChanges()
     }
@@ -498,14 +499,15 @@ class HomeViewModel(
                     sourceGeneration += 1
                     searchJob?.cancel()
                     filterCatalogJob?.cancel()
-                    presenter.update {
-                        it.copy(
-                            searchResult = SearchUiState.Idle,
-                            searchFilters = AnimeSearchFilters(),
-                            searchFilterCatalog = null,
-                        )
-                    }
+                presenter.update {
+                    it.copy(
+                        searchResult = SearchUiState.Idle,
+                        searchFilters = AnimeSearchFilters(),
+                        searchFilterCatalog = null,
+                    )
                 }
+                    loadSearchFilterCatalog()
+            }
         }
     }
 

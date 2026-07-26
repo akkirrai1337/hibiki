@@ -177,11 +177,11 @@ private fun HibikiNavHost(
                             )
                         }
                     },
-                    onOpenSources = {
+                    onOpenLibrary = {
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateTopLevelDestination(
                                 TopLevelDestination.Home,
-                                TopLevelDestination.Sources,
+                                TopLevelDestination.Library,
                             )
                         }
                     },
@@ -226,14 +226,6 @@ private fun HibikiNavHost(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                        }
-                    },
-                    onOpenSources = {
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigateTopLevelDestination(
-                                TopLevelDestination.Catalog,
-                                TopLevelDestination.Sources,
-                            )
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
