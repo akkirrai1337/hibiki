@@ -156,7 +156,9 @@ fun HomeScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
-    val homeListState = remember(selectedSourceId) { LazyListState() }
+    val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) {
+        LazyListState()
+    }
 
     LaunchedEffect(hasSearchFilters) {
         if (!hasSearchFilters) showSearchFilters = false
