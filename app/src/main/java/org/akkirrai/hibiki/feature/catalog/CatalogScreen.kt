@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -199,7 +198,6 @@ fun CatalogScreen(
                                 separator = " • ",
                         ) },
                         onAnimeClick = onAnimeClick,
-                        trailingIcon = Icons.Outlined.ChevronRight,
                         posterContent = { anime ->
                             PosterImage(
                                 primaryUrl = anime.posterUrl,

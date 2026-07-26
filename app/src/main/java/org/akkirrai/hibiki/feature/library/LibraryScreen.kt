@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
@@ -313,7 +312,6 @@ private fun LibraryAnimeCard(
         metaText = meta,
         onClick = onClick,
         modifier = modifier,
-        trailingIcon = Icons.Outlined.ChevronRight,
         posterContent = {
             AnimePoster(
                 anime = anime,

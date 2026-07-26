@@ -116,13 +116,6 @@ fun AppVerticalAnimeListItem(
                 trailingContent?.let {
                     Spacer(modifier = Modifier.width(6.dp))
                     it()
-                } ?: trailingIcon?.let { icon ->
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
 
@@ -170,7 +163,6 @@ fun LazyListScope.appVerticalAnimeListContent(
             metaText = metaText,
             onAnimeClick = onAnimeClick,
             modifier = modifier,
-            trailingIcon = trailingIcon,
             posterContent = posterContent,
             posterFooterContent = posterFooterContent,
             onItemVisible = onItemVisible,
@@ -183,7 +175,6 @@ fun LazyListScope.appVerticalAnimeListContent(
         metaText = metaText,
         onAnimeClick = onAnimeClick,
         modifier = modifier,
-        trailingIcon = trailingIcon,
         posterContent = posterContent,
         posterFooterContent = posterFooterContent,
         onItemVisible = onItemVisible,
@@ -195,7 +186,6 @@ private fun LazyListScope.appLegacyVerticalAnimeListContent(
     metaText: @Composable (Anime) -> String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     posterContent: @Composable BoxScope.(Anime) -> Unit,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
@@ -209,7 +199,6 @@ private fun LazyListScope.appLegacyVerticalAnimeListContent(
             metaText = metaText(anime),
             onClick = { onAnimeClick(anime) },
             modifier = modifier.fillMaxWidth(),
-            trailingIcon = trailingIcon,
             posterContent = { posterContent(anime) },
             posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
         )
@@ -221,7 +210,6 @@ fun LazyListScope.appPosterAnimeListContent(
     metaText: @Composable (Anime) -> String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     posterContent: @Composable BoxScope.(Anime) -> Unit,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
@@ -244,7 +232,6 @@ fun LazyListScope.appPosterAnimeListContent(
                     metaText = metaText(anime),
                     onClick = { onAnimeClick(anime) },
                     modifier = Modifier.weight(1f),
-                    trailingIcon = trailingIcon,
                     posterContent = { posterContent(anime) },
                     posterFooterContent = posterFooterContent?.let { footer ->
                         { footer(anime) }
@@ -263,7 +250,6 @@ fun AppPosterAnimeCard(
     onClick: () -> Unit,
     posterContent: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     metaContent: (@Composable () -> Unit)? = null,
     posterFooterContent: (@Composable () -> Unit)? = null,
 ) {
@@ -306,28 +292,15 @@ fun AppPosterAnimeCard(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
+            Text(
+                text = anime.title,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = anime.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                trailingIcon?.let { icon ->
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (metaContent != null) {
                 metaContent()
             } else if (metaText.isNotBlank()) {

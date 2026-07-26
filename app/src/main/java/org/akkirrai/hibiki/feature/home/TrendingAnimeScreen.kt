@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.DropdownMenu
@@ -125,7 +124,6 @@ fun TrendingAnimeScreen(
                         items = state.items,
                         metaText = { anime -> buildTrendingMeta(anime) },
                         onAnimeClick = onAnimeClick,
-                        trailingIcon = Icons.Outlined.ChevronRight,
                         posterContent = { anime ->
                             PosterImage(
                                 primaryUrl = anime.posterUrl,

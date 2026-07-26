@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
@@ -101,7 +100,6 @@ fun SearchScreen(
             errorModifier = Modifier.padding(top = 24.dp),
             errorRetryLabel = retryLabel,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
-            trailingIcon = Icons.Outlined.ChevronRight,
             posterContent = { anime ->
                 PosterImage(
                     primaryUrl = anime.posterUrl,

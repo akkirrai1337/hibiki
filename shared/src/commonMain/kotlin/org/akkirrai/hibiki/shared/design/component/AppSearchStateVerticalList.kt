@@ -49,7 +49,6 @@ import org.akkirrai.hibiki.shared.model.SearchUiState
  * @param errorRetryLabel label for the retry button in the error state.
  * @param loadMoreLoadingLabel optional label shown next to the spinner while loading more.
  * @param loadMoreModifier modifier applied to the load-more block.
- * @param trailingIcon optional trailing icon for each anime card (e.g. chevron).
  * @param posterContent slot for the anime poster image (platform-specific loader).
  * @param posterFooterContent optional slot for overlay content at the bottom of each poster.
  * @param onItemVisible optional visibility callback for each anime item.
@@ -75,7 +74,6 @@ fun LazyListScope.appSearchStateVerticalListContent(
     errorRetryLabel: String? = null,
     loadMoreLoadingLabel: String? = null,
     loadMoreModifier: Modifier = Modifier,
-    trailingIcon: ImageVector? = null,
     posterContent: @Composable BoxScope.(Anime) -> Unit,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
@@ -192,7 +190,6 @@ fun LazyListScope.appSearchStateVerticalListContent(
                 metaText = metaText,
                 onAnimeClick = onAnimeClick,
                 modifier = modifier,
-                trailingIcon = trailingIcon,
                 posterContent = posterContent,
                 posterFooterContent = posterFooterContent,
                 onItemVisible = onItemVisible,

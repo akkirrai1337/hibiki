@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
@@ -93,7 +92,6 @@ fun RecentUpdatesScreen(
                         )
                     },
                     onAnimeClick = onAnimeClick,
-                    trailingIcon = Icons.Outlined.ChevronRight,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                     posterContent = { anime ->
                         PosterImage(

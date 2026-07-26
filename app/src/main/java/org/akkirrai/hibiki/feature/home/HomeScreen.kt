@@ -46,7 +46,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
@@ -103,7 +102,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.shared.design.component.AppCompactPosterCard
+import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
@@ -428,10 +427,12 @@ private fun HomeAnimeSection(
             horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
         ) {
             items(items, key = Anime::id) { anime ->
-                AppCompactPosterCard(
+                AppPosterAnimeCard(
                     anime = anime,
+                    metaText = "",
                     onClick = { onAnimeClick(anime) },
-                    imageContent = {
+                    modifier = Modifier.width(154.dp),
+                    posterContent = {
                         PosterImage(
                             primaryUrl = anime.posterUrl,
                             fallbackUrl = anime.posterFallbackUrl,
@@ -440,11 +441,7 @@ private fun HomeAnimeSection(
                                 .fillMaxWidth()
                                 .aspectRatio(2f / 3f),
                             placeholder = {
-                                Box(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                                )
+                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
                             },
                         )
                     },

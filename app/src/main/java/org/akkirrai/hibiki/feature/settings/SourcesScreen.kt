@@ -59,7 +59,7 @@ import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.AppCompactPosterCard
+import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -307,24 +307,27 @@ private fun SourceSearchSection(
                 horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
             ) {
                 items(section.items, key = { it.id }) { anime ->
-                    AppCompactPosterCard(
+                    AppPosterAnimeCard(
                         anime = anime,
+                        metaText = "",
                         onClick = { onAnimeClick(anime) },
-                    ) {
-                        PosterImage(
-                            primaryUrl = anime.posterUrl,
-                            fallbackUrl = anime.posterFallbackUrl,
-                            contentDescription = anime.title,
-                            modifier = Modifier.fillMaxSize(),
-                            placeholder = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                                )
-                            },
-                        )
-                    }
+                        modifier = Modifier.width(154.dp),
+                        posterContent = {
+                            PosterImage(
+                                primaryUrl = anime.posterUrl,
+                                fallbackUrl = anime.posterFallbackUrl,
+                                contentDescription = anime.title,
+                                modifier = Modifier.fillMaxSize(),
+                                placeholder = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                                    )
+                                },
+                            )
+                        },
+                    )
                 }
             }
         }
