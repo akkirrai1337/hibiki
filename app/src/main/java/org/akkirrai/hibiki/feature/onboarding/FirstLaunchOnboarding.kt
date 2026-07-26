@@ -125,7 +125,6 @@ fun FirstLaunchOnboarding(
             SourcesScreen(
                 selectedSourceOverride = selectedSource,
                 onSourceSelected = { selectedSourceValue = it.value },
-                onBackClick = { showSourceList = false },
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),

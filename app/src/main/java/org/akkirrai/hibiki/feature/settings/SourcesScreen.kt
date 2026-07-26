@@ -71,7 +71,6 @@ import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
 fun SourcesScreen(
-    onBackClick: (() -> Unit)? = null,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     modifier: Modifier = Modifier,
     selectedSourceOverride: SourceId? = null,
@@ -138,17 +137,9 @@ fun SourcesScreen(
                     }
                 }
             } else {
-                if (onBackClick == null) {
-                    item(key = "active_source") {
-                        SourceActiveCard(
-                            source = AnimeSourceRegistry.sources.firstOrNull { it.id == selectedSource },
-                        )
-                    }
-                }
                 SOURCE_LANGUAGE_SECTIONS.forEach { section ->
                     val sectionSources = visibleSourcesByLanguage[section.language]
                         .orEmpty()
-                        .filterNot { source -> onBackClick == null && source.id == selectedSource }
                     if (sectionSources.isEmpty()) return@forEach
                     item(key = "${section.language.tag}_sources") {
                         SourceLanguageSection(
@@ -342,26 +333,6 @@ private fun SourceSearchSection(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SourceActiveCard(source: AnimeSourceDescriptor?) {
-    if (source == null) return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.sources_active),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        )
-        SourceGridItem(
-            source = source,
-            selected = true,
-            onClick = {},
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
