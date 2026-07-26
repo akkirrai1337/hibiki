@@ -108,7 +108,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
-    onOpenSources: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -150,7 +149,7 @@ fun SettingsScreen(
     ) {
         item(key = SettingsSection.Appearance.key) {
             AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
-                AppSettingsItems(count = 3) { index, shape ->
+                AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.DarkMode,
@@ -209,14 +208,6 @@ fun SettingsScreen(
                         }
 
                         1 -> SettingsActionItem(
-                            icon = Icons.Outlined.Storage,
-                            title = stringResource(R.string.settings_sources),
-                            shape = shape,
-                            showNavigationArrow = true,
-                            onClick = onOpenSources,
-                        )
-
-                        2 -> SettingsActionItem(
                             icon = Icons.Outlined.Notifications,
                             title = stringResource(R.string.settings_notifications),
                             subtitle = notificationPermissionLabel(preferences.notificationPermissionState),

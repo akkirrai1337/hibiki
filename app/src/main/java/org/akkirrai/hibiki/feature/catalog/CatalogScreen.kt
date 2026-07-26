@@ -46,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -79,6 +80,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.core.design.component.ActiveSourceChip
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
@@ -92,7 +94,10 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -114,6 +119,7 @@ import me.saket.cascade.rememberCascadeState
 @Composable
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
+    onOpenSources: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: CatalogViewModel = viewModel(
@@ -123,7 +129,11 @@ fun CatalogScreen(
     val state by viewModel.uiState.collectAsState()
     val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
-    val listState = rememberLazyListState()
+    val selectedSourceId = LocalAppPreferencesState.current.animeSource
+    val selectedSource = remember(selectedSourceId) { AnimeSourceRegistry.descriptor(selectedSourceId) }
+    val listState = rememberSaveable(selectedSourceId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
+        androidx.compose.foundation.lazy.LazyListState()
+    }
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     var isFilterSheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
@@ -282,6 +292,11 @@ fun CatalogScreen(
                 onFilterClick = { isFilterSheetOpen = true },
                 showFilterButton = hasCatalogFilters,
                 modifier = Modifier.zIndex(1f),
+            )
+            ActiveSourceChip(
+                source = selectedSource,
+                onClick = onOpenSources,
+                modifier = Modifier.align(Alignment.End),
             )
             val sortOffsetY by animateDpAsState(
                 targetValue = if (isSortVisible) {
@@ -556,6 +571,7 @@ private val CatalogSort.icon: ImageVector
 
 class CatalogViewModel(
     private val repository: CatalogRepository,
+    initialSourceId: SourceId,
 ) : ViewModel() {
     private val presenter = AnimeCatalogPresenter(
         repository = repository,
@@ -565,17 +581,26 @@ class CatalogViewModel(
     val uiState: StateFlow<AnimeCatalogUiState> = presenter.state
     private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
     private var sourceGeneration = 0L
+    private val sourceSessions = ConcurrentHashMap<String, AnimeCatalogUiState>()
+    private var activeSourceId = initialSourceId
 
     init {
         viewModelScope.launch {
-            AppPreferences.animeSourceChanges.collect {
+            AppPreferences.animeSourceChanges.collect { sourceId ->
+                sourceSessions[activeSourceId.value] = presenter.state.value
                 sourceGeneration += 1
+                activeSourceId = sourceId
                 descriptionRequests.clear()
-                presenter.clear()
-                presenter.setFilters(AnimeSearchFilters())
-                presenter.setQuery("")
-                presenter.loadFilterCatalog()
-                presenter.search()
+                sourceSessions[sourceId.value]?.let { cached ->
+                    presenter.restore(cached)
+                    if (cached.filterCatalog == null) presenter.loadFilterCatalog()
+                } ?: run {
+                    presenter.clear()
+                    presenter.setFilters(AnimeSearchFilters())
+                    presenter.setQuery("")
+                    presenter.loadFilterCatalog()
+                    presenter.search()
+                }
             }
         }
         presenter.loadFilterCatalog()
@@ -625,6 +650,7 @@ class CatalogViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return CatalogViewModel(
                 repository = CatalogRepository(context.applicationContext),
+                initialSourceId = AppPreferences.readState(context.applicationContext).animeSource,
             ) as T
         }
     }
@@ -699,6 +725,8 @@ private val CATALOG_SORT_VERTICAL_GAP = 8.dp
 private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
 private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SEARCH_BAR_HEIGHT +
+    CATALOG_SORT_VERTICAL_GAP +
+    32.dp +
     CATALOG_SORT_VERTICAL_GAP +
     CATALOG_SORT_CONTROL_HEIGHT +
     CATALOG_SORT_VERTICAL_GAP

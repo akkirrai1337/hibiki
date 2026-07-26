@@ -46,7 +46,6 @@ class HomeViewModel(
         PerfLogger.mark("HomeViewModel created")
         observeDescriptionUpdates()
         load()
-        loadSearchFilterCatalog()
         observeLanguageChanges()
         observeSourceChanges()
     }
@@ -114,6 +113,7 @@ class HomeViewModel(
             presenter.update { it.copy(searchResult = SearchUiState.Idle) }
             return
         }
+        ensureSearchFilterCatalog()
         scheduleSearch(immediate = false)
     }
 
@@ -493,14 +493,11 @@ class HomeViewModel(
     }
 
     private fun observeSourceChanges() {
-        viewModelScope.launch {
+                viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                     sourceGeneration += 1
-                    cancelSourceBoundJobs()
                     searchJob?.cancel()
-                    homeLoadJob?.cancel()
                     filterCatalogJob?.cancel()
-                    recentRandomIds.clear()
                     presenter.update {
                         it.copy(
                             searchResult = SearchUiState.Idle,
@@ -508,9 +505,14 @@ class HomeViewModel(
                             searchFilterCatalog = null,
                         )
                     }
-                    load()
-                    loadSearchFilterCatalog()
                 }
+        }
+    }
+
+    private fun ensureSearchFilterCatalog() {
+        val state = uiState.value
+        if (state.searchFilterCatalog == null && !state.isSearchFilterCatalogLoading) {
+            loadSearchFilterCatalog()
         }
     }
 

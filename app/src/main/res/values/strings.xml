@@ -13,6 +13,7 @@
     <string name="local_profile_duration_hours_short">%1$s h</string>
 
     <string name="nav_home">Home</string>
+    <string name="nav_sources">Sources</string>
     <string name="nav_catalog">Catalog</string>
     <string name="nav_library">Library</string>
     <string name="nav_profile">Profile</string>
@@ -34,7 +35,14 @@
     <string name="local_profile_empty_favorites">No favourite titles yet</string>
 
     <string name="home_continue_title">Continue watching</string>
+    <string name="home_recently_watched">Recently watched</string>
+    <string name="home_recently_added">Recently added</string>
+    <string name="home_personal_empty_title">Your home is empty</string>
+    <string name="home_personal_empty_message">Start watching or add a title to your library.</string>
+    <string name="home_browse_catalog">Browse catalog</string>
     <string name="home_trending">Trending now</string>
+    <string name="home_popular_this_season">Popular this season</string>
+    <string name="home_upcoming_next_season">Upcoming next season</string>
     <string name="home_see_all">See all</string>
     <string name="home_recent_updates">Recent updates</string>
     <string name="home_quick_popular">Popular</string>
@@ -364,6 +372,10 @@
     <string name="settings_downloads">Downloads</string>
     <string name="settings_downloads_summary">Placeholder for offline storage settings</string>
     <string name="settings_sources">Anime source</string>
+    <string name="sources_title">Sources</string>
+    <string name="sources_search_empty_title">No source results</string>
+    <string name="sources_search_empty_message">Try another title or check a shorter query.</string>
+    <string name="sources_search_failed">This source could not be searched.</string>
     <string name="settings_sources_summary">Choose the catalog and metadata provider</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_not_asked">Permission has not been requested</string>

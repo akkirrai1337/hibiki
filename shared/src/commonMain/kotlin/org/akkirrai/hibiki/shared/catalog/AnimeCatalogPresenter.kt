@@ -201,6 +201,18 @@ class AnimeCatalogPresenter(
         const val DEFAULT_PAGE_SIZE = 20
     }
 
+    fun restore(state: AnimeCatalogUiState) {
+        searchJob?.cancel()
+        filterCatalogJob?.cancel()
+        detailsJob?.cancel()
+        _state.value = state.copy(
+            isLoading = false,
+            isLoadingMore = false,
+            error = null,
+            isDetailsLoading = false,
+        )
+    }
+
     private fun preserveLoadedDescriptions(
         previousItems: List<Anime>,
         updatedItems: List<Anime>,

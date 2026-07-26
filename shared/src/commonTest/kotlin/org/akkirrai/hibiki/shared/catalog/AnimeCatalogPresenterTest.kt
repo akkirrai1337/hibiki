@@ -37,4 +37,28 @@ class AnimeCatalogPresenterTest {
         assertEquals(listOf("1", "2", "3"), presenter.state.value.items.map { it.id })
         assertFalse(presenter.state.value.canLoadMore)
     }
+
+    @Test
+    fun presenterRestoresASeparateSourceSession() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        val cached = AnimeCatalogUiState(
+            query = "saved query",
+            items = listOf(Anime("source:one", "Saved title", "", "", "")),
+            page = 2,
+            canLoadMore = true,
+        )
+
+        presenter.restore(cached)
+
+        assertEquals("saved query", presenter.state.value.query)
+        assertEquals(listOf("source:one"), presenter.state.value.items.map(Anime::id))
+        assertEquals(2, presenter.state.value.page)
+        assertTrue(presenter.state.value.canLoadMore)
+        assertFalse(presenter.state.value.isLoading)
+    }
 }

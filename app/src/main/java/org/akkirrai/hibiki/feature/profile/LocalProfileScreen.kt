@@ -90,7 +90,7 @@ private enum class LocalProfileTab(val titleRes: Int) {
 /**
  * Direct Android port of Animite's ProfileScreen layout: NestedScrollBannerLayout,
  * UserTabs, AboutTab's StatsRow, and its genre distribution arrangement.
- * Only AniList models are replaced with the local Hibiki profile snapshot.
+ * The profile uses the local Hibiki profile snapshot.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

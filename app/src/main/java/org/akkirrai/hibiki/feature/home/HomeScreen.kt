@@ -39,7 +39,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,6 +56,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -87,7 +87,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -104,10 +103,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
+import org.akkirrai.hibiki.shared.design.component.AppCompactPosterCard
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.ActiveSourceChip
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
@@ -126,21 +127,25 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
+    onBrowseCatalog: () -> Unit = {},
+    onOpenSources: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
+    val recentlyWatched = state.recentlyWatched
+    val recentlyAddedToLibrary = state.recentlyAddedToLibrary
     val errorMessage = state.errorMessage
-    val hasContent = featuredAnime.isNotEmpty() || continueAnime != null || state.trending.isNotEmpty() || state.recentlyUpdated.isNotEmpty()
+    val hasContent = continueAnime != null || recentlyWatched.isNotEmpty() || recentlyAddedToLibrary.isNotEmpty()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var showSearchFilters by rememberSaveable { mutableStateOf(false) }
@@ -153,10 +158,13 @@ fun HomeScreen(
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
+    val recentlyWatchedTitle = stringResource(R.string.home_recently_watched)
+    val recentlyAddedTitle = stringResource(R.string.home_recently_added)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
-    val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) {
+    val selectedSource = remember(selectedSourceId) { AnimeSourceRegistry.descriptor(selectedSourceId) }
+    val homeListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
 
@@ -164,20 +172,8 @@ fun HomeScreen(
         if (!hasSearchFilters) showSearchFilters = false
     }
 
-    LaunchedEffect(
-        homeListState,
-        state.trending.size,
-        state.isTrendingLoadingMore,
-        state.isLoading,
-        isSearchActive,
-    ) {
-        snapshotFlow {
-            val layout = homeListState.layoutInfo
-            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            homeListState.isScrollInProgress && lastVisible >= layout.totalItemsCount - 4
-        }.collect { nearEnd ->
-            if (nearEnd && !state.isLoading && !isSearchActive) viewModel.loadMoreTrending()
-        }
+    LaunchedEffect(isActive) {
+        if (isActive) viewModel.refresh()
     }
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
@@ -291,20 +287,13 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         homeFeedContent(
-                            featuredAnime = featuredAnime,
                             continueAnime = continueAnime,
-                            trending = state.trending,
-                            isTrendingLoadingMore = state.isTrendingLoadingMore,
-                            onLoadMoreTrending = viewModel::loadMoreTrending,
-                            onItemVisible = viewModel::enrichDescription,
-                            isActive = isActive,
+                            recentlyWatched = recentlyWatched,
+                            recentlyAddedToLibrary = recentlyAddedToLibrary,
                             onAnimeClick = onAnimeClick,
-                            metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
-                            posterFooterContent = { anime ->
-                                libraryStatusByAnimeId[anime.id]?.let { category ->
-                                    LibraryStatusPosterFooter(category)
-                                }
-                            },
+                            recentlyWatchedTitle = recentlyWatchedTitle,
+                            recentlyAddedTitle = recentlyAddedTitle,
+                            onBrowseCatalog = onBrowseCatalog,
                         )
                     }
                 }
@@ -336,6 +325,17 @@ fun HomeScreen(
                 )
         )
 
+        ActiveSourceChip(
+            source = selectedSource,
+            onClick = onOpenSources,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(
+                    top = UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight + 6.dp,
+                    end = UiDimens.ScreenPadding,
+                ),
+        )
+
         if (showSearchFilters) {
             HomeSearchFiltersSheet(
                 viewModel = viewModel,
@@ -346,26 +346,14 @@ fun HomeScreen(
 }
 
 private fun LazyListScope.homeFeedContent(
-    featuredAnime: List<Anime>,
     continueAnime: Anime?,
-    trending: List<Anime>,
-    isTrendingLoadingMore: Boolean,
-    onLoadMoreTrending: () -> Unit,
-    onItemVisible: (Anime) -> Unit,
-    isActive: Boolean,
+    recentlyWatched: List<Anime>,
+    recentlyAddedToLibrary: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
-    metaText: @Composable (Anime) -> String,
-    posterFooterContent: @Composable (Anime) -> Unit,
+    recentlyWatchedTitle: String,
+    recentlyAddedTitle: String,
+    onBrowseCatalog: () -> Unit,
 ) {
-    item {
-        if (featuredAnime.isNotEmpty()) {
-            FeaturedCarousel(
-                items = featuredAnime,
-                onAnimeClick = onAnimeClick,
-                autoAdvanceEnabled = isActive,
-            )
-        }
-    }
     continueAnime?.let { anime ->
         item {
             Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
@@ -373,31 +361,95 @@ private fun LazyListScope.homeFeedContent(
             }
         }
     }
-    appVerticalAnimeListContent(
-        items = trending,
-        metaText = metaText,
+    homeAnimeSection(
+        title = recentlyWatchedTitle,
+        items = recentlyWatched,
         onAnimeClick = onAnimeClick,
-        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-        trailingIcon = Icons.Outlined.ChevronRight,
-        posterContent = { anime ->
-            AnimeBackground(
-                imageUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        posterFooterContent = posterFooterContent,
-        onItemVisible = onItemVisible,
     )
-    if (isTrendingLoadingMore) {
+    homeAnimeSection(
+        title = recentlyAddedTitle,
+        items = recentlyAddedToLibrary,
+        onAnimeClick = onAnimeClick,
+    )
+    if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
         item {
-            AppLoadMoreState(
-                isLoading = true,
-                errorMessage = null,
-                errorIcon = Icons.Outlined.WarningAmber,
-                onRetry = onLoadMoreTrending,
+            AppMessageState(
+                title = stringResource(R.string.home_personal_empty_title),
+                message = stringResource(R.string.home_personal_empty_message),
+                actionLabel = stringResource(R.string.home_browse_catalog),
+                onActionClick = onBrowseCatalog,
+                icon = Icons.Outlined.VideoLibrary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 260.dp)
+                    .padding(horizontal = UiDimens.ScreenPadding),
             )
+        }
+    }
+}
+
+private fun LazyListScope.homeAnimeSection(
+    title: String,
+    items: List<Anime>,
+    onAnimeClick: (Anime) -> Unit,
+) {
+    if (items.isEmpty()) return
+    item {
+        HomeAnimeSection(
+            title = title,
+            items = items,
+            onAnimeClick = onAnimeClick,
+        )
+    }
+}
+
+@Composable
+private fun HomeAnimeSection(
+    title: String,
+    items: List<Anime>,
+    onAnimeClick: (Anime) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = UiDimens.SectionSpacing),
+        verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing),
+    ) {
+        SectionHeader(
+            title = title,
+            actionLabel = "\u203A",
+            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+            titleStyle = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.SemiBold,
+            ),
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
+            horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
+        ) {
+            items(items, key = Anime::id) { anime ->
+                AppCompactPosterCard(
+                    anime = anime,
+                    onClick = { onAnimeClick(anime) },
+                    imageContent = {
+                        PosterImage(
+                            primaryUrl = anime.posterUrl,
+                            fallbackUrl = anime.posterFallbackUrl,
+                            contentDescription = anime.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f),
+                            placeholder = {
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                                )
+                            },
+                        )
+                    },
+                )
+            }
         }
     }
 }
@@ -462,39 +514,6 @@ private fun HomeErrorState(
 }
 
 @Composable
-private fun FeaturedCarousel(
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    autoAdvanceEnabled: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val featuredHeight = 240.dp
-    AppFeaturedCarousel(
-        items = items,
-        featuredLabel = stringResource(R.string.home_featured_label),
-        metaText = { anime ->
-            buildHomeMeta(
-                anime = anime,
-                announcementLabel = stringResource(R.string.anime_meta_announcement),
-                movieLabel = stringResource(R.string.anime_meta_movie),
-            )
-        },
-        onAnimeClick = onAnimeClick,
-        autoAdvanceEnabled = autoAdvanceEnabled,
-        modifier = modifier,
-        height = featuredHeight,
-        imageContent = { anime ->
-            AnimeBackground(
-                imageUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier.matchParentSize(),
-            )
-        },
-    )
-}
-
-@Composable
 private fun ContinueWatchingCard(
     anime: Anime?,
     onClick: () -> Unit
@@ -529,89 +548,6 @@ private fun ContinueWatchingCard(
 }
 
 @Composable
-private fun AnimeSection(
-    title: String,
-    actionLabel: String? = null,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    onActionClick: (() -> Unit)? = null,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        HomeSectionHeader(
-            title = title,
-            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-            actionLabel = actionLabel,
-            icon = icon,
-            onActionClick = onActionClick,
-        )
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding)
-        ) {
-            items(items, key = { it.id }) { anime ->
-                AppPosterCard(
-                    anime = anime,
-                    metaText = buildHomeMeta(
-                        anime = anime,
-                        announcementLabel = stringResource(R.string.anime_meta_announcement),
-                        movieLabel = stringResource(R.string.anime_meta_movie),
-                    ),
-                    onClick = { onAnimeClick(anime) },
-                    modifier = Modifier.width(118.dp),
-                    titleBaseMaxLines = 2,
-                    titleExtraLongTitleLines = 0,
-                    titleOverflow = TextOverflow.Ellipsis,
-                    reservedTitleLines = 3,
-                    reserveMetaLine = true,
-                    imageContent = { PosterCardImage(anime) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HomeSectionHeader(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    actionLabel: String? = null,
-    onActionClick: (() -> Unit)? = null,
-) {
-    SectionHeader(
-        title = title,
-        modifier = modifier,
-        actionLabel = actionLabel,
-        icon = icon,
-        onActionClick = onActionClick,
-        titleStyle = MaterialTheme.typography.titleLarge.copy(
-            fontWeight = FontWeight.SemiBold
-        ),
-        titleColor = MaterialTheme.colorScheme.onBackground,
-    )
-}
-
-@Composable
-private fun AnimeBackground(
-    imageUrl: String?,
-    fallbackUrl: String?,
-    contentDescription: String?,
-    modifier: Modifier = Modifier
-) {
-    PosterImage(
-        primaryUrl = imageUrl,
-        fallbackUrl = fallbackUrl,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        placeholder = { AnimeImagePlaceholder() }
-    )
-}
-
-@Composable
 private fun AnimePoster(
     anime: Anime,
     modifier: Modifier = Modifier
@@ -626,48 +562,6 @@ private fun AnimePoster(
             contentDescription = anime.title,
             modifier = Modifier.fillMaxSize(),
             placeholder = { AnimeImagePlaceholder() }
-        )
-    }
-}
-
-@Composable
-private fun PosterCardImage(anime: Anime) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(2f / 3f)
-            .clip(RoundedCornerShape(UiDimens.CardCorner))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        PosterImage(
-            primaryUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            modifier = Modifier.fillMaxSize(),
-            placeholder = { PosterPlaceholder() },
-        )
-    }
-}
-
-@Composable
-private fun PosterPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(UiDimens.ScreenPadding),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(R.string.poster_placeholder),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -689,10 +583,11 @@ private fun AnimeImagePlaceholder(
     }
 }
 
-private const val FEATURED_AUTO_ADVANCE_MS = 5000
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
-    UiDimens.ScreenPadding
+    UiDimens.ScreenPadding +
+    32.dp +
+    UiDimens.SmallSpacing
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = HOME_CONTENT_TOP_PADDING + 18.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET =
     UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight - 8.dp

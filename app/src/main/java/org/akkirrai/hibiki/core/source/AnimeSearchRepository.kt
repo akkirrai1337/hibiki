@@ -43,6 +43,10 @@ class AnimeSearchRepository(
     }
 
     suspend fun search(request: AnimeSearchRequest): List<Anime> {
+        return search(selectedSourceId(), request)
+    }
+
+    suspend fun search(sourceId: org.akkirrai.beakokit.api.SourceId, request: AnimeSearchRequest): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
             request.statusAliases.isNotEmpty() ||
@@ -54,13 +58,14 @@ class AnimeSearchRepository(
         if (normalizedQuery.isBlank() && !hasFilters) return emptyList()
 
         val normalizedRequest = request.copy(query = normalizedQuery)
-        val cacheKey = searchCacheKey(normalizedRequest)
+        val cacheKey = searchCacheKey(sourceId, normalizedRequest)
         getCachedSearch(cacheKey)?.let { return it }
 
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
-        val source = currentSource()
+        val source = sourceManager?.runtime(sourceId)
+            ?: error("Anime source selection requires an Android context")
         val genreAliases = if (
             normalizedRequest.includedGenreAliases.isNotEmpty() ||
             normalizedRequest.excludedGenreAliases.isNotEmpty()
@@ -84,6 +89,11 @@ class AnimeSearchRepository(
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
         return currentSource().filterCatalog(preferEnglish())
+    }
+
+    suspend fun getSearchFilterCatalog(sourceId: org.akkirrai.beakokit.api.SourceId): AnimeSearchFilterCatalog {
+        return sourceManager?.runtime(sourceId)?.filterCatalog(preferEnglish())
+            ?: error("Anime source selection requires an Android context")
     }
 
     suspend fun search(
@@ -321,7 +331,7 @@ class AnimeSearchRepository(
         }
     }
 
-    private fun searchCacheKey(request: AnimeSearchRequest): String {
+    private fun searchCacheKey(sourceId: org.akkirrai.beakokit.api.SourceId, request: AnimeSearchRequest): String {
         val languageKey = if (preferEnglish()) "en" else "ru"
         val types = request.typeAliases.sorted().joinToString(",")
         val statuses = request.statusAliases.sorted().joinToString(",")
@@ -330,7 +340,7 @@ class AnimeSearchRepository(
         return buildString {
             append(SEARCH_CACHE_VERSION)
             append(':')
-            append(selectedSourceId().value)
+            append(sourceId.value)
             append(':')
             append(languageKey)
             append(':')

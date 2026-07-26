@@ -127,6 +127,41 @@ class WatchStateRepository(context: Context) {
             }
     }
 
+    fun getRecentTitleWatchStates(limit: Int): List<TitleWatchState> {
+        if (limit <= 0) return emptyList()
+        return prefs.all.entries
+            .asSequence()
+            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
+            .mapNotNull { (key, value) ->
+                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
+                parseProgress(
+                    titleId = progressKey.titleId,
+                    episodeId = progressKey.episodeId,
+                    encoded = value as String,
+                )
+            }
+            .distinctBy { it.titleId to it.episodeId }
+            .groupBy(EpisodeWatchProgress::titleId)
+            .values
+            .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
+            .sortedByDescending(EpisodeWatchProgress::updatedAt)
+            .take(limit)
+            .map { progress ->
+                TitleWatchState(
+                    titleId = progress.titleId,
+                    episodeId = progress.episodeId,
+                    episodeNumber = progress.episodeNumber,
+                    sourceId = progress.sourceId,
+                    voiceoverId = progress.voiceoverId,
+                    sourceTitle = progress.sourceTitle,
+                    quality = progress.quality,
+                    positionMs = progress.positionMs,
+                    durationMs = progress.durationMs,
+                    updatedAt = progress.updatedAt,
+                )
+            }
+    }
+
     fun getEpisodeProgress(titleId: String): List<EpisodeWatchProgress> {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
         val prefixes = episodePrefixes(titleId)

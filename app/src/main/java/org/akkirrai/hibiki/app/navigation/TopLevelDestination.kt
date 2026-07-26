@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -17,5 +18,6 @@ enum class TopLevelDestination(
     Home("home", R.string.nav_home, Icons.Outlined.Home),
     Catalog("catalog", R.string.nav_catalog, Icons.Outlined.Explore),
     Library("library", R.string.nav_library, Icons.Outlined.VideoLibrary),
+    Sources("sources", R.string.nav_sources, Icons.Outlined.Dns),
     Profile("profile", R.string.nav_profile, Icons.Outlined.Person)
 }

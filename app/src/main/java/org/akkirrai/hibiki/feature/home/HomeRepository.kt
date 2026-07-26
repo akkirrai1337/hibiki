@@ -5,6 +5,8 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -41,13 +43,7 @@ class HomeRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
 ) : HomeDataRepository {
     @Volatile
-    private var cachedHomeContent: CachedHomeContent? = null
-
-    @Volatile
     private var cachedRecentUpdates: CachedSourceAnime? = null
-
-    @Volatile
-    private var currentHomeSelectionSeed: Long? = null
 
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
@@ -59,103 +55,24 @@ class HomeRepository(
 
     override fun fallbackHomeState(): HomeUiState {
         return HomeUiState(
-            featuredAnime = MockAnimeData.trending.take(FEATURED_COUNT),
             continueAnime = loadStoredContinueAnime(),
-            popular = emptyList(),
-            trending = MockAnimeData.trending,
-            recentlyUpdated = MockAnimeData.recent,
+            recentlyWatched = loadRecentlyWatched(),
+            recentlyAddedToLibrary = loadRecentlyAddedToLibrary(),
         )
     }
 
     override suspend fun refreshHomeState(): HomeUiState {
-        AppLogger.d(TAG, "refreshHomeState: clearing cache")
-        ensureInternetConnection()
-        cachedHomeContent = null
-        cachedRecentUpdates = null
-        currentHomeSelectionSeed = Random.nextLong()
-        AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
+        AppLogger.d(TAG, "refreshHomeState: refreshing local personal content")
         return loadHomeState()
     }
 
     override suspend fun loadHomeState(): HomeUiState {
-        AppLogger.d(TAG, "loadHomeState: called")
-        val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
-            currentHomeSelectionSeed = it
-        }
-        val languageKey = "${selectedSourceId().value}:${sourceLanguage()}"
-        cachedHomeContent?.let { cached ->
-            if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
-                AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
-                    "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, seed=$selectionSeed, lang=$languageKey")
-                return HomeUiState(
-                    featuredAnime = cached.featuredAnime,
-                    continueAnime = loadContinueAnime(),
-                    popular = emptyList(),
-                    trending = cached.trending,
-                    recentlyUpdated = cached.recentlyUpdated,
-                )
-            }
-        }
-
-        ensureInternetConnection()
-
-        val source = currentSource()
-        val trendingOffset = if (source.source.catalogCapabilities.supports(AnimeSearchSort.RATING)) {
-            trendingOffsetForSeed(selectionSeed)
-        } else {
-            0
-        }
-        AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-        val catalog = source.search(
-            AnimeSearchRequest(
-                limit = HOME_TRENDING_WINDOW_SIZE,
-                offset = trendingOffset,
-                sort = AnimeSearchSort.RATING,
-            ),
-        )
-        AppLogger.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
-
-        if (catalog.isEmpty()) {
-            AppLogger.w(TAG, "loadHomeState: catalog empty")
-            throw IllegalStateException(appContext.getString(R.string.home_error_load_failed))
-        }
-
-        val homeWindow = catalog.map(::toHomeAnime)
-        val featuredAnime = homeWindow
-            .shuffled(Random(selectionSeed xor FEATURED_ROTATION_SEED_SALT))
-            .take(FEATURED_COUNT)
-        val featuredIds = featuredAnime.mapTo(mutableSetOf()) { it.id }
-        val trending = homeWindow
-            .shuffled(Random(selectionSeed xor TRENDING_ROTATION_SEED_SALT))
-            .filterNot { it.id in featuredIds }
-            .take(HOME_SECTION_LIMIT)
-        AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
-        val recentlyUpdated = runCatching { loadRecentlyUpdated() }
-            .onFailure { error ->
-                AppLogger.w(
-                    TAG,
-                    "loadHomeState: recent updates are unavailable: ${error.message}",
-                )
-            }
-            .getOrDefault(emptyList())
-        AppLogger.d(TAG, "loadHomeState: recentlyUpdated size = ${recentlyUpdated.size}")
-        cachedHomeContent = CachedHomeContent(
-            selectionSeed = selectionSeed,
-            languageKey = languageKey,
-            featuredAnime = featuredAnime,
-            trending = trending,
-            recentlyUpdated = recentlyUpdated,
-        )
-        AppLogger.d(TAG, "loadHomeState: cachedHomeContent written — " +
-            "trending=${trending.size}, recentlyUpdated=${recentlyUpdated.size}")
-
         return HomeUiState(
-            featuredAnime = featuredAnime,
-            continueAnime = loadContinueAnime(),
-            popular = emptyList(),
-            trending = trending,
-            recentlyUpdated = recentlyUpdated,
+            continueAnime = loadStoredContinueAnime(),
+            recentlyWatched = loadRecentlyWatched(),
+            recentlyAddedToLibrary = loadRecentlyAddedToLibrary(),
         )
+
     }
 
     override suspend fun search(query: String): List<Anime> {
@@ -240,6 +157,19 @@ class HomeRepository(
                 .firstOrNull { it.anime.id == titleId }
                 ?.anime
 
+    private fun loadRecentlyWatched(): List<Anime> =
+        watchStateRepository
+            .getRecentTitleWatchStates(HOME_PERSONAL_SECTION_LIMIT)
+            .mapNotNull { state -> findStoredAnime(state.titleId) }
+            .distinctBy(Anime::id)
+
+    private fun loadRecentlyAddedToLibrary(): List<Anime> =
+        libraryRepository.getLibraryEntries()
+            .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
+            .distinctBy { it.anime.id }
+            .take(HOME_PERSONAL_SECTION_LIMIT)
+            .map { it.anime }
+
     private fun ensureInternetConnection() {
         if (!hasActiveInternetConnection(appContext)) {
             throw NoInternetConnectionException(appContext.getString(R.string.home_error_no_internet))
@@ -267,6 +197,23 @@ class HomeRepository(
         return currentSource()
             .latest(limit = HOME_FULL_SECTION_LIMIT)
             .map(::toHomeAnime)
+    }
+
+    private suspend fun loadSourceTrending(selectionSeed: Long): List<Anime> {
+        val source = currentSource()
+        val trendingOffset = if (source.source.catalogCapabilities.supports(AnimeSearchSort.RATING)) {
+            trendingOffsetForSeed(selectionSeed)
+        } else {
+            0
+        }
+        AppLogger.d(TAG, "loadSourceTrending: limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset")
+        return source.search(
+            AnimeSearchRequest(
+                limit = HOME_TRENDING_WINDOW_SIZE,
+                offset = trendingOffset,
+                sort = AnimeSearchSort.RATING,
+            ),
+        ).map(::toHomeAnime)
     }
 
     override suspend fun loadTrendingPage(
@@ -424,26 +371,16 @@ class HomeRepository(
 
     private companion object {
         const val TAG = "HomeRepository"
+        const val HOME_PERSONAL_SECTION_LIMIT = 12
         const val HOME_SECTION_LIMIT = 12
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
-        const val FEATURED_COUNT = 5
-        const val FEATURED_ROTATION_SEED_SALT = 0x51A7L
-        const val TRENDING_ROTATION_SEED_SALT = 0x7E4DL
         const val RANDOM_CATALOG_PAGE_SIZE = 40
         const val RANDOM_CATALOG_MAX_OFFSET = 5_000
         const val RANDOM_CATALOG_ATTEMPTS = 5
         val RANDOM_CATALOG_SORTS = AnimeSearchSort.entries
     }
-
-    private data class CachedHomeContent(
-        val selectionSeed: Long,
-        val languageKey: String,
-        val featuredAnime: List<Anime>,
-        val trending: List<Anime>,
-        val recentlyUpdated: List<Anime>,
-    )
 
     private data class CachedSourceAnime(
         val sourceId: SourceId,

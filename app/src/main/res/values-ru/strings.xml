@@ -27,6 +27,8 @@
 
     <string name="home_continue_title">Продолжить просмотр</string>
     <string name="home_trending">Сейчас в тренде</string>
+    <string name="home_popular_this_season">Популярное в этом сезоне</string>
+    <string name="home_upcoming_next_season">Ожидается в следующем сезоне</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>
     <string name="home_quick_popular">Популярное</string>
@@ -464,4 +466,14 @@
     <string name="local_profile_empty_favorites">Пока нет любимых тайтлов</string>
     <string name="local_profile_summary_library">Библиотека</string>
     <string name="local_profile_summary_episodes">Эпизоды</string>
+    <string name="nav_sources">Источники</string>
+    <string name="home_recently_watched">Недавно просмотренные</string>
+    <string name="home_recently_added">Недавние добавления</string>
+    <string name="home_personal_empty_title">Главная пока пуста</string>
+    <string name="home_personal_empty_message">Начните смотреть аниме или добавьте тайтл в библиотеку.</string>
+    <string name="home_browse_catalog">Открыть каталог</string>
+    <string name="sources_title">Источники</string>
+    <string name="sources_search_empty_title">Ничего не найдено</string>
+    <string name="sources_search_empty_message">Попробуйте другое название или короткий запрос.</string>
+    <string name="sources_search_failed">Не удалось выполнить поиск в этом источнике.</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,8 +60,6 @@ import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
-import org.akkirrai.hibiki.feature.home.RecentUpdatesScreen
-import org.akkirrai.hibiki.feature.home.TrendingAnimeScreen
 import org.akkirrai.hibiki.feature.library.LibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
@@ -170,6 +169,22 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    onBrowseCatalog = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateTopLevelDestination(
+                                TopLevelDestination.Home,
+                                TopLevelDestination.Catalog,
+                            )
+                        }
+                    },
+                    onOpenSources = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateTopLevelDestination(
+                                TopLevelDestination.Home,
+                                TopLevelDestination.Sources,
+                            )
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
                     modifier = topLevelScreenModifier,
@@ -213,6 +228,14 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    onOpenSources = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateTopLevelDestination(
+                                TopLevelDestination.Catalog,
+                                TopLevelDestination.Sources,
+                            )
+                        }
+                    },
                     bottomContentPadding = topLevelBottomContentPadding,
                     modifier = topLevelScreenModifier,
                 )
@@ -240,6 +263,26 @@ private fun HibikiNavHost(
                 )
             }
         }
+        topLevelComposable(route = TopLevelDestination.Sources.route) { backStackEntry ->
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Sources,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Sources, destination)
+                    }
+                },
+            ) {
+                SourcesScreen(
+                    onAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
+                    },
+                    modifier = topLevelScreenModifier,
+                )
+            }
+        }
         composable(
             route = AnimeNavType.SETTINGS_ROUTE,
             enterTransition = { appScreenEnterTransition() },
@@ -252,11 +295,6 @@ private fun HibikiNavHost(
                     modifier = screenModifier,
                     onCheckForUpdates = {
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
-                    },
-                    onOpenSources = {
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.SOURCES_ROUTE)
-                        }
                     },
                     onConfigureNotifications = onConfigureNotifications,
                 )
@@ -275,57 +313,6 @@ private fun HibikiNavHost(
                         navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
                     },
                     modifier = screenModifier,
-                )
-            }
-        }
-        composable(
-            route = AnimeNavType.TRENDING_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() }
-        ) { backStackEntry ->
-            DestinationScreenContainer {
-                TrendingAnimeScreen(
-                    onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
-                    },
-                    onAnimeClick = { anime ->
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                        }
-                    },
-                    modifier = screenModifier,
-                )
-            }
-        }
-        composable(
-            route = AnimeNavType.RECENT_UPDATES_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
-        ) { backStackEntry ->
-            val context = LocalContext.current
-            val homeEntry = remember(navController) {
-                navController.getBackStackEntry(TopLevelDestination.Home.route)
-            }
-            val homeViewModel: HomeViewModel = viewModel(
-                viewModelStoreOwner = homeEntry,
-                factory = HomeViewModel.Factory(context),
-            )
-            DestinationScreenContainer {
-                RecentUpdatesScreen(
-                    viewModel = homeViewModel,
-                    onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
-                    },
-                    onAnimeClick = { anime ->
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                        }
-                    },
-                    modifier = screenModifier.statusBarsPadding(),
                 )
             }
         }
@@ -523,7 +510,7 @@ private val BottomBarHeight = 64.dp
 private val BottomBarHorizontalPadding = 14.dp
 private val BottomBarVerticalPadding = 6.dp
 private val BottomBarItemHeight = 48.dp
-private val BottomBarActivePillWidth = 68.dp
+private val BottomBarActivePillMaxWidth = 68.dp
 private val BottomBarActivePillHeight = 30.dp
 private val BottomBarIconSize = 22.dp
 private val BottomBarLabelSize = 11.sp
@@ -587,7 +574,7 @@ private fun AppBottomBar(
                     .height(1.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
             )
-            Row(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(BottomBarHeight)
@@ -595,16 +582,28 @@ private fun AppBottomBar(
                         horizontal = BottomBarHorizontalPadding,
                         vertical = BottomBarVerticalPadding,
                     ),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                destinations.forEach { destination ->
-                    AppBottomBarItem(
-                        destination = destination,
-                        selected = currentTopLevel == destination,
-                        onClick = { onDestinationClick(destination) },
-                        modifier = Modifier.weight(1f),
-                    )
+                val itemGap = 4.dp
+                val itemWidth = (maxWidth - itemGap * (destinations.size - 1)) / destinations.size
+                val activePillWidth = if (itemWidth < BottomBarActivePillMaxWidth) {
+                    (itemWidth - 4.dp).coerceAtLeast(48.dp)
+                } else {
+                    BottomBarActivePillMaxWidth
+                }
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(itemGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    destinations.forEach { destination ->
+                        AppBottomBarItem(
+                            destination = destination,
+                            selected = currentTopLevel == destination,
+                            onClick = { onDestinationClick(destination) },
+                            activePillWidth = activePillWidth,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
@@ -616,6 +615,7 @@ private fun AppBottomBarItem(
     destination: TopLevelDestination,
     selected: Boolean,
     onClick: () -> Unit,
+    activePillWidth: Dp,
     modifier: Modifier = Modifier,
 ) {
     val contentColor = if (selected) {
@@ -640,7 +640,7 @@ private fun AppBottomBarItem(
         Surface(
             modifier = Modifier
                 .size(
-                    width = BottomBarActivePillWidth,
+                    width = activePillWidth,
                     height = BottomBarActivePillHeight,
                 )
                 .clip(pillShape),
