@@ -585,9 +585,7 @@ private fun AnimeImagePlaceholder(
 
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
-    UiDimens.ScreenPadding +
-    32.dp +
-    UiDimens.SmallSpacing
+    UiDimens.ScreenPadding
 private val HOME_TOP_SEARCH_SCRIM_HEIGHT = HOME_CONTENT_TOP_PADDING + 18.dp
 private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET =
     UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight - 8.dp
