@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -163,6 +164,42 @@ fun LazyListScope.appVerticalAnimeListContent(
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
 ) {
+    if (FORCE_POSTER_CARD_STYLE) {
+        appPosterAnimeListContent(
+            items = items,
+            metaText = metaText,
+            onAnimeClick = onAnimeClick,
+            modifier = modifier,
+            trailingIcon = trailingIcon,
+            posterContent = posterContent,
+            posterFooterContent = posterFooterContent,
+            onItemVisible = onItemVisible,
+        )
+        return
+    }
+
+    appLegacyVerticalAnimeListContent(
+        items = items,
+        metaText = metaText,
+        onAnimeClick = onAnimeClick,
+        modifier = modifier,
+        trailingIcon = trailingIcon,
+        posterContent = posterContent,
+        posterFooterContent = posterFooterContent,
+        onItemVisible = onItemVisible,
+    )
+}
+
+private fun LazyListScope.appLegacyVerticalAnimeListContent(
+    items: List<Anime>,
+    metaText: @Composable (Anime) -> String,
+    onAnimeClick: (Anime) -> Unit,
+    modifier: Modifier = Modifier,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    posterContent: @Composable BoxScope.(Anime) -> Unit,
+    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    onItemVisible: ((Anime) -> Unit)? = null,
+) {
     items(items, key = Anime::id) { anime ->
         LaunchedEffect(anime.id) {
             onItemVisible?.invoke(anime)
@@ -178,3 +215,132 @@ fun LazyListScope.appVerticalAnimeListContent(
         )
     }
 }
+
+fun LazyListScope.appPosterAnimeListContent(
+    items: List<Anime>,
+    metaText: @Composable (Anime) -> String,
+    onAnimeClick: (Anime) -> Unit,
+    modifier: Modifier = Modifier,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    posterContent: @Composable BoxScope.(Anime) -> Unit,
+    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    onItemVisible: ((Anime) -> Unit)? = null,
+) {
+    items(
+        items = items.chunked(2),
+        key = { row -> row.first().id },
+    ) { row ->
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            row.forEach { anime ->
+                LaunchedEffect(anime.id) {
+                    onItemVisible?.invoke(anime)
+                }
+                AppPosterAnimeCard(
+                    anime = anime,
+                    metaText = metaText(anime),
+                    onClick = { onAnimeClick(anime) },
+                    modifier = Modifier.weight(1f),
+                    trailingIcon = trailingIcon,
+                    posterContent = { posterContent(anime) },
+                    posterFooterContent = posterFooterContent?.let { footer ->
+                        { footer(anime) }
+                    },
+                )
+            }
+            if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun AppPosterAnimeCard(
+    anime: Anime,
+    metaText: String,
+    onClick: () -> Unit,
+    posterContent: @Composable BoxScope.() -> Unit,
+    modifier: Modifier = Modifier,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    metaContent: (@Composable () -> Unit)? = null,
+    posterFooterContent: (@Composable () -> Unit)? = null,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f),
+        ) {
+            posterContent()
+            posterFooterContent?.let { content ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(74.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.Transparent,
+                                    0.48f to Color.Black.copy(alpha = 0.08f),
+                                    1f to Color.Black.copy(alpha = 0.68f),
+                                ),
+                            ),
+                        )
+                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.BottomStart,
+                ) {
+                    content()
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    text = anime.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                trailingIcon?.let { icon ->
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (metaContent != null) {
+                metaContent()
+            } else if (metaText.isNotBlank()) {
+                Text(
+                    text = metaText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private const val FORCE_POSTER_CARD_STYLE = true

@@ -277,16 +277,27 @@ internal class GogoAnimeClient(
     /** Repairs UTF-8 text that GogoAnime occasionally serves as Windows-1252. */
     private fun String.repairGogoMojibake(): String {
         if (countGogoMojibakeMarkers() == 0) return this
-        val repaired = runCatching {
-            toByteArray(WINDOWS_1252).toString(Charsets.UTF_8)
-        }.getOrNull() ?: return this
-        return repaired.takeIf {
-            it != this && !it.contains('\uFFFD') &&
-                it.countGogoMojibakeMarkers() < countGogoMojibakeMarkers()
-        } ?: this
+        val originalQuestionMarks = count { it == '?' }
+        val repaired = listOf(WINDOWS_1252, Charsets.ISO_8859_1)
+            .mapNotNull { charset ->
+                runCatching { toByteArray(charset).toString(Charsets.UTF_8) }.getOrNull()
+            }
+            .filter { candidate ->
+                candidate != this &&
+                    !candidate.contains('\uFFFD') &&
+                    candidate.count { it == '?' } <= originalQuestionMarks
+            }
+            .minByOrNull { candidate -> candidate.countGogoMojibakeMarkers() }
+        return if (repaired != null && repaired.countGogoMojibakeMarkers() < countGogoMojibakeMarkers()) {
+            repaired
+        } else {
+            this
+        }
     }
 
-    private fun String.countGogoMojibakeMarkers(): Int = count { it in GOGO_MOJIBAKE_MARKERS }
+    private fun String.countGogoMojibakeMarkers(): Int = count {
+        it in GOGO_MOJIBAKE_MARKERS || it.code in C1_CONTROL_RANGE
+    }
 
     private fun validateSlug(id: String): String = id.trim().trim('/').takeIf(SLUG::matches)
         ?: throw SourceException("GogoAnime title id is invalid: $id", kind = SourceErrorKind.NOT_FOUND)
@@ -306,6 +317,7 @@ internal class GogoAnimeClient(
         const val BROWSER_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36"
         val WINDOWS_1252: Charset = Charset.forName("windows-1252")
         val GOGO_MOJIBAKE_MARKERS = setOf('Ã', 'Â', 'â', 'ð', 'Ð', 'Ñ', 'ã', 'ƒ', '�')
+        val C1_CONTROL_RANGE = 0x80..0x9F
         val SLUG = Regex("[a-z0-9][a-z0-9-]*")
         val EPISODE_PATH = Regex("/(.+)-episode-(\\d+(?:\\.\\d+)?)$")
         val YEAR = Regex("\\b(?:19|20)\\d{2}\\b")

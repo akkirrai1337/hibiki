@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,8 +77,21 @@ fun AppLibraryEntriesContent(
         } else if (visibleEntries.isEmpty()) {
             item { emptyContent(true) }
         } else {
-            items(visibleEntries.take(visibleLimit), key = { it.anime.id }) { entry ->
-                entryContent(entry, Modifier)
+            items(visibleEntries.take(visibleLimit).chunked(2), key = { row -> row.first().anime.id }) { row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    row.forEach { entry ->
+                        entryContent(entry, Modifier.weight(1f))
+                    }
+                    if (row.size == 1) {
+                        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

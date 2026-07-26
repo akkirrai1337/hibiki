@@ -190,7 +190,7 @@ fun LibraryScreen(
             }
         },
         entryContent = { entry, entryModifier ->
-            LibraryAnimeCard(entry = entry, modifier = entryModifier.padding(horizontal = UiDimens.ScreenPadding), onClick = { onAnimeClick(entry.anime) })
+            LibraryAnimeCard(entry = entry, modifier = entryModifier, onClick = { onAnimeClick(entry.anime) })
         },
     )
 

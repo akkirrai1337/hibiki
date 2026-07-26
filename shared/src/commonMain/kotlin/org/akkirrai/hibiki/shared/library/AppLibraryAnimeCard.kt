@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
+import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.model.Anime
 
 @Composable
@@ -26,7 +26,7 @@ fun AppLibraryAnimeCard(
     extraMetaContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppVerticalAnimeListItem(
+    AppPosterAnimeCard(
         anime = anime,
         metaText = "",
         onClick = onClick,
