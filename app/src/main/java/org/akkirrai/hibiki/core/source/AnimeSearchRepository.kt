@@ -251,8 +251,13 @@ class AnimeSearchRepository(
     ): String {
         val releasedCount = availableEpisodeCount
             ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED }
+        val normalizedFallback = fallbackLabel?.trim()?.lowercase().orEmpty()
+        val fallbackIsUnknown = normalizedFallback == "unknown" || normalizedFallback.contains("unknown") ||
+            normalizedFallback == "episode unknown" ||
+            normalizedFallback == "episodes unknown" ||
+            normalizedFallback == "количество серий неизвестно"
         return when (val count = releasedCount) {
-            null -> fallbackLabel.orEmpty().ifBlank {
+            null -> fallbackLabel.orEmpty().takeUnless { fallbackIsUnknown || it.isBlank() } ?: run {
                 if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
             }
             else -> if (preferEnglish) "$count episodes" else "$count серий"
@@ -293,7 +298,7 @@ class AnimeSearchRepository(
         return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
             LanguageMode.ENGLISH -> true
             LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> false
+            LanguageMode.SYSTEM -> appContext?.resources?.configuration?.locales?.get(0)?.language != "ru"
         }
     }
 
@@ -305,11 +310,7 @@ class AnimeSearchRepository(
     }
 
     private fun searchCacheKey(request: AnimeSearchRequest): String {
-        val languageKey = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-            LanguageMode.ENGLISH -> "en"
-            LanguageMode.RUSSIAN -> "ru"
-            LanguageMode.SYSTEM -> "sys"
-        }
+        val languageKey = if (preferEnglish()) "en" else "ru"
         val types = request.typeAliases.sorted().joinToString(",")
         val statuses = request.statusAliases.sorted().joinToString(",")
         val includedGenres = request.includedGenreAliases.sorted().joinToString(",")
@@ -344,11 +345,7 @@ class AnimeSearchRepository(
     }
 
     private fun detailsCacheKey(id: String): String {
-        val languageKey = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-            LanguageMode.ENGLISH -> "en"
-            LanguageMode.RUSSIAN -> "ru"
-            LanguageMode.SYSTEM -> "sys"
-        }
+        val languageKey = if (preferEnglish()) "en" else "ru"
         val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
         return "$DETAILS_CACHE_VERSION:${sourceId.value}:$languageKey:$id"
     }

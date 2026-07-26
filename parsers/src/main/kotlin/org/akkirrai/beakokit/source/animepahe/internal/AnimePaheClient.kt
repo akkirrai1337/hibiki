@@ -18,6 +18,7 @@ import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.CatalogFeature
@@ -173,6 +174,9 @@ internal class AnimePaheClient(
                 ?: item.selectFirst("img[alt]")?.attr("alt")?.trim()
                 ?: return@mapNotNull null
             val score = item.selectFirst(".anime-score")?.text()?.trim()?.toDoubleOrNull()
+            val status = item.selectFirst(".anime-status")?.text()?.trim()
+            val episodeCount = item.selectFirst(".anime-episodes")?.text()?.let(EPISODE_COUNT::find)
+                ?.groupValues?.getOrNull(1)?.toIntOrNull()
             AnimeTitle(
                 id = id,
                 russianName = null,
@@ -182,10 +186,10 @@ internal class AnimePaheClient(
                 synonyms = emptyList(),
                 year = item.selectFirst(".anime-year")?.text()?.trim()?.toIntOrNull(),
                 type = item.selectFirst(".anime-type")?.text()?.trim(),
-                episodeCount = item.selectFirst(".anime-episodes")?.text()?.let(EPISODE_COUNT::find)
-                    ?.groupValues?.getOrNull(1)?.toIntOrNull(),
+                episodeCount = episodeCount,
+                availableEpisodeCount = episodeCount.takeIf { AnimeReleaseStatus.from(status) == AnimeReleaseStatus.ONGOING },
                 posterUrl = item.selectFirst(".anime-poster img")?.imageUrl(),
-                status = item.selectFirst(".anime-status")?.text()?.trim(),
+                status = status,
                 description = null,
                 ratings = score?.let { listOf(TitleRating("AnimePahe", it)) }.orEmpty(),
             )
@@ -207,6 +211,9 @@ internal class AnimePaheClient(
             ?.map(String::trim)
             ?.filter(String::isNotBlank)
             .orEmpty()
+        val episodeCount = info?.valueAfter("Episode")?.let(EPISODE_COUNT::find)
+            ?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val status = info?.valueAfter("Status")
         return AnimeTitle(
             id = id,
             russianName = null,
@@ -216,11 +223,11 @@ internal class AnimePaheClient(
             synonyms = synonyms,
             year = YEAR.find(aired.orEmpty())?.value?.toIntOrNull(),
             type = info?.valueAfter("Type"),
-            episodeCount = info?.valueAfter("Episode")?.let(EPISODE_COUNT::find)
-                ?.groupValues?.getOrNull(1)?.toIntOrNull(),
+            episodeCount = episodeCount,
+            availableEpisodeCount = episodeCount.takeIf { AnimeReleaseStatus.from(status) == AnimeReleaseStatus.ONGOING },
             posterUrl = document.selectFirst(".anime-poster img")?.imageUrl()
                 ?: document.selectFirst("meta[property=og:image]")?.attr("content")?.trim(),
-            status = info?.valueAfter("Status"),
+            status = status,
             description = document.selectFirst(".anime-synopsis")?.text()?.trim()?.takeIf(String::isNotBlank),
             genres = document.select(".anime-genre a").map { it.text().trim() }.filter(String::isNotBlank),
             studios = info?.select("a[href*=/studio/]")?.map { it.text().trim() }?.filter(String::isNotBlank).orEmpty(),
