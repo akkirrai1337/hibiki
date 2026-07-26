@@ -178,7 +178,11 @@ object SourceTestKit {
                 "yearFrom must not be greater than yearTo"
             }
         }
-        return assertSearchContract(source, request)
+        return assertSearchContract(source, request).also { results ->
+            results.forEach { title ->
+                assertFilteredResultMetadata(title, request)
+            }
+        }
     }
 
     suspend fun assertPaginationContract(
@@ -393,6 +397,28 @@ object SourceTestKit {
             .filterNot { it.lowercase() in knownAliases }
         assertContract(unknownAliases.isEmpty()) {
             "Unknown $filter aliases: ${unknownAliases.joinToString()}"
+        }
+    }
+
+    private fun assertFilteredResultMetadata(title: AnimeTitle, request: AnimeSearchRequest) {
+        title.year?.let { year ->
+            assertContract(request.yearFrom == null || year >= request.yearFrom) {
+                "Title ${title.id} with year $year is below requested yearFrom ${request.yearFrom}"
+            }
+            assertContract(request.yearTo == null || year <= request.yearTo) {
+                "Title ${title.id} with year $year is above requested yearTo ${request.yearTo}"
+            }
+        }
+
+        if (title.genres.isNotEmpty()) {
+            val genres = title.genres.map { it.trim().lowercase() }.toSet()
+            val included = request.includedGenreAliases.map { it.trim().lowercase() }
+            val excluded = request.excludedGenreAliases
+                .map { it.removePrefix("!") }
+                .map { it.trim().lowercase() }
+            assertContract(excluded.none(genres::contains)) {
+                "Title ${title.id} contains an excluded genre"
+            }
         }
     }
 

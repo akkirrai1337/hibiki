@@ -60,7 +60,19 @@ class AnimeSearchRepository(
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
-        val results = currentSource().search(normalizedRequest)
+        val source = currentSource()
+        val genreAliases = if (
+            normalizedRequest.includedGenreAliases.isNotEmpty() ||
+            normalizedRequest.excludedGenreAliases.isNotEmpty()
+        ) {
+            source.filterCatalog(preferEnglish).genreOptions.associate {
+                it.title.trim().lowercase() to it.id.trim().lowercase()
+            }
+        } else {
+            emptyMap()
+        }
+        val results = source.search(normalizedRequest)
+            .filter { it.matchesSearchRequest(normalizedRequest, genreAliases) }
             .map { title ->
                 getCachedDetails(detailsCacheKey(title.id))
                     ?: title.toAnime(preferEnglish = preferEnglish)
@@ -349,6 +361,32 @@ class AnimeSearchRepository(
         val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
         return "$DETAILS_CACHE_VERSION:${sourceId.value}:$languageKey:$id"
     }
+
+    private fun AnimeTitle.matchesSearchRequest(
+        request: AnimeSearchRequest,
+        genreAliases: Map<String, String>,
+    ): Boolean {
+        val titleYear = year
+        val yearFrom = request.yearFrom
+        val yearTo = request.yearTo
+        val yearMatches = titleYear == null || (
+            (yearFrom == null || titleYear >= yearFrom) &&
+                (yearTo == null || titleYear <= yearTo)
+            )
+        val canonicalGenres = genres.map { genre ->
+            genre.trim().lowercase().let { genreAliases[it] ?: it }
+        }.toSet()
+        val includedGenres = request.includedGenreAliases.map { it.trim().lowercase() }
+        val excludedGenres = request.excludedGenreAliases.map {
+            it.removePrefix("!").trim().lowercase()
+        }
+        val genresMatch = genres.isEmpty() || (
+            (includedGenres.isEmpty() || includedGenres.any(canonicalGenres::contains)) &&
+                excludedGenres.none(canonicalGenres::contains)
+            )
+        return yearMatches && genresMatch
+    }
+
 
     private fun selectedSourceId() = sourceManager?.selectedId
         ?: error("Anime source selection requires an Android context")

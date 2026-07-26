@@ -137,7 +137,7 @@ class SearchViewModel(
             }.getOrNull()
             presenter.update {
                 it.copy(
-                    filterCatalog = catalog ?: it.filterCatalog,
+                    filterCatalog = catalog,
                     isFilterCatalogLoading = false,
                 )
             }

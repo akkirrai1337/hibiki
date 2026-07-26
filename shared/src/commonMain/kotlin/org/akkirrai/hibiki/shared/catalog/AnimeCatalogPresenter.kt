@@ -58,6 +58,7 @@ class AnimeCatalogPresenter(
             it.copy(
                 query = "",
                 items = repository.initialItems,
+                filterCatalog = null,
                 page = 1,
                 canLoadMore = false,
                 isLoading = false,

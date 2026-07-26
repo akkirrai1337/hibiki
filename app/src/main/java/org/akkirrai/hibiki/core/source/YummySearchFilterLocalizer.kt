@@ -11,8 +11,9 @@ internal object YummySearchFilterLocalizer {
         return AnimeSearchFilterCatalog(
             sortOptions = catalog.sortOptions.map { it.localize(sortLabels, preferEnglish) },
             typeOptions = catalog.typeOptions.map { it.localize(typeLabels, preferEnglish) },
-            statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish) },
-            genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish) },
+            // Statuses and genres belong to the source and must stay in its language.
+            statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish = false) },
+            genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish = false) },
             capabilities = catalog.capabilities,
         )
     }
@@ -23,7 +24,8 @@ internal object YummySearchFilterLocalizer {
     ): SearchFilterOption {
         val labels = dictionary[id]
         val localizedTitle = when {
-            labels == null -> fallbackLabel(id, preferEnglish)
+            labels == null && title.trim().equals(id.trim(), ignoreCase = true) -> fallbackLabel(id, preferEnglish)
+            labels == null -> title
             preferEnglish -> labels.en
             else -> labels.ru
         }

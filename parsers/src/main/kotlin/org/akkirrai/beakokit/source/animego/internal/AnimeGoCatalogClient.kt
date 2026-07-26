@@ -159,6 +159,7 @@ internal class AnimeGoCatalogClient(
                 ?.trim()
                 ?.takeIf(String::isNotBlank)
                 ?: russianName
+            val year = YEAR_PATTERN.find(card.text())?.value?.toIntOrNull()
             val rating = card.selectFirst(".rating-badge")?.text()?.replace(',', '.')?.toDoubleOrNull()
             val sourcePosterUrl = card.selectFirst(
                 ".ani-grid__item-picture img[src], .ani-list__item-picture img[src]",
@@ -171,7 +172,7 @@ internal class AnimeGoCatalogClient(
                 originalName = originalName,
                 japaneseName = null,
                 synonyms = emptyList(),
-                year = metadata.firstNotNullOfOrNull(String::toIntOrNull),
+                year = year,
                 type = metadata.firstOrNull()?.toAnimeType(),
                 episodeCount = null,
                 posterUrl = posterUrl,
@@ -180,6 +181,7 @@ internal class AnimeGoCatalogClient(
                     ?.text()
                     ?.trim()
                     ?.takeIf(String::isNotBlank),
+                genres = metadata,
                 ratings = rating?.let { listOf(TitleRating("AnimeGo", it)) }.orEmpty(),
                 posterFallbackUrl = sourcePosterUrl?.takeIf { it != posterUrl },
             )
@@ -369,6 +371,7 @@ internal class AnimeGoCatalogClient(
         const val SEARCH_DETAILS_CONCURRENCY = 4
         const val POSTER_PROXY_URL = "https://images.weserv.nl/"
         val ANIME_SLUG = Regex("[a-z0-9][a-z0-9-]*-\\d+")
+        val YEAR_PATTERN = Regex("\\b(?:19|20)\\d{2}\\b")
         val ANIMEGO_ALIAS = Regex("!?[a-z0-9][a-z0-9+_-]*")
         val SUPPORTED_SCHEMA_TYPES = setOf("TVSeries", "Movie")
     }

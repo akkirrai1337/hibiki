@@ -463,6 +463,7 @@ class HomeViewModel(
 
     private fun loadSearchFilterCatalog() {
         filterCatalogJob?.cancel()
+        val generation = sourceGeneration
         filterCatalogJob = viewModelScope.launch {
             presenter.update { it.copy(isSearchFilterCatalogLoading = true) }
             val catalog = runCatching {
@@ -470,9 +471,10 @@ class HomeViewModel(
                     repository.getSearchFilterCatalog()
                 }
             }.getOrNull()
+            if (generation != sourceGeneration) return@launch
             presenter.update {
                 it.copy(
-                    searchFilterCatalog = catalog ?: it.searchFilterCatalog,
+                    searchFilterCatalog = catalog,
                     isSearchFilterCatalogLoading = false,
                 )
             }
