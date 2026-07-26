@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
@@ -71,12 +72,29 @@ class AnimeSearchRepository(
             normalizedRequest.excludedGenreAliases.isNotEmpty()
         ) {
             source.filterCatalog(preferEnglish).genreOptions.associate {
-                it.title.trim().lowercase() to it.id.trim().lowercase()
+                normalizeFilterValue(it.title) to normalizeFilterValue(it.id)
             }
         } else {
             emptyMap()
         }
+        val capabilities = source.source.catalogCapabilities
+        val requiresMetadataFilters =
+            (normalizedRequest.typeAliases.isNotEmpty() && !capabilities.supports(AnimeSearchFilter.TYPE)) ||
+                (normalizedRequest.statusAliases.isNotEmpty() && !capabilities.supports(AnimeSearchFilter.STATUS)) ||
+                (normalizedRequest.includedGenreAliases.isNotEmpty() && !capabilities.supports(AnimeSearchFilter.INCLUDED_GENRES)) ||
+                (normalizedRequest.excludedGenreAliases.isNotEmpty() && !capabilities.supports(AnimeSearchFilter.EXCLUDED_GENRES)) ||
+                ((normalizedRequest.yearFrom != null || normalizedRequest.yearTo != null) &&
+                    !capabilities.supports(AnimeSearchFilter.YEAR_RANGE))
         val results = source.search(normalizedRequest)
+            .mapNotNull { title ->
+                if (!requiresMetadataFilters) {
+                    title
+                } else {
+                    runCatching { source.details(title.id) }.getOrNull()?.let { details ->
+                        title.mergeFilterMetadata(details)
+                    }
+                }
+            }
             .filter { it.matchesSearchRequest(normalizedRequest, genreAliases) }
             .map { title ->
                 getCachedDetails(detailsCacheKey(title.id))
@@ -379,24 +397,42 @@ class AnimeSearchRepository(
         val titleYear = year
         val yearFrom = request.yearFrom
         val yearTo = request.yearTo
-        val yearMatches = titleYear == null || (
-            (yearFrom == null || titleYear >= yearFrom) &&
-                (yearTo == null || titleYear <= yearTo)
-            )
+        val yearMatches = (yearFrom == null && yearTo == null) ||
+            (titleYear != null &&
+                (yearFrom == null || titleYear >= yearFrom) &&
+                (yearTo == null || titleYear <= yearTo))
+        val requestedTypes = request.typeAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
+        val typeMatches = requestedTypes.isEmpty() || normalizeFilterValue(type).let(requestedTypes::contains)
+        val requestedStatuses = request.statusAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
+        val actualStatuses = listOfNotNull(status?.let(::normalizeFilterValue), releaseStatus.name.lowercase())
+        val statusMatches = requestedStatuses.isEmpty() || actualStatuses.any(requestedStatuses::contains)
         val canonicalGenres = genres.map { genre ->
-            genre.trim().lowercase().let { genreAliases[it] ?: it }
+            normalizeFilterValue(genre).let { genreAliases[it] ?: it }
         }.toSet()
-        val includedGenres = request.includedGenreAliases.map { it.trim().lowercase() }
+        val includedGenres = request.includedGenreAliases.map(::normalizeFilterValue)
         val excludedGenres = request.excludedGenreAliases.map {
-            it.removePrefix("!").trim().lowercase()
+            normalizeFilterValue(it.removePrefix("!"))
         }
-        val genresMatch = genres.isEmpty() || (
-            (includedGenres.isEmpty() || includedGenres.any(canonicalGenres::contains)) &&
-                excludedGenres.none(canonicalGenres::contains)
+        val genresMatch = (
+            (includedGenres.isEmpty() || (canonicalGenres.isNotEmpty() && includedGenres.any(canonicalGenres::contains))) &&
+                excludedGenres.none { it == UNSUPPORTED_FILTER_ALIAS || canonicalGenres.contains(it) }
             )
-        return yearMatches && genresMatch
+        return yearMatches && typeMatches && statusMatches && genresMatch
     }
 
+    private fun AnimeTitle.mergeFilterMetadata(details: AnimeTitle): AnimeTitle = copy(
+        type = details.type ?: type,
+        status = details.status ?: status,
+        year = details.year ?: year,
+        genres = details.genres.ifEmpty { genres },
+    )
+
+    private fun normalizeFilterValue(value: String?): String = value.orEmpty()
+        .trim()
+        .lowercase()
+        .replace('_', ' ')
+        .replace('-', ' ')
+        .replace(Regex("\\s+"), " ")
 
     private fun selectedSourceId() = sourceManager?.selectedId
         ?: error("Anime source selection requires an Android context")
@@ -451,8 +487,9 @@ class AnimeSearchRepository(
     }
 
     private companion object {
+        const val UNSUPPORTED_FILTER_ALIAS = "__hibiki_unsupported_filter__"
         const val TAG = "AnimeSearchRepository"
-        const val SEARCH_CACHE_VERSION = 2
+        const val SEARCH_CACHE_VERSION = 3
         const val SEARCH_PAGE_SIZE = 20
         const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
         const val DETAILS_CACHE_VERSION = 1

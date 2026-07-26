@@ -28,7 +28,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,14 +56,12 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
-import org.akkirrai.hibiki.shared.source.SourceSelectionIndicator
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
@@ -87,15 +84,10 @@ fun SourcesScreen(
     val searchState by searchViewModel.uiState.collectAsState()
     val hasSourceSearch = true
     val query = searchState.query.trim()
-    val isSearchMode = query.length >= 3 || searchState.filters.hasActiveFilters()
+    val isSearchMode = query.length >= 3
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    var isFilterSheetVisible by rememberSaveable { mutableStateOf(false) }
     val visibleSourcesByLanguage = sourcesByLanguage
-
-    LaunchedEffect(selectedSource) {
-        searchViewModel.loadFilterCatalog(selectedSource)
-    }
 
     Box(
         modifier = modifier
@@ -161,22 +153,9 @@ fun SourcesScreen(
                 query = query,
                 onQueryChange = searchViewModel::onQueryChange,
                 onClear = searchViewModel::clearQuery,
-                showFilterButton = true,
-                onFilterClick = { isFilterSheetVisible = true },
+                showFilterButton = false,
+                onFilterClick = {},
                 modifier = Modifier.align(Alignment.TopCenter),
-            )
-        }
-
-        if (isFilterSheetVisible) {
-            AnimeSearchFiltersSheet(
-                initialFilters = searchState.filters,
-                filterCatalog = searchState.filterCatalog,
-                isFilterCatalogLoading = searchState.isFilterCatalogLoading,
-                onApply = { filters ->
-                    searchViewModel.applyFilters(filters)
-                    isFilterSheetVisible = false
-                },
-                onDismissRequest = { isFilterSheetVisible = false },
             )
         }
     }
@@ -373,10 +352,6 @@ private fun SourceGridItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (selected) {
-                Spacer(Modifier.width(8.dp))
-                SourceSelectionIndicator(selected = true, modifier = Modifier.size(18.dp))
-            }
         }
     }
 }

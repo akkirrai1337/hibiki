@@ -22,7 +22,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeSearchFilters
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -39,9 +39,6 @@ data class SourcesSearchUiState(
     val sections: List<SourceSearchSection> = emptyList(),
     val isSearching: Boolean = false,
     val hasSearched: Boolean = false,
-    val filters: AnimeSearchFilters = AnimeSearchFilters(),
-    val filterCatalog: org.akkirrai.beakokit.model.AnimeSearchFilterCatalog? = null,
-    val isFilterCatalogLoading: Boolean = false,
 )
 
 class SourcesSearchViewModel(
@@ -53,7 +50,6 @@ class SourcesSearchViewModel(
     private val searchSlots = Semaphore(3)
     private var searchJob: Job? = null
     private var searchGeneration = 0L
-    private var loadedFilterSource: SourceId? = null
 
     fun onQueryChange(value: String) {
         val query = value.trimStart()
@@ -67,7 +63,7 @@ class SourcesSearchViewModel(
                 hasSearched = false,
             )
         }
-        if (query.trim().length < MIN_QUERY_LENGTH && !_uiState.value.filters.hasActiveFilters()) return
+        if (query.trim().length < MIN_QUERY_LENGTH) return
 
         val generation = searchGeneration
         searchJob = viewModelScope.launch(Dispatchers.IO) {
@@ -77,34 +73,6 @@ class SourcesSearchViewModel(
     }
 
     fun clearQuery() = onQueryChange("")
-
-    fun applyFilters(filters: AnimeSearchFilters) {
-        searchJob?.cancel()
-        searchGeneration += 1
-        _uiState.update { it.copy(filters = filters) }
-        if (_uiState.value.query.trim().length < MIN_QUERY_LENGTH && !filters.hasActiveFilters()) return
-        val generation = searchGeneration
-        searchJob = viewModelScope.launch(Dispatchers.IO) {
-            search(_uiState.value.query, generation)
-        }
-    }
-
-    fun loadFilterCatalog(sourceId: SourceId) {
-        if (loadedFilterSource == sourceId &&
-            (_uiState.value.filterCatalog != null || _uiState.value.isFilterCatalogLoading)
-        ) return
-        loadedFilterSource = sourceId
-        _uiState.update { it.copy(filterCatalog = null, isFilterCatalogLoading = true) }
-        viewModelScope.launch(Dispatchers.IO) {
-            val catalog = runCatching { repository.getSearchFilterCatalog(sourceId) }.getOrNull()
-            _uiState.update {
-                it.copy(
-                    filterCatalog = catalog,
-                    isFilterCatalogLoading = false,
-                )
-            }
-        }
-    }
 
     fun retry(sourceId: SourceId) {
         val query = _uiState.value.query.trim()
@@ -118,7 +86,7 @@ class SourcesSearchViewModel(
     }
 
     private suspend fun search(query: String, generation: Long) {
-        val sources = AnimeSourceRegistry.sources.filterForQuery(query)
+        val sources = sourcesForQuery(query)
         if (generation != searchGeneration) return
         _uiState.update {
             it.copy(
@@ -133,6 +101,10 @@ class SourcesSearchViewModel(
                 sources.map { source ->
                     async {
                         searchSlots.withPermit {
+                            AppLogger.d(
+                                TAG,
+                                "source search started source=${source.name} querySearch=true",
+                            )
                             val result = runCatching {
                                 repository.search(
                                     source.id,
@@ -150,6 +122,11 @@ class SourcesSearchViewModel(
                                         )
                                     },
                                 )
+                            }
+                            result.onSuccess { items ->
+                                AppLogger.d(TAG, "source search finished source=${source.name} resultCount=${items.size}")
+                            }.onFailure { error ->
+                                AppLogger.w(TAG, "source search failed source=${source.name}", error)
                             }
                         }
                     }
@@ -175,7 +152,7 @@ class SourcesSearchViewModel(
             val result = runCatching {
                 repository.search(
                     sourceId,
-                request(query),
+                    request(query),
                 )
             }
             if (generation != searchGeneration) return@withPermit
@@ -197,20 +174,16 @@ class SourcesSearchViewModel(
         super.onCleared()
     }
 
-    private fun request(query: String): AnimeSearchRequest {
-        val filters = _uiState.value.filters
-        return AnimeSearchRequest(
+    private fun request(query: String): AnimeSearchRequest = AnimeSearchRequest(
             query = query,
             limit = RESULTS_PER_SOURCE,
             offset = 0,
-            typeAliases = listOfNotNull(filters.typeAlias),
-            statusAliases = listOfNotNull(filters.statusAlias),
-            includedGenreAliases = filters.includedGenreAliases.toList(),
-            excludedGenreAliases = filters.excludedGenreAliases.toList(),
-            yearFrom = filters.yearFrom,
-            yearTo = filters.yearTo,
         )
-    }
+
+    private fun sourcesForQuery(query: String): List<AnimeSourceDescriptor> =
+        AnimeSourceRegistry.sources.filterForQuery(query).also { sources ->
+            AppLogger.d(TAG, "source search candidates=${sources.joinToString { it.name }}")
+        }
 
     private fun List<AnimeSourceDescriptor>.filterForQuery(query: String): List<AnimeSourceDescriptor> {
         if (!query.any { it in '\u0400'..'\u052F' }) return this
@@ -224,6 +197,7 @@ class SourcesSearchViewModel(
     }
 
     private companion object {
+        const val TAG = "SourcesSearch"
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_DEBOUNCE_MS = 400L
         const val RESULTS_PER_SOURCE = 12

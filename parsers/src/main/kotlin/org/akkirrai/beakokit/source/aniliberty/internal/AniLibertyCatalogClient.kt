@@ -96,7 +96,8 @@ internal class AniLibertyCatalogClient(
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
         sortOptions = SUPPORTED_SORTS.map { SearchFilterOption(it.name.lowercase(), it.name.lowercase()) },
         typeOptions = references("types").map(::referenceOption),
-        statusOptions = references("publish-statuses").map(::referenceOption),
+        statusOptions = (FALLBACK_STATUS_OPTIONS + references("publish-statuses").map(::referenceOption))
+            .distinctBy(SearchFilterOption::id),
         genreOptions = references("genres").map(::referenceOption),
         capabilities = capabilities,
     )
@@ -223,6 +224,11 @@ internal class AniLibertyCatalogClient(
     }
 
     private companion object {
+        val FALLBACK_STATUS_OPTIONS = listOf(
+            SearchFilterOption("ongoing", "Ongoing"),
+            SearchFilterOption("released", "Released"),
+            SearchFilterOption("announcement", "Announcement"),
+        )
         const val PUBLIC_SITE_URL = "https://anilibria.top"
         const val DEFAULT_LATEST_LIMIT = 20
         const val MAX_LATEST_PAGE_SIZE = 50

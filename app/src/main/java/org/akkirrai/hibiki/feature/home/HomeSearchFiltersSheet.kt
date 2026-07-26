@@ -125,6 +125,7 @@ fun AnimeSearchFiltersSheet(
     isFilterCatalogLoading: Boolean,
     onApply: (AnimeSearchFilters) -> Unit,
     onDismissRequest: () -> Unit,
+    showGenreFilters: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     AnimeSearchFiltersSheet(
@@ -133,6 +134,7 @@ fun AnimeSearchFiltersSheet(
         isFilterCatalogLoading = isFilterCatalogLoading,
         onApply = onApply,
         onDismissRequest = onDismissRequest,
+        showGenreFilters = showGenreFilters,
         modifier = modifier,
     )
 }
@@ -151,6 +153,7 @@ fun AnimeSearchFiltersSheet(
     optionText: @Composable (AnimeCatalogFilterOption) -> String = { appFilterOptionText(it.title) },
     maxCollapsedGenreGroups: Int? = null,
     maxCollapsedGenreItems: Int? = 15,
+    showGenreFilters: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val appLanguage = LocalAppLanguage.current
@@ -230,6 +233,7 @@ fun AnimeSearchFiltersSheet(
                     }
 
                     if (
+                        showGenreFilters &&
                         catalog.genreOptions.isNotEmpty() &&
                         capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES)
                     ) {
@@ -311,17 +315,17 @@ fun AnimeSearchFiltersSheet(
                         Spacer(modifier = Modifier.size(16.dp))
                         Button(
                             onClick = {
-                                onApply(
-                                    pendingFilters.copy(
+                            onApply(
+                                pendingFilters.copy(
                                         typeAlias = animeType?.alias
                                             ?.takeIf { capabilities.supports(AnimeCatalogFilter.TYPE) },
                                         statusAlias = includedStatuses.firstOrNull()
                                             ?.takeIf { capabilities.supports(AnimeCatalogFilter.STATUS) },
                                         includedGenreAliases = pendingFilters.includedGenreAliases
-                                            .takeIf { capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES) }
+                                            .takeIf { showGenreFilters && capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES) }
                                             .orEmpty(),
                                         excludedGenreAliases = pendingFilters.excludedGenreAliases
-                                            .takeIf { capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES) }
+                                            .takeIf { showGenreFilters && capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES) }
                                             .orEmpty(),
                                         yearFrom = yearRange.first
                                             .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != FILTER_YEAR_RANGE },

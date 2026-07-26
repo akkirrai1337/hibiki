@@ -147,7 +147,9 @@ private fun List<SearchFilterOption>.sanitizeOptions(
     // not expose that filter until its adapter supplies one.
     title.takeUnless { it.isBlank() || it.all(Char::isDigit) }
         ?.let { option.copy(id = id, title = it) }
-}.distinctBy(SearchFilterOption::id)
+}.distinctBy { option ->
+    if (isStatus) option.title.trim().lowercase() else option.id
+}
 
 private fun canonicalStatusLabel(
     id: String,
