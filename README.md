@@ -46,8 +46,8 @@
 ### 🎬 Credits
 
 - [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
-- [Animite](https://github.com/imashnake0/Animite): references for the title page's dynamic palette and UI behavior, countdown styling, and the hourglass icon.
-- [AniSync](https://github.com/Marco-9456/AniSync): title page design and styling references.
+- [Animite](https://github.com/imashnake0/Animite): inspiration and reference for parts of hibiki's visual design and user experience.
+- [AniSync](https://github.com/Marco-9456/AniSync): inspiration and reference for the title page and related interface patterns.
 
 ### 💬 Contact
 

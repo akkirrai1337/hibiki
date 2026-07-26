@@ -46,8 +46,8 @@
 ### 🎬 Credits
 
 - [anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
-- [Animite](https://github.com/imashnake0/Animite): референсы для динамической палитры и поведения интерфейса страницы тайтла, оформление таймера и иконка песочных часов.
-- [AniSync](https://github.com/Marco-9456/AniSync): дизайн и стилистические решения страницы тайтла.
+- [Animite](https://github.com/imashnake0/Animite): источник вдохновения и референс для визуального оформления и пользовательского опыта hibiki.
+- [AniSync](https://github.com/Marco-9456/AniSync): источник вдохновения и референс для страницы тайтла и связанных элементов интерфейса.
 
 ### 💬 Связь
 
