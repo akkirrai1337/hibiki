@@ -10,6 +10,7 @@ object BuiltInSources {
     val ANIMEGO_ID = GeneratedSourceCatalog.ANIMEGO_ID
     val ANIMEPAHE_ID = GeneratedSourceCatalog.ANIMEPAHE_ID
     val ANIMEVOST_ID = GeneratedSourceCatalog.ANIMEVOST_ID
+    val GOGOANIME_ID = GeneratedSourceCatalog.GOGOANIME_ID
 
     val catalog: SourceCatalog = GeneratedSourceCatalog.catalog
 }

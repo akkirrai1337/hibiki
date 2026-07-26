@@ -214,7 +214,7 @@
     <string name="watch_error_timeout">%1$s: таймаут</string>
     <string name="watch_error_open_player_failed">Не удалось открыть плеер</string>
     <string name="watch_error_stream_unavailable">Не удалось получить поток</string>
-    <string name="watch_error_no_voiceovers_from_source">YummyAnime не вернул доступные озвучки</string>
+    <string name="watch_error_no_voiceovers_from_source">%1$s не вернул доступные озвучки</string>
     <string name="watch_player_settings_quality">Качество</string>
     <string name="watch_player_settings_on">Вкл</string>
     <string name="watch_player_settings_off">Выкл</string>

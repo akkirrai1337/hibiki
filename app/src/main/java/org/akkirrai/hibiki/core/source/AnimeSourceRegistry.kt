@@ -90,6 +90,10 @@ object AnimeSourceRegistry {
             sourceId = BuiltInSources.ANIMEVOST_ID,
             iconRes = R.drawable.animite_media_type_anime,
         ),
+        Registration(
+            sourceId = BuiltInSources.GOGOANIME_ID,
+            iconRes = R.drawable.animite_media_type_anime,
+        ),
     )
 
     val sources: List<AnimeSourceDescriptor> = registrations.map(Registration::descriptor)

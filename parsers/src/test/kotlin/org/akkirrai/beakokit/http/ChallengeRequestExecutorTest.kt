@@ -85,4 +85,33 @@ class ChallengeRequestExecutorTest {
             client.close()
         }
     }
+
+    @Test
+    fun `nginx 444 is treated as a browser challenge`() = runBlocking {
+        val requests = mutableListOf<HttpRequestData>()
+        val client = HttpClient(MockEngine { request ->
+            requests += request
+            if (requests.size == 1) {
+                respond("closed", HttpStatusCode(444, "No Response"))
+            } else {
+                respond("catalog")
+            }
+        })
+        val provider = ChallengeSessionProvider {
+            ChallengeSession(mapOf("cf_clearance" to "clear"), "WebView agent")
+        }
+
+        try {
+            val response = ChallengeRequestExecutor(client, provider).execute(
+                url = "https://source.test/catalog",
+                requiredCookieNames = setOf("cf_clearance"),
+            )
+
+            assertEquals("catalog", response.bodyAsText())
+            assertEquals(2, requests.size)
+            assertEquals("cf_clearance=clear", requests.last().headers[HttpHeaders.Cookie])
+        } finally {
+            client.close()
+        }
+    }
 }

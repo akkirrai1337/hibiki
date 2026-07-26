@@ -9,6 +9,7 @@ import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
 import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
 import org.akkirrai.beakokit.source.animepahe.AnimePaheSource
 import org.akkirrai.beakokit.source.animevost.AnimeVostSource
+import org.akkirrai.beakokit.source.gogoanime.GogoAnimeSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,7 +20,7 @@ class AnimeSourceRegistryTest {
         val sources = AnimeSourceRegistry.sources
 
         assertEquals(
-            setOf(SourceId("yummy-anime"), SourceId("ani-liberty"), SourceId("animego"), SourceId("animepahe"), SourceId("animevost")),
+            setOf(SourceId("yummy-anime"), SourceId("ani-liberty"), SourceId("animego"), SourceId("animepahe"), SourceId("animevost"), SourceId("gogoanime")),
             sources.map { it.id }.toSet(),
         )
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
@@ -52,6 +53,10 @@ class AnimeSourceRegistryTest {
         assertEquals(
             AnimeVostSource.INFO,
             AnimeSourceRegistry.descriptor(SourceId("animevost")).info,
+        )
+        assertEquals(
+            GogoAnimeSource.INFO,
+            AnimeSourceRegistry.descriptor(SourceId("gogoanime")).info,
         )
         assertEquals(
             R.drawable.source_animego,

@@ -223,7 +223,7 @@
     <string name="watch_error_timeout">%1$s: timeout</string>
     <string name="watch_error_open_player_failed">Failed to open player</string>
     <string name="watch_error_stream_unavailable">Failed to get stream</string>
-    <string name="watch_error_no_voiceovers_from_source">YummyAnime did not return available voiceovers</string>
+    <string name="watch_error_no_voiceovers_from_source">%1$s did not return available voiceovers</string>
     <string name="download_notification_channel_name">Downloads</string>
     <string name="download_notification_channel_description">Episode downloads for offline playback</string>
     <string name="download_notification_active">Downloading episodes: %1$d</string>

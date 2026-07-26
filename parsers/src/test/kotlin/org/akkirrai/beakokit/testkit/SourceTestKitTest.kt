@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
+import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
@@ -31,6 +33,7 @@ import org.akkirrai.beakokit.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class SourceTestKitTest {
     @Test
@@ -242,6 +245,32 @@ class SourceTestKitTest {
         SourceTestKit.assertFailureContract(NoPlayerLinksException::class) {
             resolver.resolve(emptyList())
         }
+    }
+
+    @Test
+    fun `live contract reports blocked transport with stage and status`() = runBlocking {
+        val source = object : AnimeSource by FakeCatalogSource(listOf(title("42"))) {
+            override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> =
+                throw SourceException(
+                    message = "Source returned HTTP 444: <html>blocked</html>",
+                    statusCode = 444,
+                    kind = SourceErrorKind.AUTH,
+                )
+        }
+
+        val failure = assertFailsWith<AssertionError> {
+            SourceTestKit.assertLiveSourceContract(
+                source,
+                LiveSourceContractOptions(
+                    searchRequest = AnimeSearchRequest(query = "test", limit = 1),
+                    requirePlayback = false,
+                ),
+            )
+        }
+
+        assertTrue(failure.message.orEmpty().contains("search/details"))
+        assertTrue(failure.message.orEmpty().contains("blocked/challenge"))
+        assertTrue(failure.message.orEmpty().contains("HTTP 444"))
     }
 
     private class FakeCatalogSource(

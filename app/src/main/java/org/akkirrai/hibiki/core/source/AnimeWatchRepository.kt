@@ -86,6 +86,7 @@ class AnimeWatchRepository(
         AksorExtractor(client),
         appContext?.let(::AllohaWebViewExtractor),
         appContext?.let(::AnimePaheWebViewExtractor),
+        appContext?.let(::GogoAnimeWebViewExtractor),
         SibnetExtractor(client),
         CvhExtractor(client),
         VkExtractor(client),
@@ -351,13 +352,26 @@ class AnimeWatchRepository(
         val runtime = sourceForTitle(animeId)
         val title = runtime.details(animeId)
         if (!runtime.supportsPlayback) {
-            throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
+            throw SourceException(
+                appString(R.string.watch_error_no_voiceovers_from_source, runtime.descriptor.name),
+            )
         }
-        val groups = runCatching { runtime.getPlaybackGroups(title) }
-            .onFailure { error ->
-                AppLogger.w(TAG, "${runtime.descriptor.name} source discovery failed: ${error.message}")
-            }
-            .getOrDefault(emptyList())
+        val groups = try {
+            runtime.getPlaybackGroups(title)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            AppLogger.w(TAG, "${runtime.descriptor.name} source discovery failed: ${error.message}")
+            throw SourceException(
+                message = appString(
+                    R.string.watch_error_no_voiceovers_from_source,
+                    runtime.descriptor.name,
+                ),
+                statusCode = (error as? SourceException)?.statusCode,
+                cause = error,
+                kind = (error as? SourceException)?.kind ?: org.akkirrai.beakokit.api.SourceErrorKind.UNKNOWN,
+            )
+        }
         val sources = groups.mapIndexed { index, group ->
             val source = WatchSource(
                 sourceId = buildSourceId(animeId, group.title, index),
@@ -380,7 +394,9 @@ class AnimeWatchRepository(
         val allSources = listOfNotNull(sources.firstOrNull { it.isPriority }) +
             sources.filterNot { it.isPriority }
         if (allSources.isEmpty()) {
-            throw SourceException(appString(R.string.watch_error_no_voiceovers_from_source))
+            throw SourceException(
+                appString(R.string.watch_error_no_voiceovers_from_source, runtime.descriptor.name),
+            )
         }
         return allSources
     }

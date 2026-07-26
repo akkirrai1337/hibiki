@@ -7,12 +7,16 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceContractValidator
+import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.ResolvedPlaybackStream
@@ -47,6 +51,28 @@ data class PaginationContractSnapshot(
 data class PlayableStreamContractSnapshot(
     val playback: PlaybackContractSnapshot,
     val resolved: ResolvedPlaybackStream,
+)
+
+/** Configuration for an opt-in test against the real source endpoint. */
+data class LiveSourceContractOptions(
+    val searchRequest: AnimeSearchRequest,
+    val latestLimit: Int = 3,
+    val requirePlayback: Boolean = true,
+    val resolver: PlaybackResolver? = null,
+) {
+    init {
+        require(latestLimit > 0) { "Live latest limit must be positive" }
+        if (resolver != null) require(requirePlayback) {
+            "A playback resolver requires requirePlayback to be enabled"
+        }
+    }
+}
+
+data class LiveSourceContractSnapshot(
+    val catalog: CatalogContractSnapshot,
+    val latest: List<AnimeTitle>?,
+    val playback: PlaybackContractSnapshot?,
+    val resolved: PlayableStreamContractSnapshot?,
 )
 
 /** Reusable contract assertions for fixture-backed source tests. */
@@ -292,6 +318,43 @@ object SourceTestKit {
         return results
     }
 
+    /**
+     * Runs the end-to-end contract against a source backed by a real HttpClient.
+     *
+     * This is intentionally opt-in: external availability and anti-bot rules are not stable
+     * unit-test inputs. A live test should construct the source with the same client profile as
+     * its target host, then call this function from a separate integration-test task.
+     */
+    suspend fun assertLiveSourceContract(
+        source: AnimeSource,
+        options: LiveSourceContractOptions,
+    ): LiveSourceContractSnapshot {
+        val catalog = liveStage(source, "search/details") {
+            assertCatalogContract(source, options.searchRequest)
+        }
+        val latest = if (source is LatestSource) {
+            liveStage(source, "latest") { assertLatestContract(source, options.latestLimit) }
+        } else {
+            null
+        }
+        if (!options.requirePlayback) {
+            return LiveSourceContractSnapshot(catalog, latest, null, null)
+        }
+
+        assertContract(SourceCapability.PLAYBACK in source.info.capabilities) {
+            "Live playback was requested but source does not declare PLAYBACK"
+        }
+        val playback = liveStage(source, "playback groups/player links") {
+            assertPlaybackContract(source, catalog.details)
+        }
+        val resolved = options.resolver?.let { resolver ->
+            liveStage(source, "stream resolution") {
+                assertPlayableStreamContract(source, catalog.details, resolver)
+            }
+        }
+        return LiveSourceContractSnapshot(catalog, latest, playback, resolved)
+    }
+
     suspend fun assertPlaybackContract(
         source: AnimeSource,
         title: AnimeTitle,
@@ -367,6 +430,49 @@ object SourceTestKit {
             )
         }
         throw AssertionError("Expected ${expectedType.simpleName}, but operation completed successfully")
+    }
+
+    private suspend fun <T> liveStage(
+        source: AnimeSource,
+        stage: String,
+        block: suspend () -> T,
+    ): T = try {
+        block()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        throw liveFailure(source, stage, error)
+    }
+
+    private fun liveFailure(source: AnimeSource, stage: String, error: Throwable): AssertionError {
+        val sourceError = generateSequence(error) { it.cause }
+            .filterIsInstance<SourceException>()
+            .firstOrNull()
+        val status = sourceError?.statusCode
+        val category = when {
+            status == 403 || status == 444 || sourceError?.kind == SourceErrorKind.AUTH -> "blocked/challenge"
+            status == 429 || sourceError?.kind == SourceErrorKind.RATE_LIMITED -> "rate-limited"
+            sourceError?.kind == SourceErrorKind.PARSE -> "parse"
+            sourceError?.kind == SourceErrorKind.NETWORK -> "network"
+            sourceError?.kind == SourceErrorKind.UNAVAILABLE -> "unavailable"
+            error is kotlinx.coroutines.TimeoutCancellationException -> "timeout"
+            else -> "unknown"
+        }
+        val code = status?.let { " HTTP $it" }.orEmpty()
+        val detail = error.message
+            ?.replace(
+                Regex("([?&](?:e|token|key|signature|authorization|cookie)=)[^&\\s]+", RegexOption.IGNORE_CASE),
+                "$1<redacted>",
+            )
+            ?.replace(Regex("\\s+"), " ")
+            ?.trim()
+            ?.take(300)
+            .orEmpty()
+        return AssertionError(
+            "Live source contract failed for ${source.info.id} at $stage: $category$code" +
+                if (detail.isBlank()) "" else " — $detail",
+            error,
+        )
     }
 
     private fun assertTitles(titles: List<AnimeTitle>, label: String) {

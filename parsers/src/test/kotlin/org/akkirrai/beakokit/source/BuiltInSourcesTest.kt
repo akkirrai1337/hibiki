@@ -25,6 +25,7 @@ class BuiltInSourcesTest {
                     BuiltInSources.ANIMEGO_ID,
                     BuiltInSources.ANIMEPAHE_ID,
                     BuiltInSources.ANIMEVOST_ID,
+                    BuiltInSources.GOGOANIME_ID,
                 ),
                 BuiltInSources.catalog.sources.map { it.id },
             )

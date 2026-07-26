@@ -18,10 +18,11 @@ class ChallengeRequestExecutor(
     suspend fun execute(
         url: String,
         requiredCookieNames: Set<String>,
+        challengeUrl: String = url,
         configure: HttpRequestBuilder.() -> Unit = {},
     ): HttpResponse {
         val request = ChallengeSessionRequest(
-            url = url,
+            url = challengeUrl,
             requiredCookieNames = requiredCookieNames,
         )
         val firstResponse = send(url, session = null, configure)
@@ -52,4 +53,5 @@ class ChallengeRequestExecutor(
 
 private fun HttpResponse.isBrowserChallenge(): Boolean =
     status == HttpStatusCode.Forbidden ||
+    status.value == 444 ||
         headers["cf-mitigated"].equals("challenge", ignoreCase = true)
