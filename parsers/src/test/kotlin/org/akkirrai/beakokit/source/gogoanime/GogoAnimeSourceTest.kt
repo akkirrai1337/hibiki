@@ -52,6 +52,7 @@ class GogoAnimeSourceTest {
             assertEquals("test-show", catalog.details.id)
             assertEquals("Test Show", catalog.details.originalName)
             assertEquals("A fixture synopsis for GogoAnime.", catalog.details.description)
+            assertEquals("テストショー", catalog.details.synonyms.last())
             assertEquals(2, catalog.details.episodeCount)
             assertEquals(2, catalog.details.availableEpisodeCount)
             assertEquals(AnimeReleaseStatus.RELEASED, catalog.details.releaseStatus)

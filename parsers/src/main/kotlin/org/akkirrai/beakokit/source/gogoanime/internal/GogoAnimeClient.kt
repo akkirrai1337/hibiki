@@ -7,6 +7,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.isSuccess
+import java.nio.charset.Charset
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.http.pathOf
@@ -120,7 +121,7 @@ internal class GogoAnimeClient(
                 else -> SourceErrorKind.UNKNOWN
             },
         )
-        return response.bodyAsText()
+        return response.bodyAsText().repairGogoMojibake()
     }
 
     private fun parseSearchCards(document: Document): List<AnimeTitle> = document.select("ul.items > li")
@@ -273,6 +274,20 @@ internal class GogoAnimeClient(
         }
         ?.takeIf(String::isNotBlank)
 
+    /** Repairs UTF-8 text that GogoAnime occasionally serves as Windows-1252. */
+    private fun String.repairGogoMojibake(): String {
+        if (countGogoMojibakeMarkers() == 0) return this
+        val repaired = runCatching {
+            toByteArray(WINDOWS_1252).toString(Charsets.UTF_8)
+        }.getOrNull() ?: return this
+        return repaired.takeIf {
+            it != this && !it.contains('\uFFFD') &&
+                it.countGogoMojibakeMarkers() < countGogoMojibakeMarkers()
+        } ?: this
+    }
+
+    private fun String.countGogoMojibakeMarkers(): Int = count { it in GOGO_MOJIBAKE_MARKERS }
+
     private fun validateSlug(id: String): String = id.trim().trim('/').takeIf(SLUG::matches)
         ?: throw SourceException("GogoAnime title id is invalid: $id", kind = SourceErrorKind.NOT_FOUND)
 
@@ -289,6 +304,8 @@ internal class GogoAnimeClient(
     private companion object {
         const val MAX_RESULTS = 50
         const val BROWSER_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36"
+        val WINDOWS_1252: Charset = Charset.forName("windows-1252")
+        val GOGO_MOJIBAKE_MARKERS = setOf('Ã', 'Â', 'â', 'ð', 'Ð', 'Ñ', 'ã', 'ƒ', '�')
         val SLUG = Regex("[a-z0-9][a-z0-9-]*")
         val EPISODE_PATH = Regex("/(.+)-episode-(\\d+(?:\\.\\d+)?)$")
         val YEAR = Regex("\\b(?:19|20)\\d{2}\\b")
