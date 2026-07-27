@@ -37,19 +37,18 @@ internal fun RecentLibraryCard(
         title = if (showTitle) stringResource(R.string.yummy_account_recent_additions_title) else null,
         emptyText = stringResource(R.string.yummy_account_recent_library_empty),
         isEmpty = items.isEmpty(),
-        content = { items.forEach { RecentLibraryRow(it) } },
-    )
-}
-
-@Composable
-private fun RecentLibraryRow(item: RecentLibraryItem) {
-    org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryRow(
-        title = item.title,
-        statusLabel = item.statusLabel,
-        statusColor = item.color,
-        ratingLabel = item.ratingLabel,
-        dateLabel = item.dateLabel,
-        poster = { RecentPoster(item) },
+        content = {
+            items.forEach { item ->
+                org.akkirrai.hibiki.shared.profile.ProfileRecentLibraryRow(
+                    title = item.title,
+                    statusLabel = item.statusLabel,
+                    statusColor = item.color,
+                    ratingLabel = item.ratingLabel,
+                    dateLabel = item.dateLabel,
+                    poster = { RecentPoster(item) },
+                )
+            }
+        },
     )
 }
 
@@ -82,11 +81,4 @@ private fun RecentPoster(
             )
         }
     }
-}
-
-@Composable
-private fun EmptyState(
-    text: String,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileEmptyState(text)
 }
