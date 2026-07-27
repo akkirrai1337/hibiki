@@ -13,6 +13,17 @@ val CatalogSortMenuTitleFontSize = 10.sp
 val CatalogSortMenuWidth = 196.dp
 val CatalogSortMenuOffsetY = 4.dp
 val CatalogSortMenuCornerRadius = 26.dp
+val CatalogSortPillHorizontalPadding = 10.dp
+val CatalogSortPillVerticalPadding = 4.dp
+val CatalogSortPillContentGap = 4.dp
+val CatalogSortPillIconSize = 11.dp
+val CatalogSortMenuSelectedIconSize = 16.dp
+val CatalogSortMenuItemZeroIconSize = 0.dp
+val CatalogSortMenuContentGap = 8.dp
+val CatalogSortMenuContentHorizontalPadding = 16.dp
+val CatalogSortMenuContentVerticalPadding = 8.dp
+val CatalogSortMenuItemPadding = 4.dp
+val CatalogSortMenuItemCornerRadius = 24.dp
 val CatalogContentTopPadding = CatalogHeaderTopPadding +
     CatalogSearchBarHeight +
     CatalogSortVerticalGap +

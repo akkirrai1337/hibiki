@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppCatalogSortMenuItem(
@@ -48,7 +47,7 @@ fun AppCatalogSortMenuItem(
         label = "catalog_sort_text",
     )
     val iconSize by animateDpAsState(
-        targetValue = if (selected) 16.dp else 0.dp,
+        targetValue = if (selected) CatalogSortMenuSelectedIconSize else CatalogSortMenuItemZeroIconSize,
         label = "catalog_sort_icon",
     )
 
@@ -60,7 +59,7 @@ fun AppCatalogSortMenuItem(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CatalogSortMenuContentGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -77,10 +76,10 @@ fun AppCatalogSortMenuItem(
         },
         colors = MenuDefaults.itemColors(textColor = textColor),
         onClick = onClick,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = CatalogSortMenuContentHorizontalPadding, vertical = CatalogSortMenuContentVerticalPadding),
         modifier = Modifier
-            .padding(4.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .padding(CatalogSortMenuItemPadding)
+            .clip(RoundedCornerShape(CatalogSortMenuItemCornerRadius))
             .background(backgroundColor),
     )
 }

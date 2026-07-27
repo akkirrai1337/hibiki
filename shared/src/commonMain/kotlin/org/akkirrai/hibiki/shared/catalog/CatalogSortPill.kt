@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 
@@ -35,7 +34,7 @@ fun AppCatalogSortPill(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(28.dp),
+            .height(CatalogSortControlHeight),
         contentAlignment = Alignment.Center,
     ) {
         AnimatedContent(
@@ -50,14 +49,14 @@ fun AppCatalogSortPill(
                         shape = CircleShape,
                     )
                     .clickable(onClick = onClick)
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(horizontal = CatalogSortPillHorizontalPadding, vertical = CatalogSortPillVerticalPadding),
+                horizontalArrangement = Arrangement.spacedBy(CatalogSortPillContentGap),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(11.dp),
+                    modifier = Modifier.size(CatalogSortPillIconSize),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
                 Text(
@@ -66,7 +65,7 @@ fun AppCatalogSortPill(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
-                orderContent(Modifier.size(11.dp))
+                orderContent(Modifier.size(CatalogSortPillIconSize))
             }
         }
     }
