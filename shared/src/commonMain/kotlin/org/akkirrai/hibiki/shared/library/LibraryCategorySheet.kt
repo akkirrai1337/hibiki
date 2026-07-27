@@ -31,8 +31,8 @@ fun AppLibraryCategorySheet(
     onCategoryClick: (LibraryCategory) -> Unit,
     onRemoveClick: () -> Unit,
     onDismiss: () -> Unit,
-    iconContent: @Composable (LibraryCategory) -> Unit,
-    selectedIconContent: @Composable () -> Unit,
+    iconContent: @Composable (LibraryCategory, Modifier) -> Unit,
+    selectedIconContent: @Composable (Modifier) -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -78,7 +78,7 @@ fun AppLibraryCategorySheet(
                         label = categoryLabels.getValue(category),
                         selected = category == selectedCategory,
                         onClick = { onCategoryClick(category) },
-                        iconContent = { iconContent(category) },
+                        iconContent = { iconModifier -> iconContent(category, iconModifier) },
                         selectedIconContent = selectedIconContent,
                     )
                 }

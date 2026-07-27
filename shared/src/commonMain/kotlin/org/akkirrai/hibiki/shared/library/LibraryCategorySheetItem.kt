@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,8 +23,8 @@ fun AppLibraryCategorySheetItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    iconContent: @Composable () -> Unit,
-    selectedIconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
+    selectedIconContent: @Composable (Modifier) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -52,7 +53,7 @@ fun AppLibraryCategorySheetItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            iconContent()
+            iconContent(Modifier.size(21.dp))
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
@@ -62,7 +63,7 @@ fun AppLibraryCategorySheetItem(
                 overflow = TextOverflow.Ellipsis,
             )
             if (selected) {
-                selectedIconContent()
+                selectedIconContent(Modifier.size(20.dp))
             }
         }
     }

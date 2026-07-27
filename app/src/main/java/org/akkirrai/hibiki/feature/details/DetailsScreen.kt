@@ -844,11 +844,11 @@ private fun LibraryCategorySheet(
         onCategoryClick = onCategoryClick,
         onRemoveClick = onRemoveClick,
         onDismiss = onDismiss,
-        iconContent = { category ->
+        iconContent = { category, iconModifier ->
             Icon(
                 imageVector = category.icon(),
                 contentDescription = null,
-                modifier = Modifier.size(21.dp),
+                modifier = iconModifier,
                 tint = if (category == selectedCategory) {
                     MaterialTheme.colorScheme.primary
                 } else {
@@ -856,11 +856,11 @@ private fun LibraryCategorySheet(
                 },
             )
         },
-        selectedIconContent = {
+        selectedIconContent = { iconModifier ->
             Icon(
                 imageVector = Icons.Outlined.Check,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = iconModifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
