@@ -21,8 +21,8 @@ fun ProfileScrollableTab(
         modifier = Modifier
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
-            .padding(start = 24.dp, top = 24.dp, end = 24.dp)
-            .padding(bottom = bottomContentPadding + 24.dp),
+            .padding(start = ProfileLargePadding, top = ProfileLargePadding, end = ProfileLargePadding)
+            .padding(bottom = bottomContentPadding + ProfileLargePadding),
         verticalArrangement = Arrangement.spacedBy(verticalSpacing),
     ) {
         content()
