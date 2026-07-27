@@ -47,3 +47,4 @@ val ProfileActivitySectionVerticalSpacing = 8.dp
 val ProfileActivityBarChartHeight = 142.dp
 val ProfileActivityBarChartPlotHeight = 114.dp
 val ProfileActivityBarChartValueBarGap = 4.dp
+val ProfileActivityBarWidth = 18.dp
