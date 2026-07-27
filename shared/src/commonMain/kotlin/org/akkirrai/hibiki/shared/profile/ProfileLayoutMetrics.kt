@@ -22,3 +22,4 @@ val ProfileRecentLibraryRowPosterTextGap = 12.dp
 val ProfileRecentLibraryRowTextSpacing = 4.dp
 val ProfileRecentLibraryStatusMarkerSize = 7.dp
 val ProfileRecentLibraryCardVerticalSpacing = 12.dp
+val ProfileRecentLibraryEmptyHeight = 28.dp

@@ -24,7 +24,7 @@ fun ProfileRecentLibraryCard(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ProfileRecentLibraryCardVerticalSpacing)) {
         title?.let { Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) }
         if (isEmpty) {
-            Box(Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.fillMaxWidth().height(ProfileRecentLibraryEmptyHeight), contentAlignment = Alignment.CenterStart) {
                 ProfileEmptyState(emptyText)
             }
         } else {
