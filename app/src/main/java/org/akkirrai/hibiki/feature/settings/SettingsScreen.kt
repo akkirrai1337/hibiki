@@ -32,10 +32,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -96,6 +93,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
+import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
 import kotlinx.coroutines.launch
 
 @Composable
@@ -437,35 +435,20 @@ private fun DiscordAuthDialog(
                     onBrowserSignIn = onBrowserSignIn,
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        enabled = !isChecking,
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                manager.authenticate(manualToken)
-                                    .onSuccess { onDismiss() }
-                                    .onFailure { manualTokenFailed = true }
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        enabled = manualToken.isNotBlank() && !isChecking,
-                    ) {
-                        Text(stringResource(R.string.settings_apply))
-                    }
-                }
+                AppDiscordAuthDialogActions(
+                    cancelLabel = stringResource(R.string.action_cancel),
+                    applyLabel = stringResource(R.string.settings_apply),
+                    cancelEnabled = !isChecking,
+                    applyEnabled = manualToken.isNotBlank() && !isChecking,
+                    onCancel = onDismiss,
+                    onApply = {
+                        scope.launch {
+                            manager.authenticate(manualToken)
+                                .onSuccess { onDismiss() }
+                                .onFailure { manualTokenFailed = true }
+                        }
+                    },
+                )
                 }
             }
         }
