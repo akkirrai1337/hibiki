@@ -82,6 +82,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.home.HomeAction
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
@@ -208,8 +209,8 @@ fun AnimeSearchFiltersSheet(
                     modifier = sheetContentModifier
                         .background(MaterialTheme.colorScheme.background)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 24.dp),
+                        .padding(horizontal = UiDimens.FilterSheetHorizontalPadding)
+                        .padding(bottom = UiDimens.FilterSheetBottomPadding),
                 ) {
                     if (capabilities.supports(AnimeCatalogFilter.TYPE) && typeEntries.isNotEmpty()) {
                         AppConnectedToggleFilter(
@@ -317,11 +318,11 @@ fun AnimeSearchFiltersSheet(
                         )
                     }
 
-                    Spacer(modifier = Modifier.size(8.dp))
+                    Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionsTopGap))
                     FlowRow(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         horizontalArrangement = Arrangement.Center,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(UiDimens.FilterSheetActionsGap),
                     ) {
                         Button(
                             onClick = {
@@ -338,15 +339,15 @@ fun AnimeSearchFiltersSheet(
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.animite_reset),
                                 contentDescription = null,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(UiDimens.FilterSheetActionIconSize),
                             )
-                            Spacer(modifier = Modifier.size(8.dp))
+                            Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
                             Text(
                                 text = stringResource(R.string.search_filters_reset),
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
-                        Spacer(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionButtonGap))
                         Button(
                             onClick = {
                             onApply(
@@ -376,9 +377,9 @@ fun AnimeSearchFiltersSheet(
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.animite_done),
                                 contentDescription = null,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(UiDimens.FilterSheetActionIconSize),
                             )
-                            Spacer(modifier = Modifier.size(8.dp))
+                            Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
                             Text(
                                 text = stringResource(R.string.search_filters_apply),
                                 fontWeight = FontWeight.SemiBold,

@@ -41,6 +41,13 @@ object UiDimens {
     val CollapsibleFilterArrowSize = 16.dp
     val FilterCatalogStateHeight = 260.dp
     val FilterCatalogUnavailablePadding = 24.dp
+    val FilterSheetHorizontalPadding = 16.dp
+    val FilterSheetBottomPadding = 24.dp
+    val FilterSheetActionsTopGap = 8.dp
+    val FilterSheetActionsGap = 8.dp
+    val FilterSheetActionIconSize = 24.dp
+    val FilterSheetActionContentGap = 8.dp
+    val FilterSheetActionButtonGap = 16.dp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp
