@@ -14,3 +14,4 @@ val SettingsItemInnerCornerRadius = 4.dp
 val SettingsContentHorizontalPadding = 18.dp
 val SettingsContentTopPadding = 24.dp
 val SettingsContentSectionGap = 28.dp
+val SettingsItemIconSize = 28.dp
