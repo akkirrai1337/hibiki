@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -30,7 +31,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AppProfileBannerLayout(
     banner: @Composable BoxScope.(Float, Modifier) -> Unit,
-    bannerElevatedContent: @Composable BoxScope.(Float) -> Unit,
+    bannerElevatedContent: @Composable BoxScope.(Float, Modifier) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
     maxBannerHeight: Dp = 168.dp,
@@ -85,6 +86,12 @@ fun AppProfileBannerLayout(
                 .background(contentBackgroundColor)
                 .padding(contentPadding),
         ) { content() }
-        bannerElevatedContent(ratio)
+        bannerElevatedContent(
+            ratio,
+            Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = statusBarHeight + ProfileLargePadding * ratio * 0.9f)
+                .padding(end = ProfileLargePadding),
+        )
     }
 }

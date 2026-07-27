@@ -15,14 +15,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -116,8 +113,6 @@ fun LocalProfileScreen(
     val snapshot = remember(localizedResources, state.data) {
         buildProfileSnapshot(localizedResources, state.data)
     }
-    val statusInsets = WindowInsets.statusBars.asPaddingValues()
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -141,12 +136,9 @@ fun LocalProfileScreen(
                     )
                 }
             },
-            bannerElevatedContent = { ratio ->
+            bannerElevatedContent = { _, actionModifier ->
                 Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = statusInsets.calculateTopPadding() + ProfileLargePadding * ratio * 0.9f)
-                        .padding(end = ProfileLargePadding),
+                    modifier = actionModifier,
                     horizontalArrangement = Arrangement.spacedBy(ProfileSmallPadding),
                 ) {
                     ProfileActionButton(
