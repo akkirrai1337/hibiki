@@ -43,6 +43,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceLanguageContent
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
+import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
@@ -208,7 +209,7 @@ private fun SourceSearchSection(
                             movieLabel = movieLabel,
                         ),
                         onClick = { onAnimeClick(anime) },
-                        modifier = Modifier.width(154.dp),
+                        modifier = Modifier.width(SourceSearchPosterCardWidth),
                         posterContent = {
                             PosterImage(
                                 primaryUrl = anime.posterUrl,
