@@ -84,7 +84,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -102,6 +101,9 @@ import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomeErrorIconContainer
+import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
+import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
+import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
 import org.akkirrai.hibiki.shared.home.AppHomePoster
 import org.akkirrai.hibiki.shared.home.AppHomePosterPlaceholder
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
@@ -202,7 +204,7 @@ fun HomeScreen(
             isSearchActive = isSearchActive,
             searchContent = {
                 AppHomeSearchList(
-                    topContentPadding = HOME_CONTENT_TOP_PADDING,
+                    topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
                 ) {
                     appSearchStateVerticalListContent(
@@ -255,12 +257,12 @@ fun HomeScreen(
                     isRefreshing = state.isLoading,
                     onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
                     state = pullToRefreshState,
-                    indicatorTopPadding = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET,
+                    indicatorTopPadding = HomePullRefreshIndicatorTopOffset,
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     AppHomeFeedList(
                         state = homeListState,
-                        topContentPadding = HOME_CONTENT_TOP_PADDING,
+                        topContentPadding = HomeContentTopPadding,
                         bottomContentPadding = bottomContentPadding,
                     ) {
                         homeFeedContent(
@@ -303,7 +305,7 @@ fun HomeScreen(
                 showSearchFilters = true
             },
             showFilterButton = hasSearchFilters,
-            scrimHeight = HOME_TOP_SEARCH_SCRIM_HEIGHT,
+            scrimHeight = HomeTopSearchScrimHeight,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -419,13 +421,6 @@ private fun LazyListScope.homeFeedContent(
         onActionClick = onBrowseCatalog,
     )
 }
-
-private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
-    UiDimens.SearchBarHeight +
-    UiDimens.ScreenPadding
-private val HOME_TOP_SEARCH_SCRIM_HEIGHT = HOME_CONTENT_TOP_PADDING + 18.dp
-private val HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET =
-    UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight - 8.dp
 
 private fun buildHomeMeta(
     anime: Anime,
