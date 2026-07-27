@@ -4,15 +4,17 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerUnlockOverlay(
     visible: Boolean,
     label: String,
     onClick: () -> Unit,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
@@ -24,7 +26,7 @@ fun AppPlayerUnlockOverlay(
         AppPlayerUnlockButton(
             label = label,
             onClick = onClick,
-            iconContent = iconContent,
+            iconContent = { iconContent(Modifier.size(20.dp)) },
         )
     }
 }

@@ -1290,11 +1290,11 @@ fun PlayerScreen(
                 unlockButtonVisible = false
                 keepControlsVisible()
             },
-            iconContent = {
+            iconContent = { iconModifier ->
                 Icon(
                     imageVector = Icons.Outlined.LockOpen,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = iconModifier,
                 )
             },
             modifier = Modifier
