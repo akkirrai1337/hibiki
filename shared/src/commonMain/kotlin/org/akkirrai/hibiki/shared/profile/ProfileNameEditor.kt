@@ -26,7 +26,7 @@ fun ProfileNameEditor(
     textStyle: TextStyle = MaterialTheme.typography.titleLarge,
 ) {
     val underlineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-    Column(modifier = modifier.widthIn(min = 150.dp, max = 240.dp)) {
+    Column(modifier = modifier.widthIn(min = ProfileNameEditorMinWidth, max = 240.dp)) {
         Text(label, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
         BasicTextField(
             value = name,

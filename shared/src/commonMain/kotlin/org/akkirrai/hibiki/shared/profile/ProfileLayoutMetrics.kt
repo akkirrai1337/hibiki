@@ -25,3 +25,4 @@ val ProfileRecentLibraryCardVerticalSpacing = 12.dp
 val ProfileRecentLibraryEmptyHeight = 28.dp
 val ProfileScrollableTabDefaultSpacing = 0.dp
 val ProfileIdentityTabsVerticalSpacing = 1.dp
+val ProfileNameEditorMinWidth = 150.dp
