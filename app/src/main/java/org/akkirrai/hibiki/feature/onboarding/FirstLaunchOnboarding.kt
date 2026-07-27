@@ -67,6 +67,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepIndicator
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -190,10 +191,26 @@ fun FirstLaunchOnboarding(
                         modifier = Modifier.fillMaxSize(),
                     )
 
-                    OnboardingStep.NOTIFICATIONS -> NotificationsStep(
-                        permissionState = notificationPermissionState,
-                        onRequestPermission = onRequestNotificationPermission,
+                    OnboardingStep.NOTIFICATIONS -> AppOnboardingNotifications(
+                        title = stringResource(R.string.onboarding_notifications_title),
+                        description = stringResource(R.string.onboarding_notifications_description),
+                        icon = Icons.Rounded.NotificationsActive,
                         modifier = Modifier.fillMaxSize(),
+                        actionContent = {
+                            when (notificationPermissionState) {
+                                NotificationPermissionState.NOT_ASKED -> {
+                                    Button(onClick = onRequestNotificationPermission) {
+                                        Text(stringResource(R.string.onboarding_notifications_allow))
+                                    }
+                                }
+                                NotificationPermissionState.GRANTED -> PermissionStatus(
+                                    text = stringResource(R.string.onboarding_notifications_enabled),
+                                )
+                                NotificationPermissionState.DENIED -> PermissionStatus(
+                                    text = stringResource(R.string.onboarding_notifications_denied),
+                                )
+                            }
+                        },
                     )
 
                 }
@@ -229,58 +246,6 @@ fun FirstLaunchOnboarding(
         }
     }
 
-}
-
-@Composable
-private fun NotificationsStep(
-    permissionState: NotificationPermissionState,
-    onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.NotificationsActive,
-            contentDescription = null,
-            modifier = Modifier.size(112.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(32.dp))
-        Text(
-            text = stringResource(R.string.onboarding_notifications_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.onboarding_notifications_description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(32.dp))
-        when (permissionState) {
-            NotificationPermissionState.NOT_ASKED -> {
-                Button(onClick = onRequestPermission) {
-                    Text(stringResource(R.string.onboarding_notifications_allow))
-                }
-            }
-
-            NotificationPermissionState.GRANTED -> PermissionStatus(
-                text = stringResource(R.string.onboarding_notifications_enabled),
-            )
-
-            NotificationPermissionState.DENIED -> PermissionStatus(
-                text = stringResource(R.string.onboarding_notifications_denied),
-            )
-        }
-    }
 }
 
 @Composable
