@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsHeroActions(
@@ -36,29 +35,29 @@ fun DetailsHeroActions(
     onPrimaryClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DetailsHeroActionsHorizontalPadding),
+        horizontalArrangement = Arrangement.spacedBy(DetailsHeroActionsGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             onClick = onLibraryClick,
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(DetailsHeroLibraryButtonSize),
             shape = CircleShape,
             color = if (isInLibrary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
             contentColor = if (isInLibrary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
         ) {
-            Box(contentAlignment = Alignment.Center) { Icon(libraryIcon, libraryLabel, Modifier.size(28.dp)) }
+            Box(contentAlignment = Alignment.Center) { Icon(libraryIcon, libraryLabel, Modifier.size(DetailsHeroLibraryIconSize)) }
         }
         OutlinedButton(
             onClick = onPrimaryClick,
             enabled = canWatch,
-            modifier = Modifier.weight(1f).height(56.dp),
+            modifier = Modifier.weight(1f).height(DetailsHeroPrimaryButtonHeight),
             shape = CircleShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            border = BorderStroke(DetailsHeroPrimaryButtonBorderWidth, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface, containerColor = Color.Transparent),
         ) {
-            Icon(primaryIcon, null, Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
+            Icon(primaryIcon, null, Modifier.size(DetailsHeroPrimaryIconSize))
+            Spacer(Modifier.width(DetailsHeroPrimaryIconLabelGap))
             Text(watchLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium))
         }
     }
