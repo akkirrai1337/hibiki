@@ -93,6 +93,7 @@ import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
+import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -324,9 +325,14 @@ private fun LibraryAnimeCard(
         onClick = onClick,
         modifier = modifier,
         posterContent = {
-            AnimePoster(
-                anime = anime,
+            PosterImage(
+                primaryUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
                 modifier = Modifier.fillMaxSize(),
+                placeholder = {
+                    AppImagePlaceholder(icon = Icons.Outlined.Image)
+                },
             )
             AnimeSourceBadge(
                 titleId = anime.id,
@@ -364,34 +370,6 @@ private fun EmptyLibraryState(
                 )
             }
         }
-    )
-}
-
-@Composable
-private fun AnimePoster(
-    anime: Anime,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        PosterImage(
-            primaryUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            modifier = Modifier.fillMaxSize(),
-            placeholder = { AnimeImagePlaceholder() }
-        )
-    }
-}
-
-@Composable
-private fun AnimeImagePlaceholder(
-    modifier: Modifier = Modifier
-) {
-    org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder(
-        icon = Icons.Outlined.Image,
-        modifier = modifier,
     )
 }
 
