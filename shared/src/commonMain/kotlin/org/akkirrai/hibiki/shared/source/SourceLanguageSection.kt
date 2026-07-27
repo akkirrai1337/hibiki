@@ -56,7 +56,7 @@ fun SourceLanguageSection(
         AnimatedVisibility(visible = expanded) {
             Column(
                 modifier = Modifier.padding(top = SourceLanguageSectionContentTopPadding),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(SourceLanguageSectionContentVerticalSpacing),
             ) {
                 content()
             }
