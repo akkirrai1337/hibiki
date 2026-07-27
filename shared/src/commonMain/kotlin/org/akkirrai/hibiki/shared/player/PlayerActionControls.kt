@@ -25,31 +25,31 @@ fun AppPlayerActionControls(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PlayerActionControlsGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppFilledIconButton(
             onClick = onScaleClick,
-            modifier = Modifier.size(46.dp),
+            modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = scaleContent,
         )
         AppFilledIconButton(
             onClick = onLockClick,
-            modifier = Modifier.size(46.dp),
+            modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = lockContent,
         )
         AppFilledIconButton(
             onClick = onPictureInPictureClick,
             enabled = pictureInPictureEnabled,
-            modifier = Modifier.size(46.dp),
+            modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = pictureInPictureContent,
         )
         AppFilledIconButton(
             onClick = onSettingsClick,
-            modifier = Modifier.size(46.dp),
+            modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = settingsContent,
         )
