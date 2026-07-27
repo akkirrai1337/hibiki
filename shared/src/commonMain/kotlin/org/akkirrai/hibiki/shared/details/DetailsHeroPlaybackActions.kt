@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppDetailsHeroPlaybackActions(
@@ -43,15 +42,15 @@ fun AppDetailsHeroPlaybackActions(
                 onClick = onResumeClick,
                 shape = CircleShape,
                 color = Color.Black.copy(alpha = 0.58f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
+                border = BorderStroke(DetailsPlaybackResumeBorderWidth, Color.White.copy(alpha = 0.28f)),
                 contentColor = Color.White,
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(horizontal = DetailsPlaybackResumeHorizontalPadding, vertical = DetailsPlaybackResumeVerticalPadding),
+                    horizontalArrangement = Arrangement.spacedBy(DetailsPlaybackResumeContentGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    resumeIconContent(Modifier.size(28.dp))
+                    resumeIconContent(Modifier.size(DetailsPlaybackResumeIconSize))
                     Column {
                         Text(
                             text = resumeTitle,
@@ -70,7 +69,7 @@ fun AppDetailsHeroPlaybackActions(
                     progress = { resumeProgress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(3.dp)
+                        .height(DetailsPlaybackProgressHeight)
                         .align(Alignment.BottomCenter),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = Color.White.copy(alpha = 0.24f),
@@ -81,14 +80,14 @@ fun AppDetailsHeroPlaybackActions(
             trailerEnabled -> {
             Surface(
                 onClick = onTrailerClick,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(DetailsPlaybackTrailerButtonSize),
                 shape = CircleShape,
                 color = Color.Black.copy(alpha = 0.38f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)),
+                border = BorderStroke(DetailsPlaybackTrailerBorderWidth, Color.White.copy(alpha = 0.32f)),
                 contentColor = Color.White,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    trailerIconContent(Modifier.size(32.dp))
+                    trailerIconContent(Modifier.size(DetailsPlaybackTrailerIconSize))
                 }
             }
         }
