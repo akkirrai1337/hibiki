@@ -38,9 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,6 +90,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -150,7 +149,7 @@ fun CatalogScreen(
         delay(350)
         viewModel.load()
     }
-    CatalogPaginationEffect(
+    AppCatalogPaginationEffect(
         listState = listState,
         state = state,
         onLoadMore = viewModel::loadMore,
@@ -299,29 +298,6 @@ fun CatalogScreen(
             onApply = viewModel::applyFilters,
             onDismissRequest = { isFilterSheetOpen = false },
         )
-    }
-}
-
-@Composable
-private fun CatalogPaginationEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    state: AnimeCatalogUiState,
-    onLoadMore: () -> Unit,
-) {
-    val latestState by rememberUpdatedState(state)
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val isNearEnd = lastVisibleItem >= layoutInfo.totalItemsCount - CATALOG_SCROLL_THRESHOLD
-            isNearEnd &&
-                !latestState.isLoading &&
-                !latestState.isLoadingMore &&
-                latestState.canLoadMore &&
-                latestState.error == null
-        }.collect { shouldLoadMore ->
-            if (shouldLoadMore) onLoadMore()
-        }
     }
 }
 
@@ -604,4 +580,3 @@ private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SORT_CONTROL_HEIGHT +
     CATALOG_SORT_VERTICAL_GAP
 private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
-private const val CATALOG_SCROLL_THRESHOLD = 3
