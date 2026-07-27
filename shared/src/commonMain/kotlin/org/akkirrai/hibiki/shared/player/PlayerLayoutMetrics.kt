@@ -42,6 +42,7 @@ val PlayerActionControlsGap = 8.dp
 val PlayerActionButtonSize = 46.dp
 val PlayerTimelineContainerHeight = 18.dp
 val PlayerTimelineTrackHeight = 4.dp
+val PlayerTimelineTrackCornerRadius = 999.dp
 val PlayerTimelineThumbSize = 8.dp
 val PlayerLoadingIndicatorStrokeWidth = 4.dp
 val PlayerUnlockButtonHorizontalPadding = 18.dp

@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerTimeline(
@@ -76,7 +75,7 @@ fun AppPlayerTimeline(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(PlayerTimelineTrackHeight)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(RoundedCornerShape(PlayerTimelineTrackCornerRadius))
                 .background(trackColor)
                 .onSizeChanged { trackWidthPx = it.width.toFloat() },
         ) {
@@ -84,14 +83,14 @@ fun AppPlayerTimeline(
                 modifier = Modifier
                     .fillMaxWidth(bufferedFraction)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(RoundedCornerShape(PlayerTimelineTrackCornerRadius))
                     .background(bufferedColor),
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth(playedFraction)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(RoundedCornerShape(PlayerTimelineTrackCornerRadius))
                     .background(playedColor),
             )
         }
