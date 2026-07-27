@@ -10,6 +10,9 @@ object UiDimens {
     val SectionSpacing = 20.dp
     val ItemSpacing = 12.dp
     val SmallSpacing = 8.dp
+    val FilterHandlePadding = 8.dp
+    val FilterHandleSize = 16.dp
+    val FilterHandleStrokeWidth = 1.8.dp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp

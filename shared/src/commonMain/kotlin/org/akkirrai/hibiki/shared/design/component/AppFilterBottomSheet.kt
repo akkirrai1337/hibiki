@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +38,10 @@ fun AppFilterBottomSheet(
             val handleColor = MaterialTheme.colorScheme.onSurfaceVariant
             Canvas(
                 modifier = Modifier
-                    .padding(8.dp)
-                    .size(16.dp),
+                    .padding(UiDimens.FilterHandlePadding)
+                    .size(UiDimens.FilterHandleSize),
             ) {
-                val strokeWidth = 1.8.dp.toPx()
+                val strokeWidth = UiDimens.FilterHandleStrokeWidth.toPx()
                 val center = size.width / 2f
                 if (expanded) {
                     val inset = size.width * 0.31f
