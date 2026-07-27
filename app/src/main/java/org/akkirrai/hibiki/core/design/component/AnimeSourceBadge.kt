@@ -3,8 +3,6 @@ package org.akkirrai.hibiki.core.design.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,13 +28,13 @@ fun AnimeSourceBadge(
     org.akkirrai.hibiki.shared.design.component.AppSourceBadge(
         title = source.name,
         modifier = modifier,
-        iconContent = {
+        iconContent = { iconModifier ->
             AsyncImage(
                 model = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
                 error = painterResource(source.iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(14.dp).clip(CircleShape),
+                modifier = iconModifier,
             )
         },
     )
