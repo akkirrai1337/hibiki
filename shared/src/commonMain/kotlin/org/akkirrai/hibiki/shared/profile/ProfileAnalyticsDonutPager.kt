@@ -93,7 +93,7 @@ fun AppProfileAnalyticsDonutPager(
                         },
                         centerPrimary = displayedPage.centerPrimary,
                         centerSecondary = displayedPage.centerSecondary,
-                        modifier = Modifier.size(152.dp),
+                        modifier = Modifier.size(ProfileAnalyticsDonutSize),
                         muted = displayedPage.segments.all { it.weight <= 0f },
                     )
                 }

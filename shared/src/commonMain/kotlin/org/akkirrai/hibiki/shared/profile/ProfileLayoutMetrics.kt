@@ -39,3 +39,4 @@ val ProfileAnalyticsPagerVerticalSpacing = 14.dp
 val ProfileAnalyticsPageVerticalSpacing = 14.dp
 val ProfileAnalyticsPageHorizontalPadding = 4.dp
 val ProfileAnalyticsLegendDonutGap = 16.dp
+val ProfileAnalyticsDonutSize = 152.dp
