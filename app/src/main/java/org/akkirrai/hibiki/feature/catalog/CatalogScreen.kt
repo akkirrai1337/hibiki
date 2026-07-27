@@ -86,7 +86,6 @@ import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
@@ -108,6 +107,7 @@ import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
+import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
@@ -208,17 +208,12 @@ fun CatalogScreen(
                                 contentDescription = anime.title,
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = {
-                                    PosterPlaceholder(
+                                    AppPosterPlaceholder(
+                                        icon = Icons.Outlined.Image,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(2f / 3f),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
+                                    )
                                 },
                             )
                         },
