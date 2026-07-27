@@ -67,6 +67,11 @@ import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.shared.design.component.AppBottomBar
+import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
+import org.akkirrai.hibiki.shared.design.component.AppBottomBarHeight
+import org.akkirrai.hibiki.shared.design.component.AppTopLevelScaffold
+import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 
 @Composable
 fun HibikiApp(
@@ -74,7 +79,7 @@ fun HibikiApp(
     onConfigureNotifications: () -> Unit = {},
 ) {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val topLevelBottomContentPadding = BottomBarHeight + navigationBarBottomPadding + BottomBarContentExtraPadding
+    val topLevelBottomContentPadding = AppBottomBarHeight + navigationBarBottomPadding + AppBottomBarContentExtraPadding
     val navController = rememberNavController()
     val context = LocalContext.current
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
@@ -119,7 +124,7 @@ fun HibikiApp(
 private fun HibikiNavHost(
     navController: androidx.navigation.NavHostController,
     modifier: Modifier = Modifier,
-    topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
+    topLevelBottomContentPadding: Dp = AppBottomBarHeight + AppBottomBarContentExtraPadding,
     isTopLevelDestination: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
     onCheckForUpdates: () -> Unit = {},
@@ -483,16 +488,6 @@ private fun HibikiNavHost(
     }
 }
 
-private val BottomBarHeight = 64.dp
-private val BottomBarHorizontalPadding = 14.dp
-private val BottomBarVerticalPadding = 6.dp
-private val BottomBarItemHeight = 48.dp
-private val BottomBarActivePillMaxWidth = 68.dp
-private val BottomBarActivePillHeight = 30.dp
-private val BottomBarIconSize = 22.dp
-private val BottomBarLabelSize = 11.sp
-private val BottomBarContentExtraPadding = 12.dp
-
 @Composable
 private fun TopLevelScreenContainer(
     destination: TopLevelDestination,
@@ -500,17 +495,23 @@ private fun TopLevelScreenContainer(
     onDestinationClick: (TopLevelDestination) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize(),
+    AppTopLevelScaffold(
+        currentDestination = destination.toSharedDestination(),
+        onDestinationClick = { onDestinationClick(it.toAndroidDestination()) },
+        iconContent = { sharedDestination ->
+            val androidDestination = sharedDestination.toAndroidDestination()
+            Icon(
+                imageVector = androidDestination.icon,
+                contentDescription = stringResource(androidDestination.labelRes),
+                modifier = Modifier.size(22.dp),
+            )
+        },
+        label = { sharedDestination ->
+            stringResource(sharedDestination.toAndroidDestination().labelRes)
+        },
+        destinations = destinations.map { it.toSharedDestination() },
     ) {
         content()
-        AppBottomBar(
-            destinations = destinations,
-            currentTopLevel = destination,
-            onDestinationClick = onDestinationClick,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 
@@ -523,141 +524,20 @@ private fun DestinationScreenContainer(
     }
 }
 
-@Composable
-private fun AppBottomBar(
-    destinations: List<TopLevelDestination>,
-    currentTopLevel: TopLevelDestination,
-    onDestinationClick: (TopLevelDestination) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 3.dp,
-        shadowElevation = 0.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = navigationBarBottomPadding),
-        ) {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
-            )
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(BottomBarHeight)
-                    .padding(
-                        horizontal = BottomBarHorizontalPadding,
-                        vertical = BottomBarVerticalPadding,
-                    ),
-            ) {
-                val itemGap = 4.dp
-                val itemWidth = (maxWidth - itemGap * (destinations.size - 1)) / destinations.size
-                val activePillWidth = if (itemWidth < BottomBarActivePillMaxWidth) {
-                    (itemWidth - 4.dp).coerceAtLeast(48.dp)
-                } else {
-                    BottomBarActivePillMaxWidth
-                }
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(itemGap),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    destinations.forEach { destination ->
-                        AppBottomBarItem(
-                            destination = destination,
-                            selected = currentTopLevel == destination,
-                            onClick = { onDestinationClick(destination) },
-                            activePillWidth = activePillWidth,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-    }
+private fun TopLevelDestination.toSharedDestination(): AppTopLevelDestination = when (this) {
+    TopLevelDestination.Home -> AppTopLevelDestination.HOME
+    TopLevelDestination.Catalog -> AppTopLevelDestination.CATALOG
+    TopLevelDestination.Library -> AppTopLevelDestination.LIBRARY
+    TopLevelDestination.Sources -> AppTopLevelDestination.SOURCES
+    TopLevelDestination.Profile -> AppTopLevelDestination.PROFILE
 }
 
-@Composable
-private fun AppBottomBarItem(
-    destination: TopLevelDestination,
-    selected: Boolean,
-    onClick: () -> Unit,
-    activePillWidth: Dp,
-    modifier: Modifier = Modifier,
-) {
-    val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
-    }
-    val interactionSource = remember { MutableInteractionSource() }
-    val pillShape = RoundedCornerShape(18.dp)
-
-    Column(
-        modifier = modifier
-            .height(BottomBarItemHeight)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Surface(
-            modifier = Modifier
-                .size(
-                    width = activePillWidth,
-                    height = BottomBarActivePillHeight,
-                )
-                .clip(pillShape),
-            shape = pillShape,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                Color.Transparent
-            },
-            contentColor = contentColor,
-            tonalElevation = if (selected) 2.dp else 0.dp,
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = destination.icon,
-                    contentDescription = stringResource(destination.labelRes),
-                    modifier = Modifier.size(BottomBarIconSize),
-                    tint = contentColor,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(3.dp))
-
-        Text(
-            text = stringResource(destination.labelRes),
-            fontSize = BottomBarLabelSize,
-            lineHeight = BottomBarLabelSize,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                contentColor
-            },
-            maxLines = 1,
-        )
-    }
+private fun AppTopLevelDestination.toAndroidDestination(): TopLevelDestination = when (this) {
+    AppTopLevelDestination.HOME -> TopLevelDestination.Home
+    AppTopLevelDestination.CATALOG -> TopLevelDestination.Catalog
+    AppTopLevelDestination.LIBRARY -> TopLevelDestination.Library
+    AppTopLevelDestination.SOURCES -> TopLevelDestination.Sources
+    AppTopLevelDestination.PROFILE -> TopLevelDestination.Profile
 }
 
 private fun NavHostController.navigateSingleTopTo(route: String) {

@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.mergeAnimePreservingOrder
 import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
 import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
@@ -41,6 +42,21 @@ class HomeViewModel(
     private val presenter = HomePresenter(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = presenter.state
     private val descriptionUpdates = Channel<Anime>(Channel.UNLIMITED)
+
+    fun dispatch(action: HomeAction, onRandomAnime: (Anime) -> Unit = {}) {
+        when (action) {
+            HomeAction.Refresh -> refresh()
+            is HomeAction.SearchQueryChanged -> onSearchQueryChange(action.query)
+            HomeAction.ClearSearch -> clearSearch()
+            is HomeAction.ApplySearchFilters -> applySearchFilters(action.filters)
+            HomeAction.ResetSearchFilters -> resetSearchFilters()
+            HomeAction.LoadMoreSearchResults -> loadMoreSearchResults()
+            HomeAction.LoadMoreTrending -> loadMoreTrending()
+            HomeAction.LoadMoreRecentUpdates -> loadMoreRecentUpdates()
+            HomeAction.OpenRandomAnime -> openRandomAnime(onRandomAnime)
+            is HomeAction.EnrichDescription -> enrichDescription(action.anime)
+        }
+    }
 
     init {
         PerfLogger.mark("HomeViewModel created")

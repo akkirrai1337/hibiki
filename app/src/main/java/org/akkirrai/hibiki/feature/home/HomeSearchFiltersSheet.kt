@@ -89,6 +89,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
+import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 import kotlin.math.roundToInt
@@ -108,7 +109,9 @@ fun HomeSearchFiltersSheet(
         initialFilters = state.searchFilters,
         filterCatalog = state.searchFilterCatalog,
         isFilterCatalogLoading = state.isSearchFilterCatalogLoading,
-        onApply = viewModel::applySearchFilters,
+        onApply = { filters ->
+            viewModel.dispatch(HomeAction.ApplySearchFilters(filters))
+        },
         onDismissRequest = onDismissRequest,
         modifier = modifier,
     )

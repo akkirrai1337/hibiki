@@ -52,6 +52,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
@@ -104,13 +105,13 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
-import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
+import org.akkirrai.hibiki.shared.design.component.AppMessageState
+import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
-import org.akkirrai.hibiki.core.design.component.AppTopScrim
+import org.akkirrai.hibiki.shared.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.shared.design.component.AppPosterCard
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
@@ -125,6 +126,9 @@ import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.model.buildCardMeta
+import org.akkirrai.hibiki.shared.home.HomeAction
+import org.akkirrai.hibiki.shared.home.hasFeedContent
+import org.akkirrai.hibiki.shared.home.isSearchActive
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -142,13 +146,12 @@ fun HomeScreen(
     val recentlyWatched = state.recentlyWatched
     val recentlyAddedToLibrary = state.recentlyAddedToLibrary
     val errorMessage = state.errorMessage
-    val hasContent = continueAnime != null || recentlyWatched.isNotEmpty() || recentlyAddedToLibrary.isNotEmpty()
+    val hasContent = state.hasFeedContent
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var showSearchFilters by rememberSaveable { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
-    val isSearchActive = state.searchQuery.isNotBlank() ||
-        state.searchResult !is SearchUiState.Idle
+    val isSearchActive = state.isSearchActive
     val hasSearchFilters = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
@@ -168,7 +171,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(isActive) {
-        if (isActive) viewModel.refresh()
+        if (isActive) viewModel.dispatch(HomeAction.Refresh)
     }
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
@@ -176,7 +179,7 @@ fun HomeScreen(
             keyboardController?.hide()
             focusManager.clearFocus(force = true)
         } else {
-            viewModel.clearSearch()
+            viewModel.dispatch(HomeAction.ClearSearch)
         }
     }
 
@@ -188,7 +191,7 @@ fun HomeScreen(
     if (errorMessage != null && !hasContent && !isSearchActive) {
         HomeErrorState(
             message = errorMessage,
-            onRetry = viewModel::load,
+            onRetry = { viewModel.dispatch(HomeAction.Refresh) },
             modifier = modifier
         )
         return
@@ -215,7 +218,7 @@ fun HomeScreen(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
-                        onLoadMore = viewModel::loadMoreSearchResults,
+                        onLoadMore = { viewModel.dispatch(HomeAction.LoadMoreSearchResults) },
                         onRetrySearch = {},
                         loadMoreLabel = searchLoadMoreLabel,
                         resultsCountLabel = { count ->
@@ -252,13 +255,15 @@ fun HomeScreen(
                                 LibraryStatusPosterFooter(category)
                             }
                         },
-                        onItemVisible = viewModel::enrichDescription,
+                        onItemVisible = { anime ->
+                            viewModel.dispatch(HomeAction.EnrichDescription(anime))
+                        },
                     )
                 }
             } else {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
-                    onRefresh = viewModel::refresh,
+                    onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
                     state = pullToRefreshState,
                     modifier = Modifier.fillMaxSize(),
                     indicator = {
@@ -305,8 +310,14 @@ fun HomeScreen(
 
         AppSearchTopBar(
             query = state.searchQuery,
-            onQueryChange = viewModel::onSearchQueryChange,
-            onClear = viewModel::clearSearch,
+            onQueryChange = { viewModel.dispatch(HomeAction.SearchQueryChanged(it)) },
+            onClear = { viewModel.dispatch(HomeAction.ClearSearch) },
+            placeholder = stringResource(R.string.search_placeholder),
+            filterContentDescription = stringResource(R.string.search_filters),
+            clearContentDescription = stringResource(R.string.home_search_clear),
+            searchIcon = Icons.Outlined.Search,
+            filterIcon = Icons.Outlined.FilterList,
+            clearIcon = Icons.Outlined.Close,
             onFilterClick = {
                 keyboardController?.hide()
                 focusManager.clearFocus(force = true)
