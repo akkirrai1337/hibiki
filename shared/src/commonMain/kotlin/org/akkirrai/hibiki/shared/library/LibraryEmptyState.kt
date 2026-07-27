@@ -13,7 +13,7 @@ import org.akkirrai.hibiki.shared.design.component.AppMessageState
 fun LibraryEmptyState(
     title: String,
     message: String,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AppMessageState(
@@ -26,6 +26,6 @@ fun LibraryEmptyState(
         messageModifier = Modifier.padding(top = 6.dp, start = 28.dp, end = 28.dp),
         messageMaxLines = 2,
         messageOverflow = TextOverflow.Ellipsis,
-        iconSlot = iconContent,
+        iconSlot = { iconContent(Modifier) },
     )
 }

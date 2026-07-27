@@ -18,7 +18,7 @@ fun AppLibraryEmptyState(
     title: String,
     message: String,
     modifier: Modifier = Modifier,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
 ) {
     LibraryEmptyState(
         title = title,
@@ -32,7 +32,7 @@ fun AppLibraryEmptyState(
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)),
                 contentAlignment = Alignment.Center,
             ) {
-                iconContent()
+                iconContent(Modifier.size(30.dp))
             }
         },
     )

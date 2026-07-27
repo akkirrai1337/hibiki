@@ -350,11 +350,11 @@ private fun EmptyLibraryState(
     AppLibraryEmptyState(
         title = title,
         message = body,
-        iconContent = {
+        iconContent = { iconModifier ->
             Icon(
                 imageVector = Icons.Outlined.BookmarkBorder,
                 contentDescription = null,
-                modifier = Modifier.size(30.dp),
+                modifier = iconModifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
