@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -31,7 +30,6 @@ import androidx.lifecycle.LifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppBackButton
-import org.akkirrai.hibiki.core.design.component.AppMessageState
 
 @Composable
 internal fun rememberWatchNavigationLockState(
@@ -53,7 +51,6 @@ internal fun rememberWatchNavigationLockState(
 
     return navigationLocked
 }
-
 @Composable
 internal fun WatchScreenScaffold(
     onBackClick: () -> Unit,
@@ -79,7 +76,6 @@ internal fun WatchScreenScaffold(
         content = content,
     )
 }
-
 @Composable
 internal fun WatchBackButton(
     onBackClick: () -> Unit,
@@ -93,20 +89,3 @@ internal fun WatchBackButton(
     )
 }
 
-@Composable
-internal fun WatchEmptyState(
-    title: String,
-    message: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    onRetry: (() -> Unit)? = null,
-) {
-    org.akkirrai.hibiki.shared.player.WatchEmptyState(
-        title = title,
-        message = message,
-        icon = icon,
-        retryLabel = onRetry?.let { stringResource(R.string.search_retry) },
-        onRetry = onRetry,
-        modifier = modifier,
-    )
-}
