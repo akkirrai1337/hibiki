@@ -81,6 +81,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
+import org.akkirrai.hibiki.shared.catalog.AppCatalogGenreFilterSection
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -236,7 +237,7 @@ fun AnimeSearchFiltersSheet(
                         catalog.genreOptions.isNotEmpty() &&
                         capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES)
                     ) {
-                        AppSingleListThreeStateFilter(
+                        AppCatalogGenreFilterSection(
                             title = stringResource(R.string.search_filters_genres),
                             options = catalog.genreOptions,
                             included = pendingFilters.includedGenreAliases,
@@ -247,13 +248,10 @@ fun AnimeSearchFiltersSheet(
                                     excludedGenreAliases = excluded,
                                 )
                             },
-                            id = { it.id },
-                            text = optionText,
+                            optionText = optionText,
                             maxCollapsedItems = maxCollapsedGenreItems,
                             maxCollapsedGroups = maxCollapsedGenreGroups,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
-                            optionSortKey = { it.title },
-                            groupByFirstLetter = true,
                             arrowContent = { modifier ->
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
