@@ -181,7 +181,7 @@ import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
-import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
+import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
@@ -1285,31 +1285,26 @@ fun PlayerScreen(
             }
         }
 
-        AnimatedVisibility(
+        AppPlayerUnlockOverlay(
             visible = controlsLocked && unlockButtonVisible,
+            label = stringResource(R.string.watch_player_unlock),
+            onClick = {
+                controlsLocked = false
+                unlockButtonVisible = false
+                keepControlsVisible()
+            },
+            iconContent = {
+                Icon(
+                    imageVector = Icons.Outlined.LockOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 20.dp),
-            enter = fadeIn(animationSpec = tween(160)),
-            exit = fadeOut(animationSpec = tween(120)),
-        ) {
-            AppPlayerUnlockButton(
-                label = stringResource(R.string.watch_player_unlock),
-                onClick = {
-                    controlsLocked = false
-                    unlockButtonVisible = false
-                    keepControlsVisible()
-                },
-                iconContent = {
-                    Icon(
-                        imageVector = Icons.Outlined.LockOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-            )
-        }
+        )
 
         AppPlayerLoadingOverlay(
             visible = state.isLoading || isBuffering,
