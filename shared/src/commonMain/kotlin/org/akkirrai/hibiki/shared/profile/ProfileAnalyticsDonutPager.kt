@@ -49,7 +49,7 @@ fun AppProfileAnalyticsDonutPager(
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(ProfileAnalyticsPagerVerticalSpacing),
     ) {
         ProfileAnalyticsPagerHeader(
             title = title,
