@@ -165,6 +165,7 @@ import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
+import org.akkirrai.hibiki.shared.details.DetailsGenresSection
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -436,7 +437,11 @@ fun DetailsScreen(
 
             if (uiModel.anime.genres.isNotEmpty()) {
                 item {
-                    GenresSection(genres = uiModel.anime.genres)
+                    DetailsGenresSection(
+                        genres = uiModel.anime.genres,
+                        title = stringResource(R.string.details_genres),
+                        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+                    )
                 }
             }
 
@@ -1190,19 +1195,6 @@ private fun HeroOverlayBackButton(
         modifier = modifier
             .statusBarsPadding()
             .padding(start = UiDimens.ScreenPadding, top = 8.dp),
-    )
-}
-
-@Composable
-private fun GenresSection(
-    genres: List<String>,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsGenresSection(
-        genres = genres,
-        title = stringResource(R.string.details_genres),
-        horizontalPadding = DETAIL_CONTENT_START_PADDING,
-        modifier = modifier,
     )
 }
 
