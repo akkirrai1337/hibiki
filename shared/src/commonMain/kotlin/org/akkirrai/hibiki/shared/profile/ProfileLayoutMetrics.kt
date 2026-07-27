@@ -32,3 +32,4 @@ val ProfileNameEditorBottomPadding = 6.dp
 val ProfileNameEditorUnderlineStrokeWidth = 1.dp
 val ProfileAnalyticsArrowButtonSize = 32.dp
 val ProfileAnalyticsPagerHeaderGap = 6.dp
+val ProfileLegendItemGap = 6.dp
