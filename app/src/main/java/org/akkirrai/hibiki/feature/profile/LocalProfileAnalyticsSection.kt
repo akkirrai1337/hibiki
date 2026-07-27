@@ -1,8 +1,5 @@
 package org.akkirrai.hibiki.feature.profile
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -43,15 +40,15 @@ internal fun AnalyticsCard(
     LaunchedEffect(snapshot.activityDays) {
         activityListState.scrollToItem(firstVisibleActivityDay)
     }
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
-    ) {
+    org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsCard(
+        donutContent = {
         AnalyticsDonutPager(
             pages = pages,
             snapshot = snapshot,
         )
-        org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
+        },
+        activityContent = {
+            org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
             title = stringResource(R.string.yummy_account_activity_title),
             days = snapshot.activityDays.map { day ->
                 org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(day.dateLabel, day.episodeCount)
@@ -63,7 +60,8 @@ internal fun AnalyticsCard(
             activeColor = if (hasActivity) Color(0xFFFF7A86) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f),
             inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
         )
-    }
+        },
+    )
 }
 
 @Composable
