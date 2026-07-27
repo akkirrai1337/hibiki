@@ -25,3 +25,4 @@ val SourceSearchSectionLoadingHorizontalPadding = 8.dp
 val SourceSearchSectionErrorHorizontalPadding = 8.dp
 val SourceSearchSectionResultsHorizontalPadding = 8.dp
 val SourceLanguageSectionHorizontalPadding = 16.dp
+val SourceLanguageSectionVerticalPadding = 10.dp
