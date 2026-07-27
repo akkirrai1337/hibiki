@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.source.sourceItemShape
 
@@ -23,7 +24,7 @@ fun WatchSourcesList(
         source.episodeCount?.let { count -> "· $count" }
     },
     loadMoreContent: (@Composable () -> Unit)? = null,
-    loadingContent: (@Composable () -> Unit)? = null,
+    isRefreshing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -44,11 +45,11 @@ fun WatchSourcesList(
         loadMoreContent?.let { content ->
             item { content() }
         }
-        loadingContent?.let { content ->
+        if (isRefreshing) {
             item {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
-                ) { content() }
+                ) { AppCenteredLoading() }
             }
         }
     }

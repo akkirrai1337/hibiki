@@ -30,7 +30,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.shared.player.WatchSourcesList
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
@@ -98,9 +97,7 @@ fun WatchSourcesScreen(
                             )
                         }
                     } else null,
-                    loadingContent = if (state.isLoading && state.items.isNotEmpty()) {
-                        { AppCenteredLoading() }
-                    } else null,
+                    isRefreshing = state.isLoading && state.items.isNotEmpty(),
                 )
             }
         }
