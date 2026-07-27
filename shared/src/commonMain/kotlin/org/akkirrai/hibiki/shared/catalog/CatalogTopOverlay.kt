@@ -61,7 +61,9 @@ fun AppCatalogTopOverlay(
                 showFilterButton = showFilterButton,
                 modifier = Modifier.zIndex(1f),
             )
-            sortContent()
+            Box(modifier = sortModifier) {
+                sortContent()
+            }
         }
     }
 }
