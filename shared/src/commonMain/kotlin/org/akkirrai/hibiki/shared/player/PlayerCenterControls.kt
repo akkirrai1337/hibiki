@@ -44,7 +44,7 @@ fun AppPlayerCenterControls(
             )
             AppFilledIconButton(
                 onClick = onTogglePlay,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(PlayerCenterPrimaryButtonSize),
                 style = AppFilledIconButtonStyle.DarkOverlay,
                 content = { playContent(Modifier.size(40.dp)) },
             )

@@ -188,6 +188,7 @@ import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
+import org.akkirrai.hibiki.shared.player.PlayerCenterPrimaryButtonSize
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
@@ -1300,7 +1301,7 @@ fun PlayerScreen(
 
         AppPlayerLoadingOverlay(
             visible = state.isLoading || isBuffering,
-            indicatorSize = PLAYER_CENTER_PRIMARY_BUTTON_SIZE,
+            indicatorSize = PlayerCenterPrimaryButtonSize,
         )
 
         state.errorMessage?.let { message ->
@@ -1914,7 +1915,6 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
 private val PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y = 0.dp
