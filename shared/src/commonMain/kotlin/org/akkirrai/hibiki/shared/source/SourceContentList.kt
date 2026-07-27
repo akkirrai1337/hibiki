@@ -21,9 +21,9 @@ fun AppSourceContentList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = 12.dp,
+            start = SourceContentListHorizontalPadding,
             top = SourceContentListTopPadding,
-            end = 12.dp,
+            end = SourceContentListHorizontalPadding,
             bottom = bottomContentPadding + 32.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(SourceContentListVerticalSpacing),

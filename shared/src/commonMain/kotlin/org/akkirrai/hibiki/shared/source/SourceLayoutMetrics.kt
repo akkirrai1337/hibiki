@@ -36,3 +36,4 @@ val SourceEmptyStateVerticalPadding = 20.dp
 val SourceItemOuterCornerRadius = 20.dp
 val SourceItemInnerCornerRadius = 6.dp
 val SourceContentListTopPadding = 84.dp
+val SourceContentListHorizontalPadding = 12.dp
