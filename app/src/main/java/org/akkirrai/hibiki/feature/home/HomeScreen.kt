@@ -112,6 +112,7 @@ import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
+import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -268,15 +269,10 @@ fun HomeScreen(
                     indicatorTopPadding = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    LazyColumn(
+                    AppHomeFeedList(
                         state = homeListState,
-                        contentPadding = PaddingValues(
-                            start = 0.dp,
-                            top = HOME_CONTENT_TOP_PADDING,
-                            end = 0.dp,
-                            bottom = bottomContentPadding
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        topContentPadding = HOME_CONTENT_TOP_PADDING,
+                        bottomContentPadding = bottomContentPadding,
                     ) {
                         homeFeedContent(
                             continueAnime = continueAnime,
