@@ -177,6 +177,9 @@ import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.AppDetailsContentList
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
 import org.akkirrai.hibiki.shared.details.DetailsGenresSection
+import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
+import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
+import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -392,7 +395,7 @@ fun DetailsScreen(
                 AppDetailsContentList(
                     state = listState,
                     bottomContentPadding = contentPadding.calculateBottomPadding(),
-                    additionalBottomPadding = 100.dp,
+                    additionalBottomPadding = DetailsContentBottomPadding,
                 ) {
             item {
                 DetailHeroSection(
@@ -449,7 +452,7 @@ fun DetailsScreen(
                     DetailsGenresSection(
                         genres = uiModel.anime.genres,
                         title = stringResource(R.string.details_genres),
-                        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+                        horizontalPadding = DetailsContentHorizontalPadding,
                     )
                 }
             }
@@ -794,7 +797,7 @@ private fun DetailContentCard(
     org.akkirrai.hibiki.shared.details.DetailsInformationSection(
         title = stringResource(R.string.details_information),
         items = informationItems,
-        horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
+        horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
     )
 }
@@ -962,7 +965,7 @@ private fun RelatedAnimeList(
     org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
         items = relatedItems,
         title = title,
-        horizontalPadding = DETAIL_CONTENT_START_PADDING,
+        horizontalPadding = DetailsContentHorizontalPadding,
         onItemClick = { item -> relatedById[item.id]?.let { onAnimeClick(it.toAnime()) } },
         poster = { item ->
             relatedById[item.id]?.let { related ->
@@ -1157,10 +1160,7 @@ private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
-private val DETAIL_CONTENT_START_PADDING = 24.dp
-private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
-private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
 
 @Composable
 private fun NetworkImage(
