@@ -48,7 +48,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.AppExpandableSourceLanguageSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
-import org.akkirrai.hibiki.shared.source.AppSourceContentList
+import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -74,79 +74,74 @@ fun SourcesScreen(
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val visibleSourcesByLanguage = sourcesByLanguage
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        AppSourceContentList(
-            isSearchMode = isSearchMode,
-            bottomContentPadding = bottomContentPadding,
-            searchContent = {
-                val visibleSections = searchState.sections.filter { section ->
-                    section.isLoading || section.hasError || section.items.isNotEmpty()
+    AppSourceScreenLayout(
+        isSearchMode = isSearchMode,
+        bottomContentPadding = bottomContentPadding,
+        searchContent = {
+            val visibleSections = searchState.sections.filter { section ->
+                section.isLoading || section.hasError || section.items.isNotEmpty()
+            }
+            visibleSections.forEach { section ->
+                val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
+                item(key = "search_${section.sourceId}") {
+                    SourceSearchSection(
+                        section = section,
+                        source = source,
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
+                        onRetry = { searchViewModel.retry(SourceId(section.sourceId)) },
+                        onAnimeClick = onAnimeClick,
+                    )
                 }
-                visibleSections.forEach { section ->
-                    val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
-                    item(key = "search_${section.sourceId}") {
-                        SourceSearchSection(
-                            section = section,
-                            source = source,
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                            onRetry = { searchViewModel.retry(SourceId(section.sourceId)) },
-                            onAnimeClick = onAnimeClick,
-                        )
-                    }
+            }
+            if (!searchState.isSearching && visibleSections.isEmpty()) {
+                item(key = "search_empty") {
+                    AppMessageState(
+                        title = stringResource(R.string.sources_search_empty_title),
+                        message = stringResource(R.string.sources_search_empty_message),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    )
                 }
-                if (!searchState.isSearching && visibleSections.isEmpty()) {
-                    item(key = "search_empty") {
-                        AppMessageState(
-                            title = stringResource(R.string.sources_search_empty_title),
-                            message = stringResource(R.string.sources_search_empty_message),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                        )
-                    }
+            }
+        },
+        sourceContent = {
+            SOURCE_LANGUAGE_SECTIONS.forEach { section ->
+                val sectionSources = visibleSourcesByLanguage[section.language]
+                    .orEmpty()
+                if (sectionSources.isEmpty()) return@forEach
+                item(key = "${section.language.tag}_sources") {
+                    SourceLanguageSection(
+                        section = section,
+                        sources = sectionSources,
+                        selectedSource = selectedSource,
+                        onSourceSelected = { source ->
+                            onSourceSelected?.invoke(source.id) ?: preferences.setAnimeSource(source.id)
+                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        },
+                    )
                 }
-            },
-            sourceContent = {
-                SOURCE_LANGUAGE_SECTIONS.forEach { section ->
-                    val sectionSources = visibleSourcesByLanguage[section.language]
-                        .orEmpty()
-                    if (sectionSources.isEmpty()) return@forEach
-                    item(key = "${section.language.tag}_sources") {
-                        SourceLanguageSection(
-                            section = section,
-                            sources = sectionSources,
-                            selectedSource = selectedSource,
-                            onSourceSelected = { source ->
-                                onSourceSelected?.invoke(source.id) ?: preferences.setAnimeSource(source.id)
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                            },
-                        )
-                    }
-                }
-            },
-            modifier = Modifier,
-        )
-
-        if (hasSourceSearch) {
-            AppSourceSearchBar(
-                query = query,
-                onQueryChange = searchViewModel::onQueryChange,
-                onClear = searchViewModel::clearQuery,
-                placeholder = stringResource(R.string.search_placeholder),
-                filterContentDescription = stringResource(R.string.search_filters),
-                clearContentDescription = stringResource(R.string.home_search_clear),
-                searchIcon = Icons.Outlined.Search,
-                filterIcon = Icons.Outlined.FilterList,
-                clearIcon = Icons.Outlined.Close,
-                showFilterButton = false,
-                onFilterClick = {},
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-        }
-    }
+            }
+        },
+        searchBarContent = {
+            if (hasSourceSearch) {
+                AppSourceSearchBar(
+                    query = query,
+                    onQueryChange = searchViewModel::onQueryChange,
+                    onClear = searchViewModel::clearQuery,
+                    placeholder = stringResource(R.string.search_placeholder),
+                    filterContentDescription = stringResource(R.string.search_filters),
+                    clearContentDescription = stringResource(R.string.home_search_clear),
+                    searchIcon = Icons.Outlined.Search,
+                    filterIcon = Icons.Outlined.FilterList,
+                    clearIcon = Icons.Outlined.Close,
+                    showFilterButton = false,
+                    onFilterClick = {},
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
