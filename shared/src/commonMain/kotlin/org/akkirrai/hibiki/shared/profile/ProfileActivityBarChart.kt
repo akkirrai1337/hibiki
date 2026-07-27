@@ -50,7 +50,7 @@ fun ProfileActivityBarChart(
                         Box(Modifier.width(ProfileActivityBarWidth).height(barHeight).clip(RoundedCornerShape(ProfileActivityBarCornerRadius)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(ProfileActivityBarChartLabelGap))
                 Text(day.dateLabel, Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f), maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
             }
         }
