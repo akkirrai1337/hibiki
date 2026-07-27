@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepIndicator
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -188,9 +189,15 @@ fun FirstLaunchOnboarding(
             // Keep the footer mounted on every step. Removing it on the welcome
             // page changes the AnimatedContent height during the first transition
             // and makes the outgoing page visibly jump upward.
-            OnboardingFooter(
-                step = step,
-                nextEnabled = selectedSource != null,
+            AppOnboardingFooter(
+                currentStep = step.ordinal,
+                stepCount = OnboardingStep.entries.size,
+                showNavigation = step != OnboardingStep.WELCOME,
+                nextEnabled = step == OnboardingStep.NOTIFICATIONS || selectedSource != null,
+                backLabel = stringResource(R.string.onboarding_back),
+                nextLabel = stringResource(
+                    if (step == OnboardingStep.NOTIFICATIONS) R.string.onboarding_done else R.string.onboarding_next,
+                ),
                 onBack = {
                     stepName = when (step) {
                         OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
@@ -392,56 +399,6 @@ private fun SourceStep(
         item {
             TextButton(onClick = onShowAllSources) {
                 Text(stringResource(R.string.onboarding_view_all_sources))
-            }
-        }
-    }
-}
-
-@Composable
-private fun OnboardingFooter(
-    step: OnboardingStep,
-    nextEnabled: Boolean,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // The navigation buttons make non-welcome steps taller. Reserve their
-            // height on every step so the weighted page area never resizes while
-            // AnimatedContent is transitioning.
-            .height(72.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(modifier = Modifier.width(88.dp), contentAlignment = Alignment.CenterStart) {
-            if (step != OnboardingStep.WELCOME) {
-                TextButton(onClick = onBack) {
-                    Text(stringResource(R.string.onboarding_back))
-                }
-            }
-        }
-            AppOnboardingStepIndicator(
-                currentStep = step.ordinal,
-                stepCount = OnboardingStep.entries.size,
-                modifier = Modifier.weight(1f),
-        )
-        Box(modifier = Modifier.width(88.dp), contentAlignment = Alignment.CenterEnd) {
-            if (step != OnboardingStep.WELCOME) {
-                TextButton(
-                    onClick = onNext,
-                    enabled = step == OnboardingStep.NOTIFICATIONS || nextEnabled,
-                ) {
-                    Text(
-                        stringResource(
-                            if (step == OnboardingStep.NOTIFICATIONS) {
-                                R.string.onboarding_done
-                            } else {
-                                R.string.onboarding_next
-                            },
-                        ),
-                    )
-                }
             }
         }
     }
