@@ -207,12 +207,18 @@ fun SettingsScreen(
                             )
                         }
 
-                        1 -> SettingsActionItem(
+                        1 -> AppSettingsIconActionItem(
                             icon = Icons.Outlined.Notifications,
                             title = stringResource(R.string.settings_notifications),
                             subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
                             shape = shape,
-                            showNavigationArrow = true,
+                            trailing = {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
                             onClick = onConfigureNotifications,
                         )
 
@@ -262,7 +268,7 @@ fun SettingsScreen(
             item(key = SettingsSection.Updates.key) {
                 AppSettingsSection(title = stringResource(R.string.settings_updates)) {
                     AppSettingsItems(count = 1) { _, _ ->
-                        SettingsActionItem(
+                        AppSettingsIconActionItem(
                             icon = Icons.Outlined.Update,
                             title = stringResource(R.string.settings_check_updates),
                             shape = CircleShape,
@@ -276,7 +282,7 @@ fun SettingsScreen(
             item(key = SettingsSection.Support.key) {
             AppSettingsSection(title = stringResource(R.string.settings_support)) {
                 AppSettingsItems(count = 1) { _, _ ->
-                    SettingsActionItem(
+                    AppSettingsIconActionItem(
                         icon = Icons.Outlined.Share,
                         title = stringResource(R.string.settings_export_logs),
                         shape = CircleShape,
@@ -375,33 +381,6 @@ private fun DiscordSettingsItem(
                 if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
             )
         },
-    )
-}
-
-@Composable
-private fun SettingsActionItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String? = null,
-    shape: Shape,
-    showNavigationArrow: Boolean = false,
-    onClick: () -> Unit,
-) {
-    AppSettingsIconActionItem(
-        icon = icon,
-        title = title,
-        subtitle = subtitle,
-        shape = shape,
-        trailing = if (showNavigationArrow) {
-            {
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else null,
-        onClick = onClick,
     )
 }
 
