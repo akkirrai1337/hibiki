@@ -1,33 +1,7 @@
 package org.akkirrai.hibiki.feature.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -36,13 +10,9 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,13 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.SearchFilterOption
@@ -87,12 +53,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogYearFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
-import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
-import org.akkirrai.hibiki.shared.design.component.AppFilterSheetContentContainer
-import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
-import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
@@ -270,273 +231,6 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
 
 private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
-
-@Composable
-private fun FilterYearPaginator(
-    page: Int?,
-    pageRange: IntRange,
-    onPageChanged: (Int) -> Unit,
-) {
-    Box(contentAlignment = Alignment.Center) {
-        val screenWidth = LocalWindowInfo.current.containerDpSize.width
-        val pageItemSize = if (screenWidth > (56 * 5).dp) 56.dp else screenWidth / 5
-        var shortenPage by remember { mutableStateOf(false) }
-
-        Box(
-            modifier = Modifier.border(
-                width = 2.dp,
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-        ) {
-            Text(
-                text = if (shortenPage) "000" else "0000",
-                color = Color.Transparent,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(8.dp),
-            )
-        }
-
-        val paginatorState = rememberLazyListState()
-        LaunchedEffect(page) {
-            page?.let { paginatorState.animateScrollToItem(it - pageRange.first) }
-        }
-        LazyRow(
-            state = paginatorState,
-            contentPadding = PaddingValues(horizontal = pageItemSize * 2f),
-            userScrollEnabled = false,
-            modifier = Modifier.requiredWidth(pageItemSize * 5),
-        ) {
-            items(pageRange.count()) { index ->
-                val currentPage = pageRange.first + index
-                val textAlpha by animateFloatAsState(
-                    targetValue = if (currentPage == page) 1f else 0.5f,
-                    label = "year_page_alpha",
-                )
-                Box(modifier = Modifier.requiredSize(pageItemSize)) {
-                    Text(
-                        text = if (shortenPage) {
-                            "'${currentPage.toString().takeLast(2)}"
-                        } else {
-                            currentPage.toString()
-                        },
-                        maxLines = 1,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = textAlpha),
-                        onTextLayout = { if (it.hasVisualOverflow) shortenPage = true },
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-                }
-            }
-        }
-
-        Button(
-            enabled = (page ?: pageRange.first) > pageRange.first,
-            onClick = { onPageChanged((page ?: pageRange.first) - 1) },
-            contentPadding = PaddingValues(),
-            modifier = Modifier.align(Alignment.CenterStart),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                contentDescription = null,
-                modifier = Modifier.requiredSize(24.dp),
-            )
-        }
-        Button(
-            enabled = (page ?: pageRange.first) < pageRange.last,
-            onClick = { onPageChanged((page ?: pageRange.first) + 1) },
-            contentPadding = PaddingValues(),
-            modifier = Modifier.align(Alignment.CenterEnd),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.requiredSize(24.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThreeStateChipFilter(
-    title: String,
-    options: List<AnimeCatalogFilterOption>,
-    included: Set<String>,
-    excluded: Set<String>,
-    onChange: (Set<String>, Set<String>) -> Unit,
-    optionIcon: @Composable ((AnimeCatalogFilterOption) -> ImageVector?)? = null,
-    maxCollapsedItems: Int? = null,
-) {
-    var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
-    CollapsibleRow(
-        title = title,
-        onLongClick = { onChange(emptySet(), emptySet()) },
-    ) {
-        Column(modifier = Modifier.padding(top = 16.dp)) {
-            val includedOptions = options.filter { it.id in included }
-            val excludedOptions = options.filter { it.id in excluded }
-            val allOptions = options.filterNot { it.id in included || it.id in excluded }
-            val visibleAllOptions = if (maxCollapsedItems != null && !showAllOptions) {
-                allOptions.take(maxCollapsedItems)
-            } else {
-                allOptions
-            }
-
-            ChipFilterFlowRow(
-                options = includedOptions,
-                color = IncludedFilterColor,
-                icon = Icons.Rounded.AddCircleOutline,
-                title = stringResource(R.string.search_filters_include),
-                optionIcon = optionIcon,
-                onClick = { onChange(included - it.id, excluded + it.id) },
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-            ChipFilterFlowRow(
-                options = excludedOptions,
-                color = ExcludedFilterColor,
-                icon = Icons.Rounded.Block,
-                title = stringResource(R.string.search_filters_exclude),
-                optionIcon = optionIcon,
-                onClick = { onChange(included, excluded - it.id) },
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-            ChipFilterFlowRow(
-                options = visibleAllOptions,
-                color = MaterialTheme.colorScheme.tertiary,
-                icon = Icons.Rounded.RadioButtonChecked,
-                title = stringResource(R.string.search_filters_all),
-                optionIcon = optionIcon,
-                onClick = { onChange(included + it.id, excluded) },
-            )
-            if (maxCollapsedItems != null && allOptions.size > maxCollapsedItems) {
-                IconButton(
-                    onClick = { showAllOptions = !showAllOptions },
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .size(28.dp),
-                ) {
-                    Icon(
-                        imageVector = if (showAllOptions) {
-                            Icons.Rounded.KeyboardArrowUp
-                        } else {
-                            Icons.Rounded.KeyboardArrowDown
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ChipFilterFlowRow(
-    options: List<AnimeCatalogFilterOption>,
-    color: Color,
-    icon: ImageVector,
-    title: String,
-    onClick: (AnimeCatalogFilterOption) -> Unit,
-    modifier: Modifier = Modifier,
-    optionIcon: @Composable ((AnimeCatalogFilterOption) -> ImageVector?)? = null,
-) {
-    AnimatedContent(targetState = options, label = "filter_chips") { current ->
-        if (current.isNotEmpty()) {
-            Column {
-                Row(
-                    modifier = Modifier.padding(bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(11.dp),
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    )
-                    Text(
-                        text = title,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                FlowRow(
-                    modifier = modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    current.forEach { option ->
-                        FilterChip(
-                            color = color,
-                            icon = optionIcon?.invoke(option),
-                            text = option.title,
-                            onClick = { onClick(option) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FilterChip(
-    color: Color,
-    icon: ImageVector?,
-    text: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .clip(CircleShape)
-            .combinedClickable(onClick = onClick, onLongClick = {})
-            .background(color.copy(alpha = 0.2f))
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        icon?.let {
-            Icon(
-                imageVector = it,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(15.dp),
-            )
-        }
-        Text(
-            text = text,
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun CollapsibleRow(
-    title: String,
-    onLongClick: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    AppCollapsibleFilterSection(
-        title = title,
-        onLongClick = onLongClick,
-        arrowContent = { modifier ->
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                contentDescription = null,
-                modifier = modifier,
-            )
-        },
-        content = content,
-    )
-}
 
 @Composable
 private fun statusIcon(alias: String): ImageVector {
