@@ -55,9 +55,6 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
@@ -65,6 +62,9 @@ import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
+import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
+import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
