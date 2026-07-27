@@ -38,7 +38,7 @@ fun SourceLanguageSection(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(SourceLanguageSectionCornerRadius))
                 .clickable(onClick = onExpandedChange)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = SourceLanguageSectionHorizontalPadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
