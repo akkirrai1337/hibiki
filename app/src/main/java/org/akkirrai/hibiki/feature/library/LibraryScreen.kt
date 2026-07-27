@@ -150,7 +150,7 @@ fun LibraryScreen(
         onEntryClick = { entry -> onAnimeClick(entry.anime) },
         headerContent = {
             org.akkirrai.hibiki.shared.library.AppLibraryHeader(
-                searchContent = {
+                searchContent = { searchModifier ->
                     AppSearchTopBar(
                         query = state.searchQuery,
                         onQueryChange = viewModel::onSearchQueryChange,
@@ -162,11 +162,7 @@ fun LibraryScreen(
                         filterIcon = Icons.Outlined.FilterList,
                         clearIcon = Icons.Outlined.Close,
                         onFilterClick = { isFilterDialogVisible = true },
-                        modifier = Modifier.padding(
-                            top = UiDimens.SearchBarTopPadding,
-                            start = UiDimens.ScreenPadding,
-                            end = UiDimens.ScreenPadding,
-                        ),
+                        modifier = searchModifier,
                     )
                 },
                 selected = state.selectedCategory,
