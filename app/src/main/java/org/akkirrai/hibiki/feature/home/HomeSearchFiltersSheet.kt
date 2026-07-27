@@ -89,6 +89,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
+import org.akkirrai.hibiki.shared.design.component.AppFilterSheetContentContainer
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
@@ -208,13 +209,7 @@ fun AnimeSearchFiltersSheet(
                 val typeEntries = AnimeTypeAlias.entries.filter { type ->
                     catalog.typeOptions.any { it.id.equals(type.alias, ignoreCase = true) }
                 }
-                Column(
-                    modifier = sheetContentModifier
-                        .background(MaterialTheme.colorScheme.background)
-                        .fillMaxWidth()
-                        .padding(horizontal = UiDimens.FilterSheetHorizontalPadding)
-                        .padding(bottom = UiDimens.FilterSheetBottomPadding),
-                ) {
+                AppFilterSheetContentContainer(modifier = sheetContentModifier) {
                     if (capabilities.supports(AnimeCatalogFilter.TYPE) && typeEntries.isNotEmpty()) {
                         AppCatalogTypeFilterSection(
                             title = stringResource(R.string.search_filters_type),
