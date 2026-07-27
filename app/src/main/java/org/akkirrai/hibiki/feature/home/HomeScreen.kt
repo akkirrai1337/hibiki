@@ -129,6 +129,7 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
+import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -362,21 +363,45 @@ private fun LazyListScope.homeFeedContent(
             }
         }
     }
-    homeAnimeSection(
+    appHomeAnimeSection(
         title = recentlyWatchedTitle,
         items = recentlyWatched,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.History,
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
+        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+        posterContent = { anime ->
+            PosterImage(
+                primaryUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2f / 3f),
+                placeholder = {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                },
+            )
+        },
     )
-    homeAnimeSection(
+    appHomeAnimeSection(
         title = recentlyAddedTitle,
         items = recentlyAddedToLibrary,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.VideoLibrary,
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
+        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+        posterContent = { anime ->
+            PosterImage(
+                primaryUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2f / 3f),
+                placeholder = {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                },
+            )
+        },
         onHeaderClick = onOpenLibrary,
     )
     if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
@@ -392,93 +417,6 @@ private fun LazyListScope.homeFeedContent(
                     .heightIn(min = 260.dp)
                     .padding(horizontal = UiDimens.ScreenPadding),
             )
-        }
-    }
-}
-
-private fun LazyListScope.homeAnimeSection(
-    title: String,
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    announcementLabel: String,
-    movieLabel: String,
-    onHeaderClick: (() -> Unit)? = null,
-) {
-    if (items.isEmpty()) return
-    item {
-        HomeAnimeSection(
-            title = title,
-            items = items,
-            onAnimeClick = onAnimeClick,
-            icon = icon,
-            announcementLabel = announcementLabel,
-            movieLabel = movieLabel,
-            onHeaderClick = onHeaderClick,
-        )
-    }
-}
-
-@Composable
-private fun HomeAnimeSection(
-    title: String,
-    items: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    announcementLabel: String,
-    movieLabel: String,
-    onHeaderClick: (() -> Unit)? = null,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = UiDimens.SectionSpacing),
-        verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing),
-    ) {
-        SectionHeader(
-            title = title,
-            actionLabel = onHeaderClick?.let { "\u203A" },
-            icon = icon,
-            modifier = Modifier
-                .padding(horizontal = UiDimens.ScreenPadding)
-                .clickable(enabled = onHeaderClick != null) {
-                    onHeaderClick?.invoke()
-                },
-            titleStyle = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-        )
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val cardWidth = (maxWidth - 32.dp - UiDimens.ItemSpacing) / 2
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            ) {
-                items(items, key = Anime::id) { anime ->
-                    AppPosterAnimeCard(
-                        anime = anime,
-                        metaText = anime.buildCardMeta(
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                        ),
-                        onClick = { onAnimeClick(anime) },
-                        modifier = Modifier.width(cardWidth),
-                        posterContent = {
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(2f / 3f),
-                                placeholder = {
-                                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
-                                },
-                            )
-                        },
-                    )
-                }
-            }
         }
     }
 }
