@@ -18,8 +18,8 @@ fun AppPlayerControlButton(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(52.dp),
+            .padding(horizontal = PlayerControlButtonHorizontalPadding)
+            .size(PlayerControlButtonSize),
         style = AppFilledIconButtonStyle.DarkOverlay,
         content = iconContent,
     )
