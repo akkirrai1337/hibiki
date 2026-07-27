@@ -43,7 +43,7 @@ fun ProfileActivityBarChart(
         items(days, key = ProfileActivityBarItem::dateLabel) { day ->
             val barHeight = if (day.episodeCount > 0) (18 + (66 * day.episodeCount / maxEpisodes)).dp else 10.dp
             Column(Modifier.width(dayWidth), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.height(114.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                Box(Modifier.height(ProfileActivityBarChartPlotHeight).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(day.episodeCount.toString(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(4.dp))
