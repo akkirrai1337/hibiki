@@ -26,7 +26,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppProfileBannerLayout(
@@ -34,10 +33,10 @@ fun AppProfileBannerLayout(
     bannerElevatedContent: @Composable BoxScope.(Float, Modifier) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
-    maxBannerHeight: Dp = 168.dp,
+    maxBannerHeight: Dp = ProfileBannerMaxHeight,
     contentPadding: PaddingValues = PaddingValues(),
     contentBackgroundColor: Color = Color.Transparent,
-    minBannerPadding: Dp = 24.dp,
+    minBannerPadding: Dp = ProfileBannerMinPadding,
 ) {
     val density = LocalDensity.current
     var bannerHeightPx by remember { mutableFloatStateOf(with(density) { maxBannerHeight.toPx() }) }

@@ -59,3 +59,5 @@ val ProfileGenreBarsMaxWidth = 250.dp
 val ProfileGenreBarsRowGap = 4.dp
 val ProfileLegendGridRowGap = 10.dp
 val ProfileLegendGridColumnGap = 14.dp
+val ProfileBannerMaxHeight = 168.dp
+val ProfileBannerMinPadding = 24.dp
