@@ -80,6 +80,7 @@ import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
+import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -331,23 +332,6 @@ private fun RotatingSettingsButton(onClick: () -> Unit) {
             durationMillis = 10_000,
             label = "settings_icon_rotation",
         ),
-    )
-}
-
-@Composable
-private fun ProfileActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileActionButton(
-        icon = icon,
-        contentDescription = contentDescription,
-        onClick = onClick,
-        modifier = modifier,
-        iconModifier = iconModifier,
     )
 }
 
