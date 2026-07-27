@@ -83,6 +83,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogGenreFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogStatusFilterSection
+import org.akkirrai.hibiki.shared.catalog.AppCatalogYearFilterSection
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -90,7 +91,6 @@ import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
-import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
@@ -276,10 +276,15 @@ fun AnimeSearchFiltersSheet(
                     }
 
                     if (capabilities.supports(AnimeCatalogFilter.YEAR_RANGE)) {
-                        YearFilter(
+                        AppCatalogYearFilterSection(
                             selectedRange = yearRange,
                             yearRange = FILTER_YEAR_RANGE,
+                            title = stringResource(R.string.search_filters_year),
+                            allLabel = stringResource(R.string.search_filters_year_all),
+                            fromLabel = stringResource(R.string.search_filters_year_from),
+                            toLabel = stringResource(R.string.search_filters_year_to),
                             onRangeChange = { yearRange = it },
+                            arrowIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
                         )
                     }
 
@@ -363,30 +368,6 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
 
 private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
-
-@Composable
-private fun YearFilter(
-    selectedRange: IntRange,
-    yearRange: IntRange,
-    onRangeChange: (IntRange) -> Unit,
-) {
-    AppHomeYearFilter(
-        selectedRange = selectedRange,
-        yearRange = yearRange,
-        title = stringResource(R.string.search_filters_year),
-        allLabel = stringResource(R.string.search_filters_year_all),
-        fromLabel = stringResource(R.string.search_filters_year_from),
-        toLabel = stringResource(R.string.search_filters_year_to),
-        onRangeChange = onRangeChange,
-        arrowContent = { modifier ->
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                contentDescription = null,
-                modifier = modifier,
-            )
-        },
-    )
-}
 
 @Composable
 private fun FilterYearPaginator(
