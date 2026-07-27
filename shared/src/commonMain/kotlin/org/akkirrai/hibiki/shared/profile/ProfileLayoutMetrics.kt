@@ -53,3 +53,7 @@ val ProfileActivityBarChartLabelGap = 6.dp
 val ProfileActivityBarMinHeight = 10.dp
 val ProfileActivityBarBaseHeight = 18.dp
 val ProfileActivityBarScaleHeight = 66.dp
+val ProfileGenreBarsLabelBarGap = 8.dp
+val ProfileGenreBarsEndPadding = 24.dp
+val ProfileGenreBarsMaxWidth = 250.dp
+val ProfileGenreBarsRowGap = 4.dp
