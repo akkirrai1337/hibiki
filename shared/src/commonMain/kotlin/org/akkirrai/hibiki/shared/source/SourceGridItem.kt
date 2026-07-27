@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,7 +24,7 @@ import androidx.compose.ui.unit.dp
 fun AppSourceGridItem(
     name: String,
     selected: Boolean,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -40,7 +42,11 @@ fun AppSourceGridItem(
             modifier = Modifier.padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            iconContent()
+            iconContent(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+            )
             Spacer(Modifier.width(10.dp))
             Text(
                 text = name,
