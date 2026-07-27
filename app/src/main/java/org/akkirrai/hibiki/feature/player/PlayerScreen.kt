@@ -186,6 +186,7 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
+import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1205,7 +1206,8 @@ fun PlayerScreen(
                     )
                 }
 
-                PlayerBottomOverlay(
+                AppPlayerBottomOverlay(
+                    positionLabel = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
                     durationMs = durationMs,
                     bufferedPositionMs = bufferedPositionMs,
                     sliderPositionMs = sliderPositionMs,
@@ -1221,39 +1223,85 @@ fun PlayerScreen(
                         positionMs = sliderPositionMs
                         isSeeking = false
                     },
-                    videoScaleMode = videoScaleMode,
-                    onVideoScaleModeClick = {
-                        keepControlsVisible()
-                        appPreferences.setVideoScaleMode(videoScaleMode.next())
-                    },
-                    settingsEnabled = true,
-                    onSettingsClick = {
-                        keepControlsVisible()
-                        settingsDestination = PlayerSettingsDestination.Root
-                        settingsVisible = true
-                        viewModel.loadSettingsOptions()
-                    },
-                    pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
-                    onPictureInPictureClick = {
-                        isEnteringPictureInPicture = true
-                        discordRpcManager.setPictureInPictureActive(true)
-                        controlsVisible = false
-                        val entered = runCatching {
-                            activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
-                        }.getOrDefault(false)
-                        isPictureInPictureActive = entered
-                        if (!entered) {
-                            isEnteringPictureInPicture = false
-                            discordRpcManager.setPictureInPictureActive(false)
+                    controlsContent = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            AppFilledIconButton(
+                                onClick = {
+                                    keepControlsVisible()
+                                    appPreferences.setVideoScaleMode(videoScaleMode.next())
+                                },
+                                modifier = Modifier.size(46.dp),
+                                style = AppFilledIconButtonStyle.DarkOverlay,
+                            ) {
+                                Icon(
+                                    painter = painterResource(videoScaleMode.iconResId()),
+                                    contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
+                                    tint = Color.White,
+                                )
+                            }
+                            AppFilledIconButton(
+                                onClick = {
+                                    controlsLocked = true
+                                    controlsVisible = false
+                                    unlockButtonVisible = true
+                                    unlockButtonInteractionTick += 1
+                                    playlistVisible = false
+                                    settingsVisible = false
+                                },
+                                modifier = Modifier.size(46.dp),
+                                style = AppFilledIconButtonStyle.DarkOverlay,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Lock,
+                                    contentDescription = stringResource(R.string.watch_player_lock),
+                                    tint = Color.White,
+                                )
+                            }
+                            AppFilledIconButton(
+                                onClick = {
+                                    isEnteringPictureInPicture = true
+                                    discordRpcManager.setPictureInPictureActive(true)
+                                    controlsVisible = false
+                                    val entered = runCatching {
+                                        activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
+                                    }.getOrDefault(false)
+                                    isPictureInPictureActive = entered
+                                    if (!entered) {
+                                        isEnteringPictureInPicture = false
+                                        discordRpcManager.setPictureInPictureActive(false)
+                                    }
+                                },
+                                enabled = pictureInPictureSupported && state.playback != null,
+                                modifier = Modifier.size(46.dp),
+                                style = AppFilledIconButtonStyle.DarkOverlay,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_player_picture_in_picture_24),
+                                    contentDescription = stringResource(R.string.watch_player_picture_in_picture),
+                                    tint = Color.White,
+                                )
+                            }
+                            AppFilledIconButton(
+                                onClick = {
+                                    keepControlsVisible()
+                                    settingsDestination = PlayerSettingsDestination.Root
+                                    settingsVisible = true
+                                    viewModel.loadSettingsOptions()
+                                },
+                                enabled = true,
+                                modifier = Modifier.size(46.dp),
+                                style = AppFilledIconButtonStyle.DarkOverlay,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Settings,
+                                    contentDescription = stringResource(R.string.watch_player_settings),
+                                    tint = Color.White,
+                                )
+                            }
                         }
-                    },
-                    onLockClick = {
-                        controlsLocked = true
-                        controlsVisible = false
-                        unlockButtonVisible = true
-                        unlockButtonInteractionTick += 1
-                        playlistVisible = false
-                        settingsVisible = false
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
@@ -2061,126 +2109,6 @@ private val PlayerSettingsDestination.titleResId: Int
         PlayerSettingsDestination.Quality -> R.string.watch_player_settings_quality
     }
 
-@Composable
-private fun PlayerBottomOverlay(
-    durationMs: Long,
-    bufferedPositionMs: Long,
-    sliderPositionMs: Long,
-    onSliderValueChange: (Long) -> Unit,
-    onSliderValueChangeFinished: () -> Unit,
-    videoScaleMode: VideoScaleMode,
-    onVideoScaleModeClick: () -> Unit,
-    settingsEnabled: Boolean,
-    onSettingsClick: () -> Unit,
-    pictureInPictureEnabled: Boolean,
-    onPictureInPictureClick: () -> Unit,
-    onLockClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.92f)
-                )
-            )
-            .navigationBarsPadding()
-            .padding(
-                start = PLAYER_CONTROLS_HORIZONTAL_PADDING,
-                end = PLAYER_CONTROLS_HORIZONTAL_PADDING,
-                top = 8.dp,
-                bottom = 18.dp,
-            ),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            AppPlayerTimeline(
-                durationMs = durationMs,
-                bufferedPositionMs = bufferedPositionMs,
-                sliderPositionMs = sliderPositionMs,
-                onSeekPreview = onSliderValueChange,
-                onSeekFinished = onSliderValueChangeFinished,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 0.dp)
-                    .offset(y = (-3).dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = 1.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
-                    modifier = Modifier.padding(top = 1.dp),
-                    color = Color.White.copy(alpha = 0.78f),
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AppFilledIconButton(
-                        onClick = onVideoScaleModeClick,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            painter = painterResource(videoScaleMode.iconResId()),
-                            contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onLockClick,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = stringResource(R.string.watch_player_lock),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onPictureInPictureClick,
-                        enabled = pictureInPictureEnabled,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_player_picture_in_picture_24),
-                            contentDescription = stringResource(R.string.watch_player_picture_in_picture),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onSettingsClick,
-                        enabled = settingsEnabled,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.watch_player_settings),
-                            tint = Color.White,
-                        )
-                    }
-                }
-            }
-        }
-
-    }
-}
-
 private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
     val textureView = videoSurfaceView as? TextureView ?: return
     if (!textureView.isLaidOut || textureView.width == 0 || textureView.height == 0) {
@@ -2383,7 +2311,6 @@ private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
-private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')
