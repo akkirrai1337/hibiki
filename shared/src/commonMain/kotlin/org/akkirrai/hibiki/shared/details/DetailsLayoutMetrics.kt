@@ -54,3 +54,5 @@ val DetailsHeroTextEndPadding = 24.dp
 val DetailsHeroTextNextEpisodeTopPadding = 2.dp
 val DetailsHeroTextExpandIconTopPadding = 2.dp
 val DetailsHeroTextExpandIconSize = 16.dp
+val DetailsHeroRatingsContentGap = 6.dp
+val DetailsHeroRatingsIconSize = 14.dp
