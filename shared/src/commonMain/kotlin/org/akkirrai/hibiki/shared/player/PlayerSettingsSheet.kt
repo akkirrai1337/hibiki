@@ -25,7 +25,7 @@ fun AppPlayerSettingsSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
+            .padding(bottom = PlayerSettingsSheetBottomPadding),
     ) {
         AnimatedContent(
             targetState = destination,
@@ -45,9 +45,9 @@ fun AppPlayerSettingsSheet(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                        .heightIn(max = PlayerSettingsSheetMaxHeight),
+                    contentPadding = PaddingValues(bottom = PlayerSettingsSheetListBottomPadding),
+                    verticalArrangement = Arrangement.spacedBy(PlayerSettingsSheetItemGap),
                     userScrollEnabled = true,
                 ) {
                     content(targetDestination)
