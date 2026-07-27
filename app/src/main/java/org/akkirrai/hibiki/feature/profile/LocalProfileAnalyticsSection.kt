@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyListState
@@ -19,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 
@@ -53,28 +51,18 @@ internal fun AnalyticsCard(
             pages = pages,
             snapshot = snapshot,
         )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.yummy_account_activity_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
-                    ACTIVITY_CHART_VISIBLE_DAYS
-                ActivityBarChart(
-                    days = snapshot.activityDays,
-                    dayWidth = dayWidth,
-                    listState = activityListState,
-                    muted = !hasActivity,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
+        org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
+            title = stringResource(R.string.yummy_account_activity_title),
+            days = snapshot.activityDays.map { day ->
+                org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(day.dateLabel, day.episodeCount)
+            },
+            listState = activityListState,
+            visibleDays = ACTIVITY_CHART_VISIBLE_DAYS,
+            dayGap = ACTIVITY_CHART_DAY_GAP,
+            minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
+            activeColor = if (hasActivity) Color(0xFFFF7A86) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f),
+            inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
+        )
     }
 }
 
@@ -103,26 +91,6 @@ private fun AnalyticsDonutPager(
         watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
         backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
         forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-    )
-}
-
-@Composable
-private fun ActivityBarChart(
-    days: List<ActivityDay>,
-    dayWidth: Dp,
-    listState: LazyListState,
-    modifier: Modifier = Modifier,
-    muted: Boolean = false,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileActivityBarChart(
-        days = days.map { org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(it.dateLabel, it.episodeCount) },
-        dayWidth = dayWidth,
-        listState = listState,
-        dayGap = ACTIVITY_CHART_DAY_GAP,
-        minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
-        activeColor = if (muted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f) else Color(0xFFFF7A86),
-        inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
-        modifier = modifier,
     )
 }
 
