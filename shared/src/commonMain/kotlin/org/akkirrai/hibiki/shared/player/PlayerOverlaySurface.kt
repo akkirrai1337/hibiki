@@ -58,7 +58,10 @@ fun AppPlayerOverlaySurface(
                 .fillMaxWidth(widthFraction)
                 .widthIn(max = maxWidth)
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(
+                    horizontal = PlayerOverlayPanelPadding,
+                    vertical = PlayerOverlayPanelPadding,
+                )
                 .offset(y = restingOffsetY)
                 .then(panelModifier)
                 .graphicsLayer {
@@ -73,7 +76,7 @@ fun AppPlayerOverlaySurface(
                 ) {
                     // Consume clicks inside the panel so the scrim does not receive them.
                 },
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(PlayerOverlayPanelCornerRadius),
             color = Color(0xFF121212),
             contentColor = Color.White,
         ) {
@@ -84,7 +87,7 @@ fun AppPlayerOverlaySurface(
                         onDragEnd = onDragEnd,
                     )
                 } else {
-                    Spacer(modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.size(PlayerOverlayHiddenHandleSpacerSize))
                 }
                 content(onDismiss)
             }
