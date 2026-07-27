@@ -92,8 +92,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
-import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
-import org.akkirrai.hibiki.shared.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
@@ -113,6 +111,7 @@ import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
+import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -296,12 +295,7 @@ fun HomeScreen(
             }
         }
 
-        AppTopScrim(
-            modifier = Modifier.align(Alignment.TopCenter),
-            height = HOME_TOP_SEARCH_SCRIM_HEIGHT,
-        )
-
-        AppSearchTopBar(
+        AppHomeSearchOverlay(
             query = state.searchQuery,
             onQueryChange = { viewModel.dispatch(HomeAction.SearchQueryChanged(it)) },
             onClear = { viewModel.dispatch(HomeAction.ClearSearch) },
@@ -317,14 +311,8 @@ fun HomeScreen(
                 showSearchFilters = true
             },
             showFilterButton = hasSearchFilters,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .padding(
-                    top = UiDimens.SearchBarTopPadding,
-                    start = UiDimens.ScreenPadding,
-                    end = UiDimens.ScreenPadding,
-                )
+            scrimHeight = HOME_TOP_SEARCH_SCRIM_HEIGHT,
+            modifier = Modifier.align(Alignment.TopCenter),
         )
 
         if (showSearchFilters) {
