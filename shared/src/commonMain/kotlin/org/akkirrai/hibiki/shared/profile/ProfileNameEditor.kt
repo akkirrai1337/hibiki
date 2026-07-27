@@ -34,7 +34,7 @@ fun ProfileNameEditor(
             singleLine = true,
             textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp).drawBehind {
+            modifier = Modifier.fillMaxWidth().padding(top = ProfileNameEditorTopPadding, bottom = 6.dp).drawBehind {
                 drawLine(underlineColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
             },
         )
