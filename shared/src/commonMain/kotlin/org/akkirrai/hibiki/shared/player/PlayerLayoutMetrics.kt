@@ -15,6 +15,7 @@ val PlayerControlButtonSize = 52.dp
 val PlayerOverlayHandleTouchHeight = 28.dp
 val PlayerOverlayHandleWidth = 36.dp
 val PlayerOverlayHandleHeight = 4.dp
+val PlayerOverlayHandleCornerRadius = 999.dp
 val PlayerSettingsHeaderStartPadding = 12.dp
 val PlayerSettingsHeaderTopPadding = 2.dp
 val PlayerSettingsHeaderEndPadding = 18.dp

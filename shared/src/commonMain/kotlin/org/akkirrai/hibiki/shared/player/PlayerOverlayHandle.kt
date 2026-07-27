@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerOverlayHandle(
@@ -40,7 +39,7 @@ fun AppPlayerOverlayHandle(
             modifier = Modifier
                 .width(PlayerOverlayHandleWidth)
                 .height(PlayerOverlayHandleHeight)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(RoundedCornerShape(PlayerOverlayHandleCornerRadius))
                 .background(Color.White.copy(alpha = 0.28f)),
         )
     }
