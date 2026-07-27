@@ -27,7 +27,7 @@ fun AppProfileActivitySection(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(ProfileActivitySectionVerticalSpacing),
     ) {
         Text(
             text = title,
