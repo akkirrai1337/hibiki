@@ -31,6 +31,9 @@ object UiDimens {
     val ThreeStateFilterChipContentGap = 4.dp
     val ThreeStateFilterChipIconSize = 15.dp
     val ThreeStateFilterChipFontSize = 11.sp
+    val YearFilterAllFontSize = 16.sp
+    val YearFilterSelectedFontSize = 18.sp
+    val YearFilterBoundaryFontSize = 11.sp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp

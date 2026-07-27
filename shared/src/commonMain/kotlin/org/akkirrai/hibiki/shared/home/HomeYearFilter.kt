@@ -21,8 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import kotlin.math.roundToInt
 
@@ -57,14 +56,14 @@ fun AppHomeYearFilter(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp),
+                .padding(top = UiDimens.FilterContentTopPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (selectedRange == yearRange) {
                 Text(
                     text = allLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 16.sp,
+                    fontSize = UiDimens.YearFilterAllFontSize,
                     fontWeight = FontWeight.SemiBold,
                 )
             } else {
@@ -75,13 +74,13 @@ fun AppHomeYearFilter(
                     Text(
                         text = "$fromLabel $animatedFromYear",
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 18.sp,
+                        fontSize = UiDimens.YearFilterSelectedFontSize,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = "$toLabel $animatedToYear",
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 18.sp,
+                        fontSize = UiDimens.YearFilterSelectedFontSize,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -93,7 +92,7 @@ fun AppHomeYearFilter(
                 Text(
                     text = yearRange.first.toString(),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 11.sp,
+                    fontSize = UiDimens.YearFilterBoundaryFontSize,
                     fontWeight = FontWeight.SemiBold,
                 )
                 RangeSlider(
@@ -117,7 +116,7 @@ fun AppHomeYearFilter(
                 Text(
                     text = yearRange.last.toString(),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 11.sp,
+                    fontSize = UiDimens.YearFilterBoundaryFontSize,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
