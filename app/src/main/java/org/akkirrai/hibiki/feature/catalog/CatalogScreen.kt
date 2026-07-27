@@ -29,7 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
@@ -80,7 +83,6 @@ import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -106,6 +108,7 @@ import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
+import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
@@ -283,6 +286,12 @@ fun CatalogScreen(
                 query = state.query,
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
+                placeholder = stringResource(R.string.search_placeholder),
+                filterContentDescription = stringResource(R.string.search_filters),
+                clearContentDescription = stringResource(R.string.home_search_clear),
+                searchIcon = Icons.Outlined.Search,
+                filterIcon = Icons.Outlined.FilterList,
+                clearIcon = Icons.Outlined.Close,
                 onFilterClick = { isFilterSheetOpen = true },
                 showFilterButton = hasCatalogFilters,
                 modifier = Modifier.zIndex(1f),
