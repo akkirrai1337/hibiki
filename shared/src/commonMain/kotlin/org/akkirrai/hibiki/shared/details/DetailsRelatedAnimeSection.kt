@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 data class DetailsRelatedAnimeItem(
     val id: String,
@@ -40,32 +39,32 @@ fun DetailsRelatedAnimeSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(DetailsRelatedTitleTopSpacing))
         DetailsSectionTitle(title, modifier = Modifier.padding(horizontal = horizontalPadding))
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(DetailsRelatedTitleContentSpacing))
         LazyRow(
-            modifier = Modifier.fillMaxWidth().height(220.dp),
+            modifier = Modifier.fillMaxWidth().height(DetailsRelatedCarouselHeight),
             contentPadding = PaddingValues(horizontal = horizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(DetailsRelatedItemGap),
         ) {
             items(items, key = DetailsRelatedAnimeItem::id) { item ->
                 Column(
                     modifier = Modifier
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .width(DetailsRelatedItemWidth)
+                        .clip(RoundedCornerShape(DetailsRelatedItemCornerRadius))
                         .clickable { onItemClick(item) }
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = DetailsRelatedItemBottomPadding),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .height(DetailsRelatedPosterHeight)
+                            .clip(RoundedCornerShape(DetailsRelatedItemCornerRadius))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         poster(item)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(DetailsRelatedMetadataTitleGap))
                     Text(
                         text = item.metadata,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
