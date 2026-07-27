@@ -39,3 +39,4 @@ val SourceContentListTopPadding = 84.dp
 val SourceContentListHorizontalPadding = 12.dp
 val SourceContentListBottomExtraPadding = 32.dp
 val SourceScreenHeaderHeight = 48.dp
+val SourceScreenHeaderTitleStartPadding = 60.dp

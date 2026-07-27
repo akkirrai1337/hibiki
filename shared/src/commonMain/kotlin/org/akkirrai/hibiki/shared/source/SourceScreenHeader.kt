@@ -24,7 +24,7 @@ fun SourceScreenHeader(
     ) {
         Text(
             text = title,
-            modifier = Modifier.padding(start = 60.dp),
+            modifier = Modifier.padding(start = SourceScreenHeaderTitleStartPadding),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground,
