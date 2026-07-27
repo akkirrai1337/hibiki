@@ -18,7 +18,6 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,11 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
@@ -67,6 +62,7 @@ import org.akkirrai.hibiki.shared.player.DownloadStateIcon as WatchDownloadState
 import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadProgressBadge
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
+import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -339,39 +335,18 @@ private fun buildEpisodeHeadline(
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
         else -> stringResource(R.string.watch_episode_headline, number)
     }
-    return if (
+    val trailingLabel = if (
         status == EpisodeProgressStatus.InProgress &&
         progress != null &&
         progress.durationMs > 0L
     ) {
-        buildAnnotatedString {
-            append(headline)
-            withStyle(
-                SpanStyle(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                )
-            ) {
-                append(" • ${formatEpisodeDuration(progress.positionMs)} / ${formatEpisodeDuration(progress.durationMs)}")
-            }
-        }
+        "${formatEpisodeDuration(progress.positionMs)} / ${formatEpisodeDuration(progress.durationMs)}"
     } else if (status == EpisodeProgressStatus.Watched) {
-        buildAnnotatedString {
-            append(headline)
-            withStyle(
-                SpanStyle(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                )
-            ) {
-                append(" • ${stringResource(R.string.watch_status_watched)}")
-            }
-        }
+        stringResource(R.string.watch_status_watched)
     } else {
-        AnnotatedString(headline)
+        null
     }
+    return buildSharedEpisodeHeadline(headline, trailingLabel)
 }
 
 @Composable
