@@ -196,13 +196,13 @@ private fun SourceSearchSection(
         onRetry = onRetry,
         items = section.items,
         itemKey = { it.id },
-        sourceIconContent = {
+        sourceIconContent = { iconModifier ->
             AsyncImage(
                 model = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
                 error = painterResource(source.iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp).clip(CircleShape),
+                modifier = iconModifier,
             )
         },
         itemContent = { anime ->

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -31,7 +33,7 @@ fun <T> AppSourceSearchSection(
     onRetry: () -> Unit,
     items: List<T>,
     itemKey: (T) -> Any,
-    sourceIconContent: @Composable () -> Unit,
+    sourceIconContent: @Composable (Modifier) -> Unit,
     itemContent: @Composable (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -43,7 +45,11 @@ fun <T> AppSourceSearchSection(
             modifier = Modifier.padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            sourceIconContent()
+            sourceIconContent(
+                Modifier
+                    .size(24.dp)
+                    .clip(CircleShape),
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = sourceName,
