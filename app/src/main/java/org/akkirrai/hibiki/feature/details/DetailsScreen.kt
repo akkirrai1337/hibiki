@@ -167,6 +167,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
+import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheetItem
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -899,11 +900,30 @@ private fun LibraryCategorySheet(
                     items = LibraryCategory.entries.filter { it != LibraryCategory.Saved },
                     key = LibraryCategory::name,
                 ) { category ->
-                    LibraryCategorySheetItem(
-                        category = category,
+                    AppLibraryCategorySheetItem(
                         label = categoryLabels.getValue(category),
                         selected = category == selectedCategory,
                         onClick = { onCategoryClick(category) },
+                        iconContent = {
+                            Icon(
+                                imageVector = category.icon(),
+                                contentDescription = null,
+                                modifier = Modifier.size(21.dp),
+                                tint = if (category == selectedCategory) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        },
+                        selectedIconContent = {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
                     )
                 }
 
@@ -929,66 +949,6 @@ private fun LibraryCategorySheet(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LibraryCategorySheetItem(
-    category: LibraryCategory,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f)
-        },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f)
-            },
-        ),
-        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 58.dp)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = category.icon(),
-                contentDescription = null,
-                modifier = Modifier.size(21.dp),
-                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = label,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
             }
         }
     }
