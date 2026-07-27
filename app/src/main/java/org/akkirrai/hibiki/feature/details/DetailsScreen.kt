@@ -180,6 +180,8 @@ import org.akkirrai.hibiki.shared.details.DetailsGenresSection
 import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
 import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
+import org.akkirrai.hibiki.shared.details.DetailsHeroPosterCollapsedOffset
+import org.akkirrai.hibiki.shared.details.DetailsHeroPosterExpandedOffset
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -555,7 +557,7 @@ private fun DetailHeroSection(
         }
     }
     val posterHeightOffset by animateDpAsState(
-        targetValue = if (isAtTop) 0.dp else 28.dp,
+        targetValue = if (isAtTop) DetailsHeroPosterExpandedOffset else DetailsHeroPosterCollapsedOffset,
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )

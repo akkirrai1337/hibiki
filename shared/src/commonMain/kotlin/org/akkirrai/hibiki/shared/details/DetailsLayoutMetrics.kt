@@ -88,3 +88,5 @@ val DetailsFavoriteCircleButtonIconSize = 18.dp
 val DetailsContentHorizontalPadding = 24.dp
 val DetailsInformationHorizontalPadding = 12.dp
 val DetailsContentBottomPadding = 100.dp
+val DetailsHeroPosterExpandedOffset = 0.dp
+val DetailsHeroPosterCollapsedOffset = 28.dp
