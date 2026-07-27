@@ -81,6 +81,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
+import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
@@ -351,23 +352,15 @@ fun AnimeSearchFiltersSheet(
                         Button(
                             onClick = {
                             onApply(
-                                pendingFilters.copy(
-                                        typeAlias = animeType?.alias
-                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.TYPE) },
-                                        statusAlias = includedStatuses.firstOrNull()
-                                            ?.takeIf { capabilities.supports(AnimeCatalogFilter.STATUS) },
-                                        includedGenreAliases = pendingFilters.includedGenreAliases
-                                            .takeIf { showGenreFilters && capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES) }
-                                            .orEmpty(),
-                                        excludedGenreAliases = pendingFilters.excludedGenreAliases
-                                            .takeIf { showGenreFilters && capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES) }
-                                            .orEmpty(),
-                                        yearFrom = yearRange.first
-                                            .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != FILTER_YEAR_RANGE },
-                                        yearTo = yearRange.last
-                                            .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != FILTER_YEAR_RANGE },
-                                    )
+                                pendingFilters.applyCatalogFilterDraft(
+                                    animeType = animeType,
+                                    includedStatuses = includedStatuses,
+                                    yearRange = yearRange,
+                                    defaultYearRange = FILTER_YEAR_RANGE,
+                                    capabilities = capabilities,
+                                    showGenreFilters = showGenreFilters,
                                 )
+                            )
                                 scope.launch {
                                     sheetState.hide()
                                     onDismissRequest()
