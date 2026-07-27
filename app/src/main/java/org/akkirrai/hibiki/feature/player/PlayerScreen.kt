@@ -190,6 +190,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
+import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -901,19 +902,21 @@ fun PlayerScreen(
         }
     }
 
-    AutoHideVisibilityEffect(
+    AppAutoHideVisibilityEffect(
         enabled = !controlsLocked,
         visible = controlsVisible,
         interactionTick = controlsInteractionTick,
         blocked = playlistVisible || settingsVisible || state.isLoading || state.errorMessage != null || isSeeking,
+        hideDelayMillis = PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS,
         onHide = { controlsVisible = false },
     )
 
-    AutoHideVisibilityEffect(
+    AppAutoHideVisibilityEffect(
         enabled = controlsLocked,
         visible = unlockButtonVisible,
         interactionTick = unlockButtonInteractionTick,
         blocked = isSeeking,
+        hideDelayMillis = PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS,
         onHide = { unlockButtonVisible = false },
     )
 
@@ -2020,21 +2023,6 @@ private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
     VideoScaleMode.FIT -> R.string.watch_player_video_scale_fit
     VideoScaleMode.CROP -> R.string.watch_player_video_scale_crop
     VideoScaleMode.STRETCH -> R.string.watch_player_video_scale_stretch
-}
-
-@Composable
-private fun AutoHideVisibilityEffect(
-    enabled: Boolean,
-    visible: Boolean,
-    interactionTick: Int,
-    blocked: Boolean,
-    onHide: () -> Unit,
-) {
-    LaunchedEffect(enabled, visible, interactionTick, blocked) {
-        if (!enabled || !visible || blocked) return@LaunchedEffect
-        delay(PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS)
-        onHide()
-    }
 }
 
 @Composable
