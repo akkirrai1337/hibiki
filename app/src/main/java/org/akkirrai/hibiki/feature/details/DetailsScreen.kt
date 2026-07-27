@@ -166,6 +166,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -551,65 +552,27 @@ private fun DetailHeroSection(
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )
-    val bannerHeight = 224.dp
-    val posterExpandedHeight = 200.dp
-    val posterTop = 212.dp
-    val detailsTop = 224.dp
-    val detailsHeight = 180.dp
-    val heroHeight = 412.dp
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(heroHeight),
-        ) {
+    AppDetailsHeroSection(
+        posterHeightOffset = posterHeightOffset,
+        onPosterClick = onPosterClick,
+        posterContent = {
+            NetworkImage(
+                imageUrl = detailsState.anime.posterUrl,
+                fallbackUrl = detailsState.anime.posterFallbackUrl,
+                contentDescription = detailsState.anime.title,
+                onImageSuccess = onPosterLoaded,
+            )
+        },
+        mediaContent = { mediaModifier ->
             DetailHeroMedia(
                 detailsState = detailsState,
                 resumeFrame = resumeFrame,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(bannerHeight),
+                modifier = mediaModifier,
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .align(Alignment.TopCenter)
-                    .offset(y = bannerHeight - 80.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.background),
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(heroHeight - bannerHeight)
-                    .align(Alignment.BottomCenter)
-                    .background(MaterialTheme.colorScheme.background)
-            )
-            DetailsPosterCard(
-                height = posterExpandedHeight - posterHeightOffset,
-                onClick = onPosterClick,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(y = posterTop + posterHeightOffset)
-                    .padding(start = 16.dp),
-                poster = {
-                    NetworkImage(
-                        imageUrl = detailsState.anime.posterUrl,
-                        fallbackUrl = detailsState.anime.posterFallbackUrl,
-                        contentDescription = detailsState.anime.title,
-                        onImageSuccess = onPosterLoaded,
-                    )
-                },
-            )
+        },
+        textContent = { textModifier ->
             AppDetailsHeroTextContent(
                 title = detailsState.anime.title,
                 description = description,
@@ -649,30 +612,22 @@ private fun DetailHeroSection(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .offset(y = detailsTop)
-                    .padding(
-                        start = 172.dp,
-                        end = 16.dp,
-                    )
-                    .height(detailsHeight),
+                modifier = textModifier,
             )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        DetailsHeroActions(
-            isInLibrary = isUserLibraryCategorySelected,
-            canWatch = canWatch,
-            libraryLabel = stringResource(R.string.details_favorite),
-            watchLabel = stringResource(R.string.details_watch),
-            libraryIcon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-            primaryIcon = Icons.Filled.PlayArrow,
-            onLibraryClick = onLibraryClick,
-            onPrimaryClick = onPrimaryClick,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-    }
+        },
+        actionsContent = {
+            DetailsHeroActions(
+                isInLibrary = isUserLibraryCategorySelected,
+                canWatch = canWatch,
+                libraryLabel = stringResource(R.string.details_favorite),
+                watchLabel = stringResource(R.string.details_watch),
+                libraryIcon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                primaryIcon = Icons.Filled.PlayArrow,
+                onLibraryClick = onLibraryClick,
+                onPrimaryClick = onPrimaryClick,
+            )
+        },
+    )
 }
 
 @Composable
