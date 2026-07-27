@@ -229,36 +229,29 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
         bottomContentPadding = bottomContentPadding,
         verticalSpacing = ProfileMediumPadding,
     ) {
-        LocalStatsRow(snapshot)
-        GenreBars(snapshot.genreSegments)
+        org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
+            items = listOf(
+                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                    stringResource(R.string.local_profile_stat_total),
+                    snapshot.libraryTotal.toString(),
+                ),
+                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                    stringResource(R.string.local_profile_stat_days),
+                    snapshot.activeDaysCount.toString(),
+                ),
+                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                    stringResource(R.string.local_profile_stat_time),
+                    snapshot.watchTimeLabel,
+                ),
+            ),
+        )
+        org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
+            items = snapshot.genreSegments.map { item ->
+                org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(item.label, item.count, item.color)
+            },
+        )
         RecentLibraryCard(snapshot.recentLibraryItems)
     }
-}
-
-@Composable
-private fun LocalStatsRow(snapshot: LocalProfileSnapshot) {
-    org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
-        items = listOf(
-            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString()),
-            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString()),
-            org.akkirrai.hibiki.shared.profile.ProfileStatItem(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel),
-        ),
-    )
-}
-
-@Composable
-private fun LocalStat(label: String, value: String) {
-    org.akkirrai.hibiki.shared.profile.ProfileStat(label = label, value = value)
-}
-
-/** Direct port of AboutTab.Genres: labels column alongside proportional rounded bars. */
-@Composable
-private fun GenreBars(items: List<DistributionSegment>) {
-    org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
-        items = items.map { item ->
-            org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(item.label, item.count, item.color)
-        },
-    )
 }
 
 @Composable
