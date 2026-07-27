@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppDetailsHeroSection(
@@ -30,19 +29,19 @@ fun AppDetailsHeroSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(412.dp),
+                .height(DetailsHeroSectionHeight),
         ) {
             mediaContent(
                 Modifier
                     .fillMaxWidth()
-                    .height(224.dp),
+                    .height(DetailsHeroMediaHeight),
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(DetailsHeroGradientHeight)
                     .align(Alignment.TopCenter)
-                    .offset(y = 144.dp)
+                    .offset(y = DetailsHeroGradientOffset)
                     .background(
                         Brush.verticalGradient(
                             listOf(Color.Transparent, androidx.compose.material3.MaterialTheme.colorScheme.background),
@@ -52,30 +51,30 @@ fun AppDetailsHeroSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(188.dp)
+                    .height(DetailsHeroBackgroundHeight)
                     .align(Alignment.BottomCenter)
                     .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
             )
             DetailsPosterCard(
-                height = 200.dp - posterHeightOffset,
+                height = DetailsHeroPosterBaseHeight - posterHeightOffset,
                 onClick = onPosterClick,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(y = 212.dp + posterHeightOffset)
-                    .padding(start = 16.dp),
+                    .offset(y = DetailsHeroPosterOffset + posterHeightOffset)
+                    .padding(start = DetailsHeroPosterStartPadding),
                 poster = posterContent,
             )
             textContent(
                 Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .offset(y = 224.dp)
-                    .padding(start = 172.dp, end = 16.dp)
-                    .height(180.dp),
+                    .offset(y = DetailsHeroTextOffset)
+                    .padding(start = DetailsHeroTextStartPadding, end = DetailsHeroTextEndPaddingInSection)
+                    .height(DetailsHeroTextHeight),
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(DetailsHeroActionsTopSpacing))
         actionsContent()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(DetailsHeroActionsBottomSpacing))
     }
 }
