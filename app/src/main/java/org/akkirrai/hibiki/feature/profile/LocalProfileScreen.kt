@@ -81,6 +81,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
+import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
@@ -175,6 +176,7 @@ fun LocalProfileScreen(
                 ) {
                     if (isEditingProfile) {
                         ProfileNameEditor(
+                            label = stringResource(R.string.local_profile_name),
                             name = editedName,
                             onNameChange = { editedName = it },
                         )
@@ -310,15 +312,6 @@ private fun LocalAvatar(
                 AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
         },
-    )
-}
-
-@Composable
-private fun ProfileNameEditor(name: String, onNameChange: (String) -> Unit) {
-    org.akkirrai.hibiki.shared.profile.ProfileNameEditor(
-        label = stringResource(R.string.local_profile_name),
-        name = name,
-        onNameChange = onNameChange,
     )
 }
 
