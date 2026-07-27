@@ -178,6 +178,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSeekOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerActionControls
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
@@ -1317,43 +1318,12 @@ fun PlayerScreen(
         )
 
         state.errorMessage?.let { message ->
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp)
-                        .widthIn(max = 420.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.Black.copy(alpha = 0.84f),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.watch_player_error_title),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = message,
-                            color = Color.White.copy(alpha = 0.78f),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.watch_player_retry),
-                            modifier = Modifier
-                                .alpha(0.92f)
-                                .clickable { viewModel.load(forceRefresh = true) },
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                }
-            }
+            AppPlayerErrorOverlay(
+                message = message,
+                title = stringResource(R.string.watch_player_error_title),
+                retryLabel = stringResource(R.string.watch_player_retry),
+                onRetry = { viewModel.load(forceRefresh = true) },
+            )
         }
 
         if (playlistVisible) {
