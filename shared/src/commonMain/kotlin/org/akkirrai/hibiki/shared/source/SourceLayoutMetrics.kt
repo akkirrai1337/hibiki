@@ -32,3 +32,4 @@ val SourceLanguageSectionContentVerticalSpacing = 4.dp
 val SourceLanguageSectionChevronSize = 16.dp
 val SourceEmptyStateCornerRadius = 24.dp
 val SourceEmptyStateHorizontalPadding = 18.dp
+val SourceEmptyStateVerticalPadding = 20.dp

@@ -23,7 +23,10 @@ fun SourceEmptyState(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = SourceEmptyStateHorizontalPadding, vertical = 20.dp),
+            modifier = Modifier.padding(
+                horizontal = SourceEmptyStateHorizontalPadding,
+                vertical = SourceEmptyStateVerticalPadding,
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
