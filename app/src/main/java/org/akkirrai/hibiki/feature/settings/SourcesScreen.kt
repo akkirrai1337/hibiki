@@ -25,6 +25,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,10 +58,10 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
+import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
@@ -179,6 +183,12 @@ private fun SourcesSearchBar(
             query = query,
             onQueryChange = onQueryChange,
             onClear = onClear,
+            placeholder = stringResource(R.string.search_placeholder),
+            filterContentDescription = stringResource(R.string.search_filters),
+            clearContentDescription = stringResource(R.string.home_search_clear),
+            searchIcon = Icons.Outlined.Search,
+            filterIcon = Icons.Outlined.FilterList,
+            clearIcon = Icons.Outlined.Close,
             onFilterClick = onFilterClick,
             showFilterButton = showFilterButton,
             modifier = Modifier.fillMaxWidth(),
