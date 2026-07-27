@@ -51,7 +51,7 @@ fun AppProfileTabPager(
                         )
                     },
                     modifier = Modifier
-                        .padding(horizontal = 1.dp, vertical = ProfileTabVerticalPadding)
+                        .padding(horizontal = ProfileTabHorizontalPadding, vertical = ProfileTabVerticalPadding)
                         .clip(CircleShape),
                 )
             }
