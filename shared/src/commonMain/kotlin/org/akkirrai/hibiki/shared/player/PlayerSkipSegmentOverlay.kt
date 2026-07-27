@@ -30,7 +30,7 @@ fun AppPlayerSkipSegmentOverlay(
         exit = fadeOut(animationSpec = tween(140)),
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PlayerSkipSegmentOverlayGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (autoSkipEnabled) {

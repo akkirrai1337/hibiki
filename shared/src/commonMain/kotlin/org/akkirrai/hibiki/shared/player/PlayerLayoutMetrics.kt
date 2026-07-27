@@ -19,6 +19,7 @@ val PlayerLoadingIndicatorStrokeWidth = 4.dp
 val PlayerUnlockButtonHorizontalPadding = 18.dp
 val PlayerUnlockButtonVerticalPadding = 11.dp
 val PlayerUnlockButtonContentGap = 9.dp
+val PlayerSkipSegmentOverlayGap = 8.dp
 val PlayerBottomOverlayHorizontalPadding = 24.dp
 val PlayerBottomOverlayTopPadding = 8.dp
 val PlayerBottomOverlayBottomPadding = 18.dp
