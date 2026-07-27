@@ -27,10 +27,10 @@ fun AppDetailsHeroPlaybackActions(
     resumeSubtitle: String?,
     resumeProgress: Float,
     onResumeClick: (() -> Unit)?,
-    resumeIconContent: @Composable () -> Unit,
+    resumeIconContent: @Composable (Modifier) -> Unit,
     trailerEnabled: Boolean,
     onTrailerClick: () -> Unit,
-    trailerIconContent: @Composable () -> Unit,
+    trailerIconContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -51,7 +51,7 @@ fun AppDetailsHeroPlaybackActions(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    resumeIconContent()
+                    resumeIconContent(Modifier.size(28.dp))
                     Column {
                         Text(
                             text = resumeTitle,
@@ -88,7 +88,7 @@ fun AppDetailsHeroPlaybackActions(
                 contentColor = Color.White,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    trailerIconContent()
+                    trailerIconContent(Modifier.size(32.dp))
                 }
             }
         }

@@ -682,20 +682,20 @@ private fun DetailHeroMedia(
                 }
             } ?: 0f,
             onResumeClick = resumeState?.let { state -> { onResumeClick(state) } },
-            resumeIconContent = {
+            resumeIconContent = { iconModifier ->
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
+                    modifier = iconModifier,
                 )
             },
             trailerEnabled = trailer != null,
             onTrailerClick = onTrailerClick,
-            trailerIconContent = {
+            trailerIconContent = { iconModifier ->
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = stringResource(R.string.details_trailer),
-                    modifier = Modifier.size(32.dp),
+                    modifier = iconModifier,
                 )
             },
             )
