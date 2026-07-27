@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.settings
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,9 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,6 +64,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
+import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
@@ -332,20 +330,12 @@ private fun SourceGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    Surface(
-        modifier = modifier
-            .height(76.dp)
-            .clip(shape)
-            .clickable(onClick = onClick),
-        shape = shape,
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    AppSourceGridItem(
+        name = source.name,
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        iconContent = {
             AsyncImage(
                 model = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
@@ -353,17 +343,8 @@ private fun SourceGridItem(
                 contentDescription = null,
                 modifier = Modifier.size(40.dp).clip(CircleShape),
             )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = source.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+        },
+    )
 }
 
 internal fun groupSourcesByLanguage(
