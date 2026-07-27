@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -41,18 +41,18 @@ fun AppCollapsibleFilterSection(
     )
     Column(
         modifier = Modifier
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .padding(vertical = UiDimens.CollapsibleFilterVerticalPadding)
+            .clip(RoundedCornerShape(UiDimens.CollapsibleFilterCorner))
             .combinedClickable(
                 onClick = { visible = !visible },
                 onLongClick = onLongClick,
             )
-            .padding(8.dp),
+            .padding(UiDimens.CollapsibleFilterContentPadding),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(UiDimens.CollapsibleFilterHeaderGap),
         ) {
             Text(
                 text = title,
@@ -63,7 +63,7 @@ fun AppCollapsibleFilterSection(
             )
             arrowContent(
                 Modifier
-                    .requiredSize(16.dp)
+                    .requiredSize(UiDimens.CollapsibleFilterArrowSize)
                     .graphicsLayer { rotationZ = iconRotation },
             )
         }

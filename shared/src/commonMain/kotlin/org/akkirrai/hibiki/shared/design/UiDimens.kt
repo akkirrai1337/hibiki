@@ -34,6 +34,11 @@ object UiDimens {
     val YearFilterAllFontSize = 16.sp
     val YearFilterSelectedFontSize = 18.sp
     val YearFilterBoundaryFontSize = 11.sp
+    val CollapsibleFilterVerticalPadding = 4.dp
+    val CollapsibleFilterCorner = 8.dp
+    val CollapsibleFilterContentPadding = 8.dp
+    val CollapsibleFilterHeaderGap = 4.dp
+    val CollapsibleFilterArrowSize = 16.dp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp
