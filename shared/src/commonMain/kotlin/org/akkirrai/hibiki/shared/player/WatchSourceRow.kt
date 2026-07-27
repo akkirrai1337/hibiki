@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun WatchSourceRow(
@@ -23,7 +22,7 @@ fun WatchSourceRow(
     episodeSummary: String?,
     enabled: Boolean,
     horizontalPadding: Dp,
-    shape: RoundedCornerShape = RoundedCornerShape(0.dp),
+    shape: RoundedCornerShape = RoundedCornerShape(WatchSourceRowDefaultCornerRadius),
     onClick: () -> Unit,
 ) {
     Surface(
