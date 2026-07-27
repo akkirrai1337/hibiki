@@ -1651,38 +1651,24 @@ private fun PlayerSettingsSheet(
                 playerValues = playerValues,
                 qualityValues = qualityValues,
                 entryContent = { entry ->
-                    PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
+                    AppPlayerSettingsEntry(
+                        title = entry.title,
+                        value = entry.value,
+                        trailingIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                        onClick = entry.onClick,
+                    )
                 },
-                choiceContent = { value -> PlayerSettingsChoiceRow(value = value) },
+                choiceContent = { value ->
+                    AppPlayerSettingsChoice(
+                        label = value.label,
+                        description = value.description,
+                        selected = value.selected,
+                        onClick = value.onClick,
+                        selectedIcon = Icons.Outlined.Check,
+                    )
+                },
             )
         },
-    )
-}
-
-@Composable
-private fun PlayerSettingsEntry(
-    title: String,
-    value: String,
-    onClick: () -> Unit,
-) {
-    AppPlayerSettingsEntry(
-        title = title,
-        value = value,
-        trailingIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun PlayerSettingsChoiceRow(
-    value: PlayerSettingsValue,
-) {
-    AppPlayerSettingsChoice(
-        label = value.label,
-        description = value.description,
-        selected = value.selected,
-        onClick = value.onClick,
-        selectedIcon = Icons.Outlined.Check,
     )
 }
 
