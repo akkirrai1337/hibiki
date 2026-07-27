@@ -26,7 +26,7 @@ fun AppPlayerUnlockOverlay(
         AppPlayerUnlockButton(
             label = label,
             onClick = onClick,
-            iconContent = { iconContent(Modifier.size(20.dp)) },
+            iconContent = { iconContent(Modifier.size(PlayerUnlockOverlayIconSize)) },
         )
     }
 }
