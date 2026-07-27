@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.feature.home
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -46,8 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -92,9 +89,9 @@ import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
+import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
-import kotlin.math.roundToInt
 
 @OptIn(
     ExperimentalLayoutApi::class,
@@ -385,92 +382,22 @@ private fun YearFilter(
     yearRange: IntRange,
     onRangeChange: (IntRange) -> Unit,
 ) {
-    val animatedFromYear by animateIntAsState(selectedRange.first, label = "year_from_value")
-    val animatedToYear by animateIntAsState(selectedRange.last, label = "year_to_value")
-    var sliderPosition by remember {
-        mutableStateOf(selectedRange.first.toFloat()..selectedRange.last.toFloat())
-    }
-    var isDragging by remember { mutableStateOf(false) }
-    LaunchedEffect(selectedRange) {
-        if (!isDragging) {
-            sliderPosition = selectedRange.first.toFloat()..selectedRange.last.toFloat()
-        }
-    }
-    CollapsibleRow(
+    AppHomeYearFilter(
+        selectedRange = selectedRange,
+        yearRange = yearRange,
         title = stringResource(R.string.search_filters_year),
-        onLongClick = { onRangeChange(yearRange) },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (selectedRange == yearRange) {
-                Text(
-                    text = stringResource(R.string.search_filters_year_all),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = "${stringResource(R.string.search_filters_year_from)} $animatedFromYear",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "${stringResource(R.string.search_filters_year_to)} $animatedToYear",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = yearRange.first.toString(),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                RangeSlider(
-                    value = sliderPosition,
-                    onValueChange = { range ->
-                        isDragging = true
-                        sliderPosition = range
-                        onRangeChange(range.start.roundToInt()..range.endInclusive.roundToInt())
-                    },
-                    onValueChangeFinished = {
-                        isDragging = false
-                    },
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        inactiveTickColor = Color.Transparent,
-                        activeTickColor = Color.Transparent,
-                    ),
-                    steps = (yearRange.count() - 2).coerceAtLeast(0),
-                    valueRange = yearRange.first.toFloat()..yearRange.last.toFloat(),
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = yearRange.last.toString(),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
+        allLabel = stringResource(R.string.search_filters_year_all),
+        fromLabel = stringResource(R.string.search_filters_year_from),
+        toLabel = stringResource(R.string.search_filters_year_to),
+        onRangeChange = onRangeChange,
+        arrowContent = { modifier ->
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                contentDescription = null,
+                modifier = modifier,
+            )
+        },
+    )
 }
 
 @Composable
