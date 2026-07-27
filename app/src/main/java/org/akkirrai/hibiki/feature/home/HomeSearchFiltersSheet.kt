@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
@@ -39,12 +38,10 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -90,6 +87,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
+import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
@@ -185,29 +183,19 @@ fun AnimeSearchFiltersSheet(
         LocalizedAppContext(languageMode = appLanguage) {
             when {
             isFilterCatalogLoading && filterCatalog == null -> {
-                Box(
-                    modifier = sheetContentModifier
-                        .fillMaxWidth()
-                        .height(260.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                AppHomeFilterCatalogState(
+                    isLoading = true,
+                    unavailableLabel = stringResource(R.string.search_filters_unavailable),
+                    modifier = sheetContentModifier,
+                )
             }
 
             filterCatalog == null -> {
-                Box(
-                    modifier = sheetContentModifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.search_filters_unavailable),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                AppHomeFilterCatalogState(
+                    isLoading = false,
+                    unavailableLabel = stringResource(R.string.search_filters_unavailable),
+                    modifier = sheetContentModifier,
+                )
             }
 
             else -> {
