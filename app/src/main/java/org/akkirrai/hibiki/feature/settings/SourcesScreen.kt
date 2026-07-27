@@ -57,10 +57,10 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
+import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
