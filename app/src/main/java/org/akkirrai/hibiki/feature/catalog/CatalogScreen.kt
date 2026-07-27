@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.feature.catalog
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -10,7 +9,6 @@ import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
@@ -100,6 +97,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -408,42 +406,20 @@ private fun CatalogSortControl(
             .fillMaxWidth()
             .height(CATALOG_SORT_CONTROL_HEIGHT),
     ) {
-        AnimatedContent(
-            targetState = selectedSort,
-            modifier = Modifier.align(Alignment.Center),
-            label = "catalog_sort",
-        ) { sort ->
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.82f),
-                        shape = CircleShape,
-                    )
-                    .clickable { onExpandedChange(!expanded) }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = sort.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
-                Text(
-                    text = sortLabels[sort].orEmpty(),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
+        AppCatalogSortPill(
+            sortKey = selectedSort.name,
+            icon = selectedSort.icon,
+            label = sortLabels[selectedSort].orEmpty(),
+            onClick = { onExpandedChange(!expanded) },
+            orderContent = {
                 CatalogSortOrderIcon(
                     atEnd = expanded,
                     modifier = Modifier.size(11.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
-            }
-        }
+            },
+            modifier = Modifier.align(Alignment.Center),
+        )
 
         val layoutDirection = LocalLayoutDirection.current
         val screenWidth = LocalWindowInfo.current.containerSize.width
