@@ -78,7 +78,7 @@ fun <T> AppSourceSearchSection(
                 }
             }
             items.isNotEmpty() -> LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
+                contentPadding = PaddingValues(horizontal = SourceSearchSectionResultsHorizontalPadding),
                 horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
             ) {
                 items(items = items, key = itemKey) { item ->
