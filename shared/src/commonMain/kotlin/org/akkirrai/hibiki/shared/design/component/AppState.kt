@@ -73,12 +73,12 @@ fun AppLoadMoreBlock(
     errorMessage: String? = null,
     loadingLabel: String? = null,
 ) {
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)) {
         errorMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
         FilledTonalButton(onClick = onClick, enabled = !isLoading) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                loadingLabel?.let { Text(it, modifier = Modifier.padding(start = 10.dp)) }
+                CircularProgressIndicator(modifier = Modifier.size(UiDimens.LoadMoreBlockSpinnerSize), strokeWidth = UiDimens.LoadMoreSpinnerStrokeWidth)
+                loadingLabel?.let { Text(it, modifier = Modifier.padding(start = UiDimens.LoadMoreBlockLabelStartPadding)) }
             } else Text(label)
         }
     }
