@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppHomeFilterCatalogState(
@@ -21,7 +21,7 @@ fun AppHomeFilterCatalogState(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(260.dp),
+            .height(UiDimens.FilterCatalogStateHeight),
         contentAlignment = Alignment.Center,
     ) {
         if (isLoading) {
@@ -29,7 +29,7 @@ fun AppHomeFilterCatalogState(
         } else {
             Text(
                 text = unavailableLabel,
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(UiDimens.FilterCatalogUnavailablePadding),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
