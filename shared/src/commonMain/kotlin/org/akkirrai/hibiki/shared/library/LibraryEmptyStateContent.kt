@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
@@ -27,12 +26,12 @@ fun AppLibraryEmptyState(
         iconContent = {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .size(LibraryEmptyStateIconContainerSize)
+                    .clip(RoundedCornerShape(LibraryEmptyStateIconCornerRadius))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)),
                 contentAlignment = Alignment.Center,
             ) {
-                iconContent(Modifier.size(30.dp))
+                iconContent(Modifier.size(LibraryEmptyStateIconSize))
             }
         },
     )

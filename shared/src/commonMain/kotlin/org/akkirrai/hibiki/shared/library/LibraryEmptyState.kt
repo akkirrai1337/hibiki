@@ -6,7 +6,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 
 @Composable
@@ -21,9 +20,13 @@ fun LibraryEmptyState(
         message = message,
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 42.dp),
+            .padding(top = LibraryEmptyStateTopPadding),
         titleStyle = MaterialTheme.typography.titleLarge,
-        messageModifier = Modifier.padding(top = 6.dp, start = 28.dp, end = 28.dp),
+        messageModifier = Modifier.padding(
+            top = LibraryEmptyStateMessageTopPadding,
+            start = LibraryEmptyStateMessageHorizontalPadding,
+            end = LibraryEmptyStateMessageHorizontalPadding,
+        ),
         messageMaxLines = 2,
         messageOverflow = TextOverflow.Ellipsis,
         iconSlot = { iconContent(Modifier) },
