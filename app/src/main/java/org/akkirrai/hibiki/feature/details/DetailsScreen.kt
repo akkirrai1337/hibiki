@@ -171,6 +171,7 @@ import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheetItem
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
+import org.akkirrai.hibiki.shared.details.AppDetailsContentList
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
 import org.akkirrai.hibiki.shared.details.DetailsGenresSection
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
@@ -385,12 +386,10 @@ fun DetailsScreen(
             contentColor = MaterialTheme.colorScheme.onBackground,
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                AppDetailsContentList(
                     state = listState,
-                    contentPadding = PaddingValues(
-                        bottom = contentPadding.calculateBottomPadding() + 100.dp,
-                    ),
+                    bottomContentPadding = contentPadding.calculateBottomPadding(),
+                    additionalBottomPadding = 100.dp,
                 ) {
             item {
                 DetailHeroSection(
