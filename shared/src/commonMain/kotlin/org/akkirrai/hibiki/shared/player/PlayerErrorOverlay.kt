@@ -32,15 +32,18 @@ fun AppPlayerErrorOverlay(
     ) {
         Surface(
             modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(20.dp),
+                .padding(horizontal = PlayerErrorOverlayHorizontalPadding)
+                .widthIn(max = PlayerErrorOverlayMaxWidth),
+            shape = RoundedCornerShape(PlayerErrorOverlayCornerRadius),
             color = Color.Black.copy(alpha = 0.84f),
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                modifier = Modifier.padding(
+                    horizontal = PlayerErrorOverlayContentHorizontalPadding,
+                    vertical = PlayerErrorOverlayContentVerticalPadding,
+                ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(PlayerErrorOverlayContentGap),
             ) {
                 Text(
                     text = title,
