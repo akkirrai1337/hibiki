@@ -24,6 +24,14 @@ object UiDimens {
     val LoadMoreErrorVerticalPadding = 12.dp
     val LoadMoreContentGap = 4.dp
     val LoadMoreErrorIconSize = 16.dp
+    val PosterGridItemGap = 12.dp
+    val PosterCardCorner = 18.dp
+    val PosterFooterHeight = 74.dp
+    val PosterFooterHorizontalPadding = 8.dp
+    val PosterFooterVerticalPadding = 7.dp
+    val PosterCardContentHorizontalPadding = 10.dp
+    val PosterCardContentVerticalPadding = 9.dp
+    val PosterCardContentGap = 4.dp
     val SectionSpacing = 20.dp
     val ItemSpacing = 12.dp
     val SmallSpacing = 8.dp

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
@@ -221,7 +222,7 @@ fun LazyListScope.appPosterAnimeListContent(
     ) { row ->
         Row(
             modifier = modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(UiDimens.PosterGridItemGap),
             verticalAlignment = Alignment.Top,
         ) {
             row.forEach { anime ->
@@ -256,7 +257,7 @@ fun AppPosterAnimeCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(UiDimens.PosterCardCorner))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick),
     ) {
@@ -271,7 +272,7 @@ fun AppPosterAnimeCard(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .height(74.dp)
+                        .height(UiDimens.PosterFooterHeight)
                         .background(
                             Brush.verticalGradient(
                                 colorStops = arrayOf(
@@ -281,7 +282,10 @@ fun AppPosterAnimeCard(
                                 ),
                             ),
                         )
-                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                        .padding(
+                            horizontal = UiDimens.PosterFooterHorizontalPadding,
+                            vertical = UiDimens.PosterFooterVerticalPadding,
+                        ),
                     contentAlignment = Alignment.BottomStart,
                 ) {
                     content()
@@ -290,8 +294,11 @@ fun AppPosterAnimeCard(
         }
 
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(
+                horizontal = UiDimens.PosterCardContentHorizontalPadding,
+                vertical = UiDimens.PosterCardContentVerticalPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(UiDimens.PosterCardContentGap),
         ) {
             Text(
                 text = anime.title.preventTrailingOrphanWrap(),
