@@ -159,6 +159,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
+import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
@@ -502,14 +503,6 @@ fun DetailsScreen(
             )
         }
     }
-}
-
-@Composable
-private fun DetailsStatusBarScrim(
-    listState: LazyListState,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim(listState = listState, modifier = modifier)
 }
 
 @Composable
