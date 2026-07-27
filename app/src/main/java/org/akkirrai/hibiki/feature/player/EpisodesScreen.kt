@@ -63,6 +63,7 @@ import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadP
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
+import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -353,15 +354,19 @@ private fun buildEpisodeHeadline(
 private fun buildEpisodeSubtitle(
     downloadState: OfflineEpisodeDownloadState,
 ): String {
-    val downloadLabel = when (downloadState) {
-        OfflineEpisodeDownloadState.NotDownloaded -> ""
-        OfflineEpisodeDownloadState.Queued -> stringResource(R.string.watch_status_queued)
-        is OfflineEpisodeDownloadState.Downloading -> stringResource(R.string.watch_status_downloading, (downloadState.progress * 100).toInt())
-        OfflineEpisodeDownloadState.Paused -> stringResource(R.string.watch_status_paused)
-        OfflineEpisodeDownloadState.Completed -> stringResource(R.string.watch_downloaded)
-        OfflineEpisodeDownloadState.Failed -> stringResource(R.string.watch_status_failed)
-    }
-    return downloadLabel
+    val sharedState = downloadState.toEpisodeDownloadActionState()
+    val downloadingProgress = (sharedState as? EpisodeDownloadActionState.Downloading)?.progress ?: 0f
+    return resolveEpisodeDownloadSubtitle(
+        state = sharedState,
+        queuedLabel = stringResource(R.string.watch_status_queued),
+        downloadingLabel = stringResource(
+            R.string.watch_status_downloading,
+            (downloadingProgress * 100).toInt(),
+        ),
+        pausedLabel = stringResource(R.string.watch_status_paused),
+        downloadedLabel = stringResource(R.string.watch_downloaded),
+        failedLabel = stringResource(R.string.watch_status_failed),
+    )
 }
 
 private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {

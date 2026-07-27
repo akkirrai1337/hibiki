@@ -15,6 +15,22 @@ sealed interface EpisodeDownloadActionState {
     data object Failed : EpisodeDownloadActionState
 }
 
+fun resolveEpisodeDownloadSubtitle(
+    state: EpisodeDownloadActionState,
+    queuedLabel: String,
+    downloadingLabel: String,
+    pausedLabel: String,
+    downloadedLabel: String,
+    failedLabel: String,
+): String = when (state) {
+    EpisodeDownloadActionState.NotDownloaded -> ""
+    EpisodeDownloadActionState.Queued -> queuedLabel
+    is EpisodeDownloadActionState.Downloading -> downloadingLabel
+    EpisodeDownloadActionState.Paused -> pausedLabel
+    EpisodeDownloadActionState.Completed -> downloadedLabel
+    EpisodeDownloadActionState.Failed -> failedLabel
+}
+
 @Composable
 fun AppEpisodeDownloadAction(
     state: EpisodeDownloadActionState,
