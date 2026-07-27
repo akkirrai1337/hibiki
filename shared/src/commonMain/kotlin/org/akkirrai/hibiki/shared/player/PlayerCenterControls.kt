@@ -34,24 +34,24 @@ fun AppPlayerCenterControls(
         exit = fadeOut(animationSpec = tween(90)),
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(28.dp),
+            horizontalArrangement = Arrangement.spacedBy(PlayerCenterControlsGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppPlayerControlButton(
                 enabled = hasPreviousEpisode,
                 onClick = onPreviousEpisode,
-                iconContent = { previousContent(Modifier.size(30.dp)) },
+                iconContent = { previousContent(Modifier.size(PlayerCenterSideIconSize)) },
             )
             AppFilledIconButton(
                 onClick = onTogglePlay,
                 modifier = Modifier.size(PlayerCenterPrimaryButtonSize),
                 style = AppFilledIconButtonStyle.DarkOverlay,
-                content = { playContent(Modifier.size(40.dp)) },
+                content = { playContent(Modifier.size(PlayerCenterPlayIconSize)) },
             )
             AppPlayerControlButton(
                 enabled = hasNextEpisode,
                 onClick = onNextEpisode,
-                iconContent = { nextContent(Modifier.size(30.dp)) },
+                iconContent = { nextContent(Modifier.size(PlayerCenterSideIconSize)) },
             )
         }
     }
