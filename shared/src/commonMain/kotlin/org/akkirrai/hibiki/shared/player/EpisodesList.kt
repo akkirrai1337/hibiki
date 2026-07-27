@@ -19,8 +19,13 @@ fun EpisodesList(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 56.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(
+            start = EpisodesListHorizontalPadding,
+            end = EpisodesListHorizontalPadding,
+            top = EpisodesListTopPadding,
+            bottom = EpisodesListBottomPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(EpisodesListItemGap),
     ) {
         itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
             episodeContent(episode, sourceItemShape(index, episodes.size))

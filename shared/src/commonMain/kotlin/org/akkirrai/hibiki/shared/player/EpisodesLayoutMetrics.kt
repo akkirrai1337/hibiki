@@ -13,3 +13,7 @@ val EpisodeRowTextGap = 6.dp
 val EpisodeDownloadActionSize = 40.dp
 val EpisodeDownloadIconSize = 20.dp
 val EpisodeDownloadProgressStrokeWidth = 2.dp
+val EpisodesListHorizontalPadding = 12.dp
+val EpisodesListTopPadding = 56.dp
+val EpisodesListBottomPadding = 12.dp
+val EpisodesListItemGap = 4.dp
