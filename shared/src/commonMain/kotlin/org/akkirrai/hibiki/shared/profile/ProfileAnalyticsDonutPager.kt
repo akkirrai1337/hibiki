@@ -77,7 +77,7 @@ fun AppProfileAnalyticsDonutPager(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ProfileAnalyticsLegendDonutGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ProfileLegendGrid(
