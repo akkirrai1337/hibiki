@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppLoadMoreState(
@@ -27,23 +27,31 @@ fun AppLoadMoreState(
 ) {
     when {
         isLoading -> Box(
-            modifier = modifier.fillMaxWidth().padding(vertical = 16.dp),
+            modifier = modifier.fillMaxWidth().padding(vertical = UiDimens.LoadMoreLoadingVerticalPadding),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(
+                modifier = Modifier.size(UiDimens.LoadMoreSpinnerSize),
+                strokeWidth = UiDimens.LoadMoreSpinnerStrokeWidth,
+            )
         }
         errorMessage != null -> Box(
             modifier = modifier
                 .fillMaxWidth()
                 .clickable(onClick = onRetry)
-                .padding(vertical = 12.dp),
+                .padding(vertical = UiDimens.LoadMoreErrorVerticalPadding),
             contentAlignment = Alignment.Center,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(UiDimens.LoadMoreContentGap),
             ) {
-                Icon(errorIcon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    errorIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(UiDimens.LoadMoreErrorIconSize),
+                    tint = MaterialTheme.colorScheme.error,
+                )
                 Text(errorMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         }
