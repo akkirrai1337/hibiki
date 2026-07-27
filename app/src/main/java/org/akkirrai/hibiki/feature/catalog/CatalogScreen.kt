@@ -73,13 +73,7 @@ import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.model.CatalogFeature
-import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
-import org.akkirrai.beakokit.model.CatalogCapabilities
-import org.akkirrai.beakokit.model.AnimeSearchFilter
-import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
@@ -102,8 +96,6 @@ import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
@@ -119,7 +111,6 @@ fun CatalogScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val listState = rememberSaveable(selectedSourceId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
@@ -131,10 +122,10 @@ fun CatalogScreen(
     var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    val availableSorts = remember(legacyFilterCatalog?.capabilities) {
-        legacyFilterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+    val availableSorts = remember(state.filterCatalog?.capabilities) {
+        state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
-    val hasCatalogFilters = legacyFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
+    val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
 
     LaunchedEffect(hasCatalogFilters) {
         if (!hasCatalogFilters) isFilterSheetOpen = false
@@ -142,9 +133,13 @@ fun CatalogScreen(
 
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
-            val capabilities = legacyFilterCatalog?.capabilities
-            val fallback = availableSorts.firstOrNull { it.searchSort == capabilities?.fallbackSort }
-                ?: availableSorts.firstOrNull()
+            val capabilities = state.filterCatalog?.capabilities
+            val fallback = when (capabilities?.supportedSorts?.firstOrNull()?.lowercase()) {
+                "relevance" -> availableSorts.firstOrNull { it == CatalogSort.Updated }
+                "popular", "rating" -> availableSorts.firstOrNull { it == CatalogSort.Popular }
+                "alphabetical", "title" -> availableSorts.firstOrNull { it == CatalogSort.Alphabetical }
+                else -> null
+            } ?: availableSorts.firstOrNull()
             fallback?.let(viewModel::selectSort)
         }
     }
@@ -272,8 +267,8 @@ fun CatalogScreen(
     if (isFilterSheetOpen) {
         AnimeSearchFiltersSheet(
             initialFilters = state.filters,
-            filterCatalog = legacyFilterCatalog,
-            isFilterCatalogLoading = state.isLoading && legacyFilterCatalog == null,
+            filterCatalog = state.filterCatalog,
+            isFilterCatalogLoading = state.isLoading && state.filterCatalog == null,
             onApply = viewModel::applyFilters,
             onDismissRequest = { isFilterSheetOpen = false },
         )
@@ -476,44 +471,6 @@ class CatalogViewModel(
     }
 }
 
-private fun AnimeCatalogFilterCatalog.toLegacyCatalog(): AnimeSearchFilterCatalog {
-    val supportedSorts = capabilities.supportedSorts.mapNotNull { alias ->
-        when (alias.lowercase()) {
-            "relevance" -> AnimeSearchSort.RELEVANCE
-            "popular", "rating" -> AnimeSearchSort.RATING
-            "alphabetical", "title" -> AnimeSearchSort.TITLE
-            "year", "updated" -> AnimeSearchSort.YEAR
-            "votes" -> AnimeSearchSort.VOTES
-            "views" -> AnimeSearchSort.VIEWS
-            "comments" -> AnimeSearchSort.COMMENTS
-            else -> null
-        }
-    }.toSet().ifEmpty { setOf(AnimeSearchSort.RELEVANCE) }
-    val supportsUpdated = capabilities.supportedSorts.any { it.equals("updated", ignoreCase = true) }
-    val fallbackSort = supportedSorts.firstOrNull() ?: AnimeSearchSort.RELEVANCE
-
-    return AnimeSearchFilterCatalog(
-        sortOptions = sortOptions.map { SearchFilterOption(it.id, it.title) },
-        typeOptions = typeOptions.map { SearchFilterOption(it.id, it.title) },
-        statusOptions = statusOptions.map { SearchFilterOption(it.id, it.title) },
-        genreOptions = genreOptions.map { SearchFilterOption(it.id, it.title) },
-        capabilities = CatalogCapabilities(
-            supportedSorts = supportedSorts,
-            supportedFilters = capabilities.supportedFilters.mapNotNull { filter ->
-                when (filter) {
-                    SharedAnimeCatalogFilter.TYPE -> AnimeSearchFilter.TYPE
-                    SharedAnimeCatalogFilter.STATUS -> AnimeSearchFilter.STATUS
-                    SharedAnimeCatalogFilter.INCLUDED_GENRES -> AnimeSearchFilter.INCLUDED_GENRES
-                    SharedAnimeCatalogFilter.EXCLUDED_GENRES -> AnimeSearchFilter.EXCLUDED_GENRES
-                    SharedAnimeCatalogFilter.YEAR_RANGE -> AnimeSearchFilter.YEAR_RANGE
-                }
-            }.toSet(),
-            features = if (supportsUpdated) setOf(CatalogFeature.LATEST_RELEASES) else emptySet(),
-            fallbackSort = fallbackSort,
-        ),
-    )
-}
-
 private val CatalogSort.labelRes: Int
     get() = when (this) {
         CatalogSort.Alphabetical -> R.string.catalog_sort_alphabetical
@@ -521,20 +478,22 @@ private val CatalogSort.labelRes: Int
         CatalogSort.Updated -> R.string.catalog_sort_updated
     }
 
-private val CatalogSort.searchSort: AnimeSearchSort
-    get() = when (this) {
-        CatalogSort.Alphabetical -> AnimeSearchSort.TITLE
-        CatalogSort.Popular -> AnimeSearchSort.RATING
-        CatalogSort.Updated -> AnimeSearchSort.RELEVANCE
-    }
-
 private fun availableCatalogSorts(
-    capabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
+    capabilities: org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities,
 ): List<CatalogSort> {
     return CatalogSort.entries.filter { sort ->
         when (sort) {
-            CatalogSort.Updated -> CatalogFeature.LATEST_RELEASES in capabilities.features
-            else -> capabilities.supports(sort.searchSort)
+            CatalogSort.Alphabetical -> capabilities.supportedSorts.any {
+                it.equals("alphabetical", ignoreCase = true) || it.equals("title", ignoreCase = true)
+            }
+            CatalogSort.Popular -> capabilities.supportedSorts.any {
+                it.equals("popular", ignoreCase = true) || it.equals("rating", ignoreCase = true)
+            }
+            CatalogSort.Updated -> capabilities.supportedSorts.any {
+                it.equals("updated", ignoreCase = true) ||
+                    it.equals("latest", ignoreCase = true) ||
+                    it.equals("latest_releases", ignoreCase = true)
+            }
         }
     }
 }
