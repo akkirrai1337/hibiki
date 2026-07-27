@@ -19,7 +19,7 @@ fun SourceEmptyState(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(SourceEmptyStateCornerRadius),
     ) {
         Text(
             text = text,
