@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -57,6 +55,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
+import org.akkirrai.hibiki.shared.source.AppSourceGrid
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
@@ -194,23 +193,20 @@ private fun SourceLanguageSection(
             )
         },
     ) {
-        if (sources.isEmpty()) {
-            SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
-        } else {
-            sources.chunked(2).forEach { rowSources ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowSources.forEach { source ->
-                        SourceGridItem(
-                            source = source,
-                            selected = source.id == selectedSource,
-                            onClick = { onSourceSelected(source) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    if (rowSources.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
+        AppSourceGrid(
+            items = sources,
+            emptyContent = {
+                SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
+            },
+            itemContent = { source, itemModifier ->
+                SourceGridItem(
+                    source = source,
+                    selected = source.id == selectedSource,
+                    onClick = { onSourceSelected(source) },
+                    modifier = itemModifier,
+                )
+            },
+        )
     }
 }
 
