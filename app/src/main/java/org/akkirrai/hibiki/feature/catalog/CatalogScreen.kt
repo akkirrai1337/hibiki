@@ -81,9 +81,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
@@ -107,8 +104,11 @@ import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
+import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
+import org.akkirrai.hibiki.shared.design.component.AppTopScrim
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
