@@ -2,17 +2,12 @@ package org.akkirrai.hibiki.feature.onboarding
 
 import android.os.LocaleList
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -43,7 +38,6 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
-import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepIndicator
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
