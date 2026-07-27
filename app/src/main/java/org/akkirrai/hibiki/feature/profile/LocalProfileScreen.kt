@@ -164,37 +164,26 @@ fun LocalProfileScreen(
             contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
             contentPadding = PaddingValues(top = AnimiteLargePadding / 2),
             content = {
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = AnimiteLargePadding),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (isEditingProfile) {
+                org.akkirrai.hibiki.shared.profile.AppProfileIdentityTabs(
+                    profileName = state.data.profileName,
+                    isEditing = isEditingProfile,
+                    horizontalPadding = AnimiteLargePadding,
+                    tabTitles = LocalProfileTab.entries.map { tab -> stringResource(tab.titleRes) },
+                    nameEditorContent = {
                         ProfileNameEditor(
                             label = stringResource(R.string.local_profile_name),
                             name = editedName,
                             onNameChange = { editedName = it },
                         )
-                    } else {
-                        Text(
-                            text = state.data.profileName,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-                AppProfileTabPager(
-                    tabTitles = LocalProfileTab.entries.map { tab -> stringResource(tab.titleRes) },
-                ) { page ->
-                    when (LocalProfileTab.entries[page]) {
-                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
-                        LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
-                        LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
-                    }
-                }
-            }
+                    },
+                    pageContent = { page ->
+                        when (LocalProfileTab.entries[page]) {
+                            LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
+                            LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
+                            LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
+                        }
+                    },
+                )
             },
         )
     }
