@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 
 @Composable
@@ -61,7 +60,7 @@ fun AppCatalogSortPill(
                 )
                 Text(
                     text = label,
-                    fontSize = 11.sp,
+                    fontSize = CatalogSortPillFontSize,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )

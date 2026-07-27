@@ -17,6 +17,7 @@ val CatalogSortPillHorizontalPadding = 10.dp
 val CatalogSortPillVerticalPadding = 4.dp
 val CatalogSortPillContentGap = 4.dp
 val CatalogSortPillIconSize = 11.dp
+val CatalogSortPillFontSize = 11.sp
 val CatalogSortMenuSelectedIconSize = 16.dp
 val CatalogSortMenuItemZeroIconSize = 0.dp
 val CatalogSortMenuContentGap = 8.dp
