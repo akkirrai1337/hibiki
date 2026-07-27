@@ -63,8 +63,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
 import org.akkirrai.hibiki.shared.player.AppEpisodesStateContent
-import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
-import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
+import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
@@ -141,24 +140,17 @@ fun EpisodesScreen(
         navigationLocked = navigationLocked,
         modifier = modifier,
     ) {
-        AppFilledIconButton(
+        AppEpisodesDownloadToggle(
+            isVisible = downloadControlsVisible,
+            icon = Icons.Outlined.Download,
+            contentDescription = stringResource(R.string.watch_download),
             onClick = { downloadControlsVisible = !downloadControlsVisible },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(end = UiDimens.ScreenPadding, top = 8.dp)
                 .zIndex(1f),
-            style = if (downloadControlsVisible) {
-                AppFilledIconButtonStyle.PrimaryContainer
-            } else {
-                AppFilledIconButtonStyle.Surface
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Download,
-                contentDescription = stringResource(R.string.watch_download),
-            )
-        }
+        )
 
         AppEpisodesStateContent(
             result = state.result,
