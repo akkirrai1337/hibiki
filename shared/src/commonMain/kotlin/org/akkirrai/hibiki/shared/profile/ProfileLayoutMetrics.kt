@@ -34,3 +34,4 @@ val ProfileAnalyticsArrowButtonSize = 32.dp
 val ProfileAnalyticsPagerHeaderGap = 6.dp
 val ProfileLegendItemGap = 6.dp
 val ProfileLegendMarkerSize = 7.dp
+val ProfileLegendLabelMaxWidth = 132.dp
