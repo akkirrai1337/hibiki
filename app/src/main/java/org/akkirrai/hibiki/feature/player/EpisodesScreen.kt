@@ -1,9 +1,7 @@
 package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,8 +17,6 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,6 +65,8 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
 import org.akkirrai.hibiki.shared.player.DownloadStateIcon as WatchDownloadStateIcon
 import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadProgressBadge
+import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
@@ -270,83 +268,62 @@ private fun EpisodeDownloadAction(
     onResumeClick: () -> Unit,
     onRemoveClick: () -> Unit,
 ) {
-    if (!controlsEnabled) {
-        if (state == OfflineEpisodeDownloadState.Completed) {
+    AppEpisodeDownloadAction(
+        state = state.toEpisodeDownloadActionState(),
+        controlsEnabled = controlsEnabled,
+        downloadedContent = {
             WatchDownloadStateIcon(
                 icon = Icons.Outlined.Check,
                 contentDescription = stringResource(R.string.watch_downloaded),
             )
-        }
-        return
-    }
-
-    when (state) {
-        OfflineEpisodeDownloadState.NotDownloaded,
-        OfflineEpisodeDownloadState.Failed -> WatchDownloadIconButton(
-            icon = Icons.Outlined.Download,
-            contentDescription = stringResource(R.string.watch_download),
-            active = false,
-            onClick = onDownloadClick,
-        )
-        OfflineEpisodeDownloadState.Queued -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        },
+        downloadContent = { onClick ->
+            WatchDownloadIconButton(
+                icon = Icons.Outlined.Download,
+                contentDescription = stringResource(R.string.watch_download),
+                active = false,
+                onClick = onClick,
+            )
+        },
+        pauseContent = { onClick ->
             WatchDownloadIconButton(
                 icon = Icons.Outlined.Pause,
                 contentDescription = stringResource(R.string.watch_pause),
                 active = true,
-                onClick = onPauseClick,
+                onClick = onClick,
             )
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Delete,
-                contentDescription = stringResource(R.string.watch_remove_download),
-                active = true,
-                onClick = onRemoveClick,
-            )
-        }
-        is OfflineEpisodeDownloadState.Downloading -> Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            WatchDownloadProgressBadge(progress = state.progress)
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Pause,
-                contentDescription = stringResource(R.string.watch_pause),
-                active = true,
-                onClick = onPauseClick,
-            )
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Delete,
-                contentDescription = stringResource(R.string.watch_remove_download),
-                active = true,
-                onClick = onRemoveClick,
-            )
-        }
-        OfflineEpisodeDownloadState.Paused -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        },
+        resumeContent = { onClick ->
             WatchDownloadIconButton(
                 icon = Icons.Outlined.PlayArrow,
                 contentDescription = stringResource(R.string.watch_resume),
                 active = true,
-                onClick = onResumeClick,
+                onClick = onClick,
             )
+        },
+        removeContent = { onClick ->
             WatchDownloadIconButton(
                 icon = Icons.Outlined.Delete,
                 contentDescription = stringResource(R.string.watch_remove_download),
                 active = true,
-                onClick = onRemoveClick,
+                onClick = onClick,
             )
-        }
-        OfflineEpisodeDownloadState.Completed -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            WatchDownloadStateIcon(
-                icon = Icons.Outlined.Check,
-                contentDescription = stringResource(R.string.watch_downloaded),
-            )
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Delete,
-                contentDescription = stringResource(R.string.watch_remove_download),
-                active = true,
-                onClick = onRemoveClick,
-            )
-        }
-    }
+        },
+        progressContent = { progress -> WatchDownloadProgressBadge(progress = progress) },
+        onDownloadClick = onDownloadClick,
+        onPauseClick = onPauseClick,
+        onResumeClick = onResumeClick,
+        onRemoveClick = onRemoveClick,
+    )
+}
+
+private fun OfflineEpisodeDownloadState.toEpisodeDownloadActionState(): EpisodeDownloadActionState = when (this) {
+    OfflineEpisodeDownloadState.NotDownloaded -> EpisodeDownloadActionState.NotDownloaded
+    OfflineEpisodeDownloadState.Queued -> EpisodeDownloadActionState.Queued
+    is OfflineEpisodeDownloadState.Downloading -> EpisodeDownloadActionState.Downloading(progress)
+    OfflineEpisodeDownloadState.Paused -> EpisodeDownloadActionState.Paused
+    OfflineEpisodeDownloadState.Completed -> EpisodeDownloadActionState.Completed
+    OfflineEpisodeDownloadState.Failed -> EpisodeDownloadActionState.Failed
 }
 
 
