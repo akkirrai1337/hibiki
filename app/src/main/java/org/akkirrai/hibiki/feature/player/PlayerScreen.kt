@@ -188,7 +188,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
-import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentButton
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1122,9 +1122,12 @@ fun PlayerScreen(
                 enter = fadeIn(animationSpec = tween(140)),
                 exit = fadeOut(animationSpec = tween(140)),
             ) {
-                PlayerSkipSegmentOverlay(
+                AppPlayerSkipSegmentOverlay(
                     countdownSeconds = skipCountdownSeconds,
+                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
                     autoSkipEnabled = autoSkipSegments,
+                    skipLabel = stringResource(R.string.watch_player_skip),
+                    watchLabel = stringResource(R.string.watch_player_watch),
                     onSkipClick = {
                         skipToSegmentEnd(skipSegment)
                     },
@@ -1723,34 +1726,6 @@ private fun PlayerOverlayHandle(
                 .height(4.dp)
                 .clip(RoundedCornerShape(999.dp))
                 .background(Color.White.copy(alpha = 0.28f))
-        )
-    }
-}
-
-@Composable
-private fun PlayerSkipSegmentOverlay(
-    countdownSeconds: Int,
-    autoSkipEnabled: Boolean,
-    onSkipClick: () -> Unit,
-    onWatchClick: () -> Unit,
-) {
-    val skipLabel = stringResource(R.string.watch_player_skip)
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (autoSkipEnabled) {
-                AppPlayerSkipSegmentButton(
-                text = stringResource(R.string.watch_player_watch),
-                onClick = onWatchClick,
-                primary = false,
-            )
-        }
-        AppPlayerSkipSegmentButton(
-            text = "$skipLabel (${countdownSeconds.coerceIn(0, SKIP_SEGMENT_COUNTDOWN_SECONDS)})",
-            onClick = onSkipClick,
-            primary = true,
         )
     }
 }
