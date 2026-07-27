@@ -24,7 +24,7 @@ fun AppSourceContentList(
             start = SourceContentListHorizontalPadding,
             top = SourceContentListTopPadding,
             end = SourceContentListHorizontalPadding,
-            bottom = bottomContentPadding + 32.dp,
+            bottom = bottomContentPadding + SourceContentListBottomExtraPadding,
         ),
         verticalArrangement = Arrangement.spacedBy(SourceContentListVerticalSpacing),
     ) {
