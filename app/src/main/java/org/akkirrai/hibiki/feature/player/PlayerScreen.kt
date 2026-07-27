@@ -188,6 +188,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1740,40 +1741,16 @@ private fun PlayerSkipSegmentOverlay(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (autoSkipEnabled) {
-                PlayerSkipSegmentButton(
+                AppPlayerSkipSegmentButton(
                 text = stringResource(R.string.watch_player_watch),
                 onClick = onWatchClick,
                 primary = false,
             )
         }
-        PlayerSkipSegmentButton(
+        AppPlayerSkipSegmentButton(
             text = "$skipLabel (${countdownSeconds.coerceIn(0, SKIP_SEGMENT_COUNTDOWN_SECONDS)})",
             onClick = onSkipClick,
             primary = true,
-        )
-    }
-}
-
-@Composable
-private fun PlayerSkipSegmentButton(
-    text: String,
-    onClick: () -> Unit,
-    primary: Boolean,
-) {
-    Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
-        color = if (primary) Color.White.copy(alpha = 0.92f) else Color.Black.copy(alpha = 0.58f),
-        contentColor = if (primary) Color.Black else Color.White,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
         )
     }
 }
