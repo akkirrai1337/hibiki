@@ -91,10 +91,10 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
+import org.akkirrai.hibiki.shared.catalog.appCatalogPaginationStates
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
@@ -208,27 +208,12 @@ fun CatalogScreen(
                         onItemVisible = viewModel::enrichDescription,
                     )
 
-                    if (state.isLoadingMore) {
-                        item(key = "catalog_loading_more") {
-                            AppLoadMoreState(
-                                isLoading = true,
-                                errorMessage = null,
-                                errorIcon = Icons.Outlined.WarningAmber,
-                                onRetry = viewModel::loadMore,
-                            )
-                        }
-                    }
-
-                    if (state.isLoadingMore && state.error != null) {
-                        item(key = "catalog_load_more_error") {
-                            AppLoadMoreState(
-                                isLoading = false,
-                                errorMessage = state.error,
-                                errorIcon = Icons.Outlined.WarningAmber,
-                                onRetry = viewModel::loadMore,
-                            )
-                        }
-                    }
+                    appCatalogPaginationStates(
+                        isLoadingMore = state.isLoadingMore,
+                        errorMessage = state.error,
+                        errorIcon = Icons.Outlined.WarningAmber,
+                        onRetry = viewModel::loadMore,
+                    )
                     },
                 )
             },
