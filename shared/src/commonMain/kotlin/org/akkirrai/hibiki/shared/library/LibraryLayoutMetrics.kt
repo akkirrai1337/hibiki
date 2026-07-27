@@ -44,3 +44,4 @@ val LibraryCategoryChipVerticalPadding = 8.dp
 val LibraryCategoryChipContentGap = 7.dp
 val LibraryCategoryChipIconSize = 16.dp
 val LibraryHeaderContentGap = 10.dp
+val LibraryPosterSurfaceCornerRadius = 16.dp
