@@ -93,6 +93,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
+import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
@@ -354,7 +355,6 @@ private fun CatalogSortControl(
         modifier = modifier,
     )
 }
-
 @Composable
 private fun CatalogSortOrderIcon(
     atEnd: Boolean,
@@ -473,23 +473,3 @@ private val CatalogSort.labelRes: Int
         CatalogSort.Popular -> R.string.catalog_sort_popular
         CatalogSort.Updated -> R.string.catalog_sort_updated
     }
-
-private fun availableCatalogSorts(
-    capabilities: org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities,
-): List<CatalogSort> {
-    return CatalogSort.entries.filter { sort ->
-        when (sort) {
-            CatalogSort.Alphabetical -> capabilities.supportedSorts.any {
-                it.equals("alphabetical", ignoreCase = true) || it.equals("title", ignoreCase = true)
-            }
-            CatalogSort.Popular -> capabilities.supportedSorts.any {
-                it.equals("popular", ignoreCase = true) || it.equals("rating", ignoreCase = true)
-            }
-            CatalogSort.Updated -> capabilities.supportedSorts.any {
-                it.equals("updated", ignoreCase = true) ||
-                    it.equals("latest", ignoreCase = true) ||
-                    it.equals("latest_releases", ignoreCase = true)
-            }
-        }
-    }
-}
