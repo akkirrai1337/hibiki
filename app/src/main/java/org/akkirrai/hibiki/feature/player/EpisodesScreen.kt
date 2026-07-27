@@ -272,7 +272,10 @@ private fun EpisodeDownloadAction(
 ) {
     if (!controlsEnabled) {
         if (state == OfflineEpisodeDownloadState.Completed) {
-            PassiveDownloadStateIcon()
+            WatchDownloadStateIcon(
+                icon = Icons.Outlined.Check,
+                contentDescription = stringResource(R.string.watch_downloaded),
+            )
         }
         return
     }
@@ -346,13 +349,6 @@ private fun EpisodeDownloadAction(
     }
 }
 
-@Composable
-private fun PassiveDownloadStateIcon() {
-    WatchDownloadStateIcon(
-        icon = Icons.Outlined.Check,
-        contentDescription = stringResource(R.string.watch_downloaded),
-    )
-}
 
 
 @Composable
