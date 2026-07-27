@@ -120,6 +120,7 @@ import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
+import org.akkirrai.hibiki.shared.home.HomeErrorState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -181,9 +182,26 @@ fun HomeScreen(
 
     if (errorMessage != null && !hasContent && !isSearchActive) {
         HomeErrorState(
+            title = stringResource(R.string.home_error_title),
             message = errorMessage,
+            retryLabel = stringResource(R.string.search_retry),
             onRetry = { viewModel.dispatch(HomeAction.Refresh) },
-            modifier = modifier
+            modifier = modifier,
+            iconContent = {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WarningAmber,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            },
         )
         return
     }
@@ -424,36 +442,6 @@ private fun HomeLoadingState(
     modifier: Modifier = Modifier,
 ) {
     AppCenteredLoading(modifier = modifier)
-}
-
-@Composable
-private fun HomeErrorState(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.design.component.AppErrorState(
-        title = stringResource(R.string.home_error_title),
-        message = message,
-        retryLabel = stringResource(R.string.search_retry),
-        onRetry = onRetry,
-        modifier = modifier,
-        iconContent = {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.WarningAmber,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        }
-    )
 }
 
 @Composable

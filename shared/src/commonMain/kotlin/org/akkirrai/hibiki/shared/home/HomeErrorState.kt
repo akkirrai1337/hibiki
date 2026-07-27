@@ -1,0 +1,24 @@
+package org.akkirrai.hibiki.shared.home
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.shared.design.component.AppErrorState
+
+@Composable
+fun HomeErrorState(
+    title: String,
+    message: String,
+    retryLabel: String,
+    onRetry: () -> Unit,
+    iconContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppErrorState(
+        title = title,
+        message = message,
+        retryLabel = retryLabel,
+        onRetry = onRetry,
+        modifier = modifier,
+        iconContent = iconContent,
+    )
+}
