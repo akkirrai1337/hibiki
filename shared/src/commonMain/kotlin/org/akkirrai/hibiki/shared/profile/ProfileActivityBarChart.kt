@@ -46,7 +46,7 @@ fun ProfileActivityBarChart(
                 Box(Modifier.height(ProfileActivityBarChartPlotHeight).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(day.episodeCount.toString(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(ProfileActivityBarChartValueBarGap))
                         Box(Modifier.width(18.dp).height(barHeight).clip(RoundedCornerShape(7.dp)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
                     }
                 }
