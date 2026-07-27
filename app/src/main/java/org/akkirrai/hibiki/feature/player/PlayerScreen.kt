@@ -50,13 +50,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -174,10 +172,8 @@ import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
-import org.akkirrai.hibiki.shared.player.playerSettingsPageTransition
 import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntryRow
-import org.akkirrai.hibiki.shared.player.PlayerSettingsHeader as SharedPlayerSettingsHeader
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayerSettingsChoiceRow
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
@@ -191,6 +187,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
 import androidx.compose.foundation.layout.offset
 
@@ -1739,60 +1736,21 @@ private fun PlayerSettingsSheet(
         onBack()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-    ) {
-        AnimatedContent(
-            targetState = destination,
-            transitionSpec = { playerSettingsPageTransition() },
-            label = "PlayerSettingsPage",
-        ) { targetDestination ->
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (targetDestination != PlayerSettingsDestination.Root) {
-                    PlayerSettingsHeader(
-                        title = stringResource(targetDestination.titleResId),
-                        showBack = true,
-                        onBack = onBack,
-                    )
-                }
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = PLAYER_SETTINGS_PANEL_MAX_HEIGHT),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        bottom = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    userScrollEnabled = true,
-                ) {
-                    playerSettingsItems(
-                        destination = targetDestination,
-                        rootEntries = rootEntries,
-                        speedValues = speedValues,
-                        voiceoverValues = voiceoverValues,
-                        playerValues = playerValues,
-                        qualityValues = qualityValues,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerSettingsHeader(
-    title: String,
-    showBack: Boolean,
-    onBack: () -> Unit,
-) {
-    SharedPlayerSettingsHeader(
-        title = title,
-        showBack = showBack,
+    AppPlayerSettingsSheet(
+        destination = destination,
+        title = { targetDestination -> stringResource(targetDestination.titleResId) },
         onBack = onBack,
         backContent = { WatchBackButton(onBackClick = onBack) },
+        content = { targetDestination ->
+            playerSettingsItems(
+                destination = targetDestination,
+                rootEntries = rootEntries,
+                speedValues = speedValues,
+                voiceoverValues = voiceoverValues,
+                playerValues = playerValues,
+                qualityValues = qualityValues,
+            )
+        },
     )
 }
 
