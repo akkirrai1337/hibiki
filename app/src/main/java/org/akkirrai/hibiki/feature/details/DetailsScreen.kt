@@ -168,6 +168,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheetItem
+import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -812,36 +813,7 @@ private fun TitleDetailsSheet(
         modifier = Modifier.fillMaxHeight(),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .fillMaxSize(),
-        ) {
-            Text(
-                text = title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                ),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
-                    .navigationBarsPadding(),
-            )
-        }
+        AppDetailsTitleSheetContent(title = title, description = description)
     }
 }
 
