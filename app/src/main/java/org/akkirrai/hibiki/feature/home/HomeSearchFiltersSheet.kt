@@ -82,6 +82,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogGenreFilterSection
+import org.akkirrai.hibiki.shared.catalog.AppCatalogStatusFilterSection
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -283,17 +284,13 @@ fun AnimeSearchFiltersSheet(
                     }
 
                     if (capabilities.supports(AnimeCatalogFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
-                        AppSingleListThreeStateFilter(
+                        AppCatalogStatusFilterSection(
                             title = stringResource(R.string.search_filters_status),
                             options = catalog.statusOptions,
                             included = includedStatuses,
-                            excluded = emptySet(),
-                            onChange = { included, _ -> includedStatuses = included },
-                            id = { it.id },
-                            text = optionText,
+                            onChange = { includedStatuses = it },
+                            optionText = optionText,
                             optionIcon = { statusIcon(it.id) },
-                            allowExclusion = false,
-                            optionSortKey = { it.title },
                             arrowContent = { modifier ->
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
