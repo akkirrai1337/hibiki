@@ -12,14 +12,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -101,6 +99,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
+import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import kotlinx.coroutines.launch
 
 @Composable
@@ -137,16 +136,10 @@ fun SettingsScreen(
         PerfLogger.mark("SettingsScreen composed")
     }
 
-    LazyColumn(
+    AppSettingsContentList(
+        bottomContentPadding = bottomContentPadding,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            top = 24.dp,
-            end = 18.dp,
-            bottom = bottomContentPadding,
-        ),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
+        content = {
         item(key = SettingsSection.Appearance.key) {
             AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
                 AppSettingsItems(count = 2) { index, shape ->
@@ -308,7 +301,8 @@ fun SettingsScreen(
                 )
             }
         }
-    }
+        },
+    )
 
     if (isDiscordAuthDialogOpen) {
         DiscordAuthDialog(
