@@ -19,7 +19,7 @@ fun ProfileRecentPosterFrame(content: @Composable () -> Unit) {
         modifier = Modifier
             .width(ProfileRecentPosterFrameWidth)
             .height(ProfileRecentPosterFrameHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(ProfileRecentPosterFrameCornerRadius))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
         contentAlignment = Alignment.Center,
     ) {
