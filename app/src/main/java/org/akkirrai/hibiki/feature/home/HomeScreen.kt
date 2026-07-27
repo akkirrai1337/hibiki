@@ -93,7 +93,6 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
-import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -113,6 +112,7 @@ import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
 import org.akkirrai.hibiki.shared.home.HomeErrorState
+import org.akkirrai.hibiki.shared.home.AppHomePoster
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -364,10 +364,19 @@ private fun LazyListScope.homeFeedContent(
                 sectionIcon = Icons.Outlined.History,
                 onClick = { onAnimeClick(anime) },
                 imageContent = { currentAnime ->
-                    AnimePoster(
-                        anime = currentAnime,
+                    AppHomePoster(
                         modifier = Modifier.fillMaxSize(),
-                    )
+                    ) {
+                        PosterImage(
+                            primaryUrl = currentAnime.posterUrl,
+                            fallbackUrl = currentAnime.posterFallbackUrl,
+                            contentDescription = currentAnime.title,
+                            modifier = Modifier.fillMaxSize(),
+                            placeholder = {
+                                AppImagePlaceholder(icon = Icons.Outlined.Image)
+                            },
+                        )
+                    }
                 },
                 trailingContent = { currentAnime ->
                     AnimeSourceBadge(titleId = currentAnime.id)
@@ -434,27 +443,6 @@ private fun HomeLoadingState(
     modifier: Modifier = Modifier,
 ) {
     AppCenteredLoading(modifier = modifier)
-}
-
-@Composable
-private fun AnimePoster(
-    anime: Anime,
-    modifier: Modifier = Modifier
-) {
-    AppTonalSurface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-    ) {
-        PosterImage(
-            primaryUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            modifier = Modifier.fillMaxSize(),
-            placeholder = {
-                AppImagePlaceholder(icon = Icons.Outlined.Image)
-            }
-        )
-    }
 }
 
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
