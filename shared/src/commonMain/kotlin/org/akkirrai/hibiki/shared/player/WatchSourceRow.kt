@@ -34,8 +34,8 @@ fun WatchSourceRow(
         shape = shape,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 15.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = WatchSourceRowVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(WatchSourceRowContentGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
