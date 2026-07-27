@@ -41,3 +41,4 @@ val ProfileAnalyticsPageHorizontalPadding = 4.dp
 val ProfileAnalyticsLegendDonutGap = 16.dp
 val ProfileAnalyticsDonutSize = 152.dp
 val ProfileSegmentDonutPadding = 10.dp
+val ProfileSegmentDonutStrokeWidth = 18.dp
