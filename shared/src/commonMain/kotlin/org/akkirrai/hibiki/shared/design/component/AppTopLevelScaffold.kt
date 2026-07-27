@@ -12,7 +12,7 @@ import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 fun AppTopLevelScaffold(
     currentDestination: AppTopLevelDestination,
     onDestinationClick: (AppTopLevelDestination) -> Unit,
-    iconContent: @Composable (AppTopLevelDestination) -> Unit,
+    iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit,
     label: @Composable (AppTopLevelDestination) -> String,
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     modifier: Modifier = Modifier,

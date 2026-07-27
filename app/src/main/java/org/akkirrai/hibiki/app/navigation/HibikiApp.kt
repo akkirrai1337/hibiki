@@ -498,12 +498,12 @@ private fun TopLevelScreenContainer(
     AppTopLevelScaffold(
         currentDestination = destination.toSharedDestination(),
         onDestinationClick = { onDestinationClick(it.toAndroidDestination()) },
-        iconContent = { sharedDestination ->
+        iconContent = { sharedDestination, iconModifier ->
             val androidDestination = sharedDestination.toAndroidDestination()
             Icon(
                 imageVector = androidDestination.icon,
                 contentDescription = stringResource(androidDestination.labelRes),
-                modifier = Modifier.size(22.dp),
+                modifier = iconModifier,
             )
         },
         label = { sharedDestination ->

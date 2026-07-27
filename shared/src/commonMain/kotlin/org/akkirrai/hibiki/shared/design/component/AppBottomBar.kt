@@ -43,7 +43,7 @@ val AppBottomBarContentExtraPadding = 12.dp
 fun AppBottomBar(
     currentDestination: AppTopLevelDestination,
     onDestinationClick: (AppTopLevelDestination) -> Unit,
-    iconContent: @Composable (AppTopLevelDestination) -> Unit,
+    iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit,
     label: @Composable (AppTopLevelDestination) -> String = { appText(it.labelKey) },
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     modifier: Modifier = Modifier,
@@ -92,7 +92,7 @@ fun AppBottomBar(
                             selected = currentDestination == destination,
                             onClick = { onDestinationClick(destination) },
                             activePillWidth = activePillWidth,
-                            iconContent = { iconContent(destination) },
+                            iconContent = { iconContent(destination, Modifier.size(22.dp)) },
                             label = label(destination),
                             modifier = Modifier.weight(1f),
                         )
