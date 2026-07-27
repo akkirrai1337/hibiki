@@ -13,7 +13,7 @@ fun AppPlayerSeekOverlay(
     AppPlayerFeedbackOverlay(
         visible = visible,
         label = label,
-        horizontalPadding = 22.dp,
+        horizontalPadding = PlayerSeekOverlayHorizontalPadding,
         modifier = modifier,
     )
 }

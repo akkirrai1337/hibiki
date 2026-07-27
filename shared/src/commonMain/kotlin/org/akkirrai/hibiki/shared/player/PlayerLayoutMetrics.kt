@@ -22,6 +22,7 @@ val PlayerUnlockButtonContentGap = 9.dp
 val PlayerSkipSegmentOverlayGap = 8.dp
 val PlayerSkipSegmentButtonHorizontalPadding = 16.dp
 val PlayerSkipSegmentButtonVerticalPadding = 10.dp
+val PlayerSeekOverlayHorizontalPadding = 22.dp
 val PlayerBottomOverlayHorizontalPadding = 24.dp
 val PlayerBottomOverlayTopPadding = 8.dp
 val PlayerBottomOverlayBottomPadding = 18.dp
