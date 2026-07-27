@@ -163,6 +163,7 @@ import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
+import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -673,7 +674,10 @@ private fun DetailHeroTextContent(
                 )
             }
             if (description.isNotBlank()) {
-                NestedScrollableContent(modifier = Modifier.weight(1f)) { contentModifier ->
+                DetailsNestedScrollableContent(
+                    modifier = Modifier.weight(1f),
+                    gradientColor = MaterialTheme.colorScheme.background,
+                ) { contentModifier ->
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium,
@@ -697,21 +701,6 @@ private fun DetailHeroTextContent(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-private fun NestedScrollableContent(
-    modifier: Modifier = Modifier,
-    gradientSize: Dp = 8.dp,
-    gradientColor: Color = MaterialTheme.colorScheme.background,
-    content: @Composable (Modifier) -> Unit,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent(
-        modifier = modifier,
-        gradientSize = gradientSize,
-        gradientColor = gradientColor,
-        content = content,
-    )
 }
 
 @Composable
