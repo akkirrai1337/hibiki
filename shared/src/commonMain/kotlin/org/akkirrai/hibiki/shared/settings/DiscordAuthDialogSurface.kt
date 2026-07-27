@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
@@ -26,14 +25,14 @@ fun AppDiscordAuthDialogSurface(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(28.dp),
+                .padding(horizontal = SettingsDiscordDialogHorizontalPadding),
+            shape = RoundedCornerShape(SettingsDiscordDialogCornerRadius),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
+            tonalElevation = SettingsDiscordDialogElevation,
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
+                modifier = Modifier.padding(SettingsDiscordDialogPadding),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(SettingsDiscordDialogContentGap),
             ) {
                 headerContent()
                 tokenContent()

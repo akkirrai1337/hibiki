@@ -9,7 +9,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppDiscordAuthDialogActions(
@@ -22,13 +21,13 @@ fun AppDiscordAuthDialogActions(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(SettingsDiscordActionsGap),
     ) {
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp),
+                .height(SettingsDiscordActionHeight),
             enabled = cancelEnabled,
         ) {
             Text(cancelLabel)
@@ -37,7 +36,7 @@ fun AppDiscordAuthDialogActions(
             onClick = onApply,
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp),
+                .height(SettingsDiscordActionHeight),
             enabled = applyEnabled,
         ) {
             Text(applyLabel)

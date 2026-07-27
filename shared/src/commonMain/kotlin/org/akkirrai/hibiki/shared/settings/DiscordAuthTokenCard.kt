@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppDiscordAuthTokenCard(
@@ -36,12 +35,12 @@ fun AppDiscordAuthTokenCard(
     onBrowserSignIn: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(SettingsDiscordTokenCardCornerRadius),
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(SettingsDiscordTokenCardPadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsDiscordTokenCardContentGap),
         ) {
             OutlinedTextField(
                 value = manualToken,
@@ -57,14 +56,14 @@ fun AppDiscordAuthTokenCard(
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
                 enabled = !isChecking,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(SettingsDiscordTokenFieldCornerRadius),
             )
             if (isSignedIn) {
                 OutlinedButton(
                     onClick = onDisconnect,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(SettingsDiscordActionHeight),
                     enabled = !isChecking,
                 ) {
                     Text(disconnectLabel)
@@ -74,17 +73,17 @@ fun AppDiscordAuthTokenCard(
                     onClick = onBrowserSignIn,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(SettingsDiscordActionHeight),
                     enabled = !isChecking,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(SettingsDiscordBrowserIconSize),
                     )
                     Text(
                         text = browserSignInLabel,
-                        modifier = Modifier.padding(start = 8.dp),
+                        modifier = Modifier.padding(start = SettingsDiscordBrowserLabelStartPadding),
                     )
                 }
             }
