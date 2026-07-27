@@ -20,7 +20,7 @@ fun AppPlaylistBottomSheet(
         PlaylistEpisodesList(
             currentEpisodeId = currentEpisodeId,
             episodes = episodes,
-            maxHeight = 360.dp,
+            maxHeight = PlaylistBottomSheetMaxHeight,
             horizontalPadding = UiDimens.ScreenPadding,
             headline = headline,
             onEpisodeClick = onEpisodeClick,

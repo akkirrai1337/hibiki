@@ -11,3 +11,7 @@ val PlaylistEpisodeRowHorizontalPadding = 18.dp
 val PlaylistEpisodeRowVerticalPadding = 14.dp
 val PlaylistEpisodeRowCornerRadius = 18.dp
 val PlaylistEpisodeRowSubtitleTopPadding = 4.dp
+val PlaylistEpisodesListTopPadding = 4.dp
+val PlaylistEpisodesListBottomPadding = 16.dp
+val PlaylistEpisodesListItemGap = 8.dp
+val PlaylistBottomSheetMaxHeight = 360.dp

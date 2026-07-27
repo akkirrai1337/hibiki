@@ -25,8 +25,13 @@ fun PlaylistEpisodesList(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxHeight),
-        contentPadding = PaddingValues(start = horizontalPadding, top = 4.dp, end = horizontalPadding, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(
+            start = horizontalPadding,
+            top = PlaylistEpisodesListTopPadding,
+            end = horizontalPadding,
+            bottom = PlaylistEpisodesListBottomPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(PlaylistEpisodesListItemGap),
     ) {
         items(episodes, key = WatchEpisode::id) { episode ->
             PlaylistEpisodeRow(
