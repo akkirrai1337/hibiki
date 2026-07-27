@@ -36,7 +36,7 @@ fun SourceLanguageSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(SourceLanguageSectionCornerRadius))
                 .clickable(onClick = onExpandedChange)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
