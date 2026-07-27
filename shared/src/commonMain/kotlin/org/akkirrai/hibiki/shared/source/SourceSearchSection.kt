@@ -50,7 +50,7 @@ fun <T> AppSourceSearchSection(
                     .size(SourceSearchSectionIconSize)
                     .clip(CircleShape),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(SourceSearchSectionIconTextGap))
             Text(
                 text = sourceName,
                 style = MaterialTheme.typography.titleMedium,
