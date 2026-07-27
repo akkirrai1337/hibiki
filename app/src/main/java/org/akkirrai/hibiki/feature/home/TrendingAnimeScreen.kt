@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,7 +55,7 @@ import org.akkirrai.hibiki.shared.home.TrendingPresenter
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
-import org.akkirrai.hibiki.core.design.component.AppFloatingPill
+import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -189,52 +186,21 @@ private fun TrendingFilterButton(
     onFilterClick: (TrendingFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val baseContext = LocalContext.current
     val appLanguage = LocalAppLanguage.current
     val localizedContext = remember(baseContext, appLanguage) {
         baseContext.withLanguage(appLanguage)
     }
 
-    Box(modifier = modifier) {
-        AppFloatingPill(
-            modifier = Modifier
-                .clickable { expanded = true },
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = localizedContext.getString(selectedFilter.titleResId),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            TrendingFilter.entries.forEach { filter ->
-                DropdownMenuItem(
-                    text = { Text(text = localizedContext.getString(filter.titleResId)) },
-                    onClick = {
-                        expanded = false
-                        onFilterClick(filter)
-                    },
-                )
-            }
-        }
-    }
+    AppTrendingFilterButton(
+        selectedFilter = selectedFilter,
+        filters = TrendingFilter.entries,
+        selectedLabel = localizedContext.getString(selectedFilter.titleResId),
+        label = { filter -> localizedContext.getString(filter.titleResId) },
+        filterIcon = Icons.Outlined.FilterList,
+        onFilterSelected = onFilterClick,
+        modifier = modifier,
+    )
 }
 
 @Composable
