@@ -30,8 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -58,7 +57,7 @@ fun <T> AppSingleListThreeStateFilter(
         onLongClick = { onChange(emptySet(), emptySet()) },
         arrowContent = arrowContent,
     ) {
-        Column(modifier = Modifier.padding(top = 16.dp)) {
+        Column(modifier = Modifier.padding(top = UiDimens.FilterContentTopPadding)) {
             val sortedOptions = if (optionSortKey == null) {
                 options
             } else {
@@ -88,16 +87,16 @@ fun <T> AppSingleListThreeStateFilter(
                 } else {
                     groupedOptions.keys
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterGroupGap)) {
                     groupedOptions
                         .filterKeys { it in visibleGroupKeys }
                         .forEach { (letter, groupOptions) ->
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterGroupContentGap)) {
                                 Text(
                                     text = letter,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
+                                    fontSize = UiDimens.ThreeStateFilterGroupLabelFontSize,
                                 )
                                 AppSingleListThreeStateFlowRow(
                                     options = groupOptions,
@@ -137,9 +136,9 @@ fun <T> AppSingleListThreeStateFilter(
             ) {
                 IconButton(
                     onClick = { showAllOptions = !showAllOptions },
-                    modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp),
+                    modifier = Modifier.align(Alignment.CenterHorizontally).size(UiDimens.ThreeStateFilterExpandButtonSize),
                 ) {
-                    expandIconContent(showAllOptions, Modifier.size(18.dp))
+                    expandIconContent(showAllOptions, Modifier.size(UiDimens.ThreeStateFilterExpandIconSize))
                 }
             }
         }
@@ -163,8 +162,8 @@ private fun <T> AppSingleListThreeStateFlowRow(
     val excludedColor = if (isDarkTheme) Color(0xFFFF9999) else Color(0xFFC62828)
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterOptionGap),
+        verticalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterOptionGap),
     ) {
         options.forEach { option ->
             val optionId = id(option)
@@ -209,18 +208,18 @@ private fun AppSingleListFilterChip(
             .clip(CircleShape)
             .combinedClickable(onClick = onClick, onLongClick = {})
             .background(animatedColor.copy(alpha = 0.2f), CircleShape)
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = UiDimens.ThreeStateFilterChipHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterChipContentGap),
     ) {
         icon?.let {
-            Icon(it, null, tint = animatedColor, modifier = Modifier.size(15.dp))
+            Icon(it, null, tint = animatedColor, modifier = Modifier.size(UiDimens.ThreeStateFilterChipIconSize))
         }
         AnimatedContent(targetState = text, label = "filter_chip_text") { currentText ->
             Text(
                 text = currentText,
                 color = animatedColor,
-                fontSize = 11.sp,
+                fontSize = UiDimens.ThreeStateFilterChipFontSize,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
             )

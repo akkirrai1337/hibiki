@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.design
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Shared layout tokens. They deliberately do not depend on either platform. */
 object UiDimens {
@@ -20,6 +21,16 @@ object UiDimens {
     val ConnectedFilterItemHorizontalPadding = 8.dp
     val ConnectedFilterItemVerticalPadding = 12.dp
     val ConnectedFilterIconSize = 14.dp
+    val ThreeStateFilterGroupGap = 10.dp
+    val ThreeStateFilterGroupContentGap = 4.dp
+    val ThreeStateFilterGroupLabelFontSize = 14.sp
+    val ThreeStateFilterExpandButtonSize = 28.dp
+    val ThreeStateFilterExpandIconSize = 18.dp
+    val ThreeStateFilterOptionGap = 8.dp
+    val ThreeStateFilterChipHorizontalPadding = 8.dp
+    val ThreeStateFilterChipContentGap = 4.dp
+    val ThreeStateFilterChipIconSize = 15.dp
+    val ThreeStateFilterChipFontSize = 11.sp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp
