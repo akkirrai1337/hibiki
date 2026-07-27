@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.feature.catalog
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -8,11 +7,8 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,10 +28,8 @@ import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,6 +90,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -428,64 +422,20 @@ private fun CatalogSortControl(
                     .align(Alignment.CenterHorizontally),
             )
             availableSorts.forEach { sort ->
-                val isSelected = sort == selectedSort
-                val backgroundColor by animateColorAsState(
-                    targetValue = if (isSelected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-                    } else {
-                        Color.Transparent
-                    },
-                    label = "catalog_sort_background",
-                )
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onBackground
-                    },
-                    label = "catalog_sort_text",
-                )
-                val iconSize by animateDpAsState(
-                    targetValue = if (isSelected) 16.dp else 0.dp,
-                    label = "catalog_sort_icon",
-                )
-
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = sort.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(iconSize),
-                                )
-                                Text(sortLabels.getValue(sort))
-                            }
-                            if (isSelected) {
-                                CatalogSortOrderIcon(
-                                    atEnd = expanded,
-                                    modifier = Modifier.size(iconSize),
-                                )
-                            }
-                        }
-                    },
-                    colors = MenuDefaults.itemColors(textColor = textColor),
+                AppCatalogSortMenuItem(
+                    icon = sort.icon,
+                    label = sortLabels.getValue(sort),
+                    selected = sort == selectedSort,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
                         onSortSelected(sort)
                     },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(backgroundColor),
+                    orderContent = { orderModifier ->
+                        CatalogSortOrderIcon(
+                            atEnd = expanded,
+                            modifier = orderModifier,
+                        )
+                    },
                 )
             }
         }
