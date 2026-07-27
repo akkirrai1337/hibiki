@@ -16,7 +16,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
 
@@ -38,20 +37,20 @@ fun AppLibraryCategorySheet(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(28.dp),
+                .widthIn(max = LibraryCategorySheetMaxWidth),
+            shape = RoundedCornerShape(LibraryCategorySheetCornerRadius),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
+            tonalElevation = LibraryCategorySheetElevation,
         ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 560.dp)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .heightIn(max = LibraryCategorySheetMaxHeight)
+                    .padding(LibraryCategorySheetContentPadding),
+                verticalArrangement = Arrangement.spacedBy(LibraryCategorySheetSectionGap),
             ) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(LibraryCategorySheetHeaderGap)) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleLarge,
@@ -64,7 +63,7 @@ fun AppLibraryCategorySheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         HorizontalDivider(
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = LibraryCategorySheetDividerTopPadding),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
                         )
                     }
@@ -89,7 +88,7 @@ fun AppLibraryCategorySheet(
                             text = savedNote,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = LibraryCategorySheetSavedNoteTopPadding),
                         )
                     }
                 } else if (selectedCategory != null) {
@@ -98,8 +97,8 @@ fun AppLibraryCategorySheet(
                             onClick = onRemoveClick,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            shape = RoundedCornerShape(16.dp),
+                                .padding(top = LibraryCategorySheetRemoveTopPadding),
+                            shape = RoundedCornerShape(LibraryCategorySheetRemoveCornerRadius),
                         ) {
                             Text(removeAction)
                         }

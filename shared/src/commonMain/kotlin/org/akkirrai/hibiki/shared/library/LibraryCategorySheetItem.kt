@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppLibraryCategorySheetItem(
@@ -29,14 +28,14 @@ fun AppLibraryCategorySheetItem(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(LibraryCategorySheetItemCornerRadius),
         color = if (selected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
         } else {
             MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f)
         },
         border = BorderStroke(
-            width = 1.dp,
+            width = LibraryCategorySheetItemBorderWidth,
             color = if (selected) {
                 MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
             } else {
@@ -48,12 +47,12 @@ fun AppLibraryCategorySheetItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 58.dp)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .heightIn(min = LibraryCategorySheetItemMinHeight)
+                .padding(horizontal = LibraryCategorySheetItemHorizontalPadding, vertical = LibraryCategorySheetItemVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(LibraryCategorySheetItemContentGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            iconContent(Modifier.size(21.dp))
+            iconContent(Modifier.size(LibraryCategorySheetItemIconSize))
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
@@ -63,7 +62,7 @@ fun AppLibraryCategorySheetItem(
                 overflow = TextOverflow.Ellipsis,
             )
             if (selected) {
-                selectedIconContent(Modifier.size(20.dp))
+                selectedIconContent(Modifier.size(LibraryCategorySheetItemSelectedIconSize))
             }
         }
     }
