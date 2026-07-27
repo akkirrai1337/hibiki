@@ -44,3 +44,4 @@ val SettingsDiscordBrowserIconSize = 20.dp
 val SettingsDiscordBrowserLabelStartPadding = 8.dp
 val SettingsCardPadding = 20.dp
 val SettingsCardContentGap = 14.dp
+val SettingsScreenDefaultBottomContentPadding = 24.dp

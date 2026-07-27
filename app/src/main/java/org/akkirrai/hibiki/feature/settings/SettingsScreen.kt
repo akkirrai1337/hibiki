@@ -59,7 +59,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
@@ -91,12 +90,13 @@ import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogSurface
+import org.akkirrai.hibiki.shared.settings.SettingsScreenDefaultBottomContentPadding
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    bottomContentPadding: Dp = 24.dp,
+    bottomContentPadding: Dp = SettingsScreenDefaultBottomContentPadding,
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
 ) {
