@@ -16,7 +16,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -32,13 +31,13 @@ fun AppDetailsHeroTextContent(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(DetailsHeroTextCornerRadius))
             .clickable(onClick = onTitleClick),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(end = 24.dp),
+                .padding(end = DetailsHeroTextEndPadding),
         ) {
             Text(
                 text = title,
@@ -53,7 +52,7 @@ fun AppDetailsHeroTextContent(
             )
             ratingsContent?.invoke()
             nextEpisodeContent?.let { content ->
-                Box(modifier = Modifier.padding(top = 2.dp)) {
+                Box(modifier = Modifier.padding(top = DetailsHeroTextNextEpisodeTopPadding)) {
                     content()
                 }
             }
@@ -75,8 +74,8 @@ fun AppDetailsHeroTextContent(
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 2.dp)
-                .size(16.dp),
+                .padding(top = DetailsHeroTextExpandIconTopPadding)
+                .size(DetailsHeroTextExpandIconSize),
             contentAlignment = Alignment.Center,
         ) {
             expandIconContent()
