@@ -73,7 +73,7 @@ fun AppProfileAnalyticsDonutPager(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(ProfileAnalyticsPageVerticalSpacing),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
