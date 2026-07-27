@@ -31,7 +31,7 @@ fun ProfileRecentLibraryRow(
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = ProfileSmallPadding), horizontalArrangement = Arrangement.spacedBy(ProfileRecentLibraryRowPosterTextGap), verticalAlignment = Alignment.CenterVertically) {
         poster()
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ProfileRecentLibraryRowTextSpacing)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(statusColor))

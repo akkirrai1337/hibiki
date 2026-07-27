@@ -19,3 +19,4 @@ val ProfileAvatarEditButtonSize = 32.dp
 val ProfileAvatarEditIconPadding = 7.dp
 val ProfileActionButtonSize = 40.dp
 val ProfileRecentLibraryRowPosterTextGap = 12.dp
+val ProfileRecentLibraryRowTextSpacing = 4.dp
