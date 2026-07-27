@@ -106,6 +106,7 @@ import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
+import org.akkirrai.hibiki.shared.home.AppHomePosterPlaceholder
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
@@ -233,12 +234,10 @@ fun HomeScreen(
                                 contentDescription = anime.title,
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = {
-                                    Box(
+                                    AppHomePosterPlaceholder(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .aspectRatio(2f / 3f)
-                                            .background(MaterialTheme.colorScheme.surfaceContainer),
-                                        contentAlignment = Alignment.Center,
+                                            .aspectRatio(2f / 3f),
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Image,
@@ -394,7 +393,7 @@ private fun LazyListScope.homeFeedContent(
                     .fillMaxWidth()
                     .aspectRatio(2f / 3f),
                 placeholder = {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                    AppHomePosterPlaceholder()
                 },
             )
         },
@@ -414,7 +413,7 @@ private fun LazyListScope.homeFeedContent(
                     .fillMaxWidth()
                     .aspectRatio(2f / 3f),
                 placeholder = {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+                    AppHomePosterPlaceholder()
                 },
             )
         },
