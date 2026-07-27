@@ -44,17 +44,14 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
 import org.akkirrai.hibiki.shared.home.AppTrendingContentList
-import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
@@ -190,25 +187,6 @@ private fun TrendingFilterButton(
         filterIcon = Icons.Outlined.FilterList,
         onFilterSelected = onFilterClick,
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun TrendingErrorState(
-    title: String,
-    message: String,
-    onRetry: () -> Unit,
-) {
-    AppMessageState(
-        title = title,
-        message = message,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(UiDimens.ScreenPadding),
-        actionLabel = stringResource(R.string.search_retry),
-        onActionClick = onRetry,
-        icon = Icons.Outlined.WarningAmber,
-        iconTint = MaterialTheme.colorScheme.error,
     )
 }
 
