@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerSkipSegmentButton(
@@ -21,9 +20,9 @@ fun AppPlayerSkipSegmentButton(
 ) {
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(RoundedCornerShape(PlayerSkipSegmentButtonCornerRadius))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(PlayerSkipSegmentButtonCornerRadius),
         color = if (primary) Color.White.copy(alpha = 0.92f) else Color.Black.copy(alpha = 0.58f),
         contentColor = if (primary) Color.Black else Color.White,
     ) {

@@ -51,6 +51,7 @@ val PlayerUnlockOverlayIconSize = 20.dp
 val PlayerSkipSegmentOverlayGap = 8.dp
 val PlayerSkipSegmentButtonHorizontalPadding = 16.dp
 val PlayerSkipSegmentButtonVerticalPadding = 10.dp
+val PlayerSkipSegmentButtonCornerRadius = 999.dp
 val PlayerSeekOverlayHorizontalPadding = 22.dp
 val PlayerSpeedOverlayHorizontalPadding = 26.dp
 val PlayerTopOverlayHorizontalPadding = 20.dp
