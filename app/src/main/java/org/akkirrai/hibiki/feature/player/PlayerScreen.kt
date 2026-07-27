@@ -185,6 +185,7 @@ import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
+import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -2098,7 +2099,7 @@ private fun PlayerBottomOverlay(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            PlayerTimeline(
+            AppPlayerTimeline(
                 durationMs = durationMs,
                 bufferedPositionMs = bufferedPositionMs,
                 sliderPositionMs = sliderPositionMs,
@@ -2237,91 +2238,6 @@ private fun AutoHideVisibilityEffect(
         if (!enabled || !visible || blocked) return@LaunchedEffect
         delay(PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS)
         onHide()
-    }
-}
-
-@Composable
-private fun PlayerTimeline(
-    durationMs: Long,
-    bufferedPositionMs: Long,
-    sliderPositionMs: Long,
-    onSeekPreview: (Long) -> Unit,
-    onSeekFinished: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var trackWidthPx by remember { mutableFloatStateOf(1f) }
-    val safeDuration = durationMs.coerceAtLeast(1L)
-    val playedFraction = (sliderPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-    val bufferedFraction = (bufferedPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-    val playedColor = Color(0xFFE53935)
-    val bufferedColor = playedColor.copy(alpha = 0.34f)
-    val trackColor = Color.White.copy(alpha = 0.18f)
-    val thumbRadiusPx = with(LocalDensity.current) { PLAYER_TIMELINE_THUMB_RADIUS.toPx() }
-
-    fun seekFromX(x: Float) {
-        val fraction = (x / trackWidthPx).coerceIn(0f, 1f)
-        onSeekPreview((safeDuration * fraction).toLong())
-    }
-
-    Box(
-        modifier = modifier
-            .height(18.dp)
-            .pointerInput(safeDuration, trackWidthPx) {
-                detectTapGestures(
-                    onTap = { offset ->
-                        seekFromX(offset.x)
-                        onSeekFinished()
-                    }
-                )
-            }
-            .pointerInput(safeDuration, trackWidthPx) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        seekFromX(offset.x)
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        seekFromX(change.position.x)
-                    },
-                    onDragEnd = onSeekFinished,
-                    onDragCancel = onSeekFinished,
-                )
-            },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(PLAYER_TIMELINE_TRACK_HEIGHT)
-                .clip(RoundedCornerShape(999.dp))
-                .background(trackColor)
-                .onSizeChanged { trackWidthPx = it.width.toFloat() }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(bufferedFraction)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(bufferedColor)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(playedFraction)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(playedColor)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    translationX = (trackWidthPx * playedFraction) - thumbRadiusPx
-                }
-                .size(PLAYER_TIMELINE_THUMB_SIZE)
-                .clip(CircleShape)
-                .background(playedColor)
-        )
     }
 }
 
@@ -2468,9 +2384,6 @@ private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
 private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
-private val PLAYER_TIMELINE_TRACK_HEIGHT = 4.dp
-private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
-private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')
