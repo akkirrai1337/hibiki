@@ -83,7 +83,6 @@ import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
-import org.akkirrai.hibiki.shared.catalog.CatalogHeaderTopPadding
 import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
 import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
 import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
@@ -253,8 +252,6 @@ fun CatalogScreen(
             clearContentDescription = stringResource(R.string.home_search_clear),
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
-            headerTopPadding = CatalogHeaderTopPadding,
-            sortVerticalGap = CatalogSortVerticalGap,
             sortModifier = Modifier.graphicsLayer {
                 translationY = sortOffsetY.toPx()
                 alpha = sortAlpha

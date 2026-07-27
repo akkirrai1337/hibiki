@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
@@ -26,8 +24,6 @@ fun AppCatalogTopOverlay(
     clearContentDescription: String,
     onFilterClick: () -> Unit,
     showFilterButton: Boolean,
-    headerTopPadding: Dp,
-    sortVerticalGap: Dp,
     sortModifier: Modifier,
     sortContent: @Composable () -> Unit,
     searchIcon: ImageVector,
@@ -40,16 +36,16 @@ fun AppCatalogTopOverlay(
     ) {
         AppTopScrim(modifier = Modifier.align(Alignment.TopStart))
         Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
                 .padding(
-                    top = headerTopPadding,
+                    top = CatalogHeaderTopPadding,
                     start = UiDimens.ScreenPadding,
                     end = UiDimens.ScreenPadding,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(sortVerticalGap),
+            verticalArrangement = Arrangement.spacedBy(CatalogSortVerticalGap),
         ) {
             AppSearchTopBar(
                 query = query,
