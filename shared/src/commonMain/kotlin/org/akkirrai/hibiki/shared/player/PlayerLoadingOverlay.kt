@@ -11,13 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerLoadingOverlay(
     visible: Boolean,
-    indicatorSize: Dp,
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
@@ -29,7 +27,7 @@ fun AppPlayerLoadingOverlay(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier.size(indicatorSize),
+            modifier = Modifier.size(PlayerCenterPrimaryButtonSize),
             contentAlignment = Alignment.Center,
         ) {
             Box(

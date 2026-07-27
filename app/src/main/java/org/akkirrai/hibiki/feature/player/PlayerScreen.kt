@@ -188,7 +188,6 @@ import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
-import org.akkirrai.hibiki.shared.player.PlayerCenterPrimaryButtonSize
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
@@ -1301,7 +1300,6 @@ fun PlayerScreen(
 
         AppPlayerLoadingOverlay(
             visible = state.isLoading || isBuffering,
-            indicatorSize = PlayerCenterPrimaryButtonSize,
         )
 
         state.errorMessage?.let { message ->
