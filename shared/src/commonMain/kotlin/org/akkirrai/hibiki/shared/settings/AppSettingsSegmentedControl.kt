@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun <T> AppSettingsSegmentedControl(
@@ -30,18 +29,18 @@ fun <T> AppSettingsSegmentedControl(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(SettingsSegmentGap),
     ) {
         options.forEachIndexed { index, option ->
             val selected = option == selectedOption
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .height(SettingsSegmentHeight)
                     .clip(if (selected) CircleShape else settingsSegmentShape(index, options.lastIndex))
                     .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background)
                     .clickable { onSelect(option) }
-                    .padding(horizontal = 6.dp),
+                    .padding(horizontal = SettingsSegmentHorizontalPadding),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -63,7 +62,7 @@ fun <T> AppSettingsSegmentedControl(
 }
 
 private fun settingsSegmentShape(index: Int, lastIndex: Int): Shape = when (index) {
-    0 -> RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp, topEnd = 6.dp, bottomEnd = 6.dp)
-    lastIndex -> RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 16.dp, bottomEnd = 16.dp)
-    else -> RoundedCornerShape(6.dp)
+    0 -> RoundedCornerShape(topStart = SettingsSegmentOuterCornerRadius, bottomStart = SettingsSegmentOuterCornerRadius, topEnd = SettingsSegmentInnerCornerRadius, bottomEnd = SettingsSegmentInnerCornerRadius)
+    lastIndex -> RoundedCornerShape(topStart = SettingsSegmentInnerCornerRadius, bottomStart = SettingsSegmentInnerCornerRadius, topEnd = SettingsSegmentOuterCornerRadius, bottomEnd = SettingsSegmentOuterCornerRadius)
+    else -> RoundedCornerShape(SettingsSegmentInnerCornerRadius)
 }
