@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.model.Anime
 
@@ -31,7 +30,7 @@ fun AppLibraryAnimeCard(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp),
+                        .padding(LibraryAnimeCardSourceBadgePadding),
                 ) {
                     content()
                 }

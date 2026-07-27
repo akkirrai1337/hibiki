@@ -7,3 +7,4 @@ val LibraryEntriesRefreshIndicatorSize = 20.dp
 val LibraryEntriesRefreshIndicatorStrokeWidth = 2.dp
 val LibraryEntriesHorizontalPadding = 16.dp
 val LibraryEntriesItemGap = 12.dp
+val LibraryAnimeCardSourceBadgePadding = 8.dp
