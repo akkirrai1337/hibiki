@@ -29,15 +29,20 @@ fun PlayerSettingsEntryRow(
 ) {
     Surface(
         modifier = Modifier
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = PlayerSettingsEntryOuterHorizontalPadding)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(PlayerSettingsEntryCornerRadius))
             .clickable(onClick = onClick),
         color = Color.Transparent,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = PlayerSettingsEntryContentHorizontalPadding,
+                    vertical = PlayerSettingsEntryContentVerticalPadding,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(PlayerSettingsEntryGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Clip)
