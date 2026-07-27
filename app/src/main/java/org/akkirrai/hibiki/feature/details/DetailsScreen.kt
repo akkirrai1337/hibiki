@@ -164,6 +164,7 @@ import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -684,26 +685,27 @@ private fun DetailHeroMedia(
     val anime = detailsState.anime
     val resumeState = detailsState.resumeState
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        NetworkImage(
-            imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
-            fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-            contentDescription = null,
-        )
-
-        if (resumeState != null && resumeFrame != null) {
-            ResumeFrameImage(
-                frame = resumeFrame,
-                version = resumeState.updatedAt,
-                modifier = Modifier.fillMaxSize(),
+    AppDetailsHeroMedia(
+        imageContent = {
+            NetworkImage(
+                imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
+                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                contentDescription = null,
             )
-        }
-
-        AppDetailsHeroPlaybackActions(
+        },
+        frameContent = if (resumeState != null && resumeFrame != null) {
+            {
+                ResumeFrameImage(
+                    frame = resumeFrame,
+                    version = resumeState.updatedAt,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        } else {
+            null
+        },
+        playbackContent = {
+            AppDetailsHeroPlaybackActions(
             resumeTitle = resumeState?.let { stringResource(R.string.details_watch_continue) },
             resumeSubtitle = resumeState?.let {
                 stringResource(
@@ -736,8 +738,10 @@ private fun DetailHeroMedia(
                     modifier = Modifier.size(32.dp),
                 )
             },
-        )
-    }
+            )
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
