@@ -177,6 +177,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
 import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSeekOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerActionControls
+import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
@@ -1310,31 +1311,10 @@ fun PlayerScreen(
             )
         }
 
-        if (state.isLoading || isBuffering) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.34f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.58f)),
-                    )
-                    CircularProgressIndicator(
-                        modifier = Modifier.matchParentSize(),
-                        color = Color.White,
-                        strokeWidth = 4.dp,
-                    )
-                }
-            }
-        }
+        AppPlayerLoadingOverlay(
+            visible = state.isLoading || isBuffering,
+            indicatorSize = PLAYER_CENTER_PRIMARY_BUTTON_SIZE,
+        )
 
         state.errorMessage?.let { message ->
             Box(
