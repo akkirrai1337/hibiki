@@ -62,7 +62,7 @@ import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
-import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
+import org.akkirrai.hibiki.shared.player.AppEpisodesStateContent
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
@@ -160,42 +160,24 @@ fun EpisodesScreen(
             )
         }
 
-        when (val result = state.result) {
-            EpisodesUiState.Loading -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            EpisodesUiState.Empty -> {
-                WatchEmptyState(
-                    title = sourceTitle,
-                    message = stringResource(R.string.watch_episodes_empty_title),
-                    icon = Icons.Outlined.VideoLibrary,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            is EpisodesUiState.Error -> {
-                WatchEmptyState(
-                    title = sourceTitle,
-                    message = result.message,
-                    icon = Icons.Outlined.VideoLibrary,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::load,
-                )
-            }
-
-            is EpisodesUiState.Content -> {
+        AppEpisodesStateContent(
+            result = state.result,
+            sourceTitle = sourceTitle,
+            emptyMessage = stringResource(R.string.watch_episodes_empty_title),
+            retryLabel = stringResource(R.string.search_retry),
+            icon = Icons.Outlined.VideoLibrary,
+            onRetry = viewModel::load,
+        ) { episodes ->
                 val watchSourceFallback = stringResource(R.string.watch_source_fallback)
-                val downloadSource = remember(sourceId, sourceTitle, result.items.size) {
+                val downloadSource = remember(sourceId, sourceTitle, episodes.size) {
                     WatchSource(
                         sourceId = sourceId,
                         title = sourceTitle.ifBlank { watchSourceFallback },
-                        episodeCount = result.items.size,
+                        episodeCount = episodes.size,
                     )
                 }
                 EpisodesList(
-                    episodes = result.items,
+                    episodes = episodes,
                     episodeContent = { episode, shape ->
                         val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
                         EpisodeRow(
@@ -244,7 +226,6 @@ fun EpisodesScreen(
                         )
                     },
                 )
-            }
         }
     }
 }
