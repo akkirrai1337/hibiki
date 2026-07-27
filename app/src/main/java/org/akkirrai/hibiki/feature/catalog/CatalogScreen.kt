@@ -89,11 +89,11 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
-import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
@@ -212,13 +212,12 @@ fun CatalogScreen(
 
         // Keep the current results visible while a filter request is running, but make the
         // refresh state explicit instead of leaving the catalog looking unresponsive.
-        if (state.isLoading && !state.isLoadingMore && state.items.isNotEmpty()) {
-            AppCenteredLoading(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .align(Alignment.Center),
-            )
-        }
+        AppCatalogRefreshingState(
+            isRefreshing = state.isLoading && !state.isLoadingMore && state.items.isNotEmpty(),
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.Center),
+        )
 
         val sortOffsetY by animateDpAsState(
             targetValue = if (isSortVisible) {
