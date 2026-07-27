@@ -36,13 +36,15 @@ fun EpisodeRow(
         shape = shape,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = EpisodeRowHorizontalPadding, vertical = EpisodeRowVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(EpisodeRowContentGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(if (inProgress) 4.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(
+                    if (inProgress) EpisodeRowProgressTextGap else EpisodeRowTextGap,
+                ),
             ) {
                 Text(
                     text = headline,
