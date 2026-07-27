@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppPosterPlaceholder(
@@ -22,7 +22,7 @@ fun AppPosterPlaceholder(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(UiDimens.PlaceholderIconSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
