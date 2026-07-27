@@ -187,6 +187,9 @@ import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
@@ -1094,8 +1097,12 @@ fun PlayerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(
-                        end = 24.dp,
-                        bottom = if (controlsVisible) 140.dp else 32.dp,
+                        end = PlayerSkipSegmentEndPadding,
+                        bottom = if (controlsVisible) {
+                            PlayerSkipSegmentControlsBottomPadding
+                        } else {
+                            PlayerSkipSegmentBottomPadding
+                        },
                     ),
                 enter = fadeIn(animationSpec = tween(140)),
                 exit = fadeOut(animationSpec = tween(140)),
