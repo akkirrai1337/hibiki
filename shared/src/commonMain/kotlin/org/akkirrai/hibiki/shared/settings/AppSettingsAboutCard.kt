@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 fun AppSettingsAboutCard(
     appName: String,
     versionName: String,
-    appIconContent: @Composable () -> Unit,
-    githubIconContent: @Composable () -> Unit,
+    appIconContent: @Composable (Modifier) -> Unit,
+    githubIconContent: @Composable (Modifier) -> Unit,
     onGitHubClick: () -> Unit,
 ) {
     val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -49,7 +49,7 @@ fun AppSettingsAboutCard(
                 .clip(CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            appIconContent()
+            appIconContent(Modifier.size(48.dp))
         }
         Column(
             modifier = Modifier.weight(1f),
@@ -75,7 +75,7 @@ fun AppSettingsAboutCard(
                 .clickable(onClick = onGitHubClick),
             contentAlignment = Alignment.Center,
         ) {
-            githubIconContent()
+            githubIconContent(Modifier.size(26.dp))
         }
     }
 }

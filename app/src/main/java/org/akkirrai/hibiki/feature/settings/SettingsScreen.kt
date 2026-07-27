@@ -467,18 +467,18 @@ private fun SettingsAboutItem(
     AppSettingsAboutCard(
         appName = stringResource(R.string.app_name),
         versionName = versionName,
-        appIconContent = {
+        appIconContent = { iconModifier ->
             Image(
                 bitmap = appIcon,
                 contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(48.dp),
+                modifier = iconModifier,
             )
         },
-        githubIconContent = {
+        githubIconContent = { iconModifier ->
             Image(
                 painter = painterResource(R.drawable.ic_github),
                 contentDescription = stringResource(R.string.settings_github),
-                modifier = Modifier.size(26.dp),
+                modifier = iconModifier,
             )
         },
         onGitHubClick = onGitHubClick,
