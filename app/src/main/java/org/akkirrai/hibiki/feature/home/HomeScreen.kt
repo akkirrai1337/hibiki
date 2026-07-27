@@ -2,16 +2,6 @@ package org.akkirrai.hibiki.feature.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -129,6 +119,7 @@ import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
+import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -200,7 +191,7 @@ fun HomeScreen(
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedContent(
             targetState = isSearchActive,
-            transitionSpec = { homeSearchContentTransition(targetState) },
+            transitionSpec = { appHomeSearchContentTransition(targetState) },
             label = "HomeSearchContent",
         ) { searchActive ->
             if (searchActive) {
@@ -425,28 +416,6 @@ private fun LazyListScope.homeFeedContent(
                 onActionClick = onBrowseCatalog,
             )
         }
-    }
-}
-
-private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
-    return if (searchActive) {
-        slideInVertically(
-            animationSpec = tween(durationMillis = 220),
-            initialOffsetY = { fullHeight -> fullHeight / 12 },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
-            slideOutVertically(
-                animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { fullHeight -> -(fullHeight / 24) },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120))
-    } else {
-        slideInVertically(
-            animationSpec = tween(durationMillis = 220),
-            initialOffsetY = { fullHeight -> -(fullHeight / 24) },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
-            slideOutVertically(
-                animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { fullHeight -> fullHeight / 12 },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120))
     }
 }
 
