@@ -22,7 +22,7 @@ fun AppSourceContentList(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 12.dp,
-            top = 84.dp,
+            top = SourceContentListTopPadding,
             end = 12.dp,
             bottom = bottomContentPadding + 32.dp,
         ),
