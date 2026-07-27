@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ProfileScrollableTab(
     bottomContentPadding: Dp,
-    verticalSpacing: Dp = 0.dp,
+    verticalSpacing: Dp = ProfileScrollableTabDefaultSpacing,
     content: @Composable () -> Unit,
 ) {
     Column(
