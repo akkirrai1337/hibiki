@@ -37,11 +37,14 @@ fun SourceItemCard(
         shape = shape,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier.padding(
+                horizontal = SourceItemCardHorizontalPadding,
+                vertical = SourceItemCardVerticalPadding,
+            ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             iconContent()
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(SourceItemCardIconTextGap))
             Text(
                 text = name,
                 style = MaterialTheme.typography.titleMedium,
@@ -51,7 +54,7 @@ fun SourceItemCard(
             )
             SourceSelectionIndicator(
                 selected = selected,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(SourceItemCardSelectionIndicatorSize),
             )
         }
     }
