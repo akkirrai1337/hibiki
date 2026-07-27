@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -62,8 +60,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
@@ -94,6 +90,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
+import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogSurface
 import kotlinx.coroutines.launch
 
 @Composable
@@ -388,33 +385,21 @@ private fun DiscordAuthDialog(
     val isChecking = state.status == DiscordRpcConnectionStatus.Checking ||
         state.status == DiscordRpcConnectionStatus.Connecting
 
-    Dialog(
+    LocalizedAppContext(languageMode = appLanguage) {
+        AppDiscordAuthDialogSurface(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        LocalizedAppContext(languageMode = appLanguage) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 6.dp,
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    AppDiscordAuthDialogHeader(
+        headerContent = {
+            AppDiscordAuthDialogHeader(
                         icon = ImageVector.vectorResource(R.drawable.ic_discord),
                         title = stringResource(R.string.discord_rpc_title),
                         statusText = listOfNotNull(
                                 state.account?.displayName,
                                 discordRpcStatusLabel(state.status),
                             ).distinct().joinToString(" • "),
-                        )
-
-                AppDiscordAuthTokenCard(
+            )
+        },
+        tokenContent = {
+            AppDiscordAuthTokenCard(
                     icon = ImageVector.vectorResource(R.drawable.ic_discord),
                     manualToken = manualToken,
                     onManualTokenChange = {
@@ -433,9 +418,10 @@ private fun DiscordAuthDialog(
                         onDismiss()
                     },
                     onBrowserSignIn = onBrowserSignIn,
-                )
-
-                AppDiscordAuthDialogActions(
+            )
+        },
+        actionsContent = {
+            AppDiscordAuthDialogActions(
                     cancelLabel = stringResource(R.string.action_cancel),
                     applyLabel = stringResource(R.string.settings_apply),
                     cancelEnabled = !isChecking,
@@ -448,10 +434,9 @@ private fun DiscordAuthDialog(
                                 .onFailure { manualTokenFailed = true }
                         }
                     },
-                )
-                }
-            }
-        }
+            )
+        },
+        )
     }
 }
 
