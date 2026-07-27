@@ -174,6 +174,7 @@ import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
+import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
@@ -1742,13 +1743,17 @@ private fun PlayerSettingsSheet(
         onBack = onBack,
         backContent = { WatchBackButton(onBackClick = onBack) },
         content = { targetDestination ->
-            playerSettingsItems(
+            appPlayerSettingsItems(
                 destination = targetDestination,
                 rootEntries = rootEntries,
                 speedValues = speedValues,
                 voiceoverValues = voiceoverValues,
                 playerValues = playerValues,
                 qualityValues = qualityValues,
+                entryContent = { entry ->
+                    PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
+                },
+                choiceContent = { value -> PlayerSettingsChoiceRow(value = value) },
             )
         },
     )
@@ -1852,33 +1857,6 @@ private fun playerSettingsRootEntries(
                 onClick = { onNavigate(PlayerSettingsDestination.Player) },
             )
         )
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
-    destination: PlayerSettingsDestination,
-    rootEntries: List<PlayerSettingsEntry>,
-    speedValues: List<PlayerSettingsValue>,
-    voiceoverValues: List<PlayerSettingsValue>,
-    playerValues: List<PlayerSettingsValue>,
-    qualityValues: List<PlayerSettingsValue>,
-) {
-    when (destination) {
-        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntry::id) { entry ->
-            PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
-        }
-        PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
-        PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
-        PlayerSettingsDestination.Player -> playerSettingsChoices(playerValues)
-        PlayerSettingsDestination.Quality -> playerSettingsChoices(qualityValues)
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices(
-    values: List<PlayerSettingsValue>,
-) {
-    items(values, key = PlayerSettingsValue::id) { value ->
-        PlayerSettingsChoiceRow(value = value)
     }
 }
 
