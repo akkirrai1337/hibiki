@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.feature.settings
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,13 +22,9 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -57,7 +52,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.AppSourceGrid
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
-import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
+import org.akkirrai.hibiki.shared.source.AppExpandableSourceLanguageSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
@@ -172,24 +167,17 @@ private fun SourceLanguageSection(
     selectedSource: SourceId,
     onSourceSelected: (AnimeSourceDescriptor) -> Unit,
 ) {
-    var expanded by rememberSaveable(section.language.tag) { mutableStateOf(true) }
-    val arrowRotation by animateFloatAsState(
-        targetValue = if (expanded) 0f else -90f,
-        label = "${section.language.tag}_sources_arrow",
-    )
-
-    SharedSourceLanguageSection(
+    AppExpandableSourceLanguageSection(
+        stateKey = section.language.tag,
         title = stringResource(section.labelRes),
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        trailingContent = {
+        trailingContent = { iconModifier ->
             androidx.compose.material3.Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier
                     .size(16.dp)
-                    .graphicsLayer { rotationZ = arrowRotation },
+                    .then(iconModifier),
             )
         },
     ) {

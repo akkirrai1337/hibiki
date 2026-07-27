@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.source
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 
 @Composable
 fun SourceLanguageSection(
@@ -52,4 +58,30 @@ fun SourceLanguageSection(
             }
         }
     }
+}
+
+@Composable
+fun AppExpandableSourceLanguageSection(
+    stateKey: String,
+    title: String,
+    trailingContent: @Composable (Modifier) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    var expanded by rememberSaveable(stateKey) { mutableStateOf(true) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 0f else -90f,
+        label = "${stateKey}_arrow",
+    )
+
+    SourceLanguageSection(
+        title = title,
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        trailingContent = {
+            trailingContent(
+                Modifier.graphicsLayer { rotationZ = arrowRotation },
+            )
+        },
+        content = content,
+    )
 }
