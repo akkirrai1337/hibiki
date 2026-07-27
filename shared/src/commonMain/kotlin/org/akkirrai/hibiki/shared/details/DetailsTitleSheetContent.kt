@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -31,7 +30,7 @@ fun AppDetailsTitleSheetContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = DetailsTitleSheetHeaderHorizontalPadding, vertical = DetailsTitleSheetHeaderVerticalPadding),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = 16.sp,
                 lineHeight = 20.sp,
@@ -47,7 +46,7 @@ fun AppDetailsTitleSheetContent(
                 .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .padding(horizontal = DetailsTitleSheetDescriptionHorizontalPadding, vertical = DetailsTitleSheetDescriptionVerticalPadding)
                 .navigationBarsPadding(),
         )
     }

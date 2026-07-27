@@ -79,3 +79,7 @@ val DetailsPosterCardCornerRadius = 12.dp
 val DetailsPosterCardElevation = 8.dp
 val DetailsStatusBarScrimOpaqueDistance = 168.dp
 val DetailsNestedScrollableGradientSize = 8.dp
+val DetailsTitleSheetHeaderHorizontalPadding = 24.dp
+val DetailsTitleSheetHeaderVerticalPadding = 16.dp
+val DetailsTitleSheetDescriptionHorizontalPadding = 24.dp
+val DetailsTitleSheetDescriptionVerticalPadding = 20.dp
