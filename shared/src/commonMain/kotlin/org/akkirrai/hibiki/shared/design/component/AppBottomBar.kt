@@ -37,6 +37,18 @@ import org.akkirrai.hibiki.shared.text.appText
 
 val AppBottomBarHeight = 64.dp
 val AppBottomBarContentExtraPadding = 12.dp
+val AppBottomBarContentHeight = 64.dp
+val AppBottomBarHorizontalPadding = 14.dp
+val AppBottomBarVerticalPadding = 6.dp
+val AppBottomBarItemGap = 4.dp
+val AppBottomBarActivePillMaxWidth = 68.dp
+val AppBottomBarActivePillMinWidth = 48.dp
+val AppBottomBarIconSize = 22.dp
+val AppBottomBarItemHeight = 48.dp
+val AppBottomBarPillHeight = 30.dp
+val AppBottomBarPillCornerRadius = 18.dp
+val AppBottomBarLabelTopSpacing = 3.dp
+val AppBottomBarLabelFontSize = 11.sp
 
 /** Shared bottom navigation geometry and interaction used by platform hosts. */
 @Composable
@@ -71,15 +83,15 @@ fun AppBottomBar(
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .height(AppBottomBarContentHeight)
+                    .padding(horizontal = AppBottomBarHorizontalPadding, vertical = AppBottomBarVerticalPadding),
             ) {
-                val itemGap = 4.dp
+                val itemGap = AppBottomBarItemGap
                 val itemWidth = (maxWidth - itemGap * (destinations.size - 1)) / destinations.size
-                val activePillWidth = if (itemWidth < 68.dp) {
-                    (itemWidth - 4.dp).coerceAtLeast(48.dp)
+                val activePillWidth = if (itemWidth < AppBottomBarActivePillMaxWidth) {
+                    (itemWidth - itemGap).coerceAtLeast(AppBottomBarActivePillMinWidth)
                 } else {
-                    68.dp
+                    AppBottomBarActivePillMaxWidth
                 }
                 Row(
                     modifier = Modifier.fillMaxSize(),
@@ -92,7 +104,7 @@ fun AppBottomBar(
                             selected = currentDestination == destination,
                             onClick = { onDestinationClick(destination) },
                             activePillWidth = activePillWidth,
-                            iconContent = { iconContent(destination, Modifier.size(22.dp)) },
+                            iconContent = { iconContent(destination, Modifier.size(AppBottomBarIconSize)) },
                             label = label(destination),
                             modifier = Modifier.weight(1f),
                         )
@@ -119,11 +131,11 @@ private fun AppBottomBarItem(
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
     }
     val interactionSource = remember { MutableInteractionSource() }
-    val pillShape: Shape = RoundedCornerShape(18.dp)
+    val pillShape: Shape = RoundedCornerShape(AppBottomBarPillCornerRadius)
 
     Column(
         modifier = modifier
-            .height(48.dp)
+            .height(AppBottomBarItemHeight)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -134,7 +146,7 @@ private fun AppBottomBarItem(
     ) {
         Surface(
             modifier = Modifier
-                .size(width = activePillWidth, height = 30.dp)
+                .size(width = activePillWidth, height = AppBottomBarPillHeight)
                 .clip(pillShape),
             shape = pillShape,
             color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
@@ -149,11 +161,11 @@ private fun AppBottomBarItem(
             }
         }
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(AppBottomBarLabelTopSpacing))
         Text(
             text = label,
-            fontSize = 11.sp,
-            lineHeight = 11.sp,
+            fontSize = AppBottomBarLabelFontSize,
+            lineHeight = AppBottomBarLabelFontSize,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = if (selected) MaterialTheme.colorScheme.onSurface else contentColor,
             maxLines = 1,
