@@ -162,6 +162,7 @@ import org.akkirrai.hibiki.shared.details.DetailsUiState
 import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
+import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -661,9 +662,13 @@ private fun DetailHeroTextContent(
                 HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
             }
             nextEpisodeEta?.let { eta ->
-                NextEpisodeChip(
-                    episode = nextEpisodeNumber,
-                    eta = eta,
+                DetailsNextEpisodeChip(
+                    text = if (nextEpisodeNumber != null) {
+                        stringResource(R.string.details_next_episode_countdown_numbered, nextEpisodeNumber, eta)
+                    } else {
+                        stringResource(R.string.details_next_episode_countdown, eta)
+                    },
+                    icon = ImageVector.vectorResource(R.drawable.hourglass),
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -692,24 +697,6 @@ private fun DetailHeroTextContent(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-private fun NextEpisodeChip(
-    episode: Int?,
-    eta: String,
-    modifier: Modifier = Modifier,
-) {
-    val text = if (episode != null) {
-        stringResource(R.string.details_next_episode_countdown_numbered, episode, eta)
-    } else {
-        stringResource(R.string.details_next_episode_countdown, eta)
-    }
-    org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip(
-        text = text,
-        icon = ImageVector.vectorResource(R.drawable.hourglass),
-        modifier = modifier,
-    )
 }
 
 @Composable
