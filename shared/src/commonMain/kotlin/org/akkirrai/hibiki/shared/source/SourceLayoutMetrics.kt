@@ -18,3 +18,4 @@ val SourceLanguageSectionCornerRadius = 24.dp
 val SourceContentListVerticalSpacing = 20.dp
 val SourceSearchSectionIconSize = 24.dp
 val SourceSearchSectionVerticalSpacing = 10.dp
+val SourceSearchSectionHeaderHorizontalPadding = 8.dp

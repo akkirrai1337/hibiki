@@ -42,7 +42,7 @@ fun <T> AppSourceSearchSection(
         verticalArrangement = Arrangement.spacedBy(SourceSearchSectionVerticalSpacing),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = SourceSearchSectionHeaderHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             sourceIconContent(
