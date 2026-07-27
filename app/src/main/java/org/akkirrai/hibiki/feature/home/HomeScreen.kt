@@ -89,7 +89,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -111,6 +110,7 @@ import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
+import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
 import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
 import org.akkirrai.hibiki.shared.home.appHomePersonalEmptySection
 
@@ -175,7 +175,7 @@ fun HomeScreen(
     }
 
     if (state.isLoading && !hasContent && !isSearchActive) {
-        HomeLoadingState(modifier = modifier)
+        AppHomeLoadingState(modifier = modifier)
         return
     }
 
@@ -428,13 +428,6 @@ private fun LazyListScope.homeFeedContent(
         icon = Icons.Outlined.VideoLibrary,
         onActionClick = onBrowseCatalog,
     )
-}
-
-@Composable
-private fun HomeLoadingState(
-    modifier: Modifier = Modifier,
-) {
-    AppCenteredLoading(modifier = modifier)
 }
 
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
