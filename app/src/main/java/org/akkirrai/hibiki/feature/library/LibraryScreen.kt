@@ -34,6 +34,8 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -85,12 +87,12 @@ import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
-import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppVerticalAnimeListItem
+import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -148,15 +150,21 @@ fun LibraryScreen(
             org.akkirrai.hibiki.shared.library.AppLibraryHeader(
                 searchContent = {
                     AppSearchTopBar(
-                    query = state.searchQuery,
-                    onQueryChange = viewModel::onSearchQueryChange,
-                    onClear = viewModel::clearSearch,
-                    onFilterClick = { isFilterDialogVisible = true },
-                    modifier = Modifier.padding(
-                        top = UiDimens.SearchBarTopPadding,
-                        start = UiDimens.ScreenPadding,
-                        end = UiDimens.ScreenPadding,
-                    ),
+                        query = state.searchQuery,
+                        onQueryChange = viewModel::onSearchQueryChange,
+                        onClear = viewModel::clearSearch,
+                        placeholder = stringResource(R.string.search_placeholder),
+                        filterContentDescription = stringResource(R.string.search_filters),
+                        clearContentDescription = stringResource(R.string.home_search_clear),
+                        searchIcon = Icons.Outlined.Search,
+                        filterIcon = Icons.Outlined.FilterList,
+                        clearIcon = Icons.Outlined.Close,
+                        onFilterClick = { isFilterDialogVisible = true },
+                        modifier = Modifier.padding(
+                            top = UiDimens.SearchBarTopPadding,
+                            start = UiDimens.ScreenPadding,
+                            end = UiDimens.ScreenPadding,
+                        ),
                     )
                 },
                 selected = state.selectedCategory,
