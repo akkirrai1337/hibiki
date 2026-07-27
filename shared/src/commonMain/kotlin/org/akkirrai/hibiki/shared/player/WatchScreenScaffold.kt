@@ -37,7 +37,7 @@ fun WatchScreenScaffold(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(start = UiDimens.ScreenPadding, top = 8.dp),
+                .padding(start = UiDimens.ScreenPadding, top = WatchScreenBackButtonTopPadding),
         )
     }
 }

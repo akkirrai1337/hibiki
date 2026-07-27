@@ -9,3 +9,4 @@ val WatchSourcesListTopPadding = 56.dp
 val WatchSourcesListBottomPadding = 12.dp
 val WatchSourcesListItemGap = 4.dp
 val WatchSourcesListAuxiliaryVerticalPadding = 18.dp
+val WatchScreenBackButtonTopPadding = 8.dp
