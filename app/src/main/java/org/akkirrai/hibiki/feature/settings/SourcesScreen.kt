@@ -103,15 +103,17 @@ fun SourcesScreen(
         ) {
             if (isSearchMode) {
                 val visibleSections = searchState.sections.filter { section ->
-                    section.isLoading || section.error != null || section.items.isNotEmpty()
+                    section.isLoading || section.hasError || section.items.isNotEmpty()
                 }
                 visibleSections.forEach { section ->
-                    item(key = "search_${section.source.id.value}") {
+                    val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
+                    item(key = "search_${section.sourceId}") {
                         SourceSearchSection(
                             section = section,
+                            source = source,
                             announcementLabel = announcementLabel,
                             movieLabel = movieLabel,
-                            onRetry = { searchViewModel.retry(section.source.id) },
+                            onRetry = { searchViewModel.retry(SourceId(section.sourceId)) },
                             onAnimeClick = onAnimeClick,
                         )
                     }
@@ -215,15 +217,16 @@ private fun SourceLanguageSection(
 @Composable
 private fun SourceSearchSection(
     section: SourceSearchSection,
+    source: AnimeSourceDescriptor,
     announcementLabel: String,
     movieLabel: String,
     onRetry: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
 ) {
     AppSourceSearchSection(
-        sourceName = section.source.name,
+        sourceName = section.sourceName,
         isLoading = section.isLoading,
-        hasError = section.error != null,
+        hasError = section.hasError,
         errorLabel = stringResource(R.string.sources_search_failed),
         retryLabel = stringResource(R.string.search_retry),
         onRetry = onRetry,
@@ -231,9 +234,9 @@ private fun SourceSearchSection(
         itemKey = { it.id },
         sourceIconContent = {
             AsyncImage(
-                model = section.source.iconUrl,
-                placeholder = painterResource(section.source.iconRes),
-                error = painterResource(section.source.iconRes),
+                model = source.iconUrl,
+                placeholder = painterResource(source.iconRes),
+                error = painterResource(source.iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp).clip(CircleShape),
             )

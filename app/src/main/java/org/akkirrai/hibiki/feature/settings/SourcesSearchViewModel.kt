@@ -26,20 +26,10 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
+import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 
-data class SourceSearchSection(
-    val source: AnimeSourceDescriptor,
-    val items: List<Anime> = emptyList(),
-    val error: Throwable? = null,
-    val isLoading: Boolean = false,
-)
-
-data class SourcesSearchUiState(
-    val query: String = "",
-    val sections: List<SourceSearchSection> = emptyList(),
-    val isSearching: Boolean = false,
-    val hasSearched: Boolean = false,
-)
+typealias SourceSearchSection = SourceSearchSectionState<Anime>
 
 class SourcesSearchViewModel(
     context: Context,
@@ -90,7 +80,13 @@ class SourcesSearchViewModel(
         if (generation != searchGeneration) return
         _uiState.update {
             it.copy(
-                sections = sources.map { source -> SourceSearchSection(source, isLoading = true) },
+                sections = sources.map { source ->
+                    SourceSearchSection(
+                        sourceId = source.id.value,
+                        sourceName = source.name,
+                        isLoading = true,
+                    )
+                },
                 isSearching = true,
                 hasSearched = true,
             )
@@ -115,10 +111,10 @@ class SourcesSearchViewModel(
                             _uiState.update { state ->
                                 state.copy(
                                     sections = state.sections.map { section ->
-                                        if (section.source.id != source.id) section
+                                        if (section.sourceId != source.id.value) section
                                         else result.fold(
                                             onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), isLoading = false) },
-                                            onFailure = { error -> section.copy(error = error, isLoading = false) },
+                                            onFailure = { section.copy(hasError = true, isLoading = false) },
                                         )
                                     },
                                 )
@@ -145,7 +141,7 @@ class SourcesSearchViewModel(
         if (generation != searchGeneration) return
         _uiState.update { state ->
             state.copy(sections = state.sections.map { section ->
-                if (section.source.id == sourceId) section.copy(error = null, isLoading = true) else section
+                if (section.sourceId == sourceId.value) section.copy(hasError = false, isLoading = true) else section
             })
         }
         searchSlots.withPermit {
@@ -158,10 +154,10 @@ class SourcesSearchViewModel(
             if (generation != searchGeneration) return@withPermit
             _uiState.update { state ->
                 state.copy(sections = state.sections.map { section ->
-                    if (section.source.id != sourceId) section
+                    if (section.sourceId != sourceId.value) section
                     else result.fold(
-                        onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), error = null, isLoading = false) },
-                        onFailure = { error -> section.copy(error = error, isLoading = false) },
+                        onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), hasError = false, isLoading = false) },
+                        onFailure = { section.copy(hasError = true, isLoading = false) },
                     )
                 })
             }
