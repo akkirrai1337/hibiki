@@ -77,6 +77,9 @@ import org.akkirrai.hibiki.core.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
+import org.akkirrai.hibiki.shared.profile.ProfileLargePadding
+import org.akkirrai.hibiki.shared.profile.ProfileSmallPadding
+import org.akkirrai.hibiki.shared.profile.ProfileMediumPadding
 import org.akkirrai.hibiki.shared.profile.AppProfileTabPager
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 
@@ -142,9 +145,9 @@ fun LocalProfileScreen(
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = statusInsets.calculateTopPadding() + AnimiteLargePadding * ratio * 0.9f)
-                        .padding(end = AnimiteLargePadding),
-                    horizontalArrangement = Arrangement.spacedBy(AnimiteSmallPadding),
+                        .padding(top = statusInsets.calculateTopPadding() + ProfileLargePadding * ratio * 0.9f)
+                        .padding(end = ProfileLargePadding),
+                    horizontalArrangement = Arrangement.spacedBy(ProfileSmallPadding),
                 ) {
                     ProfileActionButton(
                         icon = if (isEditingProfile) Icons.Rounded.Check else Icons.Rounded.Edit,
@@ -162,12 +165,12 @@ fun LocalProfileScreen(
                 }
             },
             contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentPadding = PaddingValues(top = AnimiteLargePadding / 2),
+            contentPadding = PaddingValues(top = ProfileLargePadding / 2),
             content = {
                 org.akkirrai.hibiki.shared.profile.AppProfileIdentityTabs(
                     profileName = state.data.profileName,
                     isEditing = isEditingProfile,
-                    horizontalPadding = AnimiteLargePadding,
+                    horizontalPadding = ProfileLargePadding,
                     tabTitles = LocalProfileTab.entries.map { tab -> stringResource(tab.titleRes) },
                     nameEditorContent = {
                         ProfileNameEditor(
@@ -232,7 +235,7 @@ private fun RotatingSettingsButton(onClick: () -> Unit) {
 private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
     org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
         bottomContentPadding = bottomContentPadding,
-        verticalSpacing = AnimiteMediumPadding,
+        verticalSpacing = ProfileMediumPadding,
     ) {
         LocalStatsRow(snapshot)
         GenreBars(snapshot.genreSegments)
@@ -290,7 +293,3 @@ private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPaddi
 }
 
 private val AnimiteBannerHeight = 168.dp
-private val AnimiteTinyPadding = 4.dp
-private val AnimiteSmallPadding = 8.dp
-private val AnimiteMediumPadding = 16.dp
-private val AnimiteLargePadding = 24.dp
