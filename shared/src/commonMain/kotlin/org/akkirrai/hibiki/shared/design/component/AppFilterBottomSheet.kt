@@ -44,12 +44,12 @@ fun AppFilterBottomSheet(
                 val strokeWidth = UiDimens.FilterHandleStrokeWidth.toPx()
                 val center = size.width / 2f
                 if (expanded) {
-                    val inset = size.width * 0.31f
+                    val inset = size.width * UiDimens.FilterHandleExpandedInsetFraction
                     drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(inset, inset), end = androidx.compose.ui.geometry.Offset(size.width - inset, size.height - inset), strokeWidth = strokeWidth, cap = StrokeCap.Round)
                     drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(size.width - inset, inset), end = androidx.compose.ui.geometry.Offset(inset, size.height - inset), strokeWidth = strokeWidth, cap = StrokeCap.Round)
                 } else {
-                    drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(3f, size.height * 0.62f), end = androidx.compose.ui.geometry.Offset(center, size.height * 0.34f), strokeWidth = strokeWidth, cap = StrokeCap.Round)
-                    drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(center, size.height * 0.34f), end = androidx.compose.ui.geometry.Offset(size.width - 3f, size.height * 0.62f), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+                    drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(UiDimens.FilterHandleCollapsedSideInsetPx, size.height * UiDimens.FilterHandleCollapsedOuterYFraction), end = androidx.compose.ui.geometry.Offset(center, size.height * UiDimens.FilterHandleCollapsedCenterYFraction), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+                    drawLine(handleColor, start = androidx.compose.ui.geometry.Offset(center, size.height * UiDimens.FilterHandleCollapsedCenterYFraction), end = androidx.compose.ui.geometry.Offset(size.width - UiDimens.FilterHandleCollapsedSideInsetPx, size.height * UiDimens.FilterHandleCollapsedOuterYFraction), strokeWidth = strokeWidth, cap = StrokeCap.Round)
                 }
             }
         },

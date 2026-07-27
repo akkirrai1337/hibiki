@@ -44,6 +44,10 @@ object UiDimens {
     val FilterHandlePadding = 8.dp
     val FilterHandleSize = 16.dp
     val FilterHandleStrokeWidth = 1.8.dp
+    const val FilterHandleExpandedInsetFraction = 0.31f
+    const val FilterHandleCollapsedSideInsetPx = 3f
+    const val FilterHandleCollapsedOuterYFraction = 0.62f
+    const val FilterHandleCollapsedCenterYFraction = 0.34f
     val FilterContentTopPadding = 16.dp
     val ConnectedFilterItemGap = 2.dp
     val ConnectedFilterSelectedCorner = 32.dp
