@@ -33,6 +33,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.shared.player.WatchSourcesList
+import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
 
 @Composable
 fun WatchSourcesScreen(
@@ -61,34 +62,17 @@ fun WatchSourcesScreen(
         navigationLocked = navigationLocked,
         modifier = modifier,
     ) {
-        when {
-            state.errorMessage != null -> {
-                WatchEmptyState(
-                    title = stringResource(R.string.watch_sources_empty_title),
-                    message = state.errorMessage.orEmpty(),
-                    icon = Icons.Outlined.PlayCircleOutline,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::retry,
-                )
-            }
-
-            state.items.isEmpty() && state.isLoading -> {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
-            }
-
-            state.items.isEmpty() -> {
-                WatchEmptyState(
-                    title = stringResource(R.string.watch_sources_empty_title),
-                    message = stringResource(R.string.watch_sources_empty_message),
-                    icon = Icons.Outlined.SubtitlesOff,
-                    modifier = Modifier.fillMaxSize(),
-                    onRetry = viewModel::retry,
-                )
-            }
-
-            else -> {
+        AppWatchSourcesStateContent(
+            state = state,
+            emptyTitle = stringResource(R.string.watch_sources_empty_title),
+            emptyMessage = stringResource(R.string.watch_sources_empty_message),
+            errorIcon = Icons.Outlined.PlayCircleOutline,
+            emptyIcon = Icons.Outlined.SubtitlesOff,
+            retryLabel = stringResource(R.string.search_retry),
+            onRetry = viewModel::retry,
+        ) { sources ->
                 WatchSourcesList(
-                    sources = state.items,
+                    sources = sources,
                     enabled = !navigationLocked,
                     horizontalPadding = UiDimens.ScreenPadding,
                     episodeSummary = { source ->
@@ -121,7 +105,6 @@ fun WatchSourcesScreen(
             }
         }
     }
-}
 
 @Composable
 private fun WatchSourceRow(
