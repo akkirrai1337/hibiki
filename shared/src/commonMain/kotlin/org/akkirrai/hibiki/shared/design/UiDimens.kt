@@ -33,6 +33,9 @@ object UiDimens {
     val PosterCardContentVerticalPadding = 9.dp
     val PosterCardContentGap = 4.dp
     val PlaceholderIconSize = 28.dp
+    val MessageStateMessageTopPadding = 6.dp
+    val MessageStateTitleTopPadding = 12.dp
+    val MessageStateActionTopPadding = 16.dp
     val SectionSpacing = 20.dp
     val ItemSpacing = 12.dp
     val SmallSpacing = 8.dp
