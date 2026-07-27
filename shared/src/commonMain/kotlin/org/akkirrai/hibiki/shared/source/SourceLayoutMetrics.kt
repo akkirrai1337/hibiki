@@ -22,3 +22,4 @@ val SourceSearchSectionHeaderHorizontalPadding = 8.dp
 val SourceSearchSectionIconTextGap = 8.dp
 val SourceSearchSectionLoadingIndicatorSize = 24.dp
 val SourceSearchSectionLoadingHorizontalPadding = 8.dp
+val SourceSearchSectionErrorHorizontalPadding = 8.dp

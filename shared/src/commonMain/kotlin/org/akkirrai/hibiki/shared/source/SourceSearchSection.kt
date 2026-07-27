@@ -65,7 +65,7 @@ fun <T> AppSourceSearchSection(
                 strokeWidth = 2.dp,
             )
             hasError -> Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier.padding(horizontal = SourceSearchSectionErrorHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
