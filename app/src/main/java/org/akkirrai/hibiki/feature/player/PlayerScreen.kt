@@ -187,6 +187,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1142,15 +1143,26 @@ fun PlayerScreen(
             exit = fadeOut(animationSpec = tween(180)),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                PlayerTopOverlay(
+                AppPlayerTopOverlay(
                     title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
-                    onBackClick = handleBackClick,
-                    onPlaylistClick = {
-                        keepControlsVisible()
-                        playlistVisible = true
-                    },
                     playlistEnabled = state.episodes.isNotEmpty(),
+                    backContent = { WatchBackButton(onBackClick = handleBackClick) },
+                    playlistContent = {
+                        AppFilledIconButton(
+                            onClick = {
+                                keepControlsVisible()
+                                playlistVisible = true
+                            },
+                            style = AppFilledIconButtonStyle.DarkOverlay,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
+                                contentDescription = stringResource(R.string.watch_player_playlist),
+                                tint = Color.White,
+                            )
+                        }
+                    },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
 
@@ -1763,72 +1775,6 @@ private fun PlayerSkipSegmentButton(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
-    }
-}
-
-@Composable
-private fun PlayerTopOverlay(
-    title: String,
-    subtitle: String,
-    onBackClick: () -> Unit,
-    onPlaylistClick: () -> Unit,
-    playlistEnabled: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.82f),
-                    1f to Color.Transparent
-                )
-            )
-            .padding(horizontal = 20.dp, vertical = 22.dp)
-    ) {
-        WatchBackButton(
-            onBackClick = onBackClick,
-            modifier = Modifier.align(Alignment.TopStart)
-        )
-
-        if (playlistEnabled) {
-            AppFilledIconButton(
-                onClick = onPlaylistClick,
-                modifier = Modifier.align(Alignment.TopEnd),
-                style = AppFilledIconButtonStyle.DarkOverlay,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
-                    contentDescription = stringResource(R.string.watch_player_playlist),
-                    tint = Color.White
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 92.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = title.preventTrailingOrphanWrap(),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.72f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
     }
 }
 
