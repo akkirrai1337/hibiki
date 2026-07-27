@@ -28,7 +28,7 @@ fun ProfileActionButton(
             modifier = Modifier
                 .size(40.dp)
                 .clickable(onClick = onClick)
-                .padding(8.dp)
+                .padding(ProfileSmallPadding)
                 .then(iconModifier),
         )
     }
