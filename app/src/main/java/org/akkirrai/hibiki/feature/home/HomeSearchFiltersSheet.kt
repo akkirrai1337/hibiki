@@ -74,7 +74,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
@@ -86,6 +85,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
+import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
@@ -235,7 +235,7 @@ fun AnimeSearchFiltersSheet(
                         catalog.genreOptions.isNotEmpty() &&
                         capabilities.supports(AnimeCatalogFilter.INCLUDED_GENRES)
                     ) {
-                        AppThreeStateChipFilter(
+                        AppSingleListThreeStateFilter(
                             title = stringResource(R.string.search_filters_genres),
                             options = catalog.genreOptions,
                             included = pendingFilters.includedGenreAliases,
@@ -251,9 +251,27 @@ fun AnimeSearchFiltersSheet(
                             maxCollapsedItems = maxCollapsedGenreItems,
                             maxCollapsedGroups = maxCollapsedGenreGroups,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
-                            singleList = true,
                             optionSortKey = { it.title },
                             groupByFirstLetter = true,
+                            arrowContent = { modifier ->
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                                    contentDescription = null,
+                                    modifier = modifier,
+                                )
+                            },
+                            expandIconContent = { expanded, modifier ->
+                                Icon(
+                                    imageVector = if (expanded) {
+                                        Icons.Rounded.KeyboardArrowUp
+                                    } else {
+                                        Icons.Rounded.KeyboardArrowDown
+                                    },
+                                    contentDescription = null,
+                                    modifier = modifier,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                                )
+                            },
                         )
                     }
 
@@ -266,7 +284,7 @@ fun AnimeSearchFiltersSheet(
                     }
 
                     if (capabilities.supports(AnimeCatalogFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
-                        AppThreeStateChipFilter(
+                        AppSingleListThreeStateFilter(
                             title = stringResource(R.string.search_filters_status),
                             options = catalog.statusOptions,
                             included = includedStatuses,
@@ -276,8 +294,26 @@ fun AnimeSearchFiltersSheet(
                             text = optionText,
                             optionIcon = { statusIcon(it.id) },
                             allowExclusion = false,
-                            singleList = true,
                             optionSortKey = { it.title },
+                            arrowContent = { modifier ->
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                                    contentDescription = null,
+                                    modifier = modifier,
+                                )
+                            },
+                            expandIconContent = { expanded, modifier ->
+                                Icon(
+                                    imageVector = if (expanded) {
+                                        Icons.Rounded.KeyboardArrowUp
+                                    } else {
+                                        Icons.Rounded.KeyboardArrowDown
+                                    },
+                                    contentDescription = null,
+                                    modifier = modifier,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                                )
+                            },
                         )
                     }
 
