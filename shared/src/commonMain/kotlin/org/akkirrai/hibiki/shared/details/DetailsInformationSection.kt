@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 data class DetailsInformationItem(
     val label: String,
@@ -30,13 +29,13 @@ fun DetailsInformationSection(
     horizontalPadding: Dp,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DetailsInformationSectionSpacing)) {
+        Spacer(modifier = Modifier.height(DetailsInformationTitleTopSpacing))
         DetailsSectionTitle(title, modifier = Modifier.padding(horizontal = horizontalPadding))
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = horizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(DetailsInformationItemGap),
         ) {
             items(items) { item ->
                 DetailsInfoPill(

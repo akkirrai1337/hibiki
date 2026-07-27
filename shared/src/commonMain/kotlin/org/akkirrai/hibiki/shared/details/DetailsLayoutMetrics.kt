@@ -8,3 +8,6 @@ val DetailsGenresItemGap = 8.dp
 val DetailsGenresItemHeight = 32.dp
 val DetailsGenresItemBorderWidth = 1.dp
 val DetailsGenresItemHorizontalPadding = 16.dp
+val DetailsInformationSectionSpacing = 16.dp
+val DetailsInformationTitleTopSpacing = 8.dp
+val DetailsInformationItemGap = 10.dp
