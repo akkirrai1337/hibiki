@@ -88,8 +88,6 @@ import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
-import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -924,16 +922,6 @@ private fun findResumeWatchState(
 }
 
 @Composable
-private fun buildSourceSelectorLabel(
-    selectedSource: WatchSource?,
-    selection: WatchSourceSelection,
-): String {
-    val title = selectedSource?.title ?: if (selection.autoSelect) stringResource(R.string.watch_source_auto_title) else stringResource(R.string.watch_source_fallback)
-    val qualitySuffix = selectedSource?.qualityLabel?.let { " · $it" }.orEmpty()
-    return "$title$qualitySuffix"
-}
-
-@Composable
 private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
     val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
     var nowEpochSeconds by remember(seconds) {
@@ -965,18 +953,6 @@ private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
             minutes.coerceAtLeast(0L),
             remainingSeconds.coerceAtLeast(0L),
         )
-    }
-}
-
-@Composable
-private fun localizedType(type: String): String {
-    return when (type.uppercase()) {
-        "TV" -> stringResource(R.string.details_type_series)
-        "MOVIE" -> stringResource(R.string.details_type_movie)
-        "OVA" -> "OVA"
-        "ONA" -> "ONA"
-        "SPECIAL" -> stringResource(R.string.details_type_special)
-        else -> type
     }
 }
 
