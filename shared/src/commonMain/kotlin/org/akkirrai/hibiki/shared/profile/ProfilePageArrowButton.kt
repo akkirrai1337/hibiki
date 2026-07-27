@@ -18,7 +18,7 @@ fun ProfilePageArrowButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 40.dp,
+    size: Dp = ProfilePageArrowButtonDefaultSize,
 ) {
     Surface(
         modifier = modifier,
