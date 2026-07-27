@@ -44,6 +44,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
+import org.akkirrai.hibiki.shared.source.SourceSearchEmptyHorizontalPadding
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
@@ -95,7 +96,9 @@ fun SourcesScreen(
                     AppMessageState(
                         title = stringResource(R.string.sources_search_empty_title),
                         message = stringResource(R.string.sources_search_empty_message),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = SourceSearchEmptyHorizontalPadding),
                     )
                 }
             }
