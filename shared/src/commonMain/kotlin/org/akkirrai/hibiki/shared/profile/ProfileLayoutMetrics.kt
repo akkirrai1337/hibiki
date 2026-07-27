@@ -37,3 +37,4 @@ val ProfileLegendMarkerSize = 7.dp
 val ProfileLegendLabelMaxWidth = 132.dp
 val ProfileAnalyticsPagerVerticalSpacing = 14.dp
 val ProfileAnalyticsPageVerticalSpacing = 14.dp
+val ProfileAnalyticsPageHorizontalPadding = 4.dp
