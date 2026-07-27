@@ -1,18 +1,12 @@
 package org.akkirrai.hibiki.feature.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
@@ -44,7 +38,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
-import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
@@ -55,6 +48,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.AppExpandableSourceLanguageSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
+import org.akkirrai.hibiki.shared.source.AppSourceContentList
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -85,17 +79,10 @@ fun SourcesScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 12.dp,
-                top = 84.dp,
-                end = 12.dp,
-                bottom = bottomContentPadding + 32.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            if (isSearchMode) {
+        AppSourceContentList(
+            isSearchMode = isSearchMode,
+            bottomContentPadding = bottomContentPadding,
+            searchContent = {
                 val visibleSections = searchState.sections.filter { section ->
                     section.isLoading || section.hasError || section.items.isNotEmpty()
                 }
@@ -121,7 +108,8 @@ fun SourcesScreen(
                         )
                     }
                 }
-            } else {
+            },
+            sourceContent = {
                 SOURCE_LANGUAGE_SECTIONS.forEach { section ->
                     val sectionSources = visibleSourcesByLanguage[section.language]
                         .orEmpty()
@@ -138,8 +126,9 @@ fun SourcesScreen(
                         )
                     }
                 }
-            }
-        }
+            },
+            modifier = Modifier,
+        )
 
         if (hasSourceSearch) {
             AppSourceSearchBar(
