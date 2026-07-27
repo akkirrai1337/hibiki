@@ -57,3 +57,5 @@ val ProfileGenreBarsLabelBarGap = 8.dp
 val ProfileGenreBarsEndPadding = 24.dp
 val ProfileGenreBarsMaxWidth = 250.dp
 val ProfileGenreBarsRowGap = 4.dp
+val ProfileLegendGridRowGap = 10.dp
+val ProfileLegendGridColumnGap = 14.dp

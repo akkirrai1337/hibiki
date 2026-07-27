@@ -19,9 +19,9 @@ fun ProfileLegendGrid(
     modifier: Modifier = Modifier,
 ) {
     val safeColumns = columns.coerceAtLeast(1)
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ProfileLegendGridRowGap)) {
         items.chunked(safeColumns).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ProfileLegendGridColumnGap)) {
                 row.forEach { item ->
                     ProfileLegendItem(item.label, item.valueLabel, item.color, Modifier.weight(1f))
                 }
