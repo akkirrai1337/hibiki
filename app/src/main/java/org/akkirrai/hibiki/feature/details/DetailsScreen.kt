@@ -182,6 +182,8 @@ import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsHeroPosterCollapsedOffset
 import org.akkirrai.hibiki.shared.details.DetailsHeroPosterExpandedOffset
+import org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButtonIconSize
+import org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButtonSize
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -987,8 +989,8 @@ private fun FavoriteCircleButton(
     libraryCategory: LibraryCategory?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 41.dp,
-    iconSize: androidx.compose.ui.unit.Dp = 18.dp,
+    size: androidx.compose.ui.unit.Dp = DetailsFavoriteCircleButtonSize,
+    iconSize: androidx.compose.ui.unit.Dp = DetailsFavoriteCircleButtonIconSize,
 ) {
     org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButton(
         icon = libraryCategory.iconOrDefault(),
