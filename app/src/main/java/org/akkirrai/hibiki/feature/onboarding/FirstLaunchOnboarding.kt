@@ -10,7 +10,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.SizeTransform
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +66,7 @@ import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepIndicator
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -163,9 +163,22 @@ fun FirstLaunchOnboarding(
                 label = "onboarding_step",
             ) { currentStep ->
                 when (currentStep) {
-                    OnboardingStep.WELCOME -> WelcomeStep(
+                    OnboardingStep.WELCOME -> AppOnboardingWelcome(
+                        title = stringResource(R.string.onboarding_welcome_title),
+                        description = stringResource(R.string.onboarding_welcome_description),
+                        buttonLabel = stringResource(R.string.onboarding_get_started),
                         onStart = { stepName = OnboardingStep.SOURCE.name },
                         modifier = Modifier.fillMaxSize(),
+                        appIconContent = {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(R.drawable.hibiki_app_icon),
+                                contentDescription = stringResource(R.string.app_name),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        },
                     )
 
                     OnboardingStep.SOURCE -> SourceStep(
@@ -216,53 +229,6 @@ fun FirstLaunchOnboarding(
         }
     }
 
-}
-
-@Composable
-private fun WelcomeStep(
-    onStart: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Surface(
-            modifier = Modifier.size(156.dp),
-            shape = CircleShape,
-            color = Color.White,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.hibiki_app_icon),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentScale = ContentScale.Fit,
-            )
-        }
-        Spacer(Modifier.height(40.dp))
-        Text(
-            text = stringResource(R.string.onboarding_welcome_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.onboarding_welcome_description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(36.dp))
-        Button(onClick = onStart) {
-            Text(stringResource(R.string.onboarding_get_started))
-        }
-    }
 }
 
 @Composable
