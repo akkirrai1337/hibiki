@@ -182,6 +182,11 @@ import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelMaxWidth
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelRestingOffsetY
+import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelMaxWidth
+import org.akkirrai.hibiki.shared.player.PlayerOverlayPanelExitOffset
+import org.akkirrai.hibiki.shared.player.PlayerPanelDismissDragThreshold
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
@@ -1318,7 +1323,7 @@ fun PlayerScreen(
                     keepControlsVisible()
                 },
                 widthFraction = PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION,
-                maxWidth = PLAYER_PLAYLIST_PANEL_MAX_WIDTH,
+                maxWidth = PlayerPlaylistPanelMaxWidth,
                 swipeToDismissEnabled = false,
             ) { dismissPanel ->
                 AppPlaylistBottomSheet(
@@ -1341,8 +1346,8 @@ fun PlayerScreen(
                     keepControlsVisible()
                 },
                 widthFraction = PLAYER_SETTINGS_PANEL_WIDTH_FRACTION,
-                maxWidth = PLAYER_SETTINGS_SHEET_MAX_WIDTH,
-                restingOffsetY = PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y,
+                maxWidth = PlayerSettingsPanelMaxWidth,
+                restingOffsetY = PlayerSettingsPanelRestingOffsetY,
                 swipeToDismissEnabled = false,
             ) { dismissPanel ->
                 PlayerSettingsSheet(
@@ -1415,8 +1420,8 @@ private fun PlayerOverlayPanel(
     var dragOffsetPx by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
-    val exitOffsetPx = with(density) { PLAYER_OVERLAY_PANEL_EXIT_OFFSET.toPx() }
-    val dismissThresholdPx = with(density) { PLAYER_PANEL_DISMISS_DRAG_THRESHOLD.toPx() }
+    val exitOffsetPx = with(density) { PlayerOverlayPanelExitOffset.toPx() }
+    val dismissThresholdPx = with(density) { PlayerPanelDismissDragThreshold.toPx() }
 
     val scrimBaseAlpha by animateFloatAsState(
         targetValue = if (animatingIn) PLAYER_OVERLAY_SCRIM_ALPHA else 0f,
@@ -1913,14 +1918,9 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
-private val PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y = 0.dp
 private const val PLAYER_SETTINGS_PANEL_WIDTH_FRACTION = 0.68f
-private val PLAYER_PLAYLIST_PANEL_MAX_WIDTH = 380.dp
 private const val PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION = 0.58f
-private val PLAYER_OVERLAY_PANEL_EXIT_OFFSET = 40.dp
-private val PLAYER_PANEL_DISMISS_DRAG_THRESHOLD = 72.dp
 private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
 private const val PLAYER_OVERLAY_ANIMATION_MS = 220
 private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
