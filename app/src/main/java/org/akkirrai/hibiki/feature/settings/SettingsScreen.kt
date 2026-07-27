@@ -151,7 +151,7 @@ fun SettingsScreen(
             AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
                 AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
-                        0 -> SettingsVerticalItem(
+                        0 -> AppSettingsIconVerticalItem(
                             icon = Icons.Outlined.DarkMode,
                             title = stringResource(R.string.settings_theme),
                             shape = shape,
@@ -191,7 +191,7 @@ fun SettingsScreen(
             AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
                 AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
-                        0 -> SettingsVerticalItem(
+                        0 -> AppSettingsIconVerticalItem(
                             icon = Icons.Outlined.Language,
                             title = stringResource(R.string.settings_language),
                             shape = shape,
@@ -329,21 +329,6 @@ private fun notificationPermissionLabel(state: NotificationPermissionState): Str
         NotificationPermissionState.DENIED -> R.string.settings_notifications_disabled
     },
 )
-
-@Composable
-private fun SettingsVerticalItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    shape: Shape,
-    content: @Composable () -> Unit,
-) {
-    AppSettingsIconVerticalItem(
-        icon = icon,
-        title = title,
-        shape = shape,
-        content = content,
-    )
-}
 
 @Composable
 private fun SettingsSwitchItem(
