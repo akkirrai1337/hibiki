@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun EpisodeRow(
@@ -24,7 +23,7 @@ fun EpisodeRow(
     inProgress: Boolean,
     enabled: Boolean,
     showDownloadAction: Boolean,
-    shape: RoundedCornerShape = RoundedCornerShape(0.dp),
+    shape: RoundedCornerShape = RoundedCornerShape(EpisodeRowDefaultCornerRadius),
     onClick: () -> Unit,
     downloadAction: @Composable (() -> Unit)? = null,
 ) {
