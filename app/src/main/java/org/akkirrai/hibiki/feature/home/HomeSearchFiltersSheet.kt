@@ -80,13 +80,13 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
+import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
-import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
@@ -214,7 +214,7 @@ fun AnimeSearchFiltersSheet(
                         .padding(bottom = UiDimens.FilterSheetBottomPadding),
                 ) {
                     if (capabilities.supports(AnimeCatalogFilter.TYPE) && typeEntries.isNotEmpty()) {
-                        AppConnectedToggleFilter(
+                        AppCatalogTypeFilterSection(
                             title = stringResource(R.string.search_filters_type),
                             entries = typeEntries,
                             selected = animeType,
@@ -226,9 +226,8 @@ fun AnimeSearchFiltersSheet(
                                     modifier = modifier,
                                 )
                             },
-                            allowClearSelection = true,
-                            icon = { ImageVector.vectorResource(typeIcon(it)) },
-                            text = { typeLabel(it) },
+                            typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
+                            typeLabel = { typeLabel(it) },
                         )
                     }
 
