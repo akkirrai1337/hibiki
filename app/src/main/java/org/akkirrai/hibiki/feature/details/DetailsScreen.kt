@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -166,6 +165,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
+import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewAnimation
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
@@ -871,22 +871,6 @@ private fun PosterPreviewOverlay(
 ) {
     var isVisible by remember { mutableStateOf(false) }
     var isDismissing by remember { mutableStateOf(false) }
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (isVisible) 0.78f else 0f,
-        animationSpec = tween(durationMillis = 180),
-        label = "posterPreviewScrimAlpha"
-    )
-    val posterAlpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
-        label = "posterPreviewPosterAlpha"
-    )
-    val posterScale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.94f,
-        animationSpec = tween(durationMillis = 220),
-        label = "posterPreviewPosterScale"
-    )
-
     LaunchedEffect(Unit) {
         isVisible = true
     }
@@ -906,25 +890,27 @@ private fun PosterPreviewOverlay(
 
     BackHandler(onBack = ::dismissAnimated)
 
-    AppDetailsPosterPreviewSurface(
-        scrimAlpha = scrimAlpha,
-        posterAlpha = posterAlpha,
-        posterScale = posterScale,
-        onDismiss = ::dismissAnimated,
-        posterContent = { posterModifier ->
-            PosterImage(
-                primaryUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = posterModifier,
-                contentScale = ContentScale.Fit,
-                placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) },
-            )
-        },
-        backContent = {
-            HeroOverlayBackButton(onClick = ::dismissAnimated)
-        },
-    )
+    AppDetailsPosterPreviewAnimation(visible = isVisible) { scrimAlpha, posterAlpha, posterScale ->
+        AppDetailsPosterPreviewSurface(
+            scrimAlpha = scrimAlpha,
+            posterAlpha = posterAlpha,
+            posterScale = posterScale,
+            onDismiss = ::dismissAnimated,
+            posterContent = { posterModifier ->
+                PosterImage(
+                    primaryUrl = anime.posterUrl,
+                    fallbackUrl = anime.posterFallbackUrl,
+                    contentDescription = anime.title,
+                    modifier = posterModifier,
+                    contentScale = ContentScale.Fit,
+                    placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) },
+                )
+            },
+            backContent = {
+                HeroOverlayBackButton(onClick = ::dismissAnimated)
+            },
+        )
+    }
 }
 
 @Composable
