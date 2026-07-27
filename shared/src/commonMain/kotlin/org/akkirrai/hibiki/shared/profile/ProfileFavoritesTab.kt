@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppProfileFavoritesTab(
@@ -20,7 +19,7 @@ fun AppProfileFavoritesTab(
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(24.dp),
+                .padding(ProfileLargePadding),
             contentAlignment = Alignment.TopCenter,
         ) {
             emptyContent()
