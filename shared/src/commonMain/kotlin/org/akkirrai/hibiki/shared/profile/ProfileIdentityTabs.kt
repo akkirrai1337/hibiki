@@ -27,7 +27,7 @@ fun AppProfileIdentityTabs(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(1.dp),
+        verticalArrangement = Arrangement.spacedBy(ProfileIdentityTabsVerticalSpacing),
     ) {
         Column(
             modifier = Modifier
