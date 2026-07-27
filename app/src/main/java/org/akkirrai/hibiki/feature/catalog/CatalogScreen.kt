@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -98,6 +97,7 @@ import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
+import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -179,16 +179,10 @@ fun CatalogScreen(
             errorIcon = Icons.Outlined.WarningAmber,
             errorIconTint = MaterialTheme.colorScheme.error,
             content = {
-                LazyColumn(
+                AppCatalogContentList(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = CATALOG_CONTENT_TOP_PADDING,
-                        end = UiDimens.ScreenPadding,
-                        bottom = bottomContentPadding + UiDimens.ScreenPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    topContentPadding = CATALOG_CONTENT_TOP_PADDING,
+                    bottomContentPadding = bottomContentPadding,
                     content = {
                     appVerticalAnimeListContent(
                         items = state.items,
