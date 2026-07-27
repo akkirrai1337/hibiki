@@ -30,10 +30,15 @@ fun PlaylistEpisodeRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .clip(RoundedCornerShape(18.dp)),
+            .clip(RoundedCornerShape(PlaylistEpisodeRowCornerRadius)),
         color = if (selected) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.03f),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = PlaylistEpisodeRowHorizontalPadding,
+                vertical = PlaylistEpisodeRowVerticalPadding,
+            ),
+        ) {
             Text(
                 text = headline,
                 style = MaterialTheme.typography.bodyLarge,
@@ -45,7 +50,7 @@ fun PlaylistEpisodeRow(
             subtitle?.takeIf(String::isNotBlank)?.let {
                 Text(
                     text = it,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = PlaylistEpisodeRowSubtitleTopPadding),
                     style = MaterialTheme.typography.bodySmall,
                     color = subtitleColor,
                     maxLines = 2,
