@@ -11,7 +11,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,7 +63,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -98,6 +96,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
+import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -105,8 +104,6 @@ import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
-import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
-import org.akkirrai.hibiki.shared.design.component.AppTopScrim
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import kotlinx.coroutines.delay
@@ -253,62 +250,50 @@ fun CatalogScreen(
             )
         }
 
-        AppTopScrim(
-            modifier = Modifier.align(Alignment.TopStart),
+        val sortOffsetY by animateDpAsState(
+            targetValue = if (isSortVisible) {
+                0.dp
+            } else {
+                -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
+            },
+            animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+            label = "catalog_sort_offset",
+        )
+        val sortAlpha by animateFloatAsState(
+            targetValue = if (isSortVisible) 1f else 0f,
+            animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+            label = "catalog_sort_alpha",
         )
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .padding(
-                    top = CATALOG_HEADER_TOP_PADDING,
-                    start = UiDimens.ScreenPadding,
-                    end = UiDimens.ScreenPadding,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CATALOG_SORT_VERTICAL_GAP),
-        ) {
-            AppSearchTopBar(
-                query = state.query,
-                onQueryChange = viewModel::updateQuery,
-                onClear = { viewModel.updateQuery("") },
-                placeholder = stringResource(R.string.search_placeholder),
-                filterContentDescription = stringResource(R.string.search_filters),
-                clearContentDescription = stringResource(R.string.home_search_clear),
-                searchIcon = Icons.Outlined.Search,
-                filterIcon = Icons.Outlined.FilterList,
-                clearIcon = Icons.Outlined.Close,
-                onFilterClick = { isFilterSheetOpen = true },
-                showFilterButton = hasCatalogFilters,
-                modifier = Modifier.zIndex(1f),
-            )
-            val sortOffsetY by animateDpAsState(
-                targetValue = if (isSortVisible) {
-                    0.dp
-                } else {
-                    -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
-                },
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_offset",
-            )
-            val sortAlpha by animateFloatAsState(
-                targetValue = if (isSortVisible) 1f else 0f,
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_alpha",
-            )
-            CatalogSortControl(
-                selectedSort = selectedSort,
-                availableSorts = availableSorts,
-                expanded = isSortMenuOpen,
-                onExpandedChange = { isSortMenuOpen = it },
-                onSortSelected = viewModel::selectSort,
-                modifier = Modifier.graphicsLayer {
-                    translationY = sortOffsetY.toPx()
-                    alpha = sortAlpha
-                },
-            )
-        }
+        AppCatalogTopOverlay(
+            query = state.query,
+            onQueryChange = viewModel::updateQuery,
+            onClear = { viewModel.updateQuery("") },
+            placeholder = stringResource(R.string.search_placeholder),
+            filterContentDescription = stringResource(R.string.search_filters),
+            clearContentDescription = stringResource(R.string.home_search_clear),
+            onFilterClick = { isFilterSheetOpen = true },
+            showFilterButton = hasCatalogFilters,
+            headerTopPadding = CATALOG_HEADER_TOP_PADDING,
+            sortVerticalGap = CATALOG_SORT_VERTICAL_GAP,
+            sortModifier = Modifier.graphicsLayer {
+                translationY = sortOffsetY.toPx()
+                alpha = sortAlpha
+            },
+            sortContent = {
+                CatalogSortControl(
+                    selectedSort = selectedSort,
+                    availableSorts = availableSorts,
+                    expanded = isSortMenuOpen,
+                    onExpandedChange = { isSortMenuOpen = it },
+                    onSortSelected = viewModel::selectSort,
+                )
+            },
+            searchIcon = Icons.Outlined.Search,
+            filterIcon = Icons.Outlined.FilterList,
+            clearIcon = Icons.Outlined.Close,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
     }
 
     if (isFilterSheetOpen) {
