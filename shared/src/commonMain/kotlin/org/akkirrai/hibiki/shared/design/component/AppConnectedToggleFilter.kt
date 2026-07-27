@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun <T> AppConnectedToggleFilter(
@@ -42,8 +42,8 @@ fun <T> AppConnectedToggleFilter(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                .padding(top = UiDimens.FilterContentTopPadding),
+            horizontalArrangement = Arrangement.spacedBy(UiDimens.ConnectedFilterItemGap),
         ) {
             entries.forEachIndexed { index, entry ->
                 AppConnectedToggleFilterItem(
@@ -74,8 +74,8 @@ private fun <T> AppConnectedToggleFilterItem(
     text: @Composable (T) -> String,
     modifier: Modifier = Modifier,
 ) {
-    val selectedRadius = 32.dp
-    val innerRadius = 4.dp
+    val selectedRadius = UiDimens.ConnectedFilterSelectedCorner
+    val innerRadius = UiDimens.ConnectedFilterInnerCorner
     val topStart by animateDpAsState(if (checked || isFirst) selectedRadius else innerRadius, label = "filter_top_start")
     val bottomStart by animateDpAsState(if (checked || isFirst) selectedRadius else innerRadius, label = "filter_bottom_start")
     val topEnd by animateDpAsState(if (checked || isLast) selectedRadius else innerRadius, label = "filter_top_end")
@@ -96,16 +96,19 @@ private fun <T> AppConnectedToggleFilterItem(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            modifier = Modifier.padding(
+                horizontal = UiDimens.ConnectedFilterItemHorizontalPadding,
+                vertical = UiDimens.ConnectedFilterItemVerticalPadding,
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(UiDimens.ConnectedFilterItemGap),
         ) {
             Icon(
                 imageVector = icon(entry),
                 contentDescription = text(entry),
                 modifier = Modifier
                     .graphicsLayer { alpha = 0.5f }
-                    .size(width = 14.dp, height = 14.dp),
+                    .size(UiDimens.ConnectedFilterIconSize),
             )
             Text(
                 text = text(entry),

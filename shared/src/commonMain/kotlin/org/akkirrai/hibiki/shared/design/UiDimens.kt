@@ -13,6 +13,13 @@ object UiDimens {
     val FilterHandlePadding = 8.dp
     val FilterHandleSize = 16.dp
     val FilterHandleStrokeWidth = 1.8.dp
+    val FilterContentTopPadding = 16.dp
+    val ConnectedFilterItemGap = 2.dp
+    val ConnectedFilterSelectedCorner = 32.dp
+    val ConnectedFilterInnerCorner = 4.dp
+    val ConnectedFilterItemHorizontalPadding = 8.dp
+    val ConnectedFilterItemVerticalPadding = 12.dp
+    val ConnectedFilterIconSize = 14.dp
     val CardCorner = 12.dp
     val MediumCorner = 18.dp
     val LargeCorner = 16.dp
