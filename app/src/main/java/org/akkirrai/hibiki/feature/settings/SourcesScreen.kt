@@ -43,9 +43,8 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
-import org.akkirrai.hibiki.shared.source.AppSourceGrid
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
-import org.akkirrai.hibiki.shared.source.AppExpandableSourceLanguageSection
+import org.akkirrai.hibiki.shared.source.AppSourceLanguageContent
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
@@ -151,9 +150,10 @@ private fun SourceLanguageSection(
     selectedSource: SourceId,
     onSourceSelected: (AnimeSourceDescriptor) -> Unit,
 ) {
-    AppExpandableSourceLanguageSection(
+    AppSourceLanguageContent(
         stateKey = section.language.tag,
         title = stringResource(section.labelRes),
+        items = sources,
         trailingContent = { iconModifier ->
             androidx.compose.material3.Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
@@ -164,22 +164,19 @@ private fun SourceLanguageSection(
                     .then(iconModifier),
             )
         },
-    ) {
-        AppSourceGrid(
-            items = sources,
-            emptyContent = {
-                SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
-            },
-            itemContent = { source, itemModifier ->
+        emptyContent = {
+            SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
+        },
+        isSelected = { source -> source.id == selectedSource },
+        itemContent = { source, selected, itemModifier ->
                 SourceGridItem(
                     source = source,
-                    selected = source.id == selectedSource,
+                    selected = selected,
                     onClick = { onSourceSelected(source) },
                     modifier = itemModifier,
                 )
-            },
-        )
-    }
+        },
+    )
 }
 
 @Composable

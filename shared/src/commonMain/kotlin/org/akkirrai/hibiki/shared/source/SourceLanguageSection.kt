@@ -85,3 +85,28 @@ fun AppExpandableSourceLanguageSection(
         content = content,
     )
 }
+
+@Composable
+fun <T> AppSourceLanguageContent(
+    stateKey: String,
+    title: String,
+    items: List<T>,
+    trailingContent: @Composable (Modifier) -> Unit,
+    emptyContent: @Composable () -> Unit,
+    isSelected: (T) -> Boolean,
+    itemContent: @Composable (item: T, selected: Boolean, modifier: Modifier) -> Unit,
+) {
+    AppExpandableSourceLanguageSection(
+        stateKey = stateKey,
+        title = title,
+        trailingContent = trailingContent,
+    ) {
+        AppSourceGrid(
+            items = items,
+            emptyContent = emptyContent,
+            itemContent = { item, modifier ->
+                itemContent(item, isSelected(item), modifier)
+            },
+        )
+    }
+}
