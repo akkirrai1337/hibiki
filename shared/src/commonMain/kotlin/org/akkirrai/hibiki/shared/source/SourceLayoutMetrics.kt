@@ -29,3 +29,4 @@ val SourceLanguageSectionVerticalPadding = 10.dp
 val SourceLanguageSectionHeaderGap = 4.dp
 val SourceLanguageSectionContentTopPadding = 12.dp
 val SourceLanguageSectionContentVerticalSpacing = 4.dp
+val SourceLanguageSectionChevronSize = 16.dp

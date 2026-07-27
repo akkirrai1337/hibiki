@@ -84,7 +84,7 @@ fun AppExpandableSourceLanguageSection(
         trailingContent = {
             trailingContent(
                 Modifier
-                    .size(16.dp)
+                    .size(SourceLanguageSectionChevronSize)
                     .graphicsLayer { rotationZ = arrowRotation },
             )
         },
