@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -108,12 +107,12 @@ import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
-import org.akkirrai.hibiki.shared.home.appHomeSearchContentTransition
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
+import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -200,12 +199,9 @@ fun HomeScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = isSearchActive,
-            transitionSpec = { appHomeSearchContentTransition(targetState) },
-            label = "HomeSearchContent",
-        ) { searchActive ->
-                if (searchActive) {
+        AppHomeContentSwitcher(
+            isSearchActive = isSearchActive,
+            searchContent = {
                 AppHomeSearchList(
                     topContentPadding = HOME_CONTENT_TOP_PADDING,
                     bottomContentPadding = bottomContentPadding,
@@ -256,7 +252,8 @@ fun HomeScreen(
                         },
                     )
                 }
-            } else {
+            },
+            feedContent = {
                 AppHomePullToRefresh(
                     isRefreshing = state.isLoading,
                     onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
@@ -283,8 +280,8 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-        }
+            },
+        )
 
         AppHomeSearchOverlay(
             query = state.searchQuery,
