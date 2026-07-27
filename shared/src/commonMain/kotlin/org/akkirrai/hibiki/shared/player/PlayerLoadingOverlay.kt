@@ -39,7 +39,7 @@ fun AppPlayerLoadingOverlay(
             CircularProgressIndicator(
                 modifier = Modifier.matchParentSize(),
                 color = Color.White,
-                strokeWidth = 4.dp,
+                strokeWidth = PlayerLoadingIndicatorStrokeWidth,
             )
         }
     }

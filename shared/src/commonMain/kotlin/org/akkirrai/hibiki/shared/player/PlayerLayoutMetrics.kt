@@ -15,6 +15,7 @@ val PlayerActionButtonSize = 46.dp
 val PlayerTimelineContainerHeight = 18.dp
 val PlayerTimelineTrackHeight = 4.dp
 val PlayerTimelineThumbSize = 8.dp
+val PlayerLoadingIndicatorStrokeWidth = 4.dp
 val PlayerBottomOverlayHorizontalPadding = 24.dp
 val PlayerBottomOverlayTopPadding = 8.dp
 val PlayerBottomOverlayBottomPadding = 18.dp
