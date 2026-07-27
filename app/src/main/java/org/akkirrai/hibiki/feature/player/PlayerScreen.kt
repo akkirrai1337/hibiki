@@ -190,6 +190,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
+import org.akkirrai.hibiki.shared.player.AppPlayerControlsOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
 import org.akkirrai.hibiki.shared.player.AppPlaylistBottomSheet
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
@@ -1115,15 +1116,12 @@ fun PlayerScreen(
             }
         }
 
-        AnimatedVisibility(
+        AppPlayerControlsOverlay(
             visible = !isPictureInPictureActive &&
                 !controlsLocked &&
                 (controlsVisible || state.isLoading || state.errorMessage != null),
             modifier = Modifier.fillMaxSize(),
-            enter = fadeIn(animationSpec = tween(160)),
-            exit = fadeOut(animationSpec = tween(180)),
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
                 AppPlayerTopOverlay(
                     title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
@@ -1282,7 +1280,6 @@ fun PlayerScreen(
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
-            }
         }
 
         AppPlayerUnlockOverlay(
