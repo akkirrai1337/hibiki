@@ -61,8 +61,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -130,6 +128,7 @@ import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
+import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -262,20 +261,12 @@ fun HomeScreen(
                     )
                 }
             } else {
-                PullToRefreshBox(
+                AppHomePullToRefresh(
                     isRefreshing = state.isLoading,
                     onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
                     state = pullToRefreshState,
+                    indicatorTopPadding = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET,
                     modifier = Modifier.fillMaxSize(),
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            state = pullToRefreshState,
-                            isRefreshing = state.isLoading,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET),
-                        )
-                    },
                 ) {
                     LazyColumn(
                         state = homeListState,
