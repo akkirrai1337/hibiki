@@ -11,3 +11,6 @@ val SettingsSectionContentGap = 16.dp
 val SettingsItemGap = 4.dp
 val SettingsItemOuterCornerRadius = 24.dp
 val SettingsItemInnerCornerRadius = 4.dp
+val SettingsContentHorizontalPadding = 18.dp
+val SettingsContentTopPadding = 24.dp
+val SettingsContentSectionGap = 28.dp

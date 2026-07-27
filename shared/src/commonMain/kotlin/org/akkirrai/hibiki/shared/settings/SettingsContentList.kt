@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppSettingsContentList(
@@ -19,12 +18,12 @@ fun AppSettingsContentList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = 18.dp,
-            top = 24.dp,
-            end = 18.dp,
+            start = SettingsContentHorizontalPadding,
+            top = SettingsContentTopPadding,
+            end = SettingsContentHorizontalPadding,
             bottom = bottomContentPadding,
         ),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(SettingsContentSectionGap),
         content = content,
     )
 }
