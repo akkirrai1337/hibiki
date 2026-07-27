@@ -1,56 +1,24 @@
 package org.akkirrai.hibiki.feature.profile
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
@@ -115,133 +83,26 @@ private fun AnalyticsDonutPager(
     pages: List<AnalyticsPage>,
     snapshot: LocalProfileSnapshot,
 ) {
-    var currentPage by rememberSaveable { mutableIntStateOf(0) }
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPagerHeader(
-            title = stringResource(R.string.yummy_account_segment_stats),
-            currentPage = currentPage,
-            pageCount = pages.size,
-            backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-            forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            onPrevious = { currentPage -= 1 },
-            onNext = { currentPage += 1 },
-        )
-        AnimatedContent(
-            targetState = currentPage,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clipToBounds(),
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "AnalyticsPage",
-        ) { pageIndex ->
-            val displayedPage = pages[pageIndex]
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                LegendGrid(
-                    items = displayedPage.segments,
-                    modifier = Modifier.weight(1f),
-                    columns = 1,
-                )
-                SegmentDonut(
-                    segments = displayedPage.segments,
-                    centerPrimary = displayedPage.centerPrimary,
-                    centerSecondary = displayedPage.centerSecondary,
-                    modifier = Modifier.size(152.dp),
-                    muted = displayedPage.segments.all { it.weight <= 0f },
-                )
-            }
-                if (pageIndex == 0) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PageArrowButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    isBack: Boolean,
-    modifier: Modifier = Modifier,
-    size: Dp = 40.dp,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfilePageArrowButton(
-        icon = if (isBack) Icons.AutoMirrored.Outlined.KeyboardArrowLeft
-        else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-        enabled = enabled,
-        onClick = onClick,
-        modifier = modifier,
-        size = size,
-    )
-}
-
-@Composable
-private fun LegendGrid(
-    items: List<AnalyticsSegment>,
-    columns: Int,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileLegendGrid(
-        items = items.map { item ->
-            org.akkirrai.hibiki.shared.profile.ProfileLegendGridItem(item.label, item.valueLabel, item.color)
+    org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsDonutPager(
+        pages = pages.map { page ->
+            org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage(
+                centerPrimary = page.centerPrimary,
+                centerSecondary = page.centerSecondary,
+                segments = page.segments.map { segment ->
+                    org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment(
+                        label = segment.label,
+                        valueLabel = segment.valueLabel,
+                        weight = segment.weight,
+                        color = segment.color,
+                    )
+                },
+            )
         },
-        columns = columns,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun LegendItem(
-    item: AnalyticsSegment,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileLegendItem(
-        label = item.label,
-        valueLabel = item.valueLabel,
-        color = item.color,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun SegmentDonut(
-    segments: List<AnalyticsSegment>,
-    centerPrimary: String,
-    centerSecondary: String,
-    modifier: Modifier = Modifier,
-    muted: Boolean = false,
-) {
-    org.akkirrai.hibiki.shared.profile.ProfileSegmentDonut(
-        segments = segments.map { segment ->
-            org.akkirrai.hibiki.shared.profile.ProfileDonutSegment(segment.weight, segment.color)
-        },
-        centerPrimary = centerPrimary,
-        centerSecondary = centerSecondary,
-        modifier = modifier,
-        muted = muted,
+        title = stringResource(R.string.yummy_account_segment_stats),
+        episodeStat = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
+        watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
+        backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+        forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
     )
 }
 
