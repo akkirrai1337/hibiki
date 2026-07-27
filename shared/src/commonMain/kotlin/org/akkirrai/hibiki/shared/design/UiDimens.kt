@@ -8,6 +8,15 @@ object UiDimens {
     val ScreenPadding = 12.dp
     val SearchBarTopPadding = 14.dp
     val SearchBarHeight = 56.dp
+    val SearchBarInnerHeight = 54.dp
+    val SearchBarRowGap = 8.dp
+    val SearchBarStartPadding = 18.dp
+    val SearchBarEndPadding = 6.dp
+    val SearchBarContentGap = 12.dp
+    val SearchBarIconSize = 22.dp
+    val SearchBarActionGap = 2.dp
+    val SearchBarActionButtonSize = 42.dp
+    val SearchBarClearIconSize = 18.dp
     val SectionSpacing = 20.dp
     val ItemSpacing = 12.dp
     val SmallSpacing = 8.dp
