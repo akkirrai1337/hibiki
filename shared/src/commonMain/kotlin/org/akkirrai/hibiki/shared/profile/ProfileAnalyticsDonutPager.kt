@@ -98,7 +98,7 @@ fun AppProfileAnalyticsDonutPager(
                     )
                 }
                 if (pageIndex == 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(ProfileAnalyticsStatsSpacing)) {
                         androidx.compose.material3.Text(
                             text = episodeStat,
                             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
