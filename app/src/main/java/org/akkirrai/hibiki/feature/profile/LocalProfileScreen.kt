@@ -81,6 +81,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
+import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 
 private enum class LocalProfileTab(val titleRes: Int) {
@@ -129,7 +130,7 @@ fun LocalProfileScreen(
             return@Box
         }
 
-        NestedProfileBannerLayout(
+        AppProfileBannerLayout(
             banner = { ratio, bannerModifier ->
                 Box(
                     modifier = bannerModifier.background(MaterialTheme.colorScheme.surfaceContainer),
@@ -229,64 +230,6 @@ fun LocalProfileScreen(
             }
             },
         )
-    }
-}
-
-/** Direct port of Animite's NestedScrollBannerLayout with its 168dp banner. */
-@Composable
-private fun NestedProfileBannerLayout(
-    banner: @Composable BoxScope.(Float, Modifier) -> Unit,
-    bannerElevatedContent: @Composable BoxScope.(Float) -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-    modifier: Modifier = Modifier,
-    maxBannerHeight: Dp = AnimiteBannerHeight,
-    contentPadding: PaddingValues = PaddingValues(),
-    contentBackgroundColor: Color = MaterialTheme.colorScheme.background,
-) {
-    val density = LocalDensity.current
-    var bannerHeightPx by remember { mutableFloatStateOf(with(density) { maxBannerHeight.toPx() }) }
-    var ratio by remember { mutableFloatStateOf(1f) }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
-    val minBannerHeightPx = with(density) { (statusBarHeight + AnimiteLargePadding).toPx() }
-    val maxBannerHeightPx = with(density) { maxBannerHeight.toPx() }
-
-    val nestedScrollConnection = remember(density, maxBannerHeightPx, minBannerHeightPx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y > 0f) return Offset.Zero
-                val previous = bannerHeightPx
-                bannerHeightPx = (bannerHeightPx + available.y).coerceIn(minBannerHeightPx, maxBannerHeightPx)
-                ratio = (bannerHeightPx - minBannerHeightPx) / (maxBannerHeightPx - minBannerHeightPx)
-                return if (previous != bannerHeightPx) available.copy(x = 0f) else Offset.Zero
-            }
-
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                val delta = when {
-                    available.y < 0f || consumed.y < 0f -> consumed.y
-                    available.y > 0f -> available.y
-                    else -> return Offset.Zero
-                }
-                val previous = bannerHeightPx
-                bannerHeightPx = (bannerHeightPx + delta).coerceIn(minBannerHeightPx, maxBannerHeightPx)
-                ratio = (bannerHeightPx - minBannerHeightPx) / (maxBannerHeightPx - minBannerHeightPx)
-                return Offset(0f, bannerHeightPx - previous)
-            }
-        }
-    }
-
-    Box(modifier.nestedScroll(nestedScrollConnection)) {
-        banner(
-            ratio,
-            Modifier.height(with(density) { bannerHeightPx.toDp() }).fillMaxWidth(),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = with(density) { bannerHeightPx.toDp() })
-                .background(contentBackgroundColor)
-                .padding(contentPadding),
-        ) { content() }
-        bannerElevatedContent(ratio)
     }
 }
 
