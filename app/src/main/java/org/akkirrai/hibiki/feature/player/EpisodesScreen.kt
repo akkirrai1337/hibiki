@@ -45,7 +45,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
@@ -55,6 +54,8 @@ import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodesList
 import org.akkirrai.hibiki.shared.player.AppEpisodesStateContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
+import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
+import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
@@ -143,7 +144,10 @@ fun EpisodesScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = UiDimens.ScreenPadding, top = 8.dp)
+                .padding(
+                    end = EpisodesDownloadToggleEndPadding,
+                    top = EpisodesDownloadToggleTopPadding,
+                )
                 .zIndex(1f),
         )
 
