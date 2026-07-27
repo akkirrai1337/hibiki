@@ -22,3 +22,6 @@ val SettingsAboutCardAppIconSize = 48.dp
 val SettingsAboutCardTextGap = 2.dp
 val SettingsAboutCardActionSize = 36.dp
 val SettingsAboutCardGithubIconSize = 26.dp
+val SettingsItemPadding = 16.dp
+val SettingsItemContentGap = 16.dp
+val SettingsItemTextGap = 2.dp

@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppSettingsVerticalItem(
@@ -26,8 +25,8 @@ fun AppSettingsVerticalItem(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceContainer, shape)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SettingsItemPadding),
+        verticalArrangement = Arrangement.spacedBy(SettingsItemContentGap),
     ) {
         headerContent()
         content()
@@ -47,14 +46,14 @@ fun AppSettingsItemRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .background(MaterialTheme.colorScheme.surfaceContainer, shape)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SettingsItemPadding),
+        horizontalArrangement = Arrangement.spacedBy(SettingsItemContentGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         iconContent()
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemTextGap),
             content = content,
         )
         trailing?.invoke()
@@ -67,7 +66,7 @@ fun AppSettingsItemHeader(
     title: String,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(SettingsItemContentGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         iconContent()
