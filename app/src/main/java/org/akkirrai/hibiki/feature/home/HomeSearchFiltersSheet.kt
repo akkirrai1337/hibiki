@@ -37,7 +37,6 @@ import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,6 +84,7 @@ import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
@@ -319,38 +319,18 @@ fun AnimeSearchFiltersSheet(
                         )
                     }
 
-                    Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionsTopGap))
-                    FlowRow(
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalArrangement = Arrangement.spacedBy(UiDimens.FilterSheetActionsGap),
-                    ) {
-                        Button(
-                            onClick = {
+                    AppFilterSheetActions(
+                        resetLabel = stringResource(R.string.search_filters_reset),
+                        applyLabel = stringResource(R.string.search_filters_apply),
+                        resetIcon = ImageVector.vectorResource(R.drawable.animite_reset),
+                        applyIcon = ImageVector.vectorResource(R.drawable.animite_done),
+                        onReset = {
                                 pendingFilters = AnimeSearchFilters()
                                 animeType = null
                                 yearRange = FILTER_YEAR_RANGE
                                 includedStatuses = emptySet()
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            ),
-                        ) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.animite_reset),
-                                contentDescription = null,
-                                modifier = Modifier.size(UiDimens.FilterSheetActionIconSize),
-                            )
-                            Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
-                            Text(
-                                text = stringResource(R.string.search_filters_reset),
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionButtonGap))
-                        Button(
-                            onClick = {
+                        onApply = {
                             onApply(
                                 pendingFilters.applyCatalogFilterDraft(
                                     animeType = animeType,
@@ -365,20 +345,9 @@ fun AnimeSearchFiltersSheet(
                                     sheetState.hide()
                                     onDismissRequest()
                                 }
-                            },
-                        ) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.animite_done),
-                                contentDescription = null,
-                                modifier = Modifier.size(UiDimens.FilterSheetActionIconSize),
-                            )
-                            Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
-                            Text(
-                                text = stringResource(R.string.search_filters_apply),
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
                 }
             }
             }
