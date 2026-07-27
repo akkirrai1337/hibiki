@@ -104,7 +104,6 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
-import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
@@ -113,6 +112,7 @@ import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
+import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -144,6 +144,10 @@ fun HomeScreen(
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val recentlyWatchedTitle = stringResource(R.string.home_recently_watched)
     val recentlyAddedTitle = stringResource(R.string.home_recently_added)
+    val continueSectionTitle = stringResource(R.string.home_continue_title)
+    val continueEmptyTitle = stringResource(R.string.home_continue_empty_title)
+    val continueEmptyMessage = stringResource(R.string.home_continue_empty_message)
+    val continueOpenHint = stringResource(R.string.home_open_title_hint)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val homeListState = rememberSaveable(saver = LazyListState.Saver) {
@@ -271,6 +275,10 @@ fun HomeScreen(
                             recentlyWatched = recentlyWatched,
                             recentlyAddedToLibrary = recentlyAddedToLibrary,
                             onAnimeClick = onAnimeClick,
+                            continueSectionTitle = continueSectionTitle,
+                            continueEmptyTitle = continueEmptyTitle,
+                            continueEmptyMessage = continueEmptyMessage,
+                            continueOpenHint = continueOpenHint,
                             recentlyWatchedTitle = recentlyWatchedTitle,
                             recentlyAddedTitle = recentlyAddedTitle,
                             announcementLabel = announcementLabel,
@@ -317,6 +325,10 @@ private fun LazyListScope.homeFeedContent(
     recentlyWatched: List<Anime>,
     recentlyAddedToLibrary: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
+    continueSectionTitle: String,
+    continueEmptyTitle: String,
+    continueEmptyMessage: String,
+    continueOpenHint: String,
     recentlyWatchedTitle: String,
     recentlyAddedTitle: String,
     announcementLabel: String,
@@ -324,42 +336,40 @@ private fun LazyListScope.homeFeedContent(
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
-    continueAnime?.let { anime ->
-        item {
-            AppHomeContinueWatchingContent(
+    appHomeContinueWatchingSection(
+        anime = continueAnime,
+        sectionTitle = continueSectionTitle,
+        emptyTitle = continueEmptyTitle,
+        emptyMessage = continueEmptyMessage,
+        openHint = continueOpenHint,
+        sectionIcon = Icons.Outlined.History,
+        meta = { anime ->
+            buildHomeMeta(
                 anime = anime,
-                sectionTitle = stringResource(R.string.home_continue_title),
-                emptyTitle = stringResource(R.string.home_continue_empty_title),
-                emptyMessage = stringResource(R.string.home_continue_empty_message),
-                openHint = stringResource(R.string.home_open_title_hint),
-                meta = buildHomeMeta(
-                    anime = anime,
-                    announcementLabel = announcementLabel,
-                    movieLabel = movieLabel,
-                ),
-                sectionIcon = Icons.Outlined.History,
-                onClick = { onAnimeClick(anime) },
-                imageContent = { currentAnime ->
-                    AppHomePoster(
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        PosterImage(
-                            primaryUrl = currentAnime.posterUrl,
-                            fallbackUrl = currentAnime.posterFallbackUrl,
-                            contentDescription = currentAnime.title,
-                            modifier = Modifier.fillMaxSize(),
-                            placeholder = {
-                                AppImagePlaceholder(icon = Icons.Outlined.Image)
-                            },
-                        )
-                    }
-                },
-                trailingContent = { currentAnime ->
-                    AnimeSourceBadge(titleId = currentAnime.id)
-                },
+                announcementLabel = announcementLabel,
+                movieLabel = movieLabel,
             )
-        }
-    }
+        },
+        onClick = onAnimeClick,
+        imageContent = { currentAnime ->
+            AppHomePoster(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                PosterImage(
+                    primaryUrl = currentAnime.posterUrl,
+                    fallbackUrl = currentAnime.posterFallbackUrl,
+                    contentDescription = currentAnime.title,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = {
+                        AppImagePlaceholder(icon = Icons.Outlined.Image)
+                    },
+                )
+            }
+        },
+        trailingContent = { currentAnime ->
+            AnimeSourceBadge(titleId = currentAnime.id)
+        },
+    )
     appHomeAnimeSection(
         title = recentlyWatchedTitle,
         items = recentlyWatched,
