@@ -28,10 +28,10 @@ fun AppSourceGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(SourceGridItemCornerRadius)
     Surface(
         modifier = modifier
-            .height(76.dp)
+            .height(SourceGridItemHeight)
             .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
@@ -39,15 +39,15 @@ fun AppSourceGridItem(
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
+            modifier = Modifier.padding(horizontal = SourceGridItemHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             iconContent(
                 Modifier
-                    .size(40.dp)
+                    .size(SourceGridItemIconSize)
                     .clip(CircleShape),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(SourceGridItemIconTextGap))
             Text(
                 text = name,
                 style = MaterialTheme.typography.bodyLarge,
