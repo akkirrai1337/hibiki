@@ -39,7 +39,7 @@ fun <T> AppSourceSearchSection(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(SourceSearchSectionVerticalSpacing),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp),
