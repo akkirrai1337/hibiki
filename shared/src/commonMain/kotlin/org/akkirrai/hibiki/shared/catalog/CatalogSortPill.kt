@@ -29,7 +29,7 @@ fun AppCatalogSortPill(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    orderContent: @Composable () -> Unit,
+    orderContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -66,7 +66,7 @@ fun AppCatalogSortPill(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
-                orderContent()
+                orderContent(Modifier.size(11.dp))
             }
         }
     }

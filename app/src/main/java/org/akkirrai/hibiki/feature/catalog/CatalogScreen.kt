@@ -315,10 +315,10 @@ private fun CatalogSortControl(
             icon = selectedSort.icon,
             label = sortLabels[selectedSort].orEmpty(),
             onClick = { onExpandedChange(!expanded) },
-            orderContent = {
+            orderContent = { orderModifier ->
                 CatalogSortOrderIcon(
                     atEnd = expanded,
-                    modifier = Modifier.size(11.dp),
+                    modifier = orderModifier,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 )
             },
