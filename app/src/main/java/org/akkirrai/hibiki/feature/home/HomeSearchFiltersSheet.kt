@@ -84,6 +84,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogGenreFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogStatusFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogYearFilterSection
+import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -126,6 +127,116 @@ fun HomeSearchFiltersSheet(
 @Composable
 fun AnimeSearchFiltersSheet(
     initialFilters: AnimeSearchFilters,
+    filterCatalog: AnimeCatalogFilterCatalog?,
+    isFilterCatalogLoading: Boolean,
+    onApply: (AnimeSearchFilters) -> Unit,
+    onDismissRequest: () -> Unit,
+    optionText: @Composable (AnimeCatalogFilterOption) -> String = { appFilterOptionText(it.title) },
+    maxCollapsedGenreGroups: Int? = null,
+    maxCollapsedGenreItems: Int? = 15,
+    showGenreFilters: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val appLanguage = LocalAppLanguage.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
+    var pendingFilters by remember(initialFilters) { mutableStateOf(initialFilters) }
+    var animeType by rememberSaveable(initialFilters) {
+        mutableStateOf(AnimeTypeAlias.fromAlias(initialFilters.typeAlias))
+    }
+    var includedStatuses by remember(initialFilters) {
+        mutableStateOf(setOfNotNull(initialFilters.statusAlias))
+    }
+    var yearRange by remember(initialFilters) {
+        mutableStateOf(
+            initialFilters.yearFrom?.let { from ->
+                IntRange(from, initialFilters.yearTo ?: from)
+            } ?: FILTER_YEAR_RANGE
+        )
+    }
+
+    AppFilterBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        modifier = modifier,
+        shape = rememberDeviceScreenTopCornerShape(),
+    ) { sheetContentModifier ->
+        LocalizedAppContext(languageMode = appLanguage) {
+            AppCatalogFilterSheetContent(
+                filterCatalog = filterCatalog,
+                isFilterCatalogLoading = isFilterCatalogLoading,
+                unavailableLabel = stringResource(R.string.search_filters_unavailable),
+                animeType = animeType,
+                onAnimeTypeChange = { animeType = it },
+                pendingFilters = pendingFilters,
+                onPendingFiltersChange = { pendingFilters = it },
+                includedStatuses = includedStatuses,
+                onIncludedStatusesChange = { includedStatuses = it },
+                yearRange = yearRange,
+                defaultYearRange = FILTER_YEAR_RANGE,
+                onYearRangeChange = { yearRange = it },
+                onReset = {
+                    pendingFilters = AnimeSearchFilters()
+                    animeType = null
+                    yearRange = FILTER_YEAR_RANGE
+                    includedStatuses = emptySet()
+                },
+                onApply = {
+                    onApply(
+                        pendingFilters.applyCatalogFilterDraft(
+                            animeType = animeType,
+                            includedStatuses = includedStatuses,
+                            yearRange = yearRange,
+                            defaultYearRange = FILTER_YEAR_RANGE,
+                            capabilities = filterCatalog?.capabilities ?: AnimeCatalogCapabilities(),
+                            showGenreFilters = showGenreFilters,
+                        )
+                    )
+                    scope.launch {
+                        sheetState.hide()
+                        onDismissRequest()
+                    }
+                },
+                typeTitle = stringResource(R.string.search_filters_type),
+                genresTitle = stringResource(R.string.search_filters_genres),
+                yearTitle = stringResource(R.string.search_filters_year),
+                yearAllLabel = stringResource(R.string.search_filters_year_all),
+                yearFromLabel = stringResource(R.string.search_filters_year_from),
+                yearToLabel = stringResource(R.string.search_filters_year_to),
+                statusTitle = stringResource(R.string.search_filters_status),
+                resetLabel = stringResource(R.string.search_filters_reset),
+                applyLabel = stringResource(R.string.search_filters_apply),
+                dropdownIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                resetIcon = ImageVector.vectorResource(R.drawable.animite_reset),
+                applyIcon = ImageVector.vectorResource(R.drawable.animite_done),
+                typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
+                typeLabel = { typeLabel(it) },
+                statusIcon = { statusIcon(it.id) },
+                optionText = optionText,
+                expandIconContent = { expanded, iconModifier ->
+                    Icon(
+                        imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = iconModifier,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                    )
+                },
+                showGenreFilters = showGenreFilters,
+                maxCollapsedGenreGroups = maxCollapsedGenreGroups,
+                maxCollapsedGenreItems = maxCollapsedGenreItems,
+                modifier = sheetContentModifier,
+            )
+        }
+    }
+}
+
+@OptIn(
+    ExperimentalLayoutApi::class,
+    ExperimentalMaterial3Api::class,
+)
+@Composable
+fun AnimeSearchFiltersSheet(
+    initialFilters: AnimeSearchFilters,
     filterCatalog: AnimeSearchFilterCatalog?,
     isFilterCatalogLoading: Boolean,
     onApply: (AnimeSearchFilters) -> Unit,
@@ -149,7 +260,7 @@ fun AnimeSearchFiltersSheet(
     ExperimentalMaterial3Api::class,
 )
 @Composable
-fun AnimeSearchFiltersSheet(
+private fun LegacySharedAnimeSearchFiltersSheet(
     initialFilters: AnimeSearchFilters,
     filterCatalog: AnimeCatalogFilterCatalog?,
     isFilterCatalogLoading: Boolean,
