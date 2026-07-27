@@ -32,12 +32,15 @@ fun AppPlayerFeedbackOverlay(
         exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
     ) {
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(PlayerFeedbackOverlayCornerRadius),
             color = Color.Black.copy(alpha = 0.62f),
         ) {
             Text(
                 text = label,
-                modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 14.dp),
+                modifier = Modifier.padding(
+                    horizontal = horizontalPadding,
+                    vertical = PlayerFeedbackOverlayVerticalPadding,
+                ),
                 color = Color.White,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
