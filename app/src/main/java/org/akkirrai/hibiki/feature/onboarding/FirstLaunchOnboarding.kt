@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -68,6 +67,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -203,10 +203,10 @@ fun FirstLaunchOnboarding(
                                         Text(stringResource(R.string.onboarding_notifications_allow))
                                     }
                                 }
-                                NotificationPermissionState.GRANTED -> PermissionStatus(
+                                NotificationPermissionState.GRANTED -> AppOnboardingPermissionStatus(
                                     text = stringResource(R.string.onboarding_notifications_enabled),
                                 )
-                                NotificationPermissionState.DENIED -> PermissionStatus(
+                                NotificationPermissionState.DENIED -> AppOnboardingPermissionStatus(
                                     text = stringResource(R.string.onboarding_notifications_denied),
                                 )
                             }
@@ -246,22 +246,6 @@ fun FirstLaunchOnboarding(
         }
     }
 
-}
-
-@Composable
-private fun PermissionStatus(text: String) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
-    }
 }
 
 @Composable
