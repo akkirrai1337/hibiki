@@ -137,13 +137,11 @@ fun FirstLaunchOnboarding(
                         buttonLabel = stringResource(R.string.onboarding_get_started),
                         onStart = { stepName = OnboardingStep.SOURCE.name },
                         modifier = Modifier.fillMaxSize(),
-                        appIconContent = {
+                        appIconContent = { iconModifier ->
                             androidx.compose.foundation.Image(
                                 painter = painterResource(R.drawable.hibiki_app_icon),
                                 contentDescription = stringResource(R.string.app_name),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp),
+                                modifier = iconModifier,
                                 contentScale = ContentScale.Fit,
                             )
                         },

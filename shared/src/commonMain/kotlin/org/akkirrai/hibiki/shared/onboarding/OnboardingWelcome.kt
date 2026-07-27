@@ -26,7 +26,7 @@ fun AppOnboardingWelcome(
     title: String,
     description: String,
     buttonLabel: String,
-    appIconContent: @Composable () -> Unit,
+    appIconContent: @Composable (Modifier) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -42,7 +42,11 @@ fun AppOnboardingWelcome(
             shape = CircleShape,
             color = Color.White,
         ) {
-            appIconContent()
+            appIconContent(
+                Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+            )
         }
         Spacer(Modifier.height(40.dp))
         Text(
