@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,6 +81,7 @@ import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
+import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 
 private enum class LocalProfileTab(val titleRes: Int) {
@@ -319,14 +319,17 @@ private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
 
 @Composable
 private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPadding: Dp) {
-    if (items.isEmpty()) {
-        Box(Modifier.fillMaxHeight().padding(AnimiteLargePadding), contentAlignment = Alignment.TopCenter) {
-            Text(stringResource(R.string.local_profile_empty_favorites), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    } else {
-        org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
+    AppProfileFavoritesTab(
+        isEmpty = items.isEmpty(),
+        bottomContentPadding = bottomContentPadding,
+        emptyContent = {
+            Text(
+                stringResource(R.string.local_profile_empty_favorites),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    ) {
             RecentLibraryCard(items = items, showTitle = false)
-        }
     }
 }
 
