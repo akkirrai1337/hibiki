@@ -37,7 +37,10 @@ fun AppPlayerTopOverlay(
                     1f to Color.Transparent,
                 ),
             )
-            .padding(horizontal = 20.dp, vertical = 22.dp),
+            .padding(
+                horizontal = PlayerTopOverlayHorizontalPadding,
+                vertical = PlayerTopOverlayVerticalPadding,
+            ),
     ) {
         Box(
             modifier = Modifier.align(Alignment.TopStart),
@@ -56,9 +59,12 @@ fun AppPlayerTopOverlay(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(horizontal = 92.dp, vertical = 10.dp),
+                .padding(
+                    horizontal = PlayerTopOverlayTitleHorizontalPadding,
+                    vertical = PlayerTopOverlayTitleVerticalPadding,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(PlayerTopOverlayTitleGap),
         ) {
             Text(
                 text = title.preventTrailingOrphanWrap(),
