@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.profile
 
 import org.akkirrai.hibiki.shared.profile.normalizePosterUrl
+import org.akkirrai.hibiki.shared.profile.ProfileRecentPosterMarker
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,16 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -62,12 +60,7 @@ private fun RecentPoster(
     org.akkirrai.hibiki.shared.profile.ProfileRecentPosterFrame {
         val posterUrl = normalizePosterUrl(item.posterUrl)
         if (posterUrl == null) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(item.color),
-            )
+            ProfileRecentPosterMarker(color = item.color)
         } else {
             SubcomposeAsyncImage(
                 model = posterUrl,
@@ -83,12 +76,7 @@ private fun RecentPoster(
                 },
                 error = {
                     PosterPlaceholder(modifier = Modifier.fillMaxSize()) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(item.color),
-                        )
+                        ProfileRecentPosterMarker(color = item.color)
                     }
                 },
             )
