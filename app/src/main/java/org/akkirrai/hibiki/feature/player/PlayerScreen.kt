@@ -148,7 +148,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -172,7 +171,6 @@ import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
-import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntryRow
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayerSettingsChoiceRow
@@ -188,6 +186,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
+import org.akkirrai.hibiki.shared.player.AppPlaylistBottomSheet
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
 import androidx.compose.foundation.layout.offset
 
@@ -1427,9 +1426,10 @@ fun PlayerScreen(
                 maxWidth = PLAYER_PLAYLIST_PANEL_MAX_WIDTH,
                 swipeToDismissEnabled = false,
             ) { dismissPanel ->
-                PlaylistBottomSheet(
+                AppPlaylistBottomSheet(
                     currentEpisodeId = state.currentEpisodeId,
                     episodes = state.episodes,
+                    headline = ::buildEpisodeTitle,
                     onEpisodeClick = { episodeId ->
                         dismissPanel()
                         runPlaybackSwitch { viewModel.selectEpisode(episodeId) }
@@ -1944,26 +1944,6 @@ private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
     VideoScaleMode.STRETCH -> R.string.watch_player_video_scale_stretch
 }
 
-@Composable
-private fun PlaylistBottomSheet(
-    currentEpisodeId: String,
-    episodes: List<WatchEpisode>,
-    onEpisodeClick: (String) -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        PlaylistEpisodesList(
-            currentEpisodeId = currentEpisodeId,
-            episodes = episodes,
-            maxHeight = PLAYER_PLAYLIST_SHEET_MAX_HEIGHT,
-            horizontalPadding = UiDimens.ScreenPadding,
-            headline = ::buildEpisodeTitle,
-            onEpisodeClick = onEpisodeClick,
-        )
-    }
-}
-
 private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
     val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
         context = context,
@@ -2076,7 +2056,6 @@ private val PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y = 0.dp
 private const val PLAYER_SETTINGS_PANEL_WIDTH_FRACTION = 0.68f
 private val PLAYER_PLAYLIST_PANEL_MAX_WIDTH = 380.dp
 private const val PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION = 0.58f
-private val PLAYER_PLAYLIST_SHEET_MAX_HEIGHT = 360.dp
 private val PLAYER_OVERLAY_PANEL_EXIT_OFFSET = 40.dp
 private val PLAYER_PANEL_DISMISS_DRAG_THRESHOLD = 72.dp
 private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
