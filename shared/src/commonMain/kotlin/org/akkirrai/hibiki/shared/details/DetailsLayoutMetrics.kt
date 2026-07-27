@@ -77,3 +77,4 @@ val DetailsHeroActionsBottomSpacing = 16.dp
 val DetailsPosterCardWidth = 140.dp
 val DetailsPosterCardCornerRadius = 12.dp
 val DetailsPosterCardElevation = 8.dp
+val DetailsStatusBarScrimOpaqueDistance = 168.dp
