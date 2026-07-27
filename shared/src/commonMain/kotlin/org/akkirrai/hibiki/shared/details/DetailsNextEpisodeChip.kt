@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -26,11 +25,11 @@ fun DetailsNextEpisodeChip(
 ) {
     val chipColor = Color(0xFF80DF87)
     Row(
-        modifier = modifier.clip(CircleShape).background(chipColor.copy(alpha = 0.2f)).padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.clip(CircleShape).background(chipColor.copy(alpha = 0.2f)).padding(horizontal = DetailsNextEpisodeChipHorizontalPadding),
+        horizontalArrangement = Arrangement.spacedBy(DetailsNextEpisodeChipContentGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, Modifier.size(15.dp), tint = chipColor)
+        Icon(icon, null, Modifier.size(DetailsNextEpisodeChipIconSize), tint = chipColor)
         Text(text, color = chipColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
