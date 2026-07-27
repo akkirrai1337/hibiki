@@ -87,7 +87,6 @@ import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
 import org.akkirrai.hibiki.shared.model.toAnime
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -119,6 +118,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
+import org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine
 import org.akkirrai.hibiki.shared.details.AppDetailsContentList
 import org.akkirrai.hibiki.shared.details.DetailsGenresSection
 import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
@@ -535,10 +535,17 @@ private fun DetailHeroSection(
                 onTitleClick = onTitleClick,
                 ratingsContent = if (detailsState.anime.ratings.isNotEmpty() || !detailsState.anime.viewCount.isNullOrZero()) {
                     {
-                        HeroRatingsLine(
-                            ratings = detailsState.anime.ratings,
-                            viewCount = detailsState.anime.viewCount,
-                        )
+                        resolveDetailsHeroRatings(
+                            detailsState.anime.ratings,
+                            detailsState.anime.viewCount,
+                        )?.let { ratings ->
+                            DetailsHeroRatingsLine(
+                                rating = ratings.rating,
+                                viewCount = ratings.viewCount,
+                                ratingIcon = Icons.Filled.Star,
+                                viewCountIcon = Icons.Outlined.Visibility,
+                            )
+                        }
                     }
                 } else {
                     null
@@ -671,22 +678,6 @@ private fun ResumeFrameImage(
         contentScale = ContentScale.Crop,
         loading = {},
         error = {},
-    )
-}
-
-@Composable
-private fun HeroRatingsLine(
-    ratings: List<AnimeRating>,
-    viewCount: Long?,
-    modifier: Modifier = Modifier,
-) {
-    val data = resolveDetailsHeroRatings(ratings, viewCount) ?: return
-    org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine(
-        rating = data.rating,
-        viewCount = data.viewCount,
-        ratingIcon = Icons.Filled.Star,
-        viewCountIcon = Icons.Outlined.Visibility,
-        modifier = modifier,
     )
 }
 
