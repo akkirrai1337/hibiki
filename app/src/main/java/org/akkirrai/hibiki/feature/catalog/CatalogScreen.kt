@@ -91,6 +91,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -154,7 +155,7 @@ fun CatalogScreen(
         state = state,
         onLoadMore = viewModel::loadMore,
     )
-    CatalogSortVisibilityEffect(
+    AppCatalogSortVisibilityEffect(
         listState = listState,
         onVisibilityChange = { isSortVisible = it },
     )
@@ -320,31 +321,6 @@ private fun CatalogPaginationEffect(
                 latestState.error == null
         }.collect { shouldLoadMore ->
             if (shouldLoadMore) onLoadMore()
-        }
-    }
-}
-
-@Composable
-private fun CatalogSortVisibilityEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    onVisibilityChange: (Boolean) -> Unit,
-) {
-    LaunchedEffect(listState) {
-        var previousIndex = listState.firstVisibleItemIndex
-        var previousOffset = listState.firstVisibleItemScrollOffset
-        snapshotFlow {
-            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
-        }.collect { (currentIndex, currentOffset) ->
-            val isScrollingDown = currentIndex > previousIndex ||
-                (currentIndex == previousIndex && currentOffset > previousOffset)
-            val isScrollingUp = currentIndex < previousIndex ||
-                (currentIndex == previousIndex && currentOffset < previousOffset)
-            when {
-                isScrollingDown -> onVisibilityChange(false)
-                isScrollingUp -> onVisibilityChange(true)
-            }
-            previousIndex = currentIndex
-            previousOffset = currentOffset
         }
     }
 }
