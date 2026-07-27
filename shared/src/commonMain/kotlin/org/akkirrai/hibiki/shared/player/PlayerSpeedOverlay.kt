@@ -13,7 +13,7 @@ fun AppPlayerSpeedOverlay(
     AppPlayerFeedbackOverlay(
         visible = visible,
         label = label,
-        horizontalPadding = 26.dp,
+        horizontalPadding = PlayerSpeedOverlayHorizontalPadding,
         modifier = modifier,
     )
 }
