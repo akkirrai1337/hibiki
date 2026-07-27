@@ -83,6 +83,11 @@ import org.akkirrai.beakokit.model.AnimeSearchFilter
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.CatalogHeaderTopPadding
+import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
+import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
+import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
+import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
@@ -170,7 +175,7 @@ fun CatalogScreen(
             content = {
                 AppCatalogContentList(
                     state = listState,
-                    topContentPadding = CATALOG_CONTENT_TOP_PADDING,
+                    topContentPadding = CatalogContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
                     content = {
                     appCatalogResultsContent(
@@ -223,14 +228,14 @@ fun CatalogScreen(
             targetValue = if (isSortVisible) {
                 0.dp
             } else {
-                -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
+                -(CatalogSortControlHeight + CatalogSortVerticalGap)
             },
-            animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+            animationSpec = tween(durationMillis = CatalogSortAnimationDurationMs),
             label = "catalog_sort_offset",
         )
         val sortAlpha by animateFloatAsState(
             targetValue = if (isSortVisible) 1f else 0f,
-            animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+            animationSpec = tween(durationMillis = CatalogSortAnimationDurationMs),
             label = "catalog_sort_alpha",
         )
 
@@ -243,8 +248,8 @@ fun CatalogScreen(
             clearContentDescription = stringResource(R.string.home_search_clear),
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
-            headerTopPadding = CATALOG_HEADER_TOP_PADDING,
-            sortVerticalGap = CATALOG_SORT_VERTICAL_GAP,
+            headerTopPadding = CatalogHeaderTopPadding,
+            sortVerticalGap = CatalogSortVerticalGap,
             sortModifier = Modifier.graphicsLayer {
                 translationY = sortOffsetY.toPx()
                 alpha = sortAlpha
@@ -275,7 +280,6 @@ fun CatalogScreen(
         )
     }
 }
-
 @Composable
 private fun CatalogSortControl(
     selectedSort: CatalogSort,
@@ -304,7 +308,7 @@ private fun CatalogSortControl(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(CATALOG_SORT_CONTROL_HEIGHT),
+            .height(CatalogSortControlHeight),
     ) {
         AppCatalogSortPill(
             sortKey = selectedSort.name,
@@ -543,15 +547,3 @@ private fun availableCatalogSorts(
         }
     }
 }
-
-private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
-private val CATALOG_SEARCH_BAR_HEIGHT = UiDimens.SearchBarHeight
-private val CATALOG_SORT_VERTICAL_GAP = 8.dp
-private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
-private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
-    CATALOG_SEARCH_BAR_HEIGHT +
-    CATALOG_SORT_VERTICAL_GAP +
-    CATALOG_SORT_VERTICAL_GAP +
-    CATALOG_SORT_CONTROL_HEIGHT +
-    CATALOG_SORT_VERTICAL_GAP
-private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
