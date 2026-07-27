@@ -21,3 +21,4 @@ val ProfileActionButtonSize = 40.dp
 val ProfileRecentLibraryRowPosterTextGap = 12.dp
 val ProfileRecentLibraryRowTextSpacing = 4.dp
 val ProfileRecentLibraryStatusMarkerSize = 7.dp
+val ProfileRecentLibraryCardVerticalSpacing = 12.dp

@@ -21,7 +21,7 @@ fun ProfileRecentLibraryCard(
     isEmpty: Boolean,
     content: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ProfileRecentLibraryCardVerticalSpacing)) {
         title?.let { Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) }
         if (isEmpty) {
             Box(Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.CenterStart) {
