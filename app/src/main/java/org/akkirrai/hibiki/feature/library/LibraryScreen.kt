@@ -331,11 +331,10 @@ private fun LibraryAnimeCard(
                     AppImagePlaceholder(icon = Icons.Outlined.Image)
                 },
             )
+        },
+        sourceBadgeContent = {
             AnimeSourceBadge(
                 titleId = anime.id,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
             )
         },
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
