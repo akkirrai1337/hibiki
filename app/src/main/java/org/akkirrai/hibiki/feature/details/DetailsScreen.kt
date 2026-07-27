@@ -163,6 +163,7 @@ import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -702,79 +703,40 @@ private fun DetailHeroMedia(
             )
         }
 
-        when {
-            resumeState != null -> {
-                val progress = if (resumeState.durationMs > 0L) {
-                    (resumeState.positionMs.toFloat() / resumeState.durationMs).coerceIn(0f, 1f)
+        AppDetailsHeroPlaybackActions(
+            resumeTitle = resumeState?.let { stringResource(R.string.details_watch_continue) },
+            resumeSubtitle = resumeState?.let {
+                stringResource(
+                    R.string.details_continue_episode_position,
+                    formatEpisodeNumber(it.episodeNumber),
+                    formatPlaybackPosition(it.positionMs),
+                )
+            },
+            resumeProgress = resumeState?.let {
+                if (it.durationMs > 0L) {
+                    (it.positionMs.toFloat() / it.durationMs).coerceIn(0f, 1f)
                 } else {
                     0f
                 }
-                Surface(
-                    onClick = { onResumeClick(resumeState) },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.58f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
-                    contentColor = Color.White,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.details_watch_continue),
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            )
-                            Text(
-                                text = stringResource(
-                                    R.string.details_continue_episode_position,
-                                    formatEpisodeNumber(resumeState.episodeNumber),
-                                    formatPlaybackPosition(resumeState.positionMs),
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.78f),
-                            )
-                        }
-                    }
-                }
-                if (progress > 0f) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .align(Alignment.BottomCenter),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.White.copy(alpha = 0.24f),
-                    )
-                }
-            }
-
-            trailer != null -> {
-                Surface(
-                    onClick = onTrailerClick,
-                    modifier = Modifier.size(64.dp),
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.38f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)),
-                    contentColor = Color.White,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = stringResource(R.string.details_trailer),
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                }
-            }
-        }
+            } ?: 0f,
+            onResumeClick = resumeState?.let { state -> { onResumeClick(state) } },
+            resumeIconContent = {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                )
+            },
+            trailerEnabled = trailer != null,
+            onTrailerClick = onTrailerClick,
+            trailerIconContent = {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = stringResource(R.string.details_trailer),
+                    modifier = Modifier.size(32.dp),
+                )
+            },
+        )
     }
 }
 
