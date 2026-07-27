@@ -47,6 +47,7 @@ val PlayerLoadingIndicatorStrokeWidth = 4.dp
 val PlayerUnlockButtonHorizontalPadding = 18.dp
 val PlayerUnlockButtonVerticalPadding = 11.dp
 val PlayerUnlockButtonContentGap = 9.dp
+val PlayerUnlockButtonCornerRadius = 999.dp
 val PlayerUnlockOverlayIconSize = 20.dp
 val PlayerSkipSegmentOverlayGap = 8.dp
 val PlayerSkipSegmentButtonHorizontalPadding = 16.dp

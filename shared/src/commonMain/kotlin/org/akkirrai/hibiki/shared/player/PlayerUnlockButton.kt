@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerUnlockButton(
@@ -24,9 +23,9 @@ fun AppPlayerUnlockButton(
 ) {
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(RoundedCornerShape(PlayerUnlockButtonCornerRadius))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(PlayerUnlockButtonCornerRadius),
         color = Color.Black.copy(alpha = 0.72f),
         contentColor = Color.White,
     ) {
