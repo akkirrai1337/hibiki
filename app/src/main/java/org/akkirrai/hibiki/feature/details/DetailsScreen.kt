@@ -167,7 +167,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
-import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheetItem
+import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
@@ -831,98 +831,37 @@ private fun LibraryCategorySheet(
         stringResource(category.labelResId)
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 560.dp)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(top = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
-                        )
-                    }
-                }
-
-                items(
-                    items = LibraryCategory.entries.filter { it != LibraryCategory.Saved },
-                    key = LibraryCategory::name,
-                ) { category ->
-                    AppLibraryCategorySheetItem(
-                        label = categoryLabels.getValue(category),
-                        selected = category == selectedCategory,
-                        onClick = { onCategoryClick(category) },
-                        iconContent = {
-                            Icon(
-                                imageVector = category.icon(),
-                                contentDescription = null,
-                                modifier = Modifier.size(21.dp),
-                                tint = if (category == selectedCategory) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        },
-                        selectedIconContent = {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        },
-                    )
-                }
-
-                if (selectedCategory == LibraryCategory.Saved) {
-                    item {
-                        Text(
-                            text = savedNote,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-                } else if (selectedCategory != null) {
-                    item {
-                        TextButton(
-                            onClick = onRemoveClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            shape = RoundedCornerShape(16.dp),
-                        ) {
-                            Text(removeAction)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    AppLibraryCategorySheet(
+        selectedCategory = selectedCategory,
+        title = title,
+        subtitle = subtitle,
+        savedNote = savedNote,
+        removeAction = removeAction,
+        categoryLabels = categoryLabels,
+        onCategoryClick = onCategoryClick,
+        onRemoveClick = onRemoveClick,
+        onDismiss = onDismiss,
+        iconContent = { category ->
+            Icon(
+                imageVector = category.icon(),
+                contentDescription = null,
+                modifier = Modifier.size(21.dp),
+                tint = if (category == selectedCategory) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        },
+        selectedIconContent = {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+    )
 }
 
 @Composable
