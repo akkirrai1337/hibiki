@@ -10,10 +10,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.SizeTransform
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,14 +22,11 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,8 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import org.akkirrai.beakokit.api.SourceId
@@ -68,6 +61,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -182,13 +176,43 @@ fun FirstLaunchOnboarding(
                         },
                     )
 
-                    OnboardingStep.SOURCE -> SourceStep(
-                        sources = displayedSources,
-                        selectedSource = selectedSource,
-                        localizedSourcesMissing = localizedSources.isEmpty(),
-                        onSourceSelected = { selectedSourceValue = it.id.value },
-                        onShowAllSources = { showSourceList = true },
+                    OnboardingStep.SOURCE -> AppOnboardingSourceStep(
+                        title = stringResource(R.string.onboarding_source_title),
+                        description = stringResource(
+                            if (localizedSources.isEmpty()) {
+                                R.string.onboarding_source_no_match
+                            } else {
+                                R.string.onboarding_source_description
+                            },
+                        ),
+                        icon = Icons.Rounded.VideoLibrary,
+                        items = displayedSources,
+                        itemKey = { it.id.value },
                         modifier = Modifier.fillMaxSize(),
+                        itemContent = { source ->
+                            AppOnboardingSourceCard(
+                                name = source.name,
+                                languageSummary = sourceLanguageSummary(source),
+                                selected = source.id == selectedSource,
+                                onClick = { selectedSourceValue = source.id.value },
+                                iconContent = {
+                                    AsyncImage(
+                                        model = source.iconUrl,
+                                        placeholder = painterResource(source.iconRes),
+                                        error = painterResource(source.iconRes),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape),
+                                    )
+                                },
+                            )
+                        },
+                        footerContent = {
+                            TextButton(onClick = { showSourceList = true }) {
+                                Text(stringResource(R.string.onboarding_view_all_sources))
+                            }
+                        },
                     )
 
                     OnboardingStep.NOTIFICATIONS -> AppOnboardingNotifications(
@@ -246,77 +270,6 @@ fun FirstLaunchOnboarding(
         }
     }
 
-}
-
-@Composable
-private fun SourceStep(
-    sources: List<AnimeSourceDescriptor>,
-    selectedSource: SourceId?,
-    localizedSourcesMissing: Boolean,
-    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
-    onShowAllSources: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-    ) {
-        item {
-            Icon(
-                imageVector = Icons.Rounded.VideoLibrary,
-                contentDescription = null,
-                modifier = Modifier.size(88.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = stringResource(R.string.onboarding_source_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(
-                    if (localizedSourcesMissing) {
-                        R.string.onboarding_source_no_match
-                    } else {
-                        R.string.onboarding_source_description
-                    },
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-        items(sources, key = { it.id.value }) { source ->
-            AppOnboardingSourceCard(
-                name = source.name,
-                languageSummary = sourceLanguageSummary(source),
-                selected = source.id == selectedSource,
-                onClick = { onSourceSelected(source) },
-                iconContent = {
-                    AsyncImage(
-                        model = source.iconUrl,
-                        placeholder = painterResource(source.iconRes),
-                        error = painterResource(source.iconRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape),
-                    )
-                },
-            )
-        }
-        item {
-            TextButton(onClick = onShowAllSources) {
-                Text(stringResource(R.string.onboarding_view_all_sources))
-            }
-        }
-    }
 }
 
 @Composable
