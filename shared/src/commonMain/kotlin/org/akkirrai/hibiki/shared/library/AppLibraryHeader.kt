@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
@@ -21,7 +20,7 @@ fun <T> AppLibraryHeader(
     onSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LibraryHeaderContentGap)) {
         searchContent(
             Modifier.padding(
                 top = UiDimens.SearchBarTopPadding,
