@@ -20,15 +20,12 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
@@ -1148,57 +1145,52 @@ fun PlayerScreen(
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
 
-                AnimatedVisibility(
+                AppPlayerCenterControls(
                     visible = !seekOverlayActive && !state.isLoading && !isBuffering,
+                    hasPreviousEpisode = hasPreviousEpisode,
+                    hasNextEpisode = hasNextEpisode,
+                    onTogglePlay = {
+                        keepControlsVisible()
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                    },
+                    onPreviousEpisode = {
+                        runPlaybackSwitch { viewModel.playPreviousEpisode() }
+                    },
+                    onNextEpisode = {
+                        runPlaybackSwitch { viewModel.playNextEpisode() }
+                    },
+                    previousContent = { iconModifier ->
+                        Icon(
+                            painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                            tint = Color.White,
+                        )
+                    },
+                    playContent = { iconModifier ->
+                        Icon(
+                            painter = painterResource(
+                                if (isPlaying) {
+                                    R.drawable.ic_player_media_pause_24
+                                } else {
+                                    R.drawable.ic_player_media_play_arrow_24
+                                }
+                            ),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                            tint = Color.White,
+                        )
+                    },
+                    nextContent = { iconModifier ->
+                        Icon(
+                            painter = painterResource(R.drawable.ic_player_media_skip_next_24),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                            tint = Color.White,
+                        )
+                    },
                     modifier = Modifier.align(Alignment.Center),
-                    enter = fadeIn(animationSpec = tween(120)),
-                    exit = fadeOut(animationSpec = tween(90)),
-                ) {
-                    AppPlayerCenterControls(
-                        hasPreviousEpisode = hasPreviousEpisode,
-                        hasNextEpisode = hasNextEpisode,
-                        onTogglePlay = {
-                            keepControlsVisible()
-                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                        },
-                        onPreviousEpisode = {
-                            runPlaybackSwitch { viewModel.playPreviousEpisode() }
-                        },
-                        onNextEpisode = {
-                            runPlaybackSwitch { viewModel.playNextEpisode() }
-                        },
-                        previousContent = { iconModifier ->
-                            Icon(
-                                painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
-                                contentDescription = null,
-                                modifier = iconModifier,
-                                tint = Color.White,
-                            )
-                        },
-                        playContent = { iconModifier ->
-                            Icon(
-                                painter = painterResource(
-                                    if (isPlaying) {
-                                        R.drawable.ic_player_media_pause_24
-                                    } else {
-                                        R.drawable.ic_player_media_play_arrow_24
-                                    }
-                                ),
-                                contentDescription = null,
-                                modifier = iconModifier,
-                                tint = Color.White,
-                            )
-                        },
-                        nextContent = { iconModifier ->
-                            Icon(
-                                painter = painterResource(R.drawable.ic_player_media_skip_next_24),
-                                contentDescription = null,
-                                modifier = iconModifier,
-                                tint = Color.White,
-                            )
-                        },
-                    )
-                }
+                )
 
                 AppPlayerBottomOverlay(
                     positionLabel = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
