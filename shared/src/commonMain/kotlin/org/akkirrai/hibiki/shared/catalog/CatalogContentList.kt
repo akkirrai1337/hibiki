@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
@@ -29,7 +28,7 @@ fun AppCatalogContentList(
             end = UiDimens.ScreenPadding,
             bottom = bottomContentPadding + UiDimens.ScreenPadding,
         ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(CatalogContentItemGap),
         content = content,
     )
 }

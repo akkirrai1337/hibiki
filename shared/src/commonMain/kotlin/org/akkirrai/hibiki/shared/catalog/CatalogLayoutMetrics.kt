@@ -24,6 +24,7 @@ val CatalogSortMenuContentHorizontalPadding = 16.dp
 val CatalogSortMenuContentVerticalPadding = 8.dp
 val CatalogSortMenuItemPadding = 4.dp
 val CatalogSortMenuItemCornerRadius = 24.dp
+val CatalogContentItemGap = 8.dp
 val CatalogContentTopPadding = CatalogHeaderTopPadding +
     CatalogSearchBarHeight +
     CatalogSortVerticalGap +
