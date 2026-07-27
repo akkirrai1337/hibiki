@@ -89,6 +89,9 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
 import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleTopPadding
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleFontSize
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuWidth
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuOffsetY
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
 import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
@@ -332,7 +335,7 @@ private fun CatalogSortControl(
         val density = androidx.compose.ui.platform.LocalDensity.current
         val screenWidthDp = with(density) { screenWidth.toDp() }
         val horizontalInsets = UiDimens.ScreenPadding * 2
-        val menuWidth = 196.dp
+        val menuWidth = CatalogSortMenuWidth
         val offsetX = (screenWidthDp - horizontalInsets - menuWidth) / 2
 
         CascadeDropdownMenu(
@@ -341,9 +344,9 @@ private fun CatalogSortControl(
             state = cascadeState,
             offset = DpOffset(
                 x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
-                y = 4.dp,
+                y = CatalogSortMenuOffsetY,
             ),
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
         ) {
             Text(
                 text = sortTitle,
