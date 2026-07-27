@@ -66,13 +66,11 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -91,7 +89,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
-import org.akkirrai.hibiki.shared.catalog.appCatalogPaginationStates
+import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -175,14 +173,10 @@ fun CatalogScreen(
                     topContentPadding = CATALOG_CONTENT_TOP_PADDING,
                     bottomContentPadding = bottomContentPadding,
                     content = {
-                    appVerticalAnimeListContent(
+                    appCatalogResultsContent(
                         items = state.items,
-                        metaText = { anime -> anime.buildCardMeta(
-                                announcementLabel = announcementLabel,
-                                movieLabel = movieLabel,
-                                maxSubtitleParts = 2,
-                                separator = " • ",
-                        ) },
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
                         onAnimeClick = onAnimeClick,
                         posterContent = { anime ->
                             PosterImage(
@@ -206,13 +200,10 @@ fun CatalogScreen(
                             }
                         },
                         onItemVisible = viewModel::enrichDescription,
-                    )
-
-                    appCatalogPaginationStates(
                         isLoadingMore = state.isLoadingMore,
-                        errorMessage = state.error,
-                        errorIcon = Icons.Outlined.WarningAmber,
-                        onRetry = viewModel::loadMore,
+                        paginationErrorMessage = state.error,
+                        paginationErrorIcon = Icons.Outlined.WarningAmber,
+                        onLoadMoreRetry = viewModel::loadMore,
                     )
                     },
                 )
