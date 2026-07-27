@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppBackButton
 
@@ -19,6 +18,6 @@ fun AppDetailsHeroOverlayBackButton(
         iconContent = iconContent,
         modifier = modifier
             .statusBarsPadding()
-            .padding(start = UiDimens.ScreenPadding, top = 8.dp),
+            .padding(start = UiDimens.ScreenPadding, top = DetailsHeroOverlayBackButtonTopPadding),
     )
 }

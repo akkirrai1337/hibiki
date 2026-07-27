@@ -59,3 +59,4 @@ val DetailsHeroRatingsIconSize = 14.dp
 val DetailsNextEpisodeChipHorizontalPadding = 8.dp
 val DetailsNextEpisodeChipContentGap = 4.dp
 val DetailsNextEpisodeChipIconSize = 15.dp
+val DetailsHeroOverlayBackButtonTopPadding = 8.dp
