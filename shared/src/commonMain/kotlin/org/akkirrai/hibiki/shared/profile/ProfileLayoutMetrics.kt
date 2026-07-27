@@ -13,3 +13,4 @@ val ProfileTabVerticalPadding = 8.dp
 val ProfileTabHorizontalPadding = 1.dp
 val ProfilePageArrowButtonCornerRadius = 14.dp
 val ProfilePageArrowButtonDefaultSize = 40.dp
+val ProfileAvatarContainerSize = 70.dp

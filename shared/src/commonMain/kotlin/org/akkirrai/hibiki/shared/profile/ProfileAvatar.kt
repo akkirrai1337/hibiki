@@ -33,7 +33,7 @@ fun ProfileAvatar(
     modifier: Modifier = Modifier,
 ) {
     val scrimAlpha by animateFloatAsState(if (isEditing) 0.38f else 0f, tween(300), label = "avatar_scrim")
-    Box(modifier.size(70.dp).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) }, contentAlignment = Alignment.Center) {
+    Box(modifier.size(ProfileAvatarContainerSize).graphicsLayer { alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f) }, contentAlignment = Alignment.Center) {
         Surface(Modifier.fillMaxSize(), shape = CircleShape) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer))), contentAlignment = Alignment.Center) {
                 avatarContent(Modifier.size(36.dp))
