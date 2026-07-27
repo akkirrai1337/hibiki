@@ -17,7 +17,7 @@ fun ProfileRecentPosterMarker(
 ) {
     Box(
         modifier = modifier
-            .size(10.dp)
+            .size(ProfileRecentPosterMarkerSize)
             .clip(CircleShape)
             .background(color),
     )
