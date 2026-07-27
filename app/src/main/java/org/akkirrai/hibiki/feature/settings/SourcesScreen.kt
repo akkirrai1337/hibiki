@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
+import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -151,46 +152,21 @@ fun SourcesScreen(
         }
 
         if (hasSourceSearch) {
-            SourcesSearchBar(
+            AppSourceSearchBar(
                 query = query,
                 onQueryChange = searchViewModel::onQueryChange,
                 onClear = searchViewModel::clearQuery,
+                placeholder = stringResource(R.string.search_placeholder),
+                filterContentDescription = stringResource(R.string.search_filters),
+                clearContentDescription = stringResource(R.string.home_search_clear),
+                searchIcon = Icons.Outlined.Search,
+                filterIcon = Icons.Outlined.FilterList,
+                clearIcon = Icons.Outlined.Close,
                 showFilterButton = false,
                 onFilterClick = {},
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
-    }
-}
-
-@Composable
-private fun SourcesSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClear: () -> Unit,
-    showFilterButton: Boolean,
-    onFilterClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 12.dp),
-    ) {
-        AppSearchTopBar(
-            query = query,
-            onQueryChange = onQueryChange,
-            onClear = onClear,
-            placeholder = stringResource(R.string.search_placeholder),
-            filterContentDescription = stringResource(R.string.search_filters),
-            clearContentDescription = stringResource(R.string.home_search_clear),
-            searchIcon = Icons.Outlined.Search,
-            filterIcon = Icons.Outlined.FilterList,
-            clearIcon = Icons.Outlined.Close,
-            onFilterClick = onFilterClick,
-            showFilterButton = showFilterButton,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
