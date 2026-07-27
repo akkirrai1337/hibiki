@@ -148,8 +148,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
@@ -191,6 +189,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
+import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
 import org.akkirrai.hibiki.shared.player.AppPlaylistBottomSheet
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
@@ -1131,19 +1130,19 @@ fun PlayerScreen(
                     playlistEnabled = state.episodes.isNotEmpty(),
                     backContent = { WatchBackButton(onBackClick = handleBackClick) },
                     playlistContent = {
-                        AppFilledIconButton(
+                        AppPlayerPlaylistButton(
                             onClick = {
                                 keepControlsVisible()
                                 playlistVisible = true
                             },
-                            style = AppFilledIconButtonStyle.DarkOverlay,
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
-                                contentDescription = stringResource(R.string.watch_player_playlist),
-                                tint = Color.White,
-                            )
-                        }
+                            iconContent = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
+                                    contentDescription = stringResource(R.string.watch_player_playlist),
+                                    tint = Color.White,
+                                )
+                            },
+                        )
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
