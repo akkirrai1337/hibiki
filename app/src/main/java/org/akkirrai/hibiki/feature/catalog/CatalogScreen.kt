@@ -83,7 +83,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuWidth
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuOffsetY
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
 import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
-import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortControl
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
@@ -299,45 +299,39 @@ private fun CatalogSortControl(
         localizedContext.getString(R.string.catalog_sort_title)
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CatalogSortControlHeight),
-    ) {
-        AppCatalogSortPill(
-            sortKey = selectedSort.name,
-            icon = selectedSort.icon,
-            label = sortLabels[selectedSort].orEmpty(),
-            onClick = { onExpandedChange(!expanded) },
-            orderContent = { orderModifier ->
-                CatalogSortOrderIcon(
-                    atEnd = expanded,
-                    modifier = orderModifier,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
-            },
-            modifier = Modifier.align(Alignment.Center),
-        )
+    AppCatalogSortControl(
+        sortKey = selectedSort.name,
+        icon = selectedSort.icon,
+        label = sortLabels[selectedSort].orEmpty(),
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        orderContent = { orderModifier ->
+            CatalogSortOrderIcon(
+                atEnd = expanded,
+                modifier = orderModifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+            )
+        },
+        menuContent = {
+            val layoutDirection = LocalLayoutDirection.current
+            val screenWidth = LocalWindowInfo.current.containerSize.width
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val screenWidthDp = with(density) { screenWidth.toDp() }
+            val horizontalInsets = UiDimens.ScreenPadding * 2
+            val menuWidth = CatalogSortMenuWidth
+            val offsetX = (screenWidthDp - horizontalInsets - menuWidth) / 2
 
-        val layoutDirection = LocalLayoutDirection.current
-        val screenWidth = LocalWindowInfo.current.containerSize.width
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val screenWidthDp = with(density) { screenWidth.toDp() }
-        val horizontalInsets = UiDimens.ScreenPadding * 2
-        val menuWidth = CatalogSortMenuWidth
-        val offsetX = (screenWidthDp - horizontalInsets - menuWidth) / 2
-
-        CascadeDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-            state = cascadeState,
-            offset = DpOffset(
-                x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
-                y = CatalogSortMenuOffsetY,
-            ),
-            shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
-        ) {
-            AppCatalogSortMenuContent(
+            CascadeDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) },
+                state = cascadeState,
+                offset = DpOffset(
+                    x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
+                    y = CatalogSortMenuOffsetY,
+                ),
+                shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
+            ) {
+                AppCatalogSortMenuContent(
                 title = sortTitle,
                 sorts = availableSorts,
                 selectedSort = selectedSort,
@@ -354,9 +348,11 @@ private fun CatalogSortControl(
                         modifier = orderModifier,
                     )
                 },
-            )
-        }
-    }
+                )
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
