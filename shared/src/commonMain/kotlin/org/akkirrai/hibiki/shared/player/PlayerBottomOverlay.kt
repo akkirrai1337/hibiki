@@ -39,7 +39,12 @@ fun AppPlayerBottomOverlay(
                 ),
             )
             .navigationBarsPadding()
-            .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 18.dp),
+            .padding(
+                start = PlayerBottomOverlayHorizontalPadding,
+                end = PlayerBottomOverlayHorizontalPadding,
+                top = PlayerBottomOverlayTopPadding,
+                bottom = PlayerBottomOverlayBottomPadding,
+            ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         Column(
