@@ -189,6 +189,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerTimeline
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1676,15 +1677,15 @@ private fun PlayerOverlayPanel(
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (swipeToDismissEnabled) {
-                    PlayerOverlayHandle(
+                    AppPlayerOverlayHandle(
                         onDragDelta = { deltaY ->
-                            if (dismissing) return@PlayerOverlayHandle
+                            if (dismissing) return@AppPlayerOverlayHandle
 
                             isDragging = true
                             dragOffsetPx = (dragOffsetPx + deltaY).coerceAtLeast(0f)
                         },
                         onDragEnd = {
-                            if (dismissing) return@PlayerOverlayHandle
+                            if (dismissing) return@AppPlayerOverlayHandle
 
                             finishPanelDrag()
                         }
@@ -1696,37 +1697,6 @@ private fun PlayerOverlayPanel(
                 content(::dismissPanel)
             }
         }
-    }
-}
-
-@Composable
-private fun PlayerOverlayHandle(
-    onDragDelta: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDragDelta(dragAmount.y)
-                    },
-                    onDragEnd = onDragEnd,
-                    onDragCancel = onDragEnd,
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.28f))
-        )
     }
 }
 
