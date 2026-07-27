@@ -29,7 +29,10 @@ fun AppPlayerSkipSegmentButton(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(
+                horizontal = PlayerSkipSegmentButtonHorizontalPadding,
+                vertical = PlayerSkipSegmentButtonVerticalPadding,
+            ),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
