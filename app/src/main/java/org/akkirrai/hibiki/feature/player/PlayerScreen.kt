@@ -190,6 +190,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
+import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
@@ -1307,7 +1308,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 20.dp),
+                .padding(bottom = PlayerUnlockBottomPadding),
         )
 
         AppPlayerLoadingOverlay(
