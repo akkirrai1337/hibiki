@@ -161,6 +161,7 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
 import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -610,9 +611,13 @@ private fun DetailHeroSection(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        DetailHeroActions(
+        DetailsHeroActions(
             isInLibrary = isUserLibraryCategorySelected,
             canWatch = canWatch,
+            libraryLabel = stringResource(R.string.details_favorite),
+            watchLabel = stringResource(R.string.details_watch),
+            libraryIcon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+            primaryIcon = Icons.Filled.PlayArrow,
             onLibraryClick = onLibraryClick,
             onPrimaryClick = onPrimaryClick,
         )
@@ -687,25 +692,6 @@ private fun DetailHeroTextContent(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-private fun DetailHeroActions(
-    isInLibrary: Boolean,
-    canWatch: Boolean,
-    onLibraryClick: () -> Unit,
-    onPrimaryClick: () -> Unit,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsHeroActions(
-        isInLibrary = isInLibrary,
-        canWatch = canWatch,
-        libraryLabel = stringResource(R.string.details_favorite),
-        watchLabel = stringResource(R.string.details_watch),
-        libraryIcon = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-        primaryIcon = Icons.Filled.PlayArrow,
-        onLibraryClick = onLibraryClick,
-        onPrimaryClick = onPrimaryClick,
-    )
 }
 
 @Composable
