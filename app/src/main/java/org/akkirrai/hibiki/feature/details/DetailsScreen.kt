@@ -165,6 +165,7 @@ import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
+import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -1080,32 +1081,25 @@ private fun PosterPreviewOverlay(
 
     BackHandler(onBack = ::dismissAnimated)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
-            .clickable(onClick = ::dismissAnimated)
-    ) {
-        PosterImage(
-            primaryUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    alpha = posterAlpha
-                    scaleX = posterScale
-                    scaleY = posterScale
-                },
-            contentScale = ContentScale.Fit,
-            placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) }
-        )
-
-        HeroOverlayBackButton(
-            onClick = ::dismissAnimated,
-            modifier = Modifier.align(Alignment.TopStart),
-        )
-    }
+    AppDetailsPosterPreviewSurface(
+        scrimAlpha = scrimAlpha,
+        posterAlpha = posterAlpha,
+        posterScale = posterScale,
+        onDismiss = ::dismissAnimated,
+        posterContent = { posterModifier ->
+            PosterImage(
+                primaryUrl = anime.posterUrl,
+                fallbackUrl = anime.posterFallbackUrl,
+                contentDescription = anime.title,
+                modifier = posterModifier,
+                contentScale = ContentScale.Fit,
+                placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) },
+            )
+        },
+        backContent = {
+            HeroOverlayBackButton(onClick = ::dismissAnimated)
+        },
+    )
 }
 
 @Composable
