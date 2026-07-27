@@ -169,6 +169,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewAnimation
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
+import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
@@ -1182,10 +1183,7 @@ private fun NetworkImage(
 
 @Composable
 private fun ImagePlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center
-    ) {
+    AppDetailsImagePlaceholder(modifier = modifier) {
         Icon(
             imageVector = Icons.Outlined.Image,
             contentDescription = null,
