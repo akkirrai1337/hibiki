@@ -9,8 +9,11 @@ enum class AppTextKey {
     SharedUiReady,
     AppName,
     Home,
+    Catalog,
     Search,
     Library,
+    Sources,
+    Profile,
     Settings,
     Featured,
     ContinueWatching,
@@ -52,6 +55,9 @@ class DefaultAppTextResolver(
             AppTextKey.Home -> if (russian) "Главная" else "Home"
             AppTextKey.Search -> if (russian) "Поиск" else "Search"
             AppTextKey.Library -> if (russian) "Библиотека" else "Library"
+            AppTextKey.Catalog -> if (russian) "Каталог" else "Catalog"
+            AppTextKey.Sources -> if (russian) "Источники" else "Sources"
+            AppTextKey.Profile -> if (russian) "Профиль" else "Profile"
             AppTextKey.Settings -> if (russian) "Настройки" else "Settings"
             AppTextKey.Featured -> if (russian) "Рекомендуем" else "Featured"
             AppTextKey.ContinueWatching -> if (russian) "Продолжить просмотр" else "Continue watching"
