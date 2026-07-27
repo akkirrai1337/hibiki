@@ -76,7 +76,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
-import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
@@ -126,8 +125,6 @@ import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsHeroPosterCollapsedOffset
 import org.akkirrai.hibiki.shared.details.DetailsHeroPosterExpandedOffset
-import org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButtonIconSize
-import org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButtonSize
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -916,25 +913,6 @@ private fun RelatedAnimeList(
             }
         },
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun FavoriteCircleButton(
-    libraryCategory: LibraryCategory?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = DetailsFavoriteCircleButtonSize,
-    iconSize: androidx.compose.ui.unit.Dp = DetailsFavoriteCircleButtonIconSize,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButton(
-        icon = libraryCategory.iconOrDefault(),
-        isInLibrary = libraryCategory != null,
-        contentDescription = stringResource(R.string.details_favorite),
-        onClick = onClick,
-        modifier = modifier,
-        size = size,
-        iconSize = iconSize,
     )
 }
 
