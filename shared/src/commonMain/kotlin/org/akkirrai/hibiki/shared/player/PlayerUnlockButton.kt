@@ -31,8 +31,11 @@ fun AppPlayerUnlockButton(
         contentColor = Color.White,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
+            modifier = Modifier.padding(
+                horizontal = PlayerUnlockButtonHorizontalPadding,
+                vertical = PlayerUnlockButtonVerticalPadding,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(PlayerUnlockButtonContentGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             iconContent()
