@@ -83,3 +83,5 @@ val DetailsTitleSheetHeaderHorizontalPadding = 24.dp
 val DetailsTitleSheetHeaderVerticalPadding = 16.dp
 val DetailsTitleSheetDescriptionHorizontalPadding = 24.dp
 val DetailsTitleSheetDescriptionVerticalPadding = 20.dp
+val DetailsFavoriteCircleButtonSize = 41.dp
+val DetailsFavoriteCircleButtonIconSize = 18.dp
