@@ -1,13 +1,10 @@
 package org.akkirrai.hibiki.feature.home
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
@@ -36,6 +33,7 @@ import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
+import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentList
 
 @Composable
 fun RecentUpdatesScreen(
@@ -77,11 +75,9 @@ fun RecentUpdatesScreen(
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::refresh,
         ) {
-            LazyColumn(
+            AppRecentUpdatesContentList(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 84.dp, bottom = UiDimens.ScreenPadding),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 appVerticalAnimeListContent(
                     items = state.recentlyUpdated,
