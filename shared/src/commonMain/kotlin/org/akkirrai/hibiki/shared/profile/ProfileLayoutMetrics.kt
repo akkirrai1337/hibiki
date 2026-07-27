@@ -51,3 +51,4 @@ val ProfileActivityBarWidth = 18.dp
 val ProfileActivityBarCornerRadius = 7.dp
 val ProfileActivityBarChartLabelGap = 6.dp
 val ProfileActivityBarMinHeight = 10.dp
+val ProfileActivityBarBaseHeight = 18.dp
