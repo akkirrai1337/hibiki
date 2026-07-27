@@ -1,7 +1,5 @@
 package org.akkirrai.hibiki.feature.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -47,6 +45,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.AppSourceLanguageContent
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
+import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
@@ -222,10 +221,8 @@ private fun SourceSearchSection(
                                 contentDescription = anime.title,
                                 modifier = Modifier.fillMaxSize(),
                                 placeholder = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                                    AppSourceSearchPosterPlaceholder(
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 },
                             )
