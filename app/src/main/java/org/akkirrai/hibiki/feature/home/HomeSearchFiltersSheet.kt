@@ -91,6 +91,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 import kotlin.math.roundToInt
@@ -725,43 +726,18 @@ private fun CollapsibleRow(
     onLongClick: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    var visible by rememberSaveable { mutableStateOf(true) }
-    val iconRotation by animateFloatAsState(
-        targetValue = if (visible) 0f else -90f,
-        label = "filter_arrow",
-    )
-    Column(
-        modifier = Modifier
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .combinedClickable(
-                onClick = { visible = !visible },
-                onLongClick = onLongClick,
-            )
-            .padding(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = title,
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            )
+    AppCollapsibleFilterSection(
+        title = title,
+        onLongClick = onLongClick,
+        arrowContent = { modifier ->
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
                 contentDescription = null,
-                modifier = Modifier
-                    .requiredSize(16.dp)
-                    .graphicsLayer { rotationZ = iconRotation },
+                modifier = modifier,
             )
-        }
-        AnimatedVisibility(visible = visible) { content() }
-    }
+        },
+        content = content,
+    )
 }
 
 @Composable
