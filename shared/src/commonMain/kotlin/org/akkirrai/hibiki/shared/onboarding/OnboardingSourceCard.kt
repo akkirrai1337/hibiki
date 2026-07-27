@@ -26,7 +26,7 @@ fun AppOnboardingSourceCard(
     name: String,
     languageSummary: String,
     selected: Boolean,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -44,7 +44,11 @@ fun AppOnboardingSourceCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            iconContent()
+            iconContent(
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,

@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -31,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -172,15 +169,13 @@ fun FirstLaunchOnboarding(
                                 languageSummary = sourceLanguageSummary(source),
                                 selected = source.id == selectedSource,
                                 onClick = { selectedSourceValue = source.id.value },
-                                iconContent = {
+                                iconContent = { iconModifier ->
                                     AsyncImage(
                                         model = source.iconUrl,
                                         placeholder = painterResource(source.iconRes),
                                         error = painterResource(source.iconRes),
                                         contentDescription = null,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(CircleShape),
+                                        modifier = iconModifier,
                                     )
                                 },
                             )
