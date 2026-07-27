@@ -92,7 +92,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -185,6 +184,7 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
+import org.akkirrai.hibiki.shared.player.AppPlayerControlButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -2226,10 +2226,17 @@ private fun PlayerCenterControls(
         horizontalArrangement = Arrangement.spacedBy(28.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PlayerControlButton(
-            painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
+        AppPlayerControlButton(
             enabled = hasPreviousEpisode,
             onClick = onPreviousEpisode,
+            iconContent = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = Color.White,
+                )
+            },
         )
         AppFilledIconButton(
             onClick = onTogglePlay,
@@ -2249,10 +2256,17 @@ private fun PlayerCenterControls(
                 tint = Color.White,
             )
         }
-        PlayerControlButton(
-            painter = painterResource(R.drawable.ic_player_media_skip_next_24),
+        AppPlayerControlButton(
             enabled = hasNextEpisode,
             onClick = onNextEpisode,
+            iconContent = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_player_media_skip_next_24),
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = Color.White,
+                )
+            },
         )
     }
 }
@@ -2338,29 +2352,6 @@ private fun PlayerTimeline(
                 .size(PLAYER_TIMELINE_THUMB_SIZE)
                 .clip(CircleShape)
                 .background(playedColor)
-        )
-    }
-}
-
-@Composable
-private fun PlayerControlButton(
-    painter: Painter,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    AppFilledIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(52.dp),
-        style = AppFilledIconButtonStyle.DarkOverlay,
-    ) {
-        Icon(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier.size(30.dp),
-            tint = Color.White
         )
     }
 }
