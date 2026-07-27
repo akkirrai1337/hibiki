@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 fun ProfileRecentPosterFrame(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .width(50.dp)
+            .width(ProfileRecentPosterFrameWidth)
             .height(68.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
