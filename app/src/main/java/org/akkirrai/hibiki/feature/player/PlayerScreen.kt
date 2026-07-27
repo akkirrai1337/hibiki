@@ -175,6 +175,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
 import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerSeekOverlay
 import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
@@ -1078,25 +1079,11 @@ fun PlayerScreen(
             modifier = Modifier.align(Alignment.Center),
         )
 
-        AnimatedVisibility(
+        AppPlayerSeekOverlay(
             visible = doubleTapSeekOverlayVisible && doubleTapSeekOverlayDeltaMs != 0L,
+            label = formatSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
-            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.Black.copy(alpha = 0.62f)
-            ) {
-                Text(
-                    text = formatSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
+        )
 
         activeSkipSegment?.let { skipSegment ->
             AnimatedVisibility(
