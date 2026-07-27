@@ -17,9 +17,9 @@ fun AppPlayerCenterControls(
     onTogglePlay: () -> Unit,
     onPreviousEpisode: () -> Unit,
     onNextEpisode: () -> Unit,
-    previousContent: @Composable () -> Unit,
-    playContent: @Composable () -> Unit,
-    nextContent: @Composable () -> Unit,
+    previousContent: @Composable (Modifier) -> Unit,
+    playContent: @Composable (Modifier) -> Unit,
+    nextContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -30,18 +30,18 @@ fun AppPlayerCenterControls(
         AppPlayerControlButton(
             enabled = hasPreviousEpisode,
             onClick = onPreviousEpisode,
-            iconContent = previousContent,
+            iconContent = { previousContent(Modifier.size(30.dp)) },
         )
         AppFilledIconButton(
             onClick = onTogglePlay,
             modifier = Modifier.size(72.dp),
             style = AppFilledIconButtonStyle.DarkOverlay,
-            content = playContent,
+            content = { playContent(Modifier.size(40.dp)) },
         )
         AppPlayerControlButton(
             enabled = hasNextEpisode,
             onClick = onNextEpisode,
-            iconContent = nextContent,
+            iconContent = { nextContent(Modifier.size(30.dp)) },
         )
     }
 }

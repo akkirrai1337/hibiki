@@ -1164,15 +1164,15 @@ fun PlayerScreen(
                         onNextEpisode = {
                             runPlaybackSwitch { viewModel.playNextEpisode() }
                         },
-                        previousContent = {
+                        previousContent = { iconModifier ->
                             Icon(
                                 painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
                                 contentDescription = null,
-                                modifier = Modifier.size(30.dp),
+                                modifier = iconModifier,
                                 tint = Color.White,
                             )
                         },
-                        playContent = {
+                        playContent = { iconModifier ->
                             Icon(
                                 painter = painterResource(
                                     if (isPlaying) {
@@ -1182,15 +1182,15 @@ fun PlayerScreen(
                                     }
                                 ),
                                 contentDescription = null,
-                                modifier = Modifier.size(40.dp),
+                                modifier = iconModifier,
                                 tint = Color.White,
                             )
                         },
-                        nextContent = {
+                        nextContent = { iconModifier ->
                             Icon(
                                 painter = painterResource(R.drawable.ic_player_media_skip_next_24),
                                 contentDescription = null,
-                                modifier = Modifier.size(30.dp),
+                                modifier = iconModifier,
                                 tint = Color.White,
                             )
                         },
