@@ -41,7 +41,7 @@ fun AppPlayerTimeline(
     val playedColor = Color(0xFFE53935)
     val bufferedColor = playedColor.copy(alpha = 0.34f)
     val trackColor = Color.White.copy(alpha = 0.18f)
-    val thumbRadiusPx = with(LocalDensity.current) { 4.dp.toPx() }
+    val thumbRadiusPx = with(LocalDensity.current) { (PlayerTimelineThumbSize / 2).toPx() }
 
     fun seekFromX(x: Float) {
         val fraction = (x / trackWidthPx).coerceIn(0f, 1f)
@@ -50,7 +50,7 @@ fun AppPlayerTimeline(
 
     Box(
         modifier = modifier
-            .height(18.dp)
+            .height(PlayerTimelineContainerHeight)
             .pointerInput(safeDuration, trackWidthPx) {
                 detectTapGestures(
                     onTap = { offset ->
@@ -75,7 +75,7 @@ fun AppPlayerTimeline(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
+                .height(PlayerTimelineTrackHeight)
                 .clip(RoundedCornerShape(999.dp))
                 .background(trackColor)
                 .onSizeChanged { trackWidthPx = it.width.toFloat() },
@@ -101,7 +101,7 @@ fun AppPlayerTimeline(
                 .graphicsLayer {
                     translationX = (trackWidthPx * playedFraction) - thumbRadiusPx
                 }
-                .size(8.dp)
+                .size(PlayerTimelineThumbSize)
                 .clip(CircleShape)
                 .background(playedColor),
         )
