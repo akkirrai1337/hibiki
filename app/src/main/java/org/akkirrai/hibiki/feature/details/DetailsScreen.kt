@@ -162,6 +162,7 @@ import org.akkirrai.hibiki.shared.details.DetailsUiState
 import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
 import org.akkirrai.hibiki.shared.details.DetailsPosterCard
@@ -606,13 +607,45 @@ private fun DetailHeroSection(
                     )
                 },
             )
-            DetailHeroTextContent(
-                anime = detailsState.anime,
+            AppDetailsHeroTextContent(
+                title = detailsState.anime.title,
                 description = description,
-                nextEpisodeEta = nextEpisodeEta,
-                nextEpisodeNumber = nextEpisodeNumber,
-                isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
+                backgroundColor = MaterialTheme.colorScheme.background,
                 onTitleClick = onTitleClick,
+                ratingsContent = if (detailsState.anime.ratings.isNotEmpty() || !detailsState.anime.viewCount.isNullOrZero()) {
+                    {
+                        HeroRatingsLine(
+                            ratings = detailsState.anime.ratings,
+                            viewCount = detailsState.anime.viewCount,
+                        )
+                    }
+                } else {
+                    null
+                },
+                nextEpisodeContent = nextEpisodeEta?.let { eta ->
+                    {
+                        DetailsNextEpisodeChip(
+                            text = if (nextEpisodeNumber != null) {
+                                stringResource(R.string.details_next_episode_countdown_numbered, nextEpisodeNumber, eta)
+                            } else {
+                                stringResource(R.string.details_next_episode_countdown, eta)
+                            },
+                            icon = ImageVector.vectorResource(R.drawable.hourglass),
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                },
+                expandIconContent = {
+                    val expandToCollapse = AnimatedImageVector.animatedVectorResource(R.drawable.expand_collapse_anim)
+                    Icon(
+                        painter = rememberAnimatedVectorPainter(
+                            animatedImageVector = expandToCollapse,
+                            atEnd = isTitleDetailsSheetOpen,
+                        ),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
@@ -636,82 +669,6 @@ private fun DetailHeroSection(
             onPrimaryClick = onPrimaryClick,
         )
         Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun DetailHeroTextContent(
-    anime: Anime,
-    description: String,
-    nextEpisodeEta: String?,
-    nextEpisodeNumber: Int?,
-    isTitleDetailsSheetOpen: Boolean,
-    onTitleClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val expandToCollapse = AnimatedImageVector.animatedVectorResource(R.drawable.expand_collapse_anim)
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onTitleClick),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 24.dp),
-        ) {
-            Text(
-                text = anime.title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    lineHeight = 27.sp,
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (anime.ratings.isNotEmpty() || !anime.viewCount.isNullOrZero()) {
-                HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
-            }
-            nextEpisodeEta?.let { eta ->
-                DetailsNextEpisodeChip(
-                    text = if (nextEpisodeNumber != null) {
-                        stringResource(R.string.details_next_episode_countdown_numbered, nextEpisodeNumber, eta)
-                    } else {
-                        stringResource(R.string.details_next_episode_countdown, eta)
-                    },
-                    icon = ImageVector.vectorResource(R.drawable.hourglass),
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-            if (description.isNotBlank()) {
-                DetailsNestedScrollableContent(
-                    modifier = Modifier.weight(1f),
-                    gradientColor = MaterialTheme.colorScheme.background,
-                ) { contentModifier ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-                        modifier = contentModifier,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-        Icon(
-            painter = rememberAnimatedVectorPainter(
-                animatedImageVector = expandToCollapse,
-                atEnd = isTitleDetailsSheetOpen,
-            ),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 2.dp)
-                .size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
