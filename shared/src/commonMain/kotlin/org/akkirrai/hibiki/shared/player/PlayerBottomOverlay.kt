@@ -59,20 +59,20 @@ fun AppPlayerBottomOverlay(
                 onSeekFinished = onSliderValueChangeFinished,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 0.dp)
-                    .offset(y = (-3).dp),
+                    .padding(top = PlayerBottomOverlayTimelineTopPadding, bottom = 0.dp)
+                    .offset(y = PlayerBottomOverlayTimelineOffset),
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = 1.dp),
+                    .offset(y = PlayerBottomOverlayControlsOffset),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     text = positionLabel,
-                    modifier = Modifier.padding(top = 1.dp),
+                    modifier = Modifier.padding(top = PlayerBottomOverlayPositionTopPadding),
                     color = Color.White.copy(alpha = 0.78f),
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
