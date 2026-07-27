@@ -164,6 +164,7 @@ import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent
+import org.akkirrai.hibiki.shared.details.DetailsPosterCard
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -584,15 +585,21 @@ private fun DetailHeroSection(
                     .align(Alignment.BottomCenter)
                     .background(MaterialTheme.colorScheme.background)
             )
-            PosterHeroInline(
-                anime = detailsState.anime,
+            DetailsPosterCard(
                 height = posterExpandedHeight - posterHeightOffset,
-                onPosterClick = onPosterClick,
-                onPosterLoaded = onPosterLoaded,
+                onClick = onPosterClick,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(y = posterTop + posterHeightOffset)
                     .padding(start = 16.dp),
+                poster = {
+                    NetworkImage(
+                        imageUrl = detailsState.anime.posterUrl,
+                        fallbackUrl = detailsState.anime.posterFallbackUrl,
+                        contentDescription = detailsState.anime.title,
+                        onImageSuccess = onPosterLoaded,
+                    )
+                },
             )
             DetailHeroTextContent(
                 anime = detailsState.anime,
@@ -951,29 +958,6 @@ private fun TitleDetailsSheet(
             )
         }
     }
-}
-
-@Composable
-private fun PosterHeroInline(
-    anime: Anime,
-    height: Dp,
-    onPosterClick: () -> Unit,
-    onPosterLoaded: (Drawable) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsPosterCard(
-        height = height,
-        onClick = onPosterClick,
-        modifier = modifier,
-        poster = {
-        NetworkImage(
-            imageUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            onImageSuccess = onPosterLoaded,
-        )
-        },
-    )
 }
 
 @Composable
