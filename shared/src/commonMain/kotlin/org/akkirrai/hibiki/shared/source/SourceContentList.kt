@@ -26,7 +26,7 @@ fun AppSourceContentList(
             end = 12.dp,
             bottom = bottomContentPadding + 32.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(SourceContentListVerticalSpacing),
     ) {
         if (isSearchMode) searchContent() else sourceContent()
     }
