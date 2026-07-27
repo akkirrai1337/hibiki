@@ -43,3 +43,4 @@ val SourceScreenHeaderTitleStartPadding = 60.dp
 val SourceSearchBarVerticalPadding = 12.dp
 val SourceSelectionIndicatorStrokeWidth = 2.dp
 val SourceSearchSectionLoadingStrokeWidth = 2.dp
+val SourceScreenDefaultBottomContentPadding = 0.dp

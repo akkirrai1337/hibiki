@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.annotation.StringRes
 import coil.compose.AsyncImage
@@ -45,12 +44,13 @@ import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
 import org.akkirrai.hibiki.shared.source.SourceSearchEmptyHorizontalPadding
+import org.akkirrai.hibiki.shared.source.SourceScreenDefaultBottomContentPadding
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
 fun SourcesScreen(
-    bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    bottomContentPadding: androidx.compose.ui.unit.Dp = SourceScreenDefaultBottomContentPadding,
     modifier: Modifier = Modifier,
     selectedSourceOverride: SourceId? = null,
     onSourceSelected: ((SourceId) -> Unit)? = null,
