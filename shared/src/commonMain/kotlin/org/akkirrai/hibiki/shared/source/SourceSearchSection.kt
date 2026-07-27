@@ -62,7 +62,7 @@ fun <T> AppSourceSearchSection(
             isLoading -> CircularProgressIndicator(
                 modifier = Modifier.padding(horizontal = SourceSearchSectionLoadingHorizontalPadding)
                     .size(SourceSearchSectionLoadingIndicatorSize),
-                strokeWidth = 2.dp,
+                strokeWidth = SourceSearchSectionLoadingStrokeWidth,
             )
             hasError -> Row(
                 modifier = Modifier.padding(horizontal = SourceSearchSectionErrorHorizontalPadding),
