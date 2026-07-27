@@ -30,7 +30,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreBlock
 import org.akkirrai.hibiki.shared.player.WatchSourcesList
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
 
@@ -84,19 +83,10 @@ fun WatchSourcesScreen(
                         navigationLockedState.value = true
                         onSourceClick(source)
                     },
-                    loadMoreContent = if (state.hasMoreItems) {
-                        {
-                            AppLoadMoreBlock(
-                                label = stringResource(R.string.watch_sources_load_more),
-                                onClick = viewModel::loadMore,
-                                isLoading = state.isLoadingMore,
-                                modifier = Modifier.padding(
-                                    horizontal = UiDimens.ScreenPadding,
-                                    vertical = 18.dp,
-                                ),
-                            )
-                        }
-                    } else null,
+                    hasMoreItems = state.hasMoreItems,
+                    loadMoreLabel = stringResource(R.string.watch_sources_load_more),
+                    isLoadingMore = state.isLoadingMore,
+                    onLoadMore = viewModel::loadMore,
                     isRefreshing = state.isLoading && state.items.isNotEmpty(),
                 )
             }
