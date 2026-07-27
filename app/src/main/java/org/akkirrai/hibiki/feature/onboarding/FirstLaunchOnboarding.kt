@@ -11,7 +11,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +65,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepIndicator
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -372,10 +371,22 @@ private fun SourceStep(
             Spacer(Modifier.height(16.dp))
         }
         items(sources, key = { it.id.value }) { source ->
-            SourceChoiceCard(
-                source = source,
+            AppOnboardingSourceCard(
+                name = source.name,
+                languageSummary = sourceLanguageSummary(source),
                 selected = source.id == selectedSource,
                 onClick = { onSourceSelected(source) },
+                iconContent = {
+                    AsyncImage(
+                        model = source.iconUrl,
+                        placeholder = painterResource(source.iconRes),
+                        error = painterResource(source.iconRes),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                    )
+                },
             )
         }
         item {
@@ -432,56 +443,6 @@ private fun OnboardingFooter(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SourceChoiceCard(
-    source: AnimeSourceDescriptor,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AsyncImage(
-                model = source.iconUrl,
-                placeholder = painterResource(source.iconRes),
-                error = painterResource(source.iconRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = source.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = sourceLanguageSummary(source),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            RadioButton(selected = selected, onClick = null)
         }
     }
 }
