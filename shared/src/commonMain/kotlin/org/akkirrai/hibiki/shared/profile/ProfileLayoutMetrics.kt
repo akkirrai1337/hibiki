@@ -11,3 +11,4 @@ val ProfileRecentPosterFrameHeight = 68.dp
 val ProfileRecentPosterFrameCornerRadius = 12.dp
 val ProfileTabVerticalPadding = 8.dp
 val ProfileTabHorizontalPadding = 1.dp
+val ProfilePageArrowButtonCornerRadius = 14.dp
