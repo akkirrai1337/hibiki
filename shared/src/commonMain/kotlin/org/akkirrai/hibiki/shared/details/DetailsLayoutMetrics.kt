@@ -78,3 +78,4 @@ val DetailsPosterCardWidth = 140.dp
 val DetailsPosterCardCornerRadius = 12.dp
 val DetailsPosterCardElevation = 8.dp
 val DetailsStatusBarScrimOpaqueDistance = 168.dp
+val DetailsNestedScrollableGradientSize = 8.dp

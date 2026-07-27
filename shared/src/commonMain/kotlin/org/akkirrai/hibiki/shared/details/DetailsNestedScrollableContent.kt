@@ -13,12 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsNestedScrollableContent(
     modifier: Modifier = Modifier,
-    gradientSize: Dp = 8.dp,
+    gradientSize: Dp = DetailsNestedScrollableGradientSize,
     gradientColor: Color,
     content: @Composable (Modifier) -> Unit,
 ) {
