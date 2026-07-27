@@ -28,7 +28,7 @@ fun AppSourceSearchBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 12.dp),
+            .padding(horizontal = UiDimens.ScreenPadding, vertical = SourceSearchBarVerticalPadding),
     ) {
         AppSearchTopBar(
             query = query,
