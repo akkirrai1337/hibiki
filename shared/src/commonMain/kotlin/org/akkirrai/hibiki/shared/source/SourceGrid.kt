@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun <T> AppSourceGrid(
@@ -17,7 +16,7 @@ fun <T> AppSourceGrid(
         emptyContent()
     } else {
         items.chunked(2).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(SourceGridColumnSpacing)) {
                 rowItems.forEach { item ->
                     itemContent(item, Modifier.weight(1f))
                 }

@@ -13,3 +13,4 @@ val SourceGridItemHeight = 76.dp
 val SourceGridItemHorizontalPadding = 14.dp
 val SourceGridItemIconSize = 40.dp
 val SourceGridItemIconTextGap = 10.dp
+val SourceGridColumnSpacing = 10.dp
