@@ -34,7 +34,6 @@ import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +62,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,6 +95,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
+import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import kotlinx.coroutines.launch
 
 @Composable
@@ -417,67 +416,26 @@ private fun DiscordAuthDialog(
                             ).distinct().joinToString(" • "),
                         )
 
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        OutlinedTextField(
-                            value = manualToken,
-                            onValueChange = {
-                                manualToken = it
-                                manualTokenFailed = false
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.discord_rpc_manual_token)) },
-                            supportingText = if (manualTokenFailed) {
-                                { Text(stringResource(R.string.discord_rpc_invalid_token)) }
-                            } else {
-                                null
-                            },
-                            isError = manualTokenFailed,
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true,
-                            enabled = !isChecking,
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                        if (isSignedIn) {
-                            OutlinedButton(
-                                onClick = {
-                                    manager.signOut()
-                                    onDismiss()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                enabled = !isChecking,
-                            ) {
-                                Text(stringResource(R.string.discord_rpc_disconnect))
-                            }
-                        } else {
-                            Button(
-                                onClick = onBrowserSignIn,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                enabled = !isChecking,
-                            ) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.discord_rpc_sign_in_browser),
-                                    modifier = Modifier.padding(start = 8.dp),
-                                )
-                            }
-                        }
-                    }
-                }
+                AppDiscordAuthTokenCard(
+                    icon = ImageVector.vectorResource(R.drawable.ic_discord),
+                    manualToken = manualToken,
+                    onManualTokenChange = {
+                        manualToken = it
+                        manualTokenFailed = false
+                    },
+                    manualTokenLabel = stringResource(R.string.discord_rpc_manual_token),
+                    invalidTokenLabel = stringResource(R.string.discord_rpc_invalid_token),
+                    manualTokenFailed = manualTokenFailed,
+                    isChecking = isChecking,
+                    isSignedIn = isSignedIn,
+                    disconnectLabel = stringResource(R.string.discord_rpc_disconnect),
+                    browserSignInLabel = stringResource(R.string.discord_rpc_sign_in_browser),
+                    onDisconnect = {
+                        manager.signOut()
+                        onDismiss()
+                    },
+                    onBrowserSignIn = onBrowserSignIn,
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
