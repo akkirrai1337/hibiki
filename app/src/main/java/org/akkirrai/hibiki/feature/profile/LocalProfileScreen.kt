@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -38,9 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,7 +44,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +77,7 @@ import org.akkirrai.hibiki.core.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
+import org.akkirrai.hibiki.shared.profile.AppProfileTabPager
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 
 private enum class LocalProfileTab(val titleRes: Int) {
@@ -117,8 +113,6 @@ fun LocalProfileScreen(
     val snapshot = remember(localizedResources, state.data) {
         buildProfileSnapshot(localizedResources, state.data)
     }
-    val pagerState = rememberPagerState(pageCount = { LocalProfileTab.entries.size })
-    val scope = rememberCoroutineScope()
     val statusInsets = WindowInsets.statusBars.asPaddingValues()
 
     Box(
@@ -191,35 +185,8 @@ fun LocalProfileScreen(
                         )
                     }
                 }
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    divider = {},
-                ) {
-                    LocalProfileTab.entries.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = {
-                                Text(
-                                    text = stringResource(tab.titleRes),
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(
-                                        alpha = if (pagerState.currentPage == index) 1f else 0.5f,
-                                    ),
-                                    maxLines = 1,
-                                )
-                            },
-                            modifier = Modifier
-                                .padding(horizontal = 1.dp, vertical = AnimiteSmallPadding)
-                                .clip(CircleShape),
-                        )
-                    }
-                }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                AppProfileTabPager(
+                    tabTitles = LocalProfileTab.entries.map { tab -> stringResource(tab.titleRes) },
                 ) { page ->
                     when (LocalProfileTab.entries[page]) {
                         LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
