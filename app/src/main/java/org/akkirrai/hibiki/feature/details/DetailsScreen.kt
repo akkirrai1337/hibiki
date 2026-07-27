@@ -601,7 +601,6 @@ private fun DetailHeroSection(
                                 stringResource(R.string.details_next_episode_countdown, eta)
                             },
                             icon = ImageVector.vectorResource(R.drawable.hourglass),
-                            modifier = Modifier.padding(top = 2.dp),
                         )
                     }
                 },

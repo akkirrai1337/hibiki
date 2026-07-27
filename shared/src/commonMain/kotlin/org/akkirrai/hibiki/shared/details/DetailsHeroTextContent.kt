@@ -52,7 +52,11 @@ fun AppDetailsHeroTextContent(
                 overflow = TextOverflow.Ellipsis,
             )
             ratingsContent?.invoke()
-            nextEpisodeContent?.invoke()
+            nextEpisodeContent?.let { content ->
+                Box(modifier = Modifier.padding(top = 2.dp)) {
+                    content()
+                }
+            }
             if (description.isNotBlank()) {
                 DetailsNestedScrollableContent(
                     modifier = Modifier.weight(1f),
