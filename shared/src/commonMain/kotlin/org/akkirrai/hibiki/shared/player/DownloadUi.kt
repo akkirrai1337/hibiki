@@ -19,11 +19,11 @@ fun DownloadIconButton(icon: ImageVector, contentDescription: String, active: Bo
     DownloadBadge(active = active) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(EpisodeDownloadActionSize)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription, Modifier.size(20.dp))
+            Icon(icon, contentDescription, Modifier.size(EpisodeDownloadIconSize))
         }
     }
 }
@@ -31,8 +31,8 @@ fun DownloadIconButton(icon: ImageVector, contentDescription: String, active: Bo
 @Composable
 fun DownloadStateIcon(icon: ImageVector, contentDescription: String) {
     DownloadBadge(active = true) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription, Modifier.size(20.dp))
+        Box(Modifier.size(EpisodeDownloadActionSize), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription, Modifier.size(EpisodeDownloadIconSize))
         }
     }
 }
@@ -40,11 +40,11 @@ fun DownloadStateIcon(icon: ImageVector, contentDescription: String) {
 @Composable
 fun DownloadProgressBadge(progress: Float) {
     DownloadBadge(active = true) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(EpisodeDownloadActionSize), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
+                modifier = Modifier.size(EpisodeDownloadIconSize),
+                strokeWidth = EpisodeDownloadProgressStrokeWidth,
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
