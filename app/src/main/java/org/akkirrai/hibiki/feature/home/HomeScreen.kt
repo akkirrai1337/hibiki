@@ -113,6 +113,7 @@ import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
+import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -204,16 +205,10 @@ fun HomeScreen(
             transitionSpec = { appHomeSearchContentTransition(targetState) },
             label = "HomeSearchContent",
         ) { searchActive ->
-            if (searchActive) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = HOME_CONTENT_TOP_PADDING,
-                        end = UiDimens.ScreenPadding,
-                        bottom = bottomContentPadding
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                if (searchActive) {
+                AppHomeSearchList(
+                    topContentPadding = HOME_CONTENT_TOP_PADDING,
+                    bottomContentPadding = bottomContentPadding,
                 ) {
                     appSearchStateVerticalListContent(
                         state = state.searchResult,
