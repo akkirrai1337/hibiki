@@ -47,7 +47,7 @@ fun ProfileActivityBarChart(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(day.episodeCount.toString(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(ProfileActivityBarChartValueBarGap))
-                        Box(Modifier.width(ProfileActivityBarWidth).height(barHeight).clip(RoundedCornerShape(7.dp)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
+                        Box(Modifier.width(ProfileActivityBarWidth).height(barHeight).clip(RoundedCornerShape(ProfileActivityBarCornerRadius)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
                     }
                 }
                 Spacer(Modifier.height(6.dp))
