@@ -2,14 +2,6 @@ package org.akkirrai.hibiki.feature.onboarding
 
 import android.os.LocaleList
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -62,6 +53,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -138,27 +130,11 @@ fun FirstLaunchOnboarding(
                 .fillMaxSize()
                 .safeDrawingPadding(),
         ) {
-            AnimatedContent(
-                targetState = step,
+            AppOnboardingStepContent(
+                step = step,
                 modifier = Modifier.weight(1f),
-                transitionSpec = {
-                    val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                    (
-                        (slideInHorizontally(
-                            animationSpec = tween(260),
-                            initialOffsetX = { width -> direction * width / 4 },
-                        ) + fadeIn(animationSpec = tween(260))) togetherWith
-                            (slideOutHorizontally(
-                                animationSpec = tween(220),
-                                targetOffsetX = { width -> -direction * width / 4 },
-                            ) + fadeOut(animationSpec = tween(220)))
-                        ).using(SizeTransform(clip = false))
-                },
-                contentAlignment = Alignment.Center,
-                label = "onboarding_step",
-            ) { currentStep ->
-                when (currentStep) {
-                    OnboardingStep.WELCOME -> AppOnboardingWelcome(
+                welcomeContent = {
+                    AppOnboardingWelcome(
                         title = stringResource(R.string.onboarding_welcome_title),
                         description = stringResource(R.string.onboarding_welcome_description),
                         buttonLabel = stringResource(R.string.onboarding_get_started),
@@ -175,8 +151,9 @@ fun FirstLaunchOnboarding(
                             )
                         },
                     )
-
-                    OnboardingStep.SOURCE -> AppOnboardingSourceStep(
+                },
+                sourceContent = {
+                    AppOnboardingSourceStep(
                         title = stringResource(R.string.onboarding_source_title),
                         description = stringResource(
                             if (localizedSources.isEmpty()) {
@@ -214,8 +191,9 @@ fun FirstLaunchOnboarding(
                             }
                         },
                     )
-
-                    OnboardingStep.NOTIFICATIONS -> AppOnboardingNotifications(
+                },
+                notificationsContent = {
+                    AppOnboardingNotifications(
                         title = stringResource(R.string.onboarding_notifications_title),
                         description = stringResource(R.string.onboarding_notifications_description),
                         icon = Icons.Rounded.NotificationsActive,
@@ -236,9 +214,8 @@ fun FirstLaunchOnboarding(
                             }
                         },
                     )
-
-                }
-            }
+                },
+            )
 
             // Keep the footer mounted on every step. Removing it on the welcome
             // page changes the AnimatedContent height during the first transition
