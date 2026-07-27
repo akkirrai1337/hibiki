@@ -74,3 +74,6 @@ val DetailsHeroTextEndPaddingInSection = 16.dp
 val DetailsHeroTextHeight = 180.dp
 val DetailsHeroActionsTopSpacing = 24.dp
 val DetailsHeroActionsBottomSpacing = 16.dp
+val DetailsPosterCardWidth = 140.dp
+val DetailsPosterCardCornerRadius = 12.dp
+val DetailsPosterCardElevation = 8.dp
