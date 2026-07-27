@@ -24,14 +24,21 @@ fun PlayerSettingsHeader(
     backContent: @Composable (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 2.dp, end = 18.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = PlayerSettingsHeaderStartPadding,
+                top = PlayerSettingsHeaderTopPadding,
+                end = PlayerSettingsHeaderEndPadding,
+                bottom = PlayerSettingsHeaderBottomPadding,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(PlayerSettingsHeaderGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showBack) {
-            backContent?.invoke() ?: Spacer(Modifier.width(8.dp))
+            backContent?.invoke() ?: Spacer(Modifier.width(PlayerSettingsHeaderBackSpacerWidth))
         } else {
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(PlayerSettingsHeaderBackSpacerWidth))
         }
         Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
