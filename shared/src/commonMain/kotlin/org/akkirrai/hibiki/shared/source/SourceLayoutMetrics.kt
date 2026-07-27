@@ -38,3 +38,4 @@ val SourceItemInnerCornerRadius = 6.dp
 val SourceContentListTopPadding = 84.dp
 val SourceContentListHorizontalPadding = 12.dp
 val SourceContentListBottomExtraPadding = 32.dp
+val SourceScreenHeaderHeight = 48.dp

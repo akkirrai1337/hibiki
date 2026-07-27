@@ -19,7 +19,7 @@ fun SourceScreenHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(SourceScreenHeaderHeight),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
