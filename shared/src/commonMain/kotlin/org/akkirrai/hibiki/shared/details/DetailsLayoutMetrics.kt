@@ -19,3 +19,7 @@ val DetailsInfoPillContentHeight = 40.dp
 val DetailsInfoPillContentGap = 12.dp
 val DetailsInfoPillIconContainerSize = 36.dp
 val DetailsInfoPillIconSize = 20.dp
+val DetailsSectionTitleGap = 12.dp
+val DetailsSectionTitleIndicatorWidth = 4.dp
+val DetailsSectionTitleIndicatorHeight = 24.dp
+val DetailsSectionTitleIndicatorCornerRadius = 4.dp
