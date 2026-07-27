@@ -130,6 +130,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
+import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -358,9 +359,29 @@ private fun LazyListScope.homeFeedContent(
 ) {
     continueAnime?.let { anime ->
         item {
-            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
-                ContinueWatchingCard(anime = anime, onClick = { onAnimeClick(anime) })
-            }
+            AppHomeContinueWatchingContent(
+                anime = anime,
+                sectionTitle = stringResource(R.string.home_continue_title),
+                emptyTitle = stringResource(R.string.home_continue_empty_title),
+                emptyMessage = stringResource(R.string.home_continue_empty_message),
+                openHint = stringResource(R.string.home_open_title_hint),
+                meta = buildHomeMeta(
+                    anime = anime,
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
+                ),
+                sectionIcon = Icons.Outlined.History,
+                onClick = { onAnimeClick(anime) },
+                imageContent = { currentAnime ->
+                    AnimePoster(
+                        anime = currentAnime,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                },
+                trailingContent = { currentAnime ->
+                    AnimeSourceBadge(titleId = currentAnime.id)
+                },
+            )
         }
     }
     appHomeAnimeSection(
@@ -477,40 +498,6 @@ private fun HomeErrorState(
                 )
             }
         }
-    )
-}
-
-@Composable
-private fun ContinueWatchingCard(
-    anime: Anime?,
-    onClick: () -> Unit
-) {
-    AppContinueWatchingCard(
-        anime = anime,
-        sectionTitle = stringResource(R.string.home_continue_title),
-        emptyTitle = stringResource(R.string.home_continue_empty_title),
-        emptyMessage = stringResource(R.string.home_continue_empty_message),
-        openHint = stringResource(R.string.home_open_title_hint),
-        meta = anime?.let {
-            buildHomeMeta(
-                anime = it,
-                announcementLabel = stringResource(R.string.anime_meta_announcement),
-                movieLabel = stringResource(R.string.anime_meta_movie),
-            )
-        }.orEmpty(),
-        sectionIcon = Icons.Outlined.History,
-        onClick = onClick,
-        imageContent = {
-            anime?.let { currentAnime ->
-                AnimePoster(
-                    anime = currentAnime,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        },
-        trailingContent = {
-            anime?.let { AnimeSourceBadge(titleId = it.id) }
-        },
     )
 }
 
