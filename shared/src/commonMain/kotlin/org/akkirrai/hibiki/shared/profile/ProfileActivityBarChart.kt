@@ -39,7 +39,7 @@ fun ProfileActivityBarChart(
     modifier: Modifier = Modifier,
 ) {
     val maxEpisodes = days.maxOfOrNull(ProfileActivityBarItem::episodeCount)?.coerceAtLeast(minScaleEpisodes) ?: minScaleEpisodes
-    LazyRow(state = listState, modifier = modifier.height(142.dp), horizontalArrangement = Arrangement.spacedBy(dayGap), verticalAlignment = Alignment.Bottom) {
+    LazyRow(state = listState, modifier = modifier.height(ProfileActivityBarChartHeight), horizontalArrangement = Arrangement.spacedBy(dayGap), verticalAlignment = Alignment.Bottom) {
         items(days, key = ProfileActivityBarItem::dateLabel) { day ->
             val barHeight = if (day.episodeCount > 0) (18 + (66 * day.episodeCount / maxEpisodes)).dp else 10.dp
             Column(Modifier.width(dayWidth), horizontalAlignment = Alignment.CenterHorizontally) {

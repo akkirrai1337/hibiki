@@ -44,3 +44,4 @@ val ProfileSegmentDonutPadding = 10.dp
 val ProfileSegmentDonutStrokeWidth = 18.dp
 val ProfileAnalyticsStatsSpacing = 4.dp
 val ProfileActivitySectionVerticalSpacing = 8.dp
+val ProfileActivityBarChartHeight = 142.dp
