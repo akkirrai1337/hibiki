@@ -23,7 +23,7 @@ fun AppPlayerOverlayHandle(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(28.dp)
+            .height(PlayerOverlayHandleTouchHeight)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
@@ -38,8 +38,8 @@ fun AppPlayerOverlayHandle(
     ) {
         Box(
             modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
+                .width(PlayerOverlayHandleWidth)
+                .height(PlayerOverlayHandleHeight)
                 .clip(RoundedCornerShape(999.dp))
                 .background(Color.White.copy(alpha = 0.28f)),
         )
