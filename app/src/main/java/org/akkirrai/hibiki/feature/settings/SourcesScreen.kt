@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.feature.settings
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
@@ -156,9 +155,7 @@ private fun SourceLanguageSection(
                 imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier
-                    .size(16.dp)
-                    .then(iconModifier),
+                modifier = iconModifier,
             )
         },
         emptyContent = {
