@@ -27,3 +27,4 @@ val SourceSearchSectionResultsHorizontalPadding = 8.dp
 val SourceLanguageSectionHorizontalPadding = 16.dp
 val SourceLanguageSectionVerticalPadding = 10.dp
 val SourceLanguageSectionHeaderGap = 4.dp
+val SourceLanguageSectionContentTopPadding = 12.dp
