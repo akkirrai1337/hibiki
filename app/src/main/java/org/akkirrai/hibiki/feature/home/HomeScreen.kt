@@ -104,7 +104,6 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
-import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.AppHomePoster
@@ -113,6 +112,7 @@ import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
+import org.akkirrai.hibiki.shared.home.appHomePersonalEmptySection
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -148,6 +148,9 @@ fun HomeScreen(
     val continueEmptyTitle = stringResource(R.string.home_continue_empty_title)
     val continueEmptyMessage = stringResource(R.string.home_continue_empty_message)
     val continueOpenHint = stringResource(R.string.home_open_title_hint)
+    val personalEmptyTitle = stringResource(R.string.home_personal_empty_title)
+    val personalEmptyMessage = stringResource(R.string.home_personal_empty_message)
+    val personalEmptyActionLabel = stringResource(R.string.home_browse_catalog)
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val homeListState = rememberSaveable(saver = LazyListState.Saver) {
@@ -283,6 +286,9 @@ fun HomeScreen(
                             recentlyAddedTitle = recentlyAddedTitle,
                             announcementLabel = announcementLabel,
                             movieLabel = movieLabel,
+                            personalEmptyTitle = personalEmptyTitle,
+                            personalEmptyMessage = personalEmptyMessage,
+                            personalEmptyActionLabel = personalEmptyActionLabel,
                             onBrowseCatalog = onBrowseCatalog,
                             onOpenLibrary = onOpenLibrary,
                         )
@@ -333,6 +339,9 @@ private fun LazyListScope.homeFeedContent(
     recentlyAddedTitle: String,
     announcementLabel: String,
     movieLabel: String,
+    personalEmptyTitle: String,
+    personalEmptyMessage: String,
+    personalEmptyActionLabel: String,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
@@ -411,17 +420,14 @@ private fun LazyListScope.homeFeedContent(
         },
         onHeaderClick = onOpenLibrary,
     )
-    if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
-        item {
-            HomePersonalEmptyState(
-                title = stringResource(R.string.home_personal_empty_title),
-                message = stringResource(R.string.home_personal_empty_message),
-                actionLabel = stringResource(R.string.home_browse_catalog),
-                icon = Icons.Outlined.VideoLibrary,
-                onActionClick = onBrowseCatalog,
-            )
-        }
-    }
+    appHomePersonalEmptySection(
+        visible = continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty(),
+        title = personalEmptyTitle,
+        message = personalEmptyMessage,
+        actionLabel = personalEmptyActionLabel,
+        icon = Icons.Outlined.VideoLibrary,
+        onActionClick = onBrowseCatalog,
+    )
 }
 
 @Composable
