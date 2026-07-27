@@ -103,7 +103,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
@@ -1408,7 +1407,7 @@ private fun PlayerOverlayPanel(
     onDismissRequest: () -> Unit,
     widthFraction: Float,
     maxWidth: Dp,
-    restingOffsetY: Dp = 0.dp,
+    restingOffsetY: Dp = PlayerSettingsPanelRestingOffsetY,
     swipeToDismissEnabled: Boolean = true,
     content: @Composable ((() -> Unit)) -> Unit,
 ) {
@@ -1918,7 +1917,6 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
 private const val PLAYER_SETTINGS_PANEL_WIDTH_FRACTION = 0.68f
 private const val PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION = 0.58f
 private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
