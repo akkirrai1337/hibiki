@@ -190,8 +190,8 @@ import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayHandle
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
 @Composable
@@ -1631,76 +1631,42 @@ private fun PlayerOverlayPanel(
 
     BackHandler(enabled = !dismissing, onBack = ::dismissPanel)
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(Color.Black.copy(alpha = effectiveScrimAlpha))
-                .clickable(enabled = !dismissing) {
-                    val canDismiss =
-                        SystemClock.elapsedRealtime() - openedAtMs >= PLAYER_OVERLAY_TAP_GUARD_MS
-                    if (canDismiss) {
-                        dismissPanel()
-                    }
-                }
-        )
+    AppPlayerOverlaySurface(
+        scrimAlpha = effectiveScrimAlpha,
+        scrimEnabled = !dismissing,
+        panelAlpha = effectivePanelAlpha,
+        panelScale = effectivePanelScale,
+        panelTranslationY = panelBaseOffsetPx + animatedDragOffsetPx,
+        widthFraction = widthFraction,
+        maxWidth = maxWidth,
+        restingOffsetY = restingOffsetY,
+        panelModifier = if (swipeToDismissEnabled) {
+            Modifier.nestedScroll(nestedScrollConnection)
+        } else {
+            Modifier
+        },
+        showHandle = swipeToDismissEnabled,
+        onDragDelta = { deltaY ->
+            if (dismissing) return@AppPlayerOverlaySurface
 
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(widthFraction)
-                .widthIn(max = maxWidth)
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .offset(y = restingOffsetY)
-                .then(
-                    if (swipeToDismissEnabled) {
-                        Modifier.nestedScroll(nestedScrollConnection)
-                    } else {
-                        Modifier
-                    }
-                )
-                .graphicsLayer {
-                    alpha = effectivePanelAlpha
-                    scaleX = effectivePanelScale
-                    scaleY = effectivePanelScale
-                    translationY = panelBaseOffsetPx + animatedDragOffsetPx
-                }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    // Consume clicks inside dialog so scrim does not receive them.
-                },
-            shape = RoundedCornerShape(20.dp),
-            color = PLAYER_SHEET_COLOR,
-            contentColor = Color.White,
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (swipeToDismissEnabled) {
-                    AppPlayerOverlayHandle(
-                        onDragDelta = { deltaY ->
-                            if (dismissing) return@AppPlayerOverlayHandle
+            isDragging = true
+            dragOffsetPx = (dragOffsetPx + deltaY).coerceAtLeast(0f)
+        },
+        onDragEnd = {
+            if (dismissing) return@AppPlayerOverlaySurface
 
-                            isDragging = true
-                            dragOffsetPx = (dragOffsetPx + deltaY).coerceAtLeast(0f)
-                        },
-                        onDragEnd = {
-                            if (dismissing) return@AppPlayerOverlayHandle
-
-                            finishPanelDrag()
-                        }
-                    )
-                } else {
-                    SpacerBox(12.dp)
-                }
-
-                content(::dismissPanel)
+            finishPanelDrag()
+        },
+        onScrimClick = {
+            val canDismiss =
+                SystemClock.elapsedRealtime() - openedAtMs >= PLAYER_OVERLAY_TAP_GUARD_MS
+            if (canDismiss) {
+                dismissPanel()
             }
-        }
-    }
+        },
+        onDismiss = ::dismissPanel,
+        content = content,
+    )
 }
 
 @Composable
@@ -1863,11 +1829,6 @@ private fun PlayerSettingsChoiceRow(
             Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White)
         },
     )
-}
-
-@Composable
-private fun SpacerBox(size: Dp) {
-    Box(modifier = Modifier.size(size))
 }
 
 @Composable
@@ -2150,7 +2111,6 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private val PLAYER_SHEET_COLOR = Color(0xFF121212)
 private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
