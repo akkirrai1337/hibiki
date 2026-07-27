@@ -14,14 +14,14 @@ fun sourceItemShape(index: Int, count: Int): RoundedCornerShape = when {
     index == 0 -> RoundedCornerShape(
         topStart = SourceItemOuterCornerRadius,
         topEnd = SourceItemOuterCornerRadius,
-        bottomStart = 6.dp,
-        bottomEnd = 6.dp,
+        bottomStart = SourceItemInnerCornerRadius,
+        bottomEnd = SourceItemInnerCornerRadius,
     )
     index == count - 1 -> RoundedCornerShape(
-        topStart = 6.dp,
-        topEnd = 6.dp,
+        topStart = SourceItemInnerCornerRadius,
+        topEnd = SourceItemInnerCornerRadius,
         bottomStart = SourceItemOuterCornerRadius,
         bottomEnd = SourceItemOuterCornerRadius,
     )
-    else -> RoundedCornerShape(6.dp)
+    else -> RoundedCornerShape(SourceItemInnerCornerRadius)
 }
