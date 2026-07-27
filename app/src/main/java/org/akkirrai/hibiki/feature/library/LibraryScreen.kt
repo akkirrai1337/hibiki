@@ -99,6 +99,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
@@ -350,25 +351,16 @@ private fun EmptyLibraryState(
     title: String,
     body: String,
 ) {
-    org.akkirrai.hibiki.shared.library.LibraryEmptyState(
+    AppLibraryEmptyState(
         title = title,
         message = body,
-        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
         iconContent = {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.BookmarkBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Icon(
+                imageVector = Icons.Outlined.BookmarkBorder,
+                contentDescription = null,
+                modifier = Modifier.size(30.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     )
 }
