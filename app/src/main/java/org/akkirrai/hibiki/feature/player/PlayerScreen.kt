@@ -173,7 +173,7 @@ import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
-import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayerSettingsChoiceRow
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
@@ -1772,14 +1772,12 @@ private fun PlayerSettingsEntry(
 private fun PlayerSettingsChoiceRow(
     value: PlayerSettingsValue,
 ) {
-    SharedPlayerSettingsChoiceRow(
+    AppPlayerSettingsChoice(
         label = value.label,
         description = value.description,
         selected = value.selected,
         onClick = value.onClick,
-        selectedIndicator = {
-            Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White)
-        },
+        selectedIcon = Icons.Outlined.Check,
     )
 }
 
