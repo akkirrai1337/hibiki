@@ -15,13 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
@@ -43,8 +39,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.annotation.StringRes
@@ -55,7 +49,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
@@ -67,6 +60,7 @@ import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.SourceLanguageSection as SharedSourceLanguageSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
+import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -226,11 +220,16 @@ private fun SourceSearchSection(
     onRetry: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    AppSourceSearchSection(
+        sourceName = section.source.name,
+        isLoading = section.isLoading,
+        hasError = section.error != null,
+        errorLabel = stringResource(R.string.sources_search_failed),
+        retryLabel = stringResource(R.string.search_retry),
+        onRetry = onRetry,
+        items = section.items,
+        itemKey = { it.id },
+        sourceIconContent = {
             AsyncImage(
                 model = section.source.iconUrl,
                 placeholder = painterResource(section.source.iconRes),
@@ -238,37 +237,8 @@ private fun SourceSearchSection(
                 contentDescription = null,
                 modifier = Modifier.size(24.dp).clip(CircleShape),
             )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = section.source.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-        when {
-            section.isLoading -> CircularProgressIndicator(
-                modifier = Modifier.padding(horizontal = 8.dp).size(24.dp),
-                strokeWidth = 2.dp,
-            )
-            section.error != null -> Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.sources_search_failed),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.search_retry))
-                }
-            }
-            section.items.isNotEmpty() -> LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            ) {
-                items(section.items, key = { it.id }) { anime ->
+        },
+        itemContent = { anime ->
                     AppPosterAnimeCard(
                         anime = anime,
                         metaText = anime.buildCardMeta(
@@ -293,10 +263,8 @@ private fun SourceSearchSection(
                             )
                         },
                     )
-                }
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable
