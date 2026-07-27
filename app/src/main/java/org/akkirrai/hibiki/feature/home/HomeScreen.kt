@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -108,7 +107,6 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
-import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppTopScrim
@@ -131,6 +129,7 @@ import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomeContinueWatchingContent
+import org.akkirrai.hibiki.shared.home.HomePersonalEmptyState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -427,16 +426,12 @@ private fun LazyListScope.homeFeedContent(
     )
     if (continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty()) {
         item {
-            AppMessageState(
+            HomePersonalEmptyState(
                 title = stringResource(R.string.home_personal_empty_title),
                 message = stringResource(R.string.home_personal_empty_message),
                 actionLabel = stringResource(R.string.home_browse_catalog),
-                onActionClick = onBrowseCatalog,
                 icon = Icons.Outlined.VideoLibrary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 260.dp)
-                    .padding(horizontal = UiDimens.ScreenPadding),
+                onActionClick = onBrowseCatalog,
             )
         }
     }
