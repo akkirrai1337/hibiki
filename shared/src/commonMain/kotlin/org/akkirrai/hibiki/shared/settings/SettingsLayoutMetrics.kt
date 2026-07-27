@@ -42,3 +42,5 @@ val SettingsDiscordTokenCardContentGap = 12.dp
 val SettingsDiscordTokenFieldCornerRadius = 16.dp
 val SettingsDiscordBrowserIconSize = 20.dp
 val SettingsDiscordBrowserLabelStartPadding = 8.dp
+val SettingsCardPadding = 20.dp
+val SettingsCardContentGap = 14.dp

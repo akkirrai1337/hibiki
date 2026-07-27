@@ -14,7 +14,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 data class AppSettingsCardLabels(
@@ -41,7 +40,7 @@ fun AppSettingsCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = RoundedCornerShape(UiDimens.MediumCorner),
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(modifier = Modifier.padding(SettingsCardPadding), verticalArrangement = Arrangement.spacedBy(SettingsCardContentGap)) {
             Text(labels.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(labels.description, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             HorizontalDivider()
