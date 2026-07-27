@@ -74,7 +74,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
@@ -86,6 +85,7 @@ import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.shared.design.component.AppCollapsibleFilterSection
+import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
@@ -217,6 +217,13 @@ fun AnimeSearchFiltersSheet(
                             entries = typeEntries,
                             selected = animeType,
                             onSelected = { animeType = it },
+                            arrowContent = { modifier ->
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                                    contentDescription = null,
+                                    modifier = modifier,
+                                )
+                            },
                             allowClearSelection = true,
                             icon = { ImageVector.vectorResource(typeIcon(it)) },
                             text = { typeLabel(it) },
