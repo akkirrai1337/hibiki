@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
 
@@ -13,14 +13,14 @@ fun AppCatalogTypeFilterSection(
     onSelected: (AnimeTypeAlias?) -> Unit,
     typeIcon: @Composable (AnimeTypeAlias) -> ImageVector,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
-    arrowContent: @Composable (Modifier) -> Unit,
+    arrowIcon: ImageVector,
 ) {
     AppConnectedToggleFilter(
         title = title,
         entries = entries,
         selected = selected,
         onSelected = onSelected,
-        arrowContent = arrowContent,
+        arrowContent = { modifier -> Icon(arrowIcon, contentDescription = null, modifier = modifier) },
         allowClearSelection = true,
         icon = typeIcon,
         text = typeLabel,

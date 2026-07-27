@@ -216,13 +216,7 @@ fun AnimeSearchFiltersSheet(
                             entries = typeEntries,
                             selected = animeType,
                             onSelected = { animeType = it },
-                            arrowContent = { modifier ->
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                                    contentDescription = null,
-                                    modifier = modifier,
-                                )
-                            },
+                            arrowIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
                             typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
                             typeLabel = { typeLabel(it) },
                         )
@@ -248,13 +242,7 @@ fun AnimeSearchFiltersSheet(
                             maxCollapsedItems = maxCollapsedGenreItems,
                             maxCollapsedGroups = maxCollapsedGenreGroups,
                             allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
-                            arrowContent = { modifier ->
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                                    contentDescription = null,
-                                    modifier = modifier,
-                                )
-                            },
+                            arrowIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
                             expandIconContent = { expanded, modifier ->
                                 Icon(
                                     imageVector = if (expanded) {
@@ -291,13 +279,7 @@ fun AnimeSearchFiltersSheet(
                             onChange = { includedStatuses = it },
                             optionText = optionText,
                             optionIcon = { statusIcon(it.id) },
-                            arrowContent = { modifier ->
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                                    contentDescription = null,
-                                    modifier = modifier,
-                                )
-                            },
+                            arrowIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
                             expandIconContent = { expanded, modifier ->
                                 Icon(
                                     imageVector = if (expanded) {
