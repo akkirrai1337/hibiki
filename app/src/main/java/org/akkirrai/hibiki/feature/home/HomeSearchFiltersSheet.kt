@@ -1,13 +1,7 @@
 package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.AddCircleOutline
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,11 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -46,15 +37,10 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
-import org.akkirrai.hibiki.shared.catalog.AppCatalogTypeFilterSection
-import org.akkirrai.hibiki.shared.catalog.AppCatalogGenreFilterSection
-import org.akkirrai.hibiki.shared.catalog.AppCatalogStatusFilterSection
-import org.akkirrai.hibiki.shared.catalog.AppCatalogYearFilterSection
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
-import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
