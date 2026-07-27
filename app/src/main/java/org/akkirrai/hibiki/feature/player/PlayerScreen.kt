@@ -186,6 +186,9 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelRestingOffsetY
 import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelMaxWidth
 import org.akkirrai.hibiki.shared.player.PlayerOverlayPanelExitOffset
 import org.akkirrai.hibiki.shared.player.PlayerPanelDismissDragThreshold
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelWidthFraction
+import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelWidthFraction
+import org.akkirrai.hibiki.shared.player.PlayerOverlayScrimAlpha
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
@@ -1321,7 +1324,7 @@ fun PlayerScreen(
                     playlistVisible = false
                     keepControlsVisible()
                 },
-                widthFraction = PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION,
+                widthFraction = PlayerPlaylistPanelWidthFraction,
                 maxWidth = PlayerPlaylistPanelMaxWidth,
                 swipeToDismissEnabled = false,
             ) { dismissPanel ->
@@ -1344,7 +1347,7 @@ fun PlayerScreen(
                     settingsDestination = PlayerSettingsDestination.Root
                     keepControlsVisible()
                 },
-                widthFraction = PLAYER_SETTINGS_PANEL_WIDTH_FRACTION,
+                widthFraction = PlayerSettingsPanelWidthFraction,
                 maxWidth = PlayerSettingsPanelMaxWidth,
                 restingOffsetY = PlayerSettingsPanelRestingOffsetY,
                 swipeToDismissEnabled = false,
@@ -1423,7 +1426,7 @@ private fun PlayerOverlayPanel(
     val dismissThresholdPx = with(density) { PlayerPanelDismissDragThreshold.toPx() }
 
     val scrimBaseAlpha by animateFloatAsState(
-        targetValue = if (animatingIn) PLAYER_OVERLAY_SCRIM_ALPHA else 0f,
+        targetValue = if (animatingIn) PlayerOverlayScrimAlpha else 0f,
         animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
         label = "playerOverlayScrimAlpha"
     )
@@ -1917,14 +1920,11 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private const val PLAYER_SETTINGS_PANEL_WIDTH_FRACTION = 0.68f
-private const val PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION = 0.58f
 private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
 private const val PLAYER_OVERLAY_ANIMATION_MS = 220
 private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
-private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')

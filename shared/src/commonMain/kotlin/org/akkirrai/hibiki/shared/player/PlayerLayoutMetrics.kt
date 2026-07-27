@@ -91,3 +91,6 @@ val PlayerSettingsPanelRestingOffsetY = 0.dp
 val PlayerPlaylistPanelMaxWidth = 380.dp
 val PlayerOverlayPanelExitOffset = 40.dp
 val PlayerPanelDismissDragThreshold = 72.dp
+const val PlayerSettingsPanelWidthFraction = 0.68f
+const val PlayerPlaylistPanelWidthFraction = 0.58f
+const val PlayerOverlayScrimAlpha = 0.48f
