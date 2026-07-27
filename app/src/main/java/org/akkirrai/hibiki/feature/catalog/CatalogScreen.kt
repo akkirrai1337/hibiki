@@ -87,6 +87,8 @@ import org.akkirrai.hibiki.shared.catalog.CatalogHeaderTopPadding
 import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
 import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
 import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleTopPadding
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleFontSize
 import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
@@ -345,11 +347,11 @@ private fun CatalogSortControl(
         ) {
             Text(
                 text = sortTitle,
-                fontSize = 10.sp,
+                fontSize = CatalogSortMenuTitleFontSize,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier
-                    .padding(top = 8.dp)
+                    .padding(top = CatalogSortMenuTitleTopPadding)
                     .align(Alignment.CenterHorizontally),
             )
             availableSorts.forEach { sort ->
