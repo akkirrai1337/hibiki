@@ -69,6 +69,7 @@ val PlayerBottomOverlayTimelineTopPadding = 2.dp
 val PlayerBottomOverlayTimelineOffset = (-3).dp
 val PlayerBottomOverlayControlsOffset = 1.dp
 val PlayerBottomOverlayPositionTopPadding = 1.dp
+val PlayerBottomOverlayZeroSpacing = 0.dp
 val PlayerFeedbackOverlayCornerRadius = 18.dp
 val PlayerFeedbackOverlayVerticalPadding = 14.dp
 val PlayerErrorOverlayHorizontalPadding = 24.dp

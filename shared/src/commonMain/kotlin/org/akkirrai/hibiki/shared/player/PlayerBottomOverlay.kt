@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppPlayerBottomOverlay(
@@ -45,11 +44,11 @@ fun AppPlayerBottomOverlay(
                 top = PlayerBottomOverlayTopPadding,
                 bottom = PlayerBottomOverlayBottomPadding,
             ),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
+        verticalArrangement = Arrangement.spacedBy(PlayerBottomOverlayZeroSpacing),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
+            verticalArrangement = Arrangement.spacedBy(PlayerBottomOverlayZeroSpacing),
         ) {
             AppPlayerTimeline(
                 durationMs = durationMs,
@@ -59,7 +58,7 @@ fun AppPlayerBottomOverlay(
                 onSeekFinished = onSliderValueChangeFinished,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = PlayerBottomOverlayTimelineTopPadding, bottom = 0.dp)
+                    .padding(top = PlayerBottomOverlayTimelineTopPadding, bottom = PlayerBottomOverlayZeroSpacing)
                     .offset(y = PlayerBottomOverlayTimelineOffset),
             )
 
