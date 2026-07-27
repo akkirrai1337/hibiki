@@ -18,3 +18,4 @@ val EpisodesListTopPadding = 56.dp
 val EpisodesListBottomPadding = 12.dp
 val EpisodesListItemGap = 4.dp
 val EpisodeDownloadActionGap = 6.dp
+val WatchEmptyStateHorizontalPadding = 24.dp

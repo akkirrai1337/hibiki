@@ -19,7 +19,7 @@ fun WatchEmptyState(
     AppMessageState(
         title = title,
         message = message,
-        modifier = modifier.padding(horizontal = 24.dp),
+        modifier = modifier.padding(horizontal = WatchEmptyStateHorizontalPadding),
         actionLabel = retryLabel,
         onActionClick = onRetry,
         icon = icon,
