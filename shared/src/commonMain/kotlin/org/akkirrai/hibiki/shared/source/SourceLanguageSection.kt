@@ -42,7 +42,7 @@ fun SourceLanguageSection(
                     horizontal = SourceLanguageSectionHorizontalPadding,
                     vertical = SourceLanguageSectionVerticalPadding,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(SourceLanguageSectionHeaderGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
