@@ -80,9 +80,9 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
+import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
@@ -90,6 +90,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.home.HomeAction
+import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 import kotlin.math.roundToInt
@@ -181,6 +182,7 @@ fun AnimeSearchFiltersSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         modifier = modifier,
+        shape = rememberDeviceScreenTopCornerShape(),
     ) { sheetContentModifier ->
         LocalizedAppContext(languageMode = appLanguage) {
             when {
