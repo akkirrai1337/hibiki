@@ -27,9 +27,9 @@ fun ProfileAnalyticsPagerHeader(
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePageArrowButton(backIcon, currentPage > 0, onPrevious, size = 32.dp)
+            ProfilePageArrowButton(backIcon, currentPage > 0, onPrevious, size = ProfileAnalyticsArrowButtonSize)
             Text("${currentPage + 1}/$pageCount", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ProfilePageArrowButton(forwardIcon, currentPage < pageCount - 1, onNext, size = 32.dp)
+            ProfilePageArrowButton(forwardIcon, currentPage < pageCount - 1, onNext, size = ProfileAnalyticsArrowButtonSize)
         }
     }
 }

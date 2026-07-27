@@ -30,3 +30,4 @@ val ProfileNameEditorMaxWidth = 240.dp
 val ProfileNameEditorTopPadding = 2.dp
 val ProfileNameEditorBottomPadding = 6.dp
 val ProfileNameEditorUnderlineStrokeWidth = 1.dp
+val ProfileAnalyticsArrowButtonSize = 32.dp
