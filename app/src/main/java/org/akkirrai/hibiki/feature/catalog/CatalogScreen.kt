@@ -50,7 +50,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,8 +85,6 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
 import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
 import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
-import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleTopPadding
-import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuTitleFontSize
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuWidth
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuOffsetY
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
@@ -95,7 +92,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortPill
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
-import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuItem
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
@@ -345,32 +342,24 @@ private fun CatalogSortControl(
             ),
             shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
         ) {
-            Text(
-                text = sortTitle,
-                fontSize = CatalogSortMenuTitleFontSize,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier
-                    .padding(top = CatalogSortMenuTitleTopPadding)
-                    .align(Alignment.CenterHorizontally),
+            AppCatalogSortMenuContent(
+                title = sortTitle,
+                sorts = availableSorts,
+                selectedSort = selectedSort,
+                label = sortLabels::getValue,
+                icon = CatalogSort::icon,
+                expanded = expanded,
+                onSortSelected = { sort ->
+                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                    onSortSelected(sort)
+                },
+                orderContent = { atEnd, orderModifier ->
+                    CatalogSortOrderIcon(
+                        atEnd = atEnd,
+                        modifier = orderModifier,
+                    )
+                },
             )
-            availableSorts.forEach { sort ->
-                AppCatalogSortMenuItem(
-                    icon = sort.icon,
-                    label = sortLabels.getValue(sort),
-                    selected = sort == selectedSort,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
-                        onSortSelected(sort)
-                    },
-                    orderContent = { orderModifier ->
-                        CatalogSortOrderIcon(
-                            atEnd = expanded,
-                            modifier = orderModifier,
-                        )
-                    },
-                )
-            }
         }
     }
 }
