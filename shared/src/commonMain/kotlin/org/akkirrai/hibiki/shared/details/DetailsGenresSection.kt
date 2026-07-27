@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsGenresSection(
@@ -29,21 +28,21 @@ fun DetailsGenresSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(DetailsGenresTitleTopSpacing))
         DetailsSectionTitle(text = title, modifier = Modifier.padding(horizontal = horizontalPadding))
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(DetailsGenresTitleContentSpacing))
         LazyRow(
             contentPadding = PaddingValues(horizontal = horizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(DetailsGenresItemGap),
         ) {
             items(genres.distinct(), key = { it }) { genre ->
                 Surface(
-                    modifier = Modifier.height(32.dp),
+                    modifier = Modifier.height(DetailsGenresItemHeight),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                    border = BorderStroke(DetailsGenresItemBorderWidth, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
                 ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.padding(horizontal = DetailsGenresItemHorizontalPadding), contentAlignment = Alignment.Center) {
                         Text(text = genre, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
