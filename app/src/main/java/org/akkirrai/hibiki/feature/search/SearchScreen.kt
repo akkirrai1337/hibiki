@@ -1,14 +1,11 @@
 package org.akkirrai.hibiki.feature.search
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
@@ -27,9 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.shared.search.AppSearchField
+import org.akkirrai.hibiki.shared.search.AppSearchContentList
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
@@ -54,16 +51,7 @@ fun SearchScreen(
     val retryLabel = stringResource(R.string.search_retry)
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = UiDimens.ScreenPadding,
-            top = UiDimens.ScreenPadding,
-            end = UiDimens.ScreenPadding,
-            bottom = UiDimens.ScreenPadding
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    AppSearchContentList(modifier = modifier) {
         item {
             AppSearchField(
                 query = state.query,
