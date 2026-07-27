@@ -26,7 +26,7 @@ fun ProfileActionButton(
             contentDescription = contentDescription,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
-                .size(40.dp)
+                .size(ProfileActionButtonSize)
                 .clickable(onClick = onClick)
                 .padding(ProfileSmallPadding)
                 .then(iconModifier),
