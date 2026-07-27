@@ -1,0 +1,47 @@
+package org.akkirrai.hibiki.shared.player
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
+import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
+
+@Composable
+fun AppPlayerCenterControls(
+    hasPreviousEpisode: Boolean,
+    hasNextEpisode: Boolean,
+    onTogglePlay: () -> Unit,
+    onPreviousEpisode: () -> Unit,
+    onNextEpisode: () -> Unit,
+    previousContent: @Composable () -> Unit,
+    playContent: @Composable () -> Unit,
+    nextContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppPlayerControlButton(
+            enabled = hasPreviousEpisode,
+            onClick = onPreviousEpisode,
+            iconContent = previousContent,
+        )
+        AppFilledIconButton(
+            onClick = onTogglePlay,
+            modifier = Modifier.size(72.dp),
+            style = AppFilledIconButtonStyle.DarkOverlay,
+            content = playContent,
+        )
+        AppPlayerControlButton(
+            enabled = hasNextEpisode,
+            onClick = onNextEpisode,
+            iconContent = nextContent,
+        )
+    }
+}

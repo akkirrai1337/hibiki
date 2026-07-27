@@ -184,7 +184,7 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
-import org.akkirrai.hibiki.shared.player.AppPlayerControlButton
+import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1158,8 +1158,7 @@ fun PlayerScreen(
                     enter = fadeIn(animationSpec = tween(120)),
                     exit = fadeOut(animationSpec = tween(90)),
                 ) {
-                    PlayerCenterControls(
-                        isPlaying = isPlaying,
+                    AppPlayerCenterControls(
                         hasPreviousEpisode = hasPreviousEpisode,
                         hasNextEpisode = hasNextEpisode,
                         onTogglePlay = {
@@ -1171,6 +1170,36 @@ fun PlayerScreen(
                         },
                         onNextEpisode = {
                             runPlaybackSwitch { viewModel.playNextEpisode() }
+                        },
+                        previousContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp),
+                                tint = Color.White,
+                            )
+                        },
+                        playContent = {
+                            Icon(
+                                painter = painterResource(
+                                    if (isPlaying) {
+                                        R.drawable.ic_player_media_pause_24
+                                    } else {
+                                        R.drawable.ic_player_media_play_arrow_24
+                                    }
+                                ),
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.White,
+                            )
+                        },
+                        nextContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_player_media_skip_next_24),
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp),
+                                tint = Color.White,
+                            )
                         },
                     )
                 }
@@ -2212,66 +2241,6 @@ private fun AutoHideVisibilityEffect(
 }
 
 @Composable
-private fun PlayerCenterControls(
-    isPlaying: Boolean,
-    hasPreviousEpisode: Boolean,
-    hasNextEpisode: Boolean,
-    onTogglePlay: () -> Unit,
-    onPreviousEpisode: () -> Unit,
-    onNextEpisode: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(28.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppPlayerControlButton(
-            enabled = hasPreviousEpisode,
-            onClick = onPreviousEpisode,
-            iconContent = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    tint = Color.White,
-                )
-            },
-        )
-        AppFilledIconButton(
-            onClick = onTogglePlay,
-            modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
-            style = AppFilledIconButtonStyle.DarkOverlay,
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isPlaying) {
-                        R.drawable.ic_player_media_pause_24
-                    } else {
-                        R.drawable.ic_player_media_play_arrow_24
-                    }
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = Color.White,
-            )
-        }
-        AppPlayerControlButton(
-            enabled = hasNextEpisode,
-            onClick = onNextEpisode,
-            iconContent = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_player_media_skip_next_24),
-                    contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    tint = Color.White,
-                )
-            },
-        )
-    }
-}
-
-@Composable
 private fun PlayerTimeline(
     durationMs: Long,
     bufferedPositionMs: Long,
@@ -2482,6 +2451,7 @@ private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
 private val PLAYER_SHEET_COLOR = Color(0xFF121212)
+private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
 private val PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y = 0.dp
@@ -2498,7 +2468,6 @@ private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
 private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
-private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
 private val PLAYER_TIMELINE_TRACK_HEIGHT = 4.dp
 private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
 private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp
