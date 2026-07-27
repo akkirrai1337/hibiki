@@ -47,7 +47,7 @@ fun <T> AppSourceSearchSection(
         ) {
             sourceIconContent(
                 Modifier
-                    .size(24.dp)
+                    .size(SourceSearchSectionIconSize)
                     .clip(CircleShape),
             )
             Spacer(Modifier.width(8.dp))

@@ -16,3 +16,4 @@ val SourceGridItemIconTextGap = 10.dp
 val SourceGridColumnSpacing = 10.dp
 val SourceLanguageSectionCornerRadius = 24.dp
 val SourceContentListVerticalSpacing = 20.dp
+val SourceSearchSectionIconSize = 24.dp
