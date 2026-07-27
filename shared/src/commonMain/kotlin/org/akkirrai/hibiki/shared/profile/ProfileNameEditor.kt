@@ -38,7 +38,12 @@ fun ProfileNameEditor(
                 top = ProfileNameEditorTopPadding,
                 bottom = ProfileNameEditorBottomPadding,
             ).drawBehind {
-                drawLine(underlineColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                drawLine(
+                    underlineColor,
+                    Offset(0f, size.height),
+                    Offset(size.width, size.height),
+                    ProfileNameEditorUnderlineStrokeWidth.toPx(),
+                )
             },
         )
     }
