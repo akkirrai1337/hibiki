@@ -56,23 +56,23 @@ fun AppEpisodeDownloadAction(
     when (state) {
         EpisodeDownloadActionState.NotDownloaded,
         EpisodeDownloadActionState.Failed -> downloadContent(onDownloadClick)
-        EpisodeDownloadActionState.Queued -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        EpisodeDownloadActionState.Queued -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
             pauseContent(onPauseClick)
             removeContent(onRemoveClick)
         }
         is EpisodeDownloadActionState.Downloading -> Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             progressContent(state.progress)
             pauseContent(onPauseClick)
             removeContent(onRemoveClick)
         }
-        EpisodeDownloadActionState.Paused -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        EpisodeDownloadActionState.Paused -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
             resumeContent(onResumeClick)
             removeContent(onRemoveClick)
         }
-        EpisodeDownloadActionState.Completed -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        EpisodeDownloadActionState.Completed -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
             downloadedContent()
             removeContent(onRemoveClick)
         }
