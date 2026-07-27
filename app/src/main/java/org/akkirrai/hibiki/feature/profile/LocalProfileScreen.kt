@@ -207,9 +207,9 @@ private fun LocalAvatar(
         editContentDescription = stringResource(R.string.local_profile_change_avatar),
         onEditClick = onEditClick,
         modifier = modifier,
-        avatarContent = {
+        avatarContent = { avatarModifier ->
             if (avatarUri.isNullOrBlank()) {
-                Icon(Icons.Outlined.Person, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Icon(Icons.Outlined.Person, null, avatarModifier, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             } else {
                 AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
