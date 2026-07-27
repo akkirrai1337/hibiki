@@ -90,21 +90,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
+import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppTopScrim
-import org.akkirrai.hibiki.core.design.component.AnimeTitleText
-import org.akkirrai.hibiki.shared.design.component.AppPosterCard
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.shared.design.component.SectionHeader
-import org.akkirrai.hibiki.shared.design.component.AppFeaturedCarousel
-import org.akkirrai.hibiki.shared.design.component.AppContinueWatchingCard
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
@@ -458,24 +450,9 @@ private fun AnimePoster(
             fallbackUrl = anime.posterFallbackUrl,
             contentDescription = anime.title,
             modifier = Modifier.fillMaxSize(),
-            placeholder = { AnimeImagePlaceholder() }
-        )
-    }
-}
-
-@Composable
-private fun AnimeImagePlaceholder(
-    modifier: Modifier = Modifier
-) {
-    AppTonalSurface(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            placeholder = {
+                AppImagePlaceholder(icon = Icons.Outlined.Image)
+            }
         )
     }
 }
