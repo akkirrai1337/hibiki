@@ -184,6 +184,7 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayer
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
+import org.akkirrai.hibiki.shared.player.AppPlayerUnlockButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -1238,12 +1239,20 @@ fun PlayerScreen(
             enter = fadeIn(animationSpec = tween(160)),
             exit = fadeOut(animationSpec = tween(120)),
         ) {
-            PlayerUnlockButton(
+            AppPlayerUnlockButton(
+                label = stringResource(R.string.watch_player_unlock),
                 onClick = {
                     controlsLocked = false
                     unlockButtonVisible = false
                     keepControlsVisible()
-                }
+                },
+                iconContent = {
+                    Icon(
+                        imageVector = Icons.Outlined.LockOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
             )
         }
 
@@ -2199,37 +2208,6 @@ private fun AutoHideVisibilityEffect(
         if (!enabled || !visible || blocked) return@LaunchedEffect
         delay(PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS)
         onHide()
-    }
-}
-
-@Composable
-private fun PlayerUnlockButton(
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
-        color = Color.Black.copy(alpha = 0.72f),
-        contentColor = Color.White,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.LockOpen,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = stringResource(R.string.watch_player_unlock),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
     }
 }
 
