@@ -16,3 +16,4 @@ val ProfilePageArrowButtonDefaultSize = 40.dp
 val ProfileAvatarContainerSize = 70.dp
 val ProfileAvatarContentSize = 36.dp
 val ProfileAvatarEditButtonSize = 32.dp
+val ProfileAvatarEditIconPadding = 7.dp

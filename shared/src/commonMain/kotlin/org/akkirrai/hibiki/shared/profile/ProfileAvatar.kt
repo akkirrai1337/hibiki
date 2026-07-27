@@ -42,7 +42,7 @@ fun ProfileAvatar(
         }
         if (isEditing) {
             Surface(Modifier.align(Alignment.TopEnd).size(ProfileAvatarEditButtonSize).clickable(onClick = onEditClick), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, contentColor = MaterialTheme.colorScheme.onSurface) {
-                Icon(editIcon, editContentDescription, Modifier.padding(7.dp))
+                Icon(editIcon, editContentDescription, Modifier.padding(ProfileAvatarEditIconPadding))
             }
         }
     }
