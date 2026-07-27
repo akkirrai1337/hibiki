@@ -1093,7 +1093,7 @@ fun PlayerScreen(
         )
 
         activeSkipSegment?.let { skipSegment ->
-            AnimatedVisibility(
+            AppPlayerSkipSegmentOverlay(
                 visible = !isPictureInPictureActive,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -1105,23 +1105,18 @@ fun PlayerScreen(
                             PlayerSkipSegmentBottomPadding
                         },
                     ),
-                enter = fadeIn(animationSpec = tween(140)),
-                exit = fadeOut(animationSpec = tween(140)),
-            ) {
-                AppPlayerSkipSegmentOverlay(
-                    countdownSeconds = skipCountdownSeconds,
-                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
-                    autoSkipEnabled = autoSkipSegments,
-                    skipLabel = stringResource(R.string.watch_player_skip),
-                    watchLabel = stringResource(R.string.watch_player_watch),
-                    onSkipClick = {
-                        skipToSegmentEnd(skipSegment)
-                    },
-                    onWatchClick = {
-                        activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it }
-                    },
-                )
-            }
+                countdownSeconds = skipCountdownSeconds,
+                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                autoSkipEnabled = autoSkipSegments,
+                skipLabel = stringResource(R.string.watch_player_skip),
+                watchLabel = stringResource(R.string.watch_player_watch),
+                onSkipClick = {
+                    skipToSegmentEnd(skipSegment)
+                },
+                onWatchClick = {
+                    activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it }
+                },
+            )
         }
 
         AppPlayerControlsOverlay(
