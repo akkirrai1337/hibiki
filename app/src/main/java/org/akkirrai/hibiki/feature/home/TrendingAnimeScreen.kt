@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +38,7 @@ import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
 import org.akkirrai.hibiki.shared.home.AppTrendingContentList
+import org.akkirrai.hibiki.shared.home.AppTrendingContentState
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
@@ -79,15 +77,13 @@ fun TrendingAnimeScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        org.akkirrai.hibiki.shared.design.component.AppContentState(
+        AppTrendingContentState(
             isLoading = state.isLoading,
             hasContent = state.items.isNotEmpty(),
             errorMessage = state.errorMessage,
             errorTitle = stringResource(R.string.trending_error_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
-            errorIcon = Icons.Outlined.WarningAmber,
-            errorIconTint = MaterialTheme.colorScheme.error,
             content = {
                 AppTrendingContentList(
                     state = listState,
