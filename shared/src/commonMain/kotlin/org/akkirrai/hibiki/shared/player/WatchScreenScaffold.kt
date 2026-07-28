@@ -18,7 +18,7 @@ import org.akkirrai.hibiki.shared.design.component.AppBackButton
 fun WatchScreenScaffold(
     onBackClick: () -> Unit,
     backEnabled: Boolean,
-    backIconContent: @Composable () -> Unit,
+    backContentDescription: String?,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -31,7 +31,7 @@ fun WatchScreenScaffold(
         content()
         AppBackButton(
             onClick = onBackClick,
-            iconContent = backIconContent,
+            contentDescription = backContentDescription,
             enabled = backEnabled,
             modifier = Modifier
                 .align(Alignment.TopStart)

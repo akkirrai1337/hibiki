@@ -1,19 +1,12 @@
 package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -50,17 +43,7 @@ internal fun WatchScreenScaffold(
     org.akkirrai.hibiki.shared.player.WatchScreenScaffold(
         onBackClick = onBackClick,
         backEnabled = !navigationLocked,
-        backIconContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                contentDescription = stringResource(R.string.cd_back),
-                tint = Color.White,
-                modifier = Modifier.graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                    blendMode = BlendMode.Difference
-                },
-            )
-        },
+        backContentDescription = stringResource(R.string.cd_back),
         modifier = modifier,
         content = content,
     )
