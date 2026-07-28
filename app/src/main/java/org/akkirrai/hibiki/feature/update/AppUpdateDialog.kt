@@ -1,13 +1,7 @@
 package org.akkirrai.hibiki.feature.update
 
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Update
-import androidx.compose.material3.Icon
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.update.AppUpdate
 import org.akkirrai.hibiki.shared.update.AppUpdateDialogContent
@@ -25,13 +19,6 @@ fun AppUpdateDialog(
         sizeLabel = formatDownloadSize(update.apkSizeBytes),
         notes = update.notes,
         downloadProgress = downloadProgress,
-        iconContent = {
-            Icon(
-                imageVector = Icons.Outlined.Update,
-                contentDescription = null,
-                modifier = Modifier.padding(8.dp),
-            )
-        },
         title = stringResource(R.string.update_available_title),
         downloadingLabel = { progress ->
             stringResource(R.string.update_downloading, progress)
