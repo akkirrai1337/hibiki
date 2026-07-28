@@ -82,7 +82,6 @@ import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import java.io.File
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -120,6 +119,8 @@ import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
 import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import org.akkirrai.hibiki.shared.details.formatNextEpisodeEta
+import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
+import org.akkirrai.hibiki.shared.details.resolveSourceMaterialLabel
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -676,7 +677,19 @@ private fun DetailContentCard(
     heroInfo: DetailsHeroInfo,
     modifier: Modifier = Modifier,
 ) {
-    val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
+    val sourceMaterial = resolveSourceMaterialLabel(
+        sourceMaterial = anime.sourceMaterial,
+        labels = SourceMaterialLabels(
+            manga = stringResource(R.string.details_source_material_manga),
+            manhwa = stringResource(R.string.details_source_material_manhwa),
+            manhua = stringResource(R.string.details_source_material_manhua),
+            lightNovel = stringResource(R.string.details_source_material_light_novel),
+            webNovel = stringResource(R.string.details_source_material_web_novel),
+            visualNovel = stringResource(R.string.details_source_material_visual_novel),
+            game = stringResource(R.string.details_source_material_game),
+            original = stringResource(R.string.details_source_material_original),
+        ),
+    )
     org.akkirrai.hibiki.shared.details.AppDetailsInformationContent(
         heroInfo = heroInfo,
         title = stringResource(R.string.details_information),
@@ -826,22 +839,6 @@ private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
             stringResource(R.string.details_eta_minutes_seconds, minutes, seconds)
         },
     )
-}
-
-@Composable
-private fun localizedSourceMaterial(sourceMaterial: String?): String? {
-    val normalized = sourceMaterial?.trim()?.lowercase(Locale.ROOT) ?: return null
-    return when (normalized) {
-        "манга", "manga" -> stringResource(R.string.details_source_material_manga)
-        "манхва", "manhwa" -> stringResource(R.string.details_source_material_manhwa)
-        "маньхуа", "manhua" -> stringResource(R.string.details_source_material_manhua)
-        "ранобэ", "light novel" -> stringResource(R.string.details_source_material_light_novel)
-        "веб-новелла", "web novel" -> stringResource(R.string.details_source_material_web_novel)
-        "визуальная новелла", "visual novel" -> stringResource(R.string.details_source_material_visual_novel)
-        "игра", "game" -> stringResource(R.string.details_source_material_game)
-        "оригинал", "original" -> stringResource(R.string.details_source_material_original)
-        else -> sourceMaterial
-    }
 }
 
 private suspend fun extractTitleSeedColor(
