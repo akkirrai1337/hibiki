@@ -167,12 +167,21 @@ private fun SourceLanguageSection(
         },
         isSelected = { source -> source.id == selectedSource },
         itemContent = { source, selected, itemModifier ->
-                SourceGridItem(
-                    source = source,
-                    selected = selected,
-                    onClick = { onSourceSelected(source) },
-                    modifier = itemModifier,
-                )
+            AppSourceGridItem(
+                name = source.name,
+                selected = selected,
+                onClick = { onSourceSelected(source) },
+                modifier = itemModifier,
+                iconContent = { iconModifier ->
+                    AsyncImage(
+                        model = source.iconUrl,
+                        placeholder = painterResource(source.iconRes),
+                        error = painterResource(source.iconRes),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                    )
+                },
+            )
         },
     )
 }
@@ -227,30 +236,6 @@ private fun SourceSearchSection(
                             )
                         },
                     )
-        },
-    )
-}
-
-@Composable
-private fun SourceGridItem(
-    source: AnimeSourceDescriptor,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    AppSourceGridItem(
-        name = source.name,
-        selected = selected,
-        onClick = onClick,
-        modifier = modifier,
-        iconContent = { iconModifier ->
-            AsyncImage(
-                model = source.iconUrl,
-                placeholder = painterResource(source.iconRes),
-                error = painterResource(source.iconRes),
-                contentDescription = null,
-                modifier = iconModifier,
-            )
         },
     )
 }
