@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -147,7 +145,6 @@ fun FirstLaunchOnboarding(
                                 R.string.onboarding_source_description
                             },
                         ),
-                        icon = Icons.Rounded.VideoLibrary,
                         items = displayedSources,
                         itemKey = { it.id.value },
                         modifier = Modifier.fillMaxSize(),
