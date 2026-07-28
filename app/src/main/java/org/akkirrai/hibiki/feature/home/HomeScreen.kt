@@ -369,7 +369,6 @@ private fun LazyListScope.homeFeedContent(
         title = personalEmptyTitle,
         message = personalEmptyMessage,
         actionLabel = personalEmptyActionLabel,
-        icon = Icons.Outlined.VideoLibrary,
         onActionClick = onBrowseCatalog,
     )
 }

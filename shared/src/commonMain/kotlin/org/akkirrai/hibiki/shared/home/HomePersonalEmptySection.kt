@@ -1,14 +1,14 @@
 package org.akkirrai.hibiki.shared.home
 
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.VideoLibrary
 
 fun LazyListScope.appHomePersonalEmptySection(
     visible: Boolean,
     title: String,
     message: String,
     actionLabel: String,
-    icon: ImageVector,
     onActionClick: () -> Unit,
 ) {
     if (!visible) return
@@ -18,7 +18,7 @@ fun LazyListScope.appHomePersonalEmptySection(
             title = title,
             message = message,
             actionLabel = actionLabel,
-            icon = icon,
+            icon = Icons.Outlined.VideoLibrary,
             onActionClick = onActionClick,
         )
     }
