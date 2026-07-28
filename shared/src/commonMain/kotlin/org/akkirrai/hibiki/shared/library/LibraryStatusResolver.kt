@@ -20,3 +20,8 @@ fun libraryStatusLabel(value: String, isRussian: Boolean): String = when (librar
     "hiatus" -> if (isRussian) "Перерыв" else "Hiatus"
     else -> value
 }
+
+fun resolveLibraryEmptyStateMessage(
+    category: LibraryCategory,
+    labels: Map<LibraryCategory, String>,
+): String = labels.getValue(category)

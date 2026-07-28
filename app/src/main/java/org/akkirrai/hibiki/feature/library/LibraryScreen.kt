@@ -33,6 +33,7 @@ import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
 import org.akkirrai.hibiki.shared.library.libraryStatusAlias
 import org.akkirrai.hibiki.shared.library.libraryStatusLabel
+import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateMessage
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
@@ -116,7 +117,18 @@ fun LibraryScreen(
                         stringResource(R.string.home_search_empty_title)
                     },
                     message = if (state.searchQuery.isBlank()) {
-                        emptyLibraryCategoryMessage(state.selectedCategory)
+                resolveLibraryEmptyStateMessage(
+                    category = state.selectedCategory,
+                    labels = mapOf(
+                        LibraryCategory.Watching to stringResource(R.string.library_empty_watching),
+                        LibraryCategory.Planned to stringResource(R.string.library_empty_planned),
+                        LibraryCategory.Completed to stringResource(R.string.library_empty_completed),
+                        LibraryCategory.Dropped to stringResource(R.string.library_empty_dropped),
+                        LibraryCategory.OnHold to stringResource(R.string.library_empty_on_hold),
+                        LibraryCategory.Favorite to stringResource(R.string.library_empty_favorite),
+                        LibraryCategory.Saved to stringResource(R.string.library_empty_saved),
+                    ),
+                )
                     } else {
                         stringResource(R.string.home_search_empty_message)
                     },
@@ -220,17 +232,3 @@ private fun AnimeSearchFilters.toLibraryFilters(catalog: LibraryFilterCatalog): 
         yearFrom = yearFrom,
         yearTo = yearTo,
     )
-
-
-@Composable
-private fun emptyLibraryCategoryMessage(category: LibraryCategory): String {
-    return when (category) {
-        LibraryCategory.Watching -> stringResource(R.string.library_empty_watching)
-        LibraryCategory.Planned -> stringResource(R.string.library_empty_planned)
-        LibraryCategory.Completed -> stringResource(R.string.library_empty_completed)
-        LibraryCategory.Dropped -> stringResource(R.string.library_empty_dropped)
-        LibraryCategory.OnHold -> stringResource(R.string.library_empty_on_hold)
-        LibraryCategory.Favorite -> stringResource(R.string.library_empty_favorite)
-        LibraryCategory.Saved -> stringResource(R.string.library_empty_saved)
-    }
-}
