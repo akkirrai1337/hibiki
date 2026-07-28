@@ -145,7 +145,21 @@ fun LocalProfileScreen(
                             ) {
                                 AnalyticsCard(snapshot)
                             }
-                            LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
+                            LocalProfileTab.Favorites -> AppProfileFavoritesTab(
+                                isEmpty = snapshot.favoriteLibraryItems.isEmpty(),
+                                bottomContentPadding = bottomContentPadding,
+                                emptyContent = {
+                                    Text(
+                                        stringResource(R.string.local_profile_empty_favorites),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            ) {
+                                RecentLibraryCard(
+                                    items = snapshot.favoriteLibraryItems,
+                                    showTitle = false,
+                                )
+                            }
                         }
                     },
                 )
@@ -221,22 +235,6 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
             },
         )
         RecentLibraryCard(snapshot.recentLibraryItems)
-    }
-}
-
-@Composable
-private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPadding: Dp) {
-    AppProfileFavoritesTab(
-        isEmpty = items.isEmpty(),
-        bottomContentPadding = bottomContentPadding,
-        emptyContent = {
-            Text(
-                stringResource(R.string.local_profile_empty_favorites),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-    ) {
-            RecentLibraryCard(items = items, showTitle = false)
     }
 }
 
