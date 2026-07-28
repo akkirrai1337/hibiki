@@ -10,15 +10,13 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader as SharedFloatingHeader
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeaderDefaults as SharedFloatingHeaderDefaults
 
-typealias AppFloatingHeaderDefaults = SharedFloatingHeaderDefaults
-
 @Composable
 fun AppFloatingHeader(
     title: String,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     includeStatusBarsPadding: Boolean = true,
-    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
+    containerColor: Color = SharedFloatingHeaderDefaults.containerColor(),
     actions: (@Composable () -> Unit)? = null,
 ) = SharedFloatingHeader(
     title = title,
