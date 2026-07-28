@@ -193,7 +193,6 @@ fun CatalogScreen(
                         onItemVisible = viewModel::enrichDescription,
                         isLoadingMore = state.isLoadingMore,
                         paginationErrorMessage = state.error,
-                        paginationErrorIcon = Icons.Outlined.WarningAmber,
                         onLoadMoreRetry = viewModel::loadMore,
                     )
                     },
