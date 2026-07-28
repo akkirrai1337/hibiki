@@ -42,6 +42,7 @@ import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.forDisplay
 import org.akkirrai.hibiki.shared.player.shouldShowAction
+import org.akkirrai.hibiki.shared.player.keepsTitleSaved
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRowContent
 import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
@@ -185,7 +186,10 @@ fun EpisodesScreen(
                                 offlineDownloadRepository.removeEpisode(sourceId, episode.id)
                                 val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
                                 downloadStates = updatedStates
-                                if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
+                                if (!updatedStates.values
+                                        .map(OfflineEpisodeDownloadState::toEpisodeDownloadActionState)
+                                        .any(EpisodeDownloadActionState::keepsTitleSaved)
+                                ) {
                                     libraryRepository.removeSavedFromLibrary(titleId)
                                 }
                             },
@@ -315,13 +319,3 @@ private fun buildEpisodeSubtitle(
     )
 }
 
-private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {
-    return when (this) {
-        OfflineEpisodeDownloadState.NotDownloaded,
-        OfflineEpisodeDownloadState.Failed -> false
-        OfflineEpisodeDownloadState.Queued,
-        is OfflineEpisodeDownloadState.Downloading,
-        OfflineEpisodeDownloadState.Paused,
-        OfflineEpisodeDownloadState.Completed -> true
-    }
-}
