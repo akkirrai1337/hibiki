@@ -30,6 +30,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
+import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
@@ -121,7 +122,15 @@ fun LibraryScreen(
             }
         },
         entryContent = { entry, entryModifier ->
-            LibraryAnimeCard(entry = entry, modifier = entryModifier, onClick = { onAnimeClick(entry.anime) })
+            AppLibraryEntryCard(
+                entry = entry,
+                announcementLabel = stringResource(R.string.anime_meta_announcement),
+                movieLabel = stringResource(R.string.anime_meta_movie),
+                onClick = { onAnimeClick(entry.anime) },
+                libraryStatusLabel = { category -> stringResource(category.labelResId) },
+                sourceBadgeContent = { titleId -> AnimeSourceBadge(titleId = titleId) },
+                modifier = entryModifier,
+            )
         },
     )
 
@@ -229,47 +238,6 @@ private fun libraryStatusLabel(value: String, isRussian: Boolean): String = when
     "cancelled" -> if (isRussian) "Отменено" else "Cancelled"
     "hiatus" -> if (isRussian) "Перерыв" else "Hiatus"
     else -> value
-}
-
-@Composable
-private fun LibraryAnimeCard(
-    entry: LibraryEntry,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val anime = entry.anime
-    val meta = anime.buildCardMeta(
-        announcementLabel = stringResource(R.string.anime_meta_announcement),
-        movieLabel = stringResource(R.string.anime_meta_movie),
-    )
-    org.akkirrai.hibiki.shared.library.AppLibraryAnimeCard(
-        anime = anime,
-        metaText = meta,
-        onClick = onClick,
-        modifier = modifier,
-        posterContent = {
-            AppPosterImage(
-                primaryUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier.fillMaxSize(),
-                placeholder = {
-                    AppImagePlaceholder()
-                },
-            )
-        },
-        sourceBadgeContent = {
-            AnimeSourceBadge(
-                titleId = anime.id,
-            )
-        },
-        posterFooterContent = {
-            LibraryStatusPosterFooter(
-                label = stringResource(entry.category.labelResId),
-                icon = entry.category.icon(),
-            )
-        },
-    )
 }
 
 @Composable
