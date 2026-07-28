@@ -68,6 +68,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsAppearanceSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPreferencesSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPlayerSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsUpdatesSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsSupportSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -208,25 +209,20 @@ fun SettingsScreen(
         }
 
             item(key = SettingsSection.Support.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_support)) {
-                AppSettingsItems(count = 1) { _, _ ->
-                    AppSettingsIconActionItem(
-                        icon = SettingsExportLogsIcon,
-                        title = stringResource(R.string.settings_export_logs),
-                        shape = CircleShape,
-                        onClick = {
-                            AppLogger.shareLogs(context).onFailure {
-                                Toast.makeText(
-                                    context,
-                                    R.string.settings_export_logs_failed,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            }
-                        },
-                    )
-                }
+                AppSettingsSupportSection(
+                    sectionTitle = stringResource(R.string.settings_support),
+                    exportLogsTitle = stringResource(R.string.settings_export_logs),
+                    onExportLogs = {
+                        AppLogger.shareLogs(context).onFailure {
+                            Toast.makeText(
+                                context,
+                                R.string.settings_export_logs_failed,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
+                )
             }
-        }
 
         item(key = SettingsSection.About.key) {
             AppSettingsSection(title = stringResource(R.string.settings_about)) {
