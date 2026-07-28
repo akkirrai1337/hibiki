@@ -34,9 +34,10 @@ import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
 import org.akkirrai.hibiki.shared.library.libraryStatusAlias
 import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateMessage
 import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
+import org.akkirrai.hibiki.shared.library.toAnimeSearchFilters
+import org.akkirrai.hibiki.shared.library.toLibrarySearchFilters
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
-import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
@@ -179,34 +180,15 @@ private fun LibrarySearchFiltersSheet(
         genreOptions = catalog.genreOptions,
         isRussian = isRussian,
     )
-    val sharedFilters = currentFilters.toSharedFilters()
+    val sharedFilters = currentFilters.toAnimeSearchFilters()
     AnimeSearchFiltersSheet(
         initialFilters = sharedFilters,
         filterCatalog = sharedCatalog,
         isFilterCatalogLoading = false,
-        onApply = { filters -> onApply(filters.toLibraryFilters(catalog)) },
+        onApply = { filters -> onApply(filters.toLibrarySearchFilters(catalog)) },
         onDismissRequest = onDismiss,
         optionText = { it.title },
         maxCollapsedGenreGroups = 3,
         maxCollapsedGenreItems = null,
     )
 }
-
-private fun LibrarySearchFilters.toSharedFilters(): AnimeSearchFilters = AnimeSearchFilters(
-    typeAlias = type?.lowercase(),
-    statusAlias = status?.let(::libraryStatusAlias),
-    includedGenreAliases = includedGenres,
-    excludedGenreAliases = excludedGenres,
-    yearFrom = yearFrom,
-    yearTo = yearTo,
-)
-
-private fun AnimeSearchFilters.toLibraryFilters(catalog: LibraryFilterCatalog): LibrarySearchFilters =
-    LibrarySearchFilters(
-        type = typeAlias?.let { alias -> catalog.typeOptions.firstOrNull { it.equals(alias, ignoreCase = true) } },
-        status = statusAlias?.let { alias -> catalog.statusOptions.firstOrNull { libraryStatusAlias(it) == alias } },
-        includedGenres = includedGenreAliases,
-        excludedGenres = excludedGenreAliases,
-        yearFrom = yearFrom,
-        yearTo = yearTo,
-    )
