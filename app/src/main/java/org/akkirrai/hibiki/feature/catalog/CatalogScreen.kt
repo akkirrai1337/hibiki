@@ -3,9 +3,6 @@ package org.akkirrai.hibiki.feature.catalog
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.graphics.res.animatedVectorResource
-import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
-import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,7 +18,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +29,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -76,6 +71,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuOffsetY
 import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
 import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortControl
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortOrderIcon
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
@@ -302,7 +298,7 @@ private fun CatalogSortControl(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
         orderContent = { orderModifier ->
-            CatalogSortOrderIcon(
+            AppCatalogSortOrderIcon(
                 atEnd = expanded,
                 modifier = orderModifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
@@ -339,7 +335,7 @@ private fun CatalogSortControl(
                     onSortSelected(sort)
                 },
                 orderContent = { atEnd, orderModifier ->
-                    CatalogSortOrderIcon(
+                    AppCatalogSortOrderIcon(
                         atEnd = atEnd,
                         modifier = orderModifier,
                     )
@@ -350,24 +346,6 @@ private fun CatalogSortControl(
         modifier = modifier,
     )
 }
-@Composable
-private fun CatalogSortOrderIcon(
-    atEnd: Boolean,
-    modifier: Modifier = Modifier,
-    tint: Color = androidx.compose.ui.graphics.Color.Unspecified,
-) {
-    val order = AnimatedImageVector.animatedVectorResource(R.drawable.catalog_sort_order)
-    Icon(
-        painter = rememberAnimatedVectorPainter(
-            animatedImageVector = order,
-            atEnd = atEnd,
-        ),
-        contentDescription = null,
-        modifier = modifier,
-        tint = tint,
-    )
-}
-
 private val CatalogSort.icon: ImageVector
     get() = when (this) {
         CatalogSort.Alphabetical -> Icons.Outlined.SortByAlpha
