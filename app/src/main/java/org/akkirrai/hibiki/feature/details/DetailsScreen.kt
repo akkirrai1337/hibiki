@@ -676,54 +676,17 @@ private fun DetailContentCard(
     modifier: Modifier = Modifier,
 ) {
     val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
-    val emptyValue = stringResource(R.string.search_filters_not_selected)
-    val informationItems = listOfNotNull(
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_status),
-            value = heroInfo.status.ifBlank { emptyValue },
-            icon = DetailsInformationIcon.STATUS,
-            accent = MaterialTheme.colorScheme.tertiary,
-        ),
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_episodes_released),
-            value = heroInfo.episodes.ifBlank { emptyValue },
-            icon = DetailsInformationIcon.EPISODES,
-            accent = MaterialTheme.colorScheme.primary,
-        ),
-        org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-            label = stringResource(R.string.details_type),
-            value = heroInfo.type,
-            icon = DetailsInformationIcon.TYPE,
-            accent = MaterialTheme.colorScheme.secondary,
-        ),
-        heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_release_date),
-                value = releaseDate,
-                icon = DetailsInformationIcon.RELEASE_DATE,
-                accent = MaterialTheme.colorScheme.primary,
-            )
-        },
-        sourceMaterial?.let { source ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_source_material),
-                value = source,
-                icon = DetailsInformationIcon.SOURCE_MATERIAL,
-                accent = MaterialTheme.colorScheme.tertiary,
-            )
-        },
-        heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-            org.akkirrai.hibiki.shared.details.DetailsInformationItem(
-                label = stringResource(R.string.details_studio),
-                value = studio,
-                icon = DetailsInformationIcon.STUDIO,
-                accent = Color(0xFFFF9800),
-            )
-        },
-    )
-    org.akkirrai.hibiki.shared.details.DetailsInformationSection(
+    org.akkirrai.hibiki.shared.details.AppDetailsInformationContent(
+        heroInfo = heroInfo,
         title = stringResource(R.string.details_information),
-        items = informationItems,
+        emptyValue = stringResource(R.string.search_filters_not_selected),
+        statusLabel = stringResource(R.string.details_status),
+        episodesLabel = stringResource(R.string.details_episodes_released),
+        typeLabel = stringResource(R.string.details_type),
+        releaseDateLabel = stringResource(R.string.details_release_date),
+        sourceMaterialLabel = stringResource(R.string.details_source_material),
+        studioLabel = stringResource(R.string.details_studio),
+        sourceMaterial = sourceMaterial,
         horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
     )
