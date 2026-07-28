@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.hibiki.shared.source.formatFilterFallbackLabel
 
 internal object YummySearchFilterLocalizer {
     fun localize(
@@ -24,24 +25,13 @@ internal object YummySearchFilterLocalizer {
     ): SearchFilterOption {
         val labels = dictionary[id]
         val localizedTitle = when {
-            labels == null && title.trim().equals(id.trim(), ignoreCase = true) -> fallbackLabel(id, preferEnglish)
+            labels == null && title.trim().equals(id.trim(), ignoreCase = true) ->
+                formatFilterFallbackLabel(id, preferEnglish)
             labels == null -> title
             preferEnglish -> labels.en
             else -> labels.ru
         }
         return copy(title = localizedTitle)
-    }
-
-    private fun fallbackLabel(alias: String, preferEnglish: Boolean): String {
-        if (!preferEnglish) return alias
-        return alias
-            .replace('-', ' ')
-            .replace('_', ' ')
-            .split(' ')
-            .filter(String::isNotBlank)
-            .joinToString(" ") { part ->
-                part.replaceFirstChar { it.uppercase() }
-            }
     }
 
     private data class LocalizedLabel(
