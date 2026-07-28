@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.shared.navigation.reduce
  */
 fun main() = application {
     val catalogRepository = DesktopCatalogRepository()
+    val homeRepository = DesktopHomeRepository(catalogRepository)
     Window(
         onCloseRequest = {
             catalogRepository.close()
@@ -38,15 +39,22 @@ fun main() = application {
                     }
                     AppProductionRoot(
                         currentDestination = navigationState.currentTopLevel,
-                        destinations = listOf(AppTopLevelDestination.CATALOG),
+                        destinations = listOf(
+                            AppTopLevelDestination.HOME,
+                            AppTopLevelDestination.CATALOG,
+                        ),
                         onNavigationEvent = { event: AppNavigationEvent ->
                             navigationState = navigationState.reduce(event)
                         },
                     ) {
-                        DesktopCatalogScreen(
-                            repository = catalogRepository,
-                            onAnimeClick = {},
-                        )
+                        when (navigationState.currentTopLevel) {
+                            AppTopLevelDestination.HOME -> DesktopHomeScreen(repository = homeRepository)
+                            AppTopLevelDestination.CATALOG -> DesktopCatalogScreen(
+                                repository = catalogRepository,
+                                onAnimeClick = {},
+                            )
+                            else -> Unit
+                        }
                     }
                 }
             }
