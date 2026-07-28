@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Icon
@@ -47,24 +46,18 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
-import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
 import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
-import org.akkirrai.hibiki.shared.home.AppHomePoster
-import org.akkirrai.hibiki.shared.home.AppHomePosterPlaceholder
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
-import org.akkirrai.hibiki.shared.home.HomeRecentlyAddedIcon
-import org.akkirrai.hibiki.shared.home.HomeHistoryIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
-import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
-import org.akkirrai.hibiki.shared.home.appHomePersonalEmptySection
+import org.akkirrai.hibiki.shared.home.appHomeFeedContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -210,7 +203,7 @@ fun HomeScreen(
                         topContentPadding = HomeContentTopPadding,
                         bottomContentPadding = bottomContentPadding,
                     ) {
-                        homeFeedContent(
+                        appHomeFeedContent(
                             continueAnime = continueAnime,
                             recentlyWatched = recentlyWatched,
                             recentlyAddedToLibrary = recentlyAddedToLibrary,
@@ -228,6 +221,7 @@ fun HomeScreen(
                             personalEmptyActionLabel = personalEmptyActionLabel,
                             onBrowseCatalog = onBrowseCatalog,
                             onOpenLibrary = onOpenLibrary,
+                            sourceBadgeContent = { anime -> AnimeSourceBadge(titleId = anime.id) },
                         )
                     }
                 }
@@ -258,116 +252,4 @@ fun HomeScreen(
             )
         }
     }
-}
-
-private fun LazyListScope.homeFeedContent(
-    continueAnime: Anime?,
-    recentlyWatched: List<Anime>,
-    recentlyAddedToLibrary: List<Anime>,
-    onAnimeClick: (Anime) -> Unit,
-    continueSectionTitle: String,
-    continueEmptyTitle: String,
-    continueEmptyMessage: String,
-    continueOpenHint: String,
-    recentlyWatchedTitle: String,
-    recentlyAddedTitle: String,
-    announcementLabel: String,
-    movieLabel: String,
-    personalEmptyTitle: String,
-    personalEmptyMessage: String,
-    personalEmptyActionLabel: String,
-    onBrowseCatalog: () -> Unit,
-    onOpenLibrary: () -> Unit,
-) {
-    appHomeContinueWatchingSection(
-        anime = continueAnime,
-        sectionTitle = continueSectionTitle,
-        emptyTitle = continueEmptyTitle,
-        emptyMessage = continueEmptyMessage,
-        openHint = continueOpenHint,
-        sectionIcon = HomeHistoryIcon,
-        meta = { anime ->
-            anime.buildCardMeta(
-                announcementLabel = announcementLabel,
-                movieLabel = movieLabel,
-            )
-        },
-        onClick = onAnimeClick,
-        imageContent = { currentAnime ->
-            AppHomePoster(
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                AppPosterImage(
-                    primaryUrl = currentAnime.posterUrl,
-                    fallbackUrl = currentAnime.posterFallbackUrl,
-                    contentDescription = currentAnime.title,
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = {
-                        AppImagePlaceholder()
-                    },
-                )
-            }
-        },
-        trailingContent = { currentAnime ->
-            AnimeSourceBadge(titleId = currentAnime.id)
-        },
-    )
-    appHomeAnimeSection(
-        title = recentlyWatchedTitle,
-        items = recentlyWatched,
-        onAnimeClick = onAnimeClick,
-        icon = HomeHistoryIcon,
-        metaText = { anime ->
-            anime.buildCardMeta(
-                announcementLabel = announcementLabel,
-                movieLabel = movieLabel,
-            )
-        },
-        posterContent = { anime ->
-            AppPosterImage(
-                primaryUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(2f / 3f),
-                placeholder = {
-                    AppHomePosterPlaceholder()
-                },
-            )
-        },
-    )
-    appHomeAnimeSection(
-        title = recentlyAddedTitle,
-        items = recentlyAddedToLibrary,
-        onAnimeClick = onAnimeClick,
-        icon = HomeRecentlyAddedIcon,
-        metaText = { anime ->
-            anime.buildCardMeta(
-                announcementLabel = announcementLabel,
-                movieLabel = movieLabel,
-            )
-        },
-        posterContent = { anime ->
-            AppPosterImage(
-                primaryUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(2f / 3f),
-                placeholder = {
-                    AppHomePosterPlaceholder()
-                },
-            )
-        },
-        onHeaderClick = onOpenLibrary,
-    )
-    appHomePersonalEmptySection(
-        visible = continueAnime == null && recentlyWatched.isEmpty() && recentlyAddedToLibrary.isEmpty(),
-        title = personalEmptyTitle,
-        message = personalEmptyMessage,
-        actionLabel = personalEmptyActionLabel,
-        onActionClick = onBrowseCatalog,
-    )
 }
