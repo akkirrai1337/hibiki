@@ -39,6 +39,7 @@ import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
+import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
@@ -211,7 +212,7 @@ private fun EpisodeRow(
     val visibleDownloadState = if (
         downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
     ) OfflineEpisodeDownloadState.NotDownloaded else downloadState
-    org.akkirrai.hibiki.shared.player.EpisodeRow(
+    AppEpisodeDownloadRow(
         headline = buildEpisodeHeadline(episode, progress, status),
         subtitle = buildEpisodeSubtitle(visibleDownloadState).takeIf(String::isNotBlank),
         inProgress = status == EpisodeProgressStatus.InProgress,
@@ -219,21 +220,17 @@ private fun EpisodeRow(
         showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed,
         shape = shape,
         onClick = onClick,
-        downloadAction = {
-            AppEpisodeDownloadAction(
-                state = downloadState.toEpisodeDownloadActionState(),
-                controlsEnabled = showDownloadControls,
-                downloadedContentDescription = stringResource(R.string.watch_downloaded),
-                downloadContentDescription = stringResource(R.string.watch_download),
-                pauseContentDescription = stringResource(R.string.watch_pause),
-                resumeContentDescription = stringResource(R.string.watch_resume),
-                removeContentDescription = stringResource(R.string.watch_remove_download),
-                onDownloadClick = onDownloadClick,
-                onPauseClick = onPauseClick,
-                onResumeClick = onResumeClick,
-                onRemoveClick = onRemoveClick,
-            )
-        },
+        downloadState = downloadState.toEpisodeDownloadActionState(),
+        controlsEnabled = showDownloadControls,
+        downloadedContentDescription = stringResource(R.string.watch_downloaded),
+        downloadContentDescription = stringResource(R.string.watch_download),
+        pauseContentDescription = stringResource(R.string.watch_pause),
+        resumeContentDescription = stringResource(R.string.watch_resume),
+        removeContentDescription = stringResource(R.string.watch_remove_download),
+        onDownloadClick = onDownloadClick,
+        onPauseClick = onPauseClick,
+        onResumeClick = onResumeClick,
+        onRemoveClick = onRemoveClick,
     )
 }
 
