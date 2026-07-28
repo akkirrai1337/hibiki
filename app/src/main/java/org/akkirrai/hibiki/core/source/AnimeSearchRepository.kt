@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
+import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -216,7 +217,11 @@ class AnimeSearchRepository(
                 ?.takeIf { it.isNotBlank() && it != posterUrl },
             description = description ?: fallback?.description,
             genres = genres.ifEmpty { fallback?.genres.orEmpty() },
-            alternativeTitles = buildAlternativeTitles(fallback?.alternativeTitles.orEmpty()),
+            alternativeTitles = resolveAlternativeTitles(
+                primaryTitle = displayName,
+                titleCandidates = listOf(russianName, englishName, originalName, japaneseName) + synonyms,
+                fallbackTitles = fallback?.alternativeTitles.orEmpty(),
+            ),
             ratings = ratings.map { rating ->
                 AnimeRating(
                     source = rating.source,
@@ -247,22 +252,6 @@ class AnimeSearchRepository(
             thumbnailUrl = thumbnailUrl,
             sourceUrl = sourceUrl,
         )
-    }
-
-    private fun AnimeTitle.buildAlternativeTitles(fallbackTitles: List<String>): List<String> {
-        val primaryTitle = displayName
-        return buildList {
-            russianName?.let(::add)
-            englishName?.let(::add)
-            originalName.let(::add)
-            japaneseName?.let(::add)
-            addAll(synonyms)
-            addAll(fallbackTitles)
-        }
-            .map(String::trim)
-            .filter(String::isNotBlank)
-            .distinct()
-            .filterNot { it.equals(primaryTitle, ignoreCase = true) }
     }
 
     private fun AnimeTitle.buildSubtitle(fallbackSubtitle: String?): String {
