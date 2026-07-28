@@ -48,6 +48,7 @@ import org.akkirrai.hibiki.shared.player.matchesPreferredPlayer
 import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
 import org.akkirrai.hibiki.shared.player.PlayerSelectionCandidate
 import org.akkirrai.hibiki.shared.player.prioritizePlayerSelection
+import org.akkirrai.hibiki.shared.player.resolvePlayerAttemptTimeoutMillis
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
@@ -449,13 +450,12 @@ class AnimeWatchRepository(
     internal fun resolveAttemptTimeoutMillis(
         preferredPlayerName: String?,
         candidatePlayerName: String?,
-    ): Long {
-        return if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
-            PREFERRED_RESOLVE_TIMEOUT_MS
-        } else {
-            AUTO_RESOLVE_TIMEOUT_MS
-        }
-    }
+    ): Long = resolvePlayerAttemptTimeoutMillis(
+        preferredPlayerName = preferredPlayerName,
+        candidatePlayerName = candidatePlayerName,
+        preferredTimeoutMs = PREFERRED_RESOLVE_TIMEOUT_MS,
+        automaticTimeoutMs = AUTO_RESOLVE_TIMEOUT_MS,
+    )
 
     private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
         LanguageMode.ENGLISH -> "en"

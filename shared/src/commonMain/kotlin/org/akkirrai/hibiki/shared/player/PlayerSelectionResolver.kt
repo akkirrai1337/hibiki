@@ -42,6 +42,17 @@ fun prioritizePlayerSelection(
     }.thenBy { playerPriority(it.playerName) }
 ).map(PlayerSelectionCandidate::index)
 
+fun resolvePlayerAttemptTimeoutMillis(
+    preferredPlayerName: String?,
+    candidatePlayerName: String?,
+    preferredTimeoutMs: Long,
+    automaticTimeoutMs: Long,
+): Long = if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
+    preferredTimeoutMs
+} else {
+    automaticTimeoutMs
+}
+
 private fun String?.containsPlayerToken(token: String): Boolean =
     normalizePlayerName().contains(token)
 
