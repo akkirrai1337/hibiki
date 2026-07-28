@@ -1,9 +1,6 @@
 package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,8 +52,6 @@ internal fun AnalyticsCard(
                 title = stringResource(R.string.yummy_account_segment_stats),
                 episodeStat = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
                 watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
-                backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             )
         },
         activityContent = {

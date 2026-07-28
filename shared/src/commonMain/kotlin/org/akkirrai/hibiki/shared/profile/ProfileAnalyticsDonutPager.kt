@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 data class ProfileAnalyticsPage(
@@ -42,8 +41,6 @@ fun AppProfileAnalyticsDonutPager(
     title: String,
     episodeStat: String,
     watchStat: String,
-    backIcon: ImageVector,
-    forwardIcon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
@@ -55,8 +52,6 @@ fun AppProfileAnalyticsDonutPager(
             title = title,
             currentPage = currentPage,
             pageCount = pages.size,
-            backIcon = backIcon,
-            forwardIcon = forwardIcon,
             onPrevious = { currentPage -= 1 },
             onNext = { currentPage += 1 },
         )
