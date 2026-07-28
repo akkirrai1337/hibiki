@@ -120,6 +120,7 @@ import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
 import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
+import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -255,9 +256,12 @@ fun PlayerScreen(
     val mediaSession = remember(exoPlayer) {
         MediaSession.Builder(context, exoPlayer).build()
     }
-    val hasNextEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId }
-        .let { it != -1 && it < state.episodes.lastIndex }
-    val hasPreviousEpisode = state.episodes.indexOfFirst { it.id == state.currentEpisodeId } > 0
+    val episodeNavigation = resolveEpisodeNavigationAvailability(
+        episodes = state.episodes,
+        currentEpisodeId = state.currentEpisodeId,
+    )
+    val hasNextEpisode = episodeNavigation.hasNext
+    val hasPreviousEpisode = episodeNavigation.hasPrevious
     fun keepControlsVisible() {
         if (controlsLocked) return
         controlsVisible = true
@@ -559,8 +563,10 @@ fun PlayerScreen(
                 }
                 if (playbackState == Player.STATE_ENDED && autoPlayNextEpisode) {
                     val currentEpisodeId = state.currentEpisodeId
-                    val currentIndex = state.episodes.indexOfFirst { it.id == currentEpisodeId }
-                    val hasNextEpisode = currentIndex != -1 && currentIndex < state.episodes.lastIndex
+                    val hasNextEpisode = resolveEpisodeNavigationAvailability(
+                        episodes = state.episodes,
+                        currentEpisodeId = currentEpisodeId,
+                    ).hasNext
                     if (hasNextEpisode && handledEndedEpisodeId != currentEpisodeId) {
                         handledEndedEpisodeId = currentEpisodeId
                         viewModel.savePlaybackProgress(
