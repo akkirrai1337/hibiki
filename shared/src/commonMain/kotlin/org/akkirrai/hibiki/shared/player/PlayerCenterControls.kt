@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.painterResource
 import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_player_media_pause_24
+import hibiki.shared.generated.resources.ic_player_media_play_arrow_24
 import hibiki.shared.generated.resources.ic_player_media_skip_next_24
 import hibiki.shared.generated.resources.ic_player_media_skip_previous_24
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
@@ -33,7 +35,21 @@ fun AppPlayerCenterControls(
             modifier = iconModifier,
         )
     },
-    playContent: @Composable (Modifier) -> Unit,
+    isPlaying: Boolean = false,
+    playContentDescription: String? = null,
+    playContent: @Composable (Modifier) -> Unit = { iconModifier ->
+        Icon(
+            painter = painterResource(
+                if (isPlaying) {
+                    Res.drawable.ic_player_media_pause_24
+                } else {
+                    Res.drawable.ic_player_media_play_arrow_24
+                },
+            ),
+            contentDescription = playContentDescription,
+            modifier = iconModifier,
+        )
+    },
     nextContent: @Composable (Modifier) -> Unit = { iconModifier ->
         Icon(
             painter = painterResource(Res.drawable.ic_player_media_skip_next_24),
