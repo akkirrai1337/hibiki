@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
+import coil3.asDrawable
 import coil3.toBitmap
 import coil3.imageLoader
 import coil3.compose.SubcomposeAsyncImage
@@ -87,7 +88,6 @@ import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
 import org.akkirrai.hibiki.shared.model.toAnime
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
@@ -1042,11 +1042,14 @@ private fun NetworkImage(
     onImageSuccess: ((Drawable) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    PosterImage(
+    val resources = LocalContext.current.resources
+    AppPosterImage(
         primaryUrl = imageUrl,
         fallbackUrl = fallbackUrl,
         contentDescription = contentDescription,
-        onImageSuccess = onImageSuccess,
+        onImageSuccess = { image ->
+            onImageSuccess?.invoke(image.asDrawable(resources))
+        },
         modifier = modifier.fillMaxSize(),
         placeholder = {
             AppDetailsImagePlaceholder {
