@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,7 +25,7 @@ import androidx.compose.ui.unit.dp
 fun <T> AppOnboardingSourceStep(
     title: String,
     description: String,
-    icon: ImageVector,
+    icon: ImageVector = Icons.Rounded.VideoLibrary,
     items: List<T>,
     itemKey: (T) -> Any,
     itemContent: @Composable (T) -> Unit,
