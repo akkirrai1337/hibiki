@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -9,7 +11,7 @@ fun AppPlayerSettingsChoice(
     label: String,
     description: String?,
     selected: Boolean,
-    selectedIcon: ImageVector,
+    selectedIcon: ImageVector = Icons.Outlined.Check,
     onClick: () -> Unit,
 ) {
     PlayerSettingsChoiceRow(
