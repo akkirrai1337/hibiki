@@ -47,6 +47,9 @@ import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.shared.player.matchesPreferredPlayer
 import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
 import org.akkirrai.hibiki.shared.player.playerPriority
+import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
+import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -227,9 +230,9 @@ class AnimeWatchRepository(
             animeTitle = payload.title.displayName,
             sourceTitle = payload.source.title,
             episodeTitle = episode.title?.takeIf(String::isNotBlank)
-                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
+                ?: appString(R.string.watch_episode_fallback_title, formatEpisodeNumber(episode.number)),
             streamUrl = resolved.validation.finalUrl,
-            streamType = resolved.validation.streamType.toPlaybackType(),
+            streamType = resolvePlaybackStreamType(resolved.validation.streamType.name),
             qualityLabel = resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality,
             availableQualityLabels = (
                 resolved.availableQualityLabels + (resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality)
@@ -511,15 +514,6 @@ class AnimeWatchRepository(
         }
     }
 
-    private fun StreamType.toPlaybackType(): PlaybackStreamType {
-        return when (this) {
-            StreamType.HLS -> PlaybackStreamType.HLS
-            StreamType.MP4 -> PlaybackStreamType.MP4
-            StreamType.DASH -> PlaybackStreamType.DASH
-        }
-    }
-
-
     private fun selectPlaybackSegments(
         apiSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
         extractedSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
@@ -534,21 +528,10 @@ class AnimeWatchRepository(
     }
 
     private fun VideoSegment.toPlaybackSegment(): PlaybackSegment = PlaybackSegment(
-        type = type.toPlaybackSegmentType(),
+        type = resolvePlaybackSegmentType(type.name),
         startMs = startMs,
         endMs = endMs,
     )
-
-    private fun VideoSegmentType.toPlaybackSegmentType(): PlaybackSegmentType = when (this) {
-        VideoSegmentType.OPENING -> PlaybackSegmentType.Opening
-        VideoSegmentType.ENDING -> PlaybackSegmentType.Ending
-        VideoSegmentType.UNKNOWN -> PlaybackSegmentType.Unknown
-    }
-
-    private fun Double.formatEpisodeNumber(): String {
-        val asInt = toInt()
-        return if (this == asInt.toDouble()) asInt.toString() else toString()
-    }
 
     private data class CachedWatchSources(
         val sources: List<WatchSource>,
