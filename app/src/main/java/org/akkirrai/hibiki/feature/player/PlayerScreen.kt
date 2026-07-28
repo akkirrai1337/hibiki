@@ -122,6 +122,7 @@ import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveCurrentPlaybackPosition
+import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -878,8 +879,10 @@ fun PlayerScreen(
         onHide = { unlockButtonVisible = false },
     )
 
-    val rawActiveSkipSegment = state.playback?.segments
-        ?.firstOrNull { segment -> positionMs >= segment.startMs && positionMs < segment.endMs }
+    val rawActiveSkipSegment = resolveActivePlaybackSegment(
+        segments = state.playback?.segments,
+        positionMs = positionMs,
+    )
         ?.takeIf {
             !controlsLocked &&
                 !playlistVisible &&
