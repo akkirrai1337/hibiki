@@ -43,11 +43,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
+import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.design.icon
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.HomeAction
@@ -199,7 +201,10 @@ fun HomeScreen(
                         },
                         posterFooterContent = { anime ->
                             libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
+                                LibraryStatusPosterFooter(
+                                    label = stringResource(category.labelResId),
+                                    icon = category.icon(),
+                                )
                             }
                         },
                         onItemVisible = { anime ->
