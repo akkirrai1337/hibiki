@@ -115,6 +115,7 @@ import org.akkirrai.hibiki.shared.details.rememberNextEpisodeEta
 import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
 import org.akkirrai.hibiki.shared.details.resolveSourceMaterialLabel
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroMediaData
+import org.akkirrai.hibiki.shared.details.appDetailsRelatedSections
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -270,6 +271,9 @@ fun DetailsScreen(
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
         AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
     }
+    val relatedTitle = stringResource(R.string.details_related)
+    val similarTitle = stringResource(R.string.details_similar)
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val nextEpisodeEta = rememberNextEpisodeEta(
         nextEpisodeAt = currentAnime.nextEpisodeAt,
         nowEpochSeconds = { System.currentTimeMillis() / 1_000L },
@@ -396,27 +400,21 @@ fun DetailsScreen(
                 }
             }
 
-            itemsIndexed(
-                items = uiModel.sections,
-                key = { _, section -> section.key }
-            ) { _, section ->
-                when (section) {
-                    is RelatedSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_related),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
-                    }
-                    is SimilarSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_similar),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
-                    }
-                }
-            }
+            appDetailsRelatedSections(
+                sections = uiModel.sections,
+                relatedTitle = relatedTitle,
+                similarTitle = similarTitle,
+                announcementLabel = announcementLabel,
+                horizontalPadding = DetailsContentHorizontalPadding,
+                onItemClick = { related -> onRelatedAnimeClick(related.toAnime()) },
+                poster = { related ->
+                    NetworkImage(
+                        imageUrl = related.posterUrl,
+                        fallbackUrl = related.posterFallbackUrl,
+                        contentDescription = related.title,
+                    )
+                },
+            )
                 }
 
                 DetailsStatusBarScrim(
