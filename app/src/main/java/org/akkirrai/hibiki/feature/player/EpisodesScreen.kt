@@ -41,6 +41,7 @@ import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.forDisplay
+import org.akkirrai.hibiki.shared.player.shouldShowAction
 import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -223,7 +224,7 @@ private fun EpisodeRow(
         subtitle = buildEpisodeSubtitle(visibleDownloadState).takeIf(String::isNotBlank),
         inProgress = status == EpisodeProgressStatus.InProgress,
         enabled = enabled,
-        showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed,
+        showDownloadAction = sharedDownloadState.shouldShowAction(showDownloadControls),
         shape = shape,
         onClick = onClick,
         downloadState = sharedDownloadState,
