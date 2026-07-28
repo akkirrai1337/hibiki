@@ -3,9 +3,12 @@ package org.akkirrai.hibiki.shared.source
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 
@@ -19,9 +22,6 @@ fun AppSourceSearchBar(
     clearContentDescription: String,
     showFilterButton: Boolean,
     onFilterClick: () -> Unit,
-    searchIcon: ImageVector,
-    filterIcon: ImageVector,
-    clearIcon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -36,9 +36,9 @@ fun AppSourceSearchBar(
             placeholder = placeholder,
             filterContentDescription = filterContentDescription,
             clearContentDescription = clearContentDescription,
-            searchIcon = searchIcon,
-            filterIcon = filterIcon,
-            clearIcon = clearIcon,
+            searchIcon = Icons.Outlined.Search,
+            filterIcon = Icons.Outlined.FilterList,
+            clearIcon = Icons.Outlined.Close,
             onFilterClick = onFilterClick,
             showFilterButton = showFilterButton,
             modifier = Modifier.fillMaxWidth(),

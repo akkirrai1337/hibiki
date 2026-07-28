@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -194,9 +190,6 @@ fun SourcesScreen(
                     placeholder = stringResource(R.string.search_placeholder),
                     filterContentDescription = stringResource(R.string.search_filters),
                     clearContentDescription = stringResource(R.string.home_search_clear),
-                    searchIcon = Icons.Outlined.Search,
-                    filterIcon = Icons.Outlined.FilterList,
-                    clearIcon = Icons.Outlined.Close,
                     showFilterButton = false,
                     onFilterClick = {},
                     modifier = Modifier.align(Alignment.TopCenter),
