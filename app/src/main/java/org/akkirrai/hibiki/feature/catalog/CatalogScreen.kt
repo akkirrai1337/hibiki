@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,25 +60,19 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
 import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortControl
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortOrderIcon
-import org.akkirrai.hibiki.shared.catalog.AppCatalogContentList
+import org.akkirrai.hibiki.shared.catalog.AppCatalogScreenContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogQueryEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterVisibilityEffect
-import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
-import org.akkirrai.hibiki.shared.catalog.AppCatalogContentState
-import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.fallbackCatalogSort
 import org.akkirrai.hibiki.shared.catalog.icon
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
-import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
-import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
 
@@ -140,61 +133,21 @@ fun CatalogScreen(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
-        AppCatalogContentState(
-            isLoading = state.isLoading,
-            hasContent = state.items.isNotEmpty(),
-            errorMessage = state.error,
+        AppCatalogScreenContent(
+            state = state,
+            listState = listState,
+            topContentPadding = CatalogContentTopPadding,
+            bottomContentPadding = bottomContentPadding,
             errorTitle = stringResource(R.string.catalog_error_title),
             retryLabel = stringResource(R.string.search_retry),
+            announcementLabel = announcementLabel,
+            movieLabel = movieLabel,
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
+            libraryStatusLabel = { category -> stringResource(category.labelResId) },
+            onAnimeClick = onAnimeClick,
+            onItemVisible = viewModel::enrichDescription,
             onRetry = viewModel::load,
-            content = {
-                AppCatalogContentList(
-                    state = listState,
-                    topContentPadding = CatalogContentTopPadding,
-                    bottomContentPadding = bottomContentPadding,
-                    content = {
-                    appCatalogResultsContent(
-                        items = state.items,
-                        announcementLabel = announcementLabel,
-                        movieLabel = movieLabel,
-                        onAnimeClick = onAnimeClick,
-                        posterContent = { anime ->
-                            AppPosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = {
-                                    AppPosterPlaceholder(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f),
-                                    )
-                                },
-                            )
-                        },
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(
-                                    label = stringResource(category.labelResId),
-                                    icon = category.icon(),
-                                )
-                            }
-                        },
-                        onItemVisible = viewModel::enrichDescription,
-                        isLoadingMore = state.isLoadingMore,
-                        paginationErrorMessage = state.error,
-                        onLoadMoreRetry = viewModel::loadMore,
-                    )
-                    },
-                )
-            },
-        )
-
-        // Keep the current results visible while a filter request is running, but make the
-        // refresh state explicit instead of leaving the catalog looking unresponsive.
-        AppCatalogRefreshingState(
-            isRefreshing = state.isLoading && !state.isLoadingMore && state.items.isNotEmpty(),
+            onLoadMoreRetry = viewModel::loadMore,
             modifier = Modifier
                 .fillMaxSize()
                 .align(Alignment.Center),
