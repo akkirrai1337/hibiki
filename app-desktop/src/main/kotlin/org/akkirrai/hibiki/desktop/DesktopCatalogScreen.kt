@@ -15,6 +15,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogQueryEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogScreenContent
@@ -45,12 +47,16 @@ fun DesktopCatalogScreen(
     val state by presenter.state.collectAsState()
     val listState = rememberLazyListState()
     var sortExpanded by remember { mutableStateOf(false) }
+    var filterSheetOpen by remember { mutableStateOf(false) }
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
 
-    LaunchedEffect(Unit) { presenter.search() }
+    LaunchedEffect(Unit) {
+        presenter.loadFilterCatalog()
+        presenter.search()
+    }
     AppCatalogQueryEffect(query = state.query, onQuerySettled = presenter::search)
     AppCatalogPaginationEffect(listState = listState, state = state, onLoadMore = presenter::loadMore)
 
@@ -78,8 +84,8 @@ fun DesktopCatalogScreen(
             placeholder = "Search anime",
             filterContentDescription = "Filters",
             clearContentDescription = "Clear search",
-            onFilterClick = {},
-            showFilterButton = false,
+            onFilterClick = { filterSheetOpen = true },
+            showFilterButton = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true,
             sortModifier = Modifier,
             sortContent = {
                 AppCatalogSortControl(
@@ -120,6 +126,29 @@ fun DesktopCatalogScreen(
                     },
                 )
             },
+        )
+    }
+
+    if (filterSheetOpen) {
+        AppCatalogFilterSheet(
+            initialFilters = state.filters,
+            filterCatalog = state.filterCatalog,
+            isFilterCatalogLoading = state.isFilterCatalogLoading,
+            onApply = presenter::updateFilters,
+            onDismissRequest = { filterSheetOpen = false },
+            unavailableLabel = "Unavailable",
+            typeTitle = "Type",
+            genresTitle = "Genres",
+            yearTitle = "Year",
+            yearAllLabel = "All years",
+            yearFromLabel = "From",
+            yearToLabel = "To",
+            statusTitle = "Status",
+            resetLabel = "Reset",
+            applyLabel = "Apply",
+            defaultYearRange = 1990..2030,
+            optionText = { it.title },
+            shape = RoundedCornerShape(24.dp),
         )
     }
 }
