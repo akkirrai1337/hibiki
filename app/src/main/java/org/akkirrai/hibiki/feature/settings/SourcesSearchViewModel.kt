@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_DEBOUNCE_MS
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 
 typealias SourceSearchSection = SourceSearchSectionState<Anime>
@@ -58,7 +59,7 @@ class SourcesSearchViewModel(
 
         val generation = searchGeneration
         searchJob = viewModelScope.launch(Dispatchers.IO) {
-            delay(SEARCH_DEBOUNCE_MS)
+            delay(SOURCE_SEARCH_DEBOUNCE_MS)
             search(query, generation)
         }
     }
@@ -195,7 +196,6 @@ class SourcesSearchViewModel(
 
     private companion object {
         const val TAG = "SourcesSearch"
-        const val SEARCH_DEBOUNCE_MS = 400L
         const val RESULTS_PER_SOURCE = 12
     }
 }

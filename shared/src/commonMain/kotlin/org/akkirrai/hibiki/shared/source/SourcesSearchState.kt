@@ -25,3 +25,4 @@ fun <T> List<SourceSearchSectionState<T>>.visibleSourceSearchSections(): List<So
     }
 
 const val SOURCE_SEARCH_MIN_QUERY_LENGTH = 3
+const val SOURCE_SEARCH_DEBOUNCE_MS = 400L
