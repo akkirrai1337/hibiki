@@ -81,13 +81,48 @@ fun SourcesScreen(
             visibleSections.forEach { section ->
                 val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
                 item(key = "search_${section.sourceId}") {
-                    SourceSearchSection(
-                        section = section,
-                        source = source,
-                        announcementLabel = announcementLabel,
-                        movieLabel = movieLabel,
+                    AppSourceSearchSection(
+                        sourceName = section.sourceName,
+                        isLoading = section.isLoading,
+                        hasError = section.hasError,
+                        errorLabel = stringResource(R.string.sources_search_failed),
+                        retryLabel = stringResource(R.string.search_retry),
                         onRetry = { searchViewModel.retry(SourceId(section.sourceId)) },
-                        onAnimeClick = onAnimeClick,
+                        items = section.items,
+                        itemKey = { it.id },
+                        sourceIconContent = { iconModifier ->
+                            AsyncImage(
+                                model = source.iconUrl,
+                                placeholder = painterResource(source.iconRes),
+                                error = painterResource(source.iconRes),
+                                contentDescription = null,
+                                modifier = iconModifier,
+                            )
+                        },
+                        itemContent = { anime ->
+                            AppPosterAnimeCard(
+                                anime = anime,
+                                metaText = anime.buildCardMeta(
+                                    announcementLabel = announcementLabel,
+                                    movieLabel = movieLabel,
+                                ),
+                                onClick = { onAnimeClick(anime) },
+                                modifier = Modifier.width(SourceSearchPosterCardWidth),
+                                posterContent = {
+                                    PosterImage(
+                                        primaryUrl = anime.posterUrl,
+                                        fallbackUrl = anime.posterFallbackUrl,
+                                        contentDescription = anime.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        placeholder = {
+                                            AppSourceSearchPosterPlaceholder(
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        },
+                                    )
+                                },
+                            )
+                        },
                     )
                 }
             }
@@ -169,60 +204,6 @@ fun SourcesScreen(
             }
         },
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun SourceSearchSection(
-    section: SourceSearchSection,
-    source: AnimeSourceDescriptor,
-    announcementLabel: String,
-    movieLabel: String,
-    onRetry: () -> Unit,
-    onAnimeClick: (Anime) -> Unit,
-) {
-    AppSourceSearchSection(
-        sourceName = section.sourceName,
-        isLoading = section.isLoading,
-        hasError = section.hasError,
-        errorLabel = stringResource(R.string.sources_search_failed),
-        retryLabel = stringResource(R.string.search_retry),
-        onRetry = onRetry,
-        items = section.items,
-        itemKey = { it.id },
-        sourceIconContent = { iconModifier ->
-            AsyncImage(
-                model = source.iconUrl,
-                placeholder = painterResource(source.iconRes),
-                error = painterResource(source.iconRes),
-                contentDescription = null,
-                modifier = iconModifier,
-            )
-        },
-        itemContent = { anime ->
-                    AppPosterAnimeCard(
-                        anime = anime,
-                        metaText = anime.buildCardMeta(
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                        ),
-                        onClick = { onAnimeClick(anime) },
-                        modifier = Modifier.width(SourceSearchPosterCardWidth),
-                        posterContent = {
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxSize(),
-                                placeholder = {
-                                    AppSourceSearchPosterPlaceholder(
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                },
-                            )
-                        },
-                    )
-        },
     )
 }
 
