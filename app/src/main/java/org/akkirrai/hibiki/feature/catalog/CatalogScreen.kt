@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -176,7 +175,6 @@ fun CatalogScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = {
                                     AppPosterPlaceholder(
-                                        icon = Icons.Outlined.Image,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(2f / 3f),
