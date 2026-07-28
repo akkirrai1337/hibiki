@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import org.jetbrains.compose.resources.painterResource
 import org.akkirrai.hibiki.shared.design.component.AppFilterExpandIcon
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
@@ -15,7 +16,6 @@ fun AppCatalogStatusFilterSection(
     included: Set<String>,
     onChange: (Set<String>) -> Unit,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
-    optionIcon: @Composable (AnimeCatalogFilterOption) -> Painter?,
     arrowIcon: Painter,
 ) {
     AppSingleListThreeStateFilter(
@@ -26,7 +26,7 @@ fun AppCatalogStatusFilterSection(
         onChange = { nextIncluded, _ -> onChange(nextIncluded) },
         id = { it.id },
         text = optionText,
-        optionIcon = optionIcon,
+        optionIcon = { painterResource(AnimeStatus.fromAlias(it.id).iconResource()) },
         allowExclusion = false,
         optionSortKey = { it.title },
         arrowContent = { modifier -> Icon(painter = arrowIcon, contentDescription = null, modifier = modifier) },

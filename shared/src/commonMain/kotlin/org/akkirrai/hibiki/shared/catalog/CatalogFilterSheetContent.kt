@@ -119,7 +119,6 @@ fun AppCatalogFilterSheetContent(
                         included = includedStatuses,
                         onChange = onIncludedStatusesChange,
                         optionText = optionText,
-                        optionIcon = { painterResource(AnimeStatus.fromAlias(it.id).iconResource()) },
                         arrowIcon = dropdownIcon,
                     )
                 }
