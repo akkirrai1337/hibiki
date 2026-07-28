@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -123,7 +121,6 @@ fun RecentUpdatesScreen(
         AppFloatingHeader(
             title = stringResource(R.string.home_recent_updates),
             onBackClick = onBackClick,
-            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
             backContentDescription = stringResource(R.string.cd_back),
             modifier = Modifier,
             includeStatusBarsPadding = false,

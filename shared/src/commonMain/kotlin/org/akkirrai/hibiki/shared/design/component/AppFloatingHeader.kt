@@ -6,12 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -30,7 +31,6 @@ object AppFloatingHeaderDefaults {
 fun AppFloatingHeader(
     title: String,
     onBackClick: () -> Unit,
-    backIcon: ImageVector,
     backContentDescription: String?,
     modifier: Modifier = Modifier,
     includeStatusBarsPadding: Boolean = true,
@@ -57,7 +57,7 @@ fun AppFloatingHeader(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             AppFloatingIconButton(
-                imageVector = backIcon,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                 contentDescription = backContentDescription,
                 onClick = onBackClick,
                 containerColor = containerColor,

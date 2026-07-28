@@ -1,7 +1,5 @@
 package org.akkirrai.hibiki.core.design.component
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,7 +19,6 @@ fun AppFloatingHeader(
 ) = SharedFloatingHeader(
     title = title,
     onBackClick = onBackClick,
-    backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
     backContentDescription = stringResource(R.string.cd_back),
     modifier = modifier,
     includeStatusBarsPadding = includeStatusBarsPadding,

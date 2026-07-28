@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
@@ -140,7 +139,6 @@ fun TrendingAnimeScreen(
         AppFloatingHeader(
             title = stringResource(R.string.home_trending),
             onBackClick = onBackClick,
-            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
             backContentDescription = stringResource(R.string.cd_back),
             modifier = Modifier
                 .align(Alignment.TopStart)
