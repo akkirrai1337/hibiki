@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.shared.design.component
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -10,7 +12,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppImagePlaceholder(
-    icon: ImageVector,
+    icon: ImageVector = Icons.Outlined.Image,
     modifier: Modifier = Modifier,
 ) {
     AppTonalSurface(modifier = modifier, contentAlignment = Alignment.Center) {
