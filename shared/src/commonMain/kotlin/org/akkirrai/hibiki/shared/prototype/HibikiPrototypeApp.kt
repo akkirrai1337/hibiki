@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
+import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
@@ -582,15 +583,24 @@ private fun ColumnScope.CatalogScreenContent(
 
 @Composable
 private fun AnimeCatalogCard(anime: Anime, onClick: () -> Unit) {
-    androidx.compose.material3.Card(
+    AppPosterAnimeCard(
+        anime = anime,
+        metaText = listOf(anime.subtitle, "${anime.status} · ${anime.episodesLabel}")
+            .filter(String::isNotBlank)
+            .joinToString("\n"),
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(UiDimens.MediumCorner),
-    ) {
-        Column {
+        posterContent = {
             Box(
-                modifier = Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(topStart = UiDimens.MediumCorner, topEnd = UiDimens.MediumCorner))
-                    .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer))),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.tertiaryContainer,
+                            ),
+                        ),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -600,13 +610,8 @@ private fun AnimeCatalogCard(anime: Anime, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(anime.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(anime.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${anime.status} · ${anime.episodesLabel}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable
