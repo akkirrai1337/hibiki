@@ -45,6 +45,7 @@ import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.shared.settings.isBusy
+import org.akkirrai.hibiki.shared.settings.resolveDiscordRpcStatusLabel
 import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
 import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
@@ -384,16 +385,16 @@ private fun DiscordAuthDialog(
 }
 
 @Composable
-private fun discordRpcStatusLabel(status: DiscordRpcConnectionStatus): String = stringResource(
-    when (status) {
-        DiscordRpcConnectionStatus.Disabled -> R.string.discord_rpc_status_disabled
-        DiscordRpcConnectionStatus.SignedOut -> R.string.discord_rpc_status_signed_out
-        DiscordRpcConnectionStatus.Checking -> R.string.discord_rpc_status_checking
-        DiscordRpcConnectionStatus.Connecting -> R.string.discord_rpc_status_connecting
-        DiscordRpcConnectionStatus.Connected -> R.string.discord_rpc_status_connected
-        DiscordRpcConnectionStatus.Error -> R.string.discord_rpc_status_error
-    },
-)
+private fun discordRpcStatusLabel(status: DiscordRpcConnectionStatus): String =
+    resolveDiscordRpcStatusLabel(
+        status = status,
+        disabledLabel = stringResource(R.string.discord_rpc_status_disabled),
+        signedOutLabel = stringResource(R.string.discord_rpc_status_signed_out),
+        checkingLabel = stringResource(R.string.discord_rpc_status_checking),
+        connectingLabel = stringResource(R.string.discord_rpc_status_connecting),
+        connectedLabel = stringResource(R.string.discord_rpc_status_connected),
+        errorLabel = stringResource(R.string.discord_rpc_status_error),
+    )
 
 @Composable
 private fun SettingsAboutItem(
