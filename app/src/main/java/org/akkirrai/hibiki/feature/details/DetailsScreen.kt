@@ -829,13 +829,7 @@ private fun PosterPreviewOverlay(
                     modifier = posterModifier,
                     contentScale = ContentScale.Fit,
                     placeholder = {
-                        AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                imageVector = Icons.Outlined.Image,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize())
                     },
                 )
             },
