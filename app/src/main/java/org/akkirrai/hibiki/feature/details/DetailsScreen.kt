@@ -110,7 +110,6 @@ import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
 import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
-import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import org.akkirrai.hibiki.shared.details.rememberNextEpisodeEta
 import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
@@ -287,9 +286,6 @@ fun DetailsScreen(
         },
     )
         ?.takeIf { isOngoingStatus(heroInfo.status) }
-    val nextEpisodeNumber = remember(currentAnime.episodesLabel) {
-        extractNextEpisodeNumber(currentAnime.episodesLabel)
-    }
     val uiModel = remember(
         currentAnime,
         heroInfo,
@@ -352,7 +348,7 @@ fun DetailsScreen(
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
                     nextEpisodeEta = nextEpisodeEta,
-                    nextEpisodeNumber = nextEpisodeNumber,
+                    nextEpisodeNumber = heroInfo.nextEpisodeNumber,
                     canWatch = canWatch,
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,

@@ -6,6 +6,7 @@ data class DetailsHeroInfo(
     val type: String,
     val releaseDate: String,
     val episodes: String,
+    val nextEpisodeNumber: Int?,
     val status: String,
     val studio: String,
 )
@@ -32,6 +33,7 @@ fun resolveDetailsHeroInfo(
         releaseDate = anime.releaseDate?.takeIf(::isKnownValue)
             ?: year.takeIf(::isKnownValue).orEmpty(),
         episodes = rawEpisodes.takeIf { episodeCount == null || episodeCount > 0 }.orEmpty(),
+        nextEpisodeNumber = extractNextEpisodeNumber(anime.episodesLabel),
         status = anime.status.takeUnless { it.isBlank() || it.equals("Unknown", ignoreCase = true) }.orEmpty(),
         studio = anime.studios.joinToString(", "),
     )
