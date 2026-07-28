@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
@@ -179,17 +179,11 @@ fun HomeScreen(
                                 contentDescription = anime.title,
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = {
-                                    AppHomePosterPlaceholder(
+                                    AppPosterPlaceholder(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(2f / 3f),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
+                                    )
                                 },
                             )
                         },
