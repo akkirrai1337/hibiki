@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.DateRange
@@ -55,9 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -858,17 +854,7 @@ private fun HeroOverlayBackButton(
     AppDetailsHeroOverlayBackButton(
         onClick = onClick,
         modifier = modifier,
-        iconContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                contentDescription = stringResource(R.string.cd_back),
-                tint = Color.White,
-                modifier = Modifier.graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                    blendMode = BlendMode.Difference
-                },
-            )
-        },
+        contentDescription = stringResource(R.string.cd_back),
     )
 }
 

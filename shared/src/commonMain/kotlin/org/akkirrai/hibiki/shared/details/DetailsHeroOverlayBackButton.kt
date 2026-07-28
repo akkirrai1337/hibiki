@@ -10,12 +10,12 @@ import org.akkirrai.hibiki.shared.design.component.AppBackButton
 @Composable
 fun AppDetailsHeroOverlayBackButton(
     onClick: () -> Unit,
-    iconContent: @Composable () -> Unit,
+    contentDescription: String?,
     modifier: Modifier = Modifier,
 ) {
     AppBackButton(
         onClick = onClick,
-        iconContent = iconContent,
+        contentDescription = contentDescription,
         modifier = modifier
             .statusBarsPadding()
             .padding(start = UiDimens.ScreenPadding, top = DetailsHeroOverlayBackButtonTopPadding),
