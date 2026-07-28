@@ -13,14 +13,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.painterResource
 import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_player_aspect_ratio_24
+import hibiki.shared.generated.resources.ic_player_fit_to_screen_24
 import hibiki.shared.generated.resources.ic_player_picture_in_picture_24
+import hibiki.shared.generated.resources.ic_player_settings_overscan_24
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 
 @Composable
 fun AppPlayerActionControls(
     onScaleClick: () -> Unit,
-    scaleContent: @Composable () -> Unit,
+    scaleMode: VideoScaleMode = VideoScaleMode.FIT,
+    scaleContentDescription: String? = null,
+    scaleContent: @Composable () -> Unit = {
+        Icon(
+            painter = painterResource(
+                when (scaleMode) {
+                    VideoScaleMode.FIT -> Res.drawable.ic_player_fit_to_screen_24
+                    VideoScaleMode.CROP -> Res.drawable.ic_player_settings_overscan_24
+                    VideoScaleMode.STRETCH -> Res.drawable.ic_player_aspect_ratio_24
+                },
+            ),
+            contentDescription = scaleContentDescription,
+            tint = Color.White,
+        )
+    },
     onLockClick: () -> Unit,
     lockContentDescription: String? = null,
     lockContent: @Composable () -> Unit = {
