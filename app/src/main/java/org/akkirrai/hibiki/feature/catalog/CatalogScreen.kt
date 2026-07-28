@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogQueryEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
@@ -78,7 +79,6 @@ import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
-import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
 
@@ -123,10 +123,10 @@ fun CatalogScreen(
         }
     }
 
-    LaunchedEffect(state.query) {
-        delay(350)
-        viewModel.load()
-    }
+    AppCatalogQueryEffect(
+        query = state.query,
+        onQuerySettled = viewModel::load,
+    )
     AppCatalogPaginationEffect(
         listState = listState,
         state = state,
