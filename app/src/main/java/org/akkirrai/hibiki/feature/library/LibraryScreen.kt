@@ -36,6 +36,7 @@ import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateMessage
 import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
 import org.akkirrai.hibiki.shared.library.toAnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.toLibrarySearchFilters
+import org.akkirrai.hibiki.shared.library.isRussianLibraryLanguage
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.core.source.labelResId
@@ -169,11 +170,10 @@ private fun LibrarySearchFiltersSheet(
     onDismiss: () -> Unit,
     onApply: (LibrarySearchFilters) -> Unit,
 ) {
-    val isRussian = when (languageMode) {
-        LanguageMode.RUSSIAN -> true
-        LanguageMode.ENGLISH -> false
-        LanguageMode.SYSTEM -> LocalConfiguration.current.locales[0]?.language == "ru"
-    }
+    val isRussian = isRussianLibraryLanguage(
+        languageMode = languageMode,
+        systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty(),
+    )
     val sharedCatalog = buildLibraryFilterCatalog(
         typeOptions = catalog.typeOptions,
         statusOptions = catalog.statusOptions,
