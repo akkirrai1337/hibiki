@@ -22,10 +22,10 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
@@ -88,7 +88,7 @@ fun RecentUpdatesScreen(
                     onAnimeClick = onAnimeClick,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                     posterContent = { anime ->
-                        PosterImage(
+                        AppPosterImage(
                             primaryUrl = anime.posterUrl,
                             fallbackUrl = anime.posterFallbackUrl,
                             contentDescription = anime.title,
