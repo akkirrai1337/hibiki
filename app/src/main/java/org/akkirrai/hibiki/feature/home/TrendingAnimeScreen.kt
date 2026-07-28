@@ -27,6 +27,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.mergeAnimePreservingOrder
 import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
@@ -200,7 +201,7 @@ class TrendingAnimeViewModel(
             }
                 .onSuccess { nextItems ->
                     presenter.update { state ->
-                        val mergedItems = (state.items + nextItems).distinctBy(Anime::id)
+                        val mergedItems = mergeAnimePreservingOrder(state.items, nextItems)
                         state.copy(
                             isLoadingMore = false,
                             items = mergedItems,
