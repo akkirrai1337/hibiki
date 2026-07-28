@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
 fun AnimeSourceBadge(
@@ -19,11 +19,9 @@ fun AnimeSourceBadge(
         title = source.name,
         modifier = modifier,
         iconContent = { iconModifier ->
-            AsyncImage(
-                model = source.iconUrl,
+            AppSourceIconImage(
+                url = source.iconUrl,
                 placeholder = painterResource(source.iconRes),
-                error = painterResource(source.iconRes),
-                contentDescription = null,
                 modifier = iconModifier,
             )
         },
