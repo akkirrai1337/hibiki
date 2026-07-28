@@ -37,7 +37,6 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
-import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
@@ -58,6 +57,7 @@ import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
 import org.akkirrai.hibiki.shared.home.appHomeFeedContent
+import org.akkirrai.hibiki.shared.home.appHomeSearchResultsContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -143,7 +143,7 @@ fun HomeScreen(
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
                 ) {
-                    appSearchStateVerticalListContent(
+                    appHomeSearchResultsContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime ->
@@ -161,29 +161,8 @@ fun HomeScreen(
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = HomeSearchEmptyIcon,
-                        posterContent = { anime ->
-                            AppPosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = {
-                                    AppPosterPlaceholder(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f),
-                                    )
-                                },
-                            )
-                        },
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(
-                                    label = stringResource(category.labelResId),
-                                    icon = category.icon(),
-                                )
-                            }
-                        },
+                        libraryStatusByAnimeId = libraryStatusByAnimeId,
+                        libraryStatusLabel = { category -> stringResource(category.labelResId) },
                         onItemVisible = { anime ->
                             viewModel.dispatch(HomeAction.EnrichDescription(anime))
                         },
