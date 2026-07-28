@@ -114,6 +114,7 @@ import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetDragHandle
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
+import org.akkirrai.hibiki.shared.details.DetailsInformationIcon
 import org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine
 import org.akkirrai.hibiki.shared.details.AppDetailsContentList
 import org.akkirrai.hibiki.shared.details.DetailsGenresSection
@@ -690,26 +691,26 @@ private fun DetailContentCard(
         org.akkirrai.hibiki.shared.details.DetailsInformationItem(
             label = stringResource(R.string.details_status),
             value = heroInfo.status.ifBlank { emptyValue },
-            icon = Icons.Outlined.Check,
+            icon = DetailsInformationIcon.STATUS,
             accent = MaterialTheme.colorScheme.tertiary,
         ),
         org.akkirrai.hibiki.shared.details.DetailsInformationItem(
             label = stringResource(R.string.details_episodes_released),
             value = heroInfo.episodes.ifBlank { emptyValue },
-            icon = Icons.Outlined.FormatListNumbered,
+            icon = DetailsInformationIcon.EPISODES,
             accent = MaterialTheme.colorScheme.primary,
         ),
         org.akkirrai.hibiki.shared.details.DetailsInformationItem(
             label = stringResource(R.string.details_type),
             value = heroInfo.type,
-            icon = Icons.Outlined.BookmarkBorder,
+            icon = DetailsInformationIcon.TYPE,
             accent = MaterialTheme.colorScheme.secondary,
         ),
         heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
             org.akkirrai.hibiki.shared.details.DetailsInformationItem(
                 label = stringResource(R.string.details_release_date),
                 value = releaseDate,
-                icon = Icons.Filled.DateRange,
+                icon = DetailsInformationIcon.RELEASE_DATE,
                 accent = MaterialTheme.colorScheme.primary,
             )
         },
@@ -717,7 +718,7 @@ private fun DetailContentCard(
             org.akkirrai.hibiki.shared.details.DetailsInformationItem(
                 label = stringResource(R.string.details_source_material),
                 value = source,
-                icon = Icons.AutoMirrored.Filled.MenuBook,
+                icon = DetailsInformationIcon.SOURCE_MATERIAL,
                 accent = MaterialTheme.colorScheme.tertiary,
             )
         },
@@ -725,7 +726,7 @@ private fun DetailContentCard(
             org.akkirrai.hibiki.shared.details.DetailsInformationItem(
                 label = stringResource(R.string.details_studio),
                 value = studio,
-                icon = Icons.Filled.Business,
+                icon = DetailsInformationIcon.STUDIO,
                 accent = Color(0xFFFF9800),
             )
         },
