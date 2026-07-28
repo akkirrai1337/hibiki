@@ -144,7 +144,6 @@ fun AnimeSearchFiltersSheet(
                 statusTitle = stringResource(R.string.search_filters_status),
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
-                typeLabel = { typeLabel(it) },
                 optionText = optionText,
                 showGenreFilters = showGenreFilters,
                 maxCollapsedGenreGroups = maxCollapsedGenreGroups,
@@ -195,8 +194,6 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
 
 private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
-
-private fun typeLabel(type: AnimeTypeAlias): String = type.alias.uppercase()
 
 private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)
 private val IncludedFilterColor = Color(0xFF80DF87)

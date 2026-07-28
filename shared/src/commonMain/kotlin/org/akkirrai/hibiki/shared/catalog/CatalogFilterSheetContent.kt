@@ -40,7 +40,6 @@ fun AppCatalogFilterSheetContent(
     statusTitle: String,
     resetLabel: String,
     applyLabel: String,
-    typeLabel: @Composable (AnimeTypeAlias) -> String,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
     showGenreFilters: Boolean = true,
     maxCollapsedGenreGroups: Int? = null,
@@ -73,7 +72,7 @@ fun AppCatalogFilterSheetContent(
                         selected = animeType,
                         onSelected = onAnimeTypeChange,
                         typeIcon = { painterResource(it.iconResource()) },
-                        typeLabel = typeLabel,
+                        typeLabel = { it.alias.uppercase() },
                         arrowIcon = dropdownIcon,
                     )
                 }
