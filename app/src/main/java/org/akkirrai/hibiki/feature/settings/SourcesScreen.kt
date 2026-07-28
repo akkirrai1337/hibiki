@@ -33,6 +33,7 @@ import org.akkirrai.hibiki.shared.source.SourceLanguageSectionContent
 import org.akkirrai.hibiki.shared.source.appSourceLanguageSections
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
+import org.akkirrai.hibiki.shared.source.appSourceSearchSections
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
@@ -65,6 +66,10 @@ fun SourcesScreen(
     val isSearchMode = isSourceSearchActive(query)
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
+    val sourceSearchErrorLabel = stringResource(R.string.sources_search_failed)
+    val sourceSearchRetryLabel = stringResource(R.string.search_retry)
+    val sourceSearchEmptyTitle = stringResource(R.string.sources_search_empty_title)
+    val sourceSearchEmptyMessage = stringResource(R.string.sources_search_empty_message)
     val visibleSourcesByLanguage = sourcesByLanguage
     val visibleSourceSections = SOURCE_LANGUAGE_SECTIONS.map { section ->
         SourceLanguageSectionContent(
@@ -79,45 +84,37 @@ fun SourcesScreen(
         bottomContentPadding = bottomContentPadding,
         searchContent = {
             val visibleSections = searchState.sections.visibleSourceSearchSections()
-            visibleSections.forEach { section ->
-                val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
-                item(key = "search_${section.sourceId}") {
-                    AppSourceSearchSection(
-                        sourceName = section.sourceName,
-                        isLoading = section.isLoading,
-                        hasError = section.hasError,
-                        errorLabel = stringResource(R.string.sources_search_failed),
-                        retryLabel = stringResource(R.string.search_retry),
-                        onRetry = { searchViewModel.retry(SourceId(section.sourceId)) },
-                        items = section.items,
-                        itemKey = { it.id },
-                        sourceIconContent = { iconModifier ->
-                            AppSourceIconImage(
-                                url = source.iconUrl,
-                                placeholder = painterResource(source.iconRes),
-                                modifier = iconModifier,
-                            )
-                        },
-                        itemContent = { anime ->
-                            AppSourceSearchAnimeCard(
-                                anime = anime,
-                                announcementLabel = announcementLabel,
-                                movieLabel = movieLabel,
-                                onClick = { onAnimeClick(anime) },
-                                cardWidth = SourceSearchPosterCardWidth,
-                            )
-                        },
-                    )
-                }
-            }
-            if (!searchState.isSearching && visibleSections.isEmpty()) {
-                item(key = "search_empty") {
+            appSourceSearchSections(
+                sections = visibleSections,
+                isSearching = searchState.isSearching,
+                errorLabel = sourceSearchErrorLabel,
+                retryLabel = sourceSearchRetryLabel,
+                onRetry = { sourceId -> searchViewModel.retry(SourceId(sourceId)) },
+                emptyContent = {
                     AppSourceSearchEmptyState(
-                        title = stringResource(R.string.sources_search_empty_title),
-                        message = stringResource(R.string.sources_search_empty_message),
+                        title = sourceSearchEmptyTitle,
+                        message = sourceSearchEmptyMessage,
                     )
-                }
-            }
+                },
+                sourceIconContent = { section, iconModifier ->
+                    val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
+                    AppSourceIconImage(
+                        url = source.iconUrl,
+                        placeholder = painterResource(source.iconRes),
+                        modifier = iconModifier,
+                    )
+                },
+                itemContent = { anime ->
+                    AppSourceSearchAnimeCard(
+                        anime = anime,
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
+                        onClick = { onAnimeClick(anime) },
+                        cardWidth = SourceSearchPosterCardWidth,
+                    )
+                },
+                itemKey = { it.id },
+            )
         },
         sourceContent = {
             appSourceLanguageSections(
