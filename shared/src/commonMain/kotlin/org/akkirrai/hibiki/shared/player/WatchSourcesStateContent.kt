@@ -1,9 +1,11 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.SubtitlesOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.shared.model.WatchSource
 
@@ -12,8 +14,6 @@ fun AppWatchSourcesStateContent(
     state: WatchSourcesScreenState,
     emptyTitle: String,
     emptyMessage: String,
-    errorIcon: ImageVector,
-    emptyIcon: ImageVector,
     retryLabel: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -23,7 +23,7 @@ fun AppWatchSourcesStateContent(
         state.errorMessage != null -> WatchEmptyState(
             title = emptyTitle,
             message = state.errorMessage,
-            icon = errorIcon,
+            icon = Icons.Outlined.PlayCircleOutline,
             retryLabel = retryLabel,
             onRetry = onRetry,
             modifier = modifier.fillMaxSize(),
@@ -32,7 +32,7 @@ fun AppWatchSourcesStateContent(
         state.items.isEmpty() -> WatchEmptyState(
             title = emptyTitle,
             message = emptyMessage,
-            icon = emptyIcon,
+            icon = Icons.Outlined.SubtitlesOff,
             retryLabel = retryLabel,
             onRetry = onRetry,
             modifier = modifier.fillMaxSize(),

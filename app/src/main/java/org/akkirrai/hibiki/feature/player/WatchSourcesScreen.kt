@@ -1,8 +1,5 @@
 package org.akkirrai.hibiki.feature.player
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PlayCircleOutline
-import androidx.compose.material.icons.outlined.SubtitlesOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -48,8 +45,6 @@ fun WatchSourcesScreen(
             state = state,
             emptyTitle = stringResource(R.string.watch_sources_empty_title),
             emptyMessage = stringResource(R.string.watch_sources_empty_message),
-            errorIcon = Icons.Outlined.PlayCircleOutline,
-            emptyIcon = Icons.Outlined.SubtitlesOff,
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::retry,
         ) { sources ->
