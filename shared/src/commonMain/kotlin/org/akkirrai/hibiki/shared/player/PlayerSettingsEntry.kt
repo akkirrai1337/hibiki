@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -16,7 +18,7 @@ data class PlayerSettingsEntry(
 fun AppPlayerSettingsEntry(
     title: String,
     value: String,
-    trailingIcon: ImageVector,
+    trailingIcon: ImageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
     onClick: () -> Unit,
 ) {
     PlayerSettingsEntryRow(
