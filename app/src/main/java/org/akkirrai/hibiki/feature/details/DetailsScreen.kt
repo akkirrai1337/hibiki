@@ -842,7 +842,15 @@ private fun PosterPreviewOverlay(
                     contentDescription = anime.title,
                     modifier = posterModifier,
                     contentScale = ContentScale.Fit,
-                    placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) },
+                    placeholder = {
+                        AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
                 )
             },
             backContent = {
@@ -1069,17 +1077,14 @@ private fun NetworkImage(
         contentDescription = contentDescription,
         onImageSuccess = onImageSuccess,
         modifier = modifier.fillMaxSize(),
-        placeholder = { ImagePlaceholder() }
+        placeholder = {
+            AppDetailsImagePlaceholder {
+                Icon(
+                    imageVector = Icons.Outlined.Image,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     )
-}
-
-@Composable
-private fun ImagePlaceholder(modifier: Modifier = Modifier) {
-    AppDetailsImagePlaceholder(modifier = modifier) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
