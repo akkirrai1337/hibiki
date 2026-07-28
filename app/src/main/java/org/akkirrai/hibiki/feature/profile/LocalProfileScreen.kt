@@ -139,7 +139,37 @@ fun LocalProfileScreen(
                     },
                     pageContent = { page ->
                         when (LocalProfileTab.entries[page]) {
-                            LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
+                            LocalProfileTab.Overview -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+                                bottomContentPadding = bottomContentPadding,
+                                verticalSpacing = ProfileMediumPadding,
+                            ) {
+                                org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
+                                    items = listOf(
+                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                                            stringResource(R.string.local_profile_stat_total),
+                                            snapshot.libraryTotal.toString(),
+                                        ),
+                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                                            stringResource(R.string.local_profile_stat_days),
+                                            snapshot.activeDaysCount.toString(),
+                                        ),
+                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
+                                            stringResource(R.string.local_profile_stat_time),
+                                            snapshot.watchTimeLabel,
+                                        ),
+                                    ),
+                                )
+                                org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
+                                    items = snapshot.genreSegments.map { item ->
+                                        org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(
+                                            item.label,
+                                            item.count,
+                                            item.color,
+                                        )
+                                    },
+                                )
+                                RecentLibraryCard(snapshot.recentLibraryItems)
+                            }
                             LocalProfileTab.Activity -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
                                 bottomContentPadding = bottomContentPadding,
                             ) {
@@ -204,38 +234,6 @@ private fun RotatingSettingsButton(onClick: () -> Unit) {
             label = "settings_icon_rotation",
         ),
     )
-}
-
-/** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
-@Composable
-private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
-        bottomContentPadding = bottomContentPadding,
-        verticalSpacing = ProfileMediumPadding,
-    ) {
-        org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
-            items = listOf(
-                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                    stringResource(R.string.local_profile_stat_total),
-                    snapshot.libraryTotal.toString(),
-                ),
-                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                    stringResource(R.string.local_profile_stat_days),
-                    snapshot.activeDaysCount.toString(),
-                ),
-                org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                    stringResource(R.string.local_profile_stat_time),
-                    snapshot.watchTimeLabel,
-                ),
-            ),
-        )
-        org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
-            items = snapshot.genreSegments.map { item ->
-                org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(item.label, item.count, item.color)
-            },
-        )
-        RecentLibraryCard(snapshot.recentLibraryItems)
-    }
 }
 
 private val AnimiteBannerHeight = 168.dp
