@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -1599,7 +1598,6 @@ private fun PlayerSettingsSheet(
                     AppPlayerSettingsEntry(
                         title = entry.title,
                         value = entry.value,
-                        trailingIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                         onClick = entry.onClick,
                     )
                 },
