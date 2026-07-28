@@ -67,6 +67,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppSettingsAppearanceSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPreferencesSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPlayerSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsUpdatesSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -198,16 +199,11 @@ fun SettingsScreen(
 
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
             item(key = SettingsSection.Updates.key) {
-                AppSettingsSection(title = stringResource(R.string.settings_updates)) {
-                    AppSettingsItems(count = 1) { _, _ ->
-                        AppSettingsIconActionItem(
-                            icon = SettingsUpdatesIcon,
-                            title = stringResource(R.string.settings_check_updates),
-                            shape = CircleShape,
-                            onClick = onCheckForUpdates,
-                        )
-                    }
-                }
+                AppSettingsUpdatesSection(
+                    sectionTitle = stringResource(R.string.settings_updates),
+                    checkForUpdatesTitle = stringResource(R.string.settings_check_updates),
+                    onCheckForUpdates = onCheckForUpdates,
+                )
             }
         }
 
