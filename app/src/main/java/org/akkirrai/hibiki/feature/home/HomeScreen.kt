@@ -48,7 +48,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
-import org.akkirrai.hibiki.core.design.icon
+import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta

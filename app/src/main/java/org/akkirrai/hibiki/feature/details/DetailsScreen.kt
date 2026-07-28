@@ -75,7 +75,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.core.design.icon
+import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.player.formatPlaybackPosition

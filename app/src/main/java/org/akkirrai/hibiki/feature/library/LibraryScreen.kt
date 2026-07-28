@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
-import org.akkirrai.hibiki.core.design.icon
+import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
