@@ -123,6 +123,7 @@ import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveCurrentPlaybackPosition
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
+import org.akkirrai.hibiki.shared.player.resolvePlaybackDuration
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -289,7 +290,7 @@ fun PlayerScreen(
     fun watchedSecondsSnapshot(): List<Long> = watchedSeconds.sorted()
 
     fun saveCurrentPlaybackProgress() {
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val safeDurationMs = resolvePlaybackDuration(exoPlayer.duration, durationMs)
         val safePositionMs = resolveCurrentPlaybackPosition(
             playerPositionMs = exoPlayer.currentPosition,
             trackedPositionMs = positionMs,
@@ -340,7 +341,7 @@ fun PlayerScreen(
         if (direction == 0 || steps <= 0) return
 
         val deltaMs = SEEK_INCREMENT_MS * steps
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val safeDurationMs = resolvePlaybackDuration(exoPlayer.duration, durationMs)
         val targetPositionMs = if (direction < 0) {
             (accumulatedDoubleTapBasePositionMs - deltaMs).coerceAtLeast(0L)
         } else if (safeDurationMs > 0L) {
@@ -515,7 +516,7 @@ fun PlayerScreen(
             settingsVisible = false
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.playWhenReady = false
@@ -553,7 +554,7 @@ fun PlayerScreen(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
                 if (playbackState == Player.STATE_READY && pendingSeekMs > 0L) {
                     exoPlayer.seekTo(pendingSeekMs)
                     positionMs = pendingSeekMs
@@ -570,8 +571,8 @@ fun PlayerScreen(
                     if (hasNextEpisode && handledEndedEpisodeId != currentEpisodeId) {
                         handledEndedEpisodeId = currentEpisodeId
                         viewModel.savePlaybackProgress(
-                            positionMs = exoPlayer.duration.takeIf { it > 0 } ?: exoPlayer.currentPosition.coerceAtLeast(0L),
-                            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                            positionMs = resolvePlaybackDuration(exoPlayer.duration, exoPlayer.currentPosition.coerceAtLeast(0L)),
+                            durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                             watchedSeconds = watchedSecondsSnapshot(),
                         )
                         viewModel.playNextEpisode()
@@ -607,7 +608,7 @@ fun PlayerScreen(
             pendingDoubleTapSeekJob = null
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.removeListener(listener)
@@ -779,7 +780,7 @@ fun PlayerScreen(
 
     LaunchedEffect(exoPlayer, isSeeking) {
         while (true) {
-            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
             bufferedPositionMs = exoPlayer.bufferedPosition.takeIf { it > 0 } ?: 0L
             if (!isSeeking) {
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
@@ -793,7 +794,7 @@ fun PlayerScreen(
         lastTrackedPlaybackPositionMs = -1L
         while (true) {
             val currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-            val currentDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            val currentDurationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
             val trackingAllowed = exoPlayer.isPlaying &&
                 currentDurationMs > 0L &&
                 !isSeeking
