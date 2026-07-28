@@ -1177,13 +1177,8 @@ fun PlayerScreen(
                                 keepControlsVisible()
                                 appPreferences.setVideoScaleMode(videoScaleMode.next())
                             },
-                            scaleContent = {
-                                Icon(
-                                    painter = painterResource(videoScaleMode.iconResId()),
-                                    contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
-                                    tint = Color.White,
-                                )
-                            },
+                            scaleMode = videoScaleMode,
+                            scaleContentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
                             onLockClick = {
                                 controlsLocked = true
                                 controlsVisible = false
@@ -1721,12 +1716,6 @@ private data class TextureVideoScale(
     val scaleX: Float,
     val scaleY: Float,
 )
-
-private fun VideoScaleMode.iconResId(): Int = when (this) {
-    VideoScaleMode.FIT -> R.drawable.ic_player_fit_to_screen_24
-    VideoScaleMode.CROP -> R.drawable.ic_player_settings_overscan_24
-    VideoScaleMode.STRETCH -> R.drawable.ic_player_aspect_ratio_24
-}
 
 @StringRes
 private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
