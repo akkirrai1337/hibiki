@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -118,7 +117,7 @@ import org.akkirrai.hibiki.shared.details.isOngoingStatus
 import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
 import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
-import org.akkirrai.hibiki.shared.details.formatNextEpisodeEta
+import org.akkirrai.hibiki.shared.details.rememberNextEpisodeEta
 import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
 import org.akkirrai.hibiki.shared.details.resolveSourceMaterialLabel
 import com.materialkolor.PaletteStyle
@@ -276,7 +275,17 @@ fun DetailsScreen(
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
         AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
     }
-    val nextEpisodeEta = rememberNextEpisodeEta(currentAnime.nextEpisodeAt)
+    val nextEpisodeEta = rememberNextEpisodeEta(
+        nextEpisodeAt = currentAnime.nextEpisodeAt,
+        nowEpochSeconds = { System.currentTimeMillis() / 1_000L },
+        daysHoursLabel = { days, hours -> stringResource(R.string.details_eta_days_hours, days, hours) },
+        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
+            stringResource(R.string.details_eta_hours_minutes_seconds, hours, minutes, seconds)
+        },
+        minutesSecondsLabel = { minutes, seconds ->
+            stringResource(R.string.details_eta_minutes_seconds, minutes, seconds)
+        },
+    )
         ?.takeIf { isOngoingStatus(heroInfo.status) }
     val nextEpisodeNumber = remember(currentAnime.episodesLabel) {
         extractNextEpisodeNumber(currentAnime.episodesLabel)
@@ -814,31 +823,6 @@ private fun findResumeWatchState(
     titleId: String,
 ): TitleWatchState? {
     return org.akkirrai.hibiki.shared.player.resolveResumeWatchState(repository.getEpisodeProgress(titleId))
-}
-
-@Composable
-private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
-    val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
-    var nowEpochSeconds by remember(seconds) {
-        mutableLongStateOf(System.currentTimeMillis() / 1_000L)
-    }
-    LaunchedEffect(seconds) {
-        while (nowEpochSeconds < seconds) {
-            nowEpochSeconds = System.currentTimeMillis() / 1_000L
-            if (nowEpochSeconds >= seconds) break
-            delay(1_000L)
-        }
-    }
-    return formatNextEpisodeEta(
-        deltaSeconds = seconds - nowEpochSeconds,
-        daysHoursLabel = { days, hours -> stringResource(R.string.details_eta_days_hours, days, hours) },
-        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
-            stringResource(R.string.details_eta_hours_minutes_seconds, hours, minutes, seconds)
-        },
-        minutesSecondsLabel = { minutes, seconds ->
-            stringResource(R.string.details_eta_minutes_seconds, minutes, seconds)
-        },
-    )
 }
 
 private suspend fun extractTitleSeedColor(

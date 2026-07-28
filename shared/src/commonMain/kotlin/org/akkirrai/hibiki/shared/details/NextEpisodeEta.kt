@@ -1,6 +1,39 @@
 package org.akkirrai.hibiki.shared.details
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+
+@Composable
+fun rememberNextEpisodeEta(
+    nextEpisodeAt: Long?,
+    nowEpochSeconds: () -> Long,
+    daysHoursLabel: @Composable (days: Long, hours: Long) -> String,
+    hoursMinutesSecondsLabel: @Composable (hours: Long, minutes: Long, seconds: Long) -> String,
+    minutesSecondsLabel: @Composable (minutes: Long, seconds: Long) -> String,
+): String? {
+    val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
+    var nowSeconds by remember(seconds) { mutableLongStateOf(nowEpochSeconds()) }
+
+    LaunchedEffect(seconds) {
+        while (nowSeconds < seconds) {
+            nowSeconds = nowEpochSeconds()
+            if (nowSeconds >= seconds) break
+            delay(1_000L)
+        }
+    }
+
+    return formatNextEpisodeEta(
+        deltaSeconds = seconds - nowSeconds,
+        daysHoursLabel = daysHoursLabel,
+        hoursMinutesSecondsLabel = hoursMinutesSecondsLabel,
+        minutesSecondsLabel = minutesSecondsLabel,
+    )
+}
 
 @Composable
 fun formatNextEpisodeEta(
