@@ -35,6 +35,7 @@ import org.akkirrai.hibiki.shared.player.AppEpisodesStateContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
+import org.akkirrai.hibiki.shared.player.rememberEpisodesDownloadControlsVisible
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
@@ -75,7 +76,7 @@ fun EpisodesScreen(
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
-    var downloadControlsVisible by remember(sourceId, downloadMode) { mutableStateOf(downloadMode) }
+    var downloadControlsVisible by rememberEpisodesDownloadControlsVisible(sourceId, downloadMode)
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(state.result, sourceId, lifecycleOwner) {
