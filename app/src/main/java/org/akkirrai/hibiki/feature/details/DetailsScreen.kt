@@ -66,10 +66,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
-import coil.imageLoader
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.toBitmap
+import coil3.imageLoader
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -965,7 +967,7 @@ private suspend fun extractTitleSeedColor(
         }.getOrNull() as? SuccessResult ?: continue
         val palette = withContext(Dispatchers.Default) {
             val bitmap = runCatching {
-                result.drawable.toBitmap(width = 96, height = 96)
+                result.image.toBitmap(width = 96, height = 96)
             }.getOrNull() ?: return@withContext null
             runCatching {
                 Palette.from(bitmap)

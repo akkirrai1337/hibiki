@@ -10,9 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import coil.request.ErrorResult
-import coil.request.SuccessResult
+import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
+import coil3.asDrawable
+import coil3.request.ErrorResult
+import coil3.request.SuccessResult
 import org.akkirrai.hibiki.core.log.AppLogger
 
 @Composable
@@ -25,6 +27,7 @@ fun PosterImage(
     onImageSuccess: ((Drawable) -> Unit)? = null,
     placeholder: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
     val normalizedPrimary = primaryUrl?.takeIf(String::isNotBlank)
     val normalizedFallback = fallbackUrl?.takeIf(String::isNotBlank)
     var activeUrl by remember(normalizedPrimary, normalizedFallback) {
@@ -48,7 +51,7 @@ fun PosterImage(
             onLoading = { isLoading = true },
             onSuccess = { state ->
                 isLoading = false
-                val drawable = (state.result as? SuccessResult)?.drawable
+                val drawable = (state.result as? SuccessResult)?.image?.asDrawable(context.resources)
                 if (drawable != null) onImageSuccess?.invoke(drawable)
             },
             onError = { state ->
