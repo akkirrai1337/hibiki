@@ -24,6 +24,7 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -195,7 +196,7 @@ class AnimeSearchRepository(
             id = canonicalId,
             title = displayName,
             subtitle = buildSubtitle(fallback?.subtitle),
-            episodesLabel = if (resolvedStatus.isAnnouncementStatus()) {
+            episodesLabel = if (isAnnouncementStatus(resolvedStatus)) {
                 if (preferEnglish) "announcement" else "анонс"
             } else {
                 buildEpisodesLabel(fallback?.episodesLabel, preferEnglish)
@@ -278,11 +279,6 @@ class AnimeSearchRepository(
             4 -> if (preferEnglish) "Autumn" else "Осень"
             else -> null
         }
-    }
-
-    private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
     }
 
     private fun AnimeTitle.buildEpisodesLabel(
