@@ -51,7 +51,6 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
@@ -84,6 +83,7 @@ import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
@@ -169,7 +169,7 @@ fun CatalogScreen(
                         movieLabel = movieLabel,
                         onAnimeClick = onAnimeClick,
                         posterContent = { anime ->
-                            PosterImage(
+                            AppPosterImage(
                                 primaryUrl = anime.posterUrl,
                                 fallbackUrl = anime.posterFallbackUrl,
                                 contentDescription = anime.title,
