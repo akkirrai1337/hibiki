@@ -19,6 +19,7 @@ import org.akkirrai.hibiki.shared.profile.trackedProfileLibraryItems
 import org.akkirrai.hibiki.shared.profile.buildFavoriteLibraryItems
 import org.akkirrai.hibiki.shared.profile.buildRecentLibraryItems
 import org.akkirrai.hibiki.shared.profile.activitySummary
+import org.akkirrai.hibiki.shared.profile.buildProfileActivityDays
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -26,18 +27,18 @@ internal fun buildProfileSnapshot(
     resources: Resources,
     localData: LocalProfileData,
 ): LocalProfileSnapshot {
-    val activityByDate = localData.activity.associateBy { it.date }
     val activitySummary = localData.activitySummary()
     val today = LocalDate.now()
-    val activityDays = (0 until ACTIVITY_HISTORY_DAYS).map { offset ->
-        val date = today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
-        ActivityDay(
-            date.format(ACTIVITY_DATE_FORMATTER),
-            activityByDate[date.toString()]?.let { activity ->
-                activity.completedEpisodes.takeIf { it > 0 } ?: if (activity.watchedMs > 0L) 1 else 0
-            } ?: 0,
-        )
+    val activityDates = (0 until ACTIVITY_HISTORY_DAYS).map { offset ->
+        today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
     }
+    val activityDays = buildProfileActivityDays(
+        activity = localData.activity,
+        dateStrings = activityDates.map { it.toString() },
+        dateLabel = { date ->
+            LocalDate.parse(date).format(ACTIVITY_DATE_FORMATTER)
+        },
+    )
     val trackedLibrary = localData.trackedProfileLibraryItems()
     val librarySegments = localData.buildLibraryStatusSegments { category ->
         resources.getString(category.labelResId)
