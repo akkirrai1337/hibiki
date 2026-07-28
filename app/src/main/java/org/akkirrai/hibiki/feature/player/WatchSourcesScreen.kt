@@ -9,12 +9,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.shared.player.WatchSourcesList
-import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
-import org.akkirrai.hibiki.shared.player.formatWatchSourceEpisodeSummary
-import org.akkirrai.hibiki.shared.player.isRefreshing
+import org.akkirrai.hibiki.shared.player.AppWatchSourcesContent
 
 @Composable
 fun WatchSourcesScreen(
@@ -43,36 +39,22 @@ fun WatchSourcesScreen(
         navigationLocked = navigationLocked,
         modifier = modifier,
     ) {
-        AppWatchSourcesStateContent(
+        AppWatchSourcesContent(
             state = state,
             emptyTitle = stringResource(R.string.watch_sources_empty_title),
             emptyMessage = stringResource(R.string.watch_sources_empty_message),
             retryLabel = stringResource(R.string.search_retry),
+            episodeLabel = stringResource(R.string.watch_episodes_short),
+            loadMoreLabel = stringResource(R.string.watch_sources_load_more),
+            enabled = !navigationLocked,
             onRetry = viewModel::retry,
-        ) { sources ->
-                WatchSourcesList(
-                    sources = sources,
-                    enabled = !navigationLocked,
-                    horizontalPadding = UiDimens.ScreenPadding,
-                    episodeSummary = { source ->
-                        source.episodeCount?.let { count ->
-                            formatWatchSourceEpisodeSummary(
-                                episodeCount = count,
-                                episodeLabel = stringResource(R.string.watch_episodes_short),
-                            )
-                        }
-                    },
-                    onSourceClick = { source ->
-                        if (navigationLocked) return@WatchSourcesList
-                        navigationLockedState.value = true
-                        onSourceClick(source)
-                    },
-                    hasMoreItems = state.hasMoreItems,
-                    loadMoreLabel = stringResource(R.string.watch_sources_load_more),
-                    isLoadingMore = state.isLoadingMore,
-                    onLoadMore = viewModel::loadMore,
-                    isRefreshing = state.isRefreshing(),
-                )
-            }
-        }
+            onSourceClick = { source ->
+                if (!navigationLocked) {
+                    navigationLockedState.value = true
+                    onSourceClick(source)
+                }
+            },
+            onLoadMore = viewModel::loadMore,
+        )
     }
+}
