@@ -52,11 +52,10 @@ import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
 import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
-import org.akkirrai.hibiki.shared.home.AppHomeSearchList
+import org.akkirrai.hibiki.shared.home.AppHomeSearchResultsZone
 import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
-import org.akkirrai.hibiki.shared.home.appSearchResultsContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -137,35 +136,31 @@ fun HomeScreen(
         AppHomeContentSwitcher(
             isSearchActive = isSearchActive,
             searchContent = {
-                AppHomeSearchList(
+                AppHomeSearchResultsZone(
+                    state = state.searchResult,
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
-                ) {
-                    appSearchResultsContent(
-                        state = state.searchResult,
-                        onAnimeClick = onAnimeClick,
-                        metaText = { anime ->
-                            anime.buildCardMeta(
-                                announcementLabel = announcementLabel,
-                                movieLabel = movieLabel,
-                            )
-                        },
-                        onLoadMore = { viewModel.dispatch(HomeAction.LoadMoreSearchResults) },
-                        onRetrySearch = {},
-                        loadMoreLabel = searchLoadMoreLabel,
-                        resultsCountLabel = { count ->
-                            pluralStringResource(R.plurals.search_results_count, count, count)
-                        },
-                        emptyTitle = searchEmptyTitle,
-                        emptyMessage = searchEmptyMessage,
-                        emptyIcon = HomeSearchEmptyIcon,
-                        libraryStatusByAnimeId = libraryStatusByAnimeId,
-                        libraryStatusLabel = { category -> stringResource(category.labelResId) },
-                        onItemVisible = { anime ->
-                            viewModel.dispatch(HomeAction.EnrichDescription(anime))
-                        },
-                    )
-                }
+                    onAnimeClick = onAnimeClick,
+                    metaText = { anime ->
+                        anime.buildCardMeta(
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
+                        )
+                    },
+                    onLoadMore = { viewModel.dispatch(HomeAction.LoadMoreSearchResults) },
+                    loadMoreLabel = searchLoadMoreLabel,
+                    resultsCountLabel = { count ->
+                        pluralStringResource(R.plurals.search_results_count, count, count)
+                    },
+                    emptyTitle = searchEmptyTitle,
+                    emptyMessage = searchEmptyMessage,
+                    emptyIcon = HomeSearchEmptyIcon,
+                    libraryStatusByAnimeId = libraryStatusByAnimeId,
+                    libraryStatusLabel = { category -> stringResource(category.labelResId) },
+                    onItemVisible = { anime ->
+                        viewModel.dispatch(HomeAction.EnrichDescription(anime))
+                    },
+                )
             },
             feedContent = {
                 AppHomeFeedZone(
