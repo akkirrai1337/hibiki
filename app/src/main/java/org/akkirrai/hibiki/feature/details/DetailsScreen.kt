@@ -458,8 +458,16 @@ fun DetailsScreen(
         }
 
         if (isLibrarySheetOpen) {
-            LibraryCategorySheet(
+            val categoryLabels = LibraryCategory.entries.associateWith { category ->
+                stringResource(category.labelResId)
+            }
+            AppLibraryCategorySheet(
                 selectedCategory = libraryCategory,
+                title = stringResource(R.string.library_add_title),
+                subtitle = stringResource(R.string.library_add_subtitle),
+                savedNote = stringResource(R.string.library_saved_note),
+                removeAction = stringResource(R.string.library_remove_action),
+                categoryLabels = categoryLabels,
                 onCategoryClick = { category ->
                     libraryRepository.saveToLibrary(currentAnime, category)
                     libraryCategory = category
@@ -470,7 +478,27 @@ fun DetailsScreen(
                     libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
                     isLibrarySheetOpen = false
                 },
-                onDismiss = { isLibrarySheetOpen = false }
+                onDismiss = { isLibrarySheetOpen = false },
+                iconContent = { category, iconModifier ->
+                    Icon(
+                        imageVector = category.icon(),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                        tint = if (category == libraryCategory) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                },
+                selectedIconContent = { iconModifier ->
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = iconModifier,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                },
             )
         }
     }
@@ -740,54 +768,6 @@ private fun DetailContentCard(
         items = informationItems,
         horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun LibraryCategorySheet(
-    selectedCategory: LibraryCategory?,
-    onCategoryClick: (LibraryCategory) -> Unit,
-    onRemoveClick: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val title = stringResource(R.string.library_add_title)
-    val subtitle = stringResource(R.string.library_add_subtitle)
-    val savedNote = stringResource(R.string.library_saved_note)
-    val removeAction = stringResource(R.string.library_remove_action)
-    val categoryLabels = LibraryCategory.entries.associateWith { category ->
-        stringResource(category.labelResId)
-    }
-
-    AppLibraryCategorySheet(
-        selectedCategory = selectedCategory,
-        title = title,
-        subtitle = subtitle,
-        savedNote = savedNote,
-        removeAction = removeAction,
-        categoryLabels = categoryLabels,
-        onCategoryClick = onCategoryClick,
-        onRemoveClick = onRemoveClick,
-        onDismiss = onDismiss,
-        iconContent = { category, iconModifier ->
-            Icon(
-                imageVector = category.icon(),
-                contentDescription = null,
-                modifier = iconModifier,
-                tint = if (category == selectedCategory) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        },
-        selectedIconContent = { iconModifier ->
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = null,
-                modifier = iconModifier,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
     )
 }
 
