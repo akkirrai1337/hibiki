@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.profile.ActivityDay
 import org.akkirrai.hibiki.shared.profile.DistributionSegment
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
+import org.akkirrai.hibiki.shared.profile.buildGenreSegments
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -81,15 +82,7 @@ internal fun buildProfileSnapshot(
         }
         .toList()
     val allMetadata = localData.library.map { it.anime }.distinctBy(Anime::id)
-    val genreSegments = allMetadata.flatMap { it.genres }.groupingBy { it.trim() }
-        .eachCount()
-        .filterKeys(String::isNotBlank)
-        .entries
-        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-        .take(6)
-        .mapIndexed { index, entry ->
-            DistributionSegment(entry.key, entry.value, genrePalette[index % genrePalette.size])
-        }
+    val genreSegments = localData.buildGenreSegments()
 
     return LocalProfileSnapshot(
         watchTimeLabel = formatDurationLabel(resources, localData.activity.sumOf { it.watchedMs }),
@@ -143,5 +136,4 @@ internal fun formatDurationLabel(resources: Resources, durationMs: Long): String
 
 private const val ACTIVITY_HISTORY_DAYS = 30
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
-private val genrePalette = listOf(Color(0xFF48D67B), Color(0xFFF7BC16), Color(0xFFA56CE3), Color(0xFFFF646B), Color(0xFFC24ED3), Color(0xFF737373))
 private val PROFILE_LIBRARY_CATEGORIES = listOf(LibraryCategory.Watching, LibraryCategory.Planned, LibraryCategory.Completed, LibraryCategory.Dropped, LibraryCategory.OnHold, LibraryCategory.Favorite)
