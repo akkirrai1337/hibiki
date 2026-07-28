@@ -72,6 +72,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsSupportSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsExperimentalSection
 import org.akkirrai.hibiki.shared.settings.resolveLanguageModeLabel
 import org.akkirrai.hibiki.shared.settings.resolveThemeModeLabel
+import org.akkirrai.hibiki.shared.settings.resolveNotificationPermissionLabel
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -255,13 +256,13 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun notificationPermissionLabel(state: NotificationPermissionState): String = stringResource(
-    when (state) {
-        NotificationPermissionState.NOT_ASKED -> R.string.settings_notifications_not_asked
-        NotificationPermissionState.GRANTED -> R.string.settings_notifications_enabled
-        NotificationPermissionState.DENIED -> R.string.settings_notifications_disabled
-    },
-)
+private fun notificationPermissionLabel(state: NotificationPermissionState): String =
+    resolveNotificationPermissionLabel(
+        state = state,
+        notAskedLabel = stringResource(R.string.settings_notifications_not_asked),
+        grantedLabel = stringResource(R.string.settings_notifications_enabled),
+        deniedLabel = stringResource(R.string.settings_notifications_disabled),
+    )
 
 @Composable
 private fun SettingsSwitchItem(

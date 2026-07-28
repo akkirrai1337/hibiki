@@ -21,3 +21,14 @@ fun resolveThemeModeLabel(
     ThemeMode.LIGHT -> lightLabel
     ThemeMode.DARK -> darkLabel
 }
+
+fun resolveNotificationPermissionLabel(
+    state: NotificationPermissionState,
+    notAskedLabel: String,
+    grantedLabel: String,
+    deniedLabel: String,
+): String = when (state) {
+    NotificationPermissionState.NOT_ASKED -> notAskedLabel
+    NotificationPermissionState.GRANTED -> grantedLabel
+    NotificationPermissionState.DENIED -> deniedLabel
+}
