@@ -70,6 +70,8 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsPlayerSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsUpdatesSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsSupportSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsExperimentalSection
+import org.akkirrai.hibiki.shared.settings.resolveLanguageModeLabel
+import org.akkirrai.hibiki.shared.settings.resolveThemeModeLabel
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -427,23 +429,21 @@ private fun SettingsAboutItem(
 
 @Composable
 private fun languageModeLabel(mode: LanguageMode): String {
-    return stringResource(
-        when (mode) {
-            LanguageMode.SYSTEM -> R.string.settings_language_system
-            LanguageMode.RUSSIAN -> R.string.settings_language_russian
-            LanguageMode.ENGLISH -> R.string.settings_language_english
-        },
+    return resolveLanguageModeLabel(
+        mode = mode,
+        systemLabel = stringResource(R.string.settings_language_system),
+        russianLabel = stringResource(R.string.settings_language_russian),
+        englishLabel = stringResource(R.string.settings_language_english),
     )
 }
 
 @Composable
 private fun themeModeLabel(mode: ThemeMode): String {
-    return stringResource(
-        when (mode) {
-            ThemeMode.SYSTEM -> R.string.settings_theme_system
-            ThemeMode.LIGHT -> R.string.settings_theme_light
-            ThemeMode.DARK -> R.string.settings_theme_dark
-        },
+    return resolveThemeModeLabel(
+        mode = mode,
+        systemLabel = stringResource(R.string.settings_theme_system),
+        lightLabel = stringResource(R.string.settings_theme_light),
+        darkLabel = stringResource(R.string.settings_theme_dark),
     )
 }
 
