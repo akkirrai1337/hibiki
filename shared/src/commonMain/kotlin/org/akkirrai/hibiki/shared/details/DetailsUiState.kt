@@ -12,3 +12,6 @@ data class DetailsUiState(
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
 )
+
+fun DetailsUiState.hasUserLibraryCategory(): Boolean =
+    libraryCategory != null && libraryCategory != LibraryCategory.Saved

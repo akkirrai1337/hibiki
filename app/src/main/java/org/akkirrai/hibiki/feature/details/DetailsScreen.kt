@@ -85,6 +85,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
+import org.akkirrai.hibiki.shared.details.hasUserLibraryCategory
 import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
@@ -518,9 +519,7 @@ private fun DetailHeroSection(
     onTrailerClick: () -> Unit,
 ) {
     val anime = detailsState.anime
-    val libraryCategory = detailsState.libraryCategory
     val resumeState = detailsState.resumeState
-    val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -528,7 +527,7 @@ private fun DetailHeroSection(
     }
     AppDetailsHeroContent(
         posterExpanded = isAtTop,
-        isInLibrary = isUserLibraryCategorySelected,
+        isInLibrary = detailsState.hasUserLibraryCategory(),
         canWatch = canWatch,
         libraryLabel = stringResource(R.string.details_favorite),
         watchLabel = stringResource(R.string.details_watch),
