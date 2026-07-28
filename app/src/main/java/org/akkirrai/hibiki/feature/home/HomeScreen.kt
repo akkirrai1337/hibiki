@@ -46,6 +46,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
+import org.akkirrai.hibiki.shared.home.AppHomeSearchFilterVisibilityEffect
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
@@ -102,9 +103,10 @@ fun HomeScreen(
         LazyListState()
     }
 
-    LaunchedEffect(hasSearchFilters) {
-        if (!hasSearchFilters) showSearchFilters = false
-    }
+    AppHomeSearchFilterVisibilityEffect(
+        hasSearchFilters = hasSearchFilters,
+        onSearchFiltersUnavailable = { showSearchFilters = false },
+    )
 
     LaunchedEffect(isActive) {
         if (isActive) viewModel.dispatch(HomeAction.Refresh)
