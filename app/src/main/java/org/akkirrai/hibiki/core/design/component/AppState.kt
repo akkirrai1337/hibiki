@@ -8,12 +8,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading as SharedCenteredLoading
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreBlock as SharedLoadMoreBlock
 import org.akkirrai.hibiki.shared.design.component.AppMessageState as SharedMessageState
-
-@Composable
-fun AppCenteredLoading(modifier: Modifier = Modifier) = SharedCenteredLoading(modifier)
 
 @Composable
 fun AppMessageState(
@@ -47,13 +42,3 @@ fun AppMessageState(
     messageMaxLines = messageMaxLines,
     messageOverflow = messageOverflow,
 )
-
-@Composable
-fun AppLoadMoreBlock(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
-    errorMessage: String? = null,
-    loadingLabel: String? = null,
-) = SharedLoadMoreBlock(label, onClick, modifier, isLoading, errorMessage, loadingLabel)
