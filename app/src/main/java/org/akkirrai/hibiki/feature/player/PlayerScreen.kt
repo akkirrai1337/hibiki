@@ -132,7 +132,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
 import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
-import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
+import org.akkirrai.hibiki.shared.player.buildPlayerSettingsRootEntries
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
@@ -1517,7 +1517,7 @@ private fun PlayerSettingsSheet(
                 onClick = { onSelectQuality(quality) },
             )
         }
-    val rootEntries = playerSettingsRootEntries(
+    val rootEntries = buildPlayerSettingsRootEntries(
         speedValues = speedValues,
         voiceoverValues = voiceoverValues,
         playerValues = playerValues,
@@ -1527,6 +1527,14 @@ private fun PlayerSettingsSheet(
         onNavigate = onNavigate,
         onAutoSkipSegmentsChange = onAutoSkipSegmentsChange,
         onAutoPlayNextEpisodeChange = onAutoPlayNextEpisodeChange,
+        voiceoverTitle = stringResource(R.string.watch_player_settings_voiceover),
+        qualityTitle = stringResource(R.string.watch_player_settings_quality),
+        speedTitle = stringResource(R.string.watch_player_settings_speed),
+        autoSkipTitle = stringResource(R.string.watch_player_settings_auto_skip),
+        autoSkipValue = stringResource(if (autoSkipSegments) R.string.watch_player_settings_on else R.string.watch_player_settings_off),
+        autoPlayTitle = stringResource(R.string.watch_player_settings_auto_play_next),
+        autoPlayValue = stringResource(if (autoPlayNextEpisode) R.string.watch_player_settings_on else R.string.watch_player_settings_off),
+        playerTitle = stringResource(R.string.watch_player_settings_player),
     )
 
     BackHandler(enabled = destination != PlayerSettingsDestination.Root) {
@@ -1569,80 +1577,6 @@ private fun PlayerSettingsSheet(
             )
         },
     )
-}
-
-@Composable
-private fun playerSettingsRootEntries(
-    speedValues: List<PlayerSettingsValue>,
-    voiceoverValues: List<PlayerSettingsValue>,
-    playerValues: List<PlayerSettingsValue>,
-    qualityValues: List<PlayerSettingsValue>,
-    autoSkipSegments: Boolean,
-    autoPlayNextEpisode: Boolean,
-    onNavigate: (PlayerSettingsDestination) -> Unit,
-    onAutoSkipSegmentsChange: (Boolean) -> Unit,
-    onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
-): List<PlayerSettingsEntry> = buildList {
-    if (voiceoverValues.size > 1) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Voiceover.name,
-                title = stringResource(R.string.watch_player_settings_voiceover),
-                value = voiceoverValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
-            )
-        )
-    }
-    if (qualityValues.size > 1) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Quality.name,
-                title = stringResource(R.string.watch_player_settings_quality),
-                value = qualityValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Quality) },
-            )
-        )
-    }
-    add(
-        PlayerSettingsEntry(
-            id = PlayerSettingsDestination.Speed.name,
-            title = stringResource(R.string.watch_player_settings_speed),
-            value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
-            onClick = { onNavigate(PlayerSettingsDestination.Speed) },
-        )
-    )
-    add(
-        PlayerSettingsEntry(
-            id = "auto_skip",
-            title = stringResource(R.string.watch_player_settings_auto_skip),
-            value = stringResource(
-                if (autoSkipSegments) R.string.watch_player_settings_on
-                else R.string.watch_player_settings_off,
-            ),
-            onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
-        )
-    )
-    add(
-        PlayerSettingsEntry(
-            id = "auto_play_next",
-            title = stringResource(R.string.watch_player_settings_auto_play_next),
-            value = stringResource(
-                if (autoPlayNextEpisode) R.string.watch_player_settings_on
-                else R.string.watch_player_settings_off,
-            ),
-            onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
-        )
-    )
-    if (playerValues.isNotEmpty()) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Player.name,
-                title = stringResource(R.string.watch_player_settings_player),
-                value = playerValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Player) },
-            )
-        )
-    }
 }
 
 private val PlayerSettingsDestination.titleResId: Int
