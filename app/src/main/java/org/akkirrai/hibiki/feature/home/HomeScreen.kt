@@ -349,7 +349,7 @@ private fun LazyListScope.homeFeedContent(
             )
         },
         posterContent = { anime ->
-            PosterImage(
+            AppPosterImage(
                 primaryUrl = anime.posterUrl,
                 fallbackUrl = anime.posterFallbackUrl,
                 contentDescription = anime.title,
