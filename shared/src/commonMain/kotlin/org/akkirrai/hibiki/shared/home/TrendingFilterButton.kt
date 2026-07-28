@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -19,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeaderDefaults
 import org.akkirrai.hibiki.shared.design.component.AppFloatingPill
@@ -30,7 +31,6 @@ fun <T> AppTrendingFilterButton(
     filters: List<T>,
     selectedLabel: String,
     label: (T) -> String,
-    filterIcon: ImageVector,
     onFilterSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -46,7 +46,7 @@ fun <T> AppTrendingFilterButton(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = filterIcon,
+                    imageVector = Icons.Outlined.FilterList,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -170,7 +169,6 @@ private fun TrendingFilterButton(
         filters = TrendingFilter.entries,
         selectedLabel = localizedContext.getString(selectedFilter.titleResId),
         label = { filter -> localizedContext.getString(filter.titleResId) },
-        filterIcon = Icons.Outlined.FilterList,
         onFilterSelected = onFilterClick,
         modifier = modifier,
     )
