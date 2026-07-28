@@ -44,6 +44,9 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import org.akkirrai.hibiki.shared.player.matchesPreferredPlayer
+import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
+import org.akkirrai.hibiki.shared.player.playerPriority
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -465,17 +468,6 @@ class AnimeWatchRepository(
         }
     }
 
-    private fun playerPriority(name: String?): Int = when {
-        name.containsPlayerToken("kodik") -> 0
-        name.containsPlayerToken("aksor") -> 1
-        name.containsPlayerToken("alloha") -> 2
-        name.containsPlayerToken("sibnet") -> 3
-        name.containsPlayerToken("cvh") -> 4
-        name.containsPlayerToken("vk") -> 5
-        name.containsPlayerToken("aniboom") -> 6
-        else -> 10
-    }
-
     private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
         LanguageMode.ENGLISH -> "en"
         LanguageMode.RUSSIAN -> "ru"
@@ -487,32 +479,6 @@ class AnimeWatchRepository(
 
     private fun sourceLanguageKey(titleId: String): String =
         "${sourceForTitle(titleId).descriptor.id.value}:${currentLanguageKey()}"
-
-    private fun matchesPreferredPlayer(
-        candidatePlayerName: String?,
-        preferredPlayerName: String?,
-    ): Boolean {
-        if (preferredPlayerName.isNullOrBlank()) return false
-        val normalizedPreferred = preferredPlayerName.normalizePlayerName()
-        val normalizedCandidate = candidatePlayerName.normalizePlayerName()
-        return normalizedCandidate == normalizedPreferred ||
-            normalizedCandidate.contains(normalizedPreferred) ||
-            normalizedPreferred.contains(normalizedCandidate)
-    }
-
-    private fun matchesPreferredQuality(
-        candidateQuality: String?,
-        preferredQuality: String?,
-    ): Boolean {
-        return !preferredQuality.isNullOrBlank() &&
-            candidateQuality?.trim()?.equals(preferredQuality.trim(), ignoreCase = true) == true
-    }
-
-    private fun String?.containsPlayerToken(token: String): Boolean =
-        this.normalizePlayerName().contains(token)
-
-    private fun String?.normalizePlayerName(): String =
-        this.orEmpty().trim().lowercase()
 
     private fun String?.safeHost(): String {
         if (this.isNullOrBlank()) return "unknown"
