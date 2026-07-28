@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.animation
+package org.akkirrai.hibiki.shared.design.animation
 
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
@@ -12,12 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 
-/**
- * Runs a continuous float animation directly in a graphics layer.
- *
- * Reading the animated value inside [graphicsLayer] keeps each frame out of composition and layout.
- * The transform can animate layer-backed properties such as rotation, alpha, scale, and translation.
- */
+/** Runs a continuous graphics-layer animation without recomposing the content each frame. */
 @Composable
 fun Modifier.infiniteGraphicsAnimation(
     durationMillis: Int,

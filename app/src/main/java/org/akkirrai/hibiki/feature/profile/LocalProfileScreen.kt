@@ -37,7 +37,7 @@ import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.core.design.animation.continuousRotation
+import org.akkirrai.hibiki.shared.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
