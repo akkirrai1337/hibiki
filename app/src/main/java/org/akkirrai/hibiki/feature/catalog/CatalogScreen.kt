@@ -67,6 +67,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogQueryEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
@@ -109,9 +110,10 @@ fun CatalogScreen(
     }
     val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
 
-    LaunchedEffect(hasCatalogFilters) {
-        if (!hasCatalogFilters) isFilterSheetOpen = false
-    }
+    AppCatalogFilterVisibilityEffect(
+        hasFilters = hasCatalogFilters,
+        onFiltersUnavailable = { isFilterSheetOpen = false },
+    )
 
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
