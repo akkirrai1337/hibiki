@@ -17,7 +17,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -58,7 +57,6 @@ import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.appHomeAnimeSection
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
 import org.akkirrai.hibiki.shared.home.HomeErrorState
-import org.akkirrai.hibiki.shared.home.AppHomeErrorIconContainer
 import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
 import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
@@ -144,15 +142,6 @@ fun HomeScreen(
             retryLabel = stringResource(R.string.search_retry),
             onRetry = { viewModel.dispatch(HomeAction.Refresh) },
             modifier = modifier,
-            iconContent = {
-                AppHomeErrorIconContainer {
-                    Icon(
-                        imageVector = Icons.Outlined.WarningAmber,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            },
         )
         return
     }
