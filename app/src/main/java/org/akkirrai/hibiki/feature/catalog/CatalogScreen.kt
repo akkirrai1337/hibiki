@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SortByAlpha
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Whatshot
@@ -246,9 +243,6 @@ fun CatalogScreen(
                     onSortSelected = viewModel::selectSort,
                 )
             },
-            searchIcon = Icons.Outlined.Search,
-            filterIcon = Icons.Outlined.FilterList,
-            clearIcon = Icons.Outlined.Close,
             modifier = Modifier.align(Alignment.TopStart),
         )
     }
