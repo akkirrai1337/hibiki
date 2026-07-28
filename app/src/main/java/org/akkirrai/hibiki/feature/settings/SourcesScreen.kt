@@ -19,7 +19,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.annotation.StringRes
-import coil3.compose.AsyncImage
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
@@ -38,6 +37,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceLanguageContent
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
+import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
 import org.akkirrai.hibiki.shared.source.SourceSearchEmptyHorizontalPadding
 import org.akkirrai.hibiki.shared.source.SourceScreenDefaultBottomContentPadding
@@ -87,11 +87,9 @@ fun SourcesScreen(
                         items = section.items,
                         itemKey = { it.id },
                         sourceIconContent = { iconModifier ->
-                            AsyncImage(
-                                model = source.iconUrl,
+                            AppSourceIconImage(
+                                url = source.iconUrl,
                                 placeholder = painterResource(source.iconRes),
-                                error = painterResource(source.iconRes),
-                                contentDescription = null,
                                 modifier = iconModifier,
                             )
                         },
@@ -167,11 +165,9 @@ fun SourcesScreen(
                                 },
                                 modifier = itemModifier,
                                 iconContent = { iconModifier ->
-                                    AsyncImage(
-                                        model = source.iconUrl,
+                                    AppSourceIconImage(
+                                        url = source.iconUrl,
                                         placeholder = painterResource(source.iconRes),
-                                        error = painterResource(source.iconRes),
-                                        contentDescription = null,
                                         modifier = iconModifier,
                                     )
                                 },
