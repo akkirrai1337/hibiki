@@ -33,3 +33,11 @@ fun WatchSourcesScreenState.withSources(
         errorMessage = null,
     )
 }
+
+fun WatchSourcesScreenState.showAllWatchSources(): WatchSourcesScreenState = copy(
+    showAllItems = true,
+    items = allItems,
+    hasMoreItems = false,
+    isLoadingMore = false,
+    errorMessage = null,
+)

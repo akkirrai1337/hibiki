@@ -19,6 +19,7 @@ import org.akkirrai.hibiki.shared.player.hasMoreWatchSources
 import org.akkirrai.hibiki.shared.player.mergeWatchSources
 import org.akkirrai.hibiki.shared.player.visibleWatchSources
 import org.akkirrai.hibiki.shared.player.withSources
+import org.akkirrai.hibiki.shared.player.showAllWatchSources
 
 class WatchSourcesViewModel(
     private val animeId: String,
@@ -41,15 +42,7 @@ class WatchSourcesViewModel(
         if (current.items.isEmpty()) {
             loadSources(forceRefresh = true)
         } else {
-            presenter.update {
-                it.copy(
-                    showAllItems = true,
-                    items = it.allItems,
-                    hasMoreItems = false,
-                    isLoadingMore = false,
-                    errorMessage = null,
-                )
-            }
+            presenter.update(WatchSourcesScreenState::showAllWatchSources)
         }
     }
 
@@ -132,15 +125,7 @@ class WatchSourcesViewModel(
     }
 
     fun loadMore() {
-        presenter.update {
-            it.copy(
-                showAllItems = true,
-                items = it.allItems,
-                hasMoreItems = false,
-                isLoadingMore = false,
-                errorMessage = null,
-            )
-        }
+        presenter.update(WatchSourcesScreenState::showAllWatchSources)
     }
 
     override fun onCleared() {
