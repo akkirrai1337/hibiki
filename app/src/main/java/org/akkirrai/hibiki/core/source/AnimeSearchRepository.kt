@@ -27,6 +27,7 @@ import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
+import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -266,7 +267,7 @@ class AnimeSearchRepository(
 
     private fun AnimeTitle.buildSubtitle(fallbackSubtitle: String?): String {
         val parts = listOfNotNull(
-            type?.toDisplayType(),
+            type?.let(::resolveDisplayTypeLabel),
             year?.toString(),
         )
         return parts.joinToString(" · ").ifBlank { fallbackSubtitle.orEmpty() }
@@ -416,20 +417,6 @@ class AnimeSearchRepository(
     private fun getCachedDetails(key: String): Anime? {
         val cached = detailsCache[key] ?: return null
         return cached.anime
-    }
-
-    private fun String.toDisplayType(): String {
-        return when (uppercase()) {
-            "TV" -> "TV"
-            "TV_SHORT" -> "TV Short"
-            "OVA" -> "OVA"
-            "ONA" -> "ONA"
-            "MOVIE" -> "Movie"
-            "SHORT_MOVIE", "SHORT-MOVIE" -> "Short Movie"
-            "SPECIAL" -> "Special"
-            else -> replace("_", " ").replace("-", " ")
-                .replaceFirstChar { it.uppercase() }
-        }
     }
 
     private data class CachedSearchResults(
