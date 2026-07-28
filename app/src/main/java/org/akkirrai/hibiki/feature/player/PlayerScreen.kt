@@ -39,7 +39,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -1230,13 +1229,7 @@ fun PlayerScreen(
                                 settingsVisible = true
                                 viewModel.loadSettingsOptions()
                             },
-                            settingsContent = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Settings,
-                                    contentDescription = stringResource(R.string.watch_player_settings),
-                                    tint = Color.White,
-                                )
-                            },
+                            settingsContentDescription = stringResource(R.string.watch_player_settings),
                         )
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
