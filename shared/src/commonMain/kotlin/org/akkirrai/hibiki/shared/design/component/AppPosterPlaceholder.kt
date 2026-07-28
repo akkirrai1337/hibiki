@@ -16,7 +16,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppPosterPlaceholder(
-    icon: ImageVector = Icons.Outlined.Image,
+    icon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
     AppTonalSurface(
@@ -36,7 +36,13 @@ fun AppPosterPlaceholder(
 @Composable
 fun AppPosterPlaceholder(
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit = {
+        Icon(
+            imageVector = Icons.Outlined.Image,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    },
 ) {
     Box(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
