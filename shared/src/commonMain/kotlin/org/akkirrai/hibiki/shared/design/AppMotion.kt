@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design
+package org.akkirrai.hibiki.shared.design
 
 object AppMotion {
     const val ScreenTransitionDurationMillis = 350

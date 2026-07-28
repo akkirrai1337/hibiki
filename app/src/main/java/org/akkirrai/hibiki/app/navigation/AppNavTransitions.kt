@@ -5,7 +5,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import org.akkirrai.hibiki.core.design.AppMotion
+import org.akkirrai.hibiki.shared.design.AppMotion
 
 fun appScreenEnterTransition(): EnterTransition {
     return fadeIn(
