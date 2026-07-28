@@ -42,6 +42,7 @@ import org.akkirrai.hibiki.shared.onboarding.formatOnboardingSourceLanguageSumma
 import org.akkirrai.hibiki.shared.onboarding.filterOnboardingSourcesByLanguage
 import org.akkirrai.hibiki.shared.onboarding.previous
 import org.akkirrai.hibiki.shared.onboarding.next
+import org.akkirrai.hibiki.shared.onboarding.includeSelectedOnboardingSource
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
@@ -63,12 +64,12 @@ fun FirstLaunchOnboarding(
     var showSourceList by rememberSaveable { mutableStateOf(false) }
     val selectedSource = selectedSourceValue?.let(::SourceId)
     val displayedSources = remember(localizedSources, selectedSourceValue, allSources) {
-        val selected = allSources.firstOrNull { it.id.value == selectedSourceValue }
-        if (selected != null && selected !in localizedSources) {
-            listOf(selected) + localizedSources
-        } else {
-            localizedSources
-        }
+        includeSelectedOnboardingSource(
+            allSources = allSources,
+            visibleSources = localizedSources,
+            selectedKey = selectedSourceValue,
+            keyOf = { it.id.value },
+        )
     }
 
     LaunchedEffect(localizedSources, initialSource) {
