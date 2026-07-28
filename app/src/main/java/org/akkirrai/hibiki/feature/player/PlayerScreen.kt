@@ -1207,13 +1207,7 @@ fun PlayerScreen(
                                     discordRpcManager.setPictureInPictureActive(false)
                                 }
                             },
-                            pictureInPictureContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_player_picture_in_picture_24),
-                                    contentDescription = stringResource(R.string.watch_player_picture_in_picture),
-                                    tint = Color.White,
-                                )
-                            },
+                            pictureInPictureContentDescription = stringResource(R.string.watch_player_picture_in_picture),
                             onSettingsClick = {
                                 keepControlsVisible()
                                 settingsDestination = PlayerSettingsDestination.Root
