@@ -94,6 +94,7 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -1458,10 +1459,11 @@ private data class TextureVideoScale(
 )
 
 @StringRes
-private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
-    VideoScaleMode.FIT -> R.string.watch_player_video_scale_fit
-    VideoScaleMode.CROP -> R.string.watch_player_video_scale_crop
-    VideoScaleMode.STRETCH -> R.string.watch_player_video_scale_stretch
+private fun VideoScaleMode.contentDescriptionResId(): Int = when (localizationKey()) {
+    "watch_player_video_scale_fit" -> R.string.watch_player_video_scale_fit
+    "watch_player_video_scale_crop" -> R.string.watch_player_video_scale_crop
+    "watch_player_video_scale_stretch" -> R.string.watch_player_video_scale_stretch
+    else -> error("Unknown video scale localization key")
 }
 
 private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
