@@ -106,7 +106,6 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
-import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
 import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
@@ -115,6 +114,7 @@ import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
 import org.akkirrai.hibiki.shared.player.resolveLocalizedEpisodeTitle
+import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
 import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
@@ -1217,7 +1217,12 @@ fun PlayerScreen(
                 AppPlaylistBottomSheet(
                     currentEpisodeId = state.currentEpisodeId,
                     episodes = state.episodes,
-                    headline = ::buildEpisodeTitle,
+                    headline = { episode ->
+                        resolveEpisodeNumberTitle(
+                            episodeNumber = episode.number,
+                            episodeLabel = { number -> stringResource(R.string.watch_episode_number, number) },
+                        )
+                    },
                     onEpisodeClick = { episodeId ->
                         dismissPanel()
                         runPlaybackSwitch { viewModel.selectEpisode(episodeId) }
@@ -1480,12 +1485,6 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
         PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
         PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
     }
-}
-
-@Composable
-private fun buildEpisodeTitle(episode: WatchEpisode): String {
-    val number = formatEpisodeNumber(episode.number)
-    return stringResource(R.string.watch_episode_number, number)
 }
 
 @Composable
