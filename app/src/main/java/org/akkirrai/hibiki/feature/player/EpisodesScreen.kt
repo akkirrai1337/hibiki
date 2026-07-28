@@ -42,6 +42,7 @@ import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.forDisplay
 import org.akkirrai.hibiki.shared.player.shouldShowAction
+import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRowContent
 import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -197,6 +198,50 @@ fun EpisodesScreen(
 
 @Composable
 private fun EpisodeRow(
+    episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
+    status: EpisodeProgressStatus,
+    downloadState: OfflineEpisodeDownloadState,
+    showDownloadControls: Boolean,
+    shape: androidx.compose.foundation.shape.RoundedCornerShape,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+) {
+    AppEpisodeDownloadRowContent(
+        episode = episode,
+        progress = progress,
+        status = status,
+        downloadState = downloadState.toEpisodeDownloadActionState(),
+        showDownloadControls = showDownloadControls,
+        shape = shape,
+        enabled = enabled,
+        watchedHeadline = { number -> stringResource(R.string.watch_episode_headline_watched, number) },
+        defaultHeadline = { number -> stringResource(R.string.watch_episode_headline, number) },
+        watchedLabel = stringResource(R.string.watch_status_watched),
+        queuedLabel = stringResource(R.string.watch_status_queued),
+        downloadingLabel = { percent -> stringResource(R.string.watch_status_downloading, percent) },
+        pausedLabel = stringResource(R.string.watch_status_paused),
+        downloadedLabel = stringResource(R.string.watch_downloaded),
+        failedLabel = stringResource(R.string.watch_status_failed),
+        downloadedContentDescription = stringResource(R.string.watch_downloaded),
+        downloadContentDescription = stringResource(R.string.watch_download),
+        pauseContentDescription = stringResource(R.string.watch_pause),
+        resumeContentDescription = stringResource(R.string.watch_resume),
+        removeContentDescription = stringResource(R.string.watch_remove_download),
+        onClick = onClick,
+        onDownloadClick = onDownloadClick,
+        onPauseClick = onPauseClick,
+        onResumeClick = onResumeClick,
+        onRemoveClick = onRemoveClick,
+    )
+}
+
+@Composable
+private fun LegacyEpisodeRow(
     episode: WatchEpisode,
     progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
