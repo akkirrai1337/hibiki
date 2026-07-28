@@ -86,6 +86,7 @@ import org.akkirrai.hibiki.shared.details.isNullOrZero
 import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
 import org.akkirrai.hibiki.shared.model.toAnime
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
@@ -806,7 +807,7 @@ private fun PosterPreviewOverlay(
             posterScale = posterScale,
             onDismiss = ::dismissAnimated,
             posterContent = { posterModifier ->
-                PosterImage(
+                AppPosterImage(
                     primaryUrl = anime.posterUrl,
                     fallbackUrl = anime.posterFallbackUrl,
                     contentDescription = anime.title,
