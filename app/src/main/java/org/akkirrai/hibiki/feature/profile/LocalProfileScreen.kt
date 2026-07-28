@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -32,13 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
-import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.ProfileAvatarPlaceholder
+import org.akkirrai.hibiki.shared.profile.ProfileAvatarImage
 import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
 import org.akkirrai.hibiki.shared.profile.ProfileLargePadding
 import org.akkirrai.hibiki.shared.profile.ProfileSmallPadding
@@ -222,7 +221,7 @@ private fun LocalAvatar(
             if (avatarUri.isNullOrBlank()) {
                 ProfileAvatarPlaceholder(modifier = avatarModifier)
             } else {
-                AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                ProfileAvatarImage(url = avatarUri)
             }
         },
     )
