@@ -140,7 +140,11 @@ fun LocalProfileScreen(
                     pageContent = { page ->
                         when (LocalProfileTab.entries[page]) {
                             LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
-                            LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
+                            LocalProfileTab.Activity -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+                                bottomContentPadding = bottomContentPadding,
+                            ) {
+                                AnalyticsCard(snapshot)
+                            }
                             LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
                         }
                     },
@@ -217,13 +221,6 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
             },
         )
         RecentLibraryCard(snapshot.recentLibraryItems)
-    }
-}
-
-@Composable
-private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(bottomContentPadding = bottomContentPadding) {
-        AnalyticsCard(snapshot)
     }
 }
 
