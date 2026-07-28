@@ -1,9 +1,7 @@
 package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -17,18 +15,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
-import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
-import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
-import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentList
 import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentState
+import org.akkirrai.hibiki.shared.home.appRecentUpdatesAnimeListContent
 
 @Composable
 fun RecentUpdatesScreen(
@@ -39,6 +32,8 @@ fun RecentUpdatesScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
     val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
         if (state.recentlyUpdated.isEmpty()) viewModel.refresh()
@@ -74,39 +69,14 @@ fun RecentUpdatesScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                appVerticalAnimeListContent(
+                appRecentUpdatesAnimeListContent(
                     items = state.recentlyUpdated,
-                    metaText = { anime ->
-                        anime.buildCardMeta(
-                            announcementLabel = stringResource(R.string.anime_meta_announcement),
-                            movieLabel = stringResource(R.string.anime_meta_movie),
-                        )
-                    },
                     onAnimeClick = onAnimeClick,
+                    libraryStatusByAnimeId = libraryStatusByAnimeId,
+                    libraryStatusLabel = { category -> stringResource(category.labelResId) },
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                    posterContent = { anime ->
-                        AppPosterImage(
-                            primaryUrl = anime.posterUrl,
-                            fallbackUrl = anime.posterFallbackUrl,
-                            contentDescription = anime.title,
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = {
-                                AppPosterPlaceholder(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .aspectRatio(2f / 3f),
-                                )
-                            },
-                        )
-                    },
-                    posterFooterContent = { anime ->
-                        libraryStatusByAnimeId[anime.id]?.let { category ->
-                            LibraryStatusPosterFooter(
-                                label = stringResource(category.labelResId),
-                                icon = category.icon(),
-                            )
-                        }
-                    },
                 )
                 if (state.isRecentUpdatesLoadingMore) {
                     item(key = "recent_updates_loading_more") {
