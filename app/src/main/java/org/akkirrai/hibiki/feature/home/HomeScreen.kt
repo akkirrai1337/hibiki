@@ -44,7 +44,7 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
-import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
+import org.akkirrai.hibiki.shared.home.AppHomeFeedZone
 import org.akkirrai.hibiki.shared.home.AppHomeActivationEffect
 import org.akkirrai.hibiki.shared.home.AppHomeSearchFilterVisibilityEffect
 import org.akkirrai.hibiki.shared.home.HomeErrorState
@@ -52,12 +52,10 @@ import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight
 import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
-import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
-import org.akkirrai.hibiki.shared.home.appHomeFeedContent
 import org.akkirrai.hibiki.shared.home.appSearchResultsContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -72,9 +70,6 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    val continueAnime = state.continueAnime
-    val recentlyWatched = state.recentlyWatched
-    val recentlyAddedToLibrary = state.recentlyAddedToLibrary
     val errorMessage = state.errorMessage
     val hasContent = state.hasFeedContent
     val focusManager = LocalFocusManager.current
@@ -173,40 +168,31 @@ fun HomeScreen(
                 }
             },
             feedContent = {
-                AppHomePullToRefresh(
-                    isRefreshing = state.isLoading,
-                    onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
-                    state = pullToRefreshState,
+                AppHomeFeedZone(
+                    state = state,
+                    listState = homeListState,
+                    pullToRefreshState = pullToRefreshState,
+                    topContentPadding = HomeContentTopPadding,
+                    bottomContentPadding = bottomContentPadding,
                     indicatorTopPadding = HomePullRefreshIndicatorTopOffset,
+                    continueSectionTitle = continueSectionTitle,
+                    continueEmptyTitle = continueEmptyTitle,
+                    continueEmptyMessage = continueEmptyMessage,
+                    continueOpenHint = continueOpenHint,
+                    recentlyWatchedTitle = recentlyWatchedTitle,
+                    recentlyAddedTitle = recentlyAddedTitle,
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
+                    personalEmptyTitle = personalEmptyTitle,
+                    personalEmptyMessage = personalEmptyMessage,
+                    personalEmptyActionLabel = personalEmptyActionLabel,
+                    onRefresh = { viewModel.dispatch(HomeAction.Refresh) },
+                    onAnimeClick = onAnimeClick,
+                    onBrowseCatalog = onBrowseCatalog,
+                    onOpenLibrary = onOpenLibrary,
+                    sourceBadgeContent = { anime -> AnimeSourceBadge(titleId = anime.id) },
                     modifier = Modifier.fillMaxSize(),
-                ) {
-                    AppHomeFeedList(
-                        state = homeListState,
-                        topContentPadding = HomeContentTopPadding,
-                        bottomContentPadding = bottomContentPadding,
-                    ) {
-                        appHomeFeedContent(
-                            continueAnime = continueAnime,
-                            recentlyWatched = recentlyWatched,
-                            recentlyAddedToLibrary = recentlyAddedToLibrary,
-                            onAnimeClick = onAnimeClick,
-                            continueSectionTitle = continueSectionTitle,
-                            continueEmptyTitle = continueEmptyTitle,
-                            continueEmptyMessage = continueEmptyMessage,
-                            continueOpenHint = continueOpenHint,
-                            recentlyWatchedTitle = recentlyWatchedTitle,
-                            recentlyAddedTitle = recentlyAddedTitle,
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                            personalEmptyTitle = personalEmptyTitle,
-                            personalEmptyMessage = personalEmptyMessage,
-                            personalEmptyActionLabel = personalEmptyActionLabel,
-                            onBrowseCatalog = onBrowseCatalog,
-                            onOpenLibrary = onOpenLibrary,
-                            sourceBadgeContent = { anime -> AnimeSourceBadge(titleId = anime.id) },
-                        )
-                    }
-                }
+                )
             },
         )
 
