@@ -13,9 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -148,7 +147,7 @@ fun AnimeSearchFiltersSheet(
                 statusTitle = stringResource(R.string.search_filters_status),
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
-                typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
+                typeIcon = { typeIcon(it) },
                 typeLabel = { typeLabel(it) },
                 statusIcon = { statusIcon(it.id) },
                 optionText = optionText,
@@ -206,7 +205,7 @@ private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
 
 @Composable
-private fun statusIcon(alias: String): ImageVector {
+private fun statusIcon(alias: String): androidx.compose.ui.graphics.painter.Painter {
     val drawable = when (AnimeStatus.fromAlias(alias)) {
         AnimeStatus.Finished -> R.drawable.animite_finished
         AnimeStatus.Releasing -> R.drawable.animite_releasing
@@ -214,16 +213,20 @@ private fun statusIcon(alias: String): ImageVector {
         AnimeStatus.Cancelled -> R.drawable.animite_cancelled
         AnimeStatus.Hiatus -> R.drawable.animite_hiatus
     }
-    return ImageVector.vectorResource(drawable)
+    return painterResource(drawable)
 }
 
 private fun typeLabel(type: AnimeTypeAlias): String = type.alias.uppercase()
 
-private fun typeIcon(type: AnimeTypeAlias): Int = when (type) {
-    AnimeTypeAlias.Tv -> R.drawable.animite_tv
-    AnimeTypeAlias.Ona -> R.drawable.animite_ona
-    AnimeTypeAlias.Ova -> R.drawable.animite_ova
-    AnimeTypeAlias.Movie -> R.drawable.animite_movie
+@Composable
+private fun typeIcon(type: AnimeTypeAlias): androidx.compose.ui.graphics.painter.Painter {
+    val drawable = when (type) {
+        AnimeTypeAlias.Tv -> R.drawable.animite_tv
+        AnimeTypeAlias.Ona -> R.drawable.animite_ona
+        AnimeTypeAlias.Ova -> R.drawable.animite_ova
+        AnimeTypeAlias.Movie -> R.drawable.animite_movie
+    }
+    return painterResource(drawable)
 }
 
 private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)

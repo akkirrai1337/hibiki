@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -29,7 +29,7 @@ fun <T> AppConnectedToggleFilter(
     entries: List<T>,
     selected: T?,
     onSelected: (T?) -> Unit,
-    icon: @Composable (T) -> ImageVector,
+    icon: @Composable (T) -> Painter,
     text: @Composable (T) -> String,
     arrowContent: @Composable (Modifier) -> Unit,
     allowClearSelection: Boolean = false,
@@ -70,7 +70,7 @@ private fun <T> AppConnectedToggleFilterItem(
     isLast: Boolean,
     onSelected: (T?) -> Unit,
     allowClearSelection: Boolean,
-    icon: @Composable (T) -> ImageVector,
+    icon: @Composable (T) -> Painter,
     text: @Composable (T) -> String,
     modifier: Modifier = Modifier,
 ) {
@@ -104,7 +104,7 @@ private fun <T> AppConnectedToggleFilterItem(
             verticalArrangement = Arrangement.spacedBy(UiDimens.ConnectedFilterItemGap),
         ) {
             Icon(
-                imageVector = icon(entry),
+                painter = icon(entry),
                 contentDescription = text(entry),
                 modifier = Modifier
                     .graphicsLayer { alpha = 0.5f }

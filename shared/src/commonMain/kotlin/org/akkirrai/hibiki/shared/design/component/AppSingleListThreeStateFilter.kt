@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import org.akkirrai.hibiki.shared.design.UiDimens
 
@@ -42,7 +42,7 @@ fun <T> AppSingleListThreeStateFilter(
     onChange: (Set<String>, Set<String>) -> Unit,
     id: (T) -> String,
     text: @Composable (T) -> String,
-    optionIcon: @Composable ((T) -> ImageVector?)? = null,
+    optionIcon: @Composable ((T) -> Painter?)? = null,
     maxCollapsedItems: Int? = null,
     maxCollapsedGroups: Int? = null,
     allowExclusion: Boolean = true,
@@ -153,7 +153,7 @@ private fun <T> AppSingleListThreeStateFlowRow(
     excluded: Set<String>,
     id: (T) -> String,
     text: @Composable (T) -> String,
-    optionIcon: @Composable ((T) -> ImageVector?)?,
+    optionIcon: @Composable ((T) -> Painter?)?,
     onChange: (Set<String>, Set<String>) -> Unit,
     allowExclusion: Boolean,
 ) {
@@ -198,7 +198,7 @@ private fun <T> AppSingleListThreeStateFlowRow(
 @Composable
 private fun AppSingleListFilterChip(
     color: Color,
-    icon: ImageVector?,
+    icon: Painter?,
     text: String,
     onClick: () -> Unit,
 ) {
@@ -213,7 +213,7 @@ private fun AppSingleListFilterChip(
         horizontalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterChipContentGap),
     ) {
         icon?.let {
-            Icon(it, null, tint = animatedColor, modifier = Modifier.size(UiDimens.ThreeStateFilterChipIconSize))
+            Icon(painter = it, contentDescription = null, tint = animatedColor, modifier = Modifier.size(UiDimens.ThreeStateFilterChipIconSize))
         }
         AnimatedContent(targetState = text, label = "filter_chip_text") { currentText ->
             Text(

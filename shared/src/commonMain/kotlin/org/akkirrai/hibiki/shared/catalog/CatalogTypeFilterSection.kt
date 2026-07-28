@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.shared.catalog
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppConnectedToggleFilter
 
 @Composable
@@ -12,7 +11,7 @@ fun AppCatalogTypeFilterSection(
     entries: List<AnimeTypeAlias>,
     selected: AnimeTypeAlias?,
     onSelected: (AnimeTypeAlias?) -> Unit,
-    typeIcon: @Composable (AnimeTypeAlias) -> ImageVector,
+    typeIcon: @Composable (AnimeTypeAlias) -> Painter,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     arrowIcon: Painter,
 ) {
