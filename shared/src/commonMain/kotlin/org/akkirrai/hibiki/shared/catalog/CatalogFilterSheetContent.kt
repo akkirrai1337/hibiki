@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetContentContainer
@@ -37,8 +38,8 @@ fun AppCatalogFilterSheetContent(
     resetLabel: String,
     applyLabel: String,
     dropdownIcon: ImageVector,
-    resetIcon: ImageVector,
-    applyIcon: ImageVector,
+    resetIcon: Painter,
+    applyIcon: Painter,
     typeIcon: @Composable (AnimeTypeAlias) -> ImageVector,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     statusIcon: @Composable (AnimeCatalogFilterOption) -> ImageVector?,

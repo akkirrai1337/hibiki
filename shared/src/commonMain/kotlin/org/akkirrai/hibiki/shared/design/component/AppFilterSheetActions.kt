@@ -12,7 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import org.akkirrai.hibiki.shared.design.UiDimens
 
@@ -21,8 +21,8 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 fun AppFilterSheetActions(
     resetLabel: String,
     applyLabel: String,
-    resetIcon: ImageVector,
-    applyIcon: ImageVector,
+    resetIcon: Painter,
+    applyIcon: Painter,
     onReset: () -> Unit,
     onApply: () -> Unit,
     modifier: Modifier = Modifier,
@@ -40,13 +40,13 @@ fun AppFilterSheetActions(
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
             ),
         ) {
-            Icon(resetIcon, contentDescription = null, modifier = Modifier.size(UiDimens.FilterSheetActionIconSize))
+            Icon(painter = resetIcon, contentDescription = null, modifier = Modifier.size(UiDimens.FilterSheetActionIconSize))
             Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
             Text(text = resetLabel, fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionButtonGap))
         Button(onClick = onApply) {
-            Icon(applyIcon, contentDescription = null, modifier = Modifier.size(UiDimens.FilterSheetActionIconSize))
+            Icon(painter = applyIcon, contentDescription = null, modifier = Modifier.size(UiDimens.FilterSheetActionIconSize))
             Spacer(modifier = Modifier.size(UiDimens.FilterSheetActionContentGap))
             Text(text = applyLabel, fontWeight = FontWeight.SemiBold)
         }
