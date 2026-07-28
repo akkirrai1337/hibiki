@@ -1,7 +1,5 @@
 package org.akkirrai.hibiki.feature.search
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -23,12 +20,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
+import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.search.AppSearchContentList
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.design.icon
+import org.akkirrai.hibiki.core.source.labelResId
+import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
@@ -92,12 +92,10 @@ fun SearchScreen(
                     contentDescription = anime.title,
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
-                        Box(
+                        AppPosterPlaceholder(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(2f / 3f)
-                                .background(MaterialTheme.colorScheme.surfaceContainer),
-                            contentAlignment = Alignment.Center,
+                                .aspectRatio(2f / 3f),
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Image,
@@ -110,7 +108,10 @@ fun SearchScreen(
             },
             posterFooterContent = { anime ->
                 libraryStatusByAnimeId[anime.id]?.let { category ->
-                    LibraryStatusPosterFooter(category)
+                    LibraryStatusPosterFooter(
+                        label = stringResource(category.labelResId),
+                        icon = category.icon(),
+                    )
                 }
             },
         )
