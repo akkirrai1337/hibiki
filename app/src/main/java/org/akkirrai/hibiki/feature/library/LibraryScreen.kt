@@ -116,14 +116,6 @@ fun LibraryScreen(
                 AppLibraryEmptyState(
                     title = stringResource(R.string.library_empty_title),
                     message = stringResource(R.string.library_empty_body),
-                    iconContent = { iconModifier ->
-                        Icon(
-                            imageVector = Icons.Outlined.BookmarkBorder,
-                            contentDescription = null,
-                            modifier = iconModifier,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
                 )
             } else {
                 AppLibraryEmptyState(
