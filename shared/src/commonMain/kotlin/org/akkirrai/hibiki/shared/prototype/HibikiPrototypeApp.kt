@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -80,6 +82,7 @@ import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.navigation.AppDestination
+import org.akkirrai.hibiki.shared.search.AppSearchField
 
 @Composable
 fun HibikiAppShell(
@@ -533,12 +536,14 @@ private fun ColumnScope.CatalogScreenContent(
     sectionTitle: String,
 ) {
     Spacer(Modifier.height(20.dp))
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
+    AppSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        onSearch = {},
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        placeholder = { Text(appText(AppTextKey.SearchPlaceholder)) },
+        placeholder = appText(AppTextKey.SearchPlaceholder),
+        searchContentDescription = null,
+        searchIcon = Icons.Outlined.Search,
     )
     if (filterCatalog?.genreOptions?.isNotEmpty() == true) {
         Spacer(Modifier.height(10.dp))
