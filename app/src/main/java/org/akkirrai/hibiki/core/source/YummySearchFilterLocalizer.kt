@@ -4,6 +4,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.source.formatFilterFallbackLabel
 import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyTypeFilterLabel
 
 internal object YummySearchFilterLocalizer {
     fun localize(
@@ -14,7 +15,9 @@ internal object YummySearchFilterLocalizer {
             sortOptions = catalog.sortOptions.map {
                 it.copy(title = localizeYummySortFilterLabel(it.id, it.title, preferEnglish))
             },
-            typeOptions = catalog.typeOptions.map { it.localize(typeLabels, preferEnglish) },
+            typeOptions = catalog.typeOptions.map {
+                it.copy(title = localizeYummyTypeFilterLabel(it.id, it.title, preferEnglish))
+            },
             // Statuses and genres belong to the source and must stay in its language.
             statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish = false) },
             genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish = false) },
@@ -40,16 +43,6 @@ internal object YummySearchFilterLocalizer {
     private data class LocalizedLabel(
         val ru: String,
         val en: String,
-    )
-
-    private val typeLabels = mapOf(
-        "tv" to LocalizedLabel("Сериал", "Series"),
-        "movie" to LocalizedLabel("Полнометражный фильм", "Feature film"),
-        "short_movie" to LocalizedLabel("Короткометражный фильм", "Short film"),
-        "ova" to LocalizedLabel("OVA", "OVA"),
-        "special" to LocalizedLabel("Спэшл", "Special"),
-        "short_serial" to LocalizedLabel("Малометражный сериал", "Short series"),
-        "ona" to LocalizedLabel("ONA", "ONA"),
     )
 
     private val statusLabels = mapOf(
