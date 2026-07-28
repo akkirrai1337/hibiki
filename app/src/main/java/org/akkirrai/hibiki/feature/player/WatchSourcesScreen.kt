@@ -14,6 +14,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.shared.player.WatchSourcesList
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
 import org.akkirrai.hibiki.shared.player.formatWatchSourceEpisodeSummary
+import org.akkirrai.hibiki.shared.player.isRefreshing
 
 @Composable
 fun WatchSourcesScreen(
@@ -70,7 +71,7 @@ fun WatchSourcesScreen(
                     loadMoreLabel = stringResource(R.string.watch_sources_load_more),
                     isLoadingMore = state.isLoadingMore,
                     onLoadMore = viewModel::loadMore,
-                    isRefreshing = state.isLoading && state.items.isNotEmpty(),
+                    isRefreshing = state.isRefreshing(),
                 )
             }
         }

@@ -14,6 +14,8 @@ data class WatchSourcesScreenState(
     val errorMessage: String? = null,
 )
 
+fun WatchSourcesScreenState.isRefreshing(): Boolean = isLoading && items.isNotEmpty()
+
 class WatchSourcesPresenter(
     initialState: WatchSourcesScreenState = WatchSourcesScreenState(),
 ) {
