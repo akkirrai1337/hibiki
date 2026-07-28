@@ -31,11 +31,19 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
+            implementation(libs.coil.compose)
             implementation(libs.kotlinx.coroutines.core)
+        }
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.coil.network.okhttp)
+            }
         }
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation(libs.coil.network.ktor3)
+                implementation(libs.ktor.client.cio)
             }
         }
     }
