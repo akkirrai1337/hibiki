@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -18,7 +19,14 @@ fun AppPlayerActionControls(
     onScaleClick: () -> Unit,
     scaleContent: @Composable () -> Unit,
     onLockClick: () -> Unit,
-    lockContent: @Composable () -> Unit,
+    lockContentDescription: String? = null,
+    lockContent: @Composable () -> Unit = {
+        Icon(
+            imageVector = Icons.Outlined.Lock,
+            contentDescription = lockContentDescription,
+            tint = Color.White,
+        )
+    },
     pictureInPictureEnabled: Boolean,
     onPictureInPictureClick: () -> Unit,
     pictureInPictureContent: @Composable () -> Unit,
