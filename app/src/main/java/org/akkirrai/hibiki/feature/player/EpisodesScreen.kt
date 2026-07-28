@@ -122,7 +122,6 @@ fun EpisodesScreen(
     ) {
         AppEpisodesDownloadToggle(
             isVisible = downloadControlsVisible,
-            icon = Icons.Outlined.Download,
             contentDescription = stringResource(R.string.watch_download),
             onClick = { downloadControlsVisible = !downloadControlsVisible },
             modifier = Modifier

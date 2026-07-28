@@ -1,16 +1,16 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 
 @Composable
 fun AppEpisodesDownloadToggle(
     isVisible: Boolean,
-    icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -25,7 +25,7 @@ fun AppEpisodesDownloadToggle(
         },
     ) {
         Icon(
-            imageVector = icon,
+            imageVector = Icons.Outlined.Download,
             contentDescription = contentDescription,
         )
     }
