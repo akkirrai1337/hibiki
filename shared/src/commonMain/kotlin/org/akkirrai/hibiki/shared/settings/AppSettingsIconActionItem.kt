@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,6 +17,7 @@ fun AppSettingsIconActionItem(
     subtitle: String? = null,
     shape: Shape,
     trailing: (@Composable () -> Unit)? = null,
+    showChevron: Boolean = false,
     onClick: () -> Unit,
 ) {
     AppSettingsActionItem(
@@ -24,7 +27,17 @@ fun AppSettingsIconActionItem(
         title = title,
         subtitle = subtitle,
         shape = shape,
-        trailing = trailing,
+        trailing = trailing ?: if (showChevron) {
+            {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            null
+        },
         onClick = onClick,
     )
 }
