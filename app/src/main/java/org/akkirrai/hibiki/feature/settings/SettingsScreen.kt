@@ -9,11 +9,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Contrast
-import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
@@ -61,6 +58,9 @@ import org.akkirrai.hibiki.shared.settings.themeModeOptions
 import org.akkirrai.hibiki.shared.settings.languageModeOptions
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconVerticalItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
+import org.akkirrai.hibiki.shared.settings.SettingsAmoledIcon
+import org.akkirrai.hibiki.shared.settings.SettingsSystemColorSchemeIcon
+import org.akkirrai.hibiki.shared.settings.SettingsThemeIcon
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
@@ -115,7 +115,7 @@ fun SettingsScreen(
                 AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> AppSettingsIconVerticalItem(
-                            icon = Icons.Outlined.DarkMode,
+                            icon = SettingsThemeIcon,
                             title = stringResource(R.string.settings_theme),
                             shape = shape,
                         ) {
@@ -131,7 +131,7 @@ fun SettingsScreen(
                         }
 
                         1 -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Palette,
+                            icon = SettingsSystemColorSchemeIcon,
                             title = stringResource(R.string.settings_use_system_color_scheme),
                             checked = preferences.useSystemColorScheme,
                             shape = shape,
@@ -139,7 +139,7 @@ fun SettingsScreen(
                         )
 
                         2 -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Contrast,
+                            icon = SettingsAmoledIcon,
                             title = stringResource(R.string.settings_amoled),
                             checked = preferences.useAmoledTheme,
                             shape = shape,
