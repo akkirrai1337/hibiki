@@ -99,6 +99,7 @@ import org.akkirrai.hibiki.shared.player.playerToggleValueLocalizationKey
 import org.akkirrai.hibiki.shared.player.pictureInPictureAudioModeLocalizationKey
 import org.akkirrai.hibiki.shared.player.pictureInPicturePlaybackLocalizationKey
 import org.akkirrai.hibiki.shared.player.formatHeaderNames
+import org.akkirrai.hibiki.shared.player.formatShortUrl
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -584,7 +585,7 @@ fun PlayerScreen(
                         append(" type=")
                         append(state.playback?.streamType)
                         append(" stream=")
-                        append(state.playback?.streamUrl.shortUrl())
+                        append(formatShortUrl(state.playback?.streamUrl))
                         append(" code=")
                         append(error.errorCodeName)
                         append(" message=")
@@ -1573,11 +1574,6 @@ private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
 private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
-private fun String?.shortUrl(): String {
-    if (this.isNullOrBlank()) return "null"
-    return substringBefore('?').substringAfterLast('/')
-}
-
 private fun String?.safeHost(): String {
     if (this.isNullOrBlank()) return "unknown"
     return runCatching { URI(this).host }
