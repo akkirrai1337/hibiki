@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -33,8 +32,8 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.shared.design.animation.continuousRotation
 import org.akkirrai.hibiki.shared.profile.ProfileActionButton
+import org.akkirrai.hibiki.shared.profile.ProfileSettingsActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.ProfileAvatarPlaceholder
 import org.akkirrai.hibiki.shared.profile.ProfileAvatarImage
@@ -115,14 +114,9 @@ fun LocalProfileScreen(
                             isEditingProfile = !isEditingProfile
                         },
                     )
-                    ProfileActionButton(
-                        icon = Icons.Rounded.Settings,
+                    ProfileSettingsActionButton(
                         contentDescription = stringResource(R.string.local_profile_settings),
                         onClick = onSettingsClick,
-                        iconModifier = Modifier.continuousRotation(
-                            durationMillis = 10_000,
-                            label = "settings_icon_rotation",
-                        ),
                     )
                 }
             },
