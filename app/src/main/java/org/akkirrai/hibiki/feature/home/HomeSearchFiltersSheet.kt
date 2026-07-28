@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -28,7 +27,6 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
-import org.akkirrai.hibiki.shared.catalog.AnimeStatus
 import org.akkirrai.hibiki.shared.catalog.AnimeTypeAlias
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
@@ -148,7 +146,6 @@ fun AnimeSearchFiltersSheet(
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
                 typeLabel = { typeLabel(it) },
-                statusIcon = { statusIcon(it.id) },
                 optionText = optionText,
                 expandIconContent = { expanded, iconModifier ->
                     AppFilterExpandIcon(expanded = expanded, modifier = iconModifier)
@@ -202,18 +199,6 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
 
 private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
-
-@Composable
-private fun statusIcon(alias: String): androidx.compose.ui.graphics.painter.Painter {
-    val drawable = when (AnimeStatus.fromAlias(alias)) {
-        AnimeStatus.Finished -> R.drawable.animite_finished
-        AnimeStatus.Releasing -> R.drawable.animite_releasing
-        AnimeStatus.NotYetReleased -> R.drawable.animite_not_yet_released
-        AnimeStatus.Cancelled -> R.drawable.animite_cancelled
-        AnimeStatus.Hiatus -> R.drawable.animite_hiatus
-    }
-    return painterResource(drawable)
-}
 
 private fun typeLabel(type: AnimeTypeAlias): String = type.alias.uppercase()
 

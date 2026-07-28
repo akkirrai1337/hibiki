@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.painter.Painter
 import org.jetbrains.compose.resources.painterResource
 import hibiki.shared.generated.resources.Res
 import hibiki.shared.generated.resources.animite_done
@@ -43,7 +41,6 @@ fun AppCatalogFilterSheetContent(
     resetLabel: String,
     applyLabel: String,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
-    statusIcon: @Composable (AnimeCatalogFilterOption) -> Painter?,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
     expandIconContent: @Composable (Boolean, Modifier) -> Unit,
     showGenreFilters: Boolean = true,
@@ -126,7 +123,7 @@ fun AppCatalogFilterSheetContent(
                         included = includedStatuses,
                         onChange = onIncludedStatusesChange,
                         optionText = optionText,
-                        optionIcon = statusIcon,
+                        optionIcon = { painterResource(AnimeStatus.fromAlias(it.id).iconResource()) },
                         arrowIcon = dropdownIcon,
                         expandIconContent = expandIconContent,
                     )
