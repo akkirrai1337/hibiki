@@ -19,6 +19,9 @@ import org.akkirrai.hibiki.shared.profile.ActivityDay
 import org.akkirrai.hibiki.shared.profile.DistributionSegment
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.buildGenreSegments
+import org.akkirrai.hibiki.shared.profile.buildLibraryStatusSegments
+import org.akkirrai.hibiki.shared.profile.trackedProfileLibraryItems
+import org.akkirrai.hibiki.shared.profile.profileColor
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -37,15 +40,9 @@ internal fun buildProfileSnapshot(
             } ?: 0,
         )
     }
-    val trackedLibrary = localData.library.filter { item ->
-        item.categories.any(PROFILE_LIBRARY_CATEGORIES::contains)
-    }
-    val librarySegments = PROFILE_LIBRARY_CATEGORIES.map { category ->
-        DistributionSegment(
-            label = resources.getString(category.labelResId),
-            count = trackedLibrary.count { category in it.categories },
-            color = category.color(),
-        )
+    val trackedLibrary = localData.trackedProfileLibraryItems()
+    val librarySegments = localData.buildLibraryStatusSegments { category ->
+        resources.getString(category.labelResId)
     }
     val localRecentItems = localData.library
         .asSequence()
@@ -59,7 +56,7 @@ internal fun buildProfileSnapshot(
                 ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatProfileRating),
                 statusLabel = resources.getString(category.labelResId),
                 dateLabel = formatEpochDateShort(resources, requireNotNull(item.addedAt)),
-                color = category.color(),
+                color = category.profileColor(),
             )
         }
         .distinctBy(RecentLibraryItem::title)
@@ -77,7 +74,7 @@ internal fun buildProfileSnapshot(
                 ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatProfileRating),
                 statusLabel = resources.getString(LibraryCategory.Favorite.labelResId),
                 dateLabel = item.addedAt?.let { formatEpochDateShort(resources, it) }.orEmpty(),
-                color = LibraryCategory.Favorite.color(),
+                color = LibraryCategory.Favorite.profileColor(),
             )
         }
         .toList()
@@ -96,16 +93,6 @@ internal fun buildProfileSnapshot(
         genreSegments = genreSegments,
         genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
     )
-}
-
-private fun LibraryCategory.color(): Color = when (this) {
-    LibraryCategory.Watching -> Color(0xFF3DDC84)
-    LibraryCategory.Planned -> Color(0xFF5DA9FF)
-    LibraryCategory.Completed -> Color(0xFFFFB84D)
-    LibraryCategory.Dropped -> Color(0xFFFF6B6B)
-    LibraryCategory.OnHold -> Color(0xFFC593FF)
-    LibraryCategory.Favorite -> Color(0xFFFFB86A)
-    LibraryCategory.Saved -> Color(0xFF9EA4B2)
 }
 
 private fun epochToLocalDate(value: Long): LocalDate {
@@ -136,4 +123,3 @@ internal fun formatDurationLabel(resources: Resources, durationMs: Long): String
 
 private const val ACTIVITY_HISTORY_DAYS = 30
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
-private val PROFILE_LIBRARY_CATEGORIES = listOf(LibraryCategory.Watching, LibraryCategory.Planned, LibraryCategory.Completed, LibraryCategory.Dropped, LibraryCategory.OnHold, LibraryCategory.Favorite)
