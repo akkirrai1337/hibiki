@@ -1,12 +1,7 @@
 package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,6 +35,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.shared.design.component.AppFilterExpandIcon
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
@@ -160,12 +156,7 @@ fun AnimeSearchFiltersSheet(
                 statusIcon = { statusIcon(it.id) },
                 optionText = optionText,
                 expandIconContent = { expanded, iconModifier ->
-                    Icon(
-                        imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = iconModifier,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
-                    )
+                    AppFilterExpandIcon(expanded = expanded, modifier = iconModifier)
                 },
                 showGenreFilters = showGenreFilters,
                 maxCollapsedGenreGroups = maxCollapsedGenreGroups,
