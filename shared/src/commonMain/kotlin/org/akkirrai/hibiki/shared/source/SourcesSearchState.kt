@@ -24,4 +24,4 @@ fun <T> List<SourceSearchSectionState<T>>.visibleSourceSearchSections(): List<So
         section.isLoading || section.hasError || section.items.isNotEmpty()
     }
 
-private const val SOURCE_SEARCH_MIN_QUERY_LENGTH = 3
+const val SOURCE_SEARCH_MIN_QUERY_LENGTH = 3

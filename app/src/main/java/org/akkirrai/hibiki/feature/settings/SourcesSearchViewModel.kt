@@ -27,6 +27,7 @@ import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 
 typealias SourceSearchSection = SourceSearchSectionState<Anime>
@@ -53,7 +54,7 @@ class SourcesSearchViewModel(
                 hasSearched = false,
             )
         }
-        if (query.trim().length < MIN_QUERY_LENGTH) return
+        if (query.trim().length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
 
         val generation = searchGeneration
         searchJob = viewModelScope.launch(Dispatchers.IO) {
@@ -66,7 +67,7 @@ class SourcesSearchViewModel(
 
     fun retry(sourceId: SourceId) {
         val query = _uiState.value.query.trim()
-        if (query.length < MIN_QUERY_LENGTH) return
+        if (query.length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
         searchJob?.cancel()
         searchGeneration += 1
         val generation = searchGeneration
@@ -194,7 +195,6 @@ class SourcesSearchViewModel(
 
     private companion object {
         const val TAG = "SourcesSearch"
-        const val MIN_QUERY_LENGTH = 3
         const val SEARCH_DEBOUNCE_MS = 400L
         const val RESULTS_PER_SOURCE = 12
     }
