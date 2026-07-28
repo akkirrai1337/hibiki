@@ -443,11 +443,18 @@ fun DetailsScreen(
         }
 
         if (isTitleDetailsSheetOpen) {
-            TitleDetailsSheet(
-                title = currentAnime.title,
-                description = description,
-                onDismiss = { isTitleDetailsSheetOpen = false },
-            )
+            val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            AppModalBottomSheet(
+                onDismissRequest = { isTitleDetailsSheetOpen = false },
+                sheetState = titleSheetState,
+                modifier = Modifier.fillMaxHeight(),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                AppDetailsTitleSheetContent(
+                    title = currentAnime.title,
+                    description = description,
+                )
+            }
         }
 
         if (isLibrarySheetOpen) {
@@ -734,25 +741,6 @@ private fun DetailContentCard(
         horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TitleDetailsSheet(
-    title: String,
-    description: String,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-
-    AppModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        modifier = Modifier.fillMaxHeight(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-    ) {
-        AppDetailsTitleSheetContent(title = title, description = description)
-    }
 }
 
 @Composable
