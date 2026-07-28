@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,7 +16,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppPosterPlaceholder(
-    icon: ImageVector,
+    icon: ImageVector = Icons.Outlined.Image,
     modifier: Modifier = Modifier,
 ) {
     AppTonalSurface(
