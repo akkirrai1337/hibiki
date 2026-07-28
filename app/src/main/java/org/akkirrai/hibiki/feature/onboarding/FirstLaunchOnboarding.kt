@@ -40,6 +40,8 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
 import org.akkirrai.hibiki.shared.onboarding.formatOnboardingSourceLanguageSummary
 import org.akkirrai.hibiki.shared.onboarding.filterOnboardingSourcesByLanguage
+import org.akkirrai.hibiki.shared.onboarding.previous
+import org.akkirrai.hibiki.shared.onboarding.next
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
@@ -84,11 +86,7 @@ fun FirstLaunchOnboarding(
         showSourceList = false
     }
     BackHandler(enabled = !showSourceList && step != OnboardingStep.WELCOME) {
-        stepName = when (step) {
-            OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-            OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
-        }
+        stepName = (step.previous() ?: step).name
     }
 
     if (showSourceList) {
@@ -209,18 +207,11 @@ fun FirstLaunchOnboarding(
                     if (step == OnboardingStep.NOTIFICATIONS) R.string.onboarding_done else R.string.onboarding_next,
                 ),
                 onBack = {
-                    stepName = when (step) {
-                        OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-                        OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
-                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
-                    }
+                    stepName = (step.previous() ?: step).name
                 },
                 onNext = {
-                    when (step) {
-                        OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCE.name
-                        OnboardingStep.SOURCE -> stepName = OnboardingStep.NOTIFICATIONS.name
-                        OnboardingStep.NOTIFICATIONS -> selectedSource?.let(onComplete)
-                        }
+                    step.next()?.let { stepName = it.name }
+                        ?: selectedSource?.let(onComplete)
                 },
             )
         }
