@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import org.akkirrai.hibiki.shared.design.component.AppFilterExpandIcon
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 
@@ -19,7 +20,6 @@ fun AppCatalogGenreFilterSection(
     maxCollapsedGroups: Int?,
     allowExclusion: Boolean,
     arrowIcon: Painter,
-    expandIconContent: @Composable (Boolean, Modifier) -> Unit,
 ) {
     AppSingleListThreeStateFilter(
         title = title,
@@ -35,6 +35,8 @@ fun AppCatalogGenreFilterSection(
         optionSortKey = { it.title },
         groupByFirstLetter = true,
         arrowContent = { modifier -> Icon(painter = arrowIcon, contentDescription = null, modifier = modifier) },
-        expandIconContent = expandIconContent,
+        expandIconContent = { expanded, modifier ->
+            AppFilterExpandIcon(expanded = expanded, modifier = modifier)
+        },
     )
 }

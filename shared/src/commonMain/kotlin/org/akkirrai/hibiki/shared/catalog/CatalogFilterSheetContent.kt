@@ -42,7 +42,6 @@ fun AppCatalogFilterSheetContent(
     applyLabel: String,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
-    expandIconContent: @Composable (Boolean, Modifier) -> Unit,
     showGenreFilters: Boolean = true,
     maxCollapsedGenreGroups: Int? = null,
     maxCollapsedGenreItems: Int? = 15,
@@ -101,7 +100,6 @@ fun AppCatalogFilterSheetContent(
                         maxCollapsedGroups = maxCollapsedGenreGroups,
                         allowExclusion = capabilities.supports(AnimeCatalogFilter.EXCLUDED_GENRES),
                         arrowIcon = dropdownIcon,
-                        expandIconContent = expandIconContent,
                     )
                 }
                 if (capabilities.supports(AnimeCatalogFilter.YEAR_RANGE)) {
@@ -125,7 +123,6 @@ fun AppCatalogFilterSheetContent(
                         optionText = optionText,
                         optionIcon = { painterResource(AnimeStatus.fromAlias(it.id).iconResource()) },
                         arrowIcon = dropdownIcon,
-                        expandIconContent = expandIconContent,
                     )
                 }
                 AppFilterSheetActions(

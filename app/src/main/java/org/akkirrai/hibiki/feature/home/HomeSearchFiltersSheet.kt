@@ -32,7 +32,6 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheetContent
 import org.akkirrai.hibiki.shared.catalog.applyCatalogFilterDraft
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
-import org.akkirrai.hibiki.shared.design.component.AppFilterExpandIcon
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
 
@@ -147,9 +146,6 @@ fun AnimeSearchFiltersSheet(
                 applyLabel = stringResource(R.string.search_filters_apply),
                 typeLabel = { typeLabel(it) },
                 optionText = optionText,
-                expandIconContent = { expanded, iconModifier ->
-                    AppFilterExpandIcon(expanded = expanded, modifier = iconModifier)
-                },
                 showGenreFilters = showGenreFilters,
                 maxCollapsedGenreGroups = maxCollapsedGenreGroups,
                 maxCollapsedGenreItems = maxCollapsedGenreItems,
