@@ -216,7 +216,6 @@ private fun LocalAvatar(
     org.akkirrai.hibiki.shared.profile.ProfileAvatar(
         ratio = ratio,
         isEditing = isEditing,
-        editIcon = Icons.Rounded.Edit,
         editContentDescription = stringResource(R.string.local_profile_change_avatar),
         onEditClick = onEditClick,
         modifier = modifier,
