@@ -20,7 +20,6 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -51,18 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
@@ -140,18 +132,15 @@ import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelMaxWidth
 import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelRestingOffsetY
 import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelMaxWidth
-import org.akkirrai.hibiki.shared.player.PlayerOverlayPanelExitOffset
-import org.akkirrai.hibiki.shared.player.PlayerPanelDismissDragThreshold
 import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelWidthFraction
 import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelWidthFraction
-import org.akkirrai.hibiki.shared.player.PlayerOverlayScrimAlpha
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
-import org.akkirrai.hibiki.shared.player.AppPlayerOverlaySurface
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayPanel
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
 import org.akkirrai.hibiki.shared.player.AppPlayerControlsOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
@@ -1214,7 +1203,7 @@ fun PlayerScreen(
         }
 
         if (playlistVisible) {
-            PlayerOverlayPanel(
+            AppPlayerOverlayPanel(
                 onDismissRequest = {
                     playlistVisible = false
                     keepControlsVisible()
@@ -1222,6 +1211,8 @@ fun PlayerScreen(
                 widthFraction = PlayerPlaylistPanelWidthFraction,
                 maxWidth = PlayerPlaylistPanelMaxWidth,
                 swipeToDismissEnabled = false,
+                nowMs = SystemClock::elapsedRealtime,
+                backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
             ) { dismissPanel ->
                 AppPlaylistBottomSheet(
                     currentEpisodeId = state.currentEpisodeId,
@@ -1236,7 +1227,7 @@ fun PlayerScreen(
         }
 
         if (settingsVisible) {
-            PlayerOverlayPanel(
+            AppPlayerOverlayPanel(
                 onDismissRequest = {
                     settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
@@ -1246,6 +1237,8 @@ fun PlayerScreen(
                 maxWidth = PlayerSettingsPanelMaxWidth,
                 restingOffsetY = PlayerSettingsPanelRestingOffsetY,
                 swipeToDismissEnabled = false,
+                nowMs = SystemClock::elapsedRealtime,
+                backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
             ) { dismissPanel ->
                 PlayerSettingsSheet(
                     destination = settingsDestination,
@@ -1298,169 +1291,6 @@ fun PlayerScreen(
             }
         }
     }
-}
-
-@Composable
-private fun PlayerOverlayPanel(
-    onDismissRequest: () -> Unit,
-    widthFraction: Float,
-    maxWidth: Dp,
-    restingOffsetY: Dp = PlayerSettingsPanelRestingOffsetY,
-    swipeToDismissEnabled: Boolean = true,
-    content: @Composable ((() -> Unit)) -> Unit,
-) {
-    val density = LocalDensity.current
-    val openedAtMs = remember { SystemClock.elapsedRealtime() }
-
-    var animatingIn by remember { mutableStateOf(false) }
-    var dismissing by remember { mutableStateOf(false) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    val exitOffsetPx = with(density) { PlayerOverlayPanelExitOffset.toPx() }
-    val dismissThresholdPx = with(density) { PlayerPanelDismissDragThreshold.toPx() }
-
-    val scrimBaseAlpha by animateFloatAsState(
-        targetValue = if (animatingIn) PlayerOverlayScrimAlpha else 0f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayScrimAlpha"
-    )
-
-    val panelAlpha by animateFloatAsState(
-        targetValue = if (animatingIn) 1f else 0f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelAlpha"
-    )
-
-    val panelScale by animateFloatAsState(
-        targetValue = if (animatingIn) 1f else 0.96f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelScale"
-    )
-
-    val panelBaseOffsetPx by animateFloatAsState(
-        targetValue = if (animatingIn) 0f else exitOffsetPx,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelBaseOffset"
-    )
-
-    val animatedDragOffsetPx by animateFloatAsState(
-        targetValue = dragOffsetPx,
-        animationSpec = tween(durationMillis = if (isDragging) 0 else 160),
-        label = "playerOverlayDragOffset"
-    )
-
-    val dragProgress = (animatedDragOffsetPx / dismissThresholdPx).coerceIn(0f, 1f)
-    val effectiveScrimAlpha = scrimBaseAlpha * (1f - dragProgress * 0.45f)
-    val effectivePanelScale = panelScale * (1f - dragProgress * 0.02f)
-    val effectivePanelAlpha = panelAlpha * (1f - dragProgress * 0.12f)
-
-    LaunchedEffect(Unit) {
-        animatingIn = true
-    }
-
-    fun dismissPanel() {
-        if (dismissing) return
-        dismissing = true
-        isDragging = false
-        animatingIn = false
-    }
-
-    fun finishPanelDrag() {
-        if (dismissing) return
-
-        isDragging = false
-        if (dragOffsetPx >= dismissThresholdPx) {
-            dismissPanel()
-        } else {
-            dragOffsetPx = 0f
-        }
-    }
-
-    val nestedScrollConnection = remember(dismissing, dismissThresholdPx, swipeToDismissEnabled) {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource,
-            ): Offset {
-                consumed
-                if (
-                    !swipeToDismissEnabled ||
-                    dismissing ||
-                    source != NestedScrollSource.UserInput ||
-                    available.y <= 0f
-                ) {
-                    return Offset.Zero
-                }
-
-                isDragging = true
-                dragOffsetPx = (dragOffsetPx + available.y).coerceAtLeast(0f)
-                return Offset(x = 0f, y = available.y)
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (swipeToDismissEnabled && dragOffsetPx > 0f) {
-                    val shouldDismiss =
-                        dragOffsetPx >= dismissThresholdPx || available.y >= PLAYER_PANEL_DISMISS_FLING_VELOCITY
-                    if (shouldDismiss) {
-                        dismissPanel()
-                    } else {
-                        finishPanelDrag()
-                    }
-                    return Velocity.Zero
-                }
-
-                return Velocity.Zero
-            }
-        }
-    }
-
-    LaunchedEffect(dismissing) {
-        if (dismissing) {
-            delay(PLAYER_OVERLAY_ANIMATION_MS.toLong())
-            onDismissRequest()
-        }
-    }
-
-    BackHandler(enabled = !dismissing, onBack = ::dismissPanel)
-
-    AppPlayerOverlaySurface(
-        scrimAlpha = effectiveScrimAlpha,
-        scrimEnabled = !dismissing,
-        panelAlpha = effectivePanelAlpha,
-        panelScale = effectivePanelScale,
-        panelTranslationY = panelBaseOffsetPx + animatedDragOffsetPx,
-        widthFraction = widthFraction,
-        maxWidth = maxWidth,
-        restingOffsetY = restingOffsetY,
-        panelModifier = if (swipeToDismissEnabled) {
-            Modifier.nestedScroll(nestedScrollConnection)
-        } else {
-            Modifier
-        },
-        showHandle = swipeToDismissEnabled,
-        onDragDelta = { deltaY ->
-            if (dismissing) return@AppPlayerOverlaySurface
-
-            isDragging = true
-            dragOffsetPx = (dragOffsetPx + deltaY).coerceAtLeast(0f)
-        },
-        onDragEnd = {
-            if (dismissing) return@AppPlayerOverlaySurface
-
-            finishPanelDrag()
-        },
-        onScrimClick = {
-            val canDismiss =
-                SystemClock.elapsedRealtime() - openedAtMs >= PLAYER_OVERLAY_TAP_GUARD_MS
-            if (canDismiss) {
-                dismissPanel()
-            }
-        },
-        onDismiss = ::dismissPanel,
-        content = content,
-    )
 }
 
 @Composable
@@ -1732,11 +1562,8 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
-private const val PLAYER_OVERLAY_ANIMATION_MS = 220
 private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
-private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
 private fun String?.shortUrl(): String {
     if (this.isNullOrBlank()) return "null"
     return substringBefore('?').substringAfterLast('/')
