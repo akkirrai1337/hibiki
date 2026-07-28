@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +23,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 fun AppLoadMoreState(
     isLoading: Boolean,
     errorMessage: String?,
-    errorIcon: ImageVector,
+    errorIcon: ImageVector = Icons.Outlined.WarningAmber,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
