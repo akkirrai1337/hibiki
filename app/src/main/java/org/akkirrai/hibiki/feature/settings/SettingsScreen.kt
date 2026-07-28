@@ -64,6 +64,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
+import org.akkirrai.hibiki.shared.settings.AppSettingsAppearanceSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -110,43 +111,33 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         content = {
         item(key = SettingsSection.Appearance.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_appearance)) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> AppSettingsIconVerticalItem(
-                            icon = SettingsThemeIcon,
-                            title = stringResource(R.string.settings_theme),
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = themeModeOptions,
-                                selectedOption = preferences.themeMode,
-                                label = ::themeModeLabel,
-                                onSelect = { mode ->
-                                    appPreferences.setThemeMode(mode)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
-
-                        1 -> SettingsSwitchItem(
-                            icon = SettingsSystemColorSchemeIcon,
-                            title = stringResource(R.string.settings_use_system_color_scheme),
-                            checked = preferences.useSystemColorScheme,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setUseSystemColorScheme,
-                        )
-
-                        2 -> SettingsSwitchItem(
-                            icon = SettingsAmoledIcon,
-                            title = stringResource(R.string.settings_amoled),
-                            checked = preferences.useAmoledTheme,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setUseAmoledTheme,
-                        )
-                    }
-                }
-            }
+            AppSettingsAppearanceSection(
+                sectionTitle = stringResource(R.string.settings_appearance),
+                themeTitle = stringResource(R.string.settings_theme),
+                themeOptions = themeModeOptions,
+                selectedTheme = preferences.themeMode,
+                themeLabel = ::themeModeLabel,
+                onThemeSelected = { mode ->
+                    appPreferences.setThemeMode(mode)
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                },
+                systemColorSchemeTitle = stringResource(R.string.settings_use_system_color_scheme),
+                useSystemColorScheme = preferences.useSystemColorScheme,
+                onSystemColorSchemeChange = { enabled ->
+                    appPreferences.setUseSystemColorScheme(enabled)
+                    haptic.performHapticFeedback(
+                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                },
+                amoledTitle = stringResource(R.string.settings_amoled),
+                useAmoledTheme = preferences.useAmoledTheme,
+                onAmoledChange = { enabled ->
+                    appPreferences.setUseAmoledTheme(enabled)
+                    haptic.performHapticFeedback(
+                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                },
+            )
         }
 
         item(key = SettingsSection.Preferences.key) {
