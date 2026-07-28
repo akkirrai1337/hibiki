@@ -119,6 +119,7 @@ import org.akkirrai.hibiki.shared.details.isOngoingStatus
 import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
 import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
+import org.akkirrai.hibiki.shared.details.formatNextEpisodeEta
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -815,26 +816,16 @@ private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
             delay(1_000L)
         }
     }
-    val deltaSeconds = seconds - nowEpochSeconds
-    if (deltaSeconds <= 0L) return null
-    val days = deltaSeconds / 86_400L
-    val hours = deltaSeconds % 86_400L / 3_600L
-    val minutes = deltaSeconds % 3_600L / 60L
-    val remainingSeconds = deltaSeconds % 60L
-    return when {
-        days > 0L -> stringResource(R.string.details_eta_days_hours, days, hours.coerceAtLeast(0L))
-        hours > 0L -> stringResource(
-            R.string.details_eta_hours_minutes_seconds,
-            hours,
-            minutes.coerceAtLeast(0L),
-            remainingSeconds.coerceAtLeast(0L),
-        )
-        else -> stringResource(
-            R.string.details_eta_minutes_seconds,
-            minutes.coerceAtLeast(0L),
-            remainingSeconds.coerceAtLeast(0L),
-        )
-    }
+    return formatNextEpisodeEta(
+        deltaSeconds = seconds - nowEpochSeconds,
+        daysHoursLabel = { days, hours -> stringResource(R.string.details_eta_days_hours, days, hours) },
+        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
+            stringResource(R.string.details_eta_hours_minutes_seconds, hours, minutes, seconds)
+        },
+        minutesSecondsLabel = { minutes, seconds ->
+            stringResource(R.string.details_eta_minutes_seconds, minutes, seconds)
+        },
+    )
 }
 
 @Composable
