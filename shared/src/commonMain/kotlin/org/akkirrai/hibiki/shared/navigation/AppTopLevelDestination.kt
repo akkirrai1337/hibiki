@@ -1,17 +1,25 @@
 package org.akkirrai.hibiki.shared.navigation
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.text.AppTextKey
 
 /** Stable top-level destinations shared by every platform host. */
 enum class AppTopLevelDestination(
     val route: String,
     val labelKey: AppTextKey,
+    val icon: ImageVector,
 ) {
-    HOME("home", AppTextKey.Home),
-    CATALOG("catalog", AppTextKey.Catalog),
-    LIBRARY("library", AppTextKey.Library),
-    SOURCES("sources", AppTextKey.Sources),
-    PROFILE("profile", AppTextKey.Profile),
+    HOME("home", AppTextKey.Home, Icons.Outlined.Home),
+    CATALOG("catalog", AppTextKey.Catalog, Icons.Outlined.Explore),
+    LIBRARY("library", AppTextKey.Library, Icons.Outlined.VideoLibrary),
+    SOURCES("sources", AppTextKey.Sources, Icons.Outlined.Dns),
+    PROFILE("profile", AppTextKey.Profile, Icons.Outlined.Person),
 }
 
 sealed interface AppNavigationEvent {
