@@ -13,6 +13,7 @@ fun AppProductionRoot(
     currentDestination: AppTopLevelDestination,
     onNavigationEvent: (AppNavigationEvent) -> Unit,
     modifier: Modifier = Modifier,
+    destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit = { destination, iconModifier ->
         androidx.compose.material3.Icon(
             imageVector = destination.icon,
@@ -29,6 +30,7 @@ fun AppProductionRoot(
         },
         iconContent = iconContent,
         label = { destination -> appText(destination.labelKey) },
+        destinations = destinations,
         modifier = modifier,
         content = content,
     )
