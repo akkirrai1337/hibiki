@@ -30,12 +30,9 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
-import org.akkirrai.hibiki.shared.home.AppTrendingContentList
-import org.akkirrai.hibiki.shared.home.AppTrendingContentState
-import org.akkirrai.hibiki.shared.home.appHomeAnimeListContent
+import org.akkirrai.hibiki.shared.home.AppTrendingScreenContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
@@ -72,37 +69,18 @@ fun TrendingAnimeScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        AppTrendingContentState(
-            isLoading = state.isLoading,
-            hasContent = state.items.isNotEmpty(),
-            errorMessage = state.errorMessage,
+        AppTrendingScreenContent(
+            state = state,
+            listState = listState,
             errorTitle = stringResource(R.string.trending_error_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
-            content = {
-                AppTrendingContentList(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    appHomeAnimeListContent(
-                        items = state.items,
-                        metaText = { anime -> buildTrendingMeta(anime) },
-                        onAnimeClick = onAnimeClick,
-                        libraryStatusByAnimeId = libraryStatusByAnimeId,
-                        libraryStatusLabel = { category -> stringResource(category.labelResId) },
-                    )
-
-                    if (state.isLoadingMore || state.loadMoreError != null) {
-                        item(key = "trending_load_more_state") {
-                            AppLoadMoreState(
-                                isLoading = state.isLoadingMore,
-                                errorMessage = state.loadMoreError,
-                                onRetry = viewModel::loadMore,
-                            )
-                        }
-                    }
-                }
-            },
+            onLoadMoreRetry = viewModel::loadMore,
+            onAnimeClick = onAnimeClick,
+            metaText = { anime -> buildTrendingMeta(anime) },
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
+            libraryStatusLabel = { category -> stringResource(category.labelResId) },
+            modifier = Modifier.fillMaxSize(),
         )
 
         AppFloatingHeader(
