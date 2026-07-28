@@ -327,7 +327,7 @@ private fun LazyListScope.homeFeedContent(
                     contentDescription = currentAnime.title,
                     modifier = Modifier.fillMaxSize(),
                     placeholder = {
-                        AppImagePlaceholder(icon = Icons.Outlined.Image)
+                        AppImagePlaceholder()
                     },
                 )
             }
