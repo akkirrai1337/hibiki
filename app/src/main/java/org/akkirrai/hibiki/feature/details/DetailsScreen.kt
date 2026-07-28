@@ -87,12 +87,11 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
 import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
-import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
 import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewOverlay
-import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
@@ -529,9 +528,15 @@ private fun DetailHeroSection(
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
         }
     }
-    AppDetailsHeroSection(
+    AppDetailsHeroContent(
         posterExpanded = isAtTop,
+        isInLibrary = isUserLibraryCategorySelected,
+        canWatch = canWatch,
+        libraryLabel = stringResource(R.string.details_favorite),
+        watchLabel = stringResource(R.string.details_watch),
         onPosterClick = onPosterClick,
+        onLibraryClick = onLibraryClick,
+        onPrimaryClick = onPrimaryClick,
         posterContent = {
             NetworkImage(
                 imageUrl = detailsState.anime.posterUrl,
@@ -594,16 +599,6 @@ private fun DetailHeroSection(
                     )
                 },
                 modifier = textModifier,
-            )
-        },
-        actionsContent = {
-            DetailsHeroActions(
-                isInLibrary = isUserLibraryCategorySelected,
-                canWatch = canWatch,
-                libraryLabel = stringResource(R.string.details_favorite),
-                watchLabel = stringResource(R.string.details_watch),
-                onLibraryClick = onLibraryClick,
-                onPrimaryClick = onPrimaryClick,
             )
         },
     )
