@@ -739,26 +739,18 @@ private fun RelatedAnimeList(
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    val relatedItems = org.akkirrai.hibiki.shared.details.buildDetailsRelatedAnimeItems(
-        items = displayItems,
-        announcementLabel = announcementLabel,
-    )
-    val relatedById = displayItems.associateBy(RelatedAnime::id)
-    org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
-        items = relatedItems,
+    org.akkirrai.hibiki.shared.details.AppDetailsRelatedAnimeList(
+        items = items,
         title = title,
+        announcementLabel = stringResource(R.string.anime_meta_announcement),
         horizontalPadding = DetailsContentHorizontalPadding,
-        onItemClick = { item -> relatedById[item.id]?.let { onAnimeClick(it.toAnime()) } },
-        poster = { item ->
-            relatedById[item.id]?.let { related ->
-                NetworkImage(
-                    imageUrl = related.posterUrl,
-                    fallbackUrl = related.posterFallbackUrl,
-                    contentDescription = related.title,
-                )
-            }
+        onItemClick = { related -> onAnimeClick(related.toAnime()) },
+        poster = { related ->
+            NetworkImage(
+                imageUrl = related.posterUrl,
+                fallbackUrl = related.posterFallbackUrl,
+                contentDescription = related.title,
+            )
         },
         modifier = modifier,
     )
