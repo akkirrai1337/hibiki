@@ -9,7 +9,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
@@ -61,6 +60,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsIconActionItem
 import org.akkirrai.hibiki.shared.settings.SettingsAmoledIcon
 import org.akkirrai.hibiki.shared.settings.SettingsSystemColorSchemeIcon
 import org.akkirrai.hibiki.shared.settings.SettingsThemeIcon
+import org.akkirrai.hibiki.shared.settings.SettingsLanguageIcon
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
@@ -155,7 +155,7 @@ fun SettingsScreen(
                 AppSettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> AppSettingsIconVerticalItem(
-                            icon = Icons.Outlined.Language,
+                            icon = SettingsLanguageIcon,
                             title = stringResource(R.string.settings_language),
                             shape = shape,
                         ) {
