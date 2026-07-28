@@ -73,7 +73,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
 import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet as SharedModalBottomSheet
@@ -484,26 +483,6 @@ fun DetailsScreen(
                     isLibrarySheetOpen = false
                 },
                 onDismiss = { isLibrarySheetOpen = false },
-                iconContent = { category, iconModifier ->
-                    Icon(
-                        imageVector = category.icon(),
-                        contentDescription = null,
-                        modifier = iconModifier,
-                        tint = if (category == libraryCategory) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                },
-                selectedIconContent = { iconModifier ->
-                    Icon(
-                        imageVector = Icons.Outlined.Check,
-                        contentDescription = null,
-                        modifier = iconModifier,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                },
             )
         }
     }

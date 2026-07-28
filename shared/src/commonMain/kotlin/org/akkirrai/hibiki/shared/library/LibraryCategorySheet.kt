@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,8 +33,6 @@ fun AppLibraryCategorySheet(
     onCategoryClick: (LibraryCategory) -> Unit,
     onRemoveClick: () -> Unit,
     onDismiss: () -> Unit,
-    iconContent: @Composable (LibraryCategory, Modifier) -> Unit,
-    selectedIconContent: @Composable (Modifier) -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -77,8 +78,26 @@ fun AppLibraryCategorySheet(
                         label = categoryLabels.getValue(category),
                         selected = category == selectedCategory,
                         onClick = { onCategoryClick(category) },
-                        iconContent = { iconModifier -> iconContent(category, iconModifier) },
-                        selectedIconContent = selectedIconContent,
+                        iconContent = { iconModifier ->
+                            Icon(
+                                imageVector = category.icon(),
+                                contentDescription = null,
+                                modifier = iconModifier,
+                                tint = if (category == selectedCategory) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        },
+                        selectedIconContent = { iconModifier ->
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = iconModifier,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
                     )
                 }
 
