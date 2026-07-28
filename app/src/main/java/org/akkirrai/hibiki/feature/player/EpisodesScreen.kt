@@ -243,7 +243,6 @@ private fun EpisodeRow(
         onRemoveClick = onRemoveClick,
     )
 }
-
 @Composable
 private fun LegacyEpisodeRow(
     episode: WatchEpisode,
