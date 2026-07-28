@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FormatListNumbered
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -578,8 +577,6 @@ private fun DetailHeroSection(
                             DetailsHeroRatingsLine(
                                 rating = ratings.rating,
                                 viewCount = ratings.viewCount,
-                                ratingIcon = Icons.Filled.Star,
-                                viewCountIcon = Icons.Outlined.Visibility,
                             )
                         }
                     }
