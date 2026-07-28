@@ -41,6 +41,7 @@ import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
 import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
 import org.akkirrai.hibiki.shared.home.SearchSortAlias
 import org.akkirrai.hibiki.shared.home.resolveSearchSortAlias
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 
 class HomeRepository(
     context: Context,
@@ -286,7 +287,7 @@ class HomeRepository(
         }.joinToString(" · ")
 
         val status = title.releaseStatus.localizedDisplayName(preferEnglish())
-        val isAnnouncement = status.isAnnouncementStatus()
+        val isAnnouncement = isAnnouncementStatus(status)
         return Anime(
             id = title.id,
             title = displayTitle(title),
@@ -310,11 +311,6 @@ class HomeRepository(
             genres = title.genres,
             studios = title.studios,
         )
-    }
-
-    private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
     }
 
     private fun String.toSearchSort(): AnimeSearchSort = when (resolveSearchSortAlias(this)) {
