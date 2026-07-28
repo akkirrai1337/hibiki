@@ -1417,7 +1417,6 @@ private fun PlayerSettingsSheet(
         },
     )
 }
-
 private val PlayerSettingsDestination.titleResId: Int
     get() = when (localizationKey()) {
         "watch_player_settings_root" -> R.string.watch_player_settings_root
