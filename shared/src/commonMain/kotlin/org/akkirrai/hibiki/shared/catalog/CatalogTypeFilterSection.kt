@@ -12,7 +12,6 @@ fun AppCatalogTypeFilterSection(
     selected: AnimeTypeAlias?,
     onSelected: (AnimeTypeAlias?) -> Unit,
     typeIcon: @Composable (AnimeTypeAlias) -> Painter,
-    typeLabel: @Composable (AnimeTypeAlias) -> String,
     arrowIcon: Painter,
 ) {
     AppConnectedToggleFilter(
@@ -23,6 +22,6 @@ fun AppCatalogTypeFilterSection(
         arrowContent = { modifier -> Icon(painter = arrowIcon, contentDescription = null, modifier = modifier) },
         allowClearSelection = true,
         icon = typeIcon,
-        text = typeLabel,
+        text = { it.alias.uppercase() },
     )
 }

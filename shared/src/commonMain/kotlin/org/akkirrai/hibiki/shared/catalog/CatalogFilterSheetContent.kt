@@ -72,7 +72,6 @@ fun AppCatalogFilterSheetContent(
                         selected = animeType,
                         onSelected = onAnimeTypeChange,
                         typeIcon = { painterResource(it.iconResource()) },
-                        typeLabel = { it.alias.uppercase() },
                         arrowIcon = dropdownIcon,
                     )
                 }
