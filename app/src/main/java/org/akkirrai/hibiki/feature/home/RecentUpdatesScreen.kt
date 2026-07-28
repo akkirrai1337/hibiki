@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -123,7 +122,6 @@ fun RecentUpdatesScreen(
                         AppLoadMoreState(
                             isLoading = true,
                             errorMessage = null,
-                            errorIcon = Icons.Outlined.WarningAmber,
                             onRetry = viewModel::loadMoreRecentUpdates,
                         )
                     }
