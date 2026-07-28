@@ -119,7 +119,15 @@ fun LocalProfileScreen(
                             isEditingProfile = !isEditingProfile
                         },
                     )
-                    RotatingSettingsButton(onClick = onSettingsClick)
+                    ProfileActionButton(
+                        icon = Icons.Rounded.Settings,
+                        contentDescription = stringResource(R.string.local_profile_settings),
+                        onClick = onSettingsClick,
+                        iconModifier = Modifier.continuousRotation(
+                            durationMillis = 10_000,
+                            label = "settings_icon_rotation",
+                        ),
+                    )
                 }
             },
             contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -220,19 +228,6 @@ private fun LocalAvatar(
                 AsyncImage(model = avatarUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
         },
-    )
-}
-
-@Composable
-private fun RotatingSettingsButton(onClick: () -> Unit) {
-    ProfileActionButton(
-        icon = Icons.Rounded.Settings,
-        contentDescription = stringResource(R.string.local_profile_settings),
-        onClick = onClick,
-        iconModifier = Modifier.continuousRotation(
-            durationMillis = 10_000,
-            label = "settings_icon_rotation",
-        ),
     )
 }
 
