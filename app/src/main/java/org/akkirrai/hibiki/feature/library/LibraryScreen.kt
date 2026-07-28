@@ -31,6 +31,8 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
+import org.akkirrai.hibiki.shared.library.libraryStatusAlias
+import org.akkirrai.hibiki.shared.library.libraryStatusLabel
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
@@ -180,7 +182,7 @@ private fun LibrarySearchFiltersSheet(
 private fun LibraryFilterCatalog.toSharedFilterCatalog(isRussian: Boolean): AnimeCatalogFilterCatalog {
     val statuses = statusOptions.map { status ->
         AnimeCatalogFilterOption(
-            id = statusAlias(status),
+            id = libraryStatusAlias(status),
             title = libraryStatusLabel(status, isRussian),
         )
     }.distinctBy(AnimeCatalogFilterOption::id)
@@ -202,7 +204,7 @@ private fun LibraryFilterCatalog.toSharedFilterCatalog(isRussian: Boolean): Anim
 
 private fun LibrarySearchFilters.toSharedFilters(): AnimeSearchFilters = AnimeSearchFilters(
     typeAlias = type?.lowercase(),
-    statusAlias = status?.let(::statusAlias),
+    statusAlias = status?.let(::libraryStatusAlias),
     includedGenreAliases = includedGenres,
     excludedGenreAliases = excludedGenres,
     yearFrom = yearFrom,
@@ -212,33 +214,13 @@ private fun LibrarySearchFilters.toSharedFilters(): AnimeSearchFilters = AnimeSe
 private fun AnimeSearchFilters.toLibraryFilters(catalog: LibraryFilterCatalog): LibrarySearchFilters =
     LibrarySearchFilters(
         type = typeAlias?.let { alias -> catalog.typeOptions.firstOrNull { it.equals(alias, ignoreCase = true) } },
-        status = statusAlias?.let { alias -> catalog.statusOptions.firstOrNull { statusAlias(it) == alias } },
+        status = statusAlias?.let { alias -> catalog.statusOptions.firstOrNull { libraryStatusAlias(it) == alias } },
         includedGenres = includedGenreAliases,
         excludedGenres = excludedGenreAliases,
         yearFrom = yearFrom,
         yearTo = yearTo,
     )
 
-private fun statusAlias(value: String): String {
-    val normalized = value.trim().lowercase()
-    return when {
-        normalized.contains("ongoing") || normalized.contains("releasing") || normalized.contains("airing") || normalized.contains("онгоинг") -> "ongoing"
-        normalized.contains("released") || normalized.contains("finished") || normalized.contains("completed") || normalized.contains("вышел") || normalized.contains("заверш") -> "released"
-        normalized.contains("announced") || normalized.contains("not_yet") || normalized.contains("анонс") -> "announced"
-        normalized.contains("cancel") || normalized.contains("отмен") -> "cancelled"
-        normalized.contains("hiatus") || normalized.contains("перерыв") -> "hiatus"
-        else -> normalized
-    }
-}
-
-private fun libraryStatusLabel(value: String, isRussian: Boolean): String = when (statusAlias(value)) {
-    "ongoing" -> if (isRussian) "Онгоинг" else "Ongoing"
-    "released" -> if (isRussian) "Вышел" else "Released"
-    "announced" -> if (isRussian) "Анонс" else "Announced"
-    "cancelled" -> if (isRussian) "Отменено" else "Cancelled"
-    "hiatus" -> if (isRussian) "Перерыв" else "Hiatus"
-    else -> value
-}
 
 @Composable
 private fun emptyLibraryCategoryMessage(category: LibraryCategory): String {
