@@ -38,6 +38,8 @@ import org.akkirrai.hibiki.shared.source.AppSourceSearchEmptyState
 import org.akkirrai.hibiki.shared.source.AppSourceSearchAnimeCard
 import org.akkirrai.hibiki.shared.source.SourceScreenDefaultBottomContentPadding
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
+import org.akkirrai.hibiki.shared.source.isSourceSearchActive
+import org.akkirrai.hibiki.shared.source.visibleSourceSearchSections
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
 
 @Composable
@@ -58,7 +60,7 @@ fun SourcesScreen(
     val searchState by searchViewModel.uiState.collectAsState()
     val hasSourceSearch = true
     val query = searchState.query.trim()
-    val isSearchMode = query.length >= 3
+    val isSearchMode = isSourceSearchActive(query)
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val visibleSourcesByLanguage = sourcesByLanguage
@@ -67,9 +69,7 @@ fun SourcesScreen(
         isSearchMode = isSearchMode,
         bottomContentPadding = bottomContentPadding,
         searchContent = {
-            val visibleSections = searchState.sections.filter { section ->
-                section.isLoading || section.hasError || section.items.isNotEmpty()
-            }
+            val visibleSections = searchState.sections.visibleSourceSearchSections()
             visibleSections.forEach { section ->
                 val source = AnimeSourceRegistry.sources.first { it.id.value == section.sourceId }
                 item(key = "search_${section.sourceId}") {

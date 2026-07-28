@@ -16,3 +16,12 @@ data class SourcesSearchUiState(
     val isSearching: Boolean = false,
     val hasSearched: Boolean = false,
 )
+
+fun isSourceSearchActive(query: String): Boolean = query.trim().length >= SOURCE_SEARCH_MIN_QUERY_LENGTH
+
+fun <T> List<SourceSearchSectionState<T>>.visibleSourceSearchSections(): List<SourceSearchSectionState<T>> =
+    filter { section ->
+        section.isLoading || section.hasError || section.items.isNotEmpty()
+    }
+
+private const val SOURCE_SEARCH_MIN_QUERY_LENGTH = 3
