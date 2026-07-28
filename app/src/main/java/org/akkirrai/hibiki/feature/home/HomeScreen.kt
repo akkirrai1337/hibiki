@@ -57,7 +57,7 @@ import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
 import org.akkirrai.hibiki.shared.home.appHomeFeedContent
-import org.akkirrai.hibiki.shared.home.appHomeSearchResultsContent
+import org.akkirrai.hibiki.shared.home.appSearchResultsContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -143,7 +143,7 @@ fun HomeScreen(
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
                 ) {
-                    appHomeSearchResultsContent(
+                    appSearchResultsContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
                         metaText = { anime ->

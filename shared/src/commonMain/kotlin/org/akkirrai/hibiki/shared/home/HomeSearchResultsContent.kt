@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
@@ -15,7 +16,7 @@ import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 
-fun LazyListScope.appHomeSearchResultsContent(
+fun LazyListScope.appSearchResultsContent(
     state: SearchUiState,
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
@@ -28,6 +29,13 @@ fun LazyListScope.appHomeSearchResultsContent(
     emptyIcon: ImageVector,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryStatusLabel: @Composable (LibraryCategory) -> String,
+    idleTitle: String? = null,
+    idleMessage: String? = null,
+    idleIcon: ImageVector? = null,
+    idleTopPadding: androidx.compose.ui.unit.Dp = 44.dp,
+    errorModifier: Modifier = Modifier,
+    errorRetryLabel: String? = null,
+    loadMoreModifier: Modifier = Modifier,
     onItemVisible: ((Anime) -> Unit)? = null,
 ) {
     appSearchStateVerticalListContent(
@@ -38,9 +46,16 @@ fun LazyListScope.appHomeSearchResultsContent(
         onRetrySearch = onRetrySearch,
         loadMoreLabel = loadMoreLabel,
         resultsCountLabel = resultsCountLabel,
+        idleTitle = idleTitle,
+        idleMessage = idleMessage,
+        idleIcon = idleIcon,
+        idleTopPadding = idleTopPadding,
         emptyTitle = emptyTitle,
         emptyMessage = emptyMessage,
         emptyIcon = emptyIcon,
+        errorModifier = errorModifier,
+        errorRetryLabel = errorRetryLabel,
+        loadMoreModifier = loadMoreModifier,
         posterContent = { anime ->
             AppPosterImage(
                 primaryUrl = anime.posterUrl,
