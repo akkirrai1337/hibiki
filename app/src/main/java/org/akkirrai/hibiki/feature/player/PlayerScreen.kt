@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
@@ -58,6 +59,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -82,6 +86,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.core.design.component.AppBackButton
+import org.akkirrai.hibiki.shared.design.component.AppBackButton as SharedBackButton
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -1095,7 +1100,22 @@ fun PlayerScreen(
                     title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
                     playlistEnabled = state.episodes.isNotEmpty(),
-                    backContent = { AppBackButton(onClick = handleBackClick) },
+                    backContent = {
+                        SharedBackButton(
+                            onClick = handleBackClick,
+                            iconContent = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = stringResource(R.string.cd_back),
+                                    tint = Color.White,
+                                    modifier = Modifier.graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
+                                        blendMode = BlendMode.Difference
+                                    },
+                                )
+                            },
+                        )
+                    },
                     playlistContent = {
                         AppPlayerPlaylistButton(
                             onClick = {
