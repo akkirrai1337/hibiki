@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -1195,13 +1194,7 @@ fun PlayerScreen(
                                 playlistVisible = false
                                 settingsVisible = false
                             },
-                            lockContent = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Lock,
-                                    contentDescription = stringResource(R.string.watch_player_lock),
-                                    tint = Color.White,
-                                )
-                            },
+                            lockContentDescription = stringResource(R.string.watch_player_lock),
                             pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
                             onPictureInPictureClick = {
                                 isEnteringPictureInPicture = true
