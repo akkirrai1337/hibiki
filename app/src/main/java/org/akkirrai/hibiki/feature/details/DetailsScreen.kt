@@ -615,8 +615,6 @@ private fun DetailHeroSection(
                 canWatch = canWatch,
                 libraryLabel = stringResource(R.string.details_favorite),
                 watchLabel = stringResource(R.string.details_watch),
-                libraryIcon = if (isUserLibraryCategorySelected) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                primaryIcon = Icons.Filled.PlayArrow,
                 onLibraryClick = onLibraryClick,
                 onPrimaryClick = onPrimaryClick,
             )

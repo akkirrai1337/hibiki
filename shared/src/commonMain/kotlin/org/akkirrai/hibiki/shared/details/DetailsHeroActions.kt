@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,8 +33,6 @@ fun DetailsHeroActions(
     canWatch: Boolean,
     libraryLabel: String,
     watchLabel: String,
-    libraryIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    primaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
 ) {
@@ -46,7 +48,13 @@ fun DetailsHeroActions(
             color = if (isInLibrary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
             contentColor = if (isInLibrary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
         ) {
-            Box(contentAlignment = Alignment.Center) { Icon(libraryIcon, libraryLabel, Modifier.size(DetailsHeroLibraryIconSize)) }
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = libraryLabel,
+                    modifier = Modifier.size(DetailsHeroLibraryIconSize),
+                )
+            }
         }
         OutlinedButton(
             onClick = onPrimaryClick,
@@ -56,7 +64,7 @@ fun DetailsHeroActions(
             border = BorderStroke(DetailsHeroPrimaryButtonBorderWidth, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface, containerColor = Color.Transparent),
         ) {
-            Icon(primaryIcon, null, Modifier.size(DetailsHeroPrimaryIconSize))
+            Icon(Icons.Filled.PlayArrow, null, Modifier.size(DetailsHeroPrimaryIconSize))
             Spacer(Modifier.width(DetailsHeroPrimaryIconLabelGap))
             Text(watchLabel, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium))
         }
