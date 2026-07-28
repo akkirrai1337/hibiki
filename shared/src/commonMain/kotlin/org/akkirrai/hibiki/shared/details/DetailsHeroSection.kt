@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.details
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,15 +10,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 
 @Composable
 fun AppDetailsHeroSection(
-    posterHeightOffset: Dp,
+    posterExpanded: Boolean,
     onPosterClick: () -> Unit,
     posterContent: @Composable () -> Unit,
     mediaContent: @Composable (Modifier) -> Unit,
@@ -25,6 +26,11 @@ fun AppDetailsHeroSection(
     actionsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val posterHeightOffset by animateDpAsState(
+        targetValue = if (posterExpanded) DetailsHeroPosterExpandedOffset else DetailsHeroPosterCollapsedOffset,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 750),
+        label = "details_poster_height",
+    )
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier

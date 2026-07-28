@@ -3,8 +3,6 @@ package org.akkirrai.hibiki.feature.details
 import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -109,8 +107,6 @@ import org.akkirrai.hibiki.shared.details.DetailsGenresSection
 import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
 import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
-import org.akkirrai.hibiki.shared.details.DetailsHeroPosterCollapsedOffset
-import org.akkirrai.hibiki.shared.details.DetailsHeroPosterExpandedOffset
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
@@ -518,13 +514,8 @@ private fun DetailHeroSection(
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
         }
     }
-    val posterHeightOffset by animateDpAsState(
-        targetValue = if (isAtTop) DetailsHeroPosterExpandedOffset else DetailsHeroPosterCollapsedOffset,
-        animationSpec = tween(durationMillis = 750),
-        label = "details_poster_height",
-    )
     AppDetailsHeroSection(
-        posterHeightOffset = posterHeightOffset,
+        posterExpanded = isAtTop,
         onPosterClick = onPosterClick,
         posterContent = {
             NetworkImage(
