@@ -40,6 +40,7 @@ import org.akkirrai.hibiki.shared.profile.ProfileSmallPadding
 import org.akkirrai.hibiki.shared.profile.ProfileMediumPadding
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 import org.akkirrai.hibiki.shared.profile.ProfileTab
+import org.akkirrai.hibiki.shared.profile.toProfileGenreBarItems
 
 /**
  * Direct Android port of Animite's ProfileScreen layout: NestedScrollBannerLayout,
@@ -159,13 +160,7 @@ fun LocalProfileScreen(
                                     ),
                                 )
                                 org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
-                                    items = snapshot.genreSegments.map { item ->
-                                        org.akkirrai.hibiki.shared.profile.ProfileGenreBarItem(
-                                            item.label,
-                                            item.count,
-                                            item.color,
-                                        )
-                                    },
+                                    items = snapshot.genreSegments.toProfileGenreBarItems(),
                                 )
                                 RecentLibraryCard(snapshot.recentLibraryItems)
                             }

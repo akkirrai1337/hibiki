@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.buildProfileAnalyticsPages
+import org.akkirrai.hibiki.shared.profile.toProfileActivityBarItems
 
 @Composable
 internal fun AnalyticsCard(
@@ -60,9 +61,7 @@ internal fun AnalyticsCard(
         activityContent = {
             org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
                 title = stringResource(R.string.yummy_account_activity_title),
-                days = snapshot.activityDays.map { day ->
-                    org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(day.dateLabel, day.episodeCount)
-                },
+                days = snapshot.activityDays.toProfileActivityBarItems(),
                 listState = activityListState,
                 visibleDays = ACTIVITY_CHART_VISIBLE_DAYS,
                 dayGap = ACTIVITY_CHART_DAY_GAP,
