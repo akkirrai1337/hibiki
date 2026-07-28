@@ -23,7 +23,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
@@ -39,6 +38,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
+import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -155,11 +155,9 @@ fun FirstLaunchOnboarding(
                                 selected = source.id == selectedSource,
                                 onClick = { selectedSourceValue = source.id.value },
                                 iconContent = { iconModifier ->
-                                    AsyncImage(
-                                        model = source.iconUrl,
+                                    AppSourceIconImage(
+                                        url = source.iconUrl,
                                         placeholder = painterResource(source.iconRes),
-                                        error = painterResource(source.iconRes),
-                                        contentDescription = null,
                                         modifier = iconModifier,
                                     )
                                 },
