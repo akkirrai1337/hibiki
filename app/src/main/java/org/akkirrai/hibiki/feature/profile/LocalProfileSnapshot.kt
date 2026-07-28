@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.shared.profile.buildLibraryStatusSegments
 import org.akkirrai.hibiki.shared.profile.trackedProfileLibraryItems
 import org.akkirrai.hibiki.shared.profile.profileColor
 import org.akkirrai.hibiki.shared.profile.buildFavoriteLibraryItems
+import org.akkirrai.hibiki.shared.profile.buildRecentLibraryItems
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -45,24 +46,10 @@ internal fun buildProfileSnapshot(
     val librarySegments = localData.buildLibraryStatusSegments { category ->
         resources.getString(category.labelResId)
     }
-    val localRecentItems = localData.library
-        .asSequence()
-        .filter { it.addedAt != null && it.anime.title.isNotBlank() }
-        .sortedByDescending { it.addedAt }
-        .map { item ->
-            val category = item.categories.primaryLibraryCategory()
-            RecentLibraryItem(
-                title = item.anime.title,
-                posterUrl = item.anime.posterUrl,
-                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatProfileRating),
-                statusLabel = resources.getString(category.labelResId),
-                dateLabel = formatEpochDateShort(resources, requireNotNull(item.addedAt)),
-                color = category.profileColor(),
-            )
-        }
-        .distinctBy(RecentLibraryItem::title)
-        .take(5)
-        .toList()
+    val localRecentItems = localData.buildRecentLibraryItems(
+        statusLabel = { category -> resources.getString(category.labelResId) },
+        dateLabel = { value -> formatEpochDateShort(resources, value) },
+    )
     val favoriteItems = localData.buildFavoriteLibraryItems(
         statusLabel = resources.getString(LibraryCategory.Favorite.labelResId),
         dateLabel = { value -> formatEpochDateShort(resources, value) },
