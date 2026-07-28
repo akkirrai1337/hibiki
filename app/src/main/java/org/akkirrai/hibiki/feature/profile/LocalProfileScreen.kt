@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +29,7 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.shared.profile.ProfileActionButton
+import org.akkirrai.hibiki.shared.profile.ProfileEditActionButton
 import org.akkirrai.hibiki.shared.profile.ProfileSettingsActionButton
 import org.akkirrai.hibiki.shared.profile.AppProfileBannerLayout
 import org.akkirrai.hibiki.shared.profile.ProfileAvatarPlaceholder
@@ -102,8 +99,8 @@ fun LocalProfileScreen(
                     modifier = actionModifier,
                     horizontalArrangement = Arrangement.spacedBy(ProfileSmallPadding),
                 ) {
-                    ProfileActionButton(
-                        icon = if (isEditingProfile) Icons.Rounded.Check else Icons.Rounded.Edit,
+                    ProfileEditActionButton(
+                        isEditing = isEditingProfile,
                         contentDescription = stringResource(if (isEditingProfile) R.string.action_save else R.string.local_profile_edit),
                         onClick = {
                             if (isEditingProfile) {
