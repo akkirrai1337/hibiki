@@ -49,6 +49,7 @@ import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
 import org.akkirrai.hibiki.shared.player.PlayerSelectionCandidate
 import org.akkirrai.hibiki.shared.player.prioritizePlayerSelection
 import org.akkirrai.hibiki.shared.player.resolvePlayerAttemptTimeoutMillis
+import org.akkirrai.hibiki.shared.player.formatHeaderNames
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
@@ -220,7 +221,7 @@ class AnimeWatchRepository(
             "validated stream: player=${resolved.link.playerName}, type=${resolved.validation.streamType}, " +
                 "quality=${resolved.validation.quality}, status=${resolved.validation.statusCode}, " +
                 "streamHost=${resolved.validation.finalUrl.safeHost()}, " +
-                "headerNames=${resolved.stream.headers.safeHeaderNames()}",
+                "headerNames=${formatHeaderNames(resolved.stream.headers)}",
         )
         val playback = PlaybackStream(
             animeTitle = payload.title.displayName,
@@ -475,14 +476,6 @@ class AnimeWatchRepository(
             .getOrNull()
             ?.takeIf(String::isNotBlank)
             ?: "unknown"
-    }
-
-    private fun Map<String, String>.safeHeaderNames(): String {
-        if (isEmpty()) return "[]"
-        return keys
-            .filter(String::isNotBlank)
-            .sorted()
-            .joinToString(prefix = "[", postfix = "]")
     }
 
     private fun appString(@androidx.annotation.StringRes resId: Int, vararg formatArgs: Any): String {

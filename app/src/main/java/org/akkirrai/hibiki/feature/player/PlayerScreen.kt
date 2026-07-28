@@ -98,6 +98,7 @@ import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.playerToggleValueLocalizationKey
 import org.akkirrai.hibiki.shared.player.pictureInPictureAudioModeLocalizationKey
 import org.akkirrai.hibiki.shared.player.pictureInPicturePlaybackLocalizationKey
+import org.akkirrai.hibiki.shared.player.formatHeaderNames
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -749,7 +750,7 @@ fun PlayerScreen(
                 append(" streamHost=")
                 append(playback.streamUrl.safeHost())
                 append(" headerNames=")
-                append(playback.headers.safeHeaderNames())
+                append(formatHeaderNames(playback.headers))
             },
         )
         keepControlsVisible()
@@ -1586,10 +1587,3 @@ private fun String?.safeHost(): String {
         ?: "unknown"
 }
 
-private fun Map<String, String>.safeHeaderNames(): String {
-    if (isEmpty()) return "[]"
-    return keys
-        .filter(String::isNotBlank)
-        .sorted()
-        .joinToString(prefix = "[", postfix = "]")
-}
