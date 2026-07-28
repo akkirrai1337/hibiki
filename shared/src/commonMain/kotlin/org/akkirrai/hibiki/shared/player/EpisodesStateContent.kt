@@ -1,9 +1,10 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.design.component.AppCenteredLoading
 
@@ -13,7 +14,6 @@ fun AppEpisodesStateContent(
     sourceTitle: String,
     emptyMessage: String,
     retryLabel: String,
-    icon: ImageVector,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable (List<WatchEpisode>) -> Unit,
@@ -23,7 +23,7 @@ fun AppEpisodesStateContent(
         EpisodesUiState.Empty -> WatchEmptyState(
             title = sourceTitle,
             message = emptyMessage,
-            icon = icon,
+            icon = Icons.Outlined.VideoLibrary,
             retryLabel = retryLabel,
             onRetry = onRetry,
             modifier = modifier.fillMaxSize(),
@@ -31,7 +31,7 @@ fun AppEpisodesStateContent(
         is EpisodesUiState.Error -> WatchEmptyState(
             title = sourceTitle,
             message = result.message,
-            icon = icon,
+            icon = Icons.Outlined.VideoLibrary,
             retryLabel = retryLabel,
             onRetry = onRetry,
             modifier = modifier.fillMaxSize(),

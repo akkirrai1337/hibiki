@@ -8,7 +8,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -139,7 +138,6 @@ fun EpisodesScreen(
             sourceTitle = sourceTitle,
             emptyMessage = stringResource(R.string.watch_episodes_empty_title),
             retryLabel = stringResource(R.string.search_retry),
-            icon = Icons.Outlined.VideoLibrary,
             onRetry = viewModel::load,
         ) { episodes ->
                 val watchSourceFallback = stringResource(R.string.watch_source_fallback)
