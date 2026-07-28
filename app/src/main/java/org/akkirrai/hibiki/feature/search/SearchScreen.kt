@@ -21,9 +21,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.search.AppSearchContentList
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.library.icon
@@ -86,7 +86,7 @@ fun SearchScreen(
             errorRetryLabel = retryLabel,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
             posterContent = { anime ->
-                PosterImage(
+                AppPosterImage(
                     primaryUrl = anime.posterUrl,
                     fallbackUrl = anime.posterFallbackUrl,
                     contentDescription = anime.title,
