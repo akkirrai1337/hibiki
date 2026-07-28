@@ -11,6 +11,7 @@ import java.util.Locale
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
+import org.akkirrai.hibiki.shared.profile.RecentLibraryItem
 import org.akkirrai.hibiki.shared.profile.primaryLibraryCategory
 import org.akkirrai.hibiki.shared.profile.formatProfileRating
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
@@ -151,8 +152,6 @@ internal data class LocalProfileSnapshot(
 )
 internal data class DistributionSegment(val label: String, val count: Int, val color: Color)
 internal data class ActivityDay(val dateLabel: String, val episodeCount: Int)
-internal data class RecentLibraryItem(val title: String, val posterUrl: String?, val ratingLabel: String?, val statusLabel: String, val dateLabel: String, val color: Color)
-
 private const val ACTIVITY_HISTORY_DAYS = 30
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
 private val genrePalette = listOf(Color(0xFF48D67B), Color(0xFFF7BC16), Color(0xFFA56CE3), Color(0xFFFF646B), Color(0xFFC24ED3), Color(0xFF737373))

@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.feature.profile
 
 import org.akkirrai.hibiki.shared.profile.normalizePosterUrl
 import org.akkirrai.hibiki.shared.profile.ProfileRecentPosterMarker
+import org.akkirrai.hibiki.shared.profile.RecentLibraryItem
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
