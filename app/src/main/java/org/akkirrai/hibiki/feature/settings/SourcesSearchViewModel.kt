@@ -29,6 +29,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_DEBOUNCE_MS
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_RESULTS_PER_SOURCE
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 
 typealias SourceSearchSection = SourceSearchSectionState<Anime>
@@ -115,7 +116,7 @@ class SourcesSearchViewModel(
                                     sections = state.sections.map { section ->
                                         if (section.sourceId != source.id.value) section
                                         else result.fold(
-                                            onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), isLoading = false) },
+                        onSuccess = { items -> section.copy(items = items.take(SOURCE_SEARCH_RESULTS_PER_SOURCE), isLoading = false) },
                                             onFailure = { section.copy(hasError = true, isLoading = false) },
                                         )
                                     },
@@ -158,7 +159,7 @@ class SourcesSearchViewModel(
                 state.copy(sections = state.sections.map { section ->
                     if (section.sourceId != sourceId.value) section
                     else result.fold(
-                        onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), hasError = false, isLoading = false) },
+                        onSuccess = { items -> section.copy(items = items.take(SOURCE_SEARCH_RESULTS_PER_SOURCE), hasError = false, isLoading = false) },
                         onFailure = { section.copy(hasError = true, isLoading = false) },
                     )
                 })
@@ -174,7 +175,7 @@ class SourcesSearchViewModel(
 
     private fun request(query: String): AnimeSearchRequest = AnimeSearchRequest(
             query = query,
-            limit = RESULTS_PER_SOURCE,
+            limit = SOURCE_SEARCH_RESULTS_PER_SOURCE,
             offset = 0,
         )
 
@@ -196,6 +197,5 @@ class SourcesSearchViewModel(
 
     private companion object {
         const val TAG = "SourcesSearch"
-        const val RESULTS_PER_SOURCE = 12
     }
 }
