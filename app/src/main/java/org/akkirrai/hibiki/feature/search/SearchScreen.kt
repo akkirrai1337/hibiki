@@ -1,27 +1,21 @@
 package org.akkirrai.hibiki.feature.search
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.search.AppSearchField
-import org.akkirrai.hibiki.shared.search.AppSearchContentList
+import org.akkirrai.hibiki.shared.search.AppSearchScreenContent
 import org.akkirrai.hibiki.shared.search.SearchScreenEmptyIcon
 import org.akkirrai.hibiki.shared.search.SearchScreenIcon
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
-import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.model.buildCardMeta
-import org.akkirrai.hibiki.shared.home.appSearchResultsContent
 
 @Composable
 fun SearchScreen(
@@ -40,45 +34,34 @@ fun SearchScreen(
     val retryLabel = stringResource(R.string.search_retry)
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
-    AppSearchContentList(modifier = modifier) {
-        item {
-            AppSearchField(
-                query = state.query,
-                onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::search,
-                placeholder = stringResource(R.string.search_placeholder),
-                searchContentDescription = stringResource(R.string.cd_search),
-                searchIcon = SearchScreenIcon,
+    AppSearchScreenContent(
+        query = state.query,
+        result = state.result,
+        onQueryChange = viewModel::onQueryChange,
+        onSearch = viewModel::search,
+        onAnimeClick = onAnimeClick,
+        placeholder = stringResource(R.string.search_placeholder),
+        searchContentDescription = stringResource(R.string.cd_search),
+        searchIcon = SearchScreenIcon,
+        metaText = { anime ->
+            anime.buildCardMeta(
+                announcementLabel = announcementLabel,
+                movieLabel = movieLabel,
             )
-        }
-
-        appSearchResultsContent(
-            state = state.result,
-            onAnimeClick = onAnimeClick,
-            metaText = { anime ->
-                anime.buildCardMeta(
-                    announcementLabel = announcementLabel,
-                    movieLabel = movieLabel,
-                )
-            },
-            onLoadMore = viewModel::loadMore,
-            onRetrySearch = viewModel::search,
-            loadMoreLabel = loadMoreLabel,
-            resultsCountLabel = { count ->
-                pluralStringResource(R.plurals.search_results_count, count, count)
-            },
-            idleTitle = idleTitle,
-            idleMessage = idleMessage,
-            idleIcon = SearchScreenIcon,
-            idleTopPadding = 64.dp,
-            emptyTitle = emptyTitle,
-            emptyMessage = emptyMessage,
-            emptyIcon = SearchScreenEmptyIcon,
-            libraryStatusByAnimeId = libraryStatusByAnimeId,
-            libraryStatusLabel = { category -> stringResource(category.labelResId) },
-            errorModifier = Modifier.padding(top = 24.dp),
-            errorRetryLabel = retryLabel,
-            loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
-        )
-    }
+        },
+        onLoadMore = viewModel::loadMore,
+        loadMoreLabel = loadMoreLabel,
+        resultsCountLabel = { count ->
+            pluralStringResource(R.plurals.search_results_count, count, count)
+        },
+        idleTitle = idleTitle,
+        idleMessage = idleMessage,
+        emptyTitle = emptyTitle,
+        emptyMessage = emptyMessage,
+        emptyIcon = SearchScreenEmptyIcon,
+        libraryStatusByAnimeId = libraryStatusByAnimeId,
+        libraryStatusLabel = { category -> stringResource(category.labelResId) },
+        retryLabel = retryLabel,
+        modifier = modifier,
+    )
 }
