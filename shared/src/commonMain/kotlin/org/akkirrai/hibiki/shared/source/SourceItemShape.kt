@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
 
 /**
  * Returns the shape for an item in a grouped source list.
