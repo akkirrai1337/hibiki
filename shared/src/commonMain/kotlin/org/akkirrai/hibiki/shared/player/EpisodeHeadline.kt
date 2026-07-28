@@ -7,6 +7,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import org.akkirrai.hibiki.shared.model.EpisodeProgressStatus
+import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.shared.model.WatchEpisode
 
 @Composable
 fun buildEpisodeHeadline(
@@ -27,4 +30,32 @@ fun buildEpisodeHeadline(
             append(" • $trailingLabel")
         }
     }
+}
+
+@Composable
+fun buildEpisodeRowHeadline(
+    episode: WatchEpisode,
+    progress: EpisodeWatchProgress?,
+    status: EpisodeProgressStatus,
+    watchedHeadline: @Composable (number: String) -> String,
+    defaultHeadline: @Composable (number: String) -> String,
+    watchedLabel: String,
+): AnnotatedString {
+    val number = formatEpisodeNumber(episode.number)
+    val headline = when (status) {
+        EpisodeProgressStatus.Watched -> watchedHeadline(number)
+        else -> defaultHeadline(number)
+    }
+    val trailingLabel = if (
+        status == EpisodeProgressStatus.InProgress &&
+        progress != null &&
+        progress.durationMs > 0L
+    ) {
+        "${formatEpisodeDuration(progress.positionMs)} / ${formatEpisodeDuration(progress.durationMs)}"
+    } else if (status == EpisodeProgressStatus.Watched) {
+        watchedLabel
+    } else {
+        null
+    }
+    return buildEpisodeHeadline(headline, trailingLabel)
 }

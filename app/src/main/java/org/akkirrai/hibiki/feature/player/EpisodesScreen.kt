@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,11 +36,10 @@ import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
-import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
-import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
+import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -213,7 +211,14 @@ private fun EpisodeRow(
         downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
     ) OfflineEpisodeDownloadState.NotDownloaded else downloadState
     AppEpisodeDownloadRow(
-        headline = buildEpisodeHeadline(episode, progress, status),
+        headline = buildEpisodeRowHeadline(
+            episode = episode,
+            progress = progress,
+            status = status,
+            watchedHeadline = { number -> stringResource(R.string.watch_episode_headline_watched, number) },
+            defaultHeadline = { number -> stringResource(R.string.watch_episode_headline, number) },
+            watchedLabel = stringResource(R.string.watch_status_watched),
+        ),
         subtitle = buildEpisodeSubtitle(visibleDownloadState).takeIf(String::isNotBlank),
         inProgress = status == EpisodeProgressStatus.InProgress,
         enabled = enabled,
@@ -244,31 +249,6 @@ private fun OfflineEpisodeDownloadState.toEpisodeDownloadActionState(): EpisodeD
 }
 
 
-
-@Composable
-private fun buildEpisodeHeadline(
-    episode: WatchEpisode,
-    progress: EpisodeWatchProgress?,
-    status: EpisodeProgressStatus,
-): AnnotatedString {
-    val number = if (episode.number % 1.0 == 0.0) episode.number.toInt().toString() else episode.number.toString()
-    val headline = when (status) {
-        EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
-        else -> stringResource(R.string.watch_episode_headline, number)
-    }
-    val trailingLabel = if (
-        status == EpisodeProgressStatus.InProgress &&
-        progress != null &&
-        progress.durationMs > 0L
-    ) {
-        "${formatEpisodeDuration(progress.positionMs)} / ${formatEpisodeDuration(progress.durationMs)}"
-    } else if (status == EpisodeProgressStatus.Watched) {
-        stringResource(R.string.watch_status_watched)
-    } else {
-        null
-    }
-    return buildSharedEpisodeHeadline(headline, trailingLabel)
-}
 
 @Composable
 private fun buildEpisodeSubtitle(
