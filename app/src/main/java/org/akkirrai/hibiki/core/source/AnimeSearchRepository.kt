@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -199,7 +200,12 @@ class AnimeSearchRepository(
             episodesLabel = if (isAnnouncementStatus(resolvedStatus)) {
                 if (preferEnglish) "announcement" else "анонс"
             } else {
-                buildEpisodesLabel(fallback?.episodesLabel, preferEnglish)
+                resolveEpisodesLabel(
+                    releasedCount = availableEpisodeCount
+                        ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED },
+                    fallbackLabel = fallback?.episodesLabel,
+                    preferEnglish = preferEnglish,
+                )
             },
             status = resolvedStatus,
             nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
@@ -278,25 +284,6 @@ class AnimeSearchRepository(
             3 -> if (preferEnglish) "Summer" else "Лето"
             4 -> if (preferEnglish) "Autumn" else "Осень"
             else -> null
-        }
-    }
-
-    private fun AnimeTitle.buildEpisodesLabel(
-        fallbackLabel: String?,
-        preferEnglish: Boolean,
-    ): String {
-        val releasedCount = availableEpisodeCount
-            ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED }
-        val normalizedFallback = fallbackLabel?.trim()?.lowercase().orEmpty()
-        val fallbackIsUnknown = normalizedFallback == "unknown" || normalizedFallback.contains("unknown") ||
-            normalizedFallback == "episode unknown" ||
-            normalizedFallback == "episodes unknown" ||
-            normalizedFallback == "количество серий неизвестно"
-        return when (val count = releasedCount) {
-            null -> fallbackLabel.orEmpty().takeUnless { fallbackIsUnknown || it.isBlank() } ?: run {
-                if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
-            }
-            else -> if (preferEnglish) "$count episodes" else "$count серий"
         }
     }
 
