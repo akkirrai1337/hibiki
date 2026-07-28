@@ -46,6 +46,7 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.shared.settings.isBusy
 import org.akkirrai.hibiki.shared.settings.resolveDiscordRpcStatusLabel
+import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialog
 import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
 import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
@@ -315,7 +316,7 @@ private fun DiscordSettingsItem(
 }
 
 @Composable
-private fun DiscordAuthDialog(
+private fun LegacyDiscordAuthDialog(
     manager: DiscordRpcManager,
     initialToken: String,
     isSignedIn: Boolean,
@@ -380,6 +381,46 @@ private fun DiscordAuthDialog(
                     },
             )
         },
+        )
+    }
+}
+
+@Composable
+private fun DiscordAuthDialog(
+    manager: DiscordRpcManager,
+    initialToken: String,
+    isSignedIn: Boolean,
+    onBrowserSignIn: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val appLanguage = LocalAppLanguage.current
+    val state by manager.state.collectAsState()
+    val isChecking = state.status.isBusy()
+
+    LocalizedAppContext(languageMode = appLanguage) {
+        AppDiscordAuthDialog(
+            initialToken = initialToken,
+            isSignedIn = isSignedIn,
+            statusText = listOfNotNull(
+                state.account?.displayName,
+                discordRpcStatusLabel(state.status),
+            ).distinct().joinToString(" â€¢ "),
+            isChecking = isChecking,
+            icon = ImageVector.vectorResource(R.drawable.ic_discord),
+            title = stringResource(R.string.discord_rpc_title),
+            manualTokenLabel = stringResource(R.string.discord_rpc_manual_token),
+            invalidTokenLabel = stringResource(R.string.discord_rpc_invalid_token),
+            disconnectLabel = stringResource(R.string.discord_rpc_disconnect),
+            browserSignInLabel = stringResource(R.string.discord_rpc_sign_in_browser),
+            cancelLabel = stringResource(R.string.action_cancel),
+            applyLabel = stringResource(R.string.settings_apply),
+            onBrowserSignIn = onBrowserSignIn,
+            onDisconnect = {
+                manager.signOut()
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+            onAuthenticate = manager::authenticate,
         )
     }
 }
