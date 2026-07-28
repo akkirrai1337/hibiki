@@ -42,8 +42,8 @@ import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
-import org.akkirrai.hibiki.core.discord.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
 import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
