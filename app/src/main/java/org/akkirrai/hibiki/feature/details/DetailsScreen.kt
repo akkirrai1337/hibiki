@@ -741,18 +741,10 @@ private fun RelatedAnimeList(
 ) {
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    val relatedItems = displayItems.map { related ->
-        org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeItem(
-            id = related.id,
-            title = related.title,
-            metadata = formatRelatedAnimeMetadata(
-                year = related.year,
-                type = related.type,
-                status = related.status,
-                announcementLabel = announcementLabel,
-            ),
-        )
-    }
+    val relatedItems = org.akkirrai.hibiki.shared.details.buildDetailsRelatedAnimeItems(
+        items = displayItems,
+        announcementLabel = announcementLabel,
+    )
     val relatedById = displayItems.associateBy(RelatedAnime::id)
     org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
         items = relatedItems,
