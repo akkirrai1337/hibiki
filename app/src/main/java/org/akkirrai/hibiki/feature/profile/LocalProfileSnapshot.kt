@@ -15,6 +15,9 @@ import org.akkirrai.hibiki.shared.profile.RecentLibraryItem
 import org.akkirrai.hibiki.shared.profile.primaryLibraryCategory
 import org.akkirrai.hibiki.shared.profile.formatProfileRating
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
+import org.akkirrai.hibiki.shared.profile.ActivityDay
+import org.akkirrai.hibiki.shared.profile.DistributionSegment
+import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -138,20 +141,6 @@ internal fun formatDurationLabel(resources: Resources, durationMs: Long): String
     formatDurationHours(durationMs),
 )
 
-internal data class LocalProfileSnapshot(
-    val watchTimeLabel: String,
-    val activeDaysCount: Int,
-    val totalEpisodes: Int,
-    val libraryTotal: Int,
-    val libraryStatusSegments: List<DistributionSegment>,
-    val activityDays: List<ActivityDay>,
-    val recentLibraryItems: List<RecentLibraryItem>,
-    val favoriteLibraryItems: List<RecentLibraryItem>,
-    val genreSegments: List<DistributionSegment>,
-    val genreTrackedTitlesCount: Int,
-)
-internal data class DistributionSegment(val label: String, val count: Int, val color: Color)
-internal data class ActivityDay(val dateLabel: String, val episodeCount: Int)
 private const val ACTIVITY_HISTORY_DAYS = 30
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")
 private val genrePalette = listOf(Color(0xFF48D67B), Color(0xFFF7BC16), Color(0xFFA56CE3), Color(0xFFFF646B), Color(0xFFC24ED3), Color(0xFF737373))

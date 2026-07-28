@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage
 import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment
+import org.akkirrai.hibiki.shared.profile.DistributionSegment
+import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
 
 @Composable
 internal fun AnalyticsCard(
