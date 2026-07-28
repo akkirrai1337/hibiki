@@ -6,7 +6,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 
@@ -16,7 +15,6 @@ fun AppCatalogSortMenuContent(
     sorts: List<CatalogSort>,
     selectedSort: CatalogSort,
     label: (CatalogSort) -> String,
-    icon: (CatalogSort) -> ImageVector,
     expanded: Boolean,
     onSortSelected: (CatalogSort) -> Unit,
     orderContent: @Composable (Boolean, Modifier) -> Unit,
@@ -33,7 +31,7 @@ fun AppCatalogSortMenuContent(
     )
     sorts.forEach { sort ->
         AppCatalogSortMenuItem(
-            icon = icon(sort),
+            icon = sort.icon(),
             label = label(sort),
             selected = sort == selectedSort,
             onClick = { onSortSelected(sort) },

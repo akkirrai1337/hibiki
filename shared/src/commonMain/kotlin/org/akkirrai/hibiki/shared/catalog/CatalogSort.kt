@@ -1,9 +1,21 @@
 package org.akkirrai.hibiki.shared.catalog
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Whatshot
+import androidx.compose.ui.graphics.vector.ImageVector
+
 enum class CatalogSort {
     Alphabetical,
     Popular,
     Updated,
+}
+
+fun CatalogSort.icon(): ImageVector = when (this) {
+    CatalogSort.Alphabetical -> Icons.Outlined.SortByAlpha
+    CatalogSort.Popular -> Icons.Outlined.Whatshot
+    CatalogSort.Updated -> Icons.Outlined.Update
 }
 
 fun availableCatalogSorts(

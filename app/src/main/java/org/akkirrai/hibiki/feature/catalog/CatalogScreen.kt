@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SortByAlpha
-import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +71,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
+import org.akkirrai.hibiki.shared.catalog.icon
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
@@ -284,7 +281,7 @@ private fun CatalogSortControl(
 
     AppCatalogSortControl(
         sortKey = selectedSort.name,
-        icon = selectedSort.icon,
+        icon = selectedSort.icon(),
         label = sortLabels[selectedSort].orEmpty(),
         expanded = expanded,
         onExpandedChange = onExpandedChange,
@@ -319,7 +316,6 @@ private fun CatalogSortControl(
                 sorts = availableSorts,
                 selectedSort = selectedSort,
                 label = sortLabels::getValue,
-                icon = CatalogSort::icon,
                 expanded = expanded,
                 onSortSelected = { sort ->
                     haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
@@ -337,12 +333,6 @@ private fun CatalogSortControl(
         modifier = modifier,
     )
 }
-private val CatalogSort.icon: ImageVector
-    get() = when (this) {
-        CatalogSort.Alphabetical -> Icons.Outlined.SortByAlpha
-        CatalogSort.Popular -> Icons.Outlined.Whatshot
-        CatalogSort.Updated -> Icons.Outlined.Update
-    }
 
 class CatalogViewModel(
     private val repository: CatalogRepository,
