@@ -36,6 +36,7 @@ fun AppProfileBannerLayout(
     maxBannerHeight: Dp = ProfileBannerMaxHeight,
     contentPadding: PaddingValues = PaddingValues(),
     contentBackgroundColor: Color = Color.Transparent,
+    bannerBackgroundColor: Color = Color.Transparent,
     minBannerPadding: Dp = ProfileBannerMinPadding,
 ) {
     val density = LocalDensity.current
@@ -76,7 +77,10 @@ fun AppProfileBannerLayout(
     Box(modifier.nestedScroll(nestedScrollConnection)) {
         banner(
             ratio,
-            Modifier.height(with(density) { bannerHeightPx.toDp() }).fillMaxWidth(),
+            Modifier
+                .height(with(density) { bannerHeightPx.toDp() })
+                .fillMaxWidth()
+                .background(bannerBackgroundColor),
         )
         Column(
             modifier = Modifier

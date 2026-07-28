@@ -90,9 +90,7 @@ fun LocalProfileScreen(
 
         AppProfileBannerLayout(
             banner = { ratio, bannerModifier ->
-                Box(
-                    modifier = bannerModifier.background(MaterialTheme.colorScheme.surfaceContainer),
-                ) {
+                Box(modifier = bannerModifier) {
                     LocalAvatar(
                         ratio = ratio,
                         avatarUri = state.data.profileAvatarUri,
@@ -131,6 +129,7 @@ fun LocalProfileScreen(
                 }
             },
             contentBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+            bannerBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
             contentPadding = PaddingValues(top = ProfileLargePadding / 2),
             content = {
                 org.akkirrai.hibiki.shared.profile.AppProfileIdentityTabs(
