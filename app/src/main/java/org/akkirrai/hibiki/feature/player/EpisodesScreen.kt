@@ -30,7 +30,7 @@ import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
-import org.akkirrai.hibiki.shared.player.EpisodesList
+import org.akkirrai.hibiki.shared.player.AppEpisodesContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesStateContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
@@ -82,6 +82,7 @@ fun EpisodesScreen(
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
     var downloadControlsVisible by rememberEpisodesDownloadControlsVisible(sourceId, downloadMode)
     val coroutineScope = rememberCoroutineScope()
+    val episodeCount = (state.result as? EpisodesUiState.Content)?.items?.size ?: 0
 
     LaunchedEffect(state.result, sourceId, lifecycleOwner) {
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
@@ -128,24 +129,21 @@ fun EpisodesScreen(
                 .zIndex(1f),
         )
 
-        AppEpisodesStateContent(
+        AppEpisodesContent(
             result = state.result,
             sourceTitle = sourceTitle,
             emptyMessage = stringResource(R.string.watch_episodes_empty_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
-        ) { episodes ->
+            episodeContent = { episode, shape ->
                 val watchSourceFallback = stringResource(R.string.watch_source_fallback)
-                val downloadSource = remember(sourceId, sourceTitle, episodes.size) {
+                val downloadSource = remember(sourceId, sourceTitle, episodeCount) {
                     WatchSource(
                         sourceId = sourceId,
                         title = sourceTitle.ifBlank { watchSourceFallback },
-                        episodeCount = episodes.size,
+                        episodeCount = episodeCount,
                     )
                 }
-                EpisodesList(
-                    episodes = episodes,
-                    episodeContent = { episode, shape ->
                         val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
                         EpisodeRow(
                             episode = episode,
@@ -194,9 +192,8 @@ fun EpisodesScreen(
                                 }
                             },
                         )
-                    },
-                )
-        }
+            },
+        )
     }
 }
 
