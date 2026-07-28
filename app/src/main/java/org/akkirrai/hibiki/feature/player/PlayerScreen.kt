@@ -96,6 +96,8 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.playerToggleValueLocalizationKey
+import org.akkirrai.hibiki.shared.player.pictureInPictureAudioModeLocalizationKey
+import org.akkirrai.hibiki.shared.player.pictureInPicturePlaybackLocalizationKey
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -408,11 +410,8 @@ fun PlayerScreen(
                     action = PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY,
                     requestCode = PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE,
                     iconResId = R.drawable.ic_player_headphones_24,
-                    titleResId = if (isAudioOnly) {
-                        R.string.watch_player_show_video
-                    } else {
-                        R.string.watch_player_audio_only
-                    },
+                        titleResId = pictureInPictureAudioModeLocalizationKey(isAudioOnly)
+                            .toPlayerPictureInPictureTitleResId(),
                 )
             )
             add(
@@ -425,11 +424,8 @@ fun PlayerScreen(
                     } else {
                         R.drawable.ic_player_media_play_arrow_24
                     },
-                    titleResId = if (isPlaying) {
-                        R.string.watch_player_pause
-                    } else {
-                        R.string.watch_player_play
-                    },
+                        titleResId = pictureInPicturePlaybackLocalizationKey(isPlaying)
+                            .toPlayerPictureInPictureTitleResId(),
                 )
             )
             if (hasPreviousEpisode) {
@@ -1435,6 +1431,14 @@ private fun String.toPlayerSettingsValueResId(): Int = when (this) {
     "watch_player_settings_on" -> R.string.watch_player_settings_on
     "watch_player_settings_off" -> R.string.watch_player_settings_off
     else -> error("Unknown player settings value localization key")
+}
+
+private fun String.toPlayerPictureInPictureTitleResId(): Int = when (this) {
+    "watch_player_show_video" -> R.string.watch_player_show_video
+    "watch_player_audio_only" -> R.string.watch_player_audio_only
+    "watch_player_pause" -> R.string.watch_player_pause
+    "watch_player_play" -> R.string.watch_player_play
+    else -> error("Unknown player picture-in-picture localization key")
 }
 
 private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
