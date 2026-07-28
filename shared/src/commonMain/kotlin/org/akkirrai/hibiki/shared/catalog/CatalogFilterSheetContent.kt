@@ -42,7 +42,6 @@ fun AppCatalogFilterSheetContent(
     statusTitle: String,
     resetLabel: String,
     applyLabel: String,
-    typeIcon: @Composable (AnimeTypeAlias) -> Painter,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     statusIcon: @Composable (AnimeCatalogFilterOption) -> Painter?,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
@@ -77,7 +76,7 @@ fun AppCatalogFilterSheetContent(
                         entries = typeEntries,
                         selected = animeType,
                         onSelected = onAnimeTypeChange,
-                        typeIcon = typeIcon,
+                        typeIcon = { painterResource(it.iconResource()) },
                         typeLabel = typeLabel,
                         arrowIcon = dropdownIcon,
                     )

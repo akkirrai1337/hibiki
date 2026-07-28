@@ -147,7 +147,6 @@ fun AnimeSearchFiltersSheet(
                 statusTitle = stringResource(R.string.search_filters_status),
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
-                typeIcon = { typeIcon(it) },
                 typeLabel = { typeLabel(it) },
                 statusIcon = { statusIcon(it.id) },
                 optionText = optionText,
@@ -217,17 +216,6 @@ private fun statusIcon(alias: String): androidx.compose.ui.graphics.painter.Pain
 }
 
 private fun typeLabel(type: AnimeTypeAlias): String = type.alias.uppercase()
-
-@Composable
-private fun typeIcon(type: AnimeTypeAlias): androidx.compose.ui.graphics.painter.Painter {
-    val drawable = when (type) {
-        AnimeTypeAlias.Tv -> R.drawable.animite_tv
-        AnimeTypeAlias.Ona -> R.drawable.animite_ona
-        AnimeTypeAlias.Ova -> R.drawable.animite_ova
-        AnimeTypeAlias.Movie -> R.drawable.animite_movie
-    }
-    return painterResource(drawable)
-}
 
 private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)
 private val IncludedFilterColor = Color(0xFF80DF87)
