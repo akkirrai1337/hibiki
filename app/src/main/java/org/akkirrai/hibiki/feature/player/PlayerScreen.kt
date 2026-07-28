@@ -95,6 +95,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.localizationKey
+import org.akkirrai.hibiki.shared.player.playerToggleValueLocalizationKey
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
@@ -1368,9 +1369,13 @@ private fun PlayerSettingsSheet(
         qualityTitle = stringResource(R.string.watch_player_settings_quality),
         speedTitle = stringResource(R.string.watch_player_settings_speed),
         autoSkipTitle = stringResource(R.string.watch_player_settings_auto_skip),
-        autoSkipValue = stringResource(if (autoSkipSegments) R.string.watch_player_settings_on else R.string.watch_player_settings_off),
+        autoSkipValue = stringResource(
+            playerToggleValueLocalizationKey(autoSkipSegments).toPlayerSettingsValueResId()
+        ),
         autoPlayTitle = stringResource(R.string.watch_player_settings_auto_play_next),
-        autoPlayValue = stringResource(if (autoPlayNextEpisode) R.string.watch_player_settings_on else R.string.watch_player_settings_off),
+        autoPlayValue = stringResource(
+            playerToggleValueLocalizationKey(autoPlayNextEpisode).toPlayerSettingsValueResId()
+        ),
         playerTitle = stringResource(R.string.watch_player_settings_player),
     )
 
@@ -1425,6 +1430,12 @@ private val PlayerSettingsDestination.titleResId: Int
         "watch_player_settings_quality" -> R.string.watch_player_settings_quality
         else -> error("Unknown player settings localization key")
     }
+
+private fun String.toPlayerSettingsValueResId(): Int = when (this) {
+    "watch_player_settings_on" -> R.string.watch_player_settings_on
+    "watch_player_settings_off" -> R.string.watch_player_settings_off
+    else -> error("Unknown player settings value localization key")
+}
 
 private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
     val textureView = videoSurfaceView as? TextureView ?: return
