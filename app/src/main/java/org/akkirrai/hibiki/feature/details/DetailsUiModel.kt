@@ -4,6 +4,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.buildDetailsRelatedContent
 
 internal data class DetailsUiModel(
     val anime: Anime,
@@ -34,25 +35,13 @@ internal fun buildDetailsUiModel(
     description: String,
     contentFeatures: Set<SourceCapability>,
 ): DetailsUiModel {
-    val relatedItems = if (SourceCapability.RELATED_TITLES in contentFeatures) {
-        val sourceRelatedItems = (anime.franchiseAnime + anime.relatedAnime)
-            .distinctBy(RelatedAnime::id)
-        if (sourceRelatedItems.isNotEmpty() && sourceRelatedItems.none { it.id == anime.id }) {
-            listOf(anime.toRelatedAnime()) + sourceRelatedItems
-        } else {
-            sourceRelatedItems
-        }
-    } else {
-        emptyList()
-    }
-    val relatedIds = relatedItems.mapTo(mutableSetOf(), RelatedAnime::id)
-    val similarItems = if (SourceCapability.SIMILAR_TITLES in contentFeatures) {
-        anime.similarAnime
-            .filterNot { it.id == anime.id || it.id in relatedIds }
-            .distinctBy(RelatedAnime::id)
-    } else {
-        emptyList()
-    }
+    val relatedContent = buildDetailsRelatedContent(
+        anime = anime,
+        includeRelated = SourceCapability.RELATED_TITLES in contentFeatures,
+        includeSimilar = SourceCapability.SIMILAR_TITLES in contentFeatures,
+    )
+    val relatedItems = relatedContent.relatedItems
+    val similarItems = relatedContent.similarItems
     val sections = buildList {
         if (relatedItems.isNotEmpty()) {
             add(
@@ -73,11 +62,3 @@ internal fun buildDetailsUiModel(
         sections = sections,
     )
 }
-
-private fun Anime.toRelatedAnime(): RelatedAnime = RelatedAnime(
-    id = id,
-    title = title,
-    posterUrl = posterUrl,
-    posterFallbackUrl = posterFallbackUrl,
-    status = status,
-)
