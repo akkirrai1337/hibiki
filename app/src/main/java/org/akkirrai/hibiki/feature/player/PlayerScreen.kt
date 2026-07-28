@@ -1102,17 +1102,7 @@ fun PlayerScreen(
                     backContent = {
                         SharedBackButton(
                             onClick = handleBackClick,
-                            iconContent = {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.cd_back),
-                                    tint = Color.White,
-                                    modifier = Modifier.graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                        blendMode = BlendMode.Difference
-                                    },
-                                )
-                            },
+                            contentDescription = stringResource(R.string.cd_back),
                         )
                     },
                     playlistContent = {
