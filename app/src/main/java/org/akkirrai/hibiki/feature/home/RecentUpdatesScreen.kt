@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,15 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentList
-import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentState
-import org.akkirrai.hibiki.shared.home.appHomeAnimeListContent
+import org.akkirrai.hibiki.shared.home.AppRecentUpdatesScreenContent
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
@@ -58,42 +53,28 @@ fun RecentUpdatesScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        AppRecentUpdatesContentState(
-            isLoading = state.isLoading,
-            hasContent = state.recentlyUpdated.isNotEmpty(),
-            errorMessage = state.errorMessage,
-            errorTitle = stringResource(R.string.home_error_title),
-            retryLabel = stringResource(R.string.search_retry),
-            onRetry = viewModel::refresh,
-        ) {
-            AppRecentUpdatesContentList(
-                state = listState,
+            AppRecentUpdatesScreenContent(
+                isLoading = state.isLoading,
+                items = state.recentlyUpdated,
+                errorMessage = state.errorMessage,
+                errorTitle = stringResource(R.string.home_error_title),
+                retryLabel = stringResource(R.string.search_retry),
+                onRetry = viewModel::refresh,
+                listState = listState,
+                libraryStatusByAnimeId = libraryStatusByAnimeId,
+                libraryStatusLabel = { category -> stringResource(category.labelResId) },
+                metaText = { anime ->
+                    anime.buildCardMeta(
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
+                    )
+                },
+                onAnimeClick = onAnimeClick,
+                isLoadingMore = state.isRecentUpdatesLoadingMore,
+                loadMoreError = null,
+                onLoadMoreRetry = viewModel::loadMoreRecentUpdates,
                 modifier = Modifier.fillMaxSize(),
-            ) {
-                appHomeAnimeListContent(
-                    items = state.recentlyUpdated,
-                    onAnimeClick = onAnimeClick,
-                    libraryStatusByAnimeId = libraryStatusByAnimeId,
-                    libraryStatusLabel = { category -> stringResource(category.labelResId) },
-                    metaText = { anime ->
-                        anime.buildCardMeta(
-                            announcementLabel = announcementLabel,
-                            movieLabel = movieLabel,
-                        )
-                    },
-                    modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                )
-                if (state.isRecentUpdatesLoadingMore) {
-                    item(key = "recent_updates_loading_more") {
-                        AppLoadMoreState(
-                            isLoading = true,
-                            errorMessage = null,
-                            onRetry = viewModel::loadMoreRecentUpdates,
-                        )
-                    }
-                }
-            }
-        }
+            )
         AppFloatingHeader(
             title = stringResource(R.string.home_recent_updates),
             onBackClick = onBackClick,
