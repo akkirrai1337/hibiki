@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.feature.update
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -21,17 +19,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.update.AppUpdate
 import org.akkirrai.hibiki.shared.update.formatDownloadSize
+import org.akkirrai.hibiki.shared.update.AppUpdateInfoPill
 
 @Composable
 fun AppUpdateDialog(
@@ -66,8 +63,8 @@ fun AppUpdateDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                UpdateInfoPill(
-                    version = update.version,
+                AppUpdateInfoPill(
+                    versionLabel = stringResource(R.string.update_version_label, update.version),
                     size = formatDownloadSize(update.apkSizeBytes),
                 )
                 if (isDownloading) {
@@ -105,32 +102,4 @@ fun AppUpdateDialog(
             }
         },
     )
-}
-
-@Composable
-private fun UpdateInfoPill(
-    version: String,
-    size: String,
-) {
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.update_version_label, version),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.size(8.dp, 1.dp))
-            Text(
-                text = size,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-    }
 }
