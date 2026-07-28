@@ -32,7 +32,7 @@ import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
 import org.akkirrai.hibiki.shared.library.libraryStatusAlias
-import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateMessage
+import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateText
 import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
 import org.akkirrai.hibiki.shared.library.toAnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.toLibrarySearchFilters
@@ -102,36 +102,29 @@ fun LibraryScreen(
             )
         },
         emptyContent = { filtered ->
-            if (!filtered) {
-                AppLibraryEmptyState(
-                    title = stringResource(R.string.library_empty_title),
-                    message = stringResource(R.string.library_empty_body),
-                )
-            } else {
-                AppLibraryEmptyState(
-                    title = if (state.searchQuery.isBlank()) {
-                        stringResource(R.string.library_section_empty_title)
-                    } else {
-                        stringResource(R.string.home_search_empty_title)
-                    },
-                    message = if (state.searchQuery.isBlank()) {
-                resolveLibraryEmptyStateMessage(
-                    category = state.selectedCategory,
-                    labels = mapOf(
-                        LibraryCategory.Watching to stringResource(R.string.library_empty_watching),
-                        LibraryCategory.Planned to stringResource(R.string.library_empty_planned),
-                        LibraryCategory.Completed to stringResource(R.string.library_empty_completed),
-                        LibraryCategory.Dropped to stringResource(R.string.library_empty_dropped),
-                        LibraryCategory.OnHold to stringResource(R.string.library_empty_on_hold),
-                        LibraryCategory.Favorite to stringResource(R.string.library_empty_favorite),
-                        LibraryCategory.Saved to stringResource(R.string.library_empty_saved),
-                    ),
-                )
-                    } else {
-                        stringResource(R.string.home_search_empty_message)
-                    },
-                )
-            }
+            val emptyState = resolveLibraryEmptyStateText(
+                filtered = filtered,
+                searchQuery = state.searchQuery,
+                category = state.selectedCategory,
+                emptyTitle = stringResource(R.string.library_empty_title),
+                emptyMessage = stringResource(R.string.library_empty_body),
+                filteredTitle = stringResource(R.string.library_section_empty_title),
+                searchTitle = stringResource(R.string.home_search_empty_title),
+                filteredMessage = stringResource(R.string.home_search_empty_message),
+                categoryLabels = mapOf(
+                    LibraryCategory.Watching to stringResource(R.string.library_empty_watching),
+                    LibraryCategory.Planned to stringResource(R.string.library_empty_planned),
+                    LibraryCategory.Completed to stringResource(R.string.library_empty_completed),
+                    LibraryCategory.Dropped to stringResource(R.string.library_empty_dropped),
+                    LibraryCategory.OnHold to stringResource(R.string.library_empty_on_hold),
+                    LibraryCategory.Favorite to stringResource(R.string.library_empty_favorite),
+                    LibraryCategory.Saved to stringResource(R.string.library_empty_saved),
+                ),
+            )
+            AppLibraryEmptyState(
+                title = emptyState.title,
+                message = emptyState.message,
+            )
         },
         entryContent = { entry, entryModifier ->
             AppLibraryEntryCard(
