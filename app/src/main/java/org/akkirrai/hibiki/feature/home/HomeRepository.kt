@@ -36,6 +36,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 
 class HomeRepository(
     context: Context,
@@ -276,7 +277,7 @@ class HomeRepository(
 
     private fun toHomeAnime(title: AnimeTitle): Anime {
         val subtitle = buildList {
-            title.type?.toDisplayType()?.let(::add)
+            title.type?.let(::resolveDisplayTypeLabel)?.let(::add)
             title.year?.toString()?.let(::add)
         }.joinToString(" · ")
 
@@ -310,20 +311,6 @@ class HomeRepository(
     private fun String?.isAnnouncementStatus(): Boolean {
         val normalized = orEmpty().trim().lowercase()
         return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
-    }
-
-    private fun String.toDisplayType(): String {
-        return when (uppercase()) {
-            "TV" -> "TV"
-            "TV_SHORT" -> "TV Short"
-            "OVA" -> "OVA"
-            "ONA" -> "ONA"
-            "MOVIE" -> "Movie"
-            "SHORT_MOVIE", "SHORT-MOVIE" -> "Short Movie"
-            "SPECIAL" -> "Special"
-            else -> replace("_", " ").replace("-", " ")
-                .replaceFirstChar { it.uppercase() }
-        }
     }
 
     private fun String.toSearchSort(): AnimeSearchSort {
