@@ -9,9 +9,6 @@ import androidx.compose.ui.res.stringResource
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader as SharedFloatingHeader
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeaderDefaults as SharedFloatingHeaderDefaults
-import org.akkirrai.hibiki.shared.design.component.AppFloatingIconButton as SharedFloatingIconButton
-import org.akkirrai.hibiki.shared.design.component.AppFloatingPill as SharedFloatingPill
-import org.akkirrai.hibiki.shared.design.component.AppFloatingTitlePill as SharedFloatingTitlePill
 
 typealias AppFloatingHeaderDefaults = SharedFloatingHeaderDefaults
 
@@ -32,54 +29,4 @@ fun AppFloatingHeader(
     includeStatusBarsPadding = includeStatusBarsPadding,
     containerColor = containerColor,
     actions = actions,
-)
-
-@Composable
-fun AppFloatingBackButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
-) = SharedFloatingIconButton(
-    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-    contentDescription = stringResource(R.string.cd_back),
-    onClick = onClick,
-    modifier = modifier,
-    containerColor = containerColor,
-)
-
-@Composable
-fun AppFloatingIconButton(
-    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
-) = SharedFloatingIconButton(
-    imageVector = imageVector,
-    contentDescription = contentDescription,
-    onClick = onClick,
-    modifier = modifier,
-    containerColor = containerColor,
-)
-
-@Composable
-fun AppFloatingTitlePill(
-    text: String,
-    modifier: Modifier = Modifier,
-    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
-) = SharedFloatingTitlePill(
-    text = text,
-    modifier = modifier,
-    containerColor = containerColor,
-)
-
-@Composable
-fun AppFloatingPill(
-    modifier: Modifier = Modifier,
-    containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
-    content: @Composable () -> Unit,
-) = SharedFloatingPill(
-    modifier = modifier,
-    containerColor = containerColor,
-    content = content,
 )
