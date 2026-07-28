@@ -32,14 +32,10 @@ import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
 import org.akkirrai.hibiki.shared.library.libraryStatusAlias
-import org.akkirrai.hibiki.shared.library.libraryStatusLabel
 import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateMessage
+import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
-import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.source.LibraryEntry
@@ -177,7 +173,12 @@ private fun LibrarySearchFiltersSheet(
         LanguageMode.ENGLISH -> false
         LanguageMode.SYSTEM -> LocalConfiguration.current.locales[0]?.language == "ru"
     }
-    val sharedCatalog = catalog.toSharedFilterCatalog(isRussian)
+    val sharedCatalog = buildLibraryFilterCatalog(
+        typeOptions = catalog.typeOptions,
+        statusOptions = catalog.statusOptions,
+        genreOptions = catalog.genreOptions,
+        isRussian = isRussian,
+    )
     val sharedFilters = currentFilters.toSharedFilters()
     AnimeSearchFiltersSheet(
         initialFilters = sharedFilters,
@@ -188,29 +189,6 @@ private fun LibrarySearchFiltersSheet(
         optionText = { it.title },
         maxCollapsedGenreGroups = 3,
         maxCollapsedGenreItems = null,
-    )
-}
-
-private fun LibraryFilterCatalog.toSharedFilterCatalog(isRussian: Boolean): AnimeCatalogFilterCatalog {
-    val statuses = statusOptions.map { status ->
-        AnimeCatalogFilterOption(
-            id = libraryStatusAlias(status),
-            title = libraryStatusLabel(status, isRussian),
-        )
-    }.distinctBy(AnimeCatalogFilterOption::id)
-    return AnimeCatalogFilterCatalog(
-        typeOptions = typeOptions.map { AnimeCatalogFilterOption(it.lowercase(), it.uppercase()) },
-        statusOptions = statuses,
-        genreOptions = genreOptions.map { AnimeCatalogFilterOption(it, it) },
-        capabilities = AnimeCatalogCapabilities(
-            supportedFilters = setOf(
-                AnimeCatalogFilter.TYPE,
-                AnimeCatalogFilter.STATUS,
-                AnimeCatalogFilter.INCLUDED_GENRES,
-                AnimeCatalogFilter.EXCLUDED_GENRES,
-                AnimeCatalogFilter.YEAR_RANGE,
-            ),
-        ),
     )
 }
 
