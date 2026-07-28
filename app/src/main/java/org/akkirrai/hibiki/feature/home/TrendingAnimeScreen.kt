@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -41,7 +42,7 @@ import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
+import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
 import org.akkirrai.hibiki.shared.home.AppTrendingContentList
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
@@ -148,6 +149,8 @@ fun TrendingAnimeScreen(
         AppFloatingHeader(
             title = stringResource(R.string.home_trending),
             onBackClick = onBackClick,
+            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+            backContentDescription = stringResource(R.string.cd_back),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth(),
