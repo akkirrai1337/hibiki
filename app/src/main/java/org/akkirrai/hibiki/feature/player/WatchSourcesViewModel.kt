@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.hasMoreWatchSources
 import org.akkirrai.hibiki.shared.player.mergeWatchSources
 import org.akkirrai.hibiki.shared.player.visibleWatchSources
+import org.akkirrai.hibiki.shared.player.withSources
 
 class WatchSourcesViewModel(
     private val animeId: String,
@@ -145,28 +146,6 @@ class WatchSourcesViewModel(
     override fun onCleared() {
         repository.close()
         super.onCleared()
-    }
-
-    private fun WatchSourcesScreenState.withSources(
-        sources: List<WatchSource>,
-        isLoading: Boolean,
-        isLoadingMore: Boolean,
-        showAllItems: Boolean,
-    ): WatchSourcesScreenState {
-        val visibleItems = visibleWatchSources(sources, showAllItems)
-        return copy(
-            allItems = sources,
-            items = visibleItems,
-            isLoading = isLoading,
-            isLoadingMore = isLoadingMore,
-            hasMoreItems = hasMoreWatchSources(
-                allItems = sources,
-                visibleItems = visibleItems,
-                showAllItems = showAllItems,
-            ),
-            showAllItems = showAllItems,
-            errorMessage = null,
-        )
     }
 
     class Factory(
