@@ -121,6 +121,7 @@ import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
+import org.akkirrai.hibiki.shared.player.resolveCurrentPlaybackPosition
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -288,12 +289,11 @@ fun PlayerScreen(
 
     fun saveCurrentPlaybackProgress() {
         val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
-        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-        val safePositionMs = when {
-            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
-            positionMs > 0L -> positionMs
-            else -> sliderPositionMs.coerceAtLeast(0L)
-        }
+        val safePositionMs = resolveCurrentPlaybackPosition(
+            playerPositionMs = exoPlayer.currentPosition,
+            trackedPositionMs = positionMs,
+            sliderPositionMs = sliderPositionMs,
+        )
         viewModel.savePlaybackProgress(
             positionMs = safePositionMs,
             durationMs = safeDurationMs,
@@ -326,12 +326,11 @@ fun PlayerScreen(
     }
 
     fun currentPlaybackPositionMs(): Long {
-        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-        return when {
-            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
-            positionMs > 0L -> positionMs
-            else -> sliderPositionMs.coerceAtLeast(0L)
-        }
+        return resolveCurrentPlaybackPosition(
+            playerPositionMs = exoPlayer.currentPosition,
+            trackedPositionMs = positionMs,
+            sliderPositionMs = sliderPositionMs,
+        )
     }
 
     fun commitAccumulatedDoubleTapSeek() {
