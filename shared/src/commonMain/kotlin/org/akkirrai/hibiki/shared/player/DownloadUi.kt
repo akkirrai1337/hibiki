@@ -4,6 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +40,31 @@ fun DownloadStateIcon(icon: ImageVector, contentDescription: String) {
             Icon(icon, contentDescription, Modifier.size(EpisodeDownloadIconSize))
         }
     }
+}
+
+@Composable
+fun EpisodeDownloadedIcon(contentDescription: String) {
+    DownloadStateIcon(Icons.Outlined.Check, contentDescription)
+}
+
+@Composable
+fun EpisodeDownloadIcon(contentDescription: String, onClick: () -> Unit) {
+    DownloadIconButton(Icons.Outlined.Download, contentDescription, active = false, onClick = onClick)
+}
+
+@Composable
+fun EpisodePauseIcon(contentDescription: String, onClick: () -> Unit) {
+    DownloadIconButton(Icons.Outlined.Pause, contentDescription, active = true, onClick = onClick)
+}
+
+@Composable
+fun EpisodeResumeIcon(contentDescription: String, onClick: () -> Unit) {
+    DownloadIconButton(Icons.Outlined.PlayArrow, contentDescription, active = true, onClick = onClick)
+}
+
+@Composable
+fun EpisodeRemoveDownloadIcon(contentDescription: String, onClick: () -> Unit) {
+    DownloadIconButton(Icons.Outlined.Delete, contentDescription, active = true, onClick = onClick)
 }
 
 @Composable

@@ -3,11 +3,6 @@ package org.akkirrai.hibiki.feature.player
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,9 +39,12 @@ import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
-import org.akkirrai.hibiki.shared.player.DownloadIconButton as WatchDownloadIconButton
-import org.akkirrai.hibiki.shared.player.DownloadStateIcon as WatchDownloadStateIcon
 import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadProgressBadge
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadedIcon
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadIcon
+import org.akkirrai.hibiki.shared.player.EpisodePauseIcon
+import org.akkirrai.hibiki.shared.player.EpisodeResumeIcon
+import org.akkirrai.hibiki.shared.player.EpisodeRemoveDownloadIcon
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
@@ -233,40 +231,31 @@ private fun EpisodeRow(
                 state = downloadState.toEpisodeDownloadActionState(),
                 controlsEnabled = showDownloadControls,
                 downloadedContent = {
-                    WatchDownloadStateIcon(
-                        icon = Icons.Outlined.Check,
+                    EpisodeDownloadedIcon(
                         contentDescription = stringResource(R.string.watch_downloaded),
                     )
                 },
                 downloadContent = { onClick ->
-                    WatchDownloadIconButton(
-                        icon = Icons.Outlined.Download,
+                    EpisodeDownloadIcon(
                         contentDescription = stringResource(R.string.watch_download),
-                        active = false,
                         onClick = onClick,
                     )
                 },
                 pauseContent = { onClick ->
-                    WatchDownloadIconButton(
-                        icon = Icons.Outlined.Pause,
+                    EpisodePauseIcon(
                         contentDescription = stringResource(R.string.watch_pause),
-                        active = true,
                         onClick = onClick,
                     )
                 },
                 resumeContent = { onClick ->
-                    WatchDownloadIconButton(
-                        icon = Icons.Outlined.PlayArrow,
+                    EpisodeResumeIcon(
                         contentDescription = stringResource(R.string.watch_resume),
-                        active = true,
                         onClick = onClick,
                     )
                 },
                 removeContent = { onClick ->
-                    WatchDownloadIconButton(
-                        icon = Icons.Outlined.Delete,
+                    EpisodeRemoveDownloadIcon(
                         contentDescription = stringResource(R.string.watch_remove_download),
-                        active = true,
                         onClick = onClick,
                     )
                 },
