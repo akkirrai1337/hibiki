@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Icon
@@ -62,6 +61,7 @@ import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
 import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.HomeRecentlyAddedIcon
+import org.akkirrai.hibiki.shared.home.HomeHistoryIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
 import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
@@ -286,7 +286,7 @@ private fun LazyListScope.homeFeedContent(
         emptyTitle = continueEmptyTitle,
         emptyMessage = continueEmptyMessage,
         openHint = continueOpenHint,
-        sectionIcon = Icons.Outlined.History,
+        sectionIcon = HomeHistoryIcon,
         meta = { anime ->
             anime.buildCardMeta(
                 announcementLabel = announcementLabel,
@@ -317,7 +317,7 @@ private fun LazyListScope.homeFeedContent(
         title = recentlyWatchedTitle,
         items = recentlyWatched,
         onAnimeClick = onAnimeClick,
-        icon = Icons.Outlined.History,
+        icon = HomeHistoryIcon,
         metaText = { anime ->
             anime.buildCardMeta(
                 announcementLabel = announcementLabel,
