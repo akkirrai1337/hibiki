@@ -2,6 +2,12 @@ package org.akkirrai.hibiki.shared.profile
 
 import androidx.compose.ui.graphics.Color
 
+fun LocalProfileData.profileGenreTrackedTitlesCount(): Int =
+    library
+        .map { it.anime }
+        .distinctBy { it.id }
+        .count { it.genres.isNotEmpty() }
+
 fun LocalProfileData.buildGenreSegments(): List<DistributionSegment> =
     library
         .map { it.anime }

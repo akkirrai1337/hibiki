@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.profile
 
 import android.content.res.Resources
-import androidx.compose.ui.graphics.Color
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -9,19 +8,14 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
-import org.akkirrai.hibiki.shared.profile.RecentLibraryItem
-import org.akkirrai.hibiki.shared.profile.primaryLibraryCategory
-import org.akkirrai.hibiki.shared.profile.formatProfileRating
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.profile.ActivityDay
-import org.akkirrai.hibiki.shared.profile.DistributionSegment
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.buildGenreSegments
+import org.akkirrai.hibiki.shared.profile.profileGenreTrackedTitlesCount
 import org.akkirrai.hibiki.shared.profile.buildLibraryStatusSegments
 import org.akkirrai.hibiki.shared.profile.trackedProfileLibraryItems
-import org.akkirrai.hibiki.shared.profile.profileColor
 import org.akkirrai.hibiki.shared.profile.buildFavoriteLibraryItems
 import org.akkirrai.hibiki.shared.profile.buildRecentLibraryItems
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -54,7 +48,6 @@ internal fun buildProfileSnapshot(
         statusLabel = resources.getString(LibraryCategory.Favorite.labelResId),
         dateLabel = { value -> formatEpochDateShort(resources, value) },
     )
-    val allMetadata = localData.library.map { it.anime }.distinctBy(Anime::id)
     val genreSegments = localData.buildGenreSegments()
 
     return LocalProfileSnapshot(
@@ -67,7 +60,7 @@ internal fun buildProfileSnapshot(
         recentLibraryItems = localRecentItems,
         favoriteLibraryItems = favoriteItems,
         genreSegments = genreSegments,
-        genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
+        genreTrackedTitlesCount = localData.profileGenreTrackedTitlesCount(),
     )
 }
 
