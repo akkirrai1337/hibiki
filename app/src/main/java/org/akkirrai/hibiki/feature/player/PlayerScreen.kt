@@ -119,8 +119,7 @@ import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
 import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
 import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
-import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
-import org.akkirrai.hibiki.shared.player.resolveLocalizedEpisodeTitle
+import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -1509,12 +1508,8 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
 
 @Composable
 private fun currentEpisodeSubtitle(state: PlayerUiState): String {
-    return resolveLocalizedEpisodeTitle(
-        resolveCurrentEpisodeTitle(
-            playbackTitle = state.playback?.episodeTitle,
-            currentEpisodeId = state.currentEpisodeId,
-            episodes = state.episodes,
-        ),
+    return resolvePlayerEpisodeSubtitle(
+        state = state,
         episodeLabel = { number -> stringResource(R.string.watch_episode_number, number) },
     )
 }
