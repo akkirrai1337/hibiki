@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppSettingsAppearanceSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPreferencesSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsPlayerSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -159,17 +160,17 @@ fun SettingsScreen(
         }
 
         item(key = SettingsSection.Player.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_player)) {
-                AppSettingsItems(count = 1) { _, _ ->
-                    SettingsSwitchItem(
-                        icon = SettingsAutoSkipIcon,
-                        title = stringResource(R.string.settings_auto_skip_segments),
-                        checked = preferences.autoSkipSegments,
-                        shape = CircleShape,
-                        onCheckedChange = appPreferences::setAutoSkipSegments,
+            AppSettingsPlayerSection(
+                sectionTitle = stringResource(R.string.settings_player),
+                autoSkipTitle = stringResource(R.string.settings_auto_skip_segments),
+                autoSkipEnabled = preferences.autoSkipSegments,
+                onAutoSkipChange = { enabled ->
+                    appPreferences.setAutoSkipSegments(enabled)
+                    haptic.performHapticFeedback(
+                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
                     )
-                }
-            }
+                },
+            )
         }
 
         item(key = SettingsSection.Experimental.key) {
