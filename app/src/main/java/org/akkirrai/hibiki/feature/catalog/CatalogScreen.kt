@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +68,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
 import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
 import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
+import org.akkirrai.hibiki.shared.catalog.AppCatalogContentState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
 import org.akkirrai.hibiki.shared.catalog.icon
@@ -141,15 +141,13 @@ fun CatalogScreen(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
-        org.akkirrai.hibiki.shared.design.component.AppContentState(
+        AppCatalogContentState(
             isLoading = state.isLoading,
             hasContent = state.items.isNotEmpty(),
             errorMessage = state.error,
             errorTitle = stringResource(R.string.catalog_error_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
-            errorIcon = Icons.Outlined.WarningAmber,
-            errorIconTint = MaterialTheme.colorScheme.error,
             content = {
                 AppCatalogContentList(
                     state = listState,
