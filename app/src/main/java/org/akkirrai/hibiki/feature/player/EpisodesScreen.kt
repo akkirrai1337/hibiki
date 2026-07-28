@@ -40,6 +40,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRow
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
+import org.akkirrai.hibiki.shared.player.forDisplay
 import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -208,9 +209,8 @@ private fun EpisodeRow(
     onResumeClick: () -> Unit,
     onRemoveClick: () -> Unit,
 ) {
-    val visibleDownloadState = if (
-        downloadState == OfflineEpisodeDownloadState.Failed && !showDownloadControls
-    ) OfflineEpisodeDownloadState.NotDownloaded else downloadState
+    val sharedDownloadState = downloadState.toEpisodeDownloadActionState()
+    val visibleDownloadState = sharedDownloadState.forDisplay(showDownloadControls)
     AppEpisodeDownloadRow(
         headline = buildEpisodeRowHeadline(
             episode = episode,
@@ -226,7 +226,7 @@ private fun EpisodeRow(
         showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed,
         shape = shape,
         onClick = onClick,
-        downloadState = downloadState.toEpisodeDownloadActionState(),
+        downloadState = sharedDownloadState,
         controlsEnabled = showDownloadControls,
         downloadedContentDescription = stringResource(R.string.watch_downloaded),
         downloadContentDescription = stringResource(R.string.watch_download),
@@ -253,12 +253,11 @@ private fun OfflineEpisodeDownloadState.toEpisodeDownloadActionState(): EpisodeD
 
 @Composable
 private fun buildEpisodeSubtitle(
-    downloadState: OfflineEpisodeDownloadState,
+    downloadState: EpisodeDownloadActionState,
 ): String {
-    val sharedState = downloadState.toEpisodeDownloadActionState()
-    val downloadingProgress = (sharedState as? EpisodeDownloadActionState.Downloading)?.progress ?: 0f
+    val downloadingProgress = (downloadState as? EpisodeDownloadActionState.Downloading)?.progress ?: 0f
     return resolveEpisodeDownloadSubtitle(
-        state = sharedState,
+        state = downloadState,
         queuedLabel = stringResource(R.string.watch_status_queued),
         downloadingLabel = stringResource(
             R.string.watch_status_downloading,

@@ -14,6 +14,13 @@ sealed interface EpisodeDownloadActionState {
     data object Failed : EpisodeDownloadActionState
 }
 
+fun EpisodeDownloadActionState.forDisplay(controlsEnabled: Boolean): EpisodeDownloadActionState =
+    if (!controlsEnabled && this == EpisodeDownloadActionState.Failed) {
+        EpisodeDownloadActionState.NotDownloaded
+    } else {
+        this
+    }
+
 fun resolveEpisodeDownloadSubtitle(
     state: EpisodeDownloadActionState,
     queuedLabel: String,
