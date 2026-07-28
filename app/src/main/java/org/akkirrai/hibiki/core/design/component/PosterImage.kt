@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.core.design.component
 
 import android.graphics.drawable.Drawable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -9,10 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.material3.MaterialTheme
 import coil.compose.AsyncImage
 import coil.request.ErrorResult
 import coil.request.SuccessResult
@@ -81,19 +78,6 @@ fun PosterImage(
         if (isLoading) {
             placeholder()
         }
-    }
-}
-
-@Composable
-fun PosterPlaceholder(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
     }
 }
 
