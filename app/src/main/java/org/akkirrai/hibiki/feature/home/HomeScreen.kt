@@ -12,9 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -245,9 +242,6 @@ fun HomeScreen(
             placeholder = stringResource(R.string.search_placeholder),
             filterContentDescription = stringResource(R.string.search_filters),
             clearContentDescription = stringResource(R.string.home_search_clear),
-            searchIcon = Icons.Outlined.Search,
-            filterIcon = Icons.Outlined.FilterList,
-            clearIcon = Icons.Outlined.Close,
             onFilterClick = {
                 keyboardController?.hide()
                 focusManager.clearFocus(force = true)
