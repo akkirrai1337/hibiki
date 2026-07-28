@@ -24,6 +24,24 @@ fun matchesPreferredQuality(candidateQuality: String?, preferredQuality: String?
     !preferredQuality.isNullOrBlank() &&
         candidateQuality?.trim()?.equals(preferredQuality.trim(), ignoreCase = true) == true
 
+data class PlayerSelectionCandidate(
+    val index: Int,
+    val playerName: String?,
+    val quality: String?,
+)
+
+fun prioritizePlayerSelection(
+    candidates: List<PlayerSelectionCandidate>,
+    preferredPlayerName: String?,
+    preferredQuality: String?,
+): List<Int> = candidates.sortedWith(
+    compareBy<PlayerSelectionCandidate> {
+        if (matchesPreferredPlayer(it.playerName, preferredPlayerName)) 0 else 1
+    }.thenBy {
+        if (matchesPreferredQuality(it.quality, preferredQuality)) 0 else 1
+    }.thenBy { playerPriority(it.playerName) }
+).map(PlayerSelectionCandidate::index)
+
 private fun String?.containsPlayerToken(token: String): Boolean =
     normalizePlayerName().contains(token)
 

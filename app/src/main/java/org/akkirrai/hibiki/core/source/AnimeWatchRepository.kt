@@ -46,7 +46,8 @@ import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.shared.player.matchesPreferredPlayer
 import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
-import org.akkirrai.hibiki.shared.player.playerPriority
+import org.akkirrai.hibiki.shared.player.PlayerSelectionCandidate
+import org.akkirrai.hibiki.shared.player.prioritizePlayerSelection
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
@@ -435,11 +436,14 @@ class AnimeWatchRepository(
         preferredPlayerName: String?,
         preferredQuality: String?,
     ): List<PlayerLink> {
-        return links.sortedWith(
-            compareBy<PlayerLink> { if (matchesPreferredPlayer(it.playerName, preferredPlayerName)) 0 else 1 }
-                .thenBy { if (matchesPreferredQuality(it.quality, preferredQuality)) 0 else 1 }
-                .thenBy { playerPriority(it.playerName) }
+        val order = prioritizePlayerSelection(
+            candidates = links.mapIndexed { index, link ->
+                PlayerSelectionCandidate(index, link.playerName, link.quality)
+            },
+            preferredPlayerName = preferredPlayerName,
+            preferredQuality = preferredQuality,
         )
+        return order.map(links::get)
     }
 
     internal fun resolveAttemptTimeoutMillis(
