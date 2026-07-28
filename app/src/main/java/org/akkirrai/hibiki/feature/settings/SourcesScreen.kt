@@ -29,6 +29,8 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.shared.source.SourceEmptyState
 import org.akkirrai.hibiki.shared.source.AppSourceGridItem
 import org.akkirrai.hibiki.shared.source.AppSourceLanguageContent
+import org.akkirrai.hibiki.shared.source.SourceLanguageSectionContent
+import org.akkirrai.hibiki.shared.source.appSourceLanguageSections
 import org.akkirrai.hibiki.shared.source.AppSourceSearchBar
 import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
@@ -64,6 +66,13 @@ fun SourcesScreen(
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val visibleSourcesByLanguage = sourcesByLanguage
+    val visibleSourceSections = SOURCE_LANGUAGE_SECTIONS.map { section ->
+        SourceLanguageSectionContent(
+            key = section.language.tag,
+            title = stringResource(section.labelRes),
+            items = visibleSourcesByLanguage[section.language].orEmpty(),
+        )
+    }
 
     AppSourceScreenLayout(
         isSearchMode = isSearchMode,
@@ -111,49 +120,40 @@ fun SourcesScreen(
             }
         },
         sourceContent = {
-            SOURCE_LANGUAGE_SECTIONS.forEach { section ->
-                val sectionSources = visibleSourcesByLanguage[section.language]
-                    .orEmpty()
-                if (sectionSources.isEmpty()) return@forEach
-                item(key = "${section.language.tag}_sources") {
-                    AppSourceLanguageContent(
-                        stateKey = section.language.tag,
-                        title = stringResource(section.labelRes),
-                        items = sectionSources,
-                        trailingContent = { iconModifier ->
-                            androidx.compose.material3.Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
+            appSourceLanguageSections(
+                sections = visibleSourceSections,
+                trailingContent = { iconModifier ->
+                    androidx.compose.material3.Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = iconModifier,
+                    )
+                },
+                emptyContent = {
+                    SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
+                },
+                isSelected = { source -> source.id == selectedSource },
+                itemContent = { source, selected, itemModifier ->
+                    AppSourceGridItem(
+                        name = source.name,
+                        selected = selected,
+                        onClick = {
+                            onSourceSelected?.invoke(source.id)
+                                ?: preferences.setAnimeSource(source.id)
+                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        },
+                        modifier = itemModifier,
+                        iconContent = { iconModifier ->
+                            AppSourceIconImage(
+                                url = source.iconUrl,
+                                placeholder = painterResource(source.iconRes),
                                 modifier = iconModifier,
                             )
                         },
-                        emptyContent = {
-                            SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
-                        },
-                        isSelected = { source -> source.id == selectedSource },
-                        itemContent = { source, selected, itemModifier ->
-                            AppSourceGridItem(
-                                name = source.name,
-                                selected = selected,
-                                onClick = {
-                                    onSourceSelected?.invoke(source.id)
-                                        ?: preferences.setAnimeSource(source.id)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                                modifier = itemModifier,
-                                iconContent = { iconModifier ->
-                                    AppSourceIconImage(
-                                        url = source.iconUrl,
-                                        placeholder = painterResource(source.iconRes),
-                                        modifier = iconModifier,
-                                    )
-                                },
-                            )
-                        },
                     )
-                }
-            }
+                },
+            )
         },
         searchBarContent = {
             if (hasSourceSearch) {
