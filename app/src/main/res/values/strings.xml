@@ -32,6 +32,10 @@
     <string name="local_profile_stat_total">TOTAL\nANIME</string>
     <string name="local_profile_stat_days">DAYS\nWATCHED</string>
     <string name="local_profile_stat_time">WATCH\nTIME</string>
+    <string name="local_profile_analytics_watch_title">Watch time</string>
+    <string name="local_profile_analytics_total_label">Total</string>
+    <string name="local_profile_analytics_genres_title">Genres</string>
+    <string name="local_profile_analytics_genres_label">Genres</string>
     <string name="local_profile_empty_favorites">No favourite titles yet</string>
 
     <string name="home_continue_title">Continue watching</string>

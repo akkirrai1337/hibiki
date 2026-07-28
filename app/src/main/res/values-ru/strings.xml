@@ -463,6 +463,10 @@
     <string name="local_profile_stat_total">ВСЕГО\nАНИМЕ</string>
     <string name="local_profile_stat_days">ДНИ\nПРОСМОТРА</string>
     <string name="local_profile_stat_time">ВРЕМЯ\nПРОСМОТРА</string>
+    <string name="local_profile_analytics_watch_title">Время просмотра</string>
+    <string name="local_profile_analytics_total_label">Всего</string>
+    <string name="local_profile_analytics_genres_title">Жанры</string>
+    <string name="local_profile_analytics_genres_label">Жанров</string>
     <string name="local_profile_empty_favorites">Пока нет любимых тайтлов</string>
     <string name="local_profile_summary_library">Библиотека</string>
     <string name="local_profile_summary_episodes">Эпизоды</string>

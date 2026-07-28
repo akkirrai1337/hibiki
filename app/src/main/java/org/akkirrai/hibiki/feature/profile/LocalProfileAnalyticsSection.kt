@@ -9,23 +9,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage
-import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment
-import org.akkirrai.hibiki.shared.profile.DistributionSegment
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshot
+import org.akkirrai.hibiki.shared.profile.buildProfileAnalyticsPages
 
 @Composable
 internal fun AnalyticsCard(
     snapshot: LocalProfileSnapshot,
 ) {
     val hasActivity = snapshot.activeDaysCount > 0
+    val watchTimeTitle = stringResource(R.string.local_profile_analytics_watch_title)
+    val totalLabel = stringResource(R.string.local_profile_analytics_total_label)
+    val genresTitle = stringResource(R.string.local_profile_analytics_genres_title)
+    val genresLabel = stringResource(R.string.local_profile_analytics_genres_label)
     val pages = remember(
         snapshot.libraryStatusSegments,
         snapshot.genreSegments,
         snapshot.watchTimeLabel,
         snapshot.libraryTotal,
+        watchTimeTitle,
+        totalLabel,
+        genresTitle,
+        genresLabel,
     ) {
-        buildAnalyticsPages(snapshot)
+        buildProfileAnalyticsPages(
+            snapshot = snapshot,
+            watchTimeTitle = watchTimeTitle,
+            totalLabel = totalLabel,
+            genresTitle = genresTitle,
+            genresLabel = genresLabel,
+        )
     }
     val firstVisibleActivityDay = remember(snapshot.activityDays.size) {
         (snapshot.activityDays.size - ACTIVITY_CHART_VISIBLE_DAYS).coerceAtLeast(0)
@@ -47,51 +59,18 @@ internal fun AnalyticsCard(
         },
         activityContent = {
             org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
-            title = stringResource(R.string.yummy_account_activity_title),
-            days = snapshot.activityDays.map { day ->
-                org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(day.dateLabel, day.episodeCount)
-            },
-            listState = activityListState,
-            visibleDays = ACTIVITY_CHART_VISIBLE_DAYS,
-            dayGap = ACTIVITY_CHART_DAY_GAP,
-            minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
-            activeColor = if (hasActivity) Color(0xFFFF7A86) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f),
-            inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
-        )
+                title = stringResource(R.string.yummy_account_activity_title),
+                days = snapshot.activityDays.map { day ->
+                    org.akkirrai.hibiki.shared.profile.ProfileActivityBarItem(day.dateLabel, day.episodeCount)
+                },
+                listState = activityListState,
+                visibleDays = ACTIVITY_CHART_VISIBLE_DAYS,
+                dayGap = ACTIVITY_CHART_DAY_GAP,
+                minScaleEpisodes = ACTIVITY_CHART_MIN_SCALE_EPISODES,
+                activeColor = if (hasActivity) Color(0xFFFF7A86) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.34f),
+                inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
+            )
         },
-    )
-}
-
-private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<ProfileAnalyticsPage> {
-    return listOf(
-        ProfileAnalyticsPage(
-            title = "Время просмотра",
-            centerPrimary = snapshot.libraryTotal.toString(),
-            centerSecondary = "всего",
-            segments = snapshot.libraryStatusSegments.map { segment ->
-                ProfileAnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = segment.count.toString(),
-                    weight = segment.count.toFloat(),
-                    color = segment.color,
-                )
-            },
-            legendColumns = 2,
-        ),
-        ProfileAnalyticsPage(
-            title = "Жанры",
-            centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
-            centerSecondary = "жанров",
-            segments = snapshot.genreSegments.map { segment ->
-                ProfileAnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = segment.count.toString(),
-                    weight = segment.count.toFloat(),
-                    color = segment.color,
-                )
-            },
-            legendColumns = 3,
-        ),
     )
 }
 
