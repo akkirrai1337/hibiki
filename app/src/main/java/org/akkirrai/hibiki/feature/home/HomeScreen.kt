@@ -168,7 +168,12 @@ fun HomeScreen(
                     appSearchStateVerticalListContent(
                         state = state.searchResult,
                         onAnimeClick = onAnimeClick,
-                        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+                        metaText = { anime ->
+                            anime.buildCardMeta(
+                                announcementLabel = announcementLabel,
+                                movieLabel = movieLabel,
+                            )
+                        },
                         onLoadMore = { viewModel.dispatch(HomeAction.LoadMoreSearchResults) },
                         onRetrySearch = {},
                         loadMoreLabel = searchLoadMoreLabel,
@@ -306,8 +311,7 @@ private fun LazyListScope.homeFeedContent(
         openHint = continueOpenHint,
         sectionIcon = Icons.Outlined.History,
         meta = { anime ->
-            buildHomeMeta(
-                anime = anime,
+            anime.buildCardMeta(
                 announcementLabel = announcementLabel,
                 movieLabel = movieLabel,
             )
@@ -337,7 +341,12 @@ private fun LazyListScope.homeFeedContent(
         items = recentlyWatched,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.History,
-        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+        metaText = { anime ->
+            anime.buildCardMeta(
+                announcementLabel = announcementLabel,
+                movieLabel = movieLabel,
+            )
+        },
         posterContent = { anime ->
             PosterImage(
                 primaryUrl = anime.posterUrl,
@@ -357,7 +366,12 @@ private fun LazyListScope.homeFeedContent(
         items = recentlyAddedToLibrary,
         onAnimeClick = onAnimeClick,
         icon = Icons.Outlined.VideoLibrary,
-        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+        metaText = { anime ->
+            anime.buildCardMeta(
+                announcementLabel = announcementLabel,
+                movieLabel = movieLabel,
+            )
+        },
         posterContent = { anime ->
             PosterImage(
                 primaryUrl = anime.posterUrl,
@@ -380,16 +394,5 @@ private fun LazyListScope.homeFeedContent(
         actionLabel = personalEmptyActionLabel,
         icon = Icons.Outlined.VideoLibrary,
         onActionClick = onBrowseCatalog,
-    )
-}
-
-private fun buildHomeMeta(
-    anime: Anime,
-    announcementLabel: String,
-    movieLabel: String,
-): String {
-    return anime.buildCardMeta(
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
     )
 }
