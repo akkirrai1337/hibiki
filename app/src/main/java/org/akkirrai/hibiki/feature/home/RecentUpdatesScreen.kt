@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentList
+import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentState
 
 @Composable
 fun RecentUpdatesScreen(
@@ -61,7 +62,7 @@ fun RecentUpdatesScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        org.akkirrai.hibiki.shared.design.component.AppContentState(
+        AppRecentUpdatesContentState(
             isLoading = state.isLoading,
             hasContent = state.recentlyUpdated.isNotEmpty(),
             errorMessage = state.errorMessage,
