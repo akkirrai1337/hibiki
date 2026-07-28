@@ -3,14 +3,11 @@ package org.akkirrai.hibiki.feature.library
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -128,14 +125,6 @@ fun LibraryScreen(
                         emptyLibraryCategoryMessage(state.selectedCategory)
                     } else {
                         stringResource(R.string.home_search_empty_message)
-                    },
-                    iconContent = { iconModifier ->
-                        Icon(
-                            imageVector = Icons.Outlined.BookmarkBorder,
-                            contentDescription = null,
-                            modifier = iconModifier,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     },
                 )
             }
