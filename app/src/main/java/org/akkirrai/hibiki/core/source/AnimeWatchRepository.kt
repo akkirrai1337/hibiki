@@ -56,6 +56,7 @@ import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildWatchSourceId
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -458,11 +459,10 @@ class AnimeWatchRepository(
         automaticTimeoutMs = AUTO_RESOLVE_TIMEOUT_MS,
     )
 
-    private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-        LanguageMode.ENGLISH -> "en"
-        LanguageMode.RUSSIAN -> "ru"
-        LanguageMode.SYSTEM -> if (appContext?.resources?.configuration?.locales?.get(0)?.language == "ru") "ru" else "en"
-    }
+    private fun currentLanguageKey(): String = resolveAppLanguageTag(
+        appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+        appContext?.resources?.configuration?.locales?.get(0)?.language.orEmpty(),
+    )
 
     private fun languageCacheKey(titleId: String): String =
         "$titleId:${sourceLanguageKey(titleId)}"

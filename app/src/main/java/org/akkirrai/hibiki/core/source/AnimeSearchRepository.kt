@@ -30,6 +30,7 @@ import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
 import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
 import org.akkirrai.hibiki.shared.source.normalizeSourceFilterValue
+import org.akkirrai.hibiki.shared.settings.isEnglishAppLanguage
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -286,11 +287,10 @@ class AnimeSearchRepository(
     }
 
     private fun preferEnglish(): Boolean {
-        return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-            LanguageMode.ENGLISH -> true
-            LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> appContext?.resources?.configuration?.locales?.get(0)?.language != "ru"
-        }
+        return isEnglishAppLanguage(
+            appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+            appContext?.resources?.configuration?.locales?.get(0)?.language.orEmpty(),
+        )
     }
 
     private fun ensureInternetConnection() {

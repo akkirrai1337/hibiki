@@ -40,6 +40,8 @@ import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
 import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
 import org.akkirrai.hibiki.shared.home.resolveTrendingOffset
+import org.akkirrai.hibiki.shared.settings.isEnglishAppLanguage
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.hibiki.shared.home.SearchSortAlias
 import org.akkirrai.hibiki.shared.home.resolveSearchSortAlias
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
@@ -325,14 +327,16 @@ class HomeRepository(
         }
 
     private fun preferEnglish(): Boolean {
-        return when (appPreferences.state.value.languageMode) {
-            LanguageMode.ENGLISH -> true
-            LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> appContext.resources.configuration.locales[0]?.language != "ru"
-        }
+        return isEnglishAppLanguage(
+            appPreferences.state.value.languageMode,
+            appContext.resources.configuration.locales[0]?.language.orEmpty(),
+        )
     }
 
-    private fun sourceLanguage(): String = if (preferEnglish()) "en" else "ru"
+    private fun sourceLanguage(): String = resolveAppLanguageTag(
+        appPreferences.state.value.languageMode,
+        appContext.resources.configuration.locales[0]?.language.orEmpty(),
+    )
 
     private fun displayTitle(title: AnimeTitle): String = title.displayName
 
