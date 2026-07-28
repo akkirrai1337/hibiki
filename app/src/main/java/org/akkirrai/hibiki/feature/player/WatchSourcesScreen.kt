@@ -13,6 +13,7 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.shared.player.WatchSourcesList
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesStateContent
+import org.akkirrai.hibiki.shared.player.formatWatchSourceEpisodeSummary
 
 @Composable
 fun WatchSourcesScreen(
@@ -54,7 +55,10 @@ fun WatchSourcesScreen(
                     horizontalPadding = UiDimens.ScreenPadding,
                     episodeSummary = { source ->
                         source.episodeCount?.let { count ->
-                            "· $count ${stringResource(R.string.watch_episodes_short)}"
+                            formatWatchSourceEpisodeSummary(
+                                episodeCount = count,
+                                episodeLabel = stringResource(R.string.watch_episodes_short),
+                            )
                         }
                     },
                     onSourceClick = { source ->
