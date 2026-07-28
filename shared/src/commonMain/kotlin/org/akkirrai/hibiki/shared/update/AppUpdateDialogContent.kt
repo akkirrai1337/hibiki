@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -29,7 +31,13 @@ fun AppUpdateDialogContent(
     sizeLabel: String,
     notes: String,
     downloadProgress: Float?,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable () -> Unit = {
+        Icon(
+            imageVector = Icons.Outlined.Update,
+            contentDescription = null,
+            modifier = Modifier.padding(8.dp),
+        )
+    },
     title: String,
     downloadingLabel: @Composable (Int) -> String,
     whatsNewLabel: String,
