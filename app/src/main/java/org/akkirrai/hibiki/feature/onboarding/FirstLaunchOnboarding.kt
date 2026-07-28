@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -180,7 +179,6 @@ fun FirstLaunchOnboarding(
                     AppOnboardingNotifications(
                         title = stringResource(R.string.onboarding_notifications_title),
                         description = stringResource(R.string.onboarding_notifications_description),
-                        icon = Icons.Rounded.NotificationsActive,
                         modifier = Modifier.fillMaxSize(),
                         actionContent = {
                             when (notificationPermissionState) {
