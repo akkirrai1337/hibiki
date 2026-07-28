@@ -21,11 +21,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
+import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
@@ -92,7 +92,7 @@ fun RecentUpdatesScreen(
                             contentDescription = anime.title,
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = {
-                                PosterPlaceholder(
+                                AppPosterPlaceholder(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(2f / 3f),
