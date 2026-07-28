@@ -9,6 +9,7 @@ import coil3.asDrawable
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.PosterImageLoadError
+import org.akkirrai.hibiki.shared.design.component.formatPosterLogUrl
 
 @Composable
 fun PosterImage(
@@ -42,9 +43,9 @@ private fun logPosterFailure(error: PosterImageLoadError) {
             append("[image.")
             append(error.stage)
             append("] url=")
-            append(error.url.shortPosterUrl())
+            append(formatPosterLogUrl(error.url))
             append(" fallback=")
-            append(error.fallbackUrl.shortPosterUrl())
+            append(formatPosterLogUrl(error.fallbackUrl))
             append(" error=")
             append(error.throwable?.javaClass?.simpleName ?: "null")
             error.throwable?.message?.takeIf(String::isNotBlank)?.let {
@@ -53,11 +54,6 @@ private fun logPosterFailure(error: PosterImageLoadError) {
             }
         }
     )
-}
-
-private fun String?.shortPosterUrl(): String {
-    if (this.isNullOrBlank()) return "null"
-    return substringAfterLast('/')
 }
 
 private const val POSTER_LOG_TAG = "HibikiPoster"
