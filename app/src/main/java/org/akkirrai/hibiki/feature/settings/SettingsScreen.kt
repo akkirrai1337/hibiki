@@ -44,6 +44,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
+import org.akkirrai.hibiki.shared.settings.isBusy
 import org.akkirrai.hibiki.shared.settings.AppSettingsSegmentedControl
 import org.akkirrai.hibiki.shared.settings.AppSettingsSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsItems
@@ -325,8 +326,7 @@ private fun DiscordAuthDialog(
     val state by manager.state.collectAsState()
     var manualToken by remember(initialToken) { mutableStateOf(initialToken) }
     var manualTokenFailed by remember { mutableStateOf(false) }
-    val isChecking = state.status == DiscordRpcConnectionStatus.Checking ||
-        state.status == DiscordRpcConnectionStatus.Connecting
+    val isChecking = state.status.isBusy()
 
     LocalizedAppContext(languageMode = appLanguage) {
         AppDiscordAuthDialogSurface(
