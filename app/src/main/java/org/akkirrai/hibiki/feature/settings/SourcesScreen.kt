@@ -109,13 +109,42 @@ fun SourcesScreen(
                     .orEmpty()
                 if (sectionSources.isEmpty()) return@forEach
                 item(key = "${section.language.tag}_sources") {
-                    SourceLanguageSection(
-                        section = section,
-                        sources = sectionSources,
-                        selectedSource = selectedSource,
-                        onSourceSelected = { source ->
-                            onSourceSelected?.invoke(source.id) ?: preferences.setAnimeSource(source.id)
-                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    AppSourceLanguageContent(
+                        stateKey = section.language.tag,
+                        title = stringResource(section.labelRes),
+                        items = sectionSources,
+                        trailingContent = { iconModifier ->
+                            androidx.compose.material3.Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = iconModifier,
+                            )
+                        },
+                        emptyContent = {
+                            SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
+                        },
+                        isSelected = { source -> source.id == selectedSource },
+                        itemContent = { source, selected, itemModifier ->
+                            AppSourceGridItem(
+                                name = source.name,
+                                selected = selected,
+                                onClick = {
+                                    onSourceSelected?.invoke(source.id)
+                                        ?: preferences.setAnimeSource(source.id)
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                                modifier = itemModifier,
+                                iconContent = { iconModifier ->
+                                    AsyncImage(
+                                        model = source.iconUrl,
+                                        placeholder = painterResource(source.iconRes),
+                                        error = painterResource(source.iconRes),
+                                        contentDescription = null,
+                                        modifier = iconModifier,
+                                    )
+                                },
+                            )
                         },
                     )
                 }
@@ -140,49 +169,6 @@ fun SourcesScreen(
             }
         },
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun SourceLanguageSection(
-    section: SourceLanguageSectionConfig,
-    sources: List<AnimeSourceDescriptor>,
-    selectedSource: SourceId,
-    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
-) {
-    AppSourceLanguageContent(
-        stateKey = section.language.tag,
-        title = stringResource(section.labelRes),
-        items = sources,
-        trailingContent = { iconModifier ->
-            androidx.compose.material3.Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = iconModifier,
-            )
-        },
-        emptyContent = {
-            SourceEmptyState(text = stringResource(R.string.settings_sources_empty))
-        },
-        isSelected = { source -> source.id == selectedSource },
-        itemContent = { source, selected, itemModifier ->
-            AppSourceGridItem(
-                name = source.name,
-                selected = selected,
-                onClick = { onSourceSelected(source) },
-                modifier = itemModifier,
-                iconContent = { iconModifier ->
-                    AsyncImage(
-                        model = source.iconUrl,
-                        placeholder = painterResource(source.iconRes),
-                        error = painterResource(source.iconRes),
-                        contentDescription = null,
-                        modifier = iconModifier,
-                    )
-                },
-            )
-        },
     )
 }
 
