@@ -85,7 +85,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.shared.design.component.AppBackButton as SharedBackButton
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -1624,7 +1623,22 @@ private fun PlayerSettingsSheet(
         destination = destination,
         title = { targetDestination -> stringResource(targetDestination.titleResId) },
         onBack = onBack,
-        backContent = { AppBackButton(onClick = onBack) },
+        backContent = {
+            SharedBackButton(
+                onClick = onBack,
+                iconContent = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.cd_back),
+                        tint = Color.White,
+                        modifier = Modifier.graphicsLayer {
+                            compositingStrategy = CompositingStrategy.Offscreen
+                            blendMode = BlendMode.Difference
+                        },
+                    )
+                },
+            )
+        },
         content = { targetDestination ->
             appPlayerSettingsItems(
                 destination = targetDestination,
