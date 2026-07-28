@@ -38,6 +38,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
+import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
 
 class HomeRepository(
     context: Context,
@@ -289,7 +290,7 @@ class HomeRepository(
             title = displayTitle(title),
             subtitle = subtitle,
             episodesLabel = if (isAnnouncement) {
-                announcementLabel()
+                formatAnnouncementLabel(preferEnglish())
             } else {
                 (title.availableEpisodeCount
                     ?: title.episodeCount.takeIf { title.releaseStatus == AnimeReleaseStatus.RELEASED })
@@ -341,10 +342,6 @@ class HomeRepository(
     private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 
     private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
-
-    private fun isRussianLocale(): Boolean = !preferEnglish()
-
-    private fun announcementLabel(): String = if (isRussianLocale()) "анонс" else "announcement"
 
     private fun trendingOffsetForSeed(selectionSeed: Long): Int {
         return Random(selectionSeed).nextInt(
