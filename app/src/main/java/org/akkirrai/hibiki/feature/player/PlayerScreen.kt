@@ -39,7 +39,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -1252,13 +1251,7 @@ fun PlayerScreen(
                 unlockButtonVisible = false
                 keepControlsVisible()
             },
-            iconContent = { iconModifier ->
-                Icon(
-                    imageVector = Icons.Outlined.LockOpen,
-                    contentDescription = null,
-                    modifier = iconModifier,
-                )
-            },
+            contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
