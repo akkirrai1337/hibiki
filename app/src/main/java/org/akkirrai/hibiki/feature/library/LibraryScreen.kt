@@ -30,9 +30,9 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
@@ -276,7 +276,7 @@ private fun LibraryAnimeCard(
         onClick = onClick,
         modifier = modifier,
         posterContent = {
-            PosterImage(
+            AppPosterImage(
                 primaryUrl = anime.posterUrl,
                 fallbackUrl = anime.posterFallbackUrl,
                 contentDescription = anime.title,
