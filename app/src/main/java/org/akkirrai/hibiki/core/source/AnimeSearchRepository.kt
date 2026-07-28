@@ -29,6 +29,7 @@ import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
 import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
+import org.akkirrai.hibiki.shared.source.normalizeSourceFilterValue
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -77,7 +78,7 @@ class AnimeSearchRepository(
             normalizedRequest.excludedGenreAliases.isNotEmpty()
         ) {
             source.filterCatalog(preferEnglish).genreOptions.associate {
-                normalizeFilterValue(it.title) to normalizeFilterValue(it.id)
+                normalizeSourceFilterValue(it.title) to normalizeSourceFilterValue(it.id)
             }
         } else {
             emptyMap()
@@ -351,17 +352,17 @@ class AnimeSearchRepository(
             (titleYear != null &&
                 (yearFrom == null || titleYear >= yearFrom) &&
                 (yearTo == null || titleYear <= yearTo))
-        val requestedTypes = request.typeAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
-        val typeMatches = requestedTypes.isEmpty() || normalizeFilterValue(type).let(requestedTypes::contains)
-        val requestedStatuses = request.statusAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
-        val actualStatuses = listOfNotNull(status?.let(::normalizeFilterValue), releaseStatus.name.lowercase())
+        val requestedTypes = request.typeAliases.map(::normalizeSourceFilterValue).filter(String::isNotBlank)
+        val typeMatches = requestedTypes.isEmpty() || normalizeSourceFilterValue(type).let(requestedTypes::contains)
+        val requestedStatuses = request.statusAliases.map(::normalizeSourceFilterValue).filter(String::isNotBlank)
+        val actualStatuses = listOfNotNull(status?.let(::normalizeSourceFilterValue), releaseStatus.name.lowercase())
         val statusMatches = requestedStatuses.isEmpty() || actualStatuses.any(requestedStatuses::contains)
         val canonicalGenres = genres.map { genre ->
-            normalizeFilterValue(genre).let { genreAliases[it] ?: it }
+            normalizeSourceFilterValue(genre).let { genreAliases[it] ?: it }
         }.toSet()
-        val includedGenres = request.includedGenreAliases.map(::normalizeFilterValue)
+        val includedGenres = request.includedGenreAliases.map(::normalizeSourceFilterValue)
         val excludedGenres = request.excludedGenreAliases.map {
-            normalizeFilterValue(it.removePrefix("!"))
+            normalizeSourceFilterValue(it.removePrefix("!"))
         }
         val genresMatch = (
             (includedGenres.isEmpty() || (canonicalGenres.isNotEmpty() && includedGenres.any(canonicalGenres::contains))) &&
@@ -376,13 +377,6 @@ class AnimeSearchRepository(
         year = details.year ?: year,
         genres = details.genres.ifEmpty { genres },
     )
-
-    private fun normalizeFilterValue(value: String?): String = value.orEmpty()
-        .trim()
-        .lowercase()
-        .replace('_', ' ')
-        .replace('-', ' ')
-        .replace(Regex("\\s+"), " ")
 
     private fun selectedSourceId() = sourceManager?.selectedId
         ?: error("Anime source selection requires an Android context")
