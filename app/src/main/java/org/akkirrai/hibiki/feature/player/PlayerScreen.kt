@@ -61,7 +61,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
@@ -1121,20 +1120,7 @@ fun PlayerScreen(
                     onNextEpisode = {
                         runPlaybackSwitch { viewModel.playNextEpisode() }
                     },
-                    playContent = { iconModifier ->
-                        Icon(
-                            painter = painterResource(
-                                if (isPlaying) {
-                                    R.drawable.ic_player_media_pause_24
-                                } else {
-                                    R.drawable.ic_player_media_play_arrow_24
-                                }
-                            ),
-                            contentDescription = null,
-                            modifier = iconModifier,
-                            tint = Color.White,
-                        )
-                    },
+                    isPlaying = isPlaying,
                     modifier = Modifier.align(Alignment.Center),
                 )
 
