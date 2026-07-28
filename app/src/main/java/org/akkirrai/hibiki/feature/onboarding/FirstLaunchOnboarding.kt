@@ -38,6 +38,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
+import org.akkirrai.hibiki.shared.onboarding.formatOnboardingSourceLanguageSummary
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
@@ -228,15 +229,14 @@ fun FirstLaunchOnboarding(
 
 @Composable
 private fun sourceLanguageSummary(source: AnimeSourceDescriptor): String {
-    val languages = source.info.languages
-    return when {
-        SourceLanguage.RUSSIAN in languages && SourceLanguage.ENGLISH in languages -> {
-            stringResource(R.string.onboarding_source_languages_ru_en)
-        }
-        SourceLanguage.RUSSIAN in languages -> stringResource(R.string.onboarding_source_language_ru)
-        SourceLanguage.ENGLISH in languages -> stringResource(R.string.onboarding_source_language_en)
-        else -> languages.joinToString { it.tag.uppercase() }
-    }
+    return formatOnboardingSourceLanguageSummary(
+        languageTags = source.info.languages.mapTo(linkedSetOf()) { it.tag },
+        russianTag = SourceLanguage.RUSSIAN.tag,
+        englishTag = SourceLanguage.ENGLISH.tag,
+        russianEnglishLabel = stringResource(R.string.onboarding_source_languages_ru_en),
+        russianLabel = stringResource(R.string.onboarding_source_language_ru),
+        englishLabel = stringResource(R.string.onboarding_source_language_en),
+    )
 }
 
 internal fun onboardingSourcesForSystemLanguage(
