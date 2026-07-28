@@ -115,6 +115,7 @@ import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
 import org.akkirrai.hibiki.shared.details.rememberNextEpisodeEta
 import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
 import org.akkirrai.hibiki.shared.details.resolveSourceMaterialLabel
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroMediaData
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -618,11 +619,11 @@ private fun DetailHeroMedia(
 ) {
     val anime = detailsState.anime
     val resumeState = detailsState.resumeState
-    val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
+    val mediaData = resolveDetailsHeroMediaData(anime, resumeState)
     AppDetailsHeroMedia(
         imageContent = {
             NetworkImage(
-                imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
+                imageUrl = mediaData.trailer?.thumbnailUrl ?: anime.posterUrl,
                 fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
                 contentDescription = null,
             )
@@ -648,15 +649,9 @@ private fun DetailHeroMedia(
                     formatPlaybackPosition(it.positionMs),
                 )
             },
-            resumeProgress = resumeState?.let {
-                if (it.durationMs > 0L) {
-                    (it.positionMs.toFloat() / it.durationMs).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-            } ?: 0f,
+            resumeProgress = mediaData.resumeProgress,
             onResumeClick = resumeState?.let { state -> { onResumeClick(state) } },
-            trailerEnabled = trailer != null,
+            trailerEnabled = mediaData.trailer != null,
             onTrailerClick = onTrailerClick,
             trailerContentDescription = stringResource(R.string.details_trailer),
             )
