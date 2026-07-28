@@ -39,12 +39,6 @@ import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
-import org.akkirrai.hibiki.shared.player.DownloadProgressBadge as WatchDownloadProgressBadge
-import org.akkirrai.hibiki.shared.player.EpisodeDownloadedIcon
-import org.akkirrai.hibiki.shared.player.EpisodeDownloadIcon
-import org.akkirrai.hibiki.shared.player.EpisodePauseIcon
-import org.akkirrai.hibiki.shared.player.EpisodeResumeIcon
-import org.akkirrai.hibiki.shared.player.EpisodeRemoveDownloadIcon
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.buildEpisodeHeadline as buildSharedEpisodeHeadline
@@ -230,36 +224,11 @@ private fun EpisodeRow(
             AppEpisodeDownloadAction(
                 state = downloadState.toEpisodeDownloadActionState(),
                 controlsEnabled = showDownloadControls,
-                downloadedContent = {
-                    EpisodeDownloadedIcon(
-                        contentDescription = stringResource(R.string.watch_downloaded),
-                    )
-                },
-                downloadContent = { onClick ->
-                    EpisodeDownloadIcon(
-                        contentDescription = stringResource(R.string.watch_download),
-                        onClick = onClick,
-                    )
-                },
-                pauseContent = { onClick ->
-                    EpisodePauseIcon(
-                        contentDescription = stringResource(R.string.watch_pause),
-                        onClick = onClick,
-                    )
-                },
-                resumeContent = { onClick ->
-                    EpisodeResumeIcon(
-                        contentDescription = stringResource(R.string.watch_resume),
-                        onClick = onClick,
-                    )
-                },
-                removeContent = { onClick ->
-                    EpisodeRemoveDownloadIcon(
-                        contentDescription = stringResource(R.string.watch_remove_download),
-                        onClick = onClick,
-                    )
-                },
-                progressContent = { progress -> WatchDownloadProgressBadge(progress = progress) },
+                downloadedContentDescription = stringResource(R.string.watch_downloaded),
+                downloadContentDescription = stringResource(R.string.watch_download),
+                pauseContentDescription = stringResource(R.string.watch_pause),
+                resumeContentDescription = stringResource(R.string.watch_resume),
+                removeContentDescription = stringResource(R.string.watch_remove_download),
                 onDownloadClick = onDownloadClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
