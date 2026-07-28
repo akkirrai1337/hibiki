@@ -7,9 +7,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.jetbrains.compose.resources.painterResource
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_player_media_skip_next_24
+import hibiki.shared.generated.resources.ic_player_media_skip_previous_24
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 
@@ -21,9 +26,21 @@ fun AppPlayerCenterControls(
     onTogglePlay: () -> Unit,
     onPreviousEpisode: () -> Unit,
     onNextEpisode: () -> Unit,
-    previousContent: @Composable (Modifier) -> Unit,
+    previousContent: @Composable (Modifier) -> Unit = { iconModifier ->
+        Icon(
+            painter = painterResource(Res.drawable.ic_player_media_skip_previous_24),
+            contentDescription = null,
+            modifier = iconModifier,
+        )
+    },
     playContent: @Composable (Modifier) -> Unit,
-    nextContent: @Composable (Modifier) -> Unit,
+    nextContent: @Composable (Modifier) -> Unit = { iconModifier ->
+        Icon(
+            painter = painterResource(Res.drawable.ic_player_media_skip_next_24),
+            contentDescription = null,
+            modifier = iconModifier,
+        )
+    },
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
