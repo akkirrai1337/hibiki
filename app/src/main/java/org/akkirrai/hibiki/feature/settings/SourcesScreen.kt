@@ -23,9 +23,6 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
-import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -38,6 +35,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
 import org.akkirrai.hibiki.shared.source.AppSourceSearchEmptyState
+import org.akkirrai.hibiki.shared.source.AppSourceSearchAnimeCard
 import org.akkirrai.hibiki.shared.source.SourceScreenDefaultBottomContentPadding
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
@@ -92,27 +90,12 @@ fun SourcesScreen(
                             )
                         },
                         itemContent = { anime ->
-                            AppPosterAnimeCard(
+                            AppSourceSearchAnimeCard(
                                 anime = anime,
-                                metaText = anime.buildCardMeta(
-                                    announcementLabel = announcementLabel,
-                                    movieLabel = movieLabel,
-                                ),
+                                announcementLabel = announcementLabel,
+                                movieLabel = movieLabel,
                                 onClick = { onAnimeClick(anime) },
-                                modifier = Modifier.width(SourceSearchPosterCardWidth),
-                                posterContent = {
-                                    AppPosterImage(
-                                        primaryUrl = anime.posterUrl,
-                                        fallbackUrl = anime.posterFallbackUrl,
-                                        contentDescription = anime.title,
-                                        modifier = Modifier.fillMaxSize(),
-                                        placeholder = {
-                                            AppSourceSearchPosterPlaceholder(
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        },
-                                    )
-                                },
+                                cardWidth = SourceSearchPosterCardWidth,
                             )
                         },
                     )
