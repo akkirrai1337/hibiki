@@ -27,8 +27,8 @@ import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
-import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
+import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -199,7 +199,7 @@ class AnimeSearchRepository(
         return Anime(
             id = canonicalId,
             title = displayName,
-            subtitle = buildSubtitle(fallback?.subtitle),
+            subtitle = resolveAnimeSubtitle(type, year, fallback?.subtitle),
             episodesLabel = if (isAnnouncementStatus(resolvedStatus)) {
                 if (preferEnglish) "announcement" else "анонс"
             } else {
@@ -252,14 +252,6 @@ class AnimeSearchRepository(
             thumbnailUrl = thumbnailUrl,
             sourceUrl = sourceUrl,
         )
-    }
-
-    private fun AnimeTitle.buildSubtitle(fallbackSubtitle: String?): String {
-        val parts = listOfNotNull(
-            type?.let(::resolveDisplayTypeLabel),
-            year?.toString(),
-        )
-        return parts.joinToString(" · ").ifBlank { fallbackSubtitle.orEmpty() }
     }
 
     private fun List<AnimeTitle>.bestMatchFor(queryTitle: String): AnimeTitle? {
