@@ -39,6 +39,7 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
 import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
+import org.akkirrai.hibiki.shared.home.resolveTrendingOffset
 import org.akkirrai.hibiki.shared.home.SearchSortAlias
 import org.akkirrai.hibiki.shared.home.resolveSearchSortAlias
 import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
@@ -212,7 +213,7 @@ class HomeRepository(
     private suspend fun loadSourceTrending(selectionSeed: Long): List<Anime> {
         val source = currentSource()
         val trendingOffset = if (source.source.catalogCapabilities.supports(AnimeSearchSort.RATING)) {
-            trendingOffsetForSeed(selectionSeed)
+            resolveTrendingOffset(selectionSeed, HOME_TRENDING_MAX_OFFSET_EXCLUSIVE)
         } else {
             0
         }
@@ -338,13 +339,6 @@ class HomeRepository(
     private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 
     private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
-
-    private fun trendingOffsetForSeed(selectionSeed: Long): Int {
-        return Random(selectionSeed).nextInt(
-            from = 0,
-            until = HOME_TRENDING_MAX_OFFSET_EXCLUSIVE,
-        )
-    }
 
     private companion object {
         const val TAG = "HomeRepository"
