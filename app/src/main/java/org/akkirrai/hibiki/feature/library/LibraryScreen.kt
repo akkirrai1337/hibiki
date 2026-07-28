@@ -2,10 +2,6 @@ package org.akkirrai.hibiki.feature.library
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +22,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
-import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
@@ -85,16 +80,13 @@ fun LibraryScreen(
         headerContent = {
             org.akkirrai.hibiki.shared.library.AppLibraryHeader(
                 searchContent = { searchModifier ->
-                    AppSearchTopBar(
+                    org.akkirrai.hibiki.shared.library.AppLibrarySearchBar(
                         query = state.searchQuery,
                         onQueryChange = viewModel::onSearchQueryChange,
                         onClear = viewModel::clearSearch,
                         placeholder = stringResource(R.string.search_placeholder),
                         filterContentDescription = stringResource(R.string.search_filters),
                         clearContentDescription = stringResource(R.string.home_search_clear),
-                        searchIcon = Icons.Outlined.Search,
-                        filterIcon = Icons.Outlined.FilterList,
-                        clearIcon = Icons.Outlined.Close,
                         onFilterClick = { isFilterDialogVisible = true },
                         modifier = searchModifier,
                     )
