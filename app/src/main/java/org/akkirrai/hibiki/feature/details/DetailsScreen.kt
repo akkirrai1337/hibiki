@@ -107,7 +107,7 @@ import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
 import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
 import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
-import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.details.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
 import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
 import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
@@ -303,10 +303,11 @@ fun DetailsScreen(
             contentFeatures = sourceDescriptor.contentFeatures,
         )
     }
-    val canWatch = remember(selectedAnimeSource, currentAnime.episodesLabel, heroInfo.status) {
-        sourceDescriptor.supportsPlayback &&
-            !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
-    }
+    val canWatch = resolveDetailsPlaybackAvailability(
+        supportsPlayback = sourceDescriptor.supportsPlayback,
+        status = heroInfo.status,
+        episodesLabel = currentAnime.episodesLabel,
+    )
     val fallbackColorScheme = MaterialTheme.colorScheme
     val resolvedTitleSeedColor = titleSeedColor
     val titleColorScheme = if (resolvedTitleSeedColor == null) {
