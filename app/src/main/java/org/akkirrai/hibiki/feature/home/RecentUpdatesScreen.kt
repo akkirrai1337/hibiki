@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +25,7 @@ import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
+import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
@@ -132,6 +133,8 @@ fun RecentUpdatesScreen(
         AppFloatingHeader(
             title = stringResource(R.string.home_recent_updates),
             onBackClick = onBackClick,
+            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+            backContentDescription = stringResource(R.string.cd_back),
             modifier = Modifier,
             includeStatusBarsPadding = false,
         )
