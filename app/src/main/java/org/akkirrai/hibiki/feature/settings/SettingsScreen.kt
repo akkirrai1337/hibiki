@@ -9,10 +9,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +57,10 @@ import org.akkirrai.hibiki.shared.settings.SettingsAmoledIcon
 import org.akkirrai.hibiki.shared.settings.SettingsSystemColorSchemeIcon
 import org.akkirrai.hibiki.shared.settings.SettingsThemeIcon
 import org.akkirrai.hibiki.shared.settings.SettingsLanguageIcon
+import org.akkirrai.hibiki.shared.settings.SettingsNotificationsIcon
+import org.akkirrai.hibiki.shared.settings.SettingsAutoSkipIcon
+import org.akkirrai.hibiki.shared.settings.SettingsUpdatesIcon
+import org.akkirrai.hibiki.shared.settings.SettingsExportLogsIcon
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconSwitchItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
@@ -171,7 +171,7 @@ fun SettingsScreen(
                         }
 
                         1 -> AppSettingsIconActionItem(
-                            icon = Icons.Outlined.Notifications,
+                            icon = SettingsNotificationsIcon,
                             title = stringResource(R.string.settings_notifications),
                             subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
                             shape = shape,
@@ -188,7 +188,7 @@ fun SettingsScreen(
             AppSettingsSection(title = stringResource(R.string.settings_player)) {
                 AppSettingsItems(count = 1) { _, _ ->
                     SettingsSwitchItem(
-                        icon = Icons.Outlined.SkipNext,
+                        icon = SettingsAutoSkipIcon,
                         title = stringResource(R.string.settings_auto_skip_segments),
                         checked = preferences.autoSkipSegments,
                         shape = CircleShape,
@@ -226,7 +226,7 @@ fun SettingsScreen(
                 AppSettingsSection(title = stringResource(R.string.settings_updates)) {
                     AppSettingsItems(count = 1) { _, _ ->
                         AppSettingsIconActionItem(
-                            icon = Icons.Outlined.Update,
+                            icon = SettingsUpdatesIcon,
                             title = stringResource(R.string.settings_check_updates),
                             shape = CircleShape,
                             onClick = onCheckForUpdates,
@@ -240,7 +240,7 @@ fun SettingsScreen(
             AppSettingsSection(title = stringResource(R.string.settings_support)) {
                 AppSettingsItems(count = 1) { _, _ ->
                     AppSettingsIconActionItem(
-                        icon = Icons.Outlined.Share,
+                        icon = SettingsExportLogsIcon,
                         title = stringResource(R.string.settings_export_logs),
                         shape = CircleShape,
                         onClick = {
