@@ -37,10 +37,9 @@ import org.akkirrai.hibiki.shared.profile.ProfileAvatarImage
 import org.akkirrai.hibiki.shared.profile.AppProfileFavoritesTab
 import org.akkirrai.hibiki.shared.profile.ProfileLargePadding
 import org.akkirrai.hibiki.shared.profile.ProfileSmallPadding
-import org.akkirrai.hibiki.shared.profile.ProfileMediumPadding
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
 import org.akkirrai.hibiki.shared.profile.ProfileTab
-import org.akkirrai.hibiki.shared.profile.toProfileGenreBarItems
+import org.akkirrai.hibiki.shared.profile.AppProfileOverviewContent
 
 /**
  * Direct Android port of Animite's ProfileScreen layout: NestedScrollBannerLayout,
@@ -139,31 +138,16 @@ fun LocalProfileScreen(
                     },
                     pageContent = { page ->
                         when (ProfileTab.entries[page]) {
-                            ProfileTab.Overview -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+                            ProfileTab.Overview -> AppProfileOverviewContent(
+                                snapshot = snapshot,
                                 bottomContentPadding = bottomContentPadding,
-                                verticalSpacing = ProfileMediumPadding,
-                            ) {
-                                org.akkirrai.hibiki.shared.profile.ProfileStatsRow(
-                                    items = listOf(
-                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                                            stringResource(R.string.local_profile_stat_total),
-                                            snapshot.libraryTotal.toString(),
-                                        ),
-                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                                            stringResource(R.string.local_profile_stat_days),
-                                            snapshot.activeDaysCount.toString(),
-                                        ),
-                                        org.akkirrai.hibiki.shared.profile.ProfileStatItem(
-                                            stringResource(R.string.local_profile_stat_time),
-                                            snapshot.watchTimeLabel,
-                                        ),
-                                    ),
-                                )
-                                org.akkirrai.hibiki.shared.profile.ProfileGenreBars(
-                                    items = snapshot.genreSegments.toProfileGenreBarItems(),
-                                )
+                                totalLabel = stringResource(R.string.local_profile_stat_total),
+                                daysLabel = stringResource(R.string.local_profile_stat_days),
+                                timeLabel = stringResource(R.string.local_profile_stat_time),
+                                recentContent = {
                                 RecentLibraryCard(snapshot.recentLibraryItems)
-                            }
+                                },
+                            )
                             ProfileTab.Activity -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
                                 bottomContentPadding = bottomContentPadding,
                             ) {
