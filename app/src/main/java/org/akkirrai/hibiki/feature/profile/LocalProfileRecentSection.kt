@@ -13,7 +13,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import coil.compose.SubcomposeAsyncImage
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 
 @Composable
 internal fun RecentLibraryCard(
@@ -61,7 +61,7 @@ private fun RecentPoster(
                     )
                 },
                 error = {
-                    PosterPlaceholder(modifier = Modifier.fillMaxSize()) {
+                    AppPosterPlaceholder(modifier = Modifier.fillMaxSize()) {
                         ProfileRecentPosterMarker(color = item.color)
                     }
                 },
