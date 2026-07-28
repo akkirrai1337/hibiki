@@ -39,12 +39,7 @@ import org.akkirrai.hibiki.shared.profile.ProfileLargePadding
 import org.akkirrai.hibiki.shared.profile.ProfileSmallPadding
 import org.akkirrai.hibiki.shared.profile.ProfileMediumPadding
 import org.akkirrai.hibiki.shared.profile.ProfileNameEditor
-
-private enum class LocalProfileTab(val titleRes: Int) {
-    Overview(R.string.local_profile_tab_overview),
-    Activity(R.string.local_profile_tab_activity),
-    Favorites(R.string.local_profile_tab_favorites),
-}
+import org.akkirrai.hibiki.shared.profile.ProfileTab
 
 /**
  * Direct Android port of Animite's ProfileScreen layout: NestedScrollBannerLayout,
@@ -125,7 +120,15 @@ fun LocalProfileScreen(
                     profileName = state.data.profileName,
                     isEditing = isEditingProfile,
                     horizontalPadding = ProfileLargePadding,
-                    tabTitles = LocalProfileTab.entries.map { tab -> stringResource(tab.titleRes) },
+                    tabTitles = ProfileTab.entries.map { tab ->
+                        stringResource(
+                            when (tab) {
+                                ProfileTab.Overview -> R.string.local_profile_tab_overview
+                                ProfileTab.Activity -> R.string.local_profile_tab_activity
+                                ProfileTab.Favorites -> R.string.local_profile_tab_favorites
+                            }
+                        )
+                    },
                     nameEditorContent = {
                         ProfileNameEditor(
                             label = stringResource(R.string.local_profile_name),
@@ -134,8 +137,8 @@ fun LocalProfileScreen(
                         )
                     },
                     pageContent = { page ->
-                        when (LocalProfileTab.entries[page]) {
-                            LocalProfileTab.Overview -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+                        when (ProfileTab.entries[page]) {
+                            ProfileTab.Overview -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
                                 bottomContentPadding = bottomContentPadding,
                                 verticalSpacing = ProfileMediumPadding,
                             ) {
@@ -166,12 +169,12 @@ fun LocalProfileScreen(
                                 )
                                 RecentLibraryCard(snapshot.recentLibraryItems)
                             }
-                            LocalProfileTab.Activity -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
+                            ProfileTab.Activity -> org.akkirrai.hibiki.shared.profile.ProfileScrollableTab(
                                 bottomContentPadding = bottomContentPadding,
                             ) {
                                 AnalyticsCard(snapshot)
                             }
-                            LocalProfileTab.Favorites -> AppProfileFavoritesTab(
+                            ProfileTab.Favorites -> AppProfileFavoritesTab(
                                 isEmpty = snapshot.favoriteLibraryItems.isEmpty(),
                                 bottomContentPadding = bottomContentPadding,
                                 emptyContent = {
