@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -263,7 +262,7 @@ private fun LibraryAnimeCard(
                 contentDescription = anime.title,
                 modifier = Modifier.fillMaxSize(),
                 placeholder = {
-                    AppImagePlaceholder(icon = Icons.Outlined.Image)
+                    AppImagePlaceholder()
                 },
             )
         },
