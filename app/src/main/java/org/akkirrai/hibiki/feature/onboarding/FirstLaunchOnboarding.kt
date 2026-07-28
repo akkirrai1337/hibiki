@@ -39,6 +39,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
 import org.akkirrai.hibiki.shared.onboarding.formatOnboardingSourceLanguageSummary
+import org.akkirrai.hibiki.shared.onboarding.filterOnboardingSourcesByLanguage
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
@@ -242,11 +243,10 @@ private fun sourceLanguageSummary(source: AnimeSourceDescriptor): String {
 internal fun onboardingSourcesForSystemLanguage(
     sources: List<AnimeSourceDescriptor>,
     systemLanguage: String,
-): List<AnimeSourceDescriptor> {
-    val preferredLanguage = if (systemLanguage.lowercase() in setOf("ru", "uk", "be")) {
-        SourceLanguage.RUSSIAN
-    } else {
-        SourceLanguage.ENGLISH
-    }
-    return sources.filter { source -> preferredLanguage in source.info.languages }
-}
+): List<AnimeSourceDescriptor> = filterOnboardingSourcesByLanguage(
+    sources = sources,
+    systemLanguage = systemLanguage,
+    russianTag = SourceLanguage.RUSSIAN.tag,
+    englishTag = SourceLanguage.ENGLISH.tag,
+    languageTags = { source -> source.info.languages.mapTo(linkedSetOf()) { it.tag } },
+)
