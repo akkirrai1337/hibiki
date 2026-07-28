@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.settings
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -26,7 +25,6 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.shared.design.component.AppMessageState
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
@@ -39,7 +37,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceSearchSection
 import org.akkirrai.hibiki.shared.source.AppSourceSearchPosterPlaceholder
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourceSearchPosterCardWidth
-import org.akkirrai.hibiki.shared.source.SourceSearchEmptyHorizontalPadding
+import org.akkirrai.hibiki.shared.source.AppSourceSearchEmptyState
 import org.akkirrai.hibiki.shared.source.SourceScreenDefaultBottomContentPadding
 import org.akkirrai.hibiki.shared.source.AppSourceScreenLayout
 import org.akkirrai.hibiki.shared.collection.groupItemsByKeys
@@ -122,12 +120,9 @@ fun SourcesScreen(
             }
             if (!searchState.isSearching && visibleSections.isEmpty()) {
                 item(key = "search_empty") {
-                    AppMessageState(
+                    AppSourceSearchEmptyState(
                         title = stringResource(R.string.sources_search_empty_title),
                         message = stringResource(R.string.sources_search_empty_message),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = SourceSearchEmptyHorizontalPadding),
                     )
                 }
             }
