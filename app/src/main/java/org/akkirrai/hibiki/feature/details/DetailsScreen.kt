@@ -91,8 +91,7 @@ import org.akkirrai.hibiki.shared.details.DetailsHeroActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
-import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewSurface
-import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewAnimation
+import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewOverlay
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroSection
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
@@ -433,9 +432,24 @@ fun DetailsScreen(
         }
 
         if (isPosterPreviewOpen) {
-            PosterPreviewOverlay(
-                anime = currentAnime,
-                onDismiss = { isPosterPreviewOpen = false }
+            AppDetailsPosterPreviewOverlay(
+                onDismissRequest = { isPosterPreviewOpen = false },
+                backHandler = { onBack -> BackHandler(onBack = onBack) },
+                posterContent = { posterModifier ->
+                    AppPosterImage(
+                        primaryUrl = currentAnime.posterUrl,
+                        fallbackUrl = currentAnime.posterFallbackUrl,
+                        contentDescription = currentAnime.title,
+                        modifier = posterModifier,
+                        contentScale = ContentScale.Fit,
+                        placeholder = {
+                            AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize())
+                        },
+                    )
+                },
+                backContent = { onDismiss ->
+                    HeroOverlayBackButton(onClick = onDismiss)
+                },
             )
         }
 
@@ -704,57 +718,6 @@ private fun DetailContentCard(
         horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
     )
-}
-
-@Composable
-private fun PosterPreviewOverlay(
-    anime: Anime,
-    onDismiss: () -> Unit,
-) {
-    var isVisible by remember { mutableStateOf(false) }
-    var isDismissing by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        isVisible = true
-    }
-
-    fun dismissAnimated() {
-        if (isDismissing) return
-        isDismissing = true
-        isVisible = false
-    }
-
-    LaunchedEffect(isDismissing) {
-        if (isDismissing) {
-            delay(180)
-            onDismiss()
-        }
-    }
-
-    BackHandler(onBack = ::dismissAnimated)
-
-    AppDetailsPosterPreviewAnimation(visible = isVisible) { scrimAlpha, posterAlpha, posterScale ->
-        AppDetailsPosterPreviewSurface(
-            scrimAlpha = scrimAlpha,
-            posterAlpha = posterAlpha,
-            posterScale = posterScale,
-            onDismiss = ::dismissAnimated,
-            posterContent = { posterModifier ->
-                AppPosterImage(
-                    primaryUrl = anime.posterUrl,
-                    fallbackUrl = anime.posterFallbackUrl,
-                    contentDescription = anime.title,
-                    modifier = posterModifier,
-                    contentScale = ContentScale.Fit,
-                    placeholder = {
-                        AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize())
-                    },
-                )
-            },
-            backContent = {
-                HeroOverlayBackButton(onClick = ::dismissAnimated)
-            },
-        )
-    }
 }
 
 @Composable
