@@ -5,6 +5,7 @@ import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.source.formatFilterFallbackLabel
 import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
 import org.akkirrai.hibiki.shared.source.localizeYummyTypeFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyStatusFilterLabel
 
 internal object YummySearchFilterLocalizer {
     fun localize(
@@ -19,7 +20,9 @@ internal object YummySearchFilterLocalizer {
                 it.copy(title = localizeYummyTypeFilterLabel(it.id, it.title, preferEnglish))
             },
             // Statuses and genres belong to the source and must stay in its language.
-            statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish = false) },
+            statusOptions = catalog.statusOptions.map {
+                it.copy(title = localizeYummyStatusFilterLabel(it.id, it.title))
+            },
             genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish = false) },
             capabilities = catalog.capabilities,
         )
@@ -43,12 +46,6 @@ internal object YummySearchFilterLocalizer {
     private data class LocalizedLabel(
         val ru: String,
         val en: String,
-    )
-
-    private val statusLabels = mapOf(
-        "released" to LocalizedLabel("Вышел", "Released"),
-        "ongoing" to LocalizedLabel("Онгоинг", "Ongoing"),
-        "announcement" to LocalizedLabel("Анонс", "Announcement"),
     )
 
     private val genreLabels = mapOf(
