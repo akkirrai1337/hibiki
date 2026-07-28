@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -98,13 +96,7 @@ fun RecentUpdatesScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(2f / 3f),
-                                ) {
-                                    androidx.compose.material3.Icon(
-                                        imageVector = Icons.Outlined.Image,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                )
                             },
                         )
                     },
