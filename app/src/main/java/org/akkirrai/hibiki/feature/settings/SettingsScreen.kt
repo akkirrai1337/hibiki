@@ -69,6 +69,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsPreferencesSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsPlayerSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsUpdatesSection
 import org.akkirrai.hibiki.shared.settings.AppSettingsSupportSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsExperimentalSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -176,26 +177,25 @@ fun SettingsScreen(
         }
 
         item(key = SettingsSection.Experimental.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_experimental)) {
-                AppSettingsItems(count = 1) { _, shape ->
-                    DiscordSettingsItem(
-                        icon = ImageVector.vectorResource(R.drawable.ic_discord),
-                        title = stringResource(R.string.discord_rpc_title),
-                        checked = preferences.discordRpcEnabled,
-                        shape = shape,
-                        onClick = { isDiscordAuthDialogOpen = true },
-                        onCheckedChange = { enabled ->
-                            if (!enabled) {
-                                appPreferences.setDiscordRpcEnabled(false)
-                            } else if (discordRpcManager.hasToken()) {
-                                discordRpcManager.refreshAuthentication(enableOnSuccess = true)
-                            } else {
-                                isDiscordAuthDialogOpen = true
-                            }
-                        },
+            AppSettingsExperimentalSection(
+                sectionTitle = stringResource(R.string.settings_experimental),
+                discordIcon = ImageVector.vectorResource(R.drawable.ic_discord),
+                discordTitle = stringResource(R.string.discord_rpc_title),
+                discordEnabled = preferences.discordRpcEnabled,
+                onDiscordClick = { isDiscordAuthDialogOpen = true },
+                onDiscordChange = { enabled ->
+                    if (!enabled) {
+                        appPreferences.setDiscordRpcEnabled(false)
+                    } else if (discordRpcManager.hasToken()) {
+                        discordRpcManager.refreshAuthentication(enableOnSuccess = true)
+                    } else {
+                        isDiscordAuthDialogOpen = true
+                    }
+                    haptic.performHapticFeedback(
+                        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
                     )
-                }
-            }
+                },
+            )
         }
 
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
