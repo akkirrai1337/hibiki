@@ -113,8 +113,8 @@ import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
 import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
 import org.akkirrai.hibiki.shared.player.sortQualityLabels
 import org.akkirrai.hibiki.shared.player.uniquePlayerNames
-import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
+import org.akkirrai.hibiki.shared.player.resolveLocalizedEpisodeTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
 import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
@@ -1490,23 +1490,14 @@ private fun buildEpisodeTitle(episode: WatchEpisode): String {
 
 @Composable
 private fun currentEpisodeSubtitle(state: PlayerUiState): String {
-    return localizedEpisodeTitle(
+    return resolveLocalizedEpisodeTitle(
         resolveCurrentEpisodeTitle(
             playbackTitle = state.playback?.episodeTitle,
             currentEpisodeId = state.currentEpisodeId,
             episodes = state.episodes,
         ),
+        episodeLabel = { number -> stringResource(R.string.watch_episode_number, number) },
     )
-}
-
-@Composable
-private fun localizedEpisodeTitle(title: String): String {
-    val fallbackEpisodeNumber = fallbackEpisodeNumberFromTitle(title)
-    return if (fallbackEpisodeNumber != null) {
-        stringResource(R.string.watch_episode_number, fallbackEpisodeNumber)
-    } else {
-        title
-    }
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
