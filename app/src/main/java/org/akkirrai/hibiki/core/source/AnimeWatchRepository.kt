@@ -49,6 +49,7 @@ import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
 import org.akkirrai.hibiki.shared.player.playerPriority
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
+import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildWatchSourceId
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
@@ -232,9 +233,9 @@ class AnimeWatchRepository(
             ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
             headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
             segments = selectPlaybackSegments(
-                apiSegments = resolved.link.segments,
-                extractedSegments = resolved.stream.segments,
-            ).map { segment -> segment.toPlaybackSegment() },
+                apiSegments = resolved.link.segments.map { it.toPlaybackSegment() },
+                extractedSegments = resolved.stream.segments.map { it.toPlaybackSegment() },
+            ),
             videoId = resolved.link.videoId,
         )
         cachedStreams[cacheKey] = CachedPlaybackStream(stream = playback, cachedAt = System.currentTimeMillis())
@@ -493,19 +494,6 @@ class AnimeWatchRepository(
         if (!hasActiveInternetConnection(context)) {
             throw NoInternetConnectionException(context.getString(org.akkirrai.hibiki.R.string.home_error_no_internet))
         }
-    }
-
-    private fun selectPlaybackSegments(
-        apiSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
-        extractedSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
-    ): List<org.akkirrai.beakokit.model.VideoSegment> {
-        val preferred = apiSegments.ifEmpty { extractedSegments }
-        return preferred
-            .filter { segment -> segment.endMs > segment.startMs }
-            .filter { segment -> segment.startMs >= 0L }
-            .filterNot { segment ->
-                segment.startMs == 0L && segment.type != org.akkirrai.beakokit.model.VideoSegmentType.UNKNOWN
-            }
     }
 
     private fun VideoSegment.toPlaybackSegment(): PlaybackSegment = PlaybackSegment(
