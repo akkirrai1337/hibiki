@@ -14,6 +14,7 @@ class DetailsHeroInfoTest {
         assertEquals("TV", result.type)
         assertEquals("2024", result.releaseDate)
         assertEquals("12 episodes", result.episodes)
+        assertEquals(13, result.nextEpisodeNumber)
         assertEquals("Studio", result.studio)
     }
 }
