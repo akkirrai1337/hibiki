@@ -113,22 +113,38 @@ fun LibraryScreen(
         },
         emptyContent = { filtered ->
             if (!filtered) {
-                EmptyLibraryState(
+                AppLibraryEmptyState(
                     title = stringResource(R.string.library_empty_title),
-                    body = stringResource(R.string.library_empty_body),
+                    message = stringResource(R.string.library_empty_body),
+                    iconContent = { iconModifier ->
+                        Icon(
+                            imageVector = Icons.Outlined.BookmarkBorder,
+                            contentDescription = null,
+                            modifier = iconModifier,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
                 )
             } else {
-                EmptyLibraryState(
+                AppLibraryEmptyState(
                     title = if (state.searchQuery.isBlank()) {
                         stringResource(R.string.library_section_empty_title)
                     } else {
                         stringResource(R.string.home_search_empty_title)
                     },
-                    body = if (state.searchQuery.isBlank()) {
+                    message = if (state.searchQuery.isBlank()) {
                         emptyLibraryCategoryMessage(state.selectedCategory)
                     } else {
                         stringResource(R.string.home_search_empty_message)
-                    }
+                    },
+                    iconContent = { iconModifier ->
+                        Icon(
+                            imageVector = Icons.Outlined.BookmarkBorder,
+                            contentDescription = null,
+                            modifier = iconModifier,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
                 )
             }
         },
@@ -281,25 +297,6 @@ private fun LibraryAnimeCard(
                 icon = entry.category.icon(),
             )
         },
-    )
-}
-
-@Composable
-private fun EmptyLibraryState(
-    title: String,
-    body: String,
-) {
-    AppLibraryEmptyState(
-        title = title,
-        message = body,
-        iconContent = { iconModifier ->
-            Icon(
-                imageVector = Icons.Outlined.BookmarkBorder,
-                contentDescription = null,
-                modifier = iconModifier,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     )
 }
 
