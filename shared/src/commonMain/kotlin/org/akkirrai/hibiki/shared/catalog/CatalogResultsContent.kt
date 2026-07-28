@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
@@ -18,7 +20,7 @@ fun LazyListScope.appCatalogResultsContent(
     onItemVisible: ((Anime) -> Unit)? = null,
     isLoadingMore: Boolean,
     paginationErrorMessage: String?,
-    paginationErrorIcon: ImageVector,
+    paginationErrorIcon: ImageVector = Icons.Outlined.WarningAmber,
     onLoadMoreRetry: () -> Unit,
 ) {
     appVerticalAnimeListContent(
