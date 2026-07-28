@@ -361,7 +361,7 @@ class HomeViewModel(
                 if (generation != sourceGeneration) return@onSuccess
                 presenter.update { state ->
                     state.copy(
-                        recentlyUpdated = (state.recentlyUpdated + page).distinctBy { it.id },
+                        recentlyUpdated = mergeAnimePreservingOrder(state.recentlyUpdated, page),
                         isRecentUpdatesLoadingMore = false,
                         canLoadMoreRecentUpdates = page.size >= RECENT_UPDATES_PAGE_SIZE,
                         recentUpdatesLoadMoreError = null,
