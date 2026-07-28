@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -80,7 +83,8 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.design.AppMotion
-import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
+import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
+import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet as SharedModalBottomSheet
 import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.details.isNullOrZero
@@ -447,11 +451,26 @@ fun DetailsScreen(
 
         if (isTitleDetailsSheetOpen) {
             val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-            AppModalBottomSheet(
+            SharedModalBottomSheet(
                 onDismissRequest = { isTitleDetailsSheetOpen = false },
                 sheetState = titleSheetState,
                 modifier = Modifier.fillMaxHeight(),
+                shape = rememberDeviceScreenTopCornerShape(),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                scrimColor = Color.Black.copy(alpha = 0.5f),
+                dragHandleContent = { expanded ->
+                    val (handleSize, icon) = if (expanded) {
+                        16.dp to Icons.Rounded.Close
+                    } else {
+                        20.dp to Icons.Rounded.KeyboardArrowUp
+                    }
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp).size(handleSize),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
             ) {
                 AppDetailsTitleSheetContent(
                     title = currentAnime.title,
