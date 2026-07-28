@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage
+import org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment
 
 @Composable
 internal fun AnalyticsCard(
@@ -35,20 +37,7 @@ internal fun AnalyticsCard(
     org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsCard(
         donutContent = {
             org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsDonutPager(
-                pages = pages.map { page ->
-                    org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage(
-                        centerPrimary = page.centerPrimary,
-                        centerSecondary = page.centerSecondary,
-                        segments = page.segments.map { segment ->
-                            org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment(
-                                label = segment.label,
-                                valueLabel = segment.valueLabel,
-                                weight = segment.weight,
-                                color = segment.color,
-                            )
-                        },
-                    )
-                },
+                pages = pages,
                 title = stringResource(R.string.yummy_account_segment_stats),
                 episodeStat = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
                 watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
@@ -71,14 +60,14 @@ internal fun AnalyticsCard(
     )
 }
 
-private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsPage> {
+private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<ProfileAnalyticsPage> {
     return listOf(
-        AnalyticsPage(
+        ProfileAnalyticsPage(
             title = "Время просмотра",
             centerPrimary = snapshot.libraryTotal.toString(),
             centerSecondary = "всего",
             segments = snapshot.libraryStatusSegments.map { segment ->
-                AnalyticsSegment(
+                ProfileAnalyticsSegment(
                     label = segment.label,
                     valueLabel = segment.count.toString(),
                     weight = segment.count.toFloat(),
@@ -87,12 +76,12 @@ private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsP
             },
             legendColumns = 2,
         ),
-        AnalyticsPage(
+        ProfileAnalyticsPage(
             title = "Жанры",
             centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
             centerSecondary = "жанров",
             segments = snapshot.genreSegments.map { segment ->
-                AnalyticsSegment(
+                ProfileAnalyticsSegment(
                     label = segment.label,
                     valueLabel = segment.count.toString(),
                     weight = segment.count.toFloat(),
@@ -103,21 +92,6 @@ private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsP
         ),
     )
 }
-
-private data class AnalyticsPage(
-    val title: String,
-    val centerPrimary: String,
-    val centerSecondary: String,
-    val segments: List<AnalyticsSegment>,
-    val legendColumns: Int,
-)
-
-private data class AnalyticsSegment(
-    val label: String,
-    val valueLabel: String,
-    val weight: Float,
-    val color: Color,
-)
 
 private const val ACTIVITY_CHART_MIN_SCALE_EPISODES = 8
 private val ACTIVITY_CHART_DAY_GAP = 4.dp

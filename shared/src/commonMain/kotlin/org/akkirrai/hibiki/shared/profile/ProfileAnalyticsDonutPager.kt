@@ -26,6 +26,8 @@ data class ProfileAnalyticsPage(
     val centerPrimary: String,
     val centerSecondary: String,
     val segments: List<ProfileAnalyticsSegment>,
+    val title: String? = null,
+    val legendColumns: Int = 1,
 )
 
 data class ProfileAnalyticsSegment(
