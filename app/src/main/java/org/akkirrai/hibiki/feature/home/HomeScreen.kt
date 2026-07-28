@@ -46,7 +46,6 @@ import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
-import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.appSearchStateVerticalListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.shared.library.icon
@@ -185,7 +184,7 @@ fun HomeScreen(
                         emptyMessage = searchEmptyMessage,
                         emptyIcon = Icons.Outlined.SearchOff,
                         posterContent = { anime ->
-                            PosterImage(
+                            AppPosterImage(
                                 primaryUrl = anime.posterUrl,
                                 fallbackUrl = anime.posterFallbackUrl,
                                 contentDescription = anime.title,
