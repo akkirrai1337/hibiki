@@ -31,6 +31,7 @@ fun AppPosterImage(
     onImageSuccess: ((Image) -> Unit)? = null,
     onImageError: ((PosterImageLoadError) -> Unit)? = null,
     placeholder: @Composable () -> Unit,
+    errorContent: @Composable () -> Unit = {},
 ) {
     val normalizedPrimary = primaryUrl?.takeIf(String::isNotBlank)
     val normalizedFallback = fallbackUrl?.takeIf(String::isNotBlank)
@@ -39,6 +40,9 @@ fun AppPosterImage(
     }
     var isLoading by remember(normalizedPrimary, normalizedFallback) {
         mutableStateOf(activeUrl != null)
+    }
+    var hasError by remember(normalizedPrimary, normalizedFallback) {
+        mutableStateOf(false)
     }
 
     if (activeUrl == null) {
@@ -52,9 +56,13 @@ fun AppPosterImage(
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
             contentScale = contentScale,
-            onLoading = { isLoading = true },
+            onLoading = {
+                isLoading = true
+                hasError = false
+            },
             onSuccess = { state ->
                 isLoading = false
+                hasError = false
                 val image = (state.result as? SuccessResult)?.image
                 if (image != null) onImageSuccess?.invoke(image)
             },
@@ -80,12 +88,19 @@ fun AppPosterImage(
                 if (canUseFallback) {
                     activeUrl = normalizedFallback
                     isLoading = true
+                    hasError = false
+                } else {
+                    isLoading = false
+                    hasError = true
                 }
             },
         )
 
         if (isLoading) {
             placeholder()
+        }
+        if (hasError) {
+            errorContent()
         }
     }
 }

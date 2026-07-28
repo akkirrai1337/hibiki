@@ -6,10 +6,10 @@ import org.akkirrai.hibiki.shared.profile.ProfileRecentPosterMarker
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import coil3.compose.SubcomposeAsyncImage
 import org.akkirrai.hibiki.R
+import androidx.compose.ui.layout.ContentScale
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.AppPosterLoadingPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 
@@ -46,15 +46,15 @@ private fun RecentPoster(
         if (posterUrl == null) {
             ProfileRecentPosterMarker(color = item.color)
         } else {
-            SubcomposeAsyncImage(
-                model = posterUrl,
+            AppPosterImage(
+                primaryUrl = posterUrl,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                loading = {
-                    AppPosterLoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                placeholder = {
+                    AppPosterLoadingPlaceholder()
                 },
-                error = {
+                errorContent = {
                     AppPosterPlaceholder(modifier = Modifier.fillMaxSize()) {
                         ProfileRecentPosterMarker(color = item.color)
                     }
