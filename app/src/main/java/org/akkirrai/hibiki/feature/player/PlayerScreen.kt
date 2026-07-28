@@ -105,6 +105,7 @@ import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
+import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
@@ -1415,12 +1416,13 @@ private fun PlayerSettingsSheet(
 }
 
 private val PlayerSettingsDestination.titleResId: Int
-    get() = when (this) {
-        PlayerSettingsDestination.Root -> R.string.watch_player_settings_root
-        PlayerSettingsDestination.Speed -> R.string.watch_player_settings_speed
-        PlayerSettingsDestination.Voiceover -> R.string.watch_player_settings_voiceover
-        PlayerSettingsDestination.Player -> R.string.watch_player_settings_player
-        PlayerSettingsDestination.Quality -> R.string.watch_player_settings_quality
+    get() = when (localizationKey()) {
+        "watch_player_settings_root" -> R.string.watch_player_settings_root
+        "watch_player_settings_speed" -> R.string.watch_player_settings_speed
+        "watch_player_settings_voiceover" -> R.string.watch_player_settings_voiceover
+        "watch_player_settings_player" -> R.string.watch_player_settings_player
+        "watch_player_settings_quality" -> R.string.watch_player_settings_quality
+        else -> error("Unknown player settings localization key")
     }
 
 private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
