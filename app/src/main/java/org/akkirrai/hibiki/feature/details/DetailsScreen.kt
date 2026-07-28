@@ -32,8 +32,6 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -116,6 +114,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
+import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetDragHandle
 import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
 import org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine
 import org.akkirrai.hibiki.shared.details.AppDetailsContentList
@@ -454,17 +453,7 @@ fun DetailsScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 scrimColor = Color.Black.copy(alpha = 0.5f),
                 dragHandleContent = { expanded ->
-                    val (handleSize, icon) = if (expanded) {
-                        16.dp to Icons.Rounded.Close
-                    } else {
-                        20.dp to Icons.Rounded.KeyboardArrowUp
-                    }
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp).size(handleSize),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    AppDetailsTitleSheetDragHandle(expanded = expanded)
                 },
             ) {
                 AppDetailsTitleSheetContent(
