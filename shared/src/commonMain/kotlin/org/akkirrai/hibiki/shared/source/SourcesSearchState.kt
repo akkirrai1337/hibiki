@@ -19,6 +19,9 @@ data class SourcesSearchUiState(
 
 fun isSourceSearchActive(query: String): Boolean = query.trim().length >= SOURCE_SEARCH_MIN_QUERY_LENGTH
 
+fun shouldRestrictSourceSearchToRussian(query: String): Boolean =
+    query.any { it in '\u0400'..'\u052F' }
+
 fun <T> List<SourceSearchSectionState<T>>.visibleSourceSearchSections(): List<SourceSearchSectionState<T>> =
     filter { section ->
         section.isLoading || section.hasError || section.items.isNotEmpty()

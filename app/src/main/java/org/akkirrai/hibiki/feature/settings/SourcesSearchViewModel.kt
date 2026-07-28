@@ -31,6 +31,7 @@ import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_DEBOUNCE_MS
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_RESULTS_PER_SOURCE
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
+import org.akkirrai.hibiki.shared.source.shouldRestrictSourceSearchToRussian
 
 typealias SourceSearchSection = SourceSearchSectionState<Anime>
 
@@ -185,7 +186,7 @@ class SourcesSearchViewModel(
         }
 
     private fun List<AnimeSourceDescriptor>.filterForQuery(query: String): List<AnimeSourceDescriptor> {
-        if (!query.any { it in '\u0400'..'\u052F' }) return this
+        if (!shouldRestrictSourceSearchToRussian(query)) return this
         return filter { it.language == SourceLanguage.RUSSIAN }
     }
 
