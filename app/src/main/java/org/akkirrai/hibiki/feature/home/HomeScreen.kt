@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -62,6 +61,7 @@ import org.akkirrai.hibiki.shared.home.AppHomePosterPlaceholder
 import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
 import org.akkirrai.hibiki.shared.home.AppHomeFeedList
 import org.akkirrai.hibiki.shared.home.AppHomeSearchList
+import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
 import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
 import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
 import org.akkirrai.hibiki.shared.home.appHomeContinueWatchingSection
@@ -168,7 +168,7 @@ fun HomeScreen(
                         },
                         emptyTitle = searchEmptyTitle,
                         emptyMessage = searchEmptyMessage,
-                        emptyIcon = Icons.Outlined.SearchOff,
+                        emptyIcon = HomeSearchEmptyIcon,
                         posterContent = { anime ->
                             AppPosterImage(
                                 primaryUrl = anime.posterUrl,
