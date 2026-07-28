@@ -39,6 +39,8 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
 import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
+import org.akkirrai.hibiki.shared.home.SearchSortAlias
+import org.akkirrai.hibiki.shared.home.resolveSearchSortAlias
 
 class HomeRepository(
     context: Context,
@@ -315,17 +317,15 @@ class HomeRepository(
         return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
     }
 
-    private fun String.toSearchSort(): AnimeSearchSort {
-        return when (this) {
-            "top" -> AnimeSearchSort.RATING
-            "title" -> AnimeSearchSort.TITLE
-            "year" -> AnimeSearchSort.YEAR
-            "votes" -> AnimeSearchSort.VOTES
-            "views" -> AnimeSearchSort.VIEWS
-            "comments" -> AnimeSearchSort.COMMENTS
-            else -> AnimeSearchSort.RELEVANCE
+    private fun String.toSearchSort(): AnimeSearchSort = when (resolveSearchSortAlias(this)) {
+        SearchSortAlias.RELEVANCE -> AnimeSearchSort.RELEVANCE
+        SearchSortAlias.RATING -> AnimeSearchSort.RATING
+        SearchSortAlias.TITLE -> AnimeSearchSort.TITLE
+        SearchSortAlias.YEAR -> AnimeSearchSort.YEAR
+        SearchSortAlias.VOTES -> AnimeSearchSort.VOTES
+        SearchSortAlias.VIEWS -> AnimeSearchSort.VIEWS
+        SearchSortAlias.COMMENTS -> AnimeSearchSort.COMMENTS
         }
-    }
 
     private fun preferEnglish(): Boolean {
         return when (appPreferences.state.value.languageMode) {
