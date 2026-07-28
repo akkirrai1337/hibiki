@@ -8,3 +8,11 @@ fun watchTitleIdFromSourceId(sourceId: String): String =
     } else {
         sourceId.substringBefore(':')
     }
+
+fun buildWatchSourceId(animeId: String, dubbingTitle: String, index: Int): String {
+    val slug = dubbingTitle.lowercase()
+        .replace(Regex("[^\\p{L}\\p{N}]+"), "-")
+        .trim('-')
+        .ifBlank { "voiceover-$index" }
+    return "$animeId$WATCH_SOURCE_SEPARATOR$slug-$index"
+}

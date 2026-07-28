@@ -50,7 +50,7 @@ import org.akkirrai.hibiki.shared.player.playerPriority
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
-import org.akkirrai.hibiki.shared.player.WATCH_SOURCE_SEPARATOR
+import org.akkirrai.hibiki.shared.player.buildWatchSourceId
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
@@ -373,7 +373,7 @@ class AnimeWatchRepository(
         }
         val sources = groups.mapIndexed { index, group ->
             val source = WatchSource(
-                sourceId = buildSourceId(animeId, group.title, index),
+                sourceId = buildWatchSourceId(animeId, group.title, index),
                 title = group.title,
                 episodeCount = group.episodes.size,
                 qualityLabel = group.qualityLabel,
@@ -427,18 +427,6 @@ class AnimeWatchRepository(
 
     private fun extractTitleId(sourceId: String): String {
         return watchTitleIdFromSourceId(sourceId)
-    }
-
-    private fun buildSourceId(
-        animeId: String,
-        dubbingTitle: String,
-        index: Int,
-    ): String {
-        val slug = dubbingTitle.lowercase()
-            .replace(Regex("""[^\p{L}\p{N}]+"""), "-")
-            .trim('-')
-            .ifBlank { "voiceover-$index" }
-        return "$animeId$WATCH_SOURCE_SEPARATOR$slug-$index"
     }
 
     internal fun prioritizeLinks(
