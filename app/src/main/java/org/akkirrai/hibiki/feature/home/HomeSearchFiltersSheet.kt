@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
+import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
 import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.core.design.component.appFilterOptionText
 import java.time.Year
@@ -83,7 +84,7 @@ fun AnimeSearchFiltersSheet(
             statusTitle = stringResource(R.string.search_filters_status),
             resetLabel = stringResource(R.string.search_filters_reset),
             applyLabel = stringResource(R.string.search_filters_apply),
-            defaultYearRange = FILTER_YEAR_RANGE,
+            defaultYearRange = defaultCatalogFilterYearRange(Year.now().value),
             optionText = optionText,
             shape = rememberDeviceScreenTopCornerShape(),
             showGenreFilters = showGenreFilters,
@@ -134,5 +135,3 @@ private fun AnimeSearchFilterCatalog.toSharedCatalog(): AnimeCatalogFilterCatalo
 
 private fun SearchFilterOption.toSharedOption(): AnimeCatalogFilterOption =
     AnimeCatalogFilterOption(id = id, title = title)
-
-private val FILTER_YEAR_RANGE = 1940..(Year.now().value + 1)
