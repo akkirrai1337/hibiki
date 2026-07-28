@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.source.formatFilterFallbackLabel
+import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
 
 internal object YummySearchFilterLocalizer {
     fun localize(
@@ -10,7 +11,9 @@ internal object YummySearchFilterLocalizer {
         preferEnglish: Boolean,
     ): AnimeSearchFilterCatalog {
         return AnimeSearchFilterCatalog(
-            sortOptions = catalog.sortOptions.map { it.localize(sortLabels, preferEnglish) },
+            sortOptions = catalog.sortOptions.map {
+                it.copy(title = localizeYummySortFilterLabel(it.id, it.title, preferEnglish))
+            },
             typeOptions = catalog.typeOptions.map { it.localize(typeLabels, preferEnglish) },
             // Statuses and genres belong to the source and must stay in its language.
             statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish = false) },
@@ -37,20 +40,6 @@ internal object YummySearchFilterLocalizer {
     private data class LocalizedLabel(
         val ru: String,
         val en: String,
-    )
-
-    private val sortLabels = mapOf(
-        "relevance" to LocalizedLabel("Релевантности", "Relevance"),
-        "top" to LocalizedLabel("Рейтингу", "Rating"),
-        "title" to LocalizedLabel("Названию", "Title"),
-        "year" to LocalizedLabel("Дате выхода", "Release date"),
-        "rating" to LocalizedLabel("Рейтингу", "Rating"),
-        "rating_counters" to LocalizedLabel("Количеству оценок", "Rating count"),
-        "votes" to LocalizedLabel("Голосам", "Votes"),
-        "views" to LocalizedLabel("Просмотрам", "Views"),
-        "comments" to LocalizedLabel("Комментариям", "Comments"),
-        "random" to LocalizedLabel("Случайно", "Random"),
-        "id" to LocalizedLabel("Сначала новые", "Newest added"),
     )
 
     private val typeLabels = mapOf(
