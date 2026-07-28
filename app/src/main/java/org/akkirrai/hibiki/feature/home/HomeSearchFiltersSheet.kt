@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -150,8 +149,6 @@ fun AnimeSearchFiltersSheet(
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
                 dropdownIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
-                resetIcon = painterResource(R.drawable.animite_reset),
-                applyIcon = painterResource(R.drawable.animite_done),
                 typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
                 typeLabel = { typeLabel(it) },
                 statusIcon = { statusIcon(it.id) },

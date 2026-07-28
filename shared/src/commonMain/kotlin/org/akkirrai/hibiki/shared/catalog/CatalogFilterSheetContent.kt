@@ -2,8 +2,11 @@ package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.jetbrains.compose.resources.painterResource
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.animite_done
+import hibiki.shared.generated.resources.animite_reset
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetContentContainer
 import org.akkirrai.hibiki.shared.home.AppHomeFilterCatalogState
@@ -38,8 +41,6 @@ fun AppCatalogFilterSheetContent(
     resetLabel: String,
     applyLabel: String,
     dropdownIcon: ImageVector,
-    resetIcon: Painter,
-    applyIcon: Painter,
     typeIcon: @Composable (AnimeTypeAlias) -> ImageVector,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     statusIcon: @Composable (AnimeCatalogFilterOption) -> ImageVector?,
@@ -132,8 +133,8 @@ fun AppCatalogFilterSheetContent(
                 AppFilterSheetActions(
                     resetLabel = resetLabel,
                     applyLabel = applyLabel,
-                    resetIcon = resetIcon,
-                    applyIcon = applyIcon,
+                    resetIcon = painterResource(Res.drawable.animite_reset),
+                    applyIcon = painterResource(Res.drawable.animite_done),
                     onReset = onReset,
                     onApply = onApply,
                     modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally),
