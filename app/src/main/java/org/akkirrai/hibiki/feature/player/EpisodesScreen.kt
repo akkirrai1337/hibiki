@@ -232,73 +232,54 @@ private fun EpisodeRow(
         shape = shape,
         onClick = onClick,
         downloadAction = {
-            EpisodeDownloadAction(
-                state = downloadState,
+            AppEpisodeDownloadAction(
+                state = downloadState.toEpisodeDownloadActionState(),
                 controlsEnabled = showDownloadControls,
+                downloadedContent = {
+                    WatchDownloadStateIcon(
+                        icon = Icons.Outlined.Check,
+                        contentDescription = stringResource(R.string.watch_downloaded),
+                    )
+                },
+                downloadContent = { onClick ->
+                    WatchDownloadIconButton(
+                        icon = Icons.Outlined.Download,
+                        contentDescription = stringResource(R.string.watch_download),
+                        active = false,
+                        onClick = onClick,
+                    )
+                },
+                pauseContent = { onClick ->
+                    WatchDownloadIconButton(
+                        icon = Icons.Outlined.Pause,
+                        contentDescription = stringResource(R.string.watch_pause),
+                        active = true,
+                        onClick = onClick,
+                    )
+                },
+                resumeContent = { onClick ->
+                    WatchDownloadIconButton(
+                        icon = Icons.Outlined.PlayArrow,
+                        contentDescription = stringResource(R.string.watch_resume),
+                        active = true,
+                        onClick = onClick,
+                    )
+                },
+                removeContent = { onClick ->
+                    WatchDownloadIconButton(
+                        icon = Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.watch_remove_download),
+                        active = true,
+                        onClick = onClick,
+                    )
+                },
+                progressContent = { progress -> WatchDownloadProgressBadge(progress = progress) },
                 onDownloadClick = onDownloadClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
                 onRemoveClick = onRemoveClick,
             )
         },
-    )
-}
-
-@Composable
-private fun EpisodeDownloadAction(
-    state: OfflineEpisodeDownloadState,
-    controlsEnabled: Boolean,
-    onDownloadClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onRemoveClick: () -> Unit,
-) {
-    AppEpisodeDownloadAction(
-        state = state.toEpisodeDownloadActionState(),
-        controlsEnabled = controlsEnabled,
-        downloadedContent = {
-            WatchDownloadStateIcon(
-                icon = Icons.Outlined.Check,
-                contentDescription = stringResource(R.string.watch_downloaded),
-            )
-        },
-        downloadContent = { onClick ->
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Download,
-                contentDescription = stringResource(R.string.watch_download),
-                active = false,
-                onClick = onClick,
-            )
-        },
-        pauseContent = { onClick ->
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Pause,
-                contentDescription = stringResource(R.string.watch_pause),
-                active = true,
-                onClick = onClick,
-            )
-        },
-        resumeContent = { onClick ->
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.PlayArrow,
-                contentDescription = stringResource(R.string.watch_resume),
-                active = true,
-                onClick = onClick,
-            )
-        },
-        removeContent = { onClick ->
-            WatchDownloadIconButton(
-                icon = Icons.Outlined.Delete,
-                contentDescription = stringResource(R.string.watch_remove_download),
-                active = true,
-                onClick = onClick,
-            )
-        },
-        progressContent = { progress -> WatchDownloadProgressBadge(progress = progress) },
-        onDownloadClick = onDownloadClick,
-        onPauseClick = onPauseClick,
-        onResumeClick = onResumeClick,
-        onRemoveClick = onRemoveClick,
     )
 }
 
