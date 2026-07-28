@@ -14,7 +14,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +45,7 @@ import org.akkirrai.hibiki.shared.home.HomeAction
 import org.akkirrai.hibiki.shared.home.hasFeedContent
 import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.home.AppHomePullToRefresh
+import org.akkirrai.hibiki.shared.home.AppHomeActivationEffect
 import org.akkirrai.hibiki.shared.home.AppHomeSearchFilterVisibilityEffect
 import org.akkirrai.hibiki.shared.home.HomeErrorState
 import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
@@ -108,9 +108,10 @@ fun HomeScreen(
         onSearchFiltersUnavailable = { showSearchFilters = false },
     )
 
-    LaunchedEffect(isActive) {
-        if (isActive) viewModel.dispatch(HomeAction.Refresh)
-    }
+    AppHomeActivationEffect(
+        isActive = isActive,
+        onActivated = { viewModel.dispatch(HomeAction.Refresh) },
+    )
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
         if (isImeVisible) {
