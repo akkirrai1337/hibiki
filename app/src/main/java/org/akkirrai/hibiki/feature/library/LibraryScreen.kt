@@ -33,7 +33,7 @@ import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
 import org.akkirrai.hibiki.shared.design.component.AppSearchTopBar
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
@@ -275,7 +275,12 @@ private fun LibraryAnimeCard(
                 titleId = anime.id,
             )
         },
-        posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
+        posterFooterContent = {
+            LibraryStatusPosterFooter(
+                label = stringResource(entry.category.labelResId),
+                icon = entry.category.icon(),
+            )
+        },
     )
 }
 
