@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
@@ -1107,13 +1106,7 @@ fun PlayerScreen(
                                 keepControlsVisible()
                                 playlistVisible = true
                             },
-                            iconContent = {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
-                                    contentDescription = stringResource(R.string.watch_player_playlist),
-                                    tint = Color.White,
-                                )
-                            },
+                            contentDescription = stringResource(R.string.watch_player_playlist),
                         )
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
