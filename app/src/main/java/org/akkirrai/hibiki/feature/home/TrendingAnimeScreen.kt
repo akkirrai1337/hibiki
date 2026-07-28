@@ -137,7 +137,6 @@ fun TrendingAnimeScreen(
                             AppLoadMoreState(
                                 isLoading = state.isLoadingMore,
                                 errorMessage = state.loadMoreError,
-                                errorIcon = Icons.Outlined.WarningAmber,
                                 onRetry = viewModel::loadMore,
                             )
                         }
