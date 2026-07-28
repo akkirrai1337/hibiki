@@ -70,6 +70,7 @@ import org.akkirrai.hibiki.shared.catalog.AppCatalogRefreshingState
 import org.akkirrai.hibiki.shared.catalog.AppCatalogContentState
 import org.akkirrai.hibiki.shared.catalog.appCatalogResultsContent
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
+import org.akkirrai.hibiki.shared.catalog.fallbackCatalogSort
 import org.akkirrai.hibiki.shared.catalog.icon
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
@@ -115,13 +116,10 @@ fun CatalogScreen(
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
             val capabilities = state.filterCatalog?.capabilities
-            val fallback = when (capabilities?.supportedSorts?.firstOrNull()?.lowercase()) {
-                "relevance" -> availableSorts.firstOrNull { it == CatalogSort.Updated }
-                "popular", "rating" -> availableSorts.firstOrNull { it == CatalogSort.Popular }
-                "alphabetical", "title" -> availableSorts.firstOrNull { it == CatalogSort.Alphabetical }
-                else -> null
-            } ?: availableSorts.firstOrNull()
-            fallback?.let(viewModel::selectSort)
+            fallbackCatalogSort(
+                supportedSortAlias = capabilities?.supportedSorts?.firstOrNull(),
+                availableSorts = availableSorts,
+            )?.let(viewModel::selectSort)
         }
     }
 

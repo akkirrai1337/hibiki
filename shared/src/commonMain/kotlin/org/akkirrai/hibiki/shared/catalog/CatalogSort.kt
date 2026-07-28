@@ -47,3 +47,16 @@ fun CatalogSort.toAlias(): String = when (this) {
     CatalogSort.Popular -> "popular"
     CatalogSort.Updated -> "updated"
 }
+
+fun fallbackCatalogSort(
+    supportedSortAlias: String?,
+    availableSorts: List<CatalogSort>,
+): CatalogSort? {
+    val preferred = when (supportedSortAlias?.lowercase()) {
+        "relevance" -> CatalogSort.Updated
+        "popular", "rating" -> CatalogSort.Popular
+        "alphabetical", "title" -> CatalogSort.Alphabetical
+        else -> null
+    }
+    return preferred?.takeIf { it in availableSorts } ?: availableSorts.firstOrNull()
+}
