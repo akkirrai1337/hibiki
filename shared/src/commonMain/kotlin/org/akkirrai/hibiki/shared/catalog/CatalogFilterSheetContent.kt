@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.painterResource
 import hibiki.shared.generated.resources.Res
 import hibiki.shared.generated.resources.animite_done
+import hibiki.shared.generated.resources.animite_drop_down
 import hibiki.shared.generated.resources.animite_reset
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetActions
 import org.akkirrai.hibiki.shared.design.component.AppFilterSheetContentContainer
@@ -40,7 +41,6 @@ fun AppCatalogFilterSheetContent(
     statusTitle: String,
     resetLabel: String,
     applyLabel: String,
-    dropdownIcon: ImageVector,
     typeIcon: @Composable (AnimeTypeAlias) -> ImageVector,
     typeLabel: @Composable (AnimeTypeAlias) -> String,
     statusIcon: @Composable (AnimeCatalogFilterOption) -> ImageVector?,
@@ -51,6 +51,7 @@ fun AppCatalogFilterSheetContent(
     maxCollapsedGenreItems: Int? = 15,
     modifier: Modifier = Modifier,
 ) {
+    val dropdownIcon = painterResource(Res.drawable.animite_drop_down)
     when {
         isFilterCatalogLoading && filterCatalog == null -> AppHomeFilterCatalogState(
             isLoading = true,

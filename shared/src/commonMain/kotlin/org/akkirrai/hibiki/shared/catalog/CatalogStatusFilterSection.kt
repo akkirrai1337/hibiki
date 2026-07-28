@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.catalog
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.akkirrai.hibiki.shared.design.component.AppSingleListThreeStateFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
@@ -15,7 +16,7 @@ fun AppCatalogStatusFilterSection(
     onChange: (Set<String>) -> Unit,
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
     optionIcon: @Composable (AnimeCatalogFilterOption) -> ImageVector?,
-    arrowIcon: ImageVector,
+    arrowIcon: Painter,
     expandIconContent: @Composable (Boolean, Modifier) -> Unit,
 ) {
     AppSingleListThreeStateFilter(
@@ -29,7 +30,7 @@ fun AppCatalogStatusFilterSection(
         optionIcon = optionIcon,
         allowExclusion = false,
         optionSortKey = { it.title },
-        arrowContent = { modifier -> Icon(arrowIcon, contentDescription = null, modifier = modifier) },
+        arrowContent = { modifier -> Icon(painter = arrowIcon, contentDescription = null, modifier = modifier) },
         expandIconContent = expandIconContent,
     )
 }

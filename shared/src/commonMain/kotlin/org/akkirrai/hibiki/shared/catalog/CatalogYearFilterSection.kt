@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import org.akkirrai.hibiki.shared.home.AppHomeYearFilter
 
 @Composable
@@ -13,7 +13,7 @@ fun AppCatalogYearFilterSection(
     fromLabel: String,
     toLabel: String,
     onRangeChange: (IntRange) -> Unit,
-    arrowIcon: ImageVector,
+    arrowIcon: Painter,
 ) {
     AppHomeYearFilter(
         selectedRange = selectedRange,
@@ -25,7 +25,7 @@ fun AppCatalogYearFilterSection(
         onRangeChange = onRangeChange,
         arrowContent = { modifier ->
             androidx.compose.material3.Icon(
-                imageVector = arrowIcon,
+                painter = arrowIcon,
                 contentDescription = null,
                 modifier = modifier,
             )

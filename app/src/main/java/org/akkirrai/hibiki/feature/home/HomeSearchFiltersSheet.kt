@@ -148,7 +148,6 @@ fun AnimeSearchFiltersSheet(
                 statusTitle = stringResource(R.string.search_filters_status),
                 resetLabel = stringResource(R.string.search_filters_reset),
                 applyLabel = stringResource(R.string.search_filters_apply),
-                dropdownIcon = ImageVector.vectorResource(R.drawable.animite_drop_down),
                 typeIcon = { ImageVector.vectorResource(typeIcon(it)) },
                 typeLabel = { typeLabel(it) },
                 statusIcon = { statusIcon(it.id) },
