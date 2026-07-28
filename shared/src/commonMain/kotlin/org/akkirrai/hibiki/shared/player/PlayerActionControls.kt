@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import org.jetbrains.compose.resources.painterResource
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_player_picture_in_picture_24
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 
@@ -29,7 +32,14 @@ fun AppPlayerActionControls(
     },
     pictureInPictureEnabled: Boolean,
     onPictureInPictureClick: () -> Unit,
-    pictureInPictureContent: @Composable () -> Unit,
+    pictureInPictureContentDescription: String? = null,
+    pictureInPictureContent: @Composable () -> Unit = {
+        Icon(
+            painter = painterResource(Res.drawable.ic_player_picture_in_picture_24),
+            contentDescription = pictureInPictureContentDescription,
+            tint = Color.White,
+        )
+    },
     onSettingsClick: () -> Unit,
     settingsContentDescription: String? = null,
     settingsContent: @Composable () -> Unit = {
