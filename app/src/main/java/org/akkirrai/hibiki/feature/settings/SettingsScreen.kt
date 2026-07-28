@@ -65,6 +65,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsIconToggleItem
 import org.akkirrai.hibiki.shared.settings.AppSettingsAboutCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsContentList
 import org.akkirrai.hibiki.shared.settings.AppSettingsAppearanceSection
+import org.akkirrai.hibiki.shared.settings.AppSettingsPreferencesSection
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions
@@ -141,37 +142,20 @@ fun SettingsScreen(
         }
 
         item(key = SettingsSection.Preferences.key) {
-            AppSettingsSection(title = stringResource(R.string.settings_preferences)) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> AppSettingsIconVerticalItem(
-                            icon = SettingsLanguageIcon,
-                            title = stringResource(R.string.settings_language),
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = languageModeOptions,
-                                selectedOption = preferences.languageMode,
-                                label = ::languageModeLabel,
-                                onSelect = { mode ->
-                                    appPreferences.setLanguageMode(mode)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
-
-                        1 -> AppSettingsIconActionItem(
-                            icon = SettingsNotificationsIcon,
-                            title = stringResource(R.string.settings_notifications),
-                            subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
-                            shape = shape,
-                            showChevron = true,
-                            onClick = onConfigureNotifications,
-                        )
-
-                    }
-                }
-            }
+            AppSettingsPreferencesSection(
+                sectionTitle = stringResource(R.string.settings_preferences),
+                languageTitle = stringResource(R.string.settings_language),
+                languageOptions = languageModeOptions,
+                selectedLanguage = preferences.languageMode,
+                languageLabel = ::languageModeLabel,
+                onLanguageSelected = { mode ->
+                    appPreferences.setLanguageMode(mode)
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                },
+                notificationsTitle = stringResource(R.string.settings_notifications),
+                notificationsSubtitle = notificationPermissionLabel(preferences.notificationPermissionState),
+                onNotificationsClick = onConfigureNotifications,
+            )
         }
 
         item(key = SettingsSection.Player.key) {
