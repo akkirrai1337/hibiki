@@ -81,6 +81,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.akkirrai.hibiki.core.design.component.AppBackButton
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -1094,7 +1095,7 @@ fun PlayerScreen(
                     title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
                     playlistEnabled = state.episodes.isNotEmpty(),
-                    backContent = { WatchBackButton(onBackClick = handleBackClick) },
+                    backContent = { AppBackButton(onClick = handleBackClick) },
                     playlistContent = {
                         AppPlayerPlaylistButton(
                             onClick = {
@@ -1603,7 +1604,7 @@ private fun PlayerSettingsSheet(
         destination = destination,
         title = { targetDestination -> stringResource(targetDestination.titleResId) },
         onBack = onBack,
-        backContent = { WatchBackButton(onBackClick = onBack) },
+        backContent = { AppBackButton(onClick = onBack) },
         content = { targetDestination ->
             appPlayerSettingsItems(
                 destination = targetDestination,

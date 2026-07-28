@@ -19,7 +19,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.component.AppBackButton
 
 @Composable
 internal fun rememberWatchNavigationLockState(
@@ -64,18 +63,6 @@ internal fun WatchScreenScaffold(
         },
         modifier = modifier,
         content = content,
-    )
-}
-@Composable
-internal fun WatchBackButton(
-    onBackClick: () -> Unit,
-    enabled: Boolean = true,
-    modifier: Modifier = Modifier,
-) {
-    AppBackButton(
-        onClick = onBackClick,
-        enabled = enabled,
-        modifier = modifier,
     )
 }
 
