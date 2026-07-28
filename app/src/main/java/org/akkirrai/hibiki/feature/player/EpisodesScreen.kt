@@ -48,7 +48,7 @@ import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
-import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 
 @Composable
 fun EpisodesScreen(

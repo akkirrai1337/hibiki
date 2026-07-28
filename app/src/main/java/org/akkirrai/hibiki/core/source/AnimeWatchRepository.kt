@@ -50,6 +50,8 @@ import org.akkirrai.hibiki.shared.player.playerPriority
 import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
 import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.WATCH_SOURCE_SEPARATOR
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -62,15 +64,6 @@ data class ResolvedPlayerStream(
     val playerName: String?,
     val playback: PlaybackStream,
 )
-
-internal const val WATCH_SOURCE_SEPARATOR = "|watch|"
-
-internal fun watchTitleIdFromSourceId(sourceId: String): String =
-    if (WATCH_SOURCE_SEPARATOR in sourceId) {
-        sourceId.substringBefore(WATCH_SOURCE_SEPARATOR)
-    } else {
-        sourceId.substringBefore(':')
-    }
 
 class AnimeWatchRepository(
     context: Context? = null,

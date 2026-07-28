@@ -21,7 +21,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.shared.player.PlayerPresenter
 import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
