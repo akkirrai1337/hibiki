@@ -3,9 +3,13 @@ package org.akkirrai.hibiki.shared.player
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.shared.design.component.AppFilledIconButtonStyle
 
@@ -19,7 +23,14 @@ fun AppPlayerActionControls(
     onPictureInPictureClick: () -> Unit,
     pictureInPictureContent: @Composable () -> Unit,
     onSettingsClick: () -> Unit,
-    settingsContent: @Composable () -> Unit,
+    settingsContentDescription: String? = null,
+    settingsContent: @Composable () -> Unit = {
+        Icon(
+            imageVector = Icons.Outlined.Settings,
+            contentDescription = settingsContentDescription,
+            tint = Color.White,
+        )
+    },
     modifier: Modifier = Modifier,
 ) {
     Row(
