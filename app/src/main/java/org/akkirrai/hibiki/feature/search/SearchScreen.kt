@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,6 +19,8 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.search.AppSearchContentList
+import org.akkirrai.hibiki.shared.search.SearchScreenEmptyIcon
+import org.akkirrai.hibiki.shared.search.SearchScreenIcon
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.library.icon
@@ -53,7 +53,7 @@ fun SearchScreen(
                 onSearch = viewModel::search,
                 placeholder = stringResource(R.string.search_placeholder),
                 searchContentDescription = stringResource(R.string.cd_search),
-                searchIcon = Icons.Outlined.Search,
+                searchIcon = SearchScreenIcon,
             )
         }
 
@@ -74,11 +74,11 @@ fun SearchScreen(
             },
             idleTitle = idleTitle,
             idleMessage = idleMessage,
-            idleIcon = Icons.Outlined.Search,
+            idleIcon = SearchScreenIcon,
             idleTopPadding = 64.dp,
             emptyTitle = emptyTitle,
             emptyMessage = emptyMessage,
-            emptyIcon = Icons.Outlined.SearchOff,
+            emptyIcon = SearchScreenEmptyIcon,
             errorModifier = Modifier.padding(top = 24.dp),
             errorRetryLabel = retryLabel,
             loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
