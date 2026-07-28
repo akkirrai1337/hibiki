@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.design.component.AppImagePlaceholder
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.PosterImage
@@ -321,7 +322,7 @@ private fun LazyListScope.homeFeedContent(
             AppHomePoster(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                PosterImage(
+                AppPosterImage(
                     primaryUrl = currentAnime.posterUrl,
                     fallbackUrl = currentAnime.posterFallbackUrl,
                     contentDescription = currentAnime.title,
