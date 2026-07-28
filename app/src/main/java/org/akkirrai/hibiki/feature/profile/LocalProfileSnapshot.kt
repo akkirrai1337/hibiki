@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.shared.profile.buildLibraryStatusSegments
 import org.akkirrai.hibiki.shared.profile.trackedProfileLibraryItems
 import org.akkirrai.hibiki.shared.profile.buildFavoriteLibraryItems
 import org.akkirrai.hibiki.shared.profile.buildRecentLibraryItems
+import org.akkirrai.hibiki.shared.profile.activitySummary
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
 
@@ -26,6 +27,7 @@ internal fun buildProfileSnapshot(
     localData: LocalProfileData,
 ): LocalProfileSnapshot {
     val activityByDate = localData.activity.associateBy { it.date }
+    val activitySummary = localData.activitySummary()
     val today = LocalDate.now()
     val activityDays = (0 until ACTIVITY_HISTORY_DAYS).map { offset ->
         val date = today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
@@ -51,9 +53,9 @@ internal fun buildProfileSnapshot(
     val genreSegments = localData.buildGenreSegments()
 
     return LocalProfileSnapshot(
-        watchTimeLabel = formatDurationLabel(resources, localData.activity.sumOf { it.watchedMs }),
-        activeDaysCount = localData.activity.count { it.completedEpisodes > 0 || it.watchedMs > 0L },
-        totalEpisodes = localData.activity.sumOf { it.completedEpisodes },
+        watchTimeLabel = formatDurationLabel(resources, activitySummary.watchedMs),
+        activeDaysCount = activitySummary.activeDaysCount,
+        totalEpisodes = activitySummary.totalEpisodes,
         libraryTotal = trackedLibrary.size,
         libraryStatusSegments = librarySegments,
         activityDays = activityDays,
