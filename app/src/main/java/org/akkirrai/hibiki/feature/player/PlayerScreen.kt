@@ -115,15 +115,12 @@ import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
-import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
-import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
-import org.akkirrai.hibiki.shared.player.sortQualityLabels
-import org.akkirrai.hibiki.shared.player.uniquePlayerNames
 import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveCurrentPlaybackPosition
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.resolvePlaybackDuration
+import org.akkirrai.hibiki.shared.player.buildPlayerSettingsChoices
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
@@ -133,7 +130,6 @@ import org.akkirrai.hibiki.shared.player.AppPlayerActionControls
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
-import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
 import org.akkirrai.hibiki.shared.player.buildPlayerSettingsRootEntries
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
@@ -1327,40 +1323,22 @@ private fun PlayerSettingsSheet(
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
 ) {
-    val speedValues = playbackSpeedOptions.map { speed ->
-        PlayerSettingsValue(
-            id = speed.toString(),
-            label = formatPlaybackSpeed(speed),
-            selected = selectedSpeed == speed,
-            onClick = { onSelectSpeed(speed) },
-        )
-    }
-    val voiceoverValues = options.voiceovers.map { source ->
-        PlayerSettingsValue(
-            id = source.sourceId,
-            label = source.title.ifBlank { source.sourceId },
-            description = source.qualityLabel,
-            selected = selectedSourceId == source.sourceId,
-            onClick = { onSelectVoiceover(source) },
-        )
-    }
-    val playerValues = uniquePlayerNames(options.links).map { name ->
-        PlayerSettingsValue(
-            id = name,
-            label = name,
-            selected = selectedPlayerName == name || (selectedPlayerName == null && options.links.firstOrNull()?.playerName == name),
-            onClick = { onSelectPlayer(name) },
-        )
-    }
-    val qualityValues = sortQualityLabels(options.links.mapNotNull { it.qualityLabel } + availableQualityLabels)
-        .map { quality ->
-            PlayerSettingsValue(
-                id = quality,
-                label = quality,
-                selected = selectedQualityLabel == quality,
-                onClick = { onSelectQuality(quality) },
-            )
-        }
+    val choices = buildPlayerSettingsChoices(
+        selectedSpeed = selectedSpeed,
+        selectedSourceId = selectedSourceId,
+        selectedPlayerName = selectedPlayerName,
+        selectedQualityLabel = selectedQualityLabel,
+        availableQualityLabels = availableQualityLabels,
+        options = options,
+        onSelectSpeed = onSelectSpeed,
+        onSelectVoiceover = onSelectVoiceover,
+        onSelectPlayer = onSelectPlayer,
+        onSelectQuality = onSelectQuality,
+    )
+    val speedValues = choices.speed
+    val voiceoverValues = choices.voiceover
+    val playerValues = choices.player
+    val qualityValues = choices.quality
     val rootEntries = buildPlayerSettingsRootEntries(
         speedValues = speedValues,
         voiceoverValues = voiceoverValues,
