@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,16 +31,12 @@ import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
 import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.shared.design.component.AppPosterPlaceholder
-import org.akkirrai.hibiki.shared.design.component.AppPosterImage
-import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
 import org.akkirrai.hibiki.shared.home.AppTrendingContentList
 import org.akkirrai.hibiki.shared.home.AppTrendingContentState
-import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
+import org.akkirrai.hibiki.shared.home.appHomeAnimeListContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
-import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
@@ -89,33 +84,12 @@ fun TrendingAnimeScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    appVerticalAnimeListContent(
+                    appHomeAnimeListContent(
                         items = state.items,
                         metaText = { anime -> buildTrendingMeta(anime) },
                         onAnimeClick = onAnimeClick,
-                        posterContent = { anime ->
-                            AppPosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = {
-                                    AppPosterPlaceholder(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f),
-                                    )
-                                },
-                            )
-                        },
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(
-                                    label = stringResource(category.labelResId),
-                                    icon = category.icon(),
-                                )
-                            }
-                        },
+                        libraryStatusByAnimeId = libraryStatusByAnimeId,
+                        libraryStatusLabel = { category -> stringResource(category.labelResId) },
                     )
 
                     if (state.isLoadingMore || state.loadMoreError != null) {

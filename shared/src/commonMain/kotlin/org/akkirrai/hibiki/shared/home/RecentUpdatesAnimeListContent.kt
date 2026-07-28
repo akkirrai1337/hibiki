@@ -12,25 +12,18 @@ import org.akkirrai.hibiki.shared.library.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.buildCardMeta
 
-fun LazyListScope.appRecentUpdatesAnimeListContent(
+fun LazyListScope.appHomeAnimeListContent(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryStatusLabel: @Composable (LibraryCategory) -> String,
-    announcementLabel: String,
-    movieLabel: String,
+    metaText: @Composable (Anime) -> String,
     modifier: Modifier = Modifier,
 ) {
     appVerticalAnimeListContent(
         items = items,
-        metaText = { anime ->
-            anime.buildCardMeta(
-                announcementLabel = announcementLabel,
-                movieLabel = movieLabel,
-            )
-        },
+        metaText = metaText,
         onAnimeClick = onAnimeClick,
         modifier = modifier,
         posterContent = { anime ->

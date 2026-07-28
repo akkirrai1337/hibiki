@@ -21,7 +21,8 @@ import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentList
 import org.akkirrai.hibiki.shared.home.AppRecentUpdatesContentState
-import org.akkirrai.hibiki.shared.home.appRecentUpdatesAnimeListContent
+import org.akkirrai.hibiki.shared.home.appHomeAnimeListContent
+import org.akkirrai.hibiki.shared.model.buildCardMeta
 
 @Composable
 fun RecentUpdatesScreen(
@@ -69,13 +70,17 @@ fun RecentUpdatesScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                appRecentUpdatesAnimeListContent(
+                appHomeAnimeListContent(
                     items = state.recentlyUpdated,
                     onAnimeClick = onAnimeClick,
                     libraryStatusByAnimeId = libraryStatusByAnimeId,
                     libraryStatusLabel = { category -> stringResource(category.labelResId) },
-                    announcementLabel = announcementLabel,
-                    movieLabel = movieLabel,
+                    metaText = { anime ->
+                        anime.buildCardMeta(
+                            announcementLabel = announcementLabel,
+                            movieLabel = movieLabel,
+                        )
+                    },
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                 )
                 if (state.isRecentUpdatesLoadingMore) {
