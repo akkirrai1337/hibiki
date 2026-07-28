@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,10 +29,9 @@ fun AppDetailsHeroPlaybackActions(
     resumeSubtitle: String?,
     resumeProgress: Float,
     onResumeClick: (() -> Unit)?,
-    resumeIconContent: @Composable (Modifier) -> Unit,
     trailerEnabled: Boolean,
     onTrailerClick: () -> Unit,
-    trailerIconContent: @Composable (Modifier) -> Unit,
+    trailerContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -50,7 +52,11 @@ fun AppDetailsHeroPlaybackActions(
                     horizontalArrangement = Arrangement.spacedBy(DetailsPlaybackResumeContentGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    resumeIconContent(Modifier.size(DetailsPlaybackResumeIconSize))
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(DetailsPlaybackResumeIconSize),
+                    )
                     Column {
                         Text(
                             text = resumeTitle,
@@ -87,7 +93,11 @@ fun AppDetailsHeroPlaybackActions(
                 contentColor = Color.White,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    trailerIconContent(Modifier.size(DetailsPlaybackTrailerIconSize))
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = trailerContentDescription,
+                        modifier = Modifier.size(DetailsPlaybackTrailerIconSize),
+                    )
                 }
             }
         }
