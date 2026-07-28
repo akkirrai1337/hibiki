@@ -37,10 +37,27 @@ internal fun AnalyticsCard(
     }
     org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsCard(
         donutContent = {
-        AnalyticsDonutPager(
-            pages = pages,
-            snapshot = snapshot,
-        )
+            org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsDonutPager(
+                pages = pages.map { page ->
+                    org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage(
+                        centerPrimary = page.centerPrimary,
+                        centerSecondary = page.centerSecondary,
+                        segments = page.segments.map { segment ->
+                            org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment(
+                                label = segment.label,
+                                valueLabel = segment.valueLabel,
+                                weight = segment.weight,
+                                color = segment.color,
+                            )
+                        },
+                    )
+                },
+                title = stringResource(R.string.yummy_account_segment_stats),
+                episodeStat = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
+                watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
+                backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            )
         },
         activityContent = {
             org.akkirrai.hibiki.shared.profile.AppProfileActivitySection(
@@ -56,34 +73,6 @@ internal fun AnalyticsCard(
             inactiveColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.54f),
         )
         },
-    )
-}
-
-@Composable
-private fun AnalyticsDonutPager(
-    pages: List<AnalyticsPage>,
-    snapshot: LocalProfileSnapshot,
-) {
-    org.akkirrai.hibiki.shared.profile.AppProfileAnalyticsDonutPager(
-        pages = pages.map { page ->
-            org.akkirrai.hibiki.shared.profile.ProfileAnalyticsPage(
-                centerPrimary = page.centerPrimary,
-                centerSecondary = page.centerSecondary,
-                segments = page.segments.map { segment ->
-                    org.akkirrai.hibiki.shared.profile.ProfileAnalyticsSegment(
-                        label = segment.label,
-                        valueLabel = segment.valueLabel,
-                        weight = segment.weight,
-                        color = segment.color,
-                    )
-                },
-            )
-        },
-        title = stringResource(R.string.yummy_account_segment_stats),
-        episodeStat = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
-        watchStat = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
-        backIcon = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-        forwardIcon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
     )
 }
 
