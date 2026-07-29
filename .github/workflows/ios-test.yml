@@ -6,7 +6,7 @@ on:
       - main
       - unified-ui
     paths:
-      - ".github/workflows/ios.yml"
+      - ".github/workflows/ios-test.yml"
       - "gradle/**"
       - "gradle.properties"
       - "gradlew"
@@ -15,7 +15,7 @@ on:
       - "parsers/**"
   pull_request:
     paths:
-      - ".github/workflows/ios.yml"
+      - ".github/workflows/ios-test.yml"
       - "gradle/**"
       - "gradle.properties"
       - "gradlew"
