@@ -44,10 +44,14 @@ fun AppSettingsScreen(
     useSystemColorScheme: Boolean,
     useAmoledTheme: Boolean,
     autoSkipSegments: Boolean,
+    themeMode: ThemeMode? = null,
+    discordEnabled: Boolean = false,
+    showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
     onLanguageModeChange: (LanguageMode) -> Unit,
     onThemeChange: (Boolean) -> Unit,
+    onThemeModeChange: ((ThemeMode) -> Unit)? = null,
     onSystemColorSchemeChange: (Boolean) -> Unit = {},
     onAmoledChange: (Boolean) -> Unit = {},
     onNotificationsClick: () -> Unit = {},
@@ -67,7 +71,7 @@ fun AppSettingsScreen(
                 sectionTitle = labels.appearance,
                 themeTitle = labels.theme,
                 themeOptions = themeModeOptions,
-                selectedTheme = if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
+                selectedTheme = themeMode ?: if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
                 themeLabel = { mode ->
                     when (mode) {
                         ThemeMode.SYSTEM -> labels.themeSystem
@@ -75,7 +79,9 @@ fun AppSettingsScreen(
                         ThemeMode.DARK -> labels.themeDark
                     }
                 },
-                onThemeSelected = { mode -> onThemeChange(mode == ThemeMode.DARK) },
+                onThemeSelected = { mode ->
+                    onThemeModeChange?.invoke(mode) ?: onThemeChange(mode == ThemeMode.DARK)
+                },
                 systemColorSchemeTitle = labels.systemColorScheme,
                 useSystemColorScheme = useSystemColorScheme,
                 onSystemColorSchemeChange = onSystemColorSchemeChange,
@@ -116,17 +122,19 @@ fun AppSettingsScreen(
                 sectionTitle = labels.experimental,
                 discordIcon = Icons.Outlined.Code,
                 discordTitle = labels.discord,
-                discordEnabled = false,
+                discordEnabled = discordEnabled,
                 onDiscordClick = onDiscordClick,
                 onDiscordChange = onDiscordChange,
             )
         }
-        item(key = SettingsSection.Updates.key) {
-            AppSettingsUpdatesSection(
-                sectionTitle = labels.updates,
-                checkForUpdatesTitle = labels.checkUpdates,
-                onCheckForUpdates = onCheckForUpdates,
-            )
+        if (showUpdates) {
+            item(key = SettingsSection.Updates.key) {
+                AppSettingsUpdatesSection(
+                    sectionTitle = labels.updates,
+                    checkForUpdatesTitle = labels.checkUpdates,
+                    onCheckForUpdates = onCheckForUpdates,
+                )
+            }
         }
         item(key = SettingsSection.Support.key) {
             AppSettingsSupportSection(

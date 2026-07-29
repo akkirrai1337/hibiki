@@ -64,7 +64,7 @@ import org.akkirrai.hibiki.feature.library.SharedAndroidLibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
-import org.akkirrai.hibiki.feature.settings.SettingsScreen
+import org.akkirrai.hibiki.feature.settings.SharedAndroidSettingsScreen
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.shared.design.component.AppBottomBar
@@ -289,7 +289,7 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() },
         ) { backStackEntry ->
             DestinationScreenContainer {
-                SettingsScreen(
+                SharedAndroidSettingsScreen(
                     modifier = screenModifier,
                     onCheckForUpdates = {
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
