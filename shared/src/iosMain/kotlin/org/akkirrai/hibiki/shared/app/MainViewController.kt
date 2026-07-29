@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
+import platform.Foundation.NSBundle
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
@@ -51,6 +52,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 profileRepository = profileRepository,
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
+                appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String)
+                    ?: "dev",
                 onProfileAvatarEdit = { onPicked ->
                     avatarPicker.present(hostController, onPicked)
                 },

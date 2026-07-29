@@ -117,6 +117,8 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.AppSettingsCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
+import org.akkirrai.hibiki.shared.settings.AppSettingsScreenLabels
 import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -137,6 +139,7 @@ fun HibikiAppShell(
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
+    appVersionName: String = "dev",
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
@@ -229,6 +232,7 @@ fun HibikiAppShell(
                         AppDestinationContent(
                             selectedTab = selectedTab,
                             systemLanguage = systemLanguage,
+                            appVersionName = appVersionName,
                             catalogState = state,
                             homeState = homeState,
                             onHomeRefresh = {
@@ -588,6 +592,7 @@ private fun AppDestinationContent(
     onLibrarySearchClear: () -> Unit = {},
     onLibraryFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit = {},
     systemLanguage: String = "en",
+    appVersionName: String = "dev",
     onBrowseCatalog: () -> Unit = {},
     onOpenLibrary: () -> Unit = {},
     homeState: HomeUiState = HomeUiState(),
@@ -762,6 +767,7 @@ private fun AppDestinationContent(
                     onLanguageModeChange = onLanguageModeChange,
                     darkTheme = darkTheme,
                     onThemeChange = onThemeChange,
+                    versionName = appVersionName,
                 )
         }
     }
@@ -1066,31 +1072,41 @@ private fun SettingsScreen(
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    versionName: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Spacer(Modifier.height(8.dp))
-        LocalProfileSummary(
-            data = profileData,
-            fallbackName = appText(AppTextKey.AppName),
-            libraryLabel = appText(AppTextKey.ProfileLibrary),
-            episodesLabel = appText(AppTextKey.ProfileEpisodes),
-        )
-        AppSettingsCard(
-            languageMode = languageMode,
-            onLanguageModeChange = onLanguageModeChange,
-            darkTheme = darkTheme,
-            onThemeChange = onThemeChange,
-            labels = AppSettingsCardLabels(
-                title = appText(AppTextKey.SettingsTitle),
-                description = appText(AppTextKey.SettingsDescription),
-                languageSystem = appText(AppTextKey.LanguageSystem),
-                languageEnglish = appText(AppTextKey.LanguageEnglish),
-                languageRussian = appText(AppTextKey.LanguageRussian),
-                themeLight = appText(AppTextKey.ThemeLight),
-                themeDark = appText(AppTextKey.ThemeDark),
-            ),
-        )
-    }
+    AppSettingsScreen(
+        languageMode = languageMode,
+        darkTheme = darkTheme,
+        labels = AppSettingsScreenLabels(
+            appearance = appText(AppTextKey.SettingsAppearance),
+            theme = appText(AppTextKey.SettingsTheme),
+            themeSystem = appText(AppTextKey.ThemeSystem),
+            themeLight = appText(AppTextKey.ThemeLight),
+            themeDark = appText(AppTextKey.ThemeDark),
+            systemColorScheme = appText(AppTextKey.SettingsSystemColorScheme),
+            amoled = appText(AppTextKey.SettingsAmoled),
+            preferences = appText(AppTextKey.SettingsPreferences),
+            language = appText(AppTextKey.SettingsLanguage),
+            languageSystem = appText(AppTextKey.LanguageSystem),
+            languageRussian = appText(AppTextKey.LanguageRussian),
+            languageEnglish = appText(AppTextKey.LanguageEnglish),
+            notifications = appText(AppTextKey.SettingsNotifications),
+            notificationsStatus = appText(AppTextKey.SettingsNotificationsStatus),
+            player = appText(AppTextKey.SettingsPlayer),
+            autoSkip = appText(AppTextKey.SettingsAutoSkip),
+            experimental = appText(AppTextKey.SettingsExperimental),
+            discord = appText(AppTextKey.SettingsDiscord),
+            updates = appText(AppTextKey.SettingsUpdates),
+            checkUpdates = appText(AppTextKey.SettingsCheckUpdates),
+            support = appText(AppTextKey.SettingsSupport),
+            exportLogs = appText(AppTextKey.SettingsExportLogs),
+            appName = appText(AppTextKey.AppName),
+            versionName = versionName,
+        ),
+        onLanguageModeChange = onLanguageModeChange,
+        onThemeChange = onThemeChange,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @Composable

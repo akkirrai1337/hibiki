@@ -49,6 +49,22 @@ enum class AppTextKey {
     HomePersonalEmptyTitle,
     HomePersonalEmptyBody,
     HomeBrowseCatalog,
+    SettingsAppearance,
+    SettingsTheme,
+    SettingsSystemColorScheme,
+    SettingsAmoled,
+    SettingsPreferences,
+    SettingsLanguage,
+    SettingsNotifications,
+    SettingsNotificationsStatus,
+    SettingsPlayer,
+    SettingsAutoSkip,
+    SettingsExperimental,
+    SettingsDiscord,
+    SettingsUpdates,
+    SettingsCheckUpdates,
+    SettingsSupport,
+    SettingsExportLogs,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -192,6 +208,22 @@ class DefaultAppTextResolver(
             AppTextKey.HomePersonalEmptyTitle -> if (russian) "Ваша главная пока пуста" else "Your home is empty"
             AppTextKey.HomePersonalEmptyBody -> if (russian) "Добавьте тайтлы в библиотеку, чтобы видеть их здесь" else "Add titles to your library to see them here"
             AppTextKey.HomeBrowseCatalog -> if (russian) "Открыть каталог" else "Browse catalog"
+            AppTextKey.SettingsAppearance -> if (russian) "Внешний вид" else "Appearance"
+            AppTextKey.SettingsTheme -> if (russian) "Тема" else "Theme"
+            AppTextKey.SettingsSystemColorScheme -> if (russian) "Системная цветовая схема" else "Use system color scheme"
+            AppTextKey.SettingsAmoled -> if (russian) "AMOLED-тема" else "AMOLED theme"
+            AppTextKey.SettingsPreferences -> if (russian) "Настройки" else "Preferences"
+            AppTextKey.SettingsLanguage -> if (russian) "Язык" else "Language"
+            AppTextKey.SettingsNotifications -> if (russian) "Уведомления" else "Notifications"
+            AppTextKey.SettingsNotificationsStatus -> if (russian) "Настройка уведомлений недоступна" else "Notification settings unavailable"
+            AppTextKey.SettingsPlayer -> if (russian) "Плеер" else "Player"
+            AppTextKey.SettingsAutoSkip -> if (russian) "Автопропуск сегментов" else "Auto-skip segments"
+            AppTextKey.SettingsExperimental -> if (russian) "Экспериментальные" else "Experimental"
+            AppTextKey.SettingsDiscord -> "Discord RPC"
+            AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
+            AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
+            AppTextKey.SettingsSupport -> if (russian) "Поддержка" else "Support"
+            AppTextKey.SettingsExportLogs -> if (russian) "Экспортировать логи" else "Export logs"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {
