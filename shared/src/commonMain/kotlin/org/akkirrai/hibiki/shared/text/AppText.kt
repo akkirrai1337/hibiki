@@ -296,7 +296,7 @@ class DefaultAppTextResolver(
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.WatchContinue -> if (russian) "Продолжить" else "Continue"
             AppTextKey.WatchContinueEpisode -> if (russian) "Продолжить · серия %s" else "Continue · Episode %s"
-            AppTextKey.WatchContinueEpisodePosition -> if (russian) "Продолжить · серия %s · %s" else "Continue · Episode %s · %s"
+            AppTextKey.WatchContinueEpisodePosition -> if (russian) "Серия %s · %s" else "Episode %s · %s"
             AppTextKey.Trailer -> if (russian) "Трейлер" else "Trailer"
             AppTextKey.NextEpisodeCountdown -> if (russian) "Следующая серия через %s" else "Next episode in %s"
             AppTextKey.NextEpisodeCountdownNumbered -> if (russian) "Серия %d через %s" else "Ep %d in %s"
