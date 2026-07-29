@@ -15,7 +15,7 @@ class AndroidAppSettingsStore(context: Context) : AppSettingsStore, AutoCloseabl
 
     override fun save(state: AppSettingsState) {
         preferences.setLanguageMode(state.languageMode)
-        preferences.setThemeMode(if (state.darkTheme) ThemeMode.DARK else ThemeMode.LIGHT)
+        preferences.setThemeMode(state.themeMode)
         preferences.setUseSystemColorScheme(state.useSystemColorScheme)
         preferences.setUseAmoledTheme(state.useAmoledTheme)
         preferences.setAutoSkipSegments(state.autoSkipSegments)
@@ -35,6 +35,7 @@ private fun org.akkirrai.hibiki.app.settings.AppPreferencesState.toSharedState()
     AppSettingsState(
         languageMode = languageMode,
         darkTheme = themeMode == ThemeMode.DARK || useAmoledTheme,
+        themeMode = themeMode,
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,

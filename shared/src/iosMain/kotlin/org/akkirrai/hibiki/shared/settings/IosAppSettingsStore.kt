@@ -10,6 +10,9 @@ internal class IosAppSettingsStore(
             ?.let { raw -> runCatching { LanguageMode.valueOf(raw) }.getOrNull() }
             ?: LanguageMode.SYSTEM,
         darkTheme = defaults.boolForKey(DARK_THEME_KEY),
+        themeMode = defaults.stringForKey(THEME_MODE_KEY)
+            ?.let { raw -> runCatching { ThemeMode.valueOf(raw) }.getOrNull() }
+            ?: ThemeMode.SYSTEM,
         useSystemColorScheme = if (defaults.objectForKey(USE_SYSTEM_COLOR_SCHEME_KEY) == null) {
             true
         } else {
@@ -27,6 +30,7 @@ internal class IosAppSettingsStore(
     override fun save(state: AppSettingsState) {
         defaults.setObject(state.languageMode.name, forKey = LANGUAGE_MODE_KEY)
         defaults.setBool(state.darkTheme, forKey = DARK_THEME_KEY)
+        defaults.setObject(state.themeMode.name, forKey = THEME_MODE_KEY)
         defaults.setBool(state.useSystemColorScheme, forKey = USE_SYSTEM_COLOR_SCHEME_KEY)
         defaults.setBool(state.useAmoledTheme, forKey = AMOLED_THEME_KEY)
         defaults.setBool(state.autoSkipSegments, forKey = AUTO_SKIP_SEGMENTS_KEY)
@@ -40,6 +44,7 @@ internal class IosAppSettingsStore(
     private companion object {
         const val LANGUAGE_MODE_KEY = "hibiki.language_mode"
         const val DARK_THEME_KEY = "hibiki.dark_theme"
+        const val THEME_MODE_KEY = "hibiki.theme_mode"
         const val USE_SYSTEM_COLOR_SCHEME_KEY = "hibiki.use_system_color_scheme"
         const val AMOLED_THEME_KEY = "hibiki.amoled_theme"
         const val AUTO_SKIP_SEGMENTS_KEY = "hibiki.auto_skip_segments"

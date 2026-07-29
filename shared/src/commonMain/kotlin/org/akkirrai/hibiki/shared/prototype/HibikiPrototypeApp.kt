@@ -112,6 +112,7 @@ import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshotLabels
 import org.akkirrai.hibiki.shared.profile.buildLocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.settings.ThemeMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
@@ -168,6 +169,7 @@ fun HibikiAppShell(
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
+    var themeMode by remember(settingsStore) { mutableStateOf(initialSettings.themeMode) }
     var useSystemColorScheme by remember(settingsStore) { mutableStateOf(initialSettings.useSystemColorScheme) }
     var useAmoledTheme by remember(settingsStore) { mutableStateOf(initialSettings.useAmoledTheme) }
     var autoSkipSegments by remember(settingsStore) { mutableStateOf(initialSettings.autoSkipSegments) }
@@ -229,6 +231,7 @@ fun HibikiAppShell(
                             AppSettingsState(
                                 languageMode = languageMode,
                                 darkTheme = darkTheme,
+                                themeMode = themeMode,
                                 useSystemColorScheme = useSystemColorScheme,
                                 useAmoledTheme = useAmoledTheme,
                                 autoSkipSegments = autoSkipSegments,
@@ -324,6 +327,14 @@ fun HibikiAppShell(
                             onLanguageModeChange = onLanguageModeChange,
                             darkTheme = darkTheme,
                             onThemeChange = onThemeChange,
+                            themeMode = themeMode,
+                            onThemeModeChange = { mode ->
+                                themeMode = mode
+                                if (mode != ThemeMode.SYSTEM) {
+                                    darkTheme = mode == ThemeMode.DARK
+                                }
+                                saveSettings()
+                            },
                             useSystemColorScheme = useSystemColorScheme,
                             useAmoledTheme = useAmoledTheme,
                             autoSkipSegments = autoSkipSegments,
@@ -695,6 +706,8 @@ private fun AppDestinationContent(
     onAutoSkipChange: (Boolean) -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
     onLibraryChanged: () -> Unit = {},
+    themeMode: ThemeMode = ThemeMode.LIGHT,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -889,6 +902,8 @@ private fun AppDestinationContent(
                     onLanguageModeChange = onLanguageModeChange,
                     darkTheme = darkTheme,
                     onThemeChange = onThemeChange,
+                    themeMode = themeMode,
+                    onThemeModeChange = onThemeModeChange,
                     versionName = appVersionName,
                     useSystemColorScheme = useSystemColorScheme,
                     useAmoledTheme = useAmoledTheme,
@@ -1202,6 +1217,8 @@ private fun SettingsScreen(
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     versionName: String,
     useSystemColorScheme: Boolean,
     useAmoledTheme: Boolean,
@@ -1214,6 +1231,7 @@ private fun SettingsScreen(
     AppSettingsScreen(
         languageMode = languageMode,
         darkTheme = darkTheme,
+        themeMode = themeMode,
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
@@ -1245,6 +1263,7 @@ private fun SettingsScreen(
         ),
         onLanguageModeChange = onLanguageModeChange,
         onThemeChange = onThemeChange,
+        onThemeModeChange = onThemeModeChange,
         onSystemColorSchemeChange = onSystemColorSchemeChange,
         onAmoledChange = onAmoledChange,
         onAutoSkipChange = onAutoSkipChange,

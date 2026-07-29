@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.settings
 data class AppSettingsState(
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val darkTheme: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useSystemColorScheme: Boolean = true,
     val useAmoledTheme: Boolean = false,
     val autoSkipSegments: Boolean = false,
