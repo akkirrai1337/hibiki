@@ -7,4 +7,5 @@ data class AppSourceDescriptor(
     val language: String,
     val iconUrl: String? = null,
     val supportsPlayback: Boolean = false,
+    val supportsSearch: Boolean = false,
 )
