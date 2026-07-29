@@ -193,6 +193,17 @@ fun HibikiAppShell(
         profilePresenter.load(profileRepository)
     }
 
+    val refreshLocalData = {
+        scope.launch {
+            libraryPresenter.updateEntries(libraryRepository.getEntries())
+            profilePresenter.load(profileRepository)
+            homeRepository?.let { repository ->
+                homePresenter.setState(repository.loadHomeState())
+            }
+        }
+        Unit
+    }
+
     CompositionLocalProvider(
         LocalAppTextResolver provides DefaultAppTextResolver(languageMode, systemLanguage),
     ) {
@@ -305,6 +316,7 @@ fun HibikiAppShell(
                             onSystemColorSchemeChange = onSystemColorSchemeChange,
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
+                            onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
                             profileData = profileState.data,
                             isEditingProfile = isEditingProfile,
@@ -642,6 +654,7 @@ private fun AppDestinationContent(
     onSystemColorSchemeChange: (Boolean) -> Unit = {},
     onAmoledChange: (Boolean) -> Unit = {},
     onAutoSkipChange: (Boolean) -> Unit = {},
+    onLibraryChanged: () -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -649,6 +662,7 @@ private fun AppDestinationContent(
             onBackClick = onBackFromDetails,
             onRelatedAnimeClick = onAnimeClick,
             libraryRepository = libraryRepository,
+            onLibraryCategoryChange = { onLibraryChanged() },
             modifier = modifier.fillMaxSize(),
             isDetailsLoading = isDetailsLoading,
             detailsError = detailsError,
