@@ -58,6 +58,7 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.details.AppDetailsScreen
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
@@ -387,7 +388,11 @@ private fun AppDestinationContent(
             }
         }
         if (selectedAnime != null) {
-            AnimeDetailsPanel(selectedAnime, isDetailsLoading, detailsError, onBackFromDetails)
+            AppDetailsScreen(
+                anime = selectedAnime,
+                onBackClick = onBackFromDetails,
+                onRelatedAnimeClick = onAnimeClick,
+            )
         } else {
             when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(

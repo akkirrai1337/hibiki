@@ -34,6 +34,20 @@ enum class AppTextKey {
     DesktopPreview,
     ProfileLibrary,
     ProfileEpisodes,
+    Back,
+    Favorite,
+    Watch,
+    Information,
+    Status,
+    Episodes,
+    Type,
+    ReleaseDate,
+    SourceMaterial,
+    Studio,
+    Genres,
+    Related,
+    Similar,
+    Unknown,
 }
 
 interface AppTextResolver {
@@ -99,6 +113,20 @@ class DefaultAppTextResolver(
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
             AppTextKey.ProfileLibrary -> if (russian) "Библиотека" else "Library"
             AppTextKey.ProfileEpisodes -> if (russian) "Эпизоды" else "Episodes"
+            AppTextKey.Back -> if (russian) "Назад" else "Back"
+            AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
+            AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
+            AppTextKey.Information -> if (russian) "Информация" else "Information"
+            AppTextKey.Status -> if (russian) "Статус" else "Status"
+            AppTextKey.Episodes -> if (russian) "Эпизоды" else "Episodes"
+            AppTextKey.Type -> if (russian) "Тип" else "Type"
+            AppTextKey.ReleaseDate -> if (russian) "Дата выхода" else "Release date"
+            AppTextKey.SourceMaterial -> if (russian) "Источник" else "Source material"
+            AppTextKey.Studio -> if (russian) "Студия" else "Studio"
+            AppTextKey.Genres -> if (russian) "Жанры" else "Genres"
+            AppTextKey.Related -> if (russian) "Связанное" else "Related"
+            AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
+            AppTextKey.Unknown -> if (russian) "Неизвестно" else "Unknown"
         }
     }
 }
