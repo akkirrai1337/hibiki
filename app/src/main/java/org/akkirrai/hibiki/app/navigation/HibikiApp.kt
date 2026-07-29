@@ -58,7 +58,7 @@ import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
 import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
-import org.akkirrai.hibiki.feature.home.HomeScreen
+import org.akkirrai.hibiki.feature.home.SharedAndroidHomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
 import org.akkirrai.hibiki.feature.library.LibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
@@ -167,7 +167,7 @@ private fun HibikiNavHost(
                     }
                 },
             ) {
-                HomeScreen(
+                SharedAndroidHomeScreen(
                     viewModel = homeViewModel,
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {

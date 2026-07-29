@@ -70,6 +70,7 @@ fun AppHomeScreen(
     onAnimeClick: (Anime) -> Unit,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
+    sourceBadgeContent: @Composable (Anime) -> Unit = {},
     onItemVisible: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -125,7 +126,7 @@ fun AppHomeScreen(
                     onAnimeClick = onAnimeClick,
                     onBrowseCatalog = onBrowseCatalog,
                     onOpenLibrary = onOpenLibrary,
-                    sourceBadgeContent = {},
+                    sourceBadgeContent = sourceBadgeContent,
                 )
             },
         )
