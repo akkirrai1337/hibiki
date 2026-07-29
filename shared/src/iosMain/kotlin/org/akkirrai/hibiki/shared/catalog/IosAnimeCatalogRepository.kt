@@ -18,14 +18,21 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.model.AnimeRating
 import org.akkirrai.hibiki.shared.model.AnimeTrailer
 import org.akkirrai.hibiki.shared.model.RelatedAnime
+import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 
-internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
+internal class IosAnimeCatalogRepository(
+    private val preferEnglish: Boolean = false,
+) : AnimeCatalogRepository {
     private val client = HttpClient(Darwin)
     private val source = BuiltInSources.catalog.create(
         BuiltInSources.ANI_LIBERTY_ID,
         DefaultSourceContext(
             httpClient = client,
-            preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            preferredLanguages = if (preferEnglish) {
+                listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
+            } else {
+                listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
+            },
         ),
     )
 
@@ -55,7 +62,7 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
         }
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
-        source.getById(id).toSharedAnime(fallback)
+        source.getById(id).toSharedAnime(preferEnglish, fallback)
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
@@ -77,7 +84,7 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
                 yearTo = filters.yearTo,
             ),
         )
-        val items = titles.map(AnimeTitle::toSharedAnime)
+        val items = titles.map { it.toSharedAnime(preferEnglish) }
         return AnimeCatalogPage(
             items = items,
             page = query.page.coerceAtLeast(1),
@@ -90,7 +97,7 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
     }
 }
 
-private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime {
+private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = null): Anime {
     val resolvedStatus = status
         ?.takeIf { releaseStatus != AnimeReleaseStatus.UNKNOWN }
         ?: fallback?.status
@@ -125,7 +132,7 @@ private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime {
     similarAnime = similarAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.similarAnime.orEmpty() },
     franchiseAnime = franchiseAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.franchiseAnime.orEmpty() },
     relatedAnime = relatedAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.relatedAnime.orEmpty() },
-    releaseDate = year?.toString() ?: fallback?.releaseDate,
+    releaseDate = formatReleaseDateLabel(year, season, preferEnglish) ?: fallback?.releaseDate,
     )
 }
 

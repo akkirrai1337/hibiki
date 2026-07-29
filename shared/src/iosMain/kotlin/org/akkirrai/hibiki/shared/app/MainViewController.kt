@@ -13,7 +13,9 @@ import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 
 fun MainViewController(systemLanguage: String): UIViewController = ComposeUIViewController {
-    val repository = remember { IosAnimeCatalogRepository() }
+    val repository = remember(systemLanguage) {
+        IosAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
+    }
     val libraryRepository = remember { IosLibraryRepository() }
     val settingsStore = remember { IosAppSettingsStore() }
     DisposableEffect(repository) {
