@@ -68,6 +68,7 @@ kotlin {
         iosMain.dependencies {
             implementation(project(":parsers"))
             implementation("io.ktor:ktor-client-darwin:3.5.0")
+            implementation(libs.coil.network.ktor3)
         }
     }
 }
