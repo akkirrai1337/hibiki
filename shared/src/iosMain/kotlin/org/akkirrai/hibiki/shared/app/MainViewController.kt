@@ -8,11 +8,13 @@ import androidx.compose.ui.window.ComposeUIViewController
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 
 fun MainViewController(systemLanguage: String): UIViewController = ComposeUIViewController {
     val repository = remember { IosAnimeCatalogRepository() }
+    val libraryRepository = remember { IosLibraryRepository() }
     val settingsStore = remember { IosAppSettingsStore() }
     DisposableEffect(repository) {
         onDispose { repository.close() }
@@ -24,6 +26,7 @@ fun MainViewController(systemLanguage: String): UIViewController = ComposeUIView
         Surface {
             HibikiApp(
                 repository = repository,
+                libraryRepository = libraryRepository,
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
             )
