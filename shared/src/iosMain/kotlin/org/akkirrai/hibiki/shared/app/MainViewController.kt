@@ -22,8 +22,13 @@ fun MainViewController(systemLanguage: String): UIViewController {
     val avatarPicker = IosAvatarPicker()
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController {
-    val repository = remember(systemLanguage) {
-        IosMultiSourceAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
+    val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
+    val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
+    val repository = remember(systemLanguage, initialSourceId) {
+        IosMultiSourceAnimeCatalogRepository(
+            preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
+            initialSourceId = initialSourceId,
+        )
     }
     val libraryRepository = remember { IosLibraryRepository() }
     val homeRepository = remember(repository, libraryRepository) {
@@ -33,13 +38,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
         IosLocalProfileRepository(libraryRepository)
     }
     val settingsStore = remember { IosAppSettingsStore() }
-    val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
     var selectedSourceId = remember {
-        androidx.compose.runtime.mutableStateOf(sourceSelectionRepository.loadSelectedSourceId())
-    }
-    selectedSourceId.value?.let(repository::selectSource)
-    androidx.compose.runtime.LaunchedEffect(selectedSourceId.value) {
-        selectedSourceId.value?.let(repository::selectSource)
+        androidx.compose.runtime.mutableStateOf(initialSourceId)
     }
     DisposableEffect(repository) {
         onDispose { repository.close() }
