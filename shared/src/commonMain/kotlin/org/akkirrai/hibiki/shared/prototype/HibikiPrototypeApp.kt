@@ -329,6 +329,7 @@ fun HibikiAppShell(
                                 }
                             }
                         },
+                        showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         AppDestinationContent(

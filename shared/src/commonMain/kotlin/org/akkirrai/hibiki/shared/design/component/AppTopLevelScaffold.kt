@@ -22,18 +22,21 @@ fun AppTopLevelScaffold(
     },
     label: @Composable (AppTopLevelDestination) -> String,
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
+    showBottomBar: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         content()
-        AppBottomBar(
-            destinations = destinations,
-            currentDestination = currentDestination,
-            onDestinationClick = onDestinationClick,
-            iconContent = iconContent,
-            label = label,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (showBottomBar) {
+            AppBottomBar(
+                destinations = destinations,
+                currentDestination = currentDestination,
+                onDestinationClick = onDestinationClick,
+                iconContent = iconContent,
+                label = label,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }
