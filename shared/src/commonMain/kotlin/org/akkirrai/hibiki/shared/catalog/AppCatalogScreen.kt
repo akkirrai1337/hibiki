@@ -28,6 +28,7 @@ data class AppCatalogScreenLabels(
     val retryLabel: String,
     val announcementLabel: String,
     val movieLabel: String,
+    val searchPlaceholder: String,
     val filterContentDescription: String,
     val clearContentDescription: String,
     val sortTitle: String,
@@ -61,6 +62,36 @@ fun AppCatalogScreen(
     onSortSelected: (CatalogSort) -> Unit,
     onFiltersApply: (AnimeSearchFilters) -> Unit,
     onAnimeClick: (Anime) -> Unit,
+    sortMenuContent: @Composable (
+        selectedSort: CatalogSort,
+        availableSorts: List<CatalogSort>,
+        expanded: Boolean,
+        onExpandedChange: (Boolean) -> Unit,
+        onSortSelected: (CatalogSort) -> Unit,
+        title: String,
+        label: (CatalogSort) -> String,
+    ) -> Unit = { selectedSort, availableSorts, expanded, onExpandedChange, onSortSelected, title, label ->
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            modifier = Modifier.width(CatalogSortMenuWidth),
+        ) {
+            AppCatalogSortMenuContent(
+                title = title,
+                sorts = availableSorts,
+                selectedSort = selectedSort,
+                label = label,
+                expanded = expanded,
+                onSortSelected = {
+                    onExpandedChange(false)
+                    onSortSelected(it)
+                },
+                orderContent = { atEnd, orderModifier ->
+                    AppCatalogSortOrderIcon(atEnd = atEnd, modifier = orderModifier)
+                },
+            )
+        }
+    },
     modifier: Modifier = Modifier,
 ) {
     var isFilterSheetOpen by remember { mutableStateOf(false) }
@@ -113,7 +144,7 @@ fun AppCatalogScreen(
             query = state.query,
             onQueryChange = onQueryChange,
             onClear = { onQueryChange("") },
-            placeholder = appText(AppTextKey.SearchPlaceholder),
+            placeholder = labels.searchPlaceholder,
             filterContentDescription = labels.filterContentDescription,
             clearContentDescription = labels.clearContentDescription,
             onFilterClick = { isFilterSheetOpen = true },
@@ -134,26 +165,15 @@ fun AppCatalogScreen(
                         )
                     },
                     menuContent = {
-                        DropdownMenu(
-                            expanded = isSortMenuOpen,
-                            onDismissRequest = { isSortMenuOpen = false },
-                            modifier = Modifier.width(CatalogSortMenuWidth),
-                        ) {
-                            AppCatalogSortMenuContent(
-                                title = labels.sortTitle,
-                                sorts = availableSorts,
-                                selectedSort = selectedSort,
-                                label = labels.sortLabels::getValue,
-                                expanded = isSortMenuOpen,
-                                onSortSelected = {
-                                    isSortMenuOpen = false
-                                    onSortSelected(it)
-                                },
-                                orderContent = { atEnd, orderModifier ->
-                                    AppCatalogSortOrderIcon(atEnd = atEnd, modifier = orderModifier)
-                                },
-                            )
-                        }
+                        sortMenuContent(
+                            selectedSort,
+                            availableSorts,
+                            isSortMenuOpen,
+                            { isSortMenuOpen = it },
+                            onSortSelected,
+                            labels.sortTitle,
+                            labels.sortLabels::getValue,
+                        )
                     },
                 )
             },

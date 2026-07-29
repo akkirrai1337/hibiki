@@ -56,7 +56,7 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
-import org.akkirrai.hibiki.feature.catalog.CatalogScreen
+import org.akkirrai.hibiki.feature.catalog.SharedAndroidCatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.SharedAndroidHomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
@@ -227,7 +227,7 @@ private fun HibikiNavHost(
                     }
                 },
             ) {
-                CatalogScreen(
+                SharedAndroidCatalogScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))

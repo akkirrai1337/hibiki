@@ -884,6 +884,7 @@ private fun defaultCatalogScreenLabels(): AppCatalogScreenLabels {
         retryLabel = appText(AppTextKey.SearchRetry),
         announcementLabel = appText(AppTextKey.Announcement),
         movieLabel = appText(AppTextKey.Type),
+        searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
         filterContentDescription = appText(AppTextKey.SearchFilters),
         clearContentDescription = appText(AppTextKey.Back),
         sortTitle = appText(AppTextKey.CatalogSortTitle),
