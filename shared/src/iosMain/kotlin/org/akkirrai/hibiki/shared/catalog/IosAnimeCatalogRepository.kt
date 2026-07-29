@@ -38,6 +38,7 @@ import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
 import org.akkirrai.hibiki.shared.source.localizeYummyStatusFilterLabel
 import org.akkirrai.hibiki.shared.source.localizeYummyTypeFilterLabel
 import org.akkirrai.hibiki.shared.source.sanitizedForApp
+import org.akkirrai.hibiki.shared.source.YummySearchFilterLocalizer
 
 internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
@@ -84,7 +85,11 @@ internal class IosAnimeCatalogRepository(
     }
 
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
-        source.getSearchFilterCatalog().sanitizedForApp(
+        (if (sourceId == BuiltInSources.YUMMY_ANIME_ID) {
+            YummySearchFilterLocalizer.localize(source.getSearchFilterCatalog(), preferEnglish)
+        } else {
+            source.getSearchFilterCatalog()
+        }).sanitizedForApp(
             preferEnglish = preferEnglish,
             sourceLanguage = source.info.primaryLanguage,
         ).let { catalog ->
