@@ -37,6 +37,15 @@ enum class AppTextKey {
     Back,
     Favorite,
     Watch,
+    WatchContinue,
+    WatchContinueEpisode,
+    WatchContinueEpisodePosition,
+    Trailer,
+    NextEpisodeCountdown,
+    NextEpisodeCountdownNumbered,
+    NextEpisodeEtaDaysHours,
+    NextEpisodeEtaHoursMinutesSeconds,
+    NextEpisodeEtaMinutesSeconds,
     Information,
     Status,
     Episodes,
@@ -127,6 +136,15 @@ class DefaultAppTextResolver(
             AppTextKey.Back -> if (russian) "Назад" else "Back"
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
+            AppTextKey.WatchContinue -> if (russian) "Продолжить" else "Continue"
+            AppTextKey.WatchContinueEpisode -> if (russian) "Продолжить · серия %s" else "Continue · Episode %s"
+            AppTextKey.WatchContinueEpisodePosition -> if (russian) "Продолжить · серия %s · %s" else "Continue · Episode %s · %s"
+            AppTextKey.Trailer -> if (russian) "Трейлер" else "Trailer"
+            AppTextKey.NextEpisodeCountdown -> if (russian) "Следующая серия через %s" else "Next episode in %s"
+            AppTextKey.NextEpisodeCountdownNumbered -> if (russian) "Серия %d через %s" else "Ep %d in %s"
+            AppTextKey.NextEpisodeEtaDaysHours -> if (russian) "%dд %dч" else "%dd %dh"
+            AppTextKey.NextEpisodeEtaHoursMinutesSeconds -> if (russian) "%dч %dм %dс" else "%dh %dm %ds"
+            AppTextKey.NextEpisodeEtaMinutesSeconds -> if (russian) "%dм %dс" else "%dm %ds"
             AppTextKey.Information -> if (russian) "Информация" else "Information"
             AppTextKey.Status -> if (russian) "Статус" else "Status"
             AppTextKey.Episodes -> if (russian) "Эпизоды" else "Episodes"

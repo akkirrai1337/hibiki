@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +42,10 @@ import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.RelatedAnime
+import org.akkirrai.hibiki.shared.model.TitleWatchState
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
+import org.akkirrai.hibiki.shared.platform.currentEpochSeconds
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -57,6 +62,10 @@ fun AppDetailsScreen(
     onRelatedAnimeClick: (Anime) -> Unit,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     libraryRepository: LibraryRepository? = null,
+    resumeState: TitleWatchState? = null,
+    resumeFrameContent: (@Composable (Modifier) -> Unit)? = null,
+    onResumeClick: ((TitleWatchState) -> Unit)? = null,
+    onTrailerClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -95,6 +104,22 @@ fun AppDetailsScreen(
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
         }
     }
+    val mediaData = remember(uiModel.anime, resumeState) {
+        resolveDetailsHeroMediaData(uiModel.anime, resumeState)
+    }
+    val nextEpisodeEta = rememberNextEpisodeEta(
+        nextEpisodeAt = uiModel.anime.nextEpisodeAt,
+        nowEpochSeconds = ::currentEpochSeconds,
+        daysHoursLabel = { days, hours ->
+            appText(AppTextKey.NextEpisodeEtaDaysHours).formatAppText(days, hours)
+        },
+        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
+            appText(AppTextKey.NextEpisodeEtaHoursMinutesSeconds).formatAppText(hours, minutes, seconds)
+        },
+        minutesSecondsLabel = { minutes, seconds ->
+            appText(AppTextKey.NextEpisodeEtaMinutesSeconds).formatAppText(minutes, seconds)
+        },
+    )
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
@@ -155,7 +180,8 @@ fun AppDetailsScreen(
                             AppDetailsHeroMedia(
                                 imageContent = {
                                     AppPosterImage(
-                                        primaryUrl = uiModel.anime.screenshots.firstOrNull()
+                                        primaryUrl = mediaData.trailer?.thumbnailUrl
+                                            ?: uiModel.anime.screenshots.firstOrNull()
                                             ?: uiModel.anime.posterUrl,
                                         fallbackUrl = uiModel.anime.posterFallbackUrl,
                                         contentDescription = null,
@@ -164,7 +190,11 @@ fun AppDetailsScreen(
                                         placeholder = { AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) },
                                     )
                                 },
-                                frameContent = null,
+                                frameContent = resumeState?.let {
+                                    resumeFrameContent?.let { content ->
+                                        { content(Modifier.fillMaxSize()) }
+                                    }
+                                },
                                 playbackContent = {
                                     if (isDetailsLoading) {
                                         CircularProgressIndicator()
@@ -176,6 +206,22 @@ fun AppDetailsScreen(
                                             modifier = Modifier.padding(24.dp),
                                         )
                                     }
+                                    AppDetailsHeroPlaybackActions(
+                                        resumeTitle = resumeState?.let { appText(AppTextKey.WatchContinue) },
+                                        resumeSubtitle = resumeState?.let {
+                                            appText(AppTextKey.WatchContinueEpisodePosition).formatAppText(
+                                                formatEpisodeNumber(it.episodeNumber),
+                                                formatPlaybackPosition(it.positionMs),
+                                            )
+                                        },
+                                        resumeProgress = mediaData.resumeProgress,
+                                        onResumeClick = resumeState?.let { state ->
+                                            onResumeClick?.let { callback -> { callback(state) } }
+                                        },
+                                        trailerEnabled = mediaData.trailer != null && onTrailerClick != null,
+                                        onTrailerClick = onTrailerClick ?: {},
+                                        trailerContentDescription = appText(AppTextKey.Trailer),
+                                    )
                                 },
                                 modifier = mediaModifier,
                             )
@@ -197,7 +243,19 @@ fun AppDetailsScreen(
                                         )
                                     }
                                 },
-                                nextEpisodeContent = null,
+                                nextEpisodeContent = nextEpisodeEta?.let { eta ->
+                                    {
+                                        DetailsNextEpisodeChip(
+                                            text = if (heroInfo.nextEpisodeNumber != null) {
+                                                appText(AppTextKey.NextEpisodeCountdownNumbered)
+                                                    .formatAppText(heroInfo.nextEpisodeNumber, eta)
+                                            } else {
+                                                appText(AppTextKey.NextEpisodeCountdown).formatAppText(eta)
+                                            },
+                                            icon = Icons.Outlined.HourglassEmpty,
+                                        )
+                                    }
+                                },
                                 expandIconContent = {
                                     Icon(Icons.Outlined.ExpandMore, contentDescription = null)
                                 },
@@ -338,3 +396,7 @@ private fun RelatedAnime.toPreviewAnime(): Anime = Anime(
     status = status ?: "Unknown",
     posterUrl = posterUrl,
 )
+
+private fun String.formatAppText(vararg args: Any): String = args.fold(this) { text, argument ->
+    text.replaceFirst(Regex("%[sd]"), argument.toString())
+}
