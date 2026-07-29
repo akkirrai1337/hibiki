@@ -26,6 +26,7 @@ kotlin {
         }
         val jvmMain by getting {
             kotlin.srcDir("src/main/kotlin")
+            kotlin.srcDir("src/jvmMain/kotlin")
             dependencies {
                 implementation("io.ktor:ktor-client-core:3.5.0")
                 implementation("io.ktor:ktor-client-content-negotiation:3.5.0")
