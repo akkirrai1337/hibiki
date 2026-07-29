@@ -17,6 +17,8 @@ internal class IosAppSettingsStore(
         },
         useAmoledTheme = defaults.boolForKey(AMOLED_THEME_KEY),
         autoSkipSegments = defaults.boolForKey(AUTO_SKIP_SEGMENTS_KEY),
+        onboardingCompleted = defaults.boolForKey(ONBOARDING_COMPLETED_KEY),
+        selectedSourceId = defaults.stringForKey(SELECTED_SOURCE_ID_KEY),
     )
 
     override fun save(state: AppSettingsState) {
@@ -25,6 +27,10 @@ internal class IosAppSettingsStore(
         defaults.setBool(state.useSystemColorScheme, forKey = USE_SYSTEM_COLOR_SCHEME_KEY)
         defaults.setBool(state.useAmoledTheme, forKey = AMOLED_THEME_KEY)
         defaults.setBool(state.autoSkipSegments, forKey = AUTO_SKIP_SEGMENTS_KEY)
+        defaults.setBool(state.onboardingCompleted, forKey = ONBOARDING_COMPLETED_KEY)
+        state.selectedSourceId?.let { sourceId ->
+            defaults.setObject(sourceId, forKey = SELECTED_SOURCE_ID_KEY)
+        }
     }
 
     private companion object {
@@ -33,5 +39,7 @@ internal class IosAppSettingsStore(
         const val USE_SYSTEM_COLOR_SCHEME_KEY = "hibiki.use_system_color_scheme"
         const val AMOLED_THEME_KEY = "hibiki.amoled_theme"
         const val AUTO_SKIP_SEGMENTS_KEY = "hibiki.auto_skip_segments"
+        const val ONBOARDING_COMPLETED_KEY = "hibiki.onboarding_completed"
+        const val SELECTED_SOURCE_ID_KEY = "hibiki.selected_source_id"
     }
 }

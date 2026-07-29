@@ -6,6 +6,8 @@ data class AppSettingsState(
     val useSystemColorScheme: Boolean = true,
     val useAmoledTheme: Boolean = false,
     val autoSkipSegments: Boolean = false,
+    val onboardingCompleted: Boolean = false,
+    val selectedSourceId: String? = null,
 )
 
 interface AppSettingsStore {
