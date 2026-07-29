@@ -54,11 +54,14 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Select Xcode compatible with Kotlin/Native
+      - name: Select Xcode compatible with Compose and Kotlin/Native
         shell: bash
         run: |
           selected=""
           for candidate in \
+            /Applications/Xcode_26.3.0.app/Contents/Developer \
+            /Applications/Xcode_26.3.app/Contents/Developer \
+            /Applications/Xcode_26.0.app/Contents/Developer \
             /Applications/Xcode_16.4.app/Contents/Developer \
             /Applications/Xcode_16.3.app/Contents/Developer \
             /Applications/Xcode_16.2.app/Contents/Developer; do
@@ -69,7 +72,7 @@ jobs:
             fi
           done
           if [ -z "$selected" ]; then
-            echo "No Xcode 16 developer directory is installed on the runner"
+            echo "No compatible Xcode developer directory is installed on the runner"
             exit 1
           fi
           xcodebuild -version
