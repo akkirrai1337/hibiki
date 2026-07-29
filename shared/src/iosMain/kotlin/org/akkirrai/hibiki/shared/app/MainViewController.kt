@@ -11,12 +11,16 @@ import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
+import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 
 fun MainViewController(systemLanguage: String): UIViewController = ComposeUIViewController {
     val repository = remember(systemLanguage) {
         IosAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
     }
     val libraryRepository = remember { IosLibraryRepository() }
+    val profileRepository = remember(libraryRepository) {
+        IosLocalProfileRepository(libraryRepository)
+    }
     val settingsStore = remember { IosAppSettingsStore() }
     DisposableEffect(repository) {
         onDispose { repository.close() }
@@ -29,6 +33,7 @@ fun MainViewController(systemLanguage: String): UIViewController = ComposeUIView
             HibikiApp(
                 repository = repository,
                 libraryRepository = libraryRepository,
+                profileRepository = profileRepository,
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
             )
