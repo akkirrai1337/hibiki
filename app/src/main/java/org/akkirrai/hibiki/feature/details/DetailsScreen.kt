@@ -608,7 +608,7 @@ private fun DetailHeroMedia(
 ) {
     val anime = detailsState.anime
     val resumeState = detailsState.resumeState
-    val mediaData = resolveDetailsHeroMediaData(anime, resumeState)
+    val mediaData = resolveDetailsHeroMediaData(anime)
     AppDetailsHeroMedia(
         imageContent = {
             NetworkImage(
@@ -638,7 +638,6 @@ private fun DetailHeroMedia(
                     formatPlaybackPosition(it.positionMs),
                 )
             },
-            resumeProgress = mediaData.resumeProgress,
             onResumeClick = resumeState?.let { state -> { onResumeClick(state) } },
             trailerEnabled = mediaData.trailer != null,
             onTrailerClick = onTrailerClick,

@@ -45,7 +45,6 @@ val DetailsPlaybackResumeHorizontalPadding = 18.dp
 val DetailsPlaybackResumeVerticalPadding = 11.dp
 val DetailsPlaybackResumeContentGap = 10.dp
 val DetailsPlaybackResumeIconSize = 28.dp
-val DetailsPlaybackProgressHeight = 3.dp
 val DetailsPlaybackTrailerButtonSize = 64.dp
 val DetailsPlaybackTrailerBorderWidth = 1.dp
 val DetailsPlaybackTrailerIconSize = 32.dp

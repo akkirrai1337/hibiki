@@ -146,7 +146,7 @@ fun AppDetailsScreen(
         }
     }
     val mediaData = remember(uiModel.anime, resumeState) {
-        resolveDetailsHeroMediaData(uiModel.anime, resumeState)
+        resolveDetailsHeroMediaData(uiModel.anime)
     }
     val nextEpisodeEta = rememberNextEpisodeEta(
         nextEpisodeAt = uiModel.anime.nextEpisodeAt,
@@ -260,7 +260,6 @@ fun AppDetailsScreen(
                                                 formatPlaybackPosition(it.positionMs),
                                             )
                                         },
-                                        resumeProgress = mediaData.resumeProgress,
                                         onResumeClick = resumeState?.let { state ->
                                             onResumeClick?.let { callback -> { callback(state) } }
                                         },
