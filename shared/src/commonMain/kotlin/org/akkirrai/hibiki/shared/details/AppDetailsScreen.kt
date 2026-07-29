@@ -19,6 +19,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -104,6 +106,20 @@ fun AppDetailsScreen(
     val isAtTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val savedScrollPosition = detailsScrollStateCache[anime.id]
+    LaunchedEffect(anime.id) {
+        savedScrollPosition?.let { position ->
+            listState.scrollToItem(position.index, position.offset)
+        }
+    }
+    DisposableEffect(anime.id, listState) {
+        onDispose {
+            detailsScrollStateCache[anime.id] = DetailsScrollPosition(
+                index = listState.firstVisibleItemIndex,
+                offset = listState.firstVisibleItemScrollOffset,
+            )
         }
     }
     val mediaData = remember(uiModel.anime, resumeState) {
@@ -402,3 +418,10 @@ private fun RelatedAnime.toPreviewAnime(): Anime = Anime(
 private fun String.formatAppText(vararg args: Any): String = args.fold(this) { text, argument ->
     text.replaceFirst(Regex("%[sd]"), argument.toString())
 }
+
+private data class DetailsScrollPosition(
+    val index: Int,
+    val offset: Int,
+)
+
+private val detailsScrollStateCache = mutableMapOf<String, DetailsScrollPosition>()
