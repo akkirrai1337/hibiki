@@ -376,6 +376,19 @@ private fun AppDestinationContent(
     profileData: LocalProfileData,
     modifier: Modifier = Modifier,
 ) {
+    if (selectedAnime != null) {
+        AppDetailsScreen(
+            anime = selectedAnime,
+            onBackClick = onBackFromDetails,
+            onRelatedAnimeClick = onAnimeClick,
+            libraryRepository = libraryRepository,
+            modifier = modifier.fillMaxSize(),
+            isDetailsLoading = isDetailsLoading,
+            detailsError = detailsError,
+        )
+        return
+    }
+
     Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -394,17 +407,7 @@ private fun AppDestinationContent(
                 Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
             }
         }
-        if (selectedAnime != null) {
-            AppDetailsScreen(
-                anime = selectedAnime,
-                onBackClick = onBackFromDetails,
-                onRelatedAnimeClick = onAnimeClick,
-                libraryRepository = libraryRepository,
-                isDetailsLoading = isDetailsLoading,
-                detailsError = detailsError,
-            )
-        } else {
-            when (selectedTab) {
+        when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(
                     query = query,
                     onQueryChange = onQueryChange,
@@ -434,7 +437,6 @@ private fun AppDestinationContent(
                     darkTheme = darkTheme,
                     onThemeChange = onThemeChange,
                 )
-            }
         }
     }
 }
