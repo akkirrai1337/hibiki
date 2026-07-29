@@ -2,23 +2,30 @@ package org.akkirrai.hibiki.shared.details
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
+import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.RelatedAnime
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -29,6 +36,7 @@ import org.akkirrai.hibiki.shared.text.appText
  * the host; this screen keeps the Android geometry and renders those actions
  * as unavailable until a host supplies the corresponding contract.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDetailsScreen(
     anime: Anime,
@@ -59,6 +67,8 @@ fun AppDetailsScreen(
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
         }
     }
+    var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
+    var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -78,7 +88,7 @@ fun AppDetailsScreen(
                         canWatch = false,
                         libraryLabel = appText(AppTextKey.Favorite),
                         watchLabel = appText(AppTextKey.Watch),
-                        onPosterClick = {},
+                        onPosterClick = { isPosterPreviewOpen = true },
                         onLibraryClick = {},
                         onPrimaryClick = {},
                         posterContent = {
@@ -114,7 +124,7 @@ fun AppDetailsScreen(
                                 title = uiModel.anime.title,
                                 description = uiModel.description,
                                 backgroundColor = MaterialTheme.colorScheme.background,
-                                onTitleClick = {},
+                                onTitleClick = { isTitleDetailsSheetOpen = true },
                                 ratingsContent = resolveDetailsHeroRatings(
                                     uiModel.anime.ratings,
                                     uiModel.anime.viewCount,
@@ -187,6 +197,49 @@ fun AppDetailsScreen(
                 contentDescription = appText(AppTextKey.Back),
                 modifier = Modifier.align(Alignment.TopStart),
             )
+        }
+
+        if (isPosterPreviewOpen) {
+            AppDetailsPosterPreviewOverlay(
+                onDismissRequest = { isPosterPreviewOpen = false },
+                backHandler = { },
+                posterContent = { posterModifier ->
+                    AppPosterImage(
+                        primaryUrl = uiModel.anime.posterUrl,
+                        fallbackUrl = uiModel.anime.posterFallbackUrl,
+                        contentDescription = uiModel.anime.title,
+                        modifier = posterModifier,
+                        contentScale = ContentScale.Fit,
+                        placeholder = { AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) },
+                    )
+                },
+                backContent = { onDismiss ->
+                    AppDetailsHeroOverlayBackButton(
+                        onClick = onDismiss,
+                        contentDescription = appText(AppTextKey.Back),
+                    )
+                },
+            )
+        }
+
+        if (isTitleDetailsSheetOpen) {
+            val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            AppModalBottomSheet(
+                onDismissRequest = { isTitleDetailsSheetOpen = false },
+                sheetState = titleSheetState,
+                modifier = Modifier.fillMaxHeight(),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
+                dragHandleContent = { expanded ->
+                    AppDetailsTitleSheetDragHandle(expanded = expanded)
+                },
+            ) {
+                AppDetailsTitleSheetContent(
+                    title = uiModel.anime.title,
+                    description = uiModel.description,
+                )
+            }
         }
     }
 }
