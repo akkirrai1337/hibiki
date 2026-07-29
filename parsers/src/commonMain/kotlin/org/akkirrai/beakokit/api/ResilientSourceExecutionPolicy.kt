@@ -2,10 +2,9 @@ package org.akkirrai.beakokit.api
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.IOException
-import java.util.concurrent.ConcurrentHashMap
 
 data class SourceResiliencePolicy(
     /**
@@ -57,17 +56,17 @@ class SourceCircuitOpenException(
 class ResilientSourceExecutionPolicy(
     private val healthReporter: SourceHealthReporter,
     private val policy: SourceResiliencePolicy = SourceResiliencePolicy(),
-    private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val nowMillis: () -> Long = ::currentWallClockMillis,
     private val wait: suspend (Long) -> Unit = { delay(it) },
 ) : SourceExecutionPolicy {
-    private val gates = ConcurrentHashMap<SourceId, SourceGate>()
+    private val gates = MutableStateFlow<Map<SourceId, SourceGate>>(emptyMap())
 
     override suspend fun <T> execute(
         sourceId: SourceId,
         operation: SourceOperation,
         block: suspend () -> T,
     ): T = healthReporter.track(sourceId) {
-        val gate = gates.computeIfAbsent(sourceId) { SourceGate() }
+        val gate = gate(sourceId)
         gate.acquire(sourceId)
         try {
             block().also { gate.recordSuccess() }
@@ -80,7 +79,16 @@ class ResilientSourceExecutionPolicy(
     }
 
     fun circuit(sourceId: SourceId): SourceCircuitSnapshot =
-        gates[sourceId]?.snapshot() ?: SourceCircuitSnapshot()
+        gates.value[sourceId]?.snapshot() ?: SourceCircuitSnapshot()
+
+    private fun gate(sourceId: SourceId): SourceGate {
+        while (true) {
+            val current = gates.value
+            current[sourceId]?.let { return it }
+            val created = SourceGate()
+            if (gates.compareAndSet(current, current + (sourceId to created))) return created
+        }
+    }
 
     private inner class SourceGate {
         private val mutex = Mutex()
@@ -145,11 +153,11 @@ class ResilientSourceExecutionPolicy(
 }
 
 private fun Throwable.isTransientSourceFailure(): Boolean = when (this) {
-    is IOException, is SourceUnavailableException -> true
+    is SourceUnavailableException -> true
     is SourceException -> kind in setOf(
         SourceErrorKind.NETWORK,
         SourceErrorKind.RATE_LIMITED,
         SourceErrorKind.UNAVAILABLE,
     )
-    else -> false
+    else -> isPlatformTransientSourceFailure(this)
 }
