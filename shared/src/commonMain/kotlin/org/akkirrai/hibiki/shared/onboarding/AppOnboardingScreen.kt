@@ -111,10 +111,14 @@ fun AppOnboardingScreen(
                                     }
                                 }
                                 NotificationPermissionState.GRANTED -> {
-                                    Text(appText(AppTextKey.OnboardingNotificationsEnabled))
+                                    AppOnboardingPermissionStatus(
+                                        text = appText(AppTextKey.OnboardingNotificationsEnabled),
+                                    )
                                 }
                                 NotificationPermissionState.DENIED -> {
-                                    Text(appText(AppTextKey.OnboardingNotificationsDenied))
+                                    AppOnboardingPermissionStatus(
+                                        text = appText(AppTextKey.OnboardingNotificationsDenied),
+                                    )
                                 }
                             }
                         },
