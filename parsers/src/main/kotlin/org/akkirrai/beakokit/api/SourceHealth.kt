@@ -7,11 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 
-/** Optional observable view for hosts that render source state reactively. */
-interface ObservableSourceHealthReporter : SourceHealthReporter {
-    val states: StateFlow<Map<SourceId, SourceHealth>>
-}
-
 /** Thread-safe default reporter suitable for application hosts and integration tests. */
 class InMemorySourceHealthReporter : ObservableSourceHealthReporter {
     private val healthBySource = ConcurrentHashMap<SourceId, SourceHealth>()
