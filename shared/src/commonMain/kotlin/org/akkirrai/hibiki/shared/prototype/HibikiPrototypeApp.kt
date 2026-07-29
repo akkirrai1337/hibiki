@@ -382,7 +382,7 @@ fun HibikiAppShell(
                                 onboardingSourceId = sourceId
                                 onboardingCompleted = true
                                 settingsStore.save(
-                                    initialSettings.copy(
+                                    settingsStore.load().copy(
                                         onboardingCompleted = true,
                                         selectedSourceId = sourceId,
                                     ),
