@@ -16,10 +16,16 @@ fun AppSettingsIconToggleItem(
     shape: Shape,
     onClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
+    iconContent: (@Composable (Modifier) -> Unit)? = null,
 ) {
     AppSettingsToggleItem(
         iconContent = {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(SettingsItemIconSize), tint = MaterialTheme.colorScheme.onSurface)
+            val iconModifier = Modifier.size(SettingsItemIconSize)
+            if (iconContent != null) {
+                iconContent(iconModifier)
+            } else {
+                Icon(icon, contentDescription = null, modifier = iconModifier, tint = MaterialTheme.colorScheme.onSurface)
+            }
         },
         title = title,
         checked = checked,

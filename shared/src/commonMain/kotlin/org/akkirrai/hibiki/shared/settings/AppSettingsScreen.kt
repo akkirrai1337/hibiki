@@ -1,13 +1,14 @@
 package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_discord
+import hibiki.shared.generated.resources.ic_github
+import hibiki.shared.generated.resources.hibiki_app_icon
+import org.jetbrains.compose.resources.painterResource
 
 data class AppSettingsScreenLabels(
     val appearance: String,
@@ -120,7 +121,13 @@ fun AppSettingsScreen(
         item(key = SettingsSection.Experimental.key) {
             AppSettingsExperimentalSection(
                 sectionTitle = labels.experimental,
-                discordIcon = Icons.Outlined.Code,
+                discordIconContent = { iconModifier ->
+                    Image(
+                        painter = painterResource(Res.drawable.ic_discord),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                    )
+                },
                 discordTitle = labels.discord,
                 discordEnabled = discordEnabled,
                 onDiscordClick = onDiscordClick,
@@ -148,10 +155,18 @@ fun AppSettingsScreen(
                 appName = labels.appName,
                 versionName = labels.versionName,
                 appIconContent = { iconModifier ->
-                    Icon(Icons.Outlined.Settings, contentDescription = null, modifier = iconModifier)
+                    Image(
+                        painter = painterResource(Res.drawable.hibiki_app_icon),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                    )
                 },
                 githubIconContent = { iconModifier ->
-                    Icon(Icons.Outlined.Code, contentDescription = null, modifier = iconModifier)
+                    Image(
+                        painter = painterResource(Res.drawable.ic_github),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                    )
                 },
                 onGitHubClick = onGitHubClick,
             )

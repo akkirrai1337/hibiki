@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Shape
@@ -21,35 +23,37 @@ fun AppSettingsAppearanceSection(
     switchShape: Shape = CircleShape,
 ) {
     AppSettingsSection(title = sectionTitle) {
-        AppSettingsItems(count = 3) { index, shape ->
-            when (index) {
-                0 -> AppSettingsIconVerticalItem(
-                    icon = SettingsThemeIcon,
-                    title = themeTitle,
-                    shape = shape,
-                ) {
-                    AppSettingsSegmentedControl(
-                        options = themeOptions,
-                        selectedOption = selectedTheme,
-                        label = themeLabel,
-                        onSelect = onThemeSelected,
+        Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
+            AppSettingsItems(count = 2) { index, shape ->
+                when (index) {
+                    0 -> AppSettingsIconVerticalItem(
+                        icon = SettingsThemeIcon,
+                        title = themeTitle,
+                        shape = shape,
+                    ) {
+                        AppSettingsSegmentedControl(
+                            options = themeOptions,
+                            selectedOption = selectedTheme,
+                            label = themeLabel,
+                            onSelect = onThemeSelected,
+                        )
+                    }
+                    1 -> AppSettingsIconSwitchItem(
+                        icon = SettingsSystemColorSchemeIcon,
+                        title = systemColorSchemeTitle,
+                        checked = useSystemColorScheme,
+                        shape = shape,
+                        onCheckedChange = onSystemColorSchemeChange,
                     )
                 }
-                1 -> AppSettingsIconSwitchItem(
-                    icon = SettingsSystemColorSchemeIcon,
-                    title = systemColorSchemeTitle,
-                    checked = useSystemColorScheme,
-                    shape = shape,
-                    onCheckedChange = onSystemColorSchemeChange,
-                )
-                2 -> AppSettingsIconSwitchItem(
-                    icon = SettingsAmoledIcon,
-                    title = amoledTitle,
-                    checked = useAmoledTheme,
-                    shape = switchShape,
-                    onCheckedChange = onAmoledChange,
-                )
             }
+            AppSettingsIconSwitchItem(
+                icon = SettingsAmoledIcon,
+                title = amoledTitle,
+                checked = useAmoledTheme,
+                shape = switchShape,
+                onCheckedChange = onAmoledChange,
+            )
         }
     }
 }
