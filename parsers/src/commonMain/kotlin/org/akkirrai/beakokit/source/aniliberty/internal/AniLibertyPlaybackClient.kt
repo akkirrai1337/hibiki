@@ -7,6 +7,8 @@ import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -20,7 +22,6 @@ import org.akkirrai.beakokit.http.bodyOrThrow
 import org.akkirrai.beakokit.http.normalizeUrl
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.MirrorRequestExecutor
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.minutes
 
 internal class AniLibertyPlaybackClient(
@@ -102,14 +103,18 @@ internal class AniLibertyPlaybackClient(
     }
 
     private suspend fun getRelease(id: String): AniLibertyRelease {
-        cachedReleases[id]?.takeIf { it.cachedAt + CACHE_TTL.inWholeMilliseconds > System.currentTimeMillis() }
+        val now = currentTimeMillis()
+        val cached = cacheMutex.withLock { cachedReleases[id] }
+        cached?.takeIf { it.cachedAt + CACHE_TTL.inWholeMilliseconds > now }
             ?.let { return it.release }
         val release = mirrors.execute { baseUrl ->
             client.get("$baseUrl/anime/releases/$id") {
                 header(HttpHeaders.Accept, "application/json")
             }.bodyOrThrow<AniLibertyRelease>(name)
         }
-        cachedReleases[id] = CachedRelease(release, System.currentTimeMillis())
+        cacheMutex.withLock {
+            cachedReleases[id] = CachedRelease(release, currentTimeMillis())
+        }
         return release
     }
 
@@ -143,7 +148,8 @@ internal class AniLibertyPlaybackClient(
         )
     }
 
-    private val cachedReleases = ConcurrentHashMap<String, CachedRelease>()
+    private val cacheMutex = Mutex()
+    private val cachedReleases = mutableMapOf<String, CachedRelease>()
     private data class CachedRelease(val release: AniLibertyRelease, val cachedAt: Long)
 }
 
