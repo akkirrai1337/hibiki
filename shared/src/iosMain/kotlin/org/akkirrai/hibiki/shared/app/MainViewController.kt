@@ -5,6 +5,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.compose.ui.ExperimentalComposeUiApi
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
@@ -21,10 +22,13 @@ import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 
+@OptIn(ExperimentalComposeUiApi::class)
 fun MainViewController(systemLanguage: String): UIViewController {
     val avatarPicker = IosAvatarPicker()
     lateinit var hostController: UIViewController
-    hostController = ComposeUIViewController {
+    hostController = ComposeUIViewController(
+        configure = { parallelRendering = false },
+    ) {
     val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
     val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
     val repository = remember(systemLanguage, initialSourceId) {
