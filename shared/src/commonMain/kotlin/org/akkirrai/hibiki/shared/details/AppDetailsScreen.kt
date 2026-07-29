@@ -38,6 +38,7 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.RelatedAnime
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -55,6 +56,7 @@ fun AppDetailsScreen(
     onBackClick: () -> Unit,
     onRelatedAnimeClick: (Anime) -> Unit,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
+    libraryRepository: LibraryRepository? = null,
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -97,7 +99,7 @@ fun AppDetailsScreen(
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
     var libraryCategory by remember(anime.id, initialLibraryCategory) {
-        mutableStateOf(initialLibraryCategory)
+        mutableStateOf(libraryRepository?.getLibraryCategory(anime.id) ?: initialLibraryCategory)
     }
     var titleSeedColor by remember(anime.id) { mutableStateOf<Long?>(null) }
     val screenScope = rememberCoroutineScope()
@@ -310,11 +312,13 @@ fun AppDetailsScreen(
                 removeAction = appText(AppTextKey.LibraryRemoveAction),
                 categoryLabels = categoryLabels,
                 onCategoryClick = { category ->
+                    libraryRepository?.saveToLibrary(uiModel.anime, category)
                     libraryCategory = category
                     onLibraryCategoryChange(category)
                     isLibrarySheetOpen = false
                 },
                 onRemoveClick = {
+                    libraryRepository?.removeFromLibrary(uiModel.anime.id)
                     libraryCategory = null
                     onLibraryCategoryChange(null)
                     isLibrarySheetOpen = false

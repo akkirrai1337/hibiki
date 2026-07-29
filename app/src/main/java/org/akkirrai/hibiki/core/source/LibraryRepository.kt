@@ -40,7 +40,7 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.L
         return getLibraryEntries(category).map(LibraryEntry::anime)
     }
 
-    fun getLibraryCategory(id: String): LibraryCategory? {
+    override fun getLibraryCategory(id: String): LibraryCategory? {
         val categories = getLibraryCategories(id)
         return categories.firstOrNull { it != LibraryCategory.Saved }
             ?: LibraryCategory.Saved.takeIf { LibraryCategory.Saved in categories }
@@ -72,7 +72,7 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.L
         return getLibraryCategory(id) != null
     }
 
-    fun saveToLibrary(anime: Anime, category: LibraryCategory) {
+    override fun saveToLibrary(anime: Anime, category: LibraryCategory) {
         val normalizedAnime = anime.normalizeIds()
         val ids = getLibraryIds().toMutableSet()
         ids += normalizedAnime.id
@@ -123,7 +123,7 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.L
         saveCategoriesOrRemove(id, getLibraryCategories(id) + category)
     }
 
-    fun removeFromLibrary(id: String) {
+    override fun removeFromLibrary(id: String) {
         val remainingCategories = getLibraryCategories(id)
             .filterTo(mutableSetOf()) { it == LibraryCategory.Saved }
         saveCategoriesOrRemove(id, remainingCategories)
