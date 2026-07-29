@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.settings
 
 import android.content.Context
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
@@ -18,6 +19,11 @@ class AndroidAppSettingsStore(context: Context) : AppSettingsStore, AutoCloseabl
         preferences.setUseSystemColorScheme(state.useSystemColorScheme)
         preferences.setUseAmoledTheme(state.useAmoledTheme)
         preferences.setAutoSkipSegments(state.autoSkipSegments)
+        preferences.setNotificationPermissionState(state.notificationPermissionState)
+        val selectedSourceId = state.selectedSourceId
+        if (state.onboardingCompleted && selectedSourceId != null) {
+            preferences.completeOnboarding(SourceId(selectedSourceId))
+        }
     }
 
     override fun close() {
@@ -32,4 +38,7 @@ private fun org.akkirrai.hibiki.app.settings.AppPreferencesState.toSharedState()
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
+        onboardingCompleted = onboardingCompleted,
+        selectedSourceId = animeSource.value.takeIf { hasExplicitAnimeSource },
+        notificationPermissionState = notificationPermissionState,
     )
