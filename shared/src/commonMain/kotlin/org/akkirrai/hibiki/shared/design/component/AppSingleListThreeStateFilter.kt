@@ -78,18 +78,18 @@ fun <T> AppSingleListThreeStateFilter(
                         ?.uppercase()
                         ?.takeIf(String::isNotBlank)
                         ?: "#"
-                }.toSortedMap()
+                }.toList().sortedBy { (letter, _) -> letter }
                 val selectedGroupKeys = groupedOptions
-                    .filterValues { group -> group.any { id(it) in selectedIds } }
-                    .keys
+                    .filter { (_, group) -> group.any { id(it) in selectedIds } }
+                    .map { (letter, _) -> letter }
                 val visibleGroupKeys = if (maxCollapsedGroups != null && !showAllOptions) {
-                    (groupedOptions.keys.take(maxCollapsedGroups) + selectedGroupKeys).toSet()
+                    (groupedOptions.take(maxCollapsedGroups).map { (letter, _) -> letter } + selectedGroupKeys).toSet()
                 } else {
-                    groupedOptions.keys
+                    groupedOptions.map { (letter, _) -> letter }.toSet()
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterGroupGap)) {
                     groupedOptions
-                        .filterKeys { it in visibleGroupKeys }
+                        .filter { (letter, _) -> letter in visibleGroupKeys }
                         .forEach { (letter, groupOptions) ->
                             Column(verticalArrangement = Arrangement.spacedBy(UiDimens.ThreeStateFilterGroupContentGap)) {
                                 Text(
