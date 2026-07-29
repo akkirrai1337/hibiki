@@ -34,6 +34,25 @@ enum class AppTextKey {
     DesktopPreview,
     ProfileLibrary,
     ProfileEpisodes,
+    ProfileTabOverview,
+    ProfileTabActivity,
+    ProfileTabFavorites,
+    ProfileName,
+    ProfileEdit,
+    ProfileSave,
+    ProfileChangeAvatar,
+    ProfileStatTotal,
+    ProfileStatDays,
+    ProfileStatTime,
+    ProfileRecent,
+    ProfileEmptyRecent,
+    ProfileEmptyFavorites,
+    ProfileAnalyticsWatchTime,
+    ProfileAnalyticsTotal,
+    ProfileAnalyticsGenres,
+    ProfileAnalyticsGenresLabel,
+    ProfileAnalyticsWatched,
+    ProfileActivity,
     Back,
     Favorite,
     Watch,
@@ -144,6 +163,25 @@ class DefaultAppTextResolver(
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
             AppTextKey.ProfileLibrary -> if (russian) "Библиотека" else "Library"
             AppTextKey.ProfileEpisodes -> if (russian) "Эпизоды" else "Episodes"
+            AppTextKey.ProfileTabOverview -> if (russian) "Обзор" else "About"
+            AppTextKey.ProfileTabActivity -> if (russian) "Активность" else "Active"
+            AppTextKey.ProfileTabFavorites -> if (russian) "Любимое" else "Favorites"
+            AppTextKey.ProfileName -> if (russian) "Имя" else "Name"
+            AppTextKey.ProfileEdit -> if (russian) "Редактировать профиль" else "Edit profile"
+            AppTextKey.ProfileSave -> if (russian) "Сохранить" else "Save"
+            AppTextKey.ProfileChangeAvatar -> if (russian) "Сменить аватар" else "Change avatar"
+            AppTextKey.ProfileStatTotal -> if (russian) "ВСЕГО\nАНИМЕ" else "TOTAL\nANIME"
+            AppTextKey.ProfileStatDays -> if (russian) "ДНИ\nПРОСМОТРА" else "DAYS\nWATCHED"
+            AppTextKey.ProfileStatTime -> if (russian) "ВРЕМЯ\nПРОСМОТРА" else "WATCH\nTIME"
+            AppTextKey.ProfileRecent -> if (russian) "Недавние" else "Recent"
+            AppTextKey.ProfileEmptyRecent -> "—"
+            AppTextKey.ProfileEmptyFavorites -> if (russian) "Пока нет любимых тайтлов" else "No favourite titles yet"
+            AppTextKey.ProfileAnalyticsWatchTime -> if (russian) "Время просмотра" else "Watch time"
+            AppTextKey.ProfileAnalyticsTotal -> if (russian) "Всего" else "Total"
+            AppTextKey.ProfileAnalyticsGenres -> if (russian) "Жанры" else "Genres"
+            AppTextKey.ProfileAnalyticsGenresLabel -> if (russian) "Жанров" else "Genres"
+            AppTextKey.ProfileAnalyticsWatched -> if (russian) "Просмотр" else "Watched"
+            AppTextKey.ProfileActivity -> if (russian) "Активность" else "Activity"
             AppTextKey.Back -> if (russian) "Назад" else "Back"
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
