@@ -56,6 +56,7 @@ enum class AppTextKey {
     Genres,
     Related,
     Similar,
+    Announcement,
     Unknown,
     LibraryAddTitle,
     LibraryAddSubtitle,
@@ -155,6 +156,7 @@ class DefaultAppTextResolver(
             AppTextKey.Genres -> if (russian) "Жанры" else "Genres"
             AppTextKey.Related -> if (russian) "Связанное" else "Related"
             AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
+            AppTextKey.Announcement -> if (russian) "Анонс" else "Announcement"
             AppTextKey.Unknown -> if (russian) "Неизвестно" else "Unknown"
             AppTextKey.LibraryAddTitle -> if (russian) "Добавить в библиотеку" else "Add to library"
             AppTextKey.LibraryAddSubtitle -> if (russian) "Выберите статус для этого тайтла" else "Choose a status for this title"

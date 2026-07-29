@@ -79,7 +79,7 @@ fun AppDetailsScreen(
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
     val similarTitle = appText(AppTextKey.Similar)
-    val announcementLabel = appText(AppTextKey.Unknown)
+    val announcementLabel = appText(AppTextKey.Announcement)
     val categoryLabels = mapOf(
         LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
         LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
