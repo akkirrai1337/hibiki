@@ -1,6 +1,7 @@
+@file:JvmName("JvmSourceHealth")
+
 package org.akkirrai.beakokit.api
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,29 +59,6 @@ class InMemorySourceHealthReporter : ObservableSourceHealthReporter {
     }
 }
 
-/** Records an operation without changing its result or swallowing cancellation. */
-suspend inline fun <T> SourceHealthReporter.track(
-    sourceId: SourceId,
-    crossinline operation: suspend () -> T,
-): T {
-    checkStarted(sourceId)
-    val startedAt = System.nanoTime()
-    try {
-        return operation().also {
-            checkSucceeded(sourceId, elapsedMillis(startedAt))
-        }
-    } catch (error: CancellationException) {
-        checkCancelled(sourceId)
-        throw error
-    } catch (error: Throwable) {
-        checkFailed(sourceId, elapsedMillis(startedAt), error)
-        throw error
-    }
-}
-
-@PublishedApi
-internal fun elapsedMillis(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
-
 private fun Throwable.toHealthError(): SourceHealthError {
     val sourceError = this as? SourceException
     val reason = when (sourceError?.kind) {
@@ -94,9 +72,7 @@ private fun Throwable.toHealthError(): SourceHealthError {
     }
     return SourceHealthError(
         reason = reason,
-        message = message?.takeIf(String::isNotBlank) ?: errorMessage(),
+        message = message?.takeIf(String::isNotBlank) ?: (this::class.simpleName ?: "Unknown source error"),
         statusCode = sourceError?.statusCode,
     )
 }
-
-private fun Throwable.errorMessage(): String = this::class.simpleName ?: "Unknown source error"

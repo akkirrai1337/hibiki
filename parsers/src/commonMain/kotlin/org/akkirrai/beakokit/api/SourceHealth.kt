@@ -1,5 +1,7 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.coroutines.CancellationException
+
 /** The observed availability of a source. UNKNOWN means it has not completed a check yet. */
 enum class SourceAvailability {
     UNKNOWN,
@@ -61,3 +63,46 @@ interface SourceHealthReporter {
         }
     }
 }
+
+/** Records an operation without changing its result or swallowing cancellation. */
+suspend inline fun <T> SourceHealthReporter.track(
+    sourceId: SourceId,
+    crossinline operation: suspend () -> T,
+): T {
+    checkStarted(sourceId)
+    val startedAt = monotonicTimeMillis()
+    try {
+        return operation().also {
+            checkSucceeded(sourceId, elapsedMillis(startedAt))
+        }
+    } catch (error: CancellationException) {
+        checkCancelled(sourceId)
+        throw error
+    } catch (error: Throwable) {
+        checkFailed(sourceId, elapsedMillis(startedAt), error)
+        throw error
+    }
+}
+
+@PublishedApi
+internal fun elapsedMillis(startedAt: Long): Long = (monotonicTimeMillis() - startedAt).coerceAtLeast(0)
+
+private fun Throwable.toHealthError(): SourceHealthError {
+    val sourceError = this as? SourceException
+    val reason = when (sourceError?.kind) {
+        SourceErrorKind.NETWORK -> SourceFailureReason.NETWORK
+        SourceErrorKind.PARSE -> SourceFailureReason.INVALID_RESPONSE
+        SourceErrorKind.AUTH -> SourceFailureReason.ACCESS_DENIED
+        SourceErrorKind.NOT_FOUND -> SourceFailureReason.NOT_FOUND
+        SourceErrorKind.RATE_LIMITED -> SourceFailureReason.RATE_LIMITED
+        SourceErrorKind.UNAVAILABLE -> SourceFailureReason.TEMPORARILY_UNAVAILABLE
+        SourceErrorKind.UNKNOWN, null -> SourceFailureReason.UNKNOWN
+    }
+    return SourceHealthError(
+        reason = reason,
+        message = message?.takeIf(String::isNotBlank) ?: errorMessage(),
+        statusCode = sourceError?.statusCode,
+    )
+}
+
+private fun Throwable.errorMessage(): String = this::class.simpleName ?: "Unknown source error"
