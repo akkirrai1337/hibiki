@@ -69,6 +69,8 @@ fun AppDetailsScreen(
     resumeFrameContent: (@Composable (Modifier) -> Unit)? = null,
     onResumeClick: ((TitleWatchState) -> Unit)? = null,
     onTrailerClick: (() -> Unit)? = null,
+    canWatch: Boolean = false,
+    onWatchClick: () -> Unit = {},
     titleSheetShape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
@@ -190,12 +192,12 @@ fun AppDetailsScreen(
                     AppDetailsHeroContent(
                         posterExpanded = isAtTop,
                         isInLibrary = libraryCategory != null && libraryCategory != LibraryCategory.Saved,
-                        canWatch = false,
+                        canWatch = canWatch,
                         libraryLabel = appText(AppTextKey.Favorite),
                         watchLabel = appText(AppTextKey.Watch),
                         onPosterClick = { isPosterPreviewOpen = true },
                         onLibraryClick = { isLibrarySheetOpen = true },
-                        onPrimaryClick = {},
+                        onPrimaryClick = onWatchClick,
                         posterContent = {
                             AppPosterImage(
                                 primaryUrl = uiModel.anime.posterUrl,
