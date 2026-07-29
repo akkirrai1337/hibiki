@@ -267,16 +267,18 @@ private fun CompactAppLayout(
 ) {
     Scaffold(
         bottomBar = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                AppDestination.entries.forEach { tab ->
-                    FilterChip(
-                        selected = tab == selectedTab,
-                        onClick = { onTabSelected(tab) },
-                        label = { Text(appText(tab.textKey)) },
-                    )
+            if (selectedAnime == null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    AppDestination.entries.forEach { tab ->
+                        FilterChip(
+                            selected = tab == selectedTab,
+                            onClick = { onTabSelected(tab) },
+                            label = { Text(appText(tab.textKey)) },
+                        )
+                    }
                 }
             }
         },
