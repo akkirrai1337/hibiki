@@ -76,6 +76,10 @@ class YummyCatalogClientTest {
         val result = source.getById("11371")
 
         assertEquals(12, result.episodeCount)
+        assertEquals(
+            "https://static.yani.tv/posters/small/1636760604.jpg",
+            result.posterFallbackUrl,
+        )
         assertEquals("Казалось бы, Момо Аясэ ничем не отличается от обычных старшеклассниц.", result.description?.substringBefore('\n'))
         assertEquals(listOf("Yummy", "MAL", "Shiki", "KP", "WA"), result.ratings.map { it.source })
         assertEquals("R-17+", result.ageRating)
@@ -260,7 +264,8 @@ class YummyCatalogClientTest {
                   "aired": 12
                 },
                 "poster": {
-                  "fullsize": "//static.yani.tv/posters/full/1636760604.jpg"
+                  "fullsize": "//static.yani.tv/posters/full/1636760604.jpg",
+                  "small": "//static.yani.tv/posters/small/1636760604.jpg"
                 },
                 "rating": {
                   "average": 8.65746893906902,

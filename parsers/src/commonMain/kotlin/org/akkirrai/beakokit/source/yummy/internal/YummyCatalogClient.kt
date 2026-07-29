@@ -498,6 +498,7 @@ private data class YummyAnimePayload(
     val studios: List<YummyCatalogValue> = emptyList(),
 ) {
     fun toAnimeTitle(language: String): AnimeTitle {
+        val posterCandidates = (poster?.allUrls().orEmpty() + image?.allUrls().orEmpty()).distinct()
         val localizedTitle = title.normalize()
         val explicitEnglishName = titleEn.normalize()
             ?: titleEnglish.normalize()
@@ -535,7 +536,8 @@ private data class YummyAnimePayload(
             year = year,
             type = type?.alias.normalize(),
             episodeCount = if (isReleased) totalEpisodeCount else availableEpisodeCount,
-            posterUrl = poster?.bestUrl() ?: image?.bestUrl(),
+            posterUrl = posterCandidates.firstOrNull(),
+            posterFallbackUrl = posterCandidates.drop(1).firstOrNull(),
             status = animeStatus?.alias.normalize()
                 ?: animeStatus?.title.normalize()
                 ?: status.normalize(),
@@ -683,10 +685,12 @@ private data class YummyMetadataImage(
     val thumbnail: String? = null,
     val url: String? = null,
 ) {
+    fun allUrls(): List<String> = listOf(fullsize, mega, huge, big, medium, small, original, preview, thumbnail, url)
+        .mapNotNull { value: String? -> value.normalizeUrl() }
+        .distinct()
+
     fun bestUrl(): String? {
-        return listOf(fullsize, mega, huge, big, medium, small, original, preview, thumbnail, url)
-            .mapNotNull { value: String? -> value.normalizeUrl() }
-            .firstOrNull()
+        return allUrls().firstOrNull()
     }
 }
 
