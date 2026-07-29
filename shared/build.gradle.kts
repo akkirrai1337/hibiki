@@ -40,6 +40,7 @@ kotlin {
                 implementation(compose.materialIconsExtended)
                 implementation(compose.components.resources)
                 implementation(libs.coil.compose)
+                implementation(libs.material.kolor)
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
