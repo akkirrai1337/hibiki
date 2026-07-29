@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build iOS Simulator app and create GitHub Release
+    name: Build iOS device IPA and create GitHub Release
     runs-on: macos-15
     timeout-minutes: 45
 
@@ -150,7 +150,7 @@ jobs:
             echo
             echo "## Package"
             echo
-            echo "Unsigned iOS Simulator build for interface testing."
+          echo "Unsigned iOS device IPA for signing and installation with Sideloadly or another signing tool."
           } > release-notes.md
 
       - name: Compile iOS targets and run JVM tests
@@ -163,33 +163,40 @@ jobs:
           :shared:compileKotlinIosSimulatorArm64
           :parsers:jvmTest
 
-      - name: Build unsigned iOS Simulator app
+      - name: Build unsigned iOS device archive
         run: >-
           xcodebuild
           -project iosApp/iosApp.xcodeproj
           -scheme iosApp
-          -sdk iphonesimulator
-          -configuration Debug
-          -destination 'generic/platform=iOS Simulator'
-          -derivedDataPath build/ios-derived-data
+          -sdk iphoneos
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath build/ios-archive.xcarchive
           MARKETING_VERSION=${{ steps.release.outputs.version }}
           CURRENT_PROJECT_VERSION=1
           CODE_SIGNING_ALLOWED=NO
-          build
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=""
+          archive
 
-      - name: Package iOS Simulator app
+      - name: Package unsigned iOS device IPA
         shell: bash
         run: |
           set -euo pipefail
-          APP_PATH="build/ios-derived-data/Build/Products/Debug-iphonesimulator/iosApp.app"
+          APP_PATH="build/ios-archive.xcarchive/Products/Applications/iosApp.app"
           if [ ! -d "$APP_PATH" ]; then
-            echo "iOS Simulator app was not created: $APP_PATH"
+            echo "iOS device app was not created: $APP_PATH"
             exit 1
           fi
 
           mkdir -p release
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" \
-            "release/hibiki-v${{ steps.release.outputs.version }}-iphonesimulator.app.zip"
+          rm -rf build/ipa
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+          (
+            cd build/ipa
+            zip -qry "../../release/hibiki-v${{ steps.release.outputs.version }}-iphoneos.ipa" Payload
+          )
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
