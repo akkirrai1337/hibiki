@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.home
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.library.LibraryRepository
+import org.akkirrai.hibiki.shared.profile.LocalWatchStateRepository
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
@@ -11,6 +12,7 @@ import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 class CatalogBackedHomeDataRepository(
     private val catalogRepository: AnimeCatalogRepository,
     private val libraryRepository: LibraryRepository,
+    private val watchStateRepository: LocalWatchStateRepository? = null,
 ) : HomeDataRepository {
     override fun fallbackHomeState(): HomeUiState = HomeUiState()
 
@@ -18,6 +20,19 @@ class CatalogBackedHomeDataRepository(
 
     override suspend fun loadHomeState(): HomeUiState {
         val libraryEntries = libraryRepository.getEntries()
+        val libraryAnimeById = libraryEntries
+            .filter { it.category != org.akkirrai.hibiki.shared.library.LibraryCategory.Saved }
+            .associateBy { it.anime.id }
+        val recentlyWatched = watchStateRepository
+            ?.getAllEpisodeProgress()
+            ?.groupBy { it.titleId }
+            ?.mapNotNull { (titleId, progress) ->
+                val anime = libraryAnimeById[titleId]?.anime ?: return@mapNotNull null
+                anime to progress.maxOfOrNull { it.updatedAt }
+            }
+            ?.sortedByDescending { it.second ?: Long.MIN_VALUE }
+            ?.map { it.first }
+            .orEmpty()
         val recentlyUpdated = runCatching { catalogRepository.latest(HOME_SECTION_PAGE_SIZE) }
             .getOrDefault(emptyList())
         val popular = runCatching {
@@ -29,6 +44,8 @@ class CatalogBackedHomeDataRepository(
             ).items
         }.getOrDefault(emptyList())
         return HomeUiState(
+            recentlyWatched = recentlyWatched,
+            continueAnime = recentlyWatched.firstOrNull(),
             recentlyAddedToLibrary = libraryEntries
                 .filter { it.category != org.akkirrai.hibiki.shared.library.LibraryCategory.Saved }
                 .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }

@@ -15,6 +15,7 @@ import platform.Foundation.NSBundle
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
+import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 
@@ -31,8 +32,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
         )
     }
     val libraryRepository = remember { IosLibraryRepository() }
+    val watchStateRepository = remember { IosWatchStateRepository() }
     val homeRepository = remember(repository, libraryRepository) {
-        CatalogBackedHomeDataRepository(repository, libraryRepository)
+        CatalogBackedHomeDataRepository(repository, libraryRepository, watchStateRepository)
     }
     val profileRepository = remember(libraryRepository) {
         IosLocalProfileRepository(libraryRepository)
