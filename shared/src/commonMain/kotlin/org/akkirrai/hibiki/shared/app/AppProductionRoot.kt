@@ -1,7 +1,13 @@
 package org.akkirrai.hibiki.shared.app
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.shared.design.AppMotion
 import org.akkirrai.hibiki.shared.design.component.AppTopLevelScaffold
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
@@ -32,6 +38,20 @@ fun AppProductionRoot(
         label = { destination -> appText(destination.labelKey) },
         destinations = destinations,
         modifier = modifier,
-        content = content,
+        content = {
+            AnimatedContent(
+                targetState = currentDestination,
+                transitionSpec = {
+                    fadeIn(
+                        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+                    ) togetherWith fadeOut(
+                        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+                    )
+                },
+                label = "top_level_screen_transition",
+            ) {
+                content()
+            }
+        },
     )
 }
