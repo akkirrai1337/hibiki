@@ -1,8 +1,7 @@
 package org.akkirrai.beakokit.api
 
-import java.util.concurrent.ConcurrentHashMap
-
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private data class SourceResultCacheKey(
     val sourceId: SourceId,
@@ -19,10 +18,10 @@ private data class CachedSourceResult(
 /** Thread-safe bounded cache with single-flight loading for public, safe-to-reuse source results. */
 class SourceResultCache(
     private val policy: SourceResultCachePolicy = SourceResultCachePolicy(),
-    private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val nowMillis: () -> Long = ::currentWallClockMillis,
 ) {
-    private val entries = ConcurrentHashMap<SourceResultCacheKey, CachedSourceResult>()
-    private val inFlight = ConcurrentHashMap<SourceResultCacheKey, CompletableDeferred<Any?>>()
+    private val entries = MutableStateFlow<Map<SourceResultCacheKey, CachedSourceResult>>(emptyMap())
+    private val inFlight = MutableStateFlow<Map<SourceResultCacheKey, CompletableDeferred<Any?>>>(emptyMap())
 
     suspend fun <T> getOrLoad(
         sourceId: SourceId,
@@ -40,10 +39,14 @@ class SourceResultCache(
         }
 
         val deferred = CompletableDeferred<Any?>()
-        val existing = inFlight.putIfAbsent(cacheKey, deferred)
-        if (existing != null) {
-            @Suppress("UNCHECKED_CAST")
-            return existing.await() as T
+        while (true) {
+            val current = inFlight.value
+            val existing = current[cacheKey]
+            if (existing != null) {
+                @Suppress("UNCHECKED_CAST")
+                return existing.await() as T
+            }
+            if (inFlight.compareAndSet(current, current + (cacheKey to deferred))) break
         }
 
         try {
@@ -55,34 +58,48 @@ class SourceResultCache(
             deferred.completeExceptionally(error)
             throw error
         } finally {
-            inFlight.remove(cacheKey, deferred)
+            while (true) {
+                val current = inFlight.value
+                if (current[cacheKey] !== deferred) break
+                if (inFlight.compareAndSet(current, current - cacheKey)) break
+            }
         }
     }
 
     fun invalidate(sourceId: SourceId) {
-        entries.keys.removeIf { it.sourceId == sourceId }
+        while (true) {
+            val current = entries.value
+            val updated = current.filterKeys { it.sourceId != sourceId }
+            if (entries.compareAndSet(current, updated)) return
+        }
     }
 
-    fun clear() = entries.clear()
+    fun clear() {
+        entries.value = emptyMap()
+    }
 
     private fun read(key: SourceResultCacheKey): CachedSourceResult? {
-        val entry = entries[key] ?: return null
-        if (entry.expiresAtMillis <= nowMillis()) {
-            entries.remove(key, entry)
-            return null
+        while (true) {
+            val current = entries.value
+            val entry = current[key] ?: return null
+            if (entry.expiresAtMillis > nowMillis()) return entry
+            if (entries.compareAndSet(current, current - key)) return null
         }
-        return entry
     }
 
     private fun write(key: SourceResultCacheKey, value: Any?, ttlMillis: Long) {
         val now = nowMillis()
-        entries.entries.removeIf { (_, entry) -> entry.expiresAtMillis <= now }
-        if (entries.size >= policy.maxEntries && !entries.containsKey(key)) {
-            entries.entries.minByOrNull { (_, entry) -> entry.createdAtMillis }?.let { oldest ->
-                entries.remove(oldest.key, oldest.value)
+        while (true) {
+            val current = entries.value
+            val valid = current.filterValues { it.expiresAtMillis > now }
+            val bounded = if (valid.size >= policy.maxEntries && !valid.containsKey(key)) {
+                valid - valid.minByOrNull { (_, entry) -> entry.createdAtMillis }!!.key
+            } else {
+                valid
             }
+            val updated = bounded + (key to CachedSourceResult(value, now + ttlMillis, now))
+            if (entries.compareAndSet(current, updated)) return
         }
-        entries[key] = CachedSourceResult(value, now + ttlMillis, now)
     }
 }
 
