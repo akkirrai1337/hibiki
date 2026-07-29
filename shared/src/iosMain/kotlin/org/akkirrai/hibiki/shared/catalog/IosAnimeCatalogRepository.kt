@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.catalog
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -82,6 +83,11 @@ internal class IosAnimeCatalogRepository(
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
         source.getById(id).toSharedAnime(preferEnglish, fallback)
+
+    override suspend fun latest(limit: Int): List<Anime> =
+        (source as? LatestSource)?.latest(limit.coerceAtLeast(1))
+            ?.map { it.toSharedAnime(preferEnglish) }
+            .orEmpty()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters

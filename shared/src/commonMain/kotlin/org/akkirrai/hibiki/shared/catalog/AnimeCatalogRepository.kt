@@ -13,6 +13,10 @@ interface AnimeCatalogRepository {
 
     suspend fun getDetails(id: String, fallback: Anime): Anime = fallback
 
+    suspend fun latest(limit: Int): List<Anime> = search(
+        AnimeCatalogQuery(pageSize = limit.coerceAtLeast(1)),
+    ).items
+
     suspend fun filterCatalog(): AnimeCatalogFilterCatalog = AnimeCatalogFilterCatalog()
 
     suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage

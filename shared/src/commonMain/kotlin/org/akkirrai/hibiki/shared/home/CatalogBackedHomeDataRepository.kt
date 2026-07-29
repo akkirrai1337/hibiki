@@ -18,11 +18,24 @@ class CatalogBackedHomeDataRepository(
 
     override suspend fun loadHomeState(): HomeUiState {
         val libraryEntries = libraryRepository.getEntries()
+        val recentlyUpdated = runCatching { catalogRepository.latest(HOME_SECTION_PAGE_SIZE) }
+            .getOrDefault(emptyList())
+        val popular = runCatching {
+            catalogRepository.search(
+                AnimeCatalogQuery(
+                    pageSize = HOME_SECTION_PAGE_SIZE,
+                    filters = AnimeSearchFilters(sortAlias = "popular"),
+                ),
+            ).items
+        }.getOrDefault(emptyList())
         return HomeUiState(
             recentlyAddedToLibrary = libraryEntries
                 .filter { it.category != org.akkirrai.hibiki.shared.library.LibraryCategory.Saved }
                 .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
                 .map { it.anime },
+            recentlyUpdated = recentlyUpdated,
+            trending = popular,
+            popular = popular,
         )
     }
 
@@ -76,4 +89,8 @@ class CatalogBackedHomeDataRepository(
         catalogRepository.getDetails(anime.id, anime)
 
     override fun close() = Unit
+
+    private companion object {
+        const val HOME_SECTION_PAGE_SIZE = 12
+    }
 }
