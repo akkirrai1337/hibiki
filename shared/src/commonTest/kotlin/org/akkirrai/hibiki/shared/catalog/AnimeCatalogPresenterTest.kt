@@ -61,4 +61,32 @@ class AnimeCatalogPresenterTest {
         assertTrue(presenter.state.value.canLoadMore)
         assertFalse(presenter.state.value.isLoading)
     }
+
+    @Test
+    fun presenterReturnsToPreviousDetailsFromRelatedTitle() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+
+            override suspend fun getDetails(id: String, fallback: Anime): Anime =
+                fallback.copy(description = "Loaded $id")
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        val first = Anime("one", "One", "", "", "")
+        val second = Anime("two", "Two", "", "", "")
+
+        presenter.openDetails(first)
+        advanceUntilIdle()
+        presenter.openDetails(second)
+        advanceUntilIdle()
+
+        presenter.closeDetails()
+        advanceUntilIdle()
+        assertEquals(first.id, presenter.state.value.selectedAnime?.id)
+        assertEquals("Loaded one", presenter.state.value.selectedAnime?.description)
+
+        presenter.closeDetails()
+        assertEquals(null, presenter.state.value.selectedAnime)
+    }
 }

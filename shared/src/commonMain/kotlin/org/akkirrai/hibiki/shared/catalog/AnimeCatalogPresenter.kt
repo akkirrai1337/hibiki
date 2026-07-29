@@ -42,6 +42,7 @@ class AnimeCatalogPresenter(
     private var searchJob: Job? = null
     private var filterCatalogJob: Job? = null
     private var detailsJob: Job? = null
+    private val detailsBackStack = mutableListOf<Anime>()
 
     fun onQueryChange(query: String) {
         setQuery(query)
@@ -84,29 +85,27 @@ class AnimeCatalogPresenter(
     }
 
     fun openDetails(anime: Anime) {
-        detailsJob?.cancel()
-        detailsJob = scope.launch {
-            _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
-            try {
-                val details = repository.getDetails(anime.id, anime)
-                _state.update { it.copy(selectedAnime = details, isDetailsLoading = false) }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (throwable: Throwable) {
-                _state.update {
-                    it.copy(
-                        selectedAnime = anime,
-                        isDetailsLoading = false,
-                        detailsError = throwable.message ?: "Details request failed",
-                    )
-                }
-            }
+        val current = state.value.selectedAnime
+        if (current == null) {
+            detailsBackStack.clear()
+        } else if (current.id != anime.id) {
+            detailsBackStack += current
         }
+        loadDetails(anime)
     }
 
     fun closeDetails() {
-        detailsJob?.cancel()
-        _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
+        val previous = if (detailsBackStack.isEmpty()) {
+            null
+        } else {
+            detailsBackStack.removeAt(detailsBackStack.lastIndex)
+        }
+        if (previous == null) {
+            detailsJob?.cancel()
+            _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
+        } else {
+            loadDetails(previous)
+        }
     }
 
     fun search() {
@@ -195,6 +194,7 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         filterCatalogJob?.cancel()
         detailsJob?.cancel()
+        detailsBackStack.clear()
     }
 
     private companion object {
@@ -205,12 +205,34 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         filterCatalogJob?.cancel()
         detailsJob?.cancel()
+        detailsBackStack.clear()
         _state.value = state.copy(
             isLoading = false,
             isLoadingMore = false,
             error = null,
             isDetailsLoading = false,
         )
+    }
+
+    private fun loadDetails(anime: Anime) {
+        detailsJob?.cancel()
+        detailsJob = scope.launch {
+            _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
+            try {
+                val details = repository.getDetails(anime.id, anime)
+                _state.update { it.copy(selectedAnime = details, isDetailsLoading = false) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (throwable: Throwable) {
+                _state.update {
+                    it.copy(
+                        selectedAnime = anime,
+                        isDetailsLoading = false,
+                        detailsError = throwable.message ?: "Details request failed",
+                    )
+                }
+            }
+        }
     }
 
     private fun preserveLoadedDescriptions(
