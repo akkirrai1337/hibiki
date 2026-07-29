@@ -68,10 +68,18 @@ import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.library.LibraryPresenter
 import org.akkirrai.hibiki.shared.library.LibraryRepository
+import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
 import org.akkirrai.hibiki.shared.profile.LocalProfileSummary
+import org.akkirrai.hibiki.shared.profile.AppLocalProfileLabels
+import org.akkirrai.hibiki.shared.profile.AppLocalProfileScreen
+import org.akkirrai.hibiki.shared.profile.ProfileAvatarImage
+import org.akkirrai.hibiki.shared.profile.ProfileAvatarPlaceholder
+import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshotLabels
+import org.akkirrai.hibiki.shared.profile.buildLocalProfileSnapshot
+import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
@@ -105,6 +113,8 @@ fun HibikiAppShell(
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
+    var isEditingProfile by remember { mutableStateOf(false) }
+    var editedProfileName by remember(profileState.data.profileName) { mutableStateOf(profileState.data.profileName) }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -160,6 +170,12 @@ fun HibikiAppShell(
                         onThemeChange,
                         libraryState.visibleEntries,
                         profileState.data,
+                        isEditingProfile,
+                        editedProfileName,
+                        { editedProfileName = it },
+                        { isEditingProfile = !isEditingProfile },
+                        { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
+                        profileRepository,
                     )
                     } else {
                     WideAppLayout(
@@ -183,6 +199,12 @@ fun HibikiAppShell(
                         onThemeChange,
                         libraryState.visibleEntries,
                         profileState.data,
+                        isEditingProfile,
+                        editedProfileName,
+                        { editedProfileName = it },
+                        { isEditingProfile = !isEditingProfile },
+                        { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
+                        profileRepository,
                     )
                     }
                 }
@@ -213,6 +235,12 @@ private fun WideAppLayout(
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
     profileData: LocalProfileData,
+    isEditingProfile: Boolean,
+    editedProfileName: String,
+    onProfileNameChange: (String) -> Unit,
+    onProfileEditClick: () -> Unit,
+    onProfileSaveClick: () -> Unit,
+    profileRepository: LocalProfileDataRepository,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -237,6 +265,12 @@ private fun WideAppLayout(
             onThemeChange,
             libraryEntries,
             profileData,
+            isEditingProfile,
+            editedProfileName,
+            onProfileNameChange,
+            onProfileEditClick,
+            onProfileSaveClick,
+            profileRepository,
             Modifier.weight(1f),
         )
     }
@@ -264,6 +298,12 @@ private fun CompactAppLayout(
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
     profileData: LocalProfileData,
+    isEditingProfile: Boolean,
+    editedProfileName: String,
+    onProfileNameChange: (String) -> Unit,
+    onProfileEditClick: () -> Unit,
+    onProfileSaveClick: () -> Unit,
+    profileRepository: LocalProfileDataRepository,
 ) {
     Scaffold(
         bottomBar = {
@@ -303,6 +343,12 @@ private fun CompactAppLayout(
             onThemeChange,
             libraryEntries,
             profileData,
+            isEditingProfile,
+            editedProfileName,
+            onProfileNameChange,
+            onProfileEditClick,
+            onProfileSaveClick,
+            profileRepository,
             Modifier.padding(padding),
         )
     }
@@ -376,6 +422,12 @@ private fun AppDestinationContent(
     onThemeChange: (Boolean) -> Unit,
     libraryEntries: List<LibraryEntry>,
     profileData: LocalProfileData,
+    isEditingProfile: Boolean,
+    editedProfileName: String,
+    onProfileNameChange: (String) -> Unit,
+    onProfileEditClick: () -> Unit,
+    onProfileSaveClick: () -> Unit,
+    profileRepository: LocalProfileDataRepository,
     modifier: Modifier = Modifier,
 ) {
     if (selectedAnime != null) {
@@ -405,7 +457,7 @@ private fun AppDestinationContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (selectedTab != AppDestination.SETTINGS) {
+            if (selectedTab != AppDestination.SETTINGS && selectedTab != AppDestination.PROFILE) {
                 Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
             }
         }
@@ -432,6 +484,67 @@ private fun AppDestinationContent(
                     entries = libraryEntries,
                     onAnimeClick = onAnimeClick,
                 )
+                AppDestination.PROFILE -> {
+                    val categoryLabels = mapOf(
+                        LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
+                        LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
+                        LibraryCategory.Completed to appText(AppTextKey.LibraryCompleted),
+                        LibraryCategory.Dropped to appText(AppTextKey.LibraryDropped),
+                        LibraryCategory.OnHold to appText(AppTextKey.LibraryOnHold),
+                        LibraryCategory.Favorite to appText(AppTextKey.LibraryFavorite),
+                        LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
+                    )
+                    val snapshot = buildLocalProfileSnapshot(
+                        data = profileData,
+                        activityDateStrings = profileData.activity.map { it.date }.distinct(),
+                        labels = LocalProfileSnapshotLabels(
+                            durationLabel = { duration -> "${formatDurationHours(duration)} h" },
+                            categoryLabel = { category -> categoryLabels.getValue(category) },
+                            dateLabel = { it.toString() },
+                            activityDateLabel = { it },
+                        ),
+                    )
+                    AppLocalProfileScreen(
+                        snapshot = snapshot,
+                        profileName = profileData.profileName.ifBlank { appText(AppTextKey.AppName) },
+                        isEditing = isEditingProfile,
+                        editedName = editedProfileName,
+                        bottomContentPadding = 24.dp,
+                        labels = AppLocalProfileLabels(
+                            overviewTab = if (appText(AppTextKey.Profile) == "Профиль") "Обзор" else "About",
+                            activityTab = if (appText(AppTextKey.Profile) == "Профиль") "Активность" else "Active",
+                            favoritesTab = if (appText(AppTextKey.Profile) == "Профиль") "Любимое" else "Favorites",
+                            profileNameLabel = if (appText(AppTextKey.Profile) == "Профиль") "Имя" else "Name",
+                            editContentDescription = if (appText(AppTextKey.Profile) == "Профиль") "Редактировать профиль" else "Edit profile",
+                            saveContentDescription = if (appText(AppTextKey.Profile) == "Профиль") "Сохранить" else "Save",
+                            changeAvatarContentDescription = if (appText(AppTextKey.Profile) == "Профиль") "Сменить аватар" else "Change avatar",
+                            settingsContentDescription = appText(AppTextKey.Settings),
+                            totalLabel = "TOTAL\nANIME",
+                            daysLabel = "DAYS\nWATCHED",
+                            timeLabel = "WATCH\nTIME",
+                            recentTitle = if (appText(AppTextKey.Profile) == "Профиль") "Недавние" else "Recent",
+                            recentEmptyText = "—",
+                            favoritesEmptyText = if (appText(AppTextKey.Profile) == "Профиль") "Пока нет любимых тайтлов" else "No favourite titles yet",
+                            analyticsWatchTitle = if (appText(AppTextKey.Profile) == "Профиль") "Время просмотра" else "Watch time",
+                            analyticsTotalLabel = if (appText(AppTextKey.Profile) == "Профиль") "Всего" else "Total",
+                            analyticsGenresTitle = if (appText(AppTextKey.Profile) == "Профиль") "Жанры" else "Genres",
+                            analyticsGenresLabel = if (appText(AppTextKey.Profile) == "Профиль") "Жанров" else "Genres",
+                            analyticsTitle = appText(AppTextKey.Profile),
+                            episodesStatLabel = appText(AppTextKey.ProfileEpisodes),
+                            watchStatLabel = if (appText(AppTextKey.Profile) == "Профиль") "Просмотр" else "Watched",
+                            activityTitle = if (appText(AppTextKey.Profile) == "Профиль") "Активность" else "Activity",
+                        ),
+                        onNameChange = onProfileNameChange,
+                        onAvatarEditClick = { },
+                        onEditActionClick = if (isEditingProfile) onProfileSaveClick else onProfileEditClick,
+                        onSettingsClick = { },
+                        avatarContent = { avatarModifier ->
+                            profileData.profileAvatarUri?.let { ProfileAvatarImage(it) }
+                                ?: ProfileAvatarPlaceholder(avatarModifier)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
                 AppDestination.SETTINGS -> SettingsScreen(
                     profileData = profileData,
                     languageMode = languageMode,
@@ -441,6 +554,16 @@ private fun AppDestinationContent(
                 )
         }
     }
+}
+
+private fun LibraryCategory.profileTextKey(): AppTextKey = when (this) {
+    LibraryCategory.Watching -> AppTextKey.LibraryWatching
+    LibraryCategory.Planned -> AppTextKey.LibraryPlanned
+    LibraryCategory.Completed -> AppTextKey.LibraryCompleted
+    LibraryCategory.Dropped -> AppTextKey.LibraryDropped
+    LibraryCategory.OnHold -> AppTextKey.LibraryOnHold
+    LibraryCategory.Favorite -> AppTextKey.LibraryFavorite
+    LibraryCategory.Saved -> AppTextKey.LibrarySaved
 }
 
 @Composable
