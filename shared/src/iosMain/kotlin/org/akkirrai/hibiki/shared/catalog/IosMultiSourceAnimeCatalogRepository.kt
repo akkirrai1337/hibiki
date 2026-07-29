@@ -2,6 +2,9 @@ package org.akkirrai.hibiki.shared.catalog
 
 import org.akkirrai.beakokit.api.InMemorySourceHealthReporter
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.beakokit.api.CachingSourceExecutionPolicy
+import org.akkirrai.beakokit.api.ResilientSourceExecutionPolicy
+import org.akkirrai.beakokit.api.SourceExecutionPolicy
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.model.Anime
@@ -19,6 +22,9 @@ internal class IosMultiSourceAnimeCatalogRepository(
         ?: BuiltInSources.ANI_LIBERTY_ID
     private val repositories = mutableMapOf<SourceId, IosAnimeCatalogRepository>()
     private val sourceHealthReporter = InMemorySourceHealthReporter()
+    private val sourceExecutionPolicy: SourceExecutionPolicy = CachingSourceExecutionPolicy(
+        delegate = ResilientSourceExecutionPolicy(sourceHealthReporter),
+    )
 
     private val activeRepository: IosAnimeCatalogRepository
         get() = repositoryFor(activeSourceId)
@@ -30,6 +36,7 @@ internal class IosMultiSourceAnimeCatalogRepository(
                 preferEnglish = preferEnglish,
                 sourceId = sourceId,
                 sourceHealthReporter = sourceHealthReporter,
+                sourceExecutionPolicy = sourceExecutionPolicy,
             )
         }
     }

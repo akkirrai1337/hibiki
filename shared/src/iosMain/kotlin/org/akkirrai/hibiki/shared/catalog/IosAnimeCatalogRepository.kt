@@ -12,6 +12,8 @@ import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.api.SourceExecutionPolicy
+import org.akkirrai.beakokit.api.HealthTrackingSourceExecutionPolicy
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -40,6 +42,8 @@ internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
     private val sourceId: org.akkirrai.beakokit.api.SourceId = BuiltInSources.ANI_LIBERTY_ID,
     private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
+    private val sourceExecutionPolicy: SourceExecutionPolicy =
+        HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
 ) : AnimeCatalogRepository {
     private val client = HttpClient(Darwin) {
         installBeakoKitHttpDefaults(
@@ -52,6 +56,7 @@ internal class IosAnimeCatalogRepository(
             httpClient = client,
             config = sourceConfig(sourceId),
             sourceHealthReporter = sourceHealthReporter,
+            sourceExecutionPolicy = sourceExecutionPolicy,
             logger = SourceLogger { level, message, throwable ->
                 val suffix = throwable?.message?.takeIf(String::isNotBlank)?.let { detail -> " ($detail)" }.orEmpty()
                 println("BeakoKit/${sourceId.value} [$level] $message$suffix")
