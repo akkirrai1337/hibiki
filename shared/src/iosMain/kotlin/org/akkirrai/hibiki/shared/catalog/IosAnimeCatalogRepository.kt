@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.shared.catalog
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.MapSourceConfig
+import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
@@ -10,6 +12,7 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.source.BuiltInSources
+import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
@@ -25,12 +28,14 @@ import org.akkirrai.hibiki.shared.source.resolveReleaseStatusLabel
 
 internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
+    private val sourceId: org.akkirrai.beakokit.api.SourceId = BuiltInSources.ANI_LIBERTY_ID,
 ) : AnimeCatalogRepository {
     private val client = HttpClient(Darwin)
     private val source = BuiltInSources.catalog.create(
-        BuiltInSources.ANI_LIBERTY_ID,
+        sourceId,
         DefaultSourceContext(
             httpClient = client,
+            config = sourceConfig(sourceId),
             preferredLanguages = if (preferEnglish) {
                 listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
             } else {
@@ -40,6 +45,17 @@ internal class IosAnimeCatalogRepository(
     )
 
     override val initialItems: List<Anime> = emptyList()
+
+    private fun sourceConfig(sourceId: org.akkirrai.beakokit.api.SourceId): SourceConfig = when (sourceId) {
+        BuiltInSources.YUMMY_ANIME_ID -> MapSourceConfig(
+            secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to DEFAULT_YUMMY_APPLICATION_TOKEN),
+        )
+        else -> SourceConfig.EMPTY
+    }
+
+    private companion object {
+        const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
+    }
 
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
         source.getSearchFilterCatalog().let { catalog ->
