@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.shared.catalog
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
+import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.MapSourceConfig
@@ -32,7 +34,11 @@ internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
     private val sourceId: org.akkirrai.beakokit.api.SourceId = BuiltInSources.ANI_LIBERTY_ID,
 ) : AnimeCatalogRepository {
-    private val client = HttpClient(Darwin)
+    private val client = HttpClient(Darwin) {
+        installBeakoKitHttpDefaults(
+            BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 iOS"),
+        )
+    }
     private val source = BuiltInSources.catalog.create(
         sourceId,
         DefaultSourceContext(
