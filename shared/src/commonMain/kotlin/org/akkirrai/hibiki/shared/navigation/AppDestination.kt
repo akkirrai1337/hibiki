@@ -4,7 +4,7 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 
 enum class AppDestination(val textKey: AppTextKey) {
     HOME(AppTextKey.Home),
-    SEARCH(AppTextKey.Search),
+    CATALOG(AppTextKey.Catalog),
     LIBRARY(AppTextKey.Library),
     SOURCES(AppTextKey.Sources),
     PROFILE(AppTextKey.Profile),

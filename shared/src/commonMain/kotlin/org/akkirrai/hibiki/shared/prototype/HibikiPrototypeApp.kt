@@ -559,7 +559,7 @@ private fun AppDestinationContent(
                     onFiltersChange = onFiltersChange,
                     onAnimeClick = onAnimeClick,
                 )
-                AppDestination.SEARCH -> SearchScreen(
+                AppDestination.CATALOG -> SearchScreen(
                     query = query,
                     onQueryChange = onQueryChange,
                     items = items,
