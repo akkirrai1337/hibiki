@@ -179,7 +179,7 @@ class HttpStreamValidator(
         }
         val manifest = manifestResponse.bodyAsBytes()
         val manifestText = manifest.decodeToString()
-        val selected = DASH_REPRESENTATION.findAll(manifestText)
+        val selected = DASH_REPRESENTATION.findAllCommon(manifestText)
             .mapNotNull { match ->
                 val representationAttributes = match.groupValues[1]
                 val representationBody = match.groupValues[2]
@@ -262,13 +262,24 @@ class HttpStreamValidator(
     private companion object {
         val BANDWIDTH = Regex("""BANDWIDTH=(\d+)""")
         val NUMBER_TEMPLATE = Regex("""\${'$'}Number(?:%0(\d+)d)?\${'$'}""")
-        val DASH_REPRESENTATION = Regex("""<Representation\b([^>]*)>(.*?)</Representation>""", RegexOption.DOT_MATCHES_ALL)
-        val SEGMENT_TEMPLATE = Regex("""<SegmentTemplate\b([^>]*)/?>""", RegexOption.DOT_MATCHES_ALL)
+        val DASH_REPRESENTATION = Regex("""<Representation\b([^>]*)>([\s\S]*?)</Representation>""")
+        val SEGMENT_TEMPLATE = Regex("""<SegmentTemplate\b([^>]*)/?>""")
         val ATTR = Regex("""\b([A-Za-z0-9:_-]+)\s*=\s*"([^"]*)"""")
     }
 
     private fun attrValue(block: String, name: String): String? =
-        ATTR.findAll(block).firstOrNull { it.groupValues[1] == name }?.groupValues?.get(2)
+        ATTR.findAllCommon(block).firstOrNull { it.groupValues[1] == name }?.groupValues?.get(2)
+
+    private fun Regex.findAllCommon(input: String): List<MatchResult> {
+        val matches = mutableListOf<MatchResult>()
+        var startIndex = 0
+        while (startIndex <= input.length) {
+            val match = find(input, startIndex) ?: break
+            matches += match
+            startIndex = match.range.last + 1
+        }
+        return matches
+    }
 
     private data class DashSegment(
         val bandwidth: Long,

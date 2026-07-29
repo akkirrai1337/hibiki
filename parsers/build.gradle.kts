@@ -14,6 +14,10 @@ kotlin {
         }
     }
 
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -35,6 +39,13 @@ kotlin {
                 implementation("org.jsoup:jsoup:1.21.2")
             }
         }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            kotlin.srcDir("src/iosMain/kotlin")
+        }
+        val iosX64Main by getting { dependsOn(iosMain) }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
         val jvmTest by getting {
             kotlin.srcDir("src/test/kotlin")
             kotlin.srcDir("src/testFixtures/kotlin")
@@ -51,7 +62,6 @@ kotlin {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", project(":beakokit-processor"))
     add("kspJvm", project(":beakokit-processor"))
 }
 

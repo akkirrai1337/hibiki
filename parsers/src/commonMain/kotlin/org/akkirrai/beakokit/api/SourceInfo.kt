@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 
 /** Lowercase BCP-47-compatible language tag used by source metadata. */
 @JvmInline

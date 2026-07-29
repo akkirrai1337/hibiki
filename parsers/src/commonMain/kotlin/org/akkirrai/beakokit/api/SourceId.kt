@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 
 /** Stable, storage-safe identifier of a BeakoKit source. */
 @JvmInline
