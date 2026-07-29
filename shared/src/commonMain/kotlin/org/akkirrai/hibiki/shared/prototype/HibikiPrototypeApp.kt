@@ -91,6 +91,7 @@ fun HibikiAppShell(
     libraryRepository: LibraryRepository,
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
+    systemLanguage: String = "en",
 ) {
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
@@ -118,7 +119,9 @@ fun HibikiAppShell(
         profilePresenter.load(profileRepository)
     }
 
-    CompositionLocalProvider(LocalAppTextResolver provides DefaultAppTextResolver(languageMode)) {
+    CompositionLocalProvider(
+        LocalAppTextResolver provides DefaultAppTextResolver(languageMode, systemLanguage),
+    ) {
         MaterialTheme(
             colorScheme = if (darkTheme) HibikiDarkColorScheme else HibikiLightColorScheme,
             typography = HibikiTypography,

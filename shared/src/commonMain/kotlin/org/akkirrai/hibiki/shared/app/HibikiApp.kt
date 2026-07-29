@@ -20,6 +20,7 @@ fun HibikiApp(
     libraryRepository: LibraryRepository = PrototypeLibraryRepository,
     profileRepository: LocalProfileDataRepository = PrototypeLocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
+    systemLanguage: String = "en",
 ) {
     HibikiAppShell(
         modifier = modifier,
@@ -27,5 +28,6 @@ fun HibikiApp(
         libraryRepository = libraryRepository,
         profileRepository = profileRepository,
         settingsStore = settingsStore,
+        systemLanguage = systemLanguage,
     )
 }

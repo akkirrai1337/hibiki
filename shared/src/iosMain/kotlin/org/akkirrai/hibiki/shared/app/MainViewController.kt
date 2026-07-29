@@ -11,7 +11,7 @@ import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
 import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 
-fun MainViewController(): UIViewController = ComposeUIViewController {
+fun MainViewController(systemLanguage: String): UIViewController = ComposeUIViewController {
     val repository = remember { IosAnimeCatalogRepository() }
     val settingsStore = remember { IosAppSettingsStore() }
     DisposableEffect(repository) {
@@ -22,7 +22,11 @@ fun MainViewController(): UIViewController = ComposeUIViewController {
         typography = HibikiTypography,
     ) {
         Surface {
-            HibikiApp(repository = repository, settingsStore = settingsStore)
+            HibikiApp(
+                repository = repository,
+                settingsStore = settingsStore,
+                systemLanguage = systemLanguage,
+            )
         }
     }
 }

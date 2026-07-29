@@ -20,4 +20,21 @@ class AppTextResolverTest {
             DefaultAppTextResolver(LanguageMode.RUSSIAN).resolve(AppTextKey.SharedUiReady),
         )
     }
+    @Test
+    fun systemModeUsesRussianHostLanguage() {
+        assertEquals(
+            "Общий UI готов",
+            DefaultAppTextResolver(LanguageMode.SYSTEM, systemLanguage = "ru-RU")
+                .resolve(AppTextKey.SharedUiReady),
+        )
+    }
+
+    @Test
+    fun systemModeFallsBackToEnglishForOtherHostLanguages() {
+        assertEquals(
+            "Shared UI is ready",
+            DefaultAppTextResolver(LanguageMode.SYSTEM, systemLanguage = "uk-UA")
+                .resolve(AppTextKey.SharedUiReady),
+        )
+    }
 }

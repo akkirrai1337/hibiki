@@ -46,9 +46,14 @@ interface AppTextResolver {
  */
 class DefaultAppTextResolver(
     private val languageMode: LanguageMode,
+    private val systemLanguage: String = "en",
 ) : AppTextResolver {
     override fun resolve(key: AppTextKey): String {
-        val russian = languageMode == LanguageMode.RUSSIAN
+        val russian = when (languageMode) {
+            LanguageMode.RUSSIAN -> true
+            LanguageMode.ENGLISH -> false
+            LanguageMode.SYSTEM -> systemLanguage.lowercase().startsWith("ru")
+        }
         return when (key) {
             AppTextKey.SharedUiReady -> if (russian) "Общий UI готов" else "Shared UI is ready"
             AppTextKey.AppName -> "hibiki"
