@@ -14,6 +14,7 @@ on:
       - "build.gradle.kts"
       - "parsers/**"
       - "shared/**"
+      - "iosApp/**"
   pull_request:
     paths:
       - ".github/workflows/ios-test.yml"
@@ -24,6 +25,7 @@ on:
       - "build.gradle.kts"
       - "parsers/**"
       - "shared/**"
+      - "iosApp/**"
   workflow_dispatch:
 
 permissions:
@@ -64,3 +66,14 @@ jobs:
           :shared:compileKotlinIosArm64
           :shared:compileKotlinIosSimulatorArm64
           :parsers:jvmTest
+
+      - name: Build iOS app
+        run: >-
+          xcodebuild
+          -project iosApp/iosApp.xcodeproj
+          -scheme iosApp
+          -sdk iphonesimulator
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
