@@ -12,6 +12,7 @@ on:
       - "gradlew"
       - "settings.gradle.kts"
       - "build.gradle.kts"
+      - "app/**"
       - "parsers/**"
       - "shared/**"
       - "iosApp/**"
@@ -189,6 +190,29 @@ jobs:
           CODE_SIGNING_REQUIRED=NO
           CODE_SIGN_IDENTITY=""
           archive
+
+      - name: Validate archived iOS bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios-archive.xcarchive/Products/Applications/iosApp.app"
+          PLIST="$APP_PATH/Info.plist"
+          test -f "$PLIST"
+
+          FRAME_DURATION=$(/usr/libexec/PlistBuddy -c 'Print :CADisableMinimumFrameDurationOnPhone' "$PLIST")
+          test "$FRAME_DURATION" = "true"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$PLIST")
+          test "$BUNDLE_ID" = "org.akkirrai.hibiki.ios"
+
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
+          test "$VERSION" = "${{ steps.release.outputs.version }}"
+
+          if ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIconName' "$PLIST" >/dev/null 2>&1 &&
+             ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconFiles' "$PLIST" >/dev/null 2>&1; then
+            echo "Archived iOS app has no icon metadata"
+            exit 1
+          fi
 
       - name: Package unsigned iOS device IPA
         shell: bash
