@@ -7,6 +7,7 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
@@ -15,6 +16,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.model.AnimeRating
 import org.akkirrai.hibiki.shared.model.AnimeTrailer
+import org.akkirrai.hibiki.shared.model.RelatedAnime
 
 internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
     private val client = HttpClient(Darwin)
@@ -52,7 +54,7 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
         }
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
-        source.getById(id).toSharedAnime()
+        source.getById(id).toSharedAnime(fallback)
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
@@ -87,7 +89,7 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
     }
 }
 
-private fun AnimeTitle.toSharedAnime(): Anime = Anime(
+private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime = Anime(
     id = id,
     title = displayName,
     subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
@@ -106,5 +108,18 @@ private fun AnimeTitle.toSharedAnime(): Anime = Anime(
     trailer = trailer?.let { AnimeTrailer(it.id, it.site, it.thumbnailUrl, it.sourceUrl) },
     sourceMaterial = sourceMaterial,
     studios = studios,
+    similarAnime = similarAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.similarAnime.orEmpty() },
+    franchiseAnime = franchiseAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.franchiseAnime.orEmpty() },
+    relatedAnime = relatedAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.relatedAnime.orEmpty() },
     releaseDate = year?.toString(),
+)
+
+private fun RelatedAnimeTitle.toSharedRelatedAnime(): RelatedAnime = RelatedAnime(
+    id = id,
+    title = title,
+    posterUrl = posterUrl,
+    type = type,
+    year = year,
+    episodeCount = episodeCount,
+    status = status,
 )
