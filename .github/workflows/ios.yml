@@ -1,6 +1,20 @@
-name: iOS release
+name: iOS
 
 on:
+  push:
+    branches:
+      - main
+      - unified-ui
+    paths:
+      - ".github/workflows/ios.yml"
+      - "gradle/**"
+      - "gradle.properties"
+      - "gradlew"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "parsers/**"
+      - "shared/**"
+      - "iosApp/**"
   workflow_dispatch:
     inputs:
       prerelease:
@@ -13,12 +27,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: ios-release
+  group: ios-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Build iOS device IPA and create GitHub Release
+    name: Build iOS device IPA
     runs-on: macos-15
     timeout-minutes: 45
 
@@ -69,6 +83,7 @@ jobs:
         shell: bash
         env:
           IS_PRERELEASE: ${{ inputs.prerelease }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
@@ -84,7 +99,7 @@ jobs:
           fi
 
           TARGET_VERSION="$BASE_VERSION"
-          if [ "$IS_PRERELEASE" = true ]; then
+          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "$IS_PRERELEASE" = true ]; then
             EXISTING_PRERELEASE_FOR_COMMIT=$(
               git tag --points-at HEAD --list "v${TARGET_VERSION}-prerelease.*" |
                 head -n 1 || true
@@ -106,18 +121,20 @@ jobs:
               PRERELEASE_NUMBER=1
             fi
             RELEASE_VERSION="${TARGET_VERSION}-prerelease.${PRERELEASE_NUMBER}"
+          elif [ "$EVENT_NAME" = workflow_dispatch ]; then
+            RELEASE_VERSION="$TARGET_VERSION"
           else
             RELEASE_VERSION="$TARGET_VERSION"
           fi
 
           TAG="v${RELEASE_VERSION}"
-          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+          if [ "$EVENT_NAME" = workflow_dispatch ] && git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             echo "Release tag ${TAG} already exists. Bump versionName before running the workflow."
             exit 1
           fi
 
           PREVIOUS_TAG=""
-          if [ "$IS_PRERELEASE" = true ]; then
+          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "$IS_PRERELEASE" = true ]; then
             PREVIOUS_TAG=$(
               git tag --list "v${TARGET_VERSION}-prerelease.*" --sort=-version:refname |
                 head -n 1 || true
@@ -140,7 +157,7 @@ jobs:
 
           echo "version=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$([ "$EVENT_NAME" = workflow_dispatch ] && echo "$IS_PRERELEASE" || echo false)" >> "$GITHUB_OUTPUT"
 
           {
             echo "## What's changed"
@@ -198,8 +215,17 @@ jobs:
             zip -qry "../../release/hibiki-v${{ steps.release.outputs.version }}-iphoneos.ipa" Payload
           )
 
+      - name: Upload iOS device IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hibiki-v${{ steps.release.outputs.version }}-iphoneos
+          path: release/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch'
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           name: v${{ steps.release.outputs.version }} iOS
