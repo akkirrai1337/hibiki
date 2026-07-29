@@ -32,6 +32,12 @@ fun AppOnboardingScreen(
     notificationPermissionState: NotificationPermissionState,
     onRequestNotificationPermission: () -> Unit,
     onComplete: (String) -> Unit,
+    sourceIconContent: @Composable (AppSourceDescriptor, Modifier) -> Unit = { source, iconModifier ->
+        AppSourceIconImage(
+            url = source.iconUrl,
+            modifier = iconModifier,
+        )
+    },
     modifier: Modifier = Modifier,
 ) {
     var stepName by rememberSaveable { mutableStateOf(OnboardingStep.WELCOME.name) }
@@ -91,10 +97,7 @@ fun AppOnboardingScreen(
                                 selected = source.id == selectedSourceId,
                                 onClick = { selectedSourceId = source.id },
                                 iconContent = { iconModifier ->
-                                    AppSourceIconImage(
-                                        url = source.iconUrl,
-                                        modifier = iconModifier,
-                                    )
+                                    sourceIconContent(source, iconModifier)
                                 },
                             )
                         },

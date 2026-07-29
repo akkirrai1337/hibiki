@@ -43,7 +43,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
-import org.akkirrai.hibiki.feature.onboarding.FirstLaunchOnboarding
+import org.akkirrai.hibiki.feature.onboarding.SharedAndroidOnboardingScreen
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
                                 onConfigureNotifications = ::configureNotifications,
                             )
                         } else {
-                            FirstLaunchOnboarding(
+                            SharedAndroidOnboardingScreen(
                                 initialSource = preferences.animeSource
                                     .takeIf { preferences.hasExplicitAnimeSource },
                                 notificationPermissionState = preferences.notificationPermissionState,
