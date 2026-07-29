@@ -223,7 +223,7 @@ class DefaultAppTextResolver(
             AppTextKey.HomeContinueEmptyBody -> if (russian) "Начните смотреть тайтл, и он появится здесь" else "Start watching a title and it will appear here"
             AppTextKey.HomeContinueOpenHint -> if (russian) "Открыть" else "Open"
             AppTextKey.HomePersonalEmptyTitle -> if (russian) "Ваша главная пока пуста" else "Your home is empty"
-            AppTextKey.HomePersonalEmptyBody -> if (russian) "Добавьте тайтлы в библиотеку, чтобы видеть их здесь" else "Add titles to your library to see them here"
+            AppTextKey.HomePersonalEmptyBody -> if (russian) "Начните смотреть или добавьте тайтл в библиотеку" else "Start watching or add a title to your library."
             AppTextKey.HomeBrowseCatalog -> if (russian) "Открыть каталог" else "Browse catalog"
             AppTextKey.SettingsAppearance -> if (russian) "Внешний вид" else "Appearance"
             AppTextKey.SettingsTheme -> if (russian) "Тема" else "Theme"

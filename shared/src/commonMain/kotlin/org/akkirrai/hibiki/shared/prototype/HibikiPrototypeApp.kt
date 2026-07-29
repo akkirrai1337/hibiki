@@ -781,22 +781,30 @@ private fun AppDestinationContent(
         return
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(24.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(appText(selectedTab.textKey), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                Text(
-                    text = if (selectedTab == AppDestination.SETTINGS) {
-                        appText(AppTextKey.SettingsSubtitle)
-                    } else {
-                        appText(AppTextKey.PrototypeSubtitle)
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (selectedTab != AppDestination.SETTINGS && selectedTab != AppDestination.PROFILE) {
-                Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
+    Column(
+        modifier = if (selectedTab == AppDestination.HOME) {
+            modifier.fillMaxSize()
+        } else {
+            modifier.fillMaxSize().padding(24.dp)
+        },
+    ) {
+        if (selectedTab != AppDestination.HOME) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(appText(selectedTab.textKey), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (selectedTab == AppDestination.SETTINGS) {
+                            appText(AppTextKey.SettingsSubtitle)
+                        } else {
+                            appText(AppTextKey.PrototypeSubtitle)
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (selectedTab != AppDestination.SETTINGS && selectedTab != AppDestination.PROFILE) {
+                    Button(onClick = { }) { Text(appText(AppTextKey.ExploreCatalog)) }
+                }
             }
         }
         when (selectedTab) {
