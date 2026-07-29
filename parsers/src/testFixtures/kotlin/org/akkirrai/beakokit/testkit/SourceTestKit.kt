@@ -278,6 +278,7 @@ object SourceTestKit {
     ): AnimeTitle {
         val description = details.description?.trim()
         val poster = details.posterUrl?.trim()
+        val posterFallback = details.posterFallbackUrl?.trim()
         assertContract(!requirements.description || !description.isNullOrBlank()) {
             "Details for ${details.id} must include a description"
         }
@@ -286,6 +287,15 @@ object SourceTestKit {
         }
         assertContract(!requirements.poster || poster.isHttpUrl()) {
             "Details for ${details.id} must include an absolute HTTP(S) poster URL"
+        }
+        assertContract(posterFallback == null || posterFallback.isNotBlank()) {
+            "Details for ${details.id} must not include a blank poster fallback URL"
+        }
+        assertContract(posterFallback == null || posterFallback.isHttpUrl()) {
+            "Details for ${details.id} must include an absolute HTTP(S) poster fallback URL"
+        }
+        assertContract(posterFallback == null || posterFallback != poster) {
+            "Details for ${details.id} must use a distinct poster fallback URL"
         }
         assertContract(!requirements.releaseStatus || details.releaseStatus != AnimeReleaseStatus.UNKNOWN) {
             "Details for ${details.id} must include a known release status"
@@ -538,6 +548,15 @@ object SourceTestKit {
         }
         assertContract(title.posterUrl == null || title.posterUrl.isNotBlank()) {
             "Source returned a blank poster URL for ${title.id} in $label"
+        }
+        assertContract(title.posterFallbackUrl == null || title.posterFallbackUrl.isNotBlank()) {
+            "Source returned a blank poster fallback URL for ${title.id} in $label"
+        }
+        assertContract(title.posterFallbackUrl == null || title.posterFallbackUrl.isHttpUrl()) {
+            "Source returned an invalid poster fallback URL for ${title.id} in $label"
+        }
+        assertContract(title.posterFallbackUrl == null || title.posterFallbackUrl != title.posterUrl) {
+            "Source returned a duplicate poster fallback URL for ${title.id} in $label"
         }
     }
 
