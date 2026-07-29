@@ -91,7 +91,10 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
 }
 
 private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime {
-    val resolvedStatus = status ?: fallback?.status ?: "Unknown"
+    val resolvedStatus = status
+        ?.takeIf { releaseStatus != AnimeReleaseStatus.UNKNOWN }
+        ?: fallback?.status
+        ?: "Unknown"
     val resolvedEpisodesLabel = when (releaseStatus) {
         AnimeReleaseStatus.ANNOUNCEMENT -> "announcement"
         AnimeReleaseStatus.RELEASED -> (availableEpisodeCount ?: episodeCount)?.let { "$it episodes" }
