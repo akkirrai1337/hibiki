@@ -53,6 +53,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
+import org.akkirrai.hibiki.shared.design.component.AppBottomBarHeight
+import org.akkirrai.hibiki.shared.app.AppProductionRoot
 import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
@@ -92,6 +95,8 @@ import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.navigation.AppDestination
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
@@ -150,8 +155,7 @@ fun HibikiAppShell(
             typography = HibikiTypography,
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                BoxWithConstraints {
-                    val compact = maxWidth < 760.dp
+                Box {
                     val onLanguageModeChange = { mode: LanguageMode ->
                         languageMode = mode
                         settingsStore.save(AppSettingsState(mode, darkTheme))
@@ -160,90 +164,81 @@ fun HibikiAppShell(
                         darkTheme = dark
                         settingsStore.save(AppSettingsState(languageMode, dark))
                     }
-                    if (compact) {
-                    CompactAppLayout(
-                        selectedTab,
-                        { selectedTab = it },
-                        state.query,
-                        presenter::onQueryChange,
-                        state.items,
-                        state.filters,
-                        state.filterCatalog,
-                        presenter::updateFilters,
-                        state.selectedAnime,
-                        presenter::openDetails,
-                        presenter::closeDetails,
-                        state.isDetailsLoading,
-                        state.detailsError,
-                        libraryRepository,
-                        languageMode,
-                        onLanguageModeChange,
-                        darkTheme,
-                        onThemeChange,
-                        libraryState.visibleEntries,
-                        profileState.data,
-                        isEditingProfile,
-                        editedProfileName,
-                        { editedProfileName = it },
-                        { isEditingProfile = !isEditingProfile },
-                        { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
-                        { selectedTab = AppDestination.SETTINGS },
-                        onProfileAvatarEdit,
-                        { uri ->
-                            profileRepository.updateProfileAvatar(uri)
-                            profilePresenter.updateProfileAvatar(uri)
+                    val topLevelDestination = when (selectedTab) {
+                        AppDestination.HOME -> AppTopLevelDestination.HOME
+                        AppDestination.CATALOG -> AppTopLevelDestination.CATALOG
+                        AppDestination.LIBRARY -> AppTopLevelDestination.LIBRARY
+                        AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
+                        AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
+                    }
+                    AppProductionRoot(
+                        currentDestination = topLevelDestination,
+                        onNavigationEvent = { event ->
+                            if (event is AppNavigationEvent.SelectTopLevel) {
+                                selectedTab = when (event.destination) {
+                                    AppTopLevelDestination.HOME -> AppDestination.HOME
+                                    AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+                                    AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+                                    AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+                                    AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
+                                }
+                            }
                         },
-                        profileRepository,
-                        sources,
-                        selectedSourceId,
-                        onSourceSelected,
-                        sourceSearchState,
-                        sourceSearchPresenter::onQueryChange,
-                        sourceSearchPresenter::clear,
-                        sourceSearchPresenter::search,
-                    )
-                    } else {
-                    WideAppLayout(
-                        selectedTab,
-                        { selectedTab = it },
-                        state.query,
-                        presenter::onQueryChange,
-                        state.items,
-                        state.filters,
-                        state.filterCatalog,
-                        presenter::updateFilters,
-                        state.selectedAnime,
-                        presenter::openDetails,
-                        presenter::closeDetails,
-                        state.isDetailsLoading,
-                        state.detailsError,
-                        libraryRepository,
-                        languageMode,
-                        onLanguageModeChange,
-                        darkTheme,
-                        onThemeChange,
-                        libraryState.visibleEntries,
-                        profileState.data,
-                        isEditingProfile,
-                        editedProfileName,
-                        { editedProfileName = it },
-                        { isEditingProfile = !isEditingProfile },
-                        { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
-                        { selectedTab = AppDestination.SETTINGS },
-                        onProfileAvatarEdit,
-                        { uri ->
-                            profileRepository.updateProfileAvatar(uri)
-                            profilePresenter.updateProfileAvatar(uri)
-                        },
-                        profileRepository,
-                        sources,
-                        selectedSourceId,
-                        onSourceSelected,
-                        sourceSearchState,
-                        sourceSearchPresenter::onQueryChange,
-                        sourceSearchPresenter::clear,
-                        sourceSearchPresenter::search,
-                    )
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        AppDestinationContent(
+                            selectedTab = selectedTab,
+                            query = state.query,
+                            onQueryChange = presenter::onQueryChange,
+                            items = state.items,
+                            filters = state.filters,
+                            filterCatalog = state.filterCatalog,
+                            onFiltersChange = presenter::updateFilters,
+                            selectedAnime = state.selectedAnime,
+                            onAnimeClick = presenter::openDetails,
+                            onBackFromDetails = presenter::closeDetails,
+                            isDetailsLoading = state.isDetailsLoading,
+                            detailsError = state.detailsError,
+                            libraryRepository = libraryRepository,
+                            languageMode = languageMode,
+                            onLanguageModeChange = onLanguageModeChange,
+                            darkTheme = darkTheme,
+                            onThemeChange = onThemeChange,
+                            libraryEntries = libraryState.visibleEntries,
+                            profileData = profileState.data,
+                            isEditingProfile = isEditingProfile,
+                            editedProfileName = editedProfileName,
+                            onProfileNameChange = { editedProfileName = it },
+                            onProfileEditClick = { isEditingProfile = !isEditingProfile },
+                            onProfileSaveClick = {
+                                profileRepository.updateProfileName(editedProfileName)
+                                profilePresenter.updateProfileName(editedProfileName)
+                                isEditingProfile = false
+                            },
+                            onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
+                            onProfileAvatarEdit = onProfileAvatarEdit,
+                            onProfileAvatarPicked = { uri ->
+                                profileRepository.updateProfileAvatar(uri)
+                                profilePresenter.updateProfileAvatar(uri)
+                            },
+                            profileRepository = profileRepository,
+                            sources = sources,
+                            selectedSourceId = selectedSourceId,
+                            onSourceSelected = onSourceSelected,
+                            sourceSearchState = sourceSearchState,
+                            onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
+                            onSourceSearchClear = sourceSearchPresenter::clear,
+                            onSourceSearchRetry = sourceSearchPresenter::search,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    bottom = if (state.selectedAnime == null) {
+                                        AppBottomBarHeight + AppBottomBarContentExtraPadding
+                                    } else {
+                                        0.dp
+                                    },
+                                ),
+                        )
                     }
                 }
             }
