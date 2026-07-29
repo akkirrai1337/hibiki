@@ -20,6 +20,8 @@ import org.akkirrai.hibiki.shared.model.AnimeTrailer
 import org.akkirrai.hibiki.shared.model.RelatedAnime
 import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
+import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
+import org.akkirrai.hibiki.shared.source.resolveReleaseStatusLabel
 
 internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
@@ -99,15 +101,20 @@ internal class IosAnimeCatalogRepository(
 }
 
 private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = null): Anime {
-    val resolvedStatus = status
-        ?.takeIf { releaseStatus != AnimeReleaseStatus.UNKNOWN }
-        ?: fallback?.status
-        ?: "Unknown"
+    val resolvedStatus = if (releaseStatus == AnimeReleaseStatus.UNKNOWN) {
+        fallback?.status ?: resolveReleaseStatusLabel(releaseStatus.name, preferEnglish)
+    } else {
+        resolveReleaseStatusLabel(releaseStatus.name, preferEnglish)
+    }
     val resolvedEpisodesLabel = when (releaseStatus) {
-        AnimeReleaseStatus.ANNOUNCEMENT -> "announcement"
-        AnimeReleaseStatus.RELEASED -> (availableEpisodeCount ?: episodeCount)?.let { "$it episodes" }
-        else -> availableEpisodeCount?.let { "$it episodes" }
-    } ?: fallback?.episodesLabel ?: "Episodes unknown"
+        AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish) "announcement" else "\u0430\u043dо\u043d\u0441"
+        else -> resolveEpisodesLabel(
+            releasedCount = availableEpisodeCount
+                ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED },
+            fallbackLabel = fallback?.episodesLabel,
+            preferEnglish = preferEnglish,
+        )
+    }
 
     return Anime(
     id = id,
