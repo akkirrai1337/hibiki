@@ -1,0 +1,62 @@
+name: iOS
+
+on:
+  push:
+    branches:
+      - main
+      - unified-ui
+    paths:
+      - ".github/workflows/ios.yml"
+      - "gradle/**"
+      - "gradle.properties"
+      - "gradlew"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "parsers/**"
+  pull_request:
+    paths:
+      - ".github/workflows/ios.yml"
+      - "gradle/**"
+      - "gradle.properties"
+      - "gradlew"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "parsers/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-parsers:
+    name: Build BeakoKit for iOS
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Compile iOS targets and run JVM tests
+        run: >-
+          ./gradlew
+          :parsers:compileKotlinIosX64
+          :parsers:compileKotlinIosArm64
+          :parsers:compileKotlinIosSimulatorArm64
+          :parsers:jvmTest
