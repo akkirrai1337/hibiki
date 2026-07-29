@@ -93,6 +93,10 @@ import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateText
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
 import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
+import org.akkirrai.hibiki.shared.home.AppHomeScreen
+import org.akkirrai.hibiki.shared.home.AppHomeScreenLabels
+import org.akkirrai.hibiki.shared.home.HomeUiState
+import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
@@ -229,6 +233,8 @@ fun HibikiAppShell(
                             onLibrarySearchQueryChange = libraryPresenter::onSearchQueryChange,
                             onLibrarySearchClear = libraryPresenter::clearSearch,
                             onLibraryFiltersApply = libraryPresenter::applySearchFilters,
+                            onBrowseCatalog = { selectedTab = AppDestination.CATALOG },
+                            onOpenLibrary = { selectedTab = AppDestination.LIBRARY },
                             selectedAnime = state.selectedAnime,
                             onAnimeClick = presenter::openDetails,
                             onBackFromDetails = presenter::closeDetails,
@@ -558,6 +564,8 @@ private fun AppDestinationContent(
     onLibrarySearchClear: () -> Unit = {},
     onLibraryFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit = {},
     systemLanguage: String = "en",
+    onBrowseCatalog: () -> Unit = {},
+    onOpenLibrary: () -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -595,6 +603,7 @@ private fun AppDestinationContent(
                     state = catalogState,
                     listState = catalogListState,
                     libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
+                    libraryEntries = libraryEntries,
                     query = query,
                     onQueryChange = onQueryChange,
                     items = items,
@@ -605,6 +614,8 @@ private fun AppDestinationContent(
                     onRetry = onCatalogRetry,
                     onLoadMoreRetry = onCatalogLoadMoreRetry,
                     onSortSelected = onCatalogSortSelected,
+                    onBrowseCatalog = onBrowseCatalog,
+                    onOpenLibrary = onOpenLibrary,
                 )
                 AppDestination.CATALOG -> SearchScreen(
                     state = catalogState,
@@ -789,10 +800,48 @@ private fun defaultCatalogScreenLabels(): AppCatalogScreenLabels {
 }
 
 @Composable
+private fun defaultHomeScreenLabels(): AppHomeScreenLabels {
+    val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
+    return AppHomeScreenLabels(
+        searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
+        searchFilters = appText(AppTextKey.SearchFilters),
+        searchClear = appText(AppTextKey.Back),
+        searchLoadMore = appText(AppTextKey.HomeSearchLoadMore),
+        searchEmptyTitle = appText(AppTextKey.HomeSearchEmptyTitle),
+        searchEmptyMessage = appText(AppTextKey.HomeSearchEmptyBody),
+        resultsCountLabel = { count -> count.toString() },
+        continueTitle = appText(AppTextKey.HomeContinueTitle),
+        continueEmptyTitle = appText(AppTextKey.HomeContinueEmptyTitle),
+        continueEmptyMessage = appText(AppTextKey.HomeContinueEmptyBody),
+        continueOpenHint = appText(AppTextKey.HomeContinueOpenHint),
+        recentlyWatchedTitle = appText(AppTextKey.HomeRecentlyWatched),
+        recentlyAddedTitle = appText(AppTextKey.HomeRecentlyAdded),
+        announcementLabel = appText(AppTextKey.Announcement),
+        movieLabel = appText(AppTextKey.Type),
+        personalEmptyTitle = appText(AppTextKey.HomePersonalEmptyTitle),
+        personalEmptyMessage = appText(AppTextKey.HomePersonalEmptyBody),
+        personalEmptyActionLabel = appText(AppTextKey.HomeBrowseCatalog),
+        filterUnavailable = appText(AppTextKey.FilterUnavailable),
+        typeTitle = appText(AppTextKey.Type),
+        genresTitle = appText(AppTextKey.Genres),
+        yearTitle = appText(AppTextKey.ReleaseDate),
+        yearAllLabel = appText(AppTextKey.FilterAllYears),
+        yearFromLabel = appText(AppTextKey.FilterFromYear),
+        yearToLabel = appText(AppTextKey.FilterToYear),
+        statusTitle = appText(AppTextKey.Status),
+        resetLabel = appText(AppTextKey.FilterReset),
+        applyLabel = appText(AppTextKey.FilterApply),
+        libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+        optionText = { it.title },
+    )
+}
+
+@Composable
 private fun ColumnScope.HomeScreen(
     state: AnimeCatalogUiState,
     listState: LazyListState,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
+    libraryEntries: List<LibraryEntry>,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -803,21 +852,38 @@ private fun ColumnScope.HomeScreen(
     onRetry: () -> Unit,
     onLoadMoreRetry: () -> Unit,
     onSortSelected: (CatalogSort) -> Unit,
+    onBrowseCatalog: () -> Unit,
+    onOpenLibrary: () -> Unit,
 ) {
-    AppCatalogScreen(
-        state = state,
+    val searchResult = when {
+        query.isBlank() -> SearchUiState.Idle
+        state.isLoading && items.isEmpty() -> SearchUiState.Loading
+        items.isEmpty() -> SearchUiState.Empty
+        else -> SearchUiState.Content(items = items, canLoadMore = false)
+    }
+    val homeState = HomeUiState(
+        recentlyAddedToLibrary = libraryEntries.filter { it.category != LibraryCategory.Saved }.map { it.anime },
+        searchQuery = query,
+        searchResult = searchResult,
+        searchFilterCatalog = filterCatalog,
+        searchFilters = filters,
+    )
+    AppHomeScreen(
+        state = homeState,
         listState = listState,
         bottomContentPadding = 0.dp,
         currentYear = 2026,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
-        labels = defaultCatalogScreenLabels(),
+        labels = defaultHomeScreenLabels(),
         onQueryChange = onQueryChange,
-        onRetry = onRetry,
-        onLoadMoreRetry = onLoadMoreRetry,
-        onItemVisible = {},
-        onSortSelected = onSortSelected,
-        onFiltersApply = onFiltersChange,
+        onClearSearch = { onQueryChange("") },
+        onFilterApply = onFiltersChange,
+        onRefresh = onRetry,
+        onLoadMoreSearch = onLoadMoreRetry,
         onAnimeClick = onAnimeClick,
+        onBrowseCatalog = onBrowseCatalog,
+        onOpenLibrary = onOpenLibrary,
+        onItemVisible = {},
         modifier = Modifier.fillMaxSize(),
     )
 }

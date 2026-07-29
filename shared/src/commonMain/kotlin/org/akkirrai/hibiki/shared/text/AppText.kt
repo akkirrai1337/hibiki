@@ -37,6 +37,18 @@ enum class AppTextKey {
     LibraryFilteredEmptyTitle,
     LibrarySearchEmptyTitle,
     LibraryFilteredEmptyBody,
+    HomeSearchEmptyTitle,
+    HomeSearchEmptyBody,
+    HomeSearchLoadMore,
+    HomeRecentlyWatched,
+    HomeRecentlyAdded,
+    HomeContinueTitle,
+    HomeContinueEmptyTitle,
+    HomeContinueEmptyBody,
+    HomeContinueOpenHint,
+    HomePersonalEmptyTitle,
+    HomePersonalEmptyBody,
+    HomeBrowseCatalog,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -168,6 +180,18 @@ class DefaultAppTextResolver(
             AppTextKey.LibraryFilteredEmptyTitle -> if (russian) "Ничего не найдено" else "Nothing found"
             AppTextKey.LibrarySearchEmptyTitle -> if (russian) "Поиск не дал результатов" else "No search results"
             AppTextKey.LibraryFilteredEmptyBody -> if (russian) "Попробуйте изменить фильтры" else "Try changing the filters"
+            AppTextKey.HomeSearchEmptyTitle -> if (russian) "Ничего не найдено" else "Nothing found"
+            AppTextKey.HomeSearchEmptyBody -> if (russian) "Попробуйте изменить запрос" else "Try changing your search"
+            AppTextKey.HomeSearchLoadMore -> if (russian) "Загрузить ещё" else "Load more"
+            AppTextKey.HomeRecentlyWatched -> if (russian) "Недавно просмотренные" else "Recently watched"
+            AppTextKey.HomeRecentlyAdded -> if (russian) "Недавно добавленные" else "Recently added"
+            AppTextKey.HomeContinueTitle -> if (russian) "Продолжить просмотр" else "Continue watching"
+            AppTextKey.HomeContinueEmptyTitle -> if (russian) "Нет незавершённого просмотра" else "Nothing to continue"
+            AppTextKey.HomeContinueEmptyBody -> if (russian) "Начните смотреть тайтл, и он появится здесь" else "Start watching a title and it will appear here"
+            AppTextKey.HomeContinueOpenHint -> if (russian) "Открыть" else "Open"
+            AppTextKey.HomePersonalEmptyTitle -> if (russian) "Ваша главная пока пуста" else "Your home is empty"
+            AppTextKey.HomePersonalEmptyBody -> if (russian) "Добавьте тайтлы в библиотеку, чтобы видеть их здесь" else "Add titles to your library to see them here"
+            AppTextKey.HomeBrowseCatalog -> if (russian) "Открыть каталог" else "Browse catalog"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {
