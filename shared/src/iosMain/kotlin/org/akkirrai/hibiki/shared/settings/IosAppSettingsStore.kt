@@ -12,7 +12,7 @@ internal class IosAppSettingsStore(
         darkTheme = defaults.boolForKey(DARK_THEME_KEY),
         themeMode = defaults.stringForKey(THEME_MODE_KEY)
             ?.let { raw -> runCatching { ThemeMode.valueOf(raw) }.getOrNull() }
-            ?: ThemeMode.SYSTEM,
+            ?: if (defaults.boolForKey(DARK_THEME_KEY)) ThemeMode.DARK else ThemeMode.SYSTEM,
         useSystemColorScheme = if (defaults.objectForKey(USE_SYSTEM_COLOR_SCHEME_KEY) == null) {
             true
         } else {
