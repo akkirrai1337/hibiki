@@ -49,6 +49,7 @@ kotlin {
 }
 
 dependencies {
+    add("kspCommonMainMetadata", project(":beakokit-processor"))
     add("kspJvm", project(":beakokit-processor"))
 }
 
