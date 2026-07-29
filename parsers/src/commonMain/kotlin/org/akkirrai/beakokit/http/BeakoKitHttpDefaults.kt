@@ -12,7 +12,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 /** Shared, engine-agnostic network policy for hosts that run BeakoKit sources. */
 data class BeakoKitHttpPolicy(
@@ -57,7 +56,7 @@ fun <T : HttpClientEngineConfig> HttpClientConfig<T>.installBeakoKitHttpDefaults
                 (response.status.value == 429 || response.status.value in 500..599)
         }
         retryOnExceptionIf { request, cause ->
-            request.isSafeToRetry() && cause is IOException
+            request.isSafeToRetry() && isRetryableNetworkException(cause)
         }
         delayMillis { retry ->
             response?.headers?.get(HttpHeaders.RetryAfter)
