@@ -52,6 +52,14 @@ enum class AppTextKey {
     Type,
     ReleaseDate,
     SourceMaterial,
+    SourceMaterialManga,
+    SourceMaterialManhwa,
+    SourceMaterialManhua,
+    SourceMaterialLightNovel,
+    SourceMaterialWebNovel,
+    SourceMaterialVisualNovel,
+    SourceMaterialGame,
+    SourceMaterialOriginal,
     Studio,
     Genres,
     Related,
@@ -152,6 +160,14 @@ class DefaultAppTextResolver(
             AppTextKey.Type -> if (russian) "Тип" else "Type"
             AppTextKey.ReleaseDate -> if (russian) "Дата выхода" else "Release date"
             AppTextKey.SourceMaterial -> if (russian) "Источник" else "Source material"
+            AppTextKey.SourceMaterialManga -> if (russian) "Манга" else "Manga"
+            AppTextKey.SourceMaterialManhwa -> if (russian) "Манхва" else "Manhwa"
+            AppTextKey.SourceMaterialManhua -> if (russian) "Маньхуа" else "Manhua"
+            AppTextKey.SourceMaterialLightNovel -> if (russian) "Ранобэ" else "Light novel"
+            AppTextKey.SourceMaterialWebNovel -> if (russian) "Веб-новелла" else "Web novel"
+            AppTextKey.SourceMaterialVisualNovel -> if (russian) "Визуальная новелла" else "Visual novel"
+            AppTextKey.SourceMaterialGame -> if (russian) "Игра" else "Game"
+            AppTextKey.SourceMaterialOriginal -> if (russian) "Оригинал" else "Original"
             AppTextKey.Studio -> if (russian) "Студия" else "Studio"
             AppTextKey.Genres -> if (russian) "Жанры" else "Genres"
             AppTextKey.Related -> if (russian) "Связанное" else "Related"

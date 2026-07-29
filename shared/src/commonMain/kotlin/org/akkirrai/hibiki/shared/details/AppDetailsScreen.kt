@@ -91,6 +91,19 @@ fun AppDetailsScreen(
         LibraryCategory.Favorite to appText(AppTextKey.LibraryFavorite),
         LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
     )
+    val sourceMaterial = resolveSourceMaterialLabel(
+        sourceMaterial = anime.sourceMaterial,
+        labels = SourceMaterialLabels(
+            manga = appText(AppTextKey.SourceMaterialManga),
+            manhwa = appText(AppTextKey.SourceMaterialManhwa),
+            manhua = appText(AppTextKey.SourceMaterialManhua),
+            lightNovel = appText(AppTextKey.SourceMaterialLightNovel),
+            webNovel = appText(AppTextKey.SourceMaterialWebNovel),
+            visualNovel = appText(AppTextKey.SourceMaterialVisualNovel),
+            game = appText(AppTextKey.SourceMaterialGame),
+            original = appText(AppTextKey.SourceMaterialOriginal),
+        ),
+    )
     val heroInfo = remember(anime, localizedEpisodeWord) {
         resolveDetailsHeroInfo(anime, localizedEpisodeWord)
     }
@@ -293,7 +306,7 @@ fun AppDetailsScreen(
                         releaseDateLabel = appText(AppTextKey.ReleaseDate),
                         sourceMaterialLabel = appText(AppTextKey.SourceMaterial),
                         studioLabel = appText(AppTextKey.Studio),
-                        sourceMaterial = uiModel.anime.sourceMaterial,
+                        sourceMaterial = sourceMaterial,
                         horizontalPadding = DetailsInformationHorizontalPadding,
                     )
                 }
