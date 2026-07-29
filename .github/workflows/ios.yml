@@ -172,6 +172,9 @@ jobs:
             echo "Unsigned iOS device IPA for signing and installation with Sideloadly or another signing tool."
           } > release-notes.md
 
+      - name: Prebuild shared iOS device framework
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
+
       - name: Build unsigned iOS device archive
         run: >-
           xcodebuild
@@ -183,6 +186,7 @@ jobs:
           -archivePath build/ios-archive.xcarchive
           MARKETING_VERSION=${{ steps.release.outputs.version }}
           CURRENT_PROJECT_VERSION=1
+          COMPILER_INDEX_STORE_ENABLE=NO
           CODE_SIGNING_ALLOWED=NO
           CODE_SIGNING_REQUIRED=NO
           CODE_SIGN_IDENTITY=""
