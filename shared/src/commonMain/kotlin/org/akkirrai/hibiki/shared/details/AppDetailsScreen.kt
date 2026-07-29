@@ -22,11 +22,18 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.Image
+import com.materialkolor.PaletteStyle
+import com.materialkolor.rememberDynamicColorScheme
+import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
@@ -92,12 +99,23 @@ fun AppDetailsScreen(
     var libraryCategory by remember(anime.id, initialLibraryCategory) {
         mutableStateOf(initialLibraryCategory)
     }
+    var titleSeedColor by remember(anime.id) { mutableStateOf<Long?>(null) }
+    val screenScope = rememberCoroutineScope()
+    val fallbackColorScheme = MaterialTheme.colorScheme
+    val detailsColorScheme = titleSeedColor?.let { seedColor ->
+        rememberDynamicColorScheme(
+            seedColor = Color(seedColor),
+            isDark = fallbackColorScheme.background.luminance() < 0.5f,
+            style = PaletteStyle.Vibrant,
+        )
+    } ?: fallbackColorScheme
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-    ) {
+    MaterialTheme(colorScheme = detailsColorScheme) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AppDetailsContentList(
                 state = listState,
@@ -121,6 +139,13 @@ fun AppDetailsScreen(
                                 contentDescription = uiModel.anime.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
+                                onImageSuccess = { image: Image ->
+                                    if (titleSeedColor == null) {
+                                        screenScope.launch {
+                                            titleSeedColor = extractTitleSeedColor(image)
+                                        }
+                                    }
+                                },
                                 placeholder = { AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) },
                             )
                         },
@@ -297,6 +322,7 @@ fun AppDetailsScreen(
                 onDismiss = { isLibrarySheetOpen = false },
             )
         }
+    }
     }
 }
 

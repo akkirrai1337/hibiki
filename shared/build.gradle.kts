@@ -51,6 +51,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.coil.network.okhttp)
+                implementation(libs.androidx.palette.ktx)
             }
         }
         val desktopMain by getting {
