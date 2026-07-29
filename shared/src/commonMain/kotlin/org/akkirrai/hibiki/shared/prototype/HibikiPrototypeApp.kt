@@ -175,6 +175,7 @@ fun HibikiAppShell(
                         { editedProfileName = it },
                         { isEditingProfile = !isEditingProfile },
                         { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
+                        { selectedTab = AppDestination.SETTINGS },
                         profileRepository,
                     )
                     } else {
@@ -204,6 +205,7 @@ fun HibikiAppShell(
                         { editedProfileName = it },
                         { isEditingProfile = !isEditingProfile },
                         { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
+                        { selectedTab = AppDestination.SETTINGS },
                         profileRepository,
                     )
                     }
@@ -240,6 +242,7 @@ private fun WideAppLayout(
     onProfileNameChange: (String) -> Unit,
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
+    onProfileSettingsClick: () -> Unit,
     profileRepository: LocalProfileDataRepository,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
@@ -270,6 +273,7 @@ private fun WideAppLayout(
             onProfileNameChange,
             onProfileEditClick,
             onProfileSaveClick,
+            onProfileSettingsClick,
             profileRepository,
             Modifier.weight(1f),
         )
@@ -303,6 +307,7 @@ private fun CompactAppLayout(
     onProfileNameChange: (String) -> Unit,
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
+    onProfileSettingsClick: () -> Unit,
     profileRepository: LocalProfileDataRepository,
 ) {
     Scaffold(
@@ -348,6 +353,7 @@ private fun CompactAppLayout(
             onProfileNameChange,
             onProfileEditClick,
             onProfileSaveClick,
+            onProfileSettingsClick,
             profileRepository,
             Modifier.padding(padding),
         )
@@ -427,6 +433,7 @@ private fun AppDestinationContent(
     onProfileNameChange: (String) -> Unit,
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
+    onProfileSettingsClick: () -> Unit,
     profileRepository: LocalProfileDataRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -537,7 +544,7 @@ private fun AppDestinationContent(
                         onNameChange = onProfileNameChange,
                         onAvatarEditClick = { },
                         onEditActionClick = if (isEditingProfile) onProfileSaveClick else onProfileEditClick,
-                        onSettingsClick = { },
+                        onSettingsClick = onProfileSettingsClick,
                         avatarContent = { avatarModifier ->
                             profileData.profileAvatarUri?.let { ProfileAvatarImage(it) }
                                 ?: ProfileAvatarPlaceholder(avatarModifier)
