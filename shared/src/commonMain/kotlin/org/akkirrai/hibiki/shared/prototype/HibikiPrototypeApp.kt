@@ -146,6 +146,7 @@ fun HibikiAppShell(
     enableOnboarding: Boolean = false,
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onRequestOnboardingNotificationPermission: () -> Unit = {},
+    onConfigureNotifications: () -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
@@ -329,6 +330,7 @@ fun HibikiAppShell(
                             onSystemColorSchemeChange = onSystemColorSchemeChange,
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
+                            onConfigureNotifications = onConfigureNotifications,
                             onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
                             profileData = profileState.data,
@@ -437,6 +439,7 @@ private fun WideAppLayout(
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
+    onConfigureNotifications: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -477,7 +480,8 @@ private fun WideAppLayout(
             onSourceSearchQueryChange,
             onSourceSearchClear,
             onSourceSearchRetry,
-            Modifier.weight(1f),
+            onConfigureNotifications = onConfigureNotifications,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -520,6 +524,7 @@ private fun CompactAppLayout(
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
+    onConfigureNotifications: () -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -575,7 +580,8 @@ private fun CompactAppLayout(
             onSourceSearchQueryChange,
             onSourceSearchClear,
             onSourceSearchRetry,
-            Modifier.padding(padding),
+            onConfigureNotifications = onConfigureNotifications,
+            modifier = Modifier.padding(padding),
         )
     }
 }
@@ -687,6 +693,7 @@ private fun AppDestinationContent(
     onSystemColorSchemeChange: (Boolean) -> Unit = {},
     onAmoledChange: (Boolean) -> Unit = {},
     onAutoSkipChange: (Boolean) -> Unit = {},
+    onConfigureNotifications: () -> Unit = {},
     onLibraryChanged: () -> Unit = {},
 ) {
     if (selectedAnime != null) {
@@ -889,6 +896,7 @@ private fun AppDestinationContent(
                     onSystemColorSchemeChange = onSystemColorSchemeChange,
                     onAmoledChange = onAmoledChange,
                     onAutoSkipChange = onAutoSkipChange,
+                    onConfigureNotifications = onConfigureNotifications,
                 )
         }
     }
@@ -1201,6 +1209,7 @@ private fun SettingsScreen(
     onSystemColorSchemeChange: (Boolean) -> Unit,
     onAmoledChange: (Boolean) -> Unit,
     onAutoSkipChange: (Boolean) -> Unit,
+    onConfigureNotifications: () -> Unit,
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -1239,6 +1248,7 @@ private fun SettingsScreen(
         onSystemColorSchemeChange = onSystemColorSchemeChange,
         onAmoledChange = onAmoledChange,
         onAutoSkipChange = onAutoSkipChange,
+        onNotificationsClick = onConfigureNotifications,
         modifier = Modifier.fillMaxSize(),
     )
 }

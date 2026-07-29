@@ -48,6 +48,12 @@ fun MainViewController(systemLanguage: String): UIViewController {
     var selectedSourceId = remember {
         androidx.compose.runtime.mutableStateOf(initialSourceId)
     }
+    val requestNotificationPermission = {
+        requestIosNotificationPermission { state ->
+            notificationPermissionState.value = state
+            settingsStore.save(settingsStore.load().copy(notificationPermissionState = state))
+        }
+    }
     DisposableEffect(repository) {
         onDispose { repository.close() }
     }
@@ -65,12 +71,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 systemLanguage = systemLanguage,
                 enableOnboarding = true,
                 onboardingNotificationPermissionState = notificationPermissionState.value,
-                onRequestOnboardingNotificationPermission = {
-                    requestIosNotificationPermission { state ->
-                        notificationPermissionState.value = state
-                        settingsStore.save(settingsStore.load().copy(notificationPermissionState = state))
-                    }
-                },
+                onRequestOnboardingNotificationPermission = requestNotificationPermission,
+                onConfigureNotifications = requestNotificationPermission,
                 appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String)
                     ?: "dev",
                 onProfileAvatarEdit = { onPicked ->
