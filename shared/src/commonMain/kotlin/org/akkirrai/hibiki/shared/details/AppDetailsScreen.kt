@@ -47,6 +47,7 @@ fun AppDetailsScreen(
     anime: Anime,
     onBackClick: () -> Unit,
     onRelatedAnimeClick: (Anime) -> Unit,
+    backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -235,7 +236,7 @@ fun AppDetailsScreen(
         if (isPosterPreviewOpen) {
             AppDetailsPosterPreviewOverlay(
                 onDismissRequest = { isPosterPreviewOpen = false },
-                backHandler = { },
+                backHandler = backHandler,
                 posterContent = { posterModifier ->
                     AppPosterImage(
                         primaryUrl = uiModel.anime.posterUrl,
