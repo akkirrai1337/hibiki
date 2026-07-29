@@ -702,6 +702,7 @@ private data class YummyScheduleAnime(
     val episodes: YummyScheduleEpisodes? = null,
 ) {
     fun toAnimeTitle(): AnimeTitle {
+        val posterCandidates = poster?.allUrls().orEmpty()
         val aired = episodes?.aired?.takeIf { it > 0 }
         val total = episodes?.count?.takeIf { it > 0 }
         val nextDate = episodes?.nextDate?.takeIf { it > 0L }
@@ -717,7 +718,8 @@ private data class YummyScheduleAnime(
             year = null,
             type = "TV",
             episodeCount = aired ?: total,
-            posterUrl = poster?.bestUrl(),
+            posterUrl = posterCandidates.firstOrNull(),
+            posterFallbackUrl = posterCandidates.drop(1).firstOrNull(),
             status = if (isAnnouncement) "announcement" else "ongoing",
             description = null,
             nextEpisodeAt = nextDate,

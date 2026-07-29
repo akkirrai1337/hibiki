@@ -219,7 +219,7 @@ class YummyCatalogClientTest {
         val client = HttpClient(MockEngine { request ->
             assertEquals("/anime/schedule", request.url.encodedPath)
             respond(
-                content = """{"response":[{"anime_id":42,"title":"Latest","poster":{"big":"//cdn.test/latest.webp"},"episodes":{"aired":2,"count":12,"prev_date":100,"next_date":200}}]}""",
+                content = """{"response":[{"anime_id":42,"title":"Latest","poster":{"big":"//cdn.test/latest.webp","small":"//cdn.test/latest-small.webp"},"episodes":{"aired":2,"count":12,"prev_date":100,"next_date":200}}]}""",
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) {
@@ -233,6 +233,7 @@ class YummyCatalogClientTest {
         assertEquals(2, title.episodeCount)
         assertEquals("ongoing", title.status)
         assertEquals("https://cdn.test/latest.webp", title.posterUrl)
+        assertEquals("https://cdn.test/latest-small.webp", title.posterFallbackUrl)
         client.close()
     }
 
