@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -220,8 +221,22 @@ fun HibikiAppShell(
     CompositionLocalProvider(
         LocalAppTextResolver provides DefaultAppTextResolver(languageMode, systemLanguage),
     ) {
+        val effectiveDarkTheme = when (themeMode) {
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+        }
+        val baseColorScheme = if (effectiveDarkTheme) HibikiDarkColorScheme else HibikiLightColorScheme
+        val colorScheme = if (useAmoledTheme && effectiveDarkTheme) {
+            baseColorScheme.copy(
+                background = androidx.compose.ui.graphics.Color.Black,
+                surface = androidx.compose.ui.graphics.Color.Black,
+            )
+        } else {
+            baseColorScheme
+        }
         MaterialTheme(
-            colorScheme = if (darkTheme) HibikiDarkColorScheme else HibikiLightColorScheme,
+            colorScheme = colorScheme,
             typography = HibikiTypography,
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
