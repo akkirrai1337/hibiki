@@ -161,6 +161,9 @@ fun HibikiAppShell(
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
+    var useSystemColorScheme by remember(settingsStore) { mutableStateOf(initialSettings.useSystemColorScheme) }
+    var useAmoledTheme by remember(settingsStore) { mutableStateOf(initialSettings.useAmoledTheme) }
+    var autoSkipSegments by remember(settingsStore) { mutableStateOf(initialSettings.autoSkipSegments) }
     var isEditingProfile by remember { mutableStateOf(false) }
     var editedProfileName by remember(profileState.data.profileName) { mutableStateOf(profileState.data.profileName) }
 
@@ -199,13 +202,36 @@ fun HibikiAppShell(
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Box {
+                    fun saveSettings() {
+                        settingsStore.save(
+                            AppSettingsState(
+                                languageMode = languageMode,
+                                darkTheme = darkTheme,
+                                useSystemColorScheme = useSystemColorScheme,
+                                useAmoledTheme = useAmoledTheme,
+                                autoSkipSegments = autoSkipSegments,
+                            ),
+                        )
+                    }
                     val onLanguageModeChange = { mode: LanguageMode ->
                         languageMode = mode
-                        settingsStore.save(AppSettingsState(mode, darkTheme))
+                        saveSettings()
                     }
                     val onThemeChange = { dark: Boolean ->
                         darkTheme = dark
-                        settingsStore.save(AppSettingsState(languageMode, dark))
+                        saveSettings()
+                    }
+                    val onSystemColorSchemeChange = { enabled: Boolean ->
+                        useSystemColorScheme = enabled
+                        saveSettings()
+                    }
+                    val onAmoledChange = { enabled: Boolean ->
+                        useAmoledTheme = enabled
+                        saveSettings()
+                    }
+                    val onAutoSkipChange = { enabled: Boolean ->
+                        autoSkipSegments = enabled
+                        saveSettings()
                     }
                     val topLevelDestination = when (selectedTab) {
                         AppDestination.HOME -> AppTopLevelDestination.HOME
@@ -273,6 +299,12 @@ fun HibikiAppShell(
                             onLanguageModeChange = onLanguageModeChange,
                             darkTheme = darkTheme,
                             onThemeChange = onThemeChange,
+                            useSystemColorScheme = useSystemColorScheme,
+                            useAmoledTheme = useAmoledTheme,
+                            autoSkipSegments = autoSkipSegments,
+                            onSystemColorSchemeChange = onSystemColorSchemeChange,
+                            onAmoledChange = onAmoledChange,
+                            onAutoSkipChange = onAutoSkipChange,
                             libraryEntries = libraryState.visibleEntries,
                             profileData = profileState.data,
                             isEditingProfile = isEditingProfile,
@@ -597,6 +629,12 @@ private fun AppDestinationContent(
     onOpenLibrary: () -> Unit = {},
     homeState: HomeUiState = HomeUiState(),
     onHomeRefresh: () -> Unit = {},
+    useSystemColorScheme: Boolean = true,
+    useAmoledTheme: Boolean = false,
+    autoSkipSegments: Boolean = false,
+    onSystemColorSchemeChange: (Boolean) -> Unit = {},
+    onAmoledChange: (Boolean) -> Unit = {},
+    onAutoSkipChange: (Boolean) -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -768,6 +806,12 @@ private fun AppDestinationContent(
                     darkTheme = darkTheme,
                     onThemeChange = onThemeChange,
                     versionName = appVersionName,
+                    useSystemColorScheme = useSystemColorScheme,
+                    useAmoledTheme = useAmoledTheme,
+                    autoSkipSegments = autoSkipSegments,
+                    onSystemColorSchemeChange = onSystemColorSchemeChange,
+                    onAmoledChange = onAmoledChange,
+                    onAutoSkipChange = onAutoSkipChange,
                 )
         }
     }
@@ -1073,10 +1117,19 @@ private fun SettingsScreen(
     darkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
     versionName: String,
+    useSystemColorScheme: Boolean,
+    useAmoledTheme: Boolean,
+    autoSkipSegments: Boolean,
+    onSystemColorSchemeChange: (Boolean) -> Unit,
+    onAmoledChange: (Boolean) -> Unit,
+    onAutoSkipChange: (Boolean) -> Unit,
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
         darkTheme = darkTheme,
+        useSystemColorScheme = useSystemColorScheme,
+        useAmoledTheme = useAmoledTheme,
+        autoSkipSegments = autoSkipSegments,
         labels = AppSettingsScreenLabels(
             appearance = appText(AppTextKey.SettingsAppearance),
             theme = appText(AppTextKey.SettingsTheme),
@@ -1105,6 +1158,9 @@ private fun SettingsScreen(
         ),
         onLanguageModeChange = onLanguageModeChange,
         onThemeChange = onThemeChange,
+        onSystemColorSchemeChange = onSystemColorSchemeChange,
+        onAmoledChange = onAmoledChange,
+        onAutoSkipChange = onAutoSkipChange,
         modifier = Modifier.fillMaxSize(),
     )
 }

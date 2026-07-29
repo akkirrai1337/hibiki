@@ -41,6 +41,9 @@ fun AppSettingsScreen(
     languageMode: LanguageMode,
     darkTheme: Boolean,
     labels: AppSettingsScreenLabels,
+    useSystemColorScheme: Boolean,
+    useAmoledTheme: Boolean,
+    autoSkipSegments: Boolean,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
     onLanguageModeChange: (LanguageMode) -> Unit,
@@ -74,10 +77,10 @@ fun AppSettingsScreen(
                 },
                 onThemeSelected = { mode -> onThemeChange(mode == ThemeMode.DARK) },
                 systemColorSchemeTitle = labels.systemColorScheme,
-                useSystemColorScheme = false,
+                useSystemColorScheme = useSystemColorScheme,
                 onSystemColorSchemeChange = onSystemColorSchemeChange,
                 amoledTitle = labels.amoled,
-                useAmoledTheme = false,
+                useAmoledTheme = useAmoledTheme,
                 onAmoledChange = onAmoledChange,
             )
         }
@@ -104,7 +107,7 @@ fun AppSettingsScreen(
             AppSettingsPlayerSection(
                 sectionTitle = labels.player,
                 autoSkipTitle = labels.autoSkip,
-                autoSkipEnabled = false,
+                autoSkipEnabled = autoSkipSegments,
                 onAutoSkipChange = onAutoSkipChange,
             )
         }
