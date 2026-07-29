@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.details
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.akkirrai.hibiki.shared.model.Anime
 
 class DetailsHeroInfoTest {
@@ -16,5 +17,24 @@ class DetailsHeroInfoTest {
         assertEquals("12 episodes", result.episodes)
         assertEquals(13, result.nextEpisodeNumber)
         assertEquals("Studio", result.studio)
+    }
+
+    @Test
+    fun localizesEpisodeLabelWithoutChangingEpisodeNumber() {
+        val result = resolveDetailsHeroInfo(
+            Anime("1", "Title", "TV | 2024", "12 episodes", "Ongoing"),
+            localizedEpisodeWord = "серий",
+        )
+
+        assertEquals("12 серий", result.episodes)
+        assertEquals(13, result.nextEpisodeNumber)
+        assertEquals("Ongoing", result.status)
+    }
+
+    @Test
+    fun recognizesAnnouncementAndOngoingStatuses() {
+        assertTrue(isAnnouncementStatus("announcement"))
+        assertTrue(isAnnouncementStatus("", "announcement"))
+        assertTrue(isOngoingStatus("ongoing"))
     }
 }
