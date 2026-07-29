@@ -14,6 +14,7 @@ import platform.UIKit.UIViewController
 import platform.Foundation.NSBundle
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
 import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
@@ -41,6 +42,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
         IosLocalProfileRepository(libraryRepository)
     }
     val settingsStore = remember { IosAppSettingsStore() }
+    var notificationPermissionState = remember {
+        androidx.compose.runtime.mutableStateOf(settingsStore.load().notificationPermissionState)
+    }
     var selectedSourceId = remember {
         androidx.compose.runtime.mutableStateOf(initialSourceId)
     }
@@ -60,7 +64,13 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
                 enableOnboarding = true,
-                onboardingNotificationPermissionState = NotificationPermissionState.DENIED,
+                onboardingNotificationPermissionState = notificationPermissionState.value,
+                onRequestOnboardingNotificationPermission = {
+                    requestIosNotificationPermission { state ->
+                        notificationPermissionState.value = state
+                        settingsStore.save(settingsStore.load().copy(notificationPermissionState = state))
+                    }
+                },
                 appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String)
                     ?: "dev",
                 onProfileAvatarEdit = { onPicked ->

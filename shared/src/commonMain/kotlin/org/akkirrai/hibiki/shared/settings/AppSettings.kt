@@ -8,6 +8,7 @@ data class AppSettingsState(
     val autoSkipSegments: Boolean = false,
     val onboardingCompleted: Boolean = false,
     val selectedSourceId: String? = null,
+    val notificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
 )
 
 interface AppSettingsStore {

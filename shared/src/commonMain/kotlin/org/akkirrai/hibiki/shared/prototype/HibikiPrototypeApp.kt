@@ -144,6 +144,7 @@ fun HibikiAppShell(
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
+    onRequestOnboardingNotificationPermission: () -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
@@ -231,6 +232,7 @@ fun HibikiAppShell(
                                 autoSkipSegments = autoSkipSegments,
                                 onboardingCompleted = onboardingCompleted,
                                 selectedSourceId = onboardingSourceId,
+                                notificationPermissionState = settingsStore.load().notificationPermissionState,
                             ),
                         )
                     }
@@ -375,7 +377,7 @@ fun HibikiAppShell(
                             sources = sources,
                             initialSourceId = onboardingSourceId,
                             notificationPermissionState = onboardingNotificationPermissionState,
-                            onRequestNotificationPermission = {},
+                            onRequestNotificationPermission = onRequestOnboardingNotificationPermission,
                             onComplete = { sourceId ->
                                 onboardingSourceId = sourceId
                                 onboardingCompleted = true

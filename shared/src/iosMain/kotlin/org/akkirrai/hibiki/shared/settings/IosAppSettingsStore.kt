@@ -19,6 +19,9 @@ internal class IosAppSettingsStore(
         autoSkipSegments = defaults.boolForKey(AUTO_SKIP_SEGMENTS_KEY),
         onboardingCompleted = defaults.boolForKey(ONBOARDING_COMPLETED_KEY),
         selectedSourceId = defaults.stringForKey(SELECTED_SOURCE_ID_KEY),
+        notificationPermissionState = defaults.stringForKey(NOTIFICATION_PERMISSION_STATE_KEY)
+            ?.let { raw -> runCatching { NotificationPermissionState.valueOf(raw) }.getOrNull() }
+            ?: NotificationPermissionState.NOT_ASKED,
     )
 
     override fun save(state: AppSettingsState) {
@@ -31,6 +34,7 @@ internal class IosAppSettingsStore(
         state.selectedSourceId?.let { sourceId ->
             defaults.setObject(sourceId, forKey = SELECTED_SOURCE_ID_KEY)
         }
+        defaults.setObject(state.notificationPermissionState.name, forKey = NOTIFICATION_PERMISSION_STATE_KEY)
     }
 
     private companion object {
@@ -41,5 +45,6 @@ internal class IosAppSettingsStore(
         const val AUTO_SKIP_SEGMENTS_KEY = "hibiki.auto_skip_segments"
         const val ONBOARDING_COMPLETED_KEY = "hibiki.onboarding_completed"
         const val SELECTED_SOURCE_ID_KEY = "hibiki.selected_source_id"
+        const val NOTIFICATION_PERMISSION_STATE_KEY = "hibiki.notification_permission_state"
     }
 }
