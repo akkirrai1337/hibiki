@@ -17,7 +17,7 @@ media3 = "1.8.0"
 palette = "1.0.0"
 materialKolor = "4.1.1"
 kizzyRpc = "ad8f2e32eb"
-composeMultiplatform = "1.11.0"
+composeMultiplatform = "1.11.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
