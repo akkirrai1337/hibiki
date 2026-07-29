@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import coil3.Image
 import com.materialkolor.PaletteStyle
@@ -66,6 +67,7 @@ fun AppDetailsScreen(
     resumeFrameContent: (@Composable (Modifier) -> Unit)? = null,
     onResumeClick: ((TitleWatchState) -> Unit)? = null,
     onTrailerClick: (() -> Unit)? = null,
+    titleSheetShape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -347,7 +349,7 @@ fun AppDetailsScreen(
                 onDismissRequest = { isTitleDetailsSheetOpen = false },
                 sheetState = titleSheetState,
                 modifier = Modifier.fillMaxHeight(),
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                shape = titleSheetShape,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
                 dragHandleContent = { expanded ->
