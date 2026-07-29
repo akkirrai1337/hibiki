@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.prototype.PrototypeLibraryRepository
 import org.akkirrai.hibiki.shared.prototype.HibikiAppShell
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
+import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
@@ -22,6 +23,9 @@ fun HibikiApp(
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
+    sources: List<AppSourceDescriptor> = emptyList(),
+    selectedSourceId: String? = null,
+    onSourceSelected: (String) -> Unit = {},
 ) {
     HibikiAppShell(
         modifier = modifier,
@@ -31,5 +35,8 @@ fun HibikiApp(
         settingsStore = settingsStore,
         systemLanguage = systemLanguage,
         onProfileAvatarEdit = onProfileAvatarEdit,
+        sources = sources,
+        selectedSourceId = selectedSourceId,
+        onSourceSelected = onSourceSelected,
     )
 }

@@ -6,6 +6,7 @@ enum class AppDestination(val textKey: AppTextKey) {
     HOME(AppTextKey.Home),
     SEARCH(AppTextKey.Search),
     LIBRARY(AppTextKey.Library),
+    SOURCES(AppTextKey.Sources),
     PROFILE(AppTextKey.Profile),
     SETTINGS(AppTextKey.Settings),
 }

@@ -13,6 +13,8 @@ import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
+import org.akkirrai.hibiki.shared.source.IosSourceRegistry
+import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 
 fun MainViewController(systemLanguage: String): UIViewController {
     val avatarPicker = IosAvatarPicker()
@@ -26,6 +28,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
         IosLocalProfileRepository(libraryRepository)
     }
     val settingsStore = remember { IosAppSettingsStore() }
+    val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
+    var selectedSourceId = remember {
+        androidx.compose.runtime.mutableStateOf(sourceSelectionRepository.loadSelectedSourceId())
+    }
     DisposableEffect(repository) {
         onDispose { repository.close() }
     }
@@ -42,6 +48,12 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 systemLanguage = systemLanguage,
                 onProfileAvatarEdit = { onPicked ->
                     avatarPicker.present(hostController, onPicked)
+                },
+                sources = IosSourceRegistry.sources,
+                selectedSourceId = selectedSourceId.value,
+                onSourceSelected = { sourceId ->
+                    sourceSelectionRepository.saveSelectedSourceId(sourceId)
+                    selectedSourceId.value = sourceId
                 },
             )
         }

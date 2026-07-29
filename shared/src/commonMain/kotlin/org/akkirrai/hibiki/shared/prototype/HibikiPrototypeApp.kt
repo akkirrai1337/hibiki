@@ -92,6 +92,8 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
+import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 
 @Composable
 fun HibikiAppShell(
@@ -102,6 +104,9 @@ fun HibikiAppShell(
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
+    sources: List<AppSourceDescriptor> = emptyList(),
+    selectedSourceId: String? = null,
+    onSourceSelected: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
@@ -183,6 +188,9 @@ fun HibikiAppShell(
                             profilePresenter.updateProfileAvatar(uri)
                         },
                         profileRepository,
+                        sources,
+                        selectedSourceId,
+                        onSourceSelected,
                     )
                     } else {
                     WideAppLayout(
@@ -218,6 +226,9 @@ fun HibikiAppShell(
                             profilePresenter.updateProfileAvatar(uri)
                         },
                         profileRepository,
+                        sources,
+                        selectedSourceId,
+                        onSourceSelected,
                     )
                     }
                 }
@@ -257,6 +268,9 @@ private fun WideAppLayout(
     onProfileAvatarEdit: (((String) -> Unit) -> Unit),
     onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
+    sources: List<AppSourceDescriptor>,
+    selectedSourceId: String?,
+    onSourceSelected: (String) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -290,6 +304,9 @@ private fun WideAppLayout(
             onProfileAvatarEdit,
             onProfileAvatarPicked,
             profileRepository,
+            sources,
+            selectedSourceId,
+            onSourceSelected,
             Modifier.weight(1f),
         )
     }
@@ -326,6 +343,9 @@ private fun CompactAppLayout(
     onProfileAvatarEdit: (((String) -> Unit) -> Unit),
     onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
+    sources: List<AppSourceDescriptor>,
+    selectedSourceId: String?,
+    onSourceSelected: (String) -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -374,6 +394,9 @@ private fun CompactAppLayout(
             onProfileAvatarEdit,
             onProfileAvatarPicked,
             profileRepository,
+            sources,
+            selectedSourceId,
+            onSourceSelected,
             Modifier.padding(padding),
         )
     }
@@ -456,6 +479,9 @@ private fun AppDestinationContent(
     onProfileAvatarEdit: (((String) -> Unit) -> Unit),
     onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
+    sources: List<AppSourceDescriptor>,
+    selectedSourceId: String?,
+    onSourceSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (selectedAnime != null) {
@@ -575,6 +601,14 @@ private fun AppDestinationContent(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
+                AppDestination.SOURCES -> AppLocalSourcesScreen(
+                    sources = sources,
+                    selectedSourceId = selectedSourceId,
+                    bottomContentPadding = 24.dp,
+                    emptyText = appText(AppTextKey.Sources),
+                    onSourceSelected = onSourceSelected,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 AppDestination.SETTINGS -> SettingsScreen(
                     profileData = profileData,
                     languageMode = languageMode,

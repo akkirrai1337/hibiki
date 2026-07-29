@@ -8,7 +8,7 @@ import coil3.compose.AsyncImage
 @Composable
 fun AppSourceIconImage(
     url: String?,
-    placeholder: Painter,
+    placeholder: Painter? = null,
     modifier: Modifier = Modifier,
 ) {
     AsyncImage(
