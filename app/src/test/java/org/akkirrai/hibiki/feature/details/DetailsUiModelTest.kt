@@ -9,7 +9,7 @@ import org.junit.Test
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
 
 class DetailsUiModelTest {
-    private val hero = DetailsHeroInfo("TV", "2024", "12 episodes", "Ongoing", "Studio")
+    private val hero = DetailsHeroInfo("TV", "2024", "12 episodes", null, "Ongoing", "Studio")
 
     @Test
     fun `content sections follow source capabilities and keep their order`() {
