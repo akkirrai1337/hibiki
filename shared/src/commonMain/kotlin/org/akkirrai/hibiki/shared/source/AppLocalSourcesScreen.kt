@@ -15,6 +15,7 @@ fun AppLocalSourcesScreen(
     selectedSourceId: String?,
     bottomContentPadding: Dp,
     emptyText: String,
+    languageLabel: @Composable (String) -> String = { it.uppercase() },
     onSourceSelected: (String) -> Unit,
     searchQuery: String,
     searchItems: List<org.akkirrai.hibiki.shared.model.Anime>,
@@ -40,7 +41,7 @@ fun AppLocalSourcesScreen(
         .map { (language, items) ->
             SourceLanguageSectionContent(
                 key = language,
-                title = language.uppercase(),
+                title = languageLabel(language),
                 items = items,
             )
         }

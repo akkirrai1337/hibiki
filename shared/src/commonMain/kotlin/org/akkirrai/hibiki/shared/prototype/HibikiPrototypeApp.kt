@@ -803,6 +803,13 @@ private fun AppDestinationContent(
                     selectedSourceId = selectedSourceId,
                     bottomContentPadding = 24.dp,
                     emptyText = appText(AppTextKey.Sources),
+                    languageLabel = { language ->
+                        when (language.lowercase()) {
+                            "ru", "русский" -> appText(AppTextKey.LanguageRussian)
+                            "en", "english" -> appText(AppTextKey.LanguageEnglish)
+                            else -> language.uppercase()
+                        }
+                    },
                     onSourceSelected = onSourceSelected,
                     searchQuery = sourceSearchState.query,
                     searchItems = sourceSearchState.items,
