@@ -849,8 +849,14 @@ private fun AppDestinationContent(
                     searchItems = sourceSearchState.items,
                     isSearchLoading = sourceSearchState.isLoading,
                     searchError = sourceSearchState.error != null,
-                    searchSourceId = sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.id.orEmpty(),
-                    searchSourceName = sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.name.orEmpty(),
+                    searchSourceId = sources
+                        .firstOrNull { it.id == selectedSourceId && it.supportsSearch }
+                        ?.id
+                        ?: sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.id.orEmpty(),
+                    searchSourceName = sources
+                        .firstOrNull { it.id == selectedSourceId && it.supportsSearch }
+                        ?.name
+                        ?: sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.name.orEmpty(),
                     onSearchQueryChange = onSourceSearchQueryChange,
                     onSearchClear = onSourceSearchClear,
                     searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
