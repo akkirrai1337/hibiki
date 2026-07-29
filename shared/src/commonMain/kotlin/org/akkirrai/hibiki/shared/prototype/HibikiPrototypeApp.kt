@@ -325,7 +325,14 @@ fun HibikiAppShell(
                             profileRepository = profileRepository,
                             sources = sources,
                             selectedSourceId = selectedSourceId,
-                            onSourceSelected = onSourceSelected,
+                            onSourceSelected = { sourceId ->
+                                repository.selectSource(sourceId)
+                                presenter.clear()
+                                presenter.loadFilterCatalog()
+                                presenter.search()
+                                sourceSearchPresenter.clear()
+                                onSourceSelected(sourceId)
+                            },
                             sourceSearchState = sourceSearchState,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,

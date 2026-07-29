@@ -9,6 +9,8 @@ import org.akkirrai.hibiki.shared.prototype.PrototypeCatalog
 interface AnimeCatalogRepository {
     val initialItems: List<Anime>
 
+    fun selectSource(sourceId: String) = Unit
+
     suspend fun getDetails(id: String, fallback: Anime): Anime = fallback
 
     suspend fun filterCatalog(): AnimeCatalogFilterCatalog = AnimeCatalogFilterCatalog()

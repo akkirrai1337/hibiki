@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
-import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
@@ -23,7 +23,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController {
     val repository = remember(systemLanguage) {
-        IosAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
+        IosMultiSourceAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
     }
     val libraryRepository = remember { IosLibraryRepository() }
     val homeRepository = remember(repository, libraryRepository) {
@@ -36,6 +36,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
     val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
     var selectedSourceId = remember {
         androidx.compose.runtime.mutableStateOf(sourceSelectionRepository.loadSelectedSourceId())
+    }
+    selectedSourceId.value?.let(repository::selectSource)
+    androidx.compose.runtime.LaunchedEffect(selectedSourceId.value) {
+        selectedSourceId.value?.let(repository::selectSource)
     }
     DisposableEffect(repository) {
         onDispose { repository.close() }
@@ -60,6 +64,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 sources = IosSourceRegistry.sources,
                 selectedSourceId = selectedSourceId.value,
                 onSourceSelected = { sourceId ->
+                    repository.selectSource(sourceId)
                     sourceSelectionRepository.saveSelectedSourceId(sourceId)
                     selectedSourceId.value = sourceId
                 },
