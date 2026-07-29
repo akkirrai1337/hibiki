@@ -65,5 +65,9 @@ kotlin {
         }
         val iosArm64Main by getting { dependsOn(iosMain) }
         val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
+        iosMain.dependencies {
+            implementation(project(":parsers"))
+            implementation("io.ktor:ktor-client-darwin:3.5.0")
+        }
     }
 }
