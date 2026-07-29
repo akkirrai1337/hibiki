@@ -172,6 +172,9 @@ jobs:
             echo "Unsigned iOS device IPA for signing and installation with Sideloadly or another signing tool."
           } > release-notes.md
 
+      - name: Prebuild shared iOS device framework
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon
+
       - name: Build unsigned iOS device archive
         run: >-
           xcodebuild
