@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.api
 
-import java.net.URI
+internal expect fun isHttpsConfigUrl(value: String): Boolean
 
 enum class SourceConfigValueKind {
     TEXT,
@@ -52,7 +52,7 @@ class SourceConfigSchema(fields: Iterable<SourceConfigField> = emptyList()) {
             }
             if (!value.isNullOrBlank()) {
                 when (field.kind) {
-                    SourceConfigValueKind.HTTPS_URL -> if (!value.isHttpsUrl()) {
+                    SourceConfigValueKind.HTTPS_URL -> if (!isHttpsConfigUrl(value)) {
                         add("Config ${field.key} must use an HTTPS URL")
                     }
                     SourceConfigValueKind.HTTPS_URL_LIST -> if (!value.isHttpsUrlList()) {
@@ -73,14 +73,9 @@ class SourceConfigSchema(fields: Iterable<SourceConfigField> = emptyList()) {
     }
 }
 
-private fun String.isHttpsUrl(): Boolean = runCatching {
-    val uri = URI(this)
-    uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
-}.getOrDefault(false)
-
 private fun String.isHttpsUrlList(): Boolean = split(',')
     .map(String::trim)
-    .let { urls -> urls.isNotEmpty() && urls.all { url -> url.isNotEmpty() && url.isHttpsUrl() } }
+    .let { urls -> urls.isNotEmpty() && urls.all { url -> url.isNotEmpty() && isHttpsConfigUrl(url) } }
 
 class SourceConfigException(
     val violations: List<String>,
