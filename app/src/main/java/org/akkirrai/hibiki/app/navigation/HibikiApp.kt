@@ -54,7 +54,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
+import org.akkirrai.hibiki.feature.profile.SharedAndroidLocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
 import org.akkirrai.hibiki.feature.catalog.SharedAndroidCatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
@@ -206,7 +206,7 @@ private fun HibikiNavHost(
                     }
                 },
             ) {
-                LocalProfileScreen(
+                SharedAndroidLocalProfileScreen(
                     onSettingsClick = {
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.SETTINGS_ROUTE)
