@@ -283,6 +283,7 @@ fun HibikiAppShell(
                         AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
                         AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
                     }
+                    if (!enableOnboarding || onboardingCompleted) {
                     AppProductionRoot(
                         currentDestination = topLevelDestination,
                         onNavigationEvent = { event ->
@@ -400,6 +401,7 @@ fun HibikiAppShell(
                                     },
                                 ),
                         )
+                    }
                     }
                     if (enableOnboarding && !onboardingCompleted) {
                         AppOnboardingScreen(
