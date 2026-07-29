@@ -71,6 +71,8 @@ fun AppDetailsScreen(
     onTrailerClick: (() -> Unit)? = null,
     canWatch: Boolean = false,
     onWatchClick: () -> Unit = {},
+    initialTitleSeedColor: Long? = null,
+    onTitleSeedColorChange: (Long) -> Unit = {},
     titleSheetShape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
@@ -165,7 +167,9 @@ fun AppDetailsScreen(
     var libraryCategory by remember(anime.id, initialLibraryCategory) {
         mutableStateOf(libraryRepository?.getLibraryCategory(anime.id) ?: initialLibraryCategory)
     }
-    var titleSeedColor by remember(anime.id) { mutableStateOf<Long?>(null) }
+    var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
+        mutableStateOf(initialTitleSeedColor)
+    }
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme
     val detailsColorScheme = titleSeedColor?.let { seedColor ->
@@ -208,7 +212,10 @@ fun AppDetailsScreen(
                                 onImageSuccess = { image: Image ->
                                     if (titleSeedColor == null) {
                                         screenScope.launch {
-                                            titleSeedColor = extractTitleSeedColor(image)
+                                            extractTitleSeedColor(image)?.let { color ->
+                                                titleSeedColor = color
+                                                onTitleSeedColorChange(color)
+                                            }
                                         }
                                     }
                                 },
