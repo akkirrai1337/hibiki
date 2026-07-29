@@ -14,6 +14,7 @@ internal object IosSourceRegistry {
             id = info.id.value,
             name = info.name,
             language = info.primaryLanguage.tag,
+            languageTags = info.languages.mapTo(linkedSetOf()) { it.tag },
             iconUrl = info.iconUrl,
             supportsPlayback = SourceCapability.PLAYBACK in info.capabilities,
             supportsSearch = sourceId == BuiltInSources.ANI_LIBERTY_ID,

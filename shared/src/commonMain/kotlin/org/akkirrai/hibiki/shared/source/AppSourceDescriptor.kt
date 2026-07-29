@@ -5,6 +5,7 @@ data class AppSourceDescriptor(
     val id: String,
     val name: String,
     val language: String,
+    val languageTags: Set<String> = emptySet(),
     val iconUrl: String? = null,
     val supportsPlayback: Boolean = false,
     val supportsSearch: Boolean = false,

@@ -84,7 +84,10 @@ fun AppOnboardingScreen(
                         itemContent = { source ->
                             AppOnboardingSourceCard(
                                 name = source.name,
-                                languageSummary = sourceLanguageSummary(source.language),
+                                languageSummary = sourceLanguageSummary(
+                                    languageTags = source.languageTags,
+                                    fallbackLanguage = source.language,
+                                ),
                                 selected = source.id == selectedSourceId,
                                 onClick = { selectedSourceId = source.id },
                                 iconContent = { iconModifier ->
@@ -147,9 +150,14 @@ fun AppOnboardingScreen(
 }
 
 @Composable
-private fun sourceLanguageSummary(language: String): String = when (language.lowercase()) {
-    "ru" -> appText(AppTextKey.OnboardingSourceLanguageRussian)
-    "en" -> appText(AppTextKey.OnboardingSourceLanguageEnglish)
-    "ru-en", "en-ru" -> appText(AppTextKey.OnboardingSourceLanguagesRussianEnglish)
-    else -> language
+private fun sourceLanguageSummary(languageTags: Set<String>, fallbackLanguage: String): String {
+    val language = languageTags.firstOrNull().orEmpty().ifBlank { fallbackLanguage }
+    val normalizedTags = languageTags.ifEmpty { setOf(fallbackLanguage) }
+    return when {
+        normalizedTags.size > 1 && normalizedTags.all { it.lowercase() in setOf("ru", "en") } ->
+            appText(AppTextKey.OnboardingSourceLanguagesRussianEnglish)
+        language.lowercase() == "ru" -> appText(AppTextKey.OnboardingSourceLanguageRussian)
+        language.lowercase() == "en" -> appText(AppTextKey.OnboardingSourceLanguageEnglish)
+        else -> language
+    }
 }
