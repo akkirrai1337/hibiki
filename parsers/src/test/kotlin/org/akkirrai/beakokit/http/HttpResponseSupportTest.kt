@@ -30,4 +30,18 @@ class HttpResponseSupportTest {
         assertEquals(SourceErrorKind.RATE_LIMITED, classifiedKind(HttpStatusCode.TooManyRequests))
         assertEquals(SourceErrorKind.NOT_FOUND, classifiedKind(HttpStatusCode.NotFound))
     }
+
+    @Test
+    fun `classifies request timeout as transient network failure`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("timeout", HttpStatusCode.RequestTimeout) })
+        try {
+            val error = assertFailsWith<SourceException> {
+                client.get("https://source.test").bodyOrThrow<String>("TestSource")
+            }
+
+            assertEquals(SourceErrorKind.NETWORK, error.kind)
+        } finally {
+            client.close()
+        }
+    }
 }

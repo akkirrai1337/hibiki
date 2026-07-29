@@ -23,6 +23,7 @@ suspend inline fun <reified T> HttpResponse.bodyOrThrow(source: String): T {
                 401, 403 -> SourceErrorKind.AUTH
                 404 -> SourceErrorKind.NOT_FOUND
                 429 -> SourceErrorKind.RATE_LIMITED
+                408, 425 -> SourceErrorKind.NETWORK
                 in 500..599 -> SourceErrorKind.NETWORK
                 else -> SourceErrorKind.UNKNOWN
             },
