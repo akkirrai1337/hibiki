@@ -23,19 +23,24 @@ kotlin {
         }
     }
 
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.components.resources)
+                implementation(libs.coil.compose)
+                implementation(libs.kotlinx.coroutines.core)
+            }
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
-        }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.components.resources)
-            implementation(libs.coil.compose)
-            implementation(libs.kotlinx.coroutines.core)
         }
         val androidMain by getting {
             dependencies {
@@ -49,5 +54,11 @@ kotlin {
                 implementation(libs.ktor.client.cio)
             }
         }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            kotlin.srcDir("src/iosMain/kotlin")
+        }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
     }
 }
