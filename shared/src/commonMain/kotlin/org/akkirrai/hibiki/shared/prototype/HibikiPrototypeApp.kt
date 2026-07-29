@@ -661,6 +661,8 @@ private fun AppDestinationContent(
             anime = selectedAnime,
             onBackClick = onBackFromDetails,
             onRelatedAnimeClick = onAnimeClick,
+            canWatch = false,
+            onWatchClick = {},
             libraryRepository = libraryRepository,
             onLibraryCategoryChange = { onLibraryChanged() },
             modifier = modifier.fillMaxSize(),
