@@ -184,6 +184,7 @@ jobs:
           MARKETING_VERSION=${{ steps.release.outputs.version }}
           CURRENT_PROJECT_VERSION=1
           COMPILER_INDEX_STORE_ENABLE=NO
+          DEBUG_INFORMATION_FORMAT=dwarf-with-dsym
           CODE_SIGNING_ALLOWED=NO
           CODE_SIGNING_REQUIRED=NO
           CODE_SIGN_IDENTITY=""
@@ -213,6 +214,14 @@ jobs:
         with:
           name: hibiki-v${{ steps.release.outputs.version }}-iphoneos
           path: release/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload iOS device symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: hibiki-v${{ steps.release.outputs.version }}-iphoneos-symbols
+          path: build/ios-archive.xcarchive/dSYMs/iosApp.app.dSYM
           if-no-files-found: error
           retention-days: 14
 
