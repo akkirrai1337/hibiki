@@ -19,6 +19,19 @@ enum class AppTextKey {
     ContinueWatching,
     ExploreCatalog,
     SearchPlaceholder,
+    SearchFilters,
+    SearchRetry,
+    CatalogSortTitle,
+    CatalogSortAlphabetical,
+    CatalogSortPopular,
+    CatalogSortUpdated,
+    FilterUnavailable,
+    FilterAllYears,
+    FilterFromYear,
+    FilterToYear,
+    FilterReset,
+    FilterApply,
+    CatalogError,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -132,6 +145,19 @@ class DefaultAppTextResolver(
             AppTextKey.ContinueWatching -> if (russian) "Продолжить просмотр" else "Continue watching"
             AppTextKey.ExploreCatalog -> if (russian) "Каталог" else "Explore catalog"
             AppTextKey.SearchPlaceholder -> if (russian) "Найти аниме" else "Search anime"
+            AppTextKey.SearchFilters -> if (russian) "Фильтры поиска" else "Search filters"
+            AppTextKey.SearchRetry -> if (russian) "Повторить" else "Retry"
+            AppTextKey.CatalogSortTitle -> if (russian) "Сортировка" else "Sort catalog"
+            AppTextKey.CatalogSortAlphabetical -> if (russian) "По алфавиту" else "Alphabetical"
+            AppTextKey.CatalogSortPopular -> if (russian) "Популярные" else "Popular"
+            AppTextKey.CatalogSortUpdated -> if (russian) "Обновлённые" else "Recently updated"
+            AppTextKey.FilterUnavailable -> if (russian) "Фильтры недоступны" else "Filters unavailable"
+            AppTextKey.FilterAllYears -> if (russian) "Все годы" else "All years"
+            AppTextKey.FilterFromYear -> if (russian) "От" else "From"
+            AppTextKey.FilterToYear -> if (russian) "До" else "To"
+            AppTextKey.FilterReset -> if (russian) "Сбросить" else "Reset"
+            AppTextKey.FilterApply -> if (russian) "Применить" else "Apply"
+            AppTextKey.CatalogError -> if (russian) "Ошибка каталога" else "Catalog error"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

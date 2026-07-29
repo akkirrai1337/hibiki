@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +63,10 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
+import org.akkirrai.hibiki.shared.catalog.AppCatalogScreen
+import org.akkirrai.hibiki.shared.catalog.AppCatalogScreenLabels
+import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
@@ -117,6 +123,7 @@ fun HibikiAppShell(
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
+    val catalogListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository) { AnimeCatalogPresenter(repository, scope, 12) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
@@ -188,12 +195,20 @@ fun HibikiAppShell(
                     ) {
                         AppDestinationContent(
                             selectedTab = selectedTab,
+                            catalogState = state,
+                            catalogListState = catalogListState,
                             query = state.query,
                             onQueryChange = presenter::onQueryChange,
                             items = state.items,
                             filters = state.filters,
                             filterCatalog = state.filterCatalog,
                             onFiltersChange = presenter::updateFilters,
+                            onCatalogRetry = presenter::search,
+                            onCatalogLoadMoreRetry = presenter::loadMore,
+                            onCatalogSortSelected = { sort ->
+                                presenter.setFilters(state.filters.copy(sortAlias = sort.toAlias()))
+                                presenter.search()
+                            },
                             selectedAnime = state.selectedAnime,
                             onAnimeClick = presenter::openDetails,
                             onBackFromDetails = presenter::closeDetails,
@@ -512,6 +527,11 @@ private fun AppDestinationContent(
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    catalogState: AnimeCatalogUiState = AnimeCatalogUiState(),
+    catalogListState: LazyListState = LazyListState(),
+    onCatalogRetry: () -> Unit = {},
+    onCatalogLoadMoreRetry: () -> Unit = {},
+    onCatalogSortSelected: (CatalogSort) -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -546,6 +566,9 @@ private fun AppDestinationContent(
         }
         when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(
+                    state = catalogState,
+                    listState = catalogListState,
+                    libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
                     query = query,
                     onQueryChange = onQueryChange,
                     items = items,
@@ -553,8 +576,14 @@ private fun AppDestinationContent(
                     filterCatalog = filterCatalog,
                     onFiltersChange = onFiltersChange,
                     onAnimeClick = onAnimeClick,
+                    onRetry = onCatalogRetry,
+                    onLoadMoreRetry = onCatalogLoadMoreRetry,
+                    onSortSelected = onCatalogSortSelected,
                 )
                 AppDestination.CATALOG -> SearchScreen(
+                    state = catalogState,
+                    listState = catalogListState,
+                    libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
                     query = query,
                     onQueryChange = onQueryChange,
                     items = items,
@@ -562,6 +591,9 @@ private fun AppDestinationContent(
                     filterCatalog = filterCatalog,
                     onFiltersChange = onFiltersChange,
                     onAnimeClick = onAnimeClick,
+                    onRetry = onCatalogRetry,
+                    onLoadMoreRetry = onCatalogLoadMoreRetry,
+                    onSortSelected = onCatalogSortSelected,
                 )
                 AppDestination.LIBRARY -> LibraryScreen(
                     entries = libraryEntries,
@@ -674,7 +706,49 @@ private fun LibraryCategory.profileTextKey(): AppTextKey = when (this) {
 }
 
 @Composable
+private fun defaultCatalogScreenLabels(): AppCatalogScreenLabels {
+    val categoryLabels = mapOf(
+        LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
+        LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
+        LibraryCategory.Completed to appText(AppTextKey.LibraryCompleted),
+        LibraryCategory.Dropped to appText(AppTextKey.LibraryDropped),
+        LibraryCategory.OnHold to appText(AppTextKey.LibraryOnHold),
+        LibraryCategory.Favorite to appText(AppTextKey.LibraryFavorite),
+        LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
+    )
+    return AppCatalogScreenLabels(
+        errorTitle = appText(AppTextKey.CatalogError),
+        retryLabel = appText(AppTextKey.SearchRetry),
+        announcementLabel = appText(AppTextKey.Announcement),
+        movieLabel = appText(AppTextKey.Type),
+        filterContentDescription = appText(AppTextKey.SearchFilters),
+        clearContentDescription = appText(AppTextKey.Back),
+        sortTitle = appText(AppTextKey.CatalogSortTitle),
+        sortLabels = mapOf(
+            CatalogSort.Alphabetical to appText(AppTextKey.CatalogSortAlphabetical),
+            CatalogSort.Popular to appText(AppTextKey.CatalogSortPopular),
+            CatalogSort.Updated to appText(AppTextKey.CatalogSortUpdated),
+        ),
+        filterUnavailable = appText(AppTextKey.FilterUnavailable),
+        typeTitle = appText(AppTextKey.Type),
+        genresTitle = appText(AppTextKey.Genres),
+        yearTitle = appText(AppTextKey.ReleaseDate),
+        yearAllLabel = appText(AppTextKey.FilterAllYears),
+        yearFromLabel = appText(AppTextKey.FilterFromYear),
+        yearToLabel = appText(AppTextKey.FilterToYear),
+        statusTitle = appText(AppTextKey.Status),
+        resetLabel = appText(AppTextKey.FilterReset),
+        applyLabel = appText(AppTextKey.FilterApply),
+        libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+        optionText = { it.title },
+    )
+}
+
+@Composable
 private fun ColumnScope.HomeScreen(
+    state: AnimeCatalogUiState,
+    listState: LazyListState,
+    libraryStatusByAnimeId: Map<String, LibraryCategory>,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -682,21 +756,33 @@ private fun ColumnScope.HomeScreen(
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     onAnimeClick: (Anime) -> Unit,
+    onRetry: () -> Unit,
+    onLoadMoreRetry: () -> Unit,
+    onSortSelected: (CatalogSort) -> Unit,
 ) {
-    CatalogScreenContent(
-        query = query,
+    AppCatalogScreen(
+        state = state,
+        listState = listState,
+        bottomContentPadding = 0.dp,
+        currentYear = 2026,
+        libraryStatusByAnimeId = libraryStatusByAnimeId,
+        labels = defaultCatalogScreenLabels(),
         onQueryChange = onQueryChange,
-        items = items,
-        filters = filters,
-        filterCatalog = filterCatalog,
-        onFiltersChange = onFiltersChange,
+        onRetry = onRetry,
+        onLoadMoreRetry = onLoadMoreRetry,
+        onItemVisible = {},
+        onSortSelected = onSortSelected,
+        onFiltersApply = onFiltersChange,
         onAnimeClick = onAnimeClick,
-        sectionTitle = appText(AppTextKey.ContinueWatching),
+        modifier = Modifier.fillMaxSize(),
     )
 }
 
 @Composable
 private fun ColumnScope.SearchScreen(
+    state: AnimeCatalogUiState,
+    listState: LazyListState,
+    libraryStatusByAnimeId: Map<String, LibraryCategory>,
     query: String,
     onQueryChange: (String) -> Unit,
     items: List<Anime>,
@@ -704,16 +790,25 @@ private fun ColumnScope.SearchScreen(
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     onAnimeClick: (Anime) -> Unit,
+    onRetry: () -> Unit,
+    onLoadMoreRetry: () -> Unit,
+    onSortSelected: (CatalogSort) -> Unit,
 ) {
-    CatalogScreenContent(
-        query = query,
+    AppCatalogScreen(
+        state = state,
+        listState = listState,
+        bottomContentPadding = 0.dp,
+        currentYear = 2026,
+        libraryStatusByAnimeId = libraryStatusByAnimeId,
+        labels = defaultCatalogScreenLabels(),
         onQueryChange = onQueryChange,
-        items = items,
-        filters = filters,
-        filterCatalog = filterCatalog,
-        onFiltersChange = onFiltersChange,
+        onRetry = onRetry,
+        onLoadMoreRetry = onLoadMoreRetry,
+        onItemVisible = {},
+        onSortSelected = onSortSelected,
+        onFiltersApply = onFiltersChange,
         onAnimeClick = onAnimeClick,
-        sectionTitle = appText(AppTextKey.ExploreCatalog),
+        modifier = Modifier.fillMaxSize(),
     )
 }
 
