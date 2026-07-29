@@ -5,8 +5,16 @@ import io.ktor.client.engine.darwin.Darwin
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.model.AnimeRating
+import org.akkirrai.hibiki.shared.model.AnimeTrailer
 
 internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
     private val client = HttpClient(Darwin)
@@ -20,19 +28,59 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
 
     override val initialItems: List<Anime> = emptyList()
 
-    override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
-        val items = source.search(query.text).map(AnimeTitle::toSharedAnime)
-        val pageSize = query.pageSize.coerceAtLeast(1)
-        val pageItems = items.drop(query.offset).take(pageSize)
-        return AnimeCatalogPage(
-            items = pageItems,
-            page = query.page.coerceAtLeast(1),
-            canLoadMore = query.offset + pageItems.size < items.size,
-        )
-    }
+    override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
+        source.getSearchFilterCatalog().let { catalog ->
+            AnimeCatalogFilterCatalog(
+                sortOptions = catalog.sortOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
+                typeOptions = catalog.typeOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
+                statusOptions = catalog.statusOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
+                genreOptions = catalog.genreOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
+                capabilities = AnimeCatalogCapabilities(
+                    supportedSorts = catalog.capabilities.supportedSorts.map { it.name.lowercase() }.toSet(),
+                    supportedFilters = catalog.capabilities.supportedFilters.mapNotNull { filter ->
+                        when (filter.name) {
+                            "TYPE" -> AnimeCatalogFilter.TYPE
+                            "STATUS" -> AnimeCatalogFilter.STATUS
+                            "INCLUDED_GENRES" -> AnimeCatalogFilter.INCLUDED_GENRES
+                            "EXCLUDED_GENRES" -> AnimeCatalogFilter.EXCLUDED_GENRES
+                            "YEAR_RANGE" -> AnimeCatalogFilter.YEAR_RANGE
+                            else -> null
+                        }
+                    }.toSet(),
+                ),
+            )
+        }
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
         source.getById(id).toSharedAnime()
+
+    override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
+        val filters = query.filters
+        val titles = source.search(
+            AnimeSearchRequest(
+                query = query.text,
+                limit = query.pageSize,
+                offset = query.offset,
+                sort = when (filters.sortAlias.lowercase()) {
+                    "alphabetical", "title" -> AnimeSearchSort.TITLE
+                    "popular", "rating" -> AnimeSearchSort.RATING
+                    else -> AnimeSearchSort.RELEVANCE
+                },
+                typeAliases = listOfNotNull(filters.typeAlias),
+                statusAliases = listOfNotNull(filters.statusAlias),
+                includedGenreAliases = filters.includedGenreAliases.sorted(),
+                excludedGenreAliases = filters.excludedGenreAliases.sorted(),
+                yearFrom = filters.yearFrom,
+                yearTo = filters.yearTo,
+            ),
+        )
+        val items = titles.map(AnimeTitle::toSharedAnime)
+        return AnimeCatalogPage(
+            items = items,
+            page = query.page.coerceAtLeast(1),
+            canLoadMore = items.size >= query.pageSize.coerceAtLeast(1),
+        )
+    }
 
     fun close() {
         client.close()
@@ -42,19 +90,21 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
 private fun AnimeTitle.toSharedAnime(): Anime = Anime(
     id = id,
     title = displayName,
-    subtitle = listOfNotNull(englishName, originalName.takeUnless { it == displayName })
-        .distinct()
-        .joinToString(" / "),
-    episodesLabel = episodeCount?.let { "$it episodes" }.orEmpty(),
-    status = status.orEmpty(),
-    nextEpisodeAt = nextEpisodeAt?.times(1_000L),
+    subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
+    episodesLabel = episodeCount?.let { "$it episodes" } ?: "Episodes unknown",
+    status = status ?: "Unknown",
+    nextEpisodeAt = nextEpisodeAt,
     posterUrl = posterUrl,
     posterFallbackUrl = posterFallbackUrl,
     description = description,
     genres = genres,
-    alternativeTitles = allNames().filterNot { it == displayName },
+    alternativeTitles = allNames().filterNot { it.equals(displayName, ignoreCase = true) },
+    ratings = ratings.map { AnimeRating(it.source, it.value, it.votes) },
     ageRating = ageRating,
     viewCount = viewCount,
+    screenshots = screenshots,
+    trailer = trailer?.let { AnimeTrailer(it.id, it.site, it.thumbnailUrl, it.sourceUrl) },
+    sourceMaterial = sourceMaterial,
     studios = studios,
     releaseDate = year?.toString(),
 )
