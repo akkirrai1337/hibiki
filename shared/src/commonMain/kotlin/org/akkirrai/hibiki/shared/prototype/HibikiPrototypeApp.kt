@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -191,20 +192,38 @@ fun HibikiAppShell(
     }
 
     LaunchedEffect(libraryRepository, state.selectedAnime) {
-        libraryPresenter.updateEntries(libraryRepository.getEntries())
+        try {
+            libraryPresenter.updateEntries(libraryRepository.getEntries())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            libraryPresenter.updateEntries(emptyList())
+        }
     }
 
     LaunchedEffect(homeRepository) {
-        if (homeRepository == null) {
+        try {
+            if (homeRepository == null) {
+                homePresenter.setState(HomeUiState())
+            } else {
+                homePresenter.setState(homeRepository.fallbackHomeState())
+                homePresenter.setState(homeRepository.loadHomeState())
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
             homePresenter.setState(HomeUiState())
-        } else {
-            homePresenter.setState(homeRepository.fallbackHomeState())
-            homePresenter.setState(homeRepository.loadHomeState())
         }
     }
 
     LaunchedEffect(profileRepository) {
-        profilePresenter.load(profileRepository)
+        try {
+            profilePresenter.load(profileRepository)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            profilePresenter.setData(LocalProfileData())
+        }
     }
 
     val refreshLocalData = {
