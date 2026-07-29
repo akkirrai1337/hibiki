@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceConfig
+import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
@@ -33,6 +34,7 @@ import org.akkirrai.hibiki.shared.source.resolveReleaseStatusLabel
 internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
     private val sourceId: org.akkirrai.beakokit.api.SourceId = BuiltInSources.ANI_LIBERTY_ID,
+    private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
 ) : AnimeCatalogRepository {
     private val client = HttpClient(Darwin) {
         installBeakoKitHttpDefaults(
@@ -44,6 +46,7 @@ internal class IosAnimeCatalogRepository(
         DefaultSourceContext(
             httpClient = client,
             config = sourceConfig(sourceId),
+            sourceHealthReporter = sourceHealthReporter,
             preferredLanguages = if (preferEnglish) {
                 listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
             } else {

@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.catalog
 
+import org.akkirrai.beakokit.api.InMemorySourceHealthReporter
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.model.Anime
@@ -16,10 +17,15 @@ internal class IosMultiSourceAnimeCatalogRepository(
     private var activeSourceId: SourceId = knownSourceIds.firstOrNull { it.value == initialSourceId }
         ?: BuiltInSources.ANI_LIBERTY_ID
     private val repositories = mutableMapOf<SourceId, IosAnimeCatalogRepository>()
+    private val sourceHealthReporter = InMemorySourceHealthReporter()
 
     private val activeRepository: IosAnimeCatalogRepository
         get() = repositories.getOrPut(activeSourceId) {
-            IosAnimeCatalogRepository(preferEnglish = preferEnglish, sourceId = activeSourceId)
+            IosAnimeCatalogRepository(
+                preferEnglish = preferEnglish,
+                sourceId = activeSourceId,
+                sourceHealthReporter = sourceHealthReporter,
+            )
         }
 
     override val initialItems: List<Anime>
