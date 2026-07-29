@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -155,7 +156,13 @@ fun HibikiAppShell(
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
 ) {
-    val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope {
+        CoroutineExceptionHandler { _, throwable ->
+            if (throwable !is CancellationException) {
+                println("Hibiki coroutine failed: ${throwable.message ?: throwable::class.simpleName}")
+            }
+        }
+    }
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
     val homePresenter = remember(homeRepository) { HomePresenter() }
@@ -228,10 +235,16 @@ fun HibikiAppShell(
 
     val refreshLocalData = {
         scope.launch {
-            libraryPresenter.updateEntries(libraryRepository.getEntries())
-            profilePresenter.load(profileRepository)
-            homeRepository?.let { repository ->
-                homePresenter.setState(repository.loadHomeState())
+            try {
+                libraryPresenter.updateEntries(libraryRepository.getEntries())
+                profilePresenter.load(profileRepository)
+                homeRepository?.let { repository ->
+                    homePresenter.setState(repository.loadHomeState())
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (throwable: Throwable) {
+                println("Hibiki local data refresh failed: ${throwable.message ?: throwable::class.simpleName}")
             }
         }
         Unit
@@ -327,8 +340,15 @@ fun HibikiAppShell(
                             onHomeRefresh = {
                                 homeRepository?.let { repo ->
                                     scope.launch {
-                                        homePresenter.setState(homePresenter.state.value.copy(isLoading = true))
-                                        homePresenter.setState(repo.refreshHomeState())
+                                        try {
+                                            homePresenter.setState(homePresenter.state.value.copy(isLoading = true))
+                                            homePresenter.setState(repo.refreshHomeState())
+                                        } catch (cancelled: CancellationException) {
+                                            throw cancelled
+                                        } catch (throwable: Throwable) {
+                                            println("Hibiki home refresh failed: ${throwable.message ?: throwable::class.simpleName}")
+                                            homePresenter.setState(homePresenter.state.value.copy(isLoading = false))
+                                        }
                                     }
                                 }
                             },
