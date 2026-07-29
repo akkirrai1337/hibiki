@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.profile.LocalWatchStateRepository
 
 import android.content.Context
 import java.time.Instant
@@ -38,7 +39,7 @@ internal fun parseProgressStorageKey(key: String): ProgressStorageKey? {
     )
 }
 
-class WatchStateRepository(context: Context) {
+class WatchStateRepository(context: Context) : LocalWatchStateRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getSelectedSource(titleId: String): WatchSourceSelection {
@@ -374,7 +375,7 @@ class WatchStateRepository(context: Context) {
      * title and episode, so this remains independent of the streaming source used to
      * play an episode.
      */
-    fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
+    override fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
         return prefs.all.entries
             .asSequence()
             .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
@@ -391,7 +392,7 @@ class WatchStateRepository(context: Context) {
     }
 
     /** Daily local playback aggregates used by the profile. Resume state remains separate. */
-    fun getDailyWatchActivity(): List<DailyWatchActivity> {
+    override fun getDailyWatchActivity(): List<DailyWatchActivity> {
         pruneActivityBefore(activityCutoffDate())
         return prefs.all.keys
             .asSequence()
