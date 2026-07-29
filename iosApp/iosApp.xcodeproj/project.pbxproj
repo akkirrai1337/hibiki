@@ -162,6 +162,7 @@
 		A80000010000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				CODE_SIGNING_ALLOWED = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)";
@@ -173,6 +174,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.akkirrai.hibiki.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				SWIFT_VERSION = 5.0;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -182,6 +184,7 @@
 		A80000010000000000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				CODE_SIGNING_ALLOWED = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)";
@@ -193,6 +196,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.akkirrai.hibiki.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				SWIFT_VERSION = 5.0;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
