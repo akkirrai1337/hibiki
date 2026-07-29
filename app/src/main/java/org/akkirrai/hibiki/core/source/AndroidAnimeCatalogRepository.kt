@@ -29,6 +29,8 @@ class AndroidAnimeCatalogRepository(
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime = delegate.getDetails(id, fallback)
 
+    override suspend fun latest(limit: Int): List<Anime> = delegate.latest(limit)
+
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
         delegate.getSearchFilterCatalog().let { catalog ->
             AnimeCatalogFilterCatalog(

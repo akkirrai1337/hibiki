@@ -54,6 +54,10 @@ class AnimeSearchRepository(
         return search(selectedSourceId(), request)
     }
 
+    suspend fun latest(limit: Int): List<Anime> = currentSource()
+        .latest(limit.coerceAtLeast(1))
+        .map { title -> title.toAnime(preferEnglish = preferEnglish()) }
+
     suspend fun search(sourceId: org.akkirrai.beakokit.api.SourceId, request: AnimeSearchRequest): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
