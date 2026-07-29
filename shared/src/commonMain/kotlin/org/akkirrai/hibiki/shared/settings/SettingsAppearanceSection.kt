@@ -21,7 +21,7 @@ fun AppSettingsAppearanceSection(
     switchShape: Shape = CircleShape,
 ) {
     AppSettingsSection(title = sectionTitle) {
-        AppSettingsItems(count = 2) { index, shape ->
+        AppSettingsItems(count = 3) { index, shape ->
             when (index) {
                 0 -> AppSettingsIconVerticalItem(
                     icon = SettingsThemeIcon,
