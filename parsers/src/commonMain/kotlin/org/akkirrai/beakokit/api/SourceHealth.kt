@@ -1,6 +1,10 @@
 package org.akkirrai.beakokit.api
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /** The observed availability of a source. UNKNOWN means it has not completed a check yet. */
 enum class SourceAvailability {
@@ -60,6 +64,48 @@ interface SourceHealthReporter {
             override fun checkSucceeded(sourceId: SourceId, responseTimeMillis: Long) = Unit
             override fun checkFailed(sourceId: SourceId, responseTimeMillis: Long, error: Throwable) = Unit
             override fun checkCancelled(sourceId: SourceId) = Unit
+        }
+    }
+}
+
+/** Thread-safe default reporter suitable for application hosts and integration tests. */
+class InMemorySourceHealthReporter : ObservableSourceHealthReporter {
+    private val mutableStates = MutableStateFlow<Map<SourceId, SourceHealth>>(emptyMap())
+
+    override val states: StateFlow<Map<SourceId, SourceHealth>> = mutableStates.asStateFlow()
+
+    override fun health(sourceId: SourceId): SourceHealth = states.value[sourceId] ?: SourceHealth()
+
+    override fun checkStarted(sourceId: SourceId) {
+        mutableStates.update { states ->
+            states + (sourceId to (states[sourceId] ?: SourceHealth()).copy(checkState = SourceHealthCheckState.CHECKING))
+        }
+    }
+
+    override fun checkSucceeded(sourceId: SourceId, responseTimeMillis: Long) {
+        mutableStates.update { states ->
+            states + (sourceId to SourceHealth(
+                availability = SourceAvailability.AVAILABLE,
+                checkState = SourceHealthCheckState.COMPLETED,
+                responseTimeMillis = responseTimeMillis.coerceAtLeast(0),
+            ))
+        }
+    }
+
+    override fun checkFailed(sourceId: SourceId, responseTimeMillis: Long, error: Throwable) {
+        mutableStates.update { states ->
+            states + (sourceId to SourceHealth(
+                availability = SourceAvailability.UNAVAILABLE,
+                checkState = SourceHealthCheckState.COMPLETED,
+                responseTimeMillis = responseTimeMillis.coerceAtLeast(0),
+                lastError = error.toHealthError(),
+            ))
+        }
+    }
+
+    override fun checkCancelled(sourceId: SourceId) {
+        mutableStates.update { states ->
+            states + (sourceId to (states[sourceId] ?: SourceHealth()).copy(checkState = SourceHealthCheckState.NOT_CHECKED))
         }
     }
 }
