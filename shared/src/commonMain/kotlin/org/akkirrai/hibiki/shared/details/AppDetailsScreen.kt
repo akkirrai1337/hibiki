@@ -91,7 +91,7 @@ fun AppDetailsScreen(
         LibraryCategory.Favorite to appText(AppTextKey.LibraryFavorite),
         LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
     )
-    val heroInfo = remember(anime) {
+    val heroInfo = remember(anime, localizedEpisodeWord) {
         resolveDetailsHeroInfo(anime, localizedEpisodeWord)
     }
     val uiModel = remember(anime, heroInfo) {
