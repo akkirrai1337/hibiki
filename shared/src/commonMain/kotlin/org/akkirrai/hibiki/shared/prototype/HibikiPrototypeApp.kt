@@ -392,6 +392,8 @@ private fun AppDestinationContent(
                 anime = selectedAnime,
                 onBackClick = onBackFromDetails,
                 onRelatedAnimeClick = onAnimeClick,
+                isDetailsLoading = isDetailsLoading,
+                detailsError = detailsError,
             )
         } else {
             when (selectedTab) {

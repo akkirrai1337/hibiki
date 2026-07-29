@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,9 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -49,6 +52,8 @@ fun AppDetailsScreen(
     listState: LazyListState = rememberLazyListState(),
     initialLibraryCategory: LibraryCategory? = null,
     onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
+    isDetailsLoading: Boolean = false,
+    detailsError: String? = null,
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
@@ -132,7 +137,18 @@ fun AppDetailsScreen(
                                     )
                                 },
                                 frameContent = null,
-                                playbackContent = {},
+                                playbackContent = {
+                                    if (isDetailsLoading) {
+                                        CircularProgressIndicator()
+                                    }
+                                    detailsError?.let { message ->
+                                        Text(
+                                            text = message,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(24.dp),
+                                        )
+                                    }
+                                },
                                 modifier = mediaModifier,
                             )
                         },
