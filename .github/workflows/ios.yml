@@ -205,6 +205,9 @@ jobs:
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$PLIST")
           test "$BUNDLE_ID" = "org.akkirrai.hibiki.ios"
 
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST")
+          test -f "$APP_PATH/$EXECUTABLE"
+
           VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
           test "$VERSION" = "${{ steps.release.outputs.version }}"
 
