@@ -82,6 +82,12 @@ fun AppDetailsScreen(
     val relatedTitle = appText(AppTextKey.Related)
     val similarTitle = appText(AppTextKey.Similar)
     val announcementLabel = appText(AppTextKey.Announcement)
+    val localizedStatus = resolveDetailsStatusLabel(
+        status = anime.status,
+        ongoingLabel = appText(AppTextKey.Ongoing),
+        releasedLabel = appText(AppTextKey.Released),
+        announcementLabel = announcementLabel,
+    )
     val categoryLabels = mapOf(
         LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
         LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
@@ -104,8 +110,8 @@ fun AppDetailsScreen(
             original = appText(AppTextKey.SourceMaterialOriginal),
         ),
     )
-    val heroInfo = remember(anime, localizedEpisodeWord) {
-        resolveDetailsHeroInfo(anime, localizedEpisodeWord)
+    val heroInfo = remember(anime, localizedEpisodeWord, localizedStatus) {
+        resolveDetailsHeroInfo(anime, localizedEpisodeWord).copy(status = localizedStatus)
     }
     val uiModel = remember(anime, heroInfo) {
         buildDetailsUiModel(
