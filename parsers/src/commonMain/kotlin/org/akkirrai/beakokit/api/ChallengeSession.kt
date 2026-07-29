@@ -1,6 +1,6 @@
 package org.akkirrai.beakokit.api
 
-import java.net.URI
+internal expect fun isAbsoluteHttpsUrl(value: String): Boolean
 
 /**
  * A browser session requested by a source when ordinary HTTP is blocked by an interactive
@@ -12,10 +12,7 @@ data class ChallengeSessionRequest(
     val forceRefresh: Boolean = false,
 ) {
     init {
-        val uri = runCatching { URI(url) }.getOrNull()
-        require(uri?.scheme.equals("https", ignoreCase = true) && !uri?.host.isNullOrBlank()) {
-            "Challenge URL must be an absolute HTTPS URL"
-        }
+        require(isAbsoluteHttpsUrl(url)) { "Challenge URL must be an absolute HTTPS URL" }
         require(requiredCookieNames.isNotEmpty()) { "At least one completion cookie is required" }
         require(requiredCookieNames.all(COOKIE_NAME::matches)) { "Completion cookie names are invalid" }
     }
