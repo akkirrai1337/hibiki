@@ -5,6 +5,7 @@ import io.ktor.client.engine.darwin.Darwin
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
@@ -89,12 +90,20 @@ internal class IosAnimeCatalogRepository : AnimeCatalogRepository {
     }
 }
 
-private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime = Anime(
+private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime {
+    val resolvedStatus = status ?: fallback?.status ?: "Unknown"
+    val resolvedEpisodesLabel = when (releaseStatus) {
+        AnimeReleaseStatus.ANNOUNCEMENT -> "announcement"
+        AnimeReleaseStatus.RELEASED -> (availableEpisodeCount ?: episodeCount)?.let { "$it episodes" }
+        else -> availableEpisodeCount?.let { "$it episodes" }
+    } ?: fallback?.episodesLabel ?: "Episodes unknown"
+
+    return Anime(
     id = id,
     title = displayName,
     subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
-    episodesLabel = episodeCount?.let { "$it episodes" } ?: "Episodes unknown",
-    status = status ?: "Unknown",
+    episodesLabel = resolvedEpisodesLabel,
+    status = resolvedStatus,
     nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
     posterUrl = posterUrl ?: fallback?.posterUrl,
     posterFallbackUrl = posterFallbackUrl
@@ -114,7 +123,8 @@ private fun AnimeTitle.toSharedAnime(fallback: Anime? = null): Anime = Anime(
     franchiseAnime = franchiseAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.franchiseAnime.orEmpty() },
     relatedAnime = relatedAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.relatedAnime.orEmpty() },
     releaseDate = year?.toString() ?: fallback?.releaseDate,
-)
+    )
+}
 
 private fun RelatedAnimeTitle.toSharedRelatedAnime(): RelatedAnime = RelatedAnime(
     id = id,
