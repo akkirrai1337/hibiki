@@ -57,7 +57,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.feature.profile.SharedAndroidLocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
 import org.akkirrai.hibiki.feature.catalog.SharedAndroidCatalogScreen
-import org.akkirrai.hibiki.feature.details.DetailsScreen
+import org.akkirrai.hibiki.feature.details.SharedAndroidDetailsScreen
 import org.akkirrai.hibiki.feature.home.SharedAndroidHomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
 import org.akkirrai.hibiki.feature.library.SharedAndroidLibraryScreen
@@ -333,7 +333,7 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             DestinationScreenContainer {
-                DetailsScreen(
+                SharedAndroidDetailsScreen(
                     anime = animeFromArguments(backStackEntry.arguments),
                     onBackClick = {
                         navController.runIfCurrent(backStackEntry) { navController.navigateUp() }

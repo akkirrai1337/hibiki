@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.feature.details
 
+import android.content.Context
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,6 +43,9 @@ fun SharedAndroidDetailsScreen(
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val offlineRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
+    val detailsStateKey = remember(anime.id, preferences.animeSource) {
+        "${preferences.animeSource.value}:${anime.id}"
+    }
     var currentAnime by remember(anime.id, preferences.animeSource) { mutableStateOf(anime) }
     var isLoading by remember(anime.id, preferences.animeSource) { mutableStateOf(true) }
     var detailsError by remember(anime.id, preferences.animeSource) { mutableStateOf<String?>(null) }
@@ -49,6 +53,14 @@ fun SharedAndroidDetailsScreen(
     var resumeState by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
     val resumeFrame = remember(anime.id, resumeState?.updatedAt) {
         resumeFrameRepository.getFrame(anime.id)
+    }
+    val titleColorPreferences = remember(context) {
+        context.getSharedPreferences(TITLE_COLOR_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    }
+    val initialTitleSeedColor = remember(detailsStateKey) {
+        titleColorPreferences.getInt(detailsStateKey, 0)
+            .takeIf { titleColorPreferences.contains(detailsStateKey) }
+            ?.toLong()
     }
 
     DisposableEffect(searchRepository) {
@@ -99,6 +111,10 @@ fun SharedAndroidDetailsScreen(
         onTrailerClick = { currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri) },
         canWatch = true,
         onWatchClick = { onOpenSources(currentAnime) },
+        initialTitleSeedColor = initialTitleSeedColor,
+        onTitleSeedColorChange = { color ->
+            titleColorPreferences.edit().putInt(detailsStateKey, color.toInt()).apply()
+        },
         contentPadding = contentPadding,
         initialLibraryCategory = libraryCategory,
         onLibraryCategoryChange = { category ->
@@ -109,3 +125,5 @@ fun SharedAndroidDetailsScreen(
         modifier = modifier,
     )
 }
+
+private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
