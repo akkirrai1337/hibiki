@@ -145,6 +145,22 @@ enum class AppTextKey {
     LibraryOnHold,
     LibraryFavorite,
     LibrarySaved,
+    OnboardingWelcomeTitle,
+    OnboardingWelcomeDescription,
+    OnboardingGetStarted,
+    OnboardingSourceTitle,
+    OnboardingSourceDescription,
+    OnboardingSourceLanguageRussian,
+    OnboardingSourceLanguageEnglish,
+    OnboardingSourceLanguagesRussianEnglish,
+    OnboardingNotificationsTitle,
+    OnboardingNotificationsDescription,
+    OnboardingNotificationsAllow,
+    OnboardingNotificationsEnabled,
+    OnboardingNotificationsDenied,
+    OnboardingBack,
+    OnboardingNext,
+    OnboardingDone,
 }
 
 interface AppTextResolver {
@@ -321,6 +337,22 @@ class DefaultAppTextResolver(
             AppTextKey.LibraryOnHold -> if (russian) "Приостановлено" else "On hold"
             AppTextKey.LibraryFavorite -> if (russian) "Любимое" else "Favorite"
             AppTextKey.LibrarySaved -> if (russian) "Сохранённое" else "Saved"
+            AppTextKey.OnboardingWelcomeTitle -> if (russian) "Добро пожаловать в hibiki" else "Welcome to hibiki"
+            AppTextKey.OnboardingWelcomeDescription -> if (russian) "Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр." else "Let’s set up the app in a couple of steps so you can start watching right away."
+            AppTextKey.OnboardingGetStarted -> if (russian) "Начать настройку" else "Get started"
+            AppTextKey.OnboardingSourceTitle -> if (russian) "Источник аниме" else "Anime source"
+            AppTextKey.OnboardingSourceDescription -> if (russian) "Мы подобрали источники на основе языка вашего устройства." else "We selected sources based on your device language."
+            AppTextKey.OnboardingSourceLanguageRussian -> if (russian) "Контент на русском языке" else "Russian-language content"
+            AppTextKey.OnboardingSourceLanguageEnglish -> if (russian) "Контент на английском языке" else "English-language content"
+            AppTextKey.OnboardingSourceLanguagesRussianEnglish -> if (russian) "Контент на русском и английском языках" else "Russian and English content"
+            AppTextKey.OnboardingNotificationsTitle -> if (russian) "Уведомления" else "Notifications"
+            AppTextKey.OnboardingNotificationsDescription -> if (russian) "Получайте уведомления после завершения загрузок." else "Get notified when downloads are complete."
+            AppTextKey.OnboardingNotificationsAllow -> if (russian) "Разрешить уведомления" else "Allow notifications"
+            AppTextKey.OnboardingNotificationsEnabled -> if (russian) "Уведомления включены" else "Notifications are enabled"
+            AppTextKey.OnboardingNotificationsDenied -> if (russian) "Уведомления можно включить позже в системных настройках." else "You can enable notifications later in system settings."
+            AppTextKey.OnboardingBack -> if (russian) "Назад" else "Back"
+            AppTextKey.OnboardingNext -> if (russian) "Далее" else "Next"
+            AppTextKey.OnboardingDone -> if (russian) "Готово" else "Done"
         }
     }
 }

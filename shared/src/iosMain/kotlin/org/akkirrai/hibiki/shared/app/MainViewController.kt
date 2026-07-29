@@ -13,6 +13,7 @@ import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
 import platform.Foundation.NSBundle
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
+import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
 import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
@@ -58,6 +59,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 profileRepository = profileRepository,
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
+                enableOnboarding = true,
+                onboardingNotificationPermissionState = NotificationPermissionState.DENIED,
                 appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String)
                     ?: "dev",
                 onProfileAvatarEdit = { onPicked ->

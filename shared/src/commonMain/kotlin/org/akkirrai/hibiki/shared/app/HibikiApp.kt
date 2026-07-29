@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.prototype.PrototypeLibraryRepository
 import org.akkirrai.hibiki.shared.prototype.HibikiAppShell
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
+import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 
@@ -25,6 +26,8 @@ fun HibikiApp(
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
     appVersionName: String = "dev",
+    enableOnboarding: Boolean = false,
+    onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
@@ -39,6 +42,8 @@ fun HibikiApp(
         settingsStore = settingsStore,
         systemLanguage = systemLanguage,
         appVersionName = appVersionName,
+        enableOnboarding = enableOnboarding,
+        onboardingNotificationPermissionState = onboardingNotificationPermissionState,
         onProfileAvatarEdit = onProfileAvatarEdit,
         sources = sources,
         selectedSourceId = selectedSourceId,

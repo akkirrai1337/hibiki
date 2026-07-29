@@ -115,6 +115,7 @@ import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
+import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.AppSettingsCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
@@ -129,6 +130,7 @@ import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 
 @Composable
 fun HibikiAppShell(
@@ -140,6 +142,8 @@ fun HibikiAppShell(
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
     appVersionName: String = "dev",
+    enableOnboarding: Boolean = false,
+    onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
@@ -164,6 +168,10 @@ fun HibikiAppShell(
     var useSystemColorScheme by remember(settingsStore) { mutableStateOf(initialSettings.useSystemColorScheme) }
     var useAmoledTheme by remember(settingsStore) { mutableStateOf(initialSettings.useAmoledTheme) }
     var autoSkipSegments by remember(settingsStore) { mutableStateOf(initialSettings.autoSkipSegments) }
+    var onboardingCompleted by remember(settingsStore) { mutableStateOf(initialSettings.onboardingCompleted) }
+    var onboardingSourceId by remember(settingsStore) {
+        mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
+    }
     var isEditingProfile by remember { mutableStateOf(false) }
     var editedProfileName by remember(profileState.data.profileName) { mutableStateOf(profileState.data.profileName) }
 
@@ -221,6 +229,8 @@ fun HibikiAppShell(
                                 useSystemColorScheme = useSystemColorScheme,
                                 useAmoledTheme = useAmoledTheme,
                                 autoSkipSegments = autoSkipSegments,
+                                onboardingCompleted = onboardingCompleted,
+                                selectedSourceId = onboardingSourceId,
                             ),
                         )
                     }
@@ -358,6 +368,26 @@ fun HibikiAppShell(
                                         0.dp
                                     },
                                 ),
+                        )
+                    }
+                    if (enableOnboarding && !onboardingCompleted) {
+                        AppOnboardingScreen(
+                            sources = sources,
+                            initialSourceId = onboardingSourceId,
+                            notificationPermissionState = onboardingNotificationPermissionState,
+                            onRequestNotificationPermission = {},
+                            onComplete = { sourceId ->
+                                onboardingSourceId = sourceId
+                                onboardingCompleted = true
+                                settingsStore.save(
+                                    initialSettings.copy(
+                                        onboardingCompleted = true,
+                                        selectedSourceId = sourceId,
+                                    ),
+                                )
+                                repository.selectSource(sourceId)
+                                onSourceSelected(sourceId)
+                            },
                         )
                     }
                 }
