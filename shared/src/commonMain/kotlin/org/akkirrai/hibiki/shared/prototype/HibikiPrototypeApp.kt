@@ -112,7 +112,7 @@ fun HibikiAppShell(
         onDispose { presenter.close() }
     }
 
-    LaunchedEffect(libraryRepository) {
+    LaunchedEffect(libraryRepository, state.selectedAnime) {
         libraryPresenter.updateEntries(libraryRepository.getEntries())
     }
 
