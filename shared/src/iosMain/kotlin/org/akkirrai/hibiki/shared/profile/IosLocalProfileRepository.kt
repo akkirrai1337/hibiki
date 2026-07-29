@@ -13,6 +13,7 @@ import platform.Foundation.NSUserDefaults
  */
 internal class IosLocalProfileRepository(
     private val libraryRepository: LibraryRepository,
+    private val watchStateRepository: LocalWatchStateRepository = IosWatchStateRepository(),
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
 ) : LocalProfileDataRepository {
     override suspend fun load(): LocalProfileData {
@@ -31,6 +32,8 @@ internal class IosLocalProfileRepository(
         return LocalProfileData(
             profileName = defaults.stringForKey(PROFILE_NAME_KEY).orEmpty(),
             profileAvatarUri = defaults.stringForKey(PROFILE_AVATAR_URI_KEY),
+            episodeProgress = watchStateRepository.getAllEpisodeProgress(),
+            activity = watchStateRepository.getDailyWatchActivity(),
             library = library,
         )
     }
