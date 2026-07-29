@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.catalog
 
 import org.akkirrai.beakokit.api.InMemorySourceHealthReporter
+import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.model.Anime
@@ -20,13 +21,18 @@ internal class IosMultiSourceAnimeCatalogRepository(
     private val sourceHealthReporter = InMemorySourceHealthReporter()
 
     private val activeRepository: IosAnimeCatalogRepository
-        get() = repositories.getOrPut(activeSourceId) {
+        get() = repositoryFor(activeSourceId)
+
+    private fun repositoryFor(sourceId: SourceId): IosAnimeCatalogRepository {
+        require(sourceId in knownSourceIds) { "iOS does not include source $sourceId" }
+        return repositories.getOrPut(sourceId) {
             IosAnimeCatalogRepository(
                 preferEnglish = preferEnglish,
-                sourceId = activeSourceId,
+                sourceId = sourceId,
                 sourceHealthReporter = sourceHealthReporter,
             )
         }
+    }
 
     override val initialItems: List<Anime>
         get() = activeRepository.initialItems
@@ -35,7 +41,10 @@ internal class IosMultiSourceAnimeCatalogRepository(
         knownSourceIds.firstOrNull { it.value == sourceId }?.let { activeSourceId = it }
     }
 
-    override suspend fun getDetails(id: String, fallback: Anime): Anime = activeRepository.getDetails(id, fallback)
+    override suspend fun getDetails(id: String, fallback: Anime): Anime {
+        val sourceId = AnimeKey.parse(id)?.sourceId ?: activeSourceId
+        return repositoryFor(sourceId).getDetails(id, fallback)
+    }
 
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog = activeRepository.filterCatalog()
 

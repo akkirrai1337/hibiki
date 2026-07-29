@@ -5,6 +5,7 @@ import io.ktor.client.engine.darwin.Darwin
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceConfig
@@ -116,34 +117,36 @@ internal class IosAnimeCatalogRepository(
         }
 
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
-        source.getById(id).toSharedAnime(preferEnglish, fallback)
+        source.getById(nativeId(id)).toSharedAnime(sourceId, preferEnglish, fallback)
 
     override suspend fun latest(limit: Int): List<Anime> =
         (source as? LatestSource)?.latest(limit.coerceAtLeast(1))
-            ?.map { it.toSharedAnime(preferEnglish) }
+            ?.map { it.toSharedAnime(sourceId, preferEnglish) }
             .orEmpty()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
         val titles = source.search(
-            AnimeSearchRequest(
-                query = query.text,
-                limit = query.pageSize,
-                offset = query.offset,
-                sort = when (filters.sortAlias.lowercase()) {
-                    "alphabetical", "title" -> AnimeSearchSort.TITLE
-                    "popular", "rating" -> AnimeSearchSort.RATING
-                    else -> AnimeSearchSort.RELEVANCE
-                },
-                typeAliases = listOfNotNull(filters.typeAlias),
-                statusAliases = listOfNotNull(filters.statusAlias),
-                includedGenreAliases = filters.includedGenreAliases.sorted(),
-                excludedGenreAliases = filters.excludedGenreAliases.sorted(),
-                yearFrom = filters.yearFrom,
-                yearTo = filters.yearTo,
+            source.catalogCapabilities.adapt(
+                AnimeSearchRequest(
+                    query = query.text,
+                    limit = query.pageSize,
+                    offset = query.offset,
+                    sort = when (filters.sortAlias.lowercase()) {
+                        "alphabetical", "title" -> AnimeSearchSort.TITLE
+                        "popular", "rating" -> AnimeSearchSort.RATING
+                        else -> AnimeSearchSort.RELEVANCE
+                    },
+                    typeAliases = listOfNotNull(filters.typeAlias),
+                    statusAliases = listOfNotNull(filters.statusAlias),
+                    includedGenreAliases = filters.includedGenreAliases.sorted(),
+                    excludedGenreAliases = filters.excludedGenreAliases.sorted(),
+                    yearFrom = filters.yearFrom,
+                    yearTo = filters.yearTo,
+                ),
             ),
         )
-        val items = titles.map { it.toSharedAnime(preferEnglish) }
+        val items = titles.map { it.toSharedAnime(sourceId, preferEnglish) }
         return AnimeCatalogPage(
             items = items,
             page = query.page.coerceAtLeast(1),
@@ -154,9 +157,21 @@ internal class IosAnimeCatalogRepository(
     fun close() {
         client.close()
     }
+
+    private fun nativeId(id: String): String {
+        val key = AnimeKey.parse(id) ?: return id
+        require(key.sourceId == sourceId) {
+            "Title $id belongs to ${key.sourceId}, not $sourceId"
+        }
+        return key.nativeId
+    }
 }
 
-private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = null): Anime {
+private fun AnimeTitle.toSharedAnime(
+    sourceId: org.akkirrai.beakokit.api.SourceId,
+    preferEnglish: Boolean,
+    fallback: Anime? = null,
+): Anime {
     val resolvedPosterUrl = posterUrl ?: fallback?.posterUrl
     val resolvedStatus = if (releaseStatus == AnimeReleaseStatus.UNKNOWN) {
         fallback?.status ?: resolveReleaseStatusLabel(releaseStatus.name, preferEnglish)
@@ -174,39 +189,41 @@ private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = 
     }
 
     return Anime(
-    id = id,
-    title = displayName,
-    subtitle = resolveAnimeSubtitle(type, year, fallback?.subtitle),
-    episodesLabel = resolvedEpisodesLabel,
-    status = resolvedStatus,
-    nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
+        id = AnimeKey(sourceId, id).value,
+        title = displayName,
+        subtitle = resolveAnimeSubtitle(type, year, fallback?.subtitle),
+        episodesLabel = resolvedEpisodesLabel,
+        status = resolvedStatus,
+        nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
         posterUrl = resolvedPosterUrl,
         posterFallbackUrl = posterFallbackUrl
         ?.takeIf { it.isNotBlank() && it != resolvedPosterUrl }
         ?: fallback?.posterFallbackUrl?.takeIf { it.isNotBlank() && it != resolvedPosterUrl },
         description = description ?: fallback?.description,
         genres = genres.ifEmpty { fallback?.genres.orEmpty() },
-    alternativeTitles = resolveAlternativeTitles(
-        primaryTitle = displayName,
-        titleCandidates = listOf(russianName, englishName, originalName, japaneseName) + synonyms,
-        fallbackTitles = fallback?.alternativeTitles.orEmpty(),
-    ),
+        alternativeTitles = resolveAlternativeTitles(
+            primaryTitle = displayName,
+            titleCandidates = listOf(russianName, englishName, originalName, japaneseName) + synonyms,
+            fallbackTitles = fallback?.alternativeTitles.orEmpty(),
+        ),
         ratings = ratings.map { AnimeRating(it.source, it.value, it.votes) }.ifEmpty { fallback?.ratings.orEmpty() },
-    ageRating = ageRating ?: fallback?.ageRating,
-    viewCount = viewCount ?: fallback?.viewCount,
-    screenshots = screenshots.ifEmpty { fallback?.screenshots.orEmpty() },
-    trailer = trailer?.let { AnimeTrailer(it.id, it.site, it.thumbnailUrl, it.sourceUrl) } ?: fallback?.trailer,
-    sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
-    studios = studios.ifEmpty { fallback?.studios.orEmpty() },
-    similarAnime = similarAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.similarAnime.orEmpty() },
-    franchiseAnime = franchiseAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.franchiseAnime.orEmpty() },
-    relatedAnime = relatedAnime.map { it.toSharedRelatedAnime() }.ifEmpty { fallback?.relatedAnime.orEmpty() },
-    releaseDate = formatReleaseDateLabel(year, season, preferEnglish) ?: fallback?.releaseDate,
+        ageRating = ageRating ?: fallback?.ageRating,
+        viewCount = viewCount ?: fallback?.viewCount,
+        screenshots = screenshots.ifEmpty { fallback?.screenshots.orEmpty() },
+        trailer = trailer?.let { AnimeTrailer(it.id, it.site, it.thumbnailUrl, it.sourceUrl) } ?: fallback?.trailer,
+        sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
+        studios = studios.ifEmpty { fallback?.studios.orEmpty() },
+        similarAnime = similarAnime.map { it.toSharedRelatedAnime(sourceId) }.ifEmpty { fallback?.similarAnime.orEmpty() },
+        franchiseAnime = franchiseAnime.map { it.toSharedRelatedAnime(sourceId) }.ifEmpty { fallback?.franchiseAnime.orEmpty() },
+        relatedAnime = relatedAnime.map { it.toSharedRelatedAnime(sourceId) }.ifEmpty { fallback?.relatedAnime.orEmpty() },
+        releaseDate = formatReleaseDateLabel(year, season, preferEnglish) ?: fallback?.releaseDate,
     )
 }
 
-private fun RelatedAnimeTitle.toSharedRelatedAnime(): RelatedAnime = RelatedAnime(
-    id = id,
+private fun RelatedAnimeTitle.toSharedRelatedAnime(
+    sourceId: org.akkirrai.beakokit.api.SourceId,
+): RelatedAnime = RelatedAnime(
+    id = AnimeKey(sourceId, id).value,
     title = title,
     posterUrl = posterUrl,
     type = type,
