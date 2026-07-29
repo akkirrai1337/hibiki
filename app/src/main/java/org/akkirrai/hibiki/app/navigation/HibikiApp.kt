@@ -65,7 +65,7 @@ import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SharedAndroidSettingsScreen
-import org.akkirrai.hibiki.feature.settings.SourcesScreen
+import org.akkirrai.hibiki.feature.settings.SharedAndroidSourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.shared.design.component.AppBottomBar
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -270,7 +270,7 @@ private fun HibikiNavHost(
                     }
                 },
             ) {
-                SourcesScreen(
+                SharedAndroidSourcesScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))

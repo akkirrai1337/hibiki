@@ -33,6 +33,10 @@ fun AppLocalSourcesScreen(
     movieLabel: String = "Movie",
     onSearchRetry: () -> Unit,
     onAnimeClick: (org.akkirrai.hibiki.shared.model.Anime) -> Unit,
+    searchSections: List<SourceSearchSectionState<org.akkirrai.hibiki.shared.model.Anime>>? = null,
+    onSearchRetryForSource: ((String) -> Unit)? = null,
+    sourceIconContent: (@Composable (AppSourceDescriptor, Modifier) -> Unit)? = null,
+    searchSourceIconContent: (@Composable (SourceSearchSectionState<org.akkirrai.hibiki.shared.model.Anime>, Modifier) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val sections = sources
@@ -49,25 +53,27 @@ fun AppLocalSourcesScreen(
         isSearchMode = isSourceSearchActive(searchQuery),
         bottomContentPadding = bottomContentPadding,
         searchContent = {
-            appSourceSearchSections(
-                sections = listOf(
+            val effectiveSearchSections = searchSections ?: listOf(
                     SourceSearchSectionState(
                         sourceId = searchSourceId,
                         sourceName = searchSourceName,
                         items = searchItems,
                         hasError = searchError,
                         isLoading = isSearchLoading,
-                    ),
-                ),
+                    )
+                )
+            appSourceSearchSections(
+                sections = effectiveSearchSections,
                 isSearching = isSearchLoading,
                 errorLabel = searchErrorLabel,
                 retryLabel = searchRetryLabel,
-                onRetry = { onSearchRetry() },
+                onRetry = { sourceId -> onSearchRetryForSource?.invoke(sourceId) ?: onSearchRetry() },
                 emptyContent = {
                     SourceEmptyState(text = searchEmptyTitle)
                 },
-                sourceIconContent = { _, iconModifier ->
-                    AppSourceIconImage(url = null, modifier = iconModifier)
+                sourceIconContent = { section, iconModifier ->
+                    searchSourceIconContent?.invoke(section, iconModifier)
+                        ?: AppSourceIconImage(url = null, modifier = iconModifier)
                 },
                 itemContent = { anime ->
                     AppSourceSearchAnimeCard(
@@ -101,11 +107,12 @@ fun AppLocalSourcesScreen(
                         onClick = { onSourceSelected(source.id) },
                         modifier = itemModifier,
                         iconContent = { iconModifier ->
-                            AppSourceIconImage(
-                                url = source.iconUrl,
-                                placeholder = null,
-                                modifier = iconModifier,
-                            )
+                            sourceIconContent?.invoke(source, iconModifier)
+                                ?: AppSourceIconImage(
+                                    url = source.iconUrl,
+                                    placeholder = null,
+                                    modifier = iconModifier,
+                                )
                         },
                     )
                 },
