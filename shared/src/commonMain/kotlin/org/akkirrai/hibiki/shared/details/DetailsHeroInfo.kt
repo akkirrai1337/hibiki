@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.details
 
+import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
 import org.akkirrai.hibiki.shared.model.Anime
 
 data class DetailsHeroInfo(
@@ -20,7 +21,11 @@ fun resolveDetailsHeroInfo(
         .map(String::trim)
         .filter(String::isNotEmpty)
 
-    val type = parts.getOrNull(0)?.uppercase().orEmpty().ifBlank { "TV" }
+    val type = parts.getOrNull(0)
+        ?.let(::resolveDisplayTypeLabel)
+        ?.uppercase()
+        .orEmpty()
+        .ifBlank { "TV" }
     val year = parts.getOrNull(1).orEmpty()
     val rawEpisodes = anime.episodesLabel
         .replace(Regex("\\bepisodes?\\b", RegexOption.IGNORE_CASE), localizedEpisodeWord)

@@ -32,6 +32,16 @@ class DetailsHeroInfoTest {
     }
 
     @Test
+    fun normalizesSourceTypeKeysForDetails() {
+        val result = resolveDetailsHeroInfo(
+            Anime("1", "Title", "TV_SHORT | 2024", "", ""),
+            localizedEpisodeWord = "episodes",
+        )
+
+        assertEquals("TV SHORT", result.type)
+    }
+
+    @Test
     fun recognizesAnnouncementAndOngoingStatuses() {
         assertTrue(isAnnouncementStatus("announcement"))
         assertTrue(isAnnouncementStatus("", "announcement"))
