@@ -26,6 +26,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet
+import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
+import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.RelatedAnime
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -45,11 +47,22 @@ fun AppDetailsScreen(
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
+    initialLibraryCategory: LibraryCategory? = null,
+    onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
     val similarTitle = appText(AppTextKey.Similar)
     val announcementLabel = appText(AppTextKey.Unknown)
+    val categoryLabels = mapOf(
+        LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
+        LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
+        LibraryCategory.Completed to appText(AppTextKey.LibraryCompleted),
+        LibraryCategory.Dropped to appText(AppTextKey.LibraryDropped),
+        LibraryCategory.OnHold to appText(AppTextKey.LibraryOnHold),
+        LibraryCategory.Favorite to appText(AppTextKey.LibraryFavorite),
+        LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
+    )
     val heroInfo = remember(anime) {
         resolveDetailsHeroInfo(anime, localizedEpisodeWord)
     }
@@ -69,6 +82,10 @@ fun AppDetailsScreen(
     }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
+    var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
+    var libraryCategory by remember(anime.id, initialLibraryCategory) {
+        mutableStateOf(initialLibraryCategory)
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -84,12 +101,12 @@ fun AppDetailsScreen(
                 item {
                     AppDetailsHeroContent(
                         posterExpanded = isAtTop,
-                        isInLibrary = false,
+                        isInLibrary = libraryCategory != null && libraryCategory != LibraryCategory.Saved,
                         canWatch = false,
                         libraryLabel = appText(AppTextKey.Favorite),
                         watchLabel = appText(AppTextKey.Watch),
                         onPosterClick = { isPosterPreviewOpen = true },
-                        onLibraryClick = {},
+                        onLibraryClick = { isLibrarySheetOpen = true },
                         onPrimaryClick = {},
                         posterContent = {
                             AppPosterImage(
@@ -240,6 +257,28 @@ fun AppDetailsScreen(
                     description = uiModel.description,
                 )
             }
+        }
+
+        if (isLibrarySheetOpen) {
+            AppLibraryCategorySheet(
+                selectedCategory = libraryCategory,
+                title = appText(AppTextKey.LibraryAddTitle),
+                subtitle = appText(AppTextKey.LibraryAddSubtitle),
+                savedNote = appText(AppTextKey.LibrarySavedNote),
+                removeAction = appText(AppTextKey.LibraryRemoveAction),
+                categoryLabels = categoryLabels,
+                onCategoryClick = { category ->
+                    libraryCategory = category
+                    onLibraryCategoryChange(category)
+                    isLibrarySheetOpen = false
+                },
+                onRemoveClick = {
+                    libraryCategory = null
+                    onLibraryCategoryChange(null)
+                    isLibrarySheetOpen = false
+                },
+                onDismiss = { isLibrarySheetOpen = false },
+            )
         }
     }
 }

@@ -48,6 +48,17 @@ enum class AppTextKey {
     Related,
     Similar,
     Unknown,
+    LibraryAddTitle,
+    LibraryAddSubtitle,
+    LibrarySavedNote,
+    LibraryRemoveAction,
+    LibraryWatching,
+    LibraryPlanned,
+    LibraryCompleted,
+    LibraryDropped,
+    LibraryOnHold,
+    LibraryFavorite,
+    LibrarySaved,
 }
 
 interface AppTextResolver {
@@ -127,6 +138,17 @@ class DefaultAppTextResolver(
             AppTextKey.Related -> if (russian) "Связанное" else "Related"
             AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
             AppTextKey.Unknown -> if (russian) "Неизвестно" else "Unknown"
+            AppTextKey.LibraryAddTitle -> if (russian) "Добавить в библиотеку" else "Add to library"
+            AppTextKey.LibraryAddSubtitle -> if (russian) "Выберите статус для этого тайтла" else "Choose a status for this title"
+            AppTextKey.LibrarySavedNote -> if (russian) "Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии." else "Saved titles are managed by downloaded episodes. To remove a title from here, delete the downloaded episodes."
+            AppTextKey.LibraryRemoveAction -> if (russian) "Удалить из библиотеки" else "Remove from library"
+            AppTextKey.LibraryWatching -> if (russian) "Смотрю" else "Watching"
+            AppTextKey.LibraryPlanned -> if (russian) "В планах" else "Planned"
+            AppTextKey.LibraryCompleted -> if (russian) "Просмотрено" else "Completed"
+            AppTextKey.LibraryDropped -> if (russian) "Брошено" else "Dropped"
+            AppTextKey.LibraryOnHold -> if (russian) "Приостановлено" else "On hold"
+            AppTextKey.LibraryFavorite -> if (russian) "Любимое" else "Favorite"
+            AppTextKey.LibrarySaved -> if (russian) "Сохранённое" else "Saved"
         }
     }
 }
