@@ -12,35 +12,45 @@ import kotlin.test.assertTrue
 class DependencyBoundaryTest {
     @Test
     fun `BeakoKit main sources do not depend on the legacy resolver namespace`() {
-        val sourceRoot = findSourceRoot(
-            Path.of("src", "main", "kotlin", "org", "akkirrai", "beakokit"),
-            Path.of("parsers", "src", "main", "kotlin", "org", "akkirrai", "beakokit"),
+        val sourceRoots = findSourceRoots(
+            Path.of("src", "commonMain", "kotlin"),
+            Path.of("parsers", "src", "commonMain", "kotlin"),
+            Path.of("src", "jvmMain", "kotlin"),
+            Path.of("parsers", "src", "jvmMain", "kotlin"),
+            Path.of("src", "iosMain", "kotlin"),
+            Path.of("parsers", "src", "iosMain", "kotlin"),
         )
-        assertNoLegacyImports(sourceRoot, "BeakoKit")
+        assertNoLegacyImports(sourceRoots, "BeakoKit")
     }
 
     @Test
     fun `Hibiki app consumes BeakoKit without legacy resolver imports`() {
-        val sourceRoot = findSourceRoot(
+        val sourceRoots = findSourceRoots(
             Path.of("app", "src", "main", "java"),
             Path.of("..", "app", "src", "main", "java"),
         )
-        assertNoLegacyImports(sourceRoot, "Hibiki app")
+        assertNoLegacyImports(sourceRoots, "Hibiki app")
     }
 
     @Test
     fun `legacy resolver namespace has no production sources`() {
-        val kotlinRoot = findSourceRoot(
-            Path.of("src", "main", "kotlin"),
-            Path.of("parsers", "src", "main", "kotlin"),
+        val productionRoots = findSourceRoots(
+            Path.of("src", "commonMain", "kotlin"),
+            Path.of("parsers", "src", "commonMain", "kotlin"),
+            Path.of("src", "jvmMain", "kotlin"),
+            Path.of("parsers", "src", "jvmMain", "kotlin"),
+            Path.of("src", "iosMain", "kotlin"),
+            Path.of("parsers", "src", "iosMain", "kotlin"),
         )
-        val legacyRoot = kotlinRoot.resolve(Path.of("org", "akkirrai", "animeresolver"))
-        val legacySources = if (legacyRoot.exists()) Files.walk(legacyRoot).use { paths ->
-            paths
-                .filter { it.isRegularFile() && it.extension == "kt" }
-                .map(kotlinRoot::relativize)
-                .toList()
-        } else emptyList()
+        val legacySources = productionRoots.flatMap { kotlinRoot ->
+            val legacyRoot = kotlinRoot.resolve(Path.of("org", "akkirrai", "animeresolver"))
+            if (legacyRoot.exists()) Files.walk(legacyRoot).use { paths ->
+                paths
+                    .filter { it.isRegularFile() && it.extension == "kt" }
+                    .map(kotlinRoot::relativize)
+                    .toList()
+            } else emptyList()
+        }
 
         assertTrue(
             legacySources.isEmpty(),
@@ -48,13 +58,15 @@ class DependencyBoundaryTest {
         )
     }
 
-    private fun assertNoLegacyImports(sourceRoot: Path, owner: String) {
-        val violations = Files.walk(sourceRoot).use { paths ->
-            paths
-                .filter { it.extension == "kt" }
-                .filter { it.readText().contains("org.akkirrai.animeresolver") }
-                .map(sourceRoot::relativize)
-                .toList()
+    private fun assertNoLegacyImports(sourceRoots: List<Path>, owner: String) {
+        val violations = sourceRoots.flatMap { sourceRoot ->
+            Files.walk(sourceRoot).use { paths ->
+                paths
+                    .filter { it.extension == "kt" }
+                    .filter { it.readText().contains("org.akkirrai.animeresolver") }
+                    .map(sourceRoot::relativize)
+                    .toList()
+            }
         }
 
         assertTrue(
@@ -63,11 +75,15 @@ class DependencyBoundaryTest {
         )
     }
 
-    private fun findSourceRoot(vararg candidates: Path): Path {
-        return generateSequence(Path.of("").toAbsolutePath()) { it.parent }
+    private fun findSourceRoots(vararg candidates: Path): List<Path> {
+        val roots = generateSequence(Path.of("").toAbsolutePath()) { it.parent }
             .map { current -> candidates.map(current::resolve) }
             .flatten()
-            .firstOrNull(Path::exists)
-            ?: error("Unable to locate source root from ${candidates.toList()}")
+            .filter(Path::exists)
+            .distinct()
+            .toList()
+        return roots.ifEmpty {
+            error("Unable to locate source roots from ${candidates.toList()}")
+        }
     }
 }
