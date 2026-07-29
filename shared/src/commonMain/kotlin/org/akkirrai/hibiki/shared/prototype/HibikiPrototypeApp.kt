@@ -101,6 +101,7 @@ fun HibikiAppShell(
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
+    onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
 ) {
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
@@ -176,6 +177,11 @@ fun HibikiAppShell(
                         { isEditingProfile = !isEditingProfile },
                         { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
                         { selectedTab = AppDestination.SETTINGS },
+                        onProfileAvatarEdit,
+                        { uri ->
+                            profileRepository.updateProfileAvatar(uri)
+                            profilePresenter.updateProfileAvatar(uri)
+                        },
                         profileRepository,
                     )
                     } else {
@@ -206,6 +212,11 @@ fun HibikiAppShell(
                         { isEditingProfile = !isEditingProfile },
                         { profileRepository.updateProfileName(editedProfileName); profilePresenter.updateProfileName(editedProfileName); isEditingProfile = false },
                         { selectedTab = AppDestination.SETTINGS },
+                        onProfileAvatarEdit,
+                        { uri ->
+                            profileRepository.updateProfileAvatar(uri)
+                            profilePresenter.updateProfileAvatar(uri)
+                        },
                         profileRepository,
                     )
                     }
@@ -243,6 +254,8 @@ private fun WideAppLayout(
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
     onProfileSettingsClick: () -> Unit,
+    onProfileAvatarEdit: (((String) -> Unit) -> Unit),
+    onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
@@ -274,6 +287,8 @@ private fun WideAppLayout(
             onProfileEditClick,
             onProfileSaveClick,
             onProfileSettingsClick,
+            onProfileAvatarEdit,
+            onProfileAvatarPicked,
             profileRepository,
             Modifier.weight(1f),
         )
@@ -308,6 +323,8 @@ private fun CompactAppLayout(
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
     onProfileSettingsClick: () -> Unit,
+    onProfileAvatarEdit: (((String) -> Unit) -> Unit),
+    onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
 ) {
     Scaffold(
@@ -354,6 +371,8 @@ private fun CompactAppLayout(
             onProfileEditClick,
             onProfileSaveClick,
             onProfileSettingsClick,
+            onProfileAvatarEdit,
+            onProfileAvatarPicked,
             profileRepository,
             Modifier.padding(padding),
         )
@@ -434,6 +453,8 @@ private fun AppDestinationContent(
     onProfileEditClick: () -> Unit,
     onProfileSaveClick: () -> Unit,
     onProfileSettingsClick: () -> Unit,
+    onProfileAvatarEdit: (((String) -> Unit) -> Unit),
+    onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -542,7 +563,9 @@ private fun AppDestinationContent(
                             activityTitle = if (appText(AppTextKey.Profile) == "Профиль") "Активность" else "Activity",
                         ),
                         onNameChange = onProfileNameChange,
-                        onAvatarEditClick = { },
+                        onAvatarEditClick = {
+                            onProfileAvatarEdit(onProfileAvatarPicked)
+                        },
                         onEditActionClick = if (isEditingProfile) onProfileSaveClick else onProfileEditClick,
                         onSettingsClick = onProfileSettingsClick,
                         avatarContent = { avatarModifier ->

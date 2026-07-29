@@ -21,6 +21,7 @@ fun HibikiApp(
     profileRepository: LocalProfileDataRepository = PrototypeLocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     systemLanguage: String = "en",
+    onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
 ) {
     HibikiAppShell(
         modifier = modifier,
@@ -29,5 +30,6 @@ fun HibikiApp(
         profileRepository = profileRepository,
         settingsStore = settingsStore,
         systemLanguage = systemLanguage,
+        onProfileAvatarEdit = onProfileAvatarEdit,
     )
 }

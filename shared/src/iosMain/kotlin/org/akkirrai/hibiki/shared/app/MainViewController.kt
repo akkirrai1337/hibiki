@@ -12,8 +12,12 @@ import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
+import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
 
-fun MainViewController(systemLanguage: String): UIViewController = ComposeUIViewController {
+fun MainViewController(systemLanguage: String): UIViewController {
+    val avatarPicker = IosAvatarPicker()
+    lateinit var hostController: UIViewController
+    hostController = ComposeUIViewController {
     val repository = remember(systemLanguage) {
         IosAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
     }
@@ -36,7 +40,12 @@ fun MainViewController(systemLanguage: String): UIViewController = ComposeUIView
                 profileRepository = profileRepository,
                 settingsStore = settingsStore,
                 systemLanguage = systemLanguage,
+                onProfileAvatarEdit = { onPicked ->
+                    avatarPicker.present(hostController, onPicked)
+                },
             )
         }
     }
+    }
+    return hostController
 }
