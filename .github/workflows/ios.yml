@@ -87,7 +87,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          BASE_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1)
+          BASE_VERSION=$(sed -nE 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n 1)
           if [ -z "${BASE_VERSION:-}" ]; then
             echo "Could not read versionName from app/build.gradle.kts"
             exit 1
