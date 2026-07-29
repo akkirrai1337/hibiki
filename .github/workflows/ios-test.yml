@@ -61,8 +61,7 @@ jobs:
           for candidate in \
             /Applications/Xcode_16.4.app/Contents/Developer \
             /Applications/Xcode_16.3.app/Contents/Developer \
-            /Applications/Xcode_16.2.app/Contents/Developer \
-            /Applications/Xcode.app/Contents/Developer; do
+            /Applications/Xcode_16.2.app/Contents/Developer; do
             if [ -d "$candidate" ]; then
               sudo xcode-select -s "$candidate"
               selected="$candidate"
