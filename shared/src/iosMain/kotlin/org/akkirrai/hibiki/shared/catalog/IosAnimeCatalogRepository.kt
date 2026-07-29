@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.model.AnimeRating
 import org.akkirrai.hibiki.shared.model.AnimeTrailer
 import org.akkirrai.hibiki.shared.model.RelatedAnime
+import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 
 internal class IosAnimeCatalogRepository(
@@ -111,7 +112,7 @@ private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = 
     return Anime(
     id = id,
     title = displayName,
-    subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
+    subtitle = resolveAnimeSubtitle(type, year, fallback?.subtitle),
     episodesLabel = resolvedEpisodesLabel,
     status = resolvedStatus,
     nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
