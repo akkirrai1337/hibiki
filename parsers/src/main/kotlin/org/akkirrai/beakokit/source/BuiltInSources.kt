@@ -12,9 +12,5 @@ actual object BuiltInSources {
     val ANIMEVOST_ID = GeneratedSourceCatalog.ANIMEVOST_ID
     val GOGOANIME_ID = GeneratedSourceCatalog.GOGOANIME_ID
 
-    actual val catalog: SourceCatalog = SourceCatalog(
-        GeneratedSourceCatalog.catalog.entries.toMutableList().apply {
-            addAll(0, CommonSourceCatalog.catalog.entries)
-        },
-    )
+    actual val catalog: SourceCatalog = CommonSourceCatalog.catalog.mergedWith(GeneratedSourceCatalog.catalog)
 }

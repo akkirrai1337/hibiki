@@ -9,5 +9,6 @@ class SourceEntryProcessorProvider : SymbolProcessorProvider {
         SourceEntryProcessor(
             codeGenerator = environment.codeGenerator,
             logger = environment.logger,
+            excludeCommonSourceEntries = environment.options["beakokit.excludeCommonSourceEntries"] == "true",
         )
 }

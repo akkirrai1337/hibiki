@@ -55,6 +55,10 @@ dependencies {
     add("kspJvm", project(":beakokit-processor"))
 }
 
+ksp {
+    arg("beakokit.excludeCommonSourceEntries", "true")
+}
+
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
 }

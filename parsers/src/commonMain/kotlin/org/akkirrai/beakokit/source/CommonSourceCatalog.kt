@@ -16,10 +16,12 @@ internal object CommonSourceCatalog {
             SourceCatalogEntry(
                 info = YummyAnimeSource.INFO,
                 factory = SourceFactory(::YummyAnimeSource),
+                registrationOrder = 0,
             ),
             SourceCatalogEntry(
                 info = AniLibertySource.INFO,
                 factory = SourceFactory(::AniLibertySource),
+                registrationOrder = 1,
             ),
         ),
     )

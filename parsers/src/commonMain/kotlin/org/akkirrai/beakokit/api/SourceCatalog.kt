@@ -7,6 +7,7 @@ fun interface SourceFactory {
 data class SourceCatalogEntry(
     val info: SourceInfo,
     val factory: SourceFactory,
+    val registrationOrder: Int? = null,
 ) {
     fun create(context: SourceContext): AnimeSource {
         val source = factory.create(context)
@@ -41,4 +42,15 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
 
     fun create(id: SourceId, context: SourceContext): AnimeSource =
         entriesById[id]?.create(context) ?: error("Source is not registered: $id")
+
+    fun mergedWith(other: SourceCatalog): SourceCatalog {
+        val combined = entries + other.entries
+        return SourceCatalog(
+            if (combined.all { it.registrationOrder != null }) {
+                combined.sortedBy(SourceCatalogEntry::registrationOrder)
+            } else {
+                combined
+            },
+        )
+    }
 }
