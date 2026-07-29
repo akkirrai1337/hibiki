@@ -35,6 +35,8 @@ jobs:
     name: Build iOS device IPA
     runs-on: macos-15
     timeout-minutes: 45
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dkotlin.daemon.jvm.options=-Xmx6g"
 
     steps:
       - name: Checkout repository
