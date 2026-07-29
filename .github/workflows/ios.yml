@@ -150,7 +150,7 @@ jobs:
             echo
             echo "## Package"
             echo
-          echo "Unsigned iOS device IPA for signing and installation with Sideloadly or another signing tool."
+            echo "Unsigned iOS device IPA for signing and installation with Sideloadly or another signing tool."
           } > release-notes.md
 
       - name: Compile iOS targets and run JVM tests
