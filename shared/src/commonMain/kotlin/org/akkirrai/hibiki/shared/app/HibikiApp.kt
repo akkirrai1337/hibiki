@@ -12,12 +12,14 @@ import org.akkirrai.hibiki.shared.prototype.HibikiAppShell
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
 fun HibikiApp(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    homeRepository: HomeDataRepository? = null,
     libraryRepository: LibraryRepository = PrototypeLibraryRepository,
     profileRepository: LocalProfileDataRepository = PrototypeLocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
@@ -30,6 +32,7 @@ fun HibikiApp(
     HibikiAppShell(
         modifier = modifier,
         repository = repository,
+        homeRepository = homeRepository,
         libraryRepository = libraryRepository,
         profileRepository = profileRepository,
         settingsStore = settingsStore,

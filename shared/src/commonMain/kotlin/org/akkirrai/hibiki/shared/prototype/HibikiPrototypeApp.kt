@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -96,6 +97,8 @@ import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
 import org.akkirrai.hibiki.shared.home.AppHomeScreen
 import org.akkirrai.hibiki.shared.home.AppHomeScreenLabels
 import org.akkirrai.hibiki.shared.home.HomeUiState
+import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
@@ -129,6 +132,7 @@ import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 fun HibikiAppShell(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    homeRepository: HomeDataRepository? = null,
     libraryRepository: LibraryRepository,
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
@@ -141,6 +145,8 @@ fun HibikiAppShell(
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
+    val homePresenter = remember(homeRepository) { HomePresenter() }
+    val homeState by homePresenter.state.collectAsState()
     val catalogListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository) { AnimeCatalogPresenter(repository, scope, 12) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
@@ -166,6 +172,15 @@ fun HibikiAppShell(
 
     LaunchedEffect(libraryRepository, state.selectedAnime) {
         libraryPresenter.updateEntries(libraryRepository.getEntries())
+    }
+
+    LaunchedEffect(homeRepository) {
+        if (homeRepository == null) {
+            homePresenter.setState(HomeUiState())
+        } else {
+            homePresenter.setState(homeRepository.fallbackHomeState())
+            homePresenter.setState(homeRepository.loadHomeState())
+        }
     }
 
     LaunchedEffect(profileRepository) {
@@ -215,6 +230,15 @@ fun HibikiAppShell(
                             selectedTab = selectedTab,
                             systemLanguage = systemLanguage,
                             catalogState = state,
+                            homeState = homeState,
+                            onHomeRefresh = {
+                                homeRepository?.let { repo ->
+                                    scope.launch {
+                                        homePresenter.setState(homePresenter.state.value.copy(isLoading = true))
+                                        homePresenter.setState(repo.refreshHomeState())
+                                    }
+                                }
+                            },
                             catalogListState = catalogListState,
                             query = state.query,
                             onQueryChange = presenter::onQueryChange,
@@ -566,6 +590,8 @@ private fun AppDestinationContent(
     systemLanguage: String = "en",
     onBrowseCatalog: () -> Unit = {},
     onOpenLibrary: () -> Unit = {},
+    homeState: HomeUiState = HomeUiState(),
+    onHomeRefresh: () -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -616,6 +642,8 @@ private fun AppDestinationContent(
                     onSortSelected = onCatalogSortSelected,
                     onBrowseCatalog = onBrowseCatalog,
                     onOpenLibrary = onOpenLibrary,
+                    baseHomeState = homeState,
+                    onHomeRefresh = onHomeRefresh,
                 )
                 AppDestination.CATALOG -> SearchScreen(
                     state = catalogState,
@@ -839,6 +867,7 @@ private fun defaultHomeScreenLabels(): AppHomeScreenLabels {
 @Composable
 private fun ColumnScope.HomeScreen(
     state: AnimeCatalogUiState,
+    baseHomeState: HomeUiState,
     listState: LazyListState,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryEntries: List<LibraryEntry>,
@@ -854,6 +883,7 @@ private fun ColumnScope.HomeScreen(
     onSortSelected: (CatalogSort) -> Unit,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
+    onHomeRefresh: () -> Unit,
 ) {
     val searchResult = when {
         query.isBlank() -> SearchUiState.Idle
@@ -861,8 +891,12 @@ private fun ColumnScope.HomeScreen(
         items.isEmpty() -> SearchUiState.Empty
         else -> SearchUiState.Content(items = items, canLoadMore = false)
     }
-    val homeState = HomeUiState(
-        recentlyAddedToLibrary = libraryEntries.filter { it.category != LibraryCategory.Saved }.map { it.anime },
+    val homeState = baseHomeState.copy(
+        recentlyAddedToLibrary = if (baseHomeState.recentlyAddedToLibrary.isEmpty()) {
+            libraryEntries.filter { it.category != LibraryCategory.Saved }.map { it.anime }
+        } else {
+            baseHomeState.recentlyAddedToLibrary
+        },
         searchQuery = query,
         searchResult = searchResult,
         searchFilterCatalog = filterCatalog,
@@ -878,7 +912,7 @@ private fun ColumnScope.HomeScreen(
         onQueryChange = onQueryChange,
         onClearSearch = { onQueryChange("") },
         onFilterApply = onFiltersChange,
-        onRefresh = onRetry,
+        onRefresh = onHomeRefresh,
         onLoadMoreSearch = onLoadMoreRetry,
         onAnimeClick = onAnimeClick,
         onBrowseCatalog = onBrowseCatalog,

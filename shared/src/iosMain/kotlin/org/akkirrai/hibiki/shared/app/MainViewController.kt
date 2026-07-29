@@ -8,6 +8,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.catalog.IosAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
@@ -24,6 +25,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
         IosAnimeCatalogRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
     }
     val libraryRepository = remember { IosLibraryRepository() }
+    val homeRepository = remember(repository, libraryRepository) {
+        CatalogBackedHomeDataRepository(repository, libraryRepository)
+    }
     val profileRepository = remember(libraryRepository) {
         IosLocalProfileRepository(libraryRepository)
     }
@@ -42,6 +46,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
         Surface {
             HibikiApp(
                 repository = repository,
+                homeRepository = homeRepository,
                 libraryRepository = libraryRepository,
                 profileRepository = profileRepository,
                 settingsStore = settingsStore,
