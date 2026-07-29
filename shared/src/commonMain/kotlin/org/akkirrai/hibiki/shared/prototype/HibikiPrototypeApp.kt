@@ -130,6 +130,7 @@ import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
+import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 
 @Composable
@@ -867,6 +868,12 @@ private fun AppDestinationContent(
                     movieLabel = appText(AppTextKey.Movie),
                     onSearchRetry = onSourceSearchRetry,
                     onAnimeClick = onAnimeClick,
+                    searchSourceIconContent = { section, iconModifier ->
+                        AppSourceIconImage(
+                            url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,
+                            modifier = iconModifier,
+                        )
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 AppDestination.SETTINGS -> SettingsScreen(
