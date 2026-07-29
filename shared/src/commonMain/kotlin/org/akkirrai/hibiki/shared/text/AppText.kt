@@ -130,6 +130,7 @@ enum class AppTextKey {
     Related,
     Similar,
     Announcement,
+    Movie,
     Ongoing,
     Released,
     Unknown,
@@ -305,6 +306,7 @@ class DefaultAppTextResolver(
             AppTextKey.Related -> if (russian) "Связанное" else "Related"
             AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
             AppTextKey.Announcement -> if (russian) "Анонс" else "Announcement"
+            AppTextKey.Movie -> if (russian) "Фильм" else "Movie"
             AppTextKey.Ongoing -> if (russian) "Онгоинг" else "Ongoing"
             AppTextKey.Released -> if (russian) "Вышел" else "Released"
             AppTextKey.Unknown -> if (russian) "Неизвестно" else "Unknown"

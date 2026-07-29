@@ -816,6 +816,8 @@ private fun AppDestinationContent(
                     searchErrorLabel = sourceSearchState.error ?: appText(AppTextKey.Unknown),
                     searchRetryLabel = appText(AppTextKey.Search),
                     searchEmptyTitle = appText(AppTextKey.Sources),
+                    announcementLabel = appText(AppTextKey.Announcement),
+                    movieLabel = appText(AppTextKey.Movie),
                     onSearchRetry = onSourceSearchRetry,
                     onAnimeClick = onAnimeClick,
                     modifier = Modifier.fillMaxSize(),

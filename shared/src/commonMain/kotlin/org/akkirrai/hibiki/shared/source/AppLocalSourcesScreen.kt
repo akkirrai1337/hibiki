@@ -28,6 +28,8 @@ fun AppLocalSourcesScreen(
     searchErrorLabel: String,
     searchRetryLabel: String,
     searchEmptyTitle: String,
+    announcementLabel: String = "Announcement",
+    movieLabel: String = "Movie",
     onSearchRetry: () -> Unit,
     onAnimeClick: (org.akkirrai.hibiki.shared.model.Anime) -> Unit,
     modifier: Modifier = Modifier,
@@ -69,8 +71,8 @@ fun AppLocalSourcesScreen(
                 itemContent = { anime ->
                     AppSourceSearchAnimeCard(
                         anime = anime,
-                        announcementLabel = "Announcement",
-                        movieLabel = "Movie",
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
                         onClick = { onAnimeClick(anime) },
                         cardWidth = SourceSearchPosterCardWidth,
                     )
