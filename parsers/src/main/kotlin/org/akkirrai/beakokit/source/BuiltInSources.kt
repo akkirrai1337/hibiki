@@ -4,15 +4,15 @@ import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.generated.GeneratedSourceCatalog
 
 /** Stable facade over the KSP-generated built-in source catalog. */
-object BuiltInSources {
-    val YUMMY_ANIME_ID = CommonSourceCatalog.YUMMY_ANIME_ID
-    val ANI_LIBERTY_ID = CommonSourceCatalog.ANI_LIBERTY_ID
+actual object BuiltInSources {
+    actual val YUMMY_ANIME_ID = CommonSourceCatalog.YUMMY_ANIME_ID
+    actual val ANI_LIBERTY_ID = CommonSourceCatalog.ANI_LIBERTY_ID
     val ANIMEGO_ID = GeneratedSourceCatalog.ANIMEGO_ID
     val ANIMEPAHE_ID = GeneratedSourceCatalog.ANIMEPAHE_ID
     val ANIMEVOST_ID = GeneratedSourceCatalog.ANIMEVOST_ID
     val GOGOANIME_ID = GeneratedSourceCatalog.GOGOANIME_ID
 
-    val catalog: SourceCatalog = SourceCatalog(
+    actual val catalog: SourceCatalog = SourceCatalog(
         GeneratedSourceCatalog.catalog.entries.toMutableList().apply {
             addAll(0, CommonSourceCatalog.catalog.entries)
         },
