@@ -19,6 +19,7 @@ import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.shared.source.sanitizedForApp
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSourceRuntime internal constructor(
@@ -54,7 +55,7 @@ class AnimeSourceRuntime internal constructor(
             filterCatalogCache[preferEnglish] ?: localizeFilters(
                 source.getSearchFilterCatalog(),
                 preferEnglish,
-            ).sanitized(preferEnglish, descriptor.language).also { filterCatalogCache[preferEnglish] = it }
+            ).sanitizedForApp(preferEnglish, descriptor.language).also { filterCatalogCache[preferEnglish] = it }
         }
     }
 

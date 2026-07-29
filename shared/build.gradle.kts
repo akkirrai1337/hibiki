@@ -42,6 +42,7 @@ kotlin {
                 implementation(libs.coil.compose)
                 implementation(libs.material.kolor)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(project(":parsers"))
             }
         }
         commonTest.dependencies {
@@ -68,7 +69,6 @@ kotlin {
         val iosArm64Main by getting { dependsOn(iosMain) }
         val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
         iosMain.dependencies {
-            implementation(project(":parsers"))
             implementation("io.ktor:ktor-client-darwin:3.5.0")
             implementation(libs.coil.network.ktor3)
         }
