@@ -60,7 +60,7 @@ import org.akkirrai.hibiki.feature.catalog.SharedAndroidCatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
 import org.akkirrai.hibiki.feature.home.SharedAndroidHomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
-import org.akkirrai.hibiki.feature.library.LibraryScreen
+import org.akkirrai.hibiki.feature.library.SharedAndroidLibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
@@ -248,7 +248,7 @@ private fun HibikiNavHost(
                     }
                 },
             ) {
-                LibraryScreen(
+                SharedAndroidLibraryScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
