@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.http
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceUnavailableException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,6 +42,30 @@ class MirrorRequestExecutorTest {
                 throw CancellationException("Cancelled by caller")
             }
         }
+        assertEquals(1, attempts)
+    }
+
+    @Test
+    fun `does not retry non transient source errors`() = runBlocking {
+        var attempts = 0
+        val executor = MirrorRequestExecutor(
+            sourceName = "TestSource",
+            baseUrls = listOf("https://first.test", "https://second.test"),
+        )
+
+        val error = assertFailsWith<SourceException> {
+            executor.execute<Unit> {
+                attempts += 1
+                throw SourceException(
+                    message = "Not found",
+                    statusCode = 404,
+                    kind = SourceErrorKind.NOT_FOUND,
+                )
+            }
+        }
+
+        assertEquals(SourceErrorKind.NOT_FOUND, error.kind)
+        assertEquals(404, error.statusCode)
         assertEquals(1, attempts)
     }
 

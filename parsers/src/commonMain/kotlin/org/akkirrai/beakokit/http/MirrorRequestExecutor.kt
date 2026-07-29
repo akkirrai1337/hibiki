@@ -1,6 +1,8 @@
 package org.akkirrai.beakokit.http
 
 import kotlinx.coroutines.CancellationException
+import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.api.SourceUnavailableException
@@ -26,6 +28,9 @@ class MirrorRequestExecutor(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
+                if (!error.shouldTryNextMirror()) {
+                    throw error
+                }
                 failures += error
                 logger.log(
                     SourceLogLevel.WARNING,
@@ -42,4 +47,13 @@ class MirrorRequestExecutor(
             failures.drop(1).forEach(unavailable::addSuppressed)
         }
     }
+}
+
+private fun Throwable.shouldTryNextMirror(): Boolean = when (this) {
+    is SourceException -> kind in setOf(
+        SourceErrorKind.NETWORK,
+        SourceErrorKind.RATE_LIMITED,
+        SourceErrorKind.UNAVAILABLE,
+    )
+    else -> true
 }
