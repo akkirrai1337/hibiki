@@ -31,6 +31,9 @@ import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
 import org.akkirrai.hibiki.shared.source.resolveReleaseStatusLabel
+import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyStatusFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyTypeFilterLabel
 
 internal class IosAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
@@ -75,10 +78,26 @@ internal class IosAnimeCatalogRepository(
 
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog =
         source.getSearchFilterCatalog().let { catalog ->
+            val isYummy = sourceId == BuiltInSources.YUMMY_ANIME_ID
             AnimeCatalogFilterCatalog(
-                sortOptions = catalog.sortOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
-                typeOptions = catalog.typeOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
-                statusOptions = catalog.statusOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
+                sortOptions = catalog.sortOptions.map {
+                    AnimeCatalogFilterOption(
+                        it.id,
+                        if (isYummy) localizeYummySortFilterLabel(it.id, it.title, preferEnglish) else it.title,
+                    )
+                },
+                typeOptions = catalog.typeOptions.map {
+                    AnimeCatalogFilterOption(
+                        it.id,
+                        if (isYummy) localizeYummyTypeFilterLabel(it.id, it.title, preferEnglish) else it.title,
+                    )
+                },
+                statusOptions = catalog.statusOptions.map {
+                    AnimeCatalogFilterOption(
+                        it.id,
+                        if (isYummy) localizeYummyStatusFilterLabel(it.id, it.title) else it.title,
+                    )
+                },
                 genreOptions = catalog.genreOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
                 capabilities = AnimeCatalogCapabilities(
                     supportedSorts = catalog.capabilities.supportedSorts.map { it.name.lowercase() }.toSet(),
