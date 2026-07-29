@@ -57,6 +57,7 @@ import org.akkirrai.hibiki.shared.design.component.SectionHeader
 import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
+import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
@@ -111,6 +112,8 @@ fun HibikiAppShell(
     val scope = rememberCoroutineScope()
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
     val state by presenter.state.collectAsState()
+    val sourceSearchPresenter = remember(repository) { AnimeCatalogPresenter(repository, scope, 12) }
+    val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
@@ -125,7 +128,10 @@ fun HibikiAppShell(
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
         presenter.search()
-        onDispose { presenter.close() }
+        onDispose {
+            presenter.close()
+            sourceSearchPresenter.close()
+        }
     }
 
     LaunchedEffect(libraryRepository, state.selectedAnime) {
@@ -191,6 +197,10 @@ fun HibikiAppShell(
                         sources,
                         selectedSourceId,
                         onSourceSelected,
+                        sourceSearchState,
+                        sourceSearchPresenter::onQueryChange,
+                        sourceSearchPresenter::clear,
+                        sourceSearchPresenter::search,
                     )
                     } else {
                     WideAppLayout(
@@ -229,6 +239,10 @@ fun HibikiAppShell(
                         sources,
                         selectedSourceId,
                         onSourceSelected,
+                        sourceSearchState,
+                        sourceSearchPresenter::onQueryChange,
+                        sourceSearchPresenter::clear,
+                        sourceSearchPresenter::search,
                     )
                     }
                 }
@@ -271,6 +285,10 @@ private fun WideAppLayout(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
+    sourceSearchState: AnimeCatalogUiState,
+    onSourceSearchQueryChange: (String) -> Unit,
+    onSourceSearchClear: () -> Unit,
+    onSourceSearchRetry: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         AppSidebar(selectedTab, onTabSelected)
@@ -307,6 +325,10 @@ private fun WideAppLayout(
             sources,
             selectedSourceId,
             onSourceSelected,
+            sourceSearchState,
+            onSourceSearchQueryChange,
+            onSourceSearchClear,
+            onSourceSearchRetry,
             Modifier.weight(1f),
         )
     }
@@ -346,6 +368,10 @@ private fun CompactAppLayout(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
+    sourceSearchState: AnimeCatalogUiState,
+    onSourceSearchQueryChange: (String) -> Unit,
+    onSourceSearchClear: () -> Unit,
+    onSourceSearchRetry: () -> Unit,
 ) {
     Scaffold(
         bottomBar = {
@@ -397,6 +423,10 @@ private fun CompactAppLayout(
             sources,
             selectedSourceId,
             onSourceSelected,
+            sourceSearchState,
+            onSourceSearchQueryChange,
+            onSourceSearchClear,
+            onSourceSearchRetry,
             Modifier.padding(padding),
         )
     }
@@ -482,6 +512,10 @@ private fun AppDestinationContent(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
+    sourceSearchState: AnimeCatalogUiState,
+    onSourceSearchQueryChange: (String) -> Unit,
+    onSourceSearchClear: () -> Unit,
+    onSourceSearchRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (selectedAnime != null) {
@@ -607,6 +641,20 @@ private fun AppDestinationContent(
                     bottomContentPadding = 24.dp,
                     emptyText = appText(AppTextKey.Sources),
                     onSourceSelected = onSourceSelected,
+                    searchQuery = sourceSearchState.query,
+                    searchItems = sourceSearchState.items,
+                    isSearchLoading = sourceSearchState.isLoading,
+                    searchError = sourceSearchState.error != null,
+                    searchSourceId = sources.firstOrNull { it.id.contains("ani", ignoreCase = true) }?.id.orEmpty(),
+                    searchSourceName = sources.firstOrNull { it.id.contains("ani", ignoreCase = true) }?.name.orEmpty(),
+                    onSearchQueryChange = onSourceSearchQueryChange,
+                    onSearchClear = onSourceSearchClear,
+                    searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
+                    searchErrorLabel = sourceSearchState.error ?: appText(AppTextKey.Unknown),
+                    searchRetryLabel = appText(AppTextKey.Search),
+                    searchEmptyTitle = appText(AppTextKey.Sources),
+                    onSearchRetry = onSourceSearchRetry,
+                    onAnimeClick = onAnimeClick,
                     modifier = Modifier.fillMaxSize(),
                 )
                 AppDestination.SETTINGS -> SettingsScreen(
