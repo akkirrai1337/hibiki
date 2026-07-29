@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.shared.model.RelatedAnime
 import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
+import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
 import org.akkirrai.hibiki.shared.source.resolveReleaseStatusLabel
 
 internal class IosAnimeCatalogRepository(
@@ -123,6 +124,7 @@ internal class IosAnimeCatalogRepository(
 }
 
 private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = null): Anime {
+    val resolvedPosterUrl = posterUrl ?: fallback?.posterUrl
     val resolvedStatus = if (releaseStatus == AnimeReleaseStatus.UNKNOWN) {
         fallback?.status ?: resolveReleaseStatusLabel(releaseStatus.name, preferEnglish)
     } else {
@@ -145,14 +147,18 @@ private fun AnimeTitle.toSharedAnime(preferEnglish: Boolean, fallback: Anime? = 
     episodesLabel = resolvedEpisodesLabel,
     status = resolvedStatus,
     nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
-    posterUrl = posterUrl ?: fallback?.posterUrl,
-    posterFallbackUrl = posterFallbackUrl
-        ?.takeIf { it.isNotBlank() && it != posterUrl }
-        ?: fallback?.posterFallbackUrl?.takeIf { it.isNotBlank() && it != posterUrl },
-    description = description ?: fallback?.description,
-    genres = genres.ifEmpty { fallback?.genres.orEmpty() },
-    alternativeTitles = allNames().filterNot { it.equals(displayName, ignoreCase = true) },
-    ratings = ratings.map { AnimeRating(it.source, it.value, it.votes) }.ifEmpty { fallback?.ratings.orEmpty() },
+        posterUrl = resolvedPosterUrl,
+        posterFallbackUrl = posterFallbackUrl
+        ?.takeIf { it.isNotBlank() && it != resolvedPosterUrl }
+        ?: fallback?.posterFallbackUrl?.takeIf { it.isNotBlank() && it != resolvedPosterUrl },
+        description = description ?: fallback?.description,
+        genres = genres.ifEmpty { fallback?.genres.orEmpty() },
+    alternativeTitles = resolveAlternativeTitles(
+        primaryTitle = displayName,
+        titleCandidates = listOf(russianName, englishName, originalName, japaneseName) + synonyms,
+        fallbackTitles = fallback?.alternativeTitles.orEmpty(),
+    ),
+        ratings = ratings.map { AnimeRating(it.source, it.value, it.votes) }.ifEmpty { fallback?.ratings.orEmpty() },
     ageRating = ageRating ?: fallback?.ageRating,
     viewCount = viewCount ?: fallback?.viewCount,
     screenshots = screenshots.ifEmpty { fallback?.screenshots.orEmpty() },
