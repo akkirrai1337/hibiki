@@ -7,6 +7,8 @@ import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -17,7 +19,6 @@ import org.akkirrai.beakokit.model.ProviderMatch
 import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
 import org.akkirrai.beakokit.http.bodyOrThrow
-import java.util.concurrent.ConcurrentHashMap
 
 internal class YummyPlaybackClient(
     private val client: HttpClient,
@@ -111,16 +112,22 @@ internal class YummyPlaybackClient(
     }
 
     private suspend fun getVideos(animeId: String): List<YummyVideo> {
-        cachedVideos[animeId]?.let { return it }
+        cachedVideosMutex.withLock {
+            cachedVideos[animeId]?.let { return it }
+        }
         val response = client.get("$baseUrl/anime/$animeId/videos") {
             addHeaders()
         }
         return response.bodyOrThrow<YummyResponse<List<YummyVideo>>>(name).response
-            .also { cachedVideos[animeId] = it }
+            .also { videos ->
+                cachedVideosMutex.withLock { cachedVideos[animeId] = videos }
+            }
     }
 
     private suspend fun getEpisodeIndex(animeId: String): Map<String, Episode> {
-        cachedEpisodes[animeId]?.let { return it }
+        cachedEpisodesMutex.withLock {
+            cachedEpisodes[animeId]?.let { return it }
+        }
         return getVideos(animeId)
             .groupBy(YummyVideo::number)
             .mapNotNull { (number, videos) ->
@@ -132,7 +139,9 @@ internal class YummyPlaybackClient(
                 )
             }
             .toMap()
-            .also { cachedEpisodes[animeId] = it }
+            .also { episodes ->
+                cachedEpisodesMutex.withLock { cachedEpisodes[animeId] = episodes }
+            }
     }
 
     private fun io.ktor.client.request.HttpRequestBuilder.addHeaders() {
@@ -181,8 +190,10 @@ internal class YummyPlaybackClient(
     private companion object {
         const val MIN_CONFIDENCE = 0.70
         val EPISODE_NUMBER = Regex("""\d+(?:\.\d+)?""")
-        val cachedVideos = ConcurrentHashMap<String, List<YummyVideo>>()
-        val cachedEpisodes = ConcurrentHashMap<String, Map<String, Episode>>()
+        val cachedVideosMutex = Mutex()
+        val cachedVideos = mutableMapOf<String, List<YummyVideo>>()
+        val cachedEpisodesMutex = Mutex()
+        val cachedEpisodes = mutableMapOf<String, Map<String, Episode>>()
     }
 }
 
