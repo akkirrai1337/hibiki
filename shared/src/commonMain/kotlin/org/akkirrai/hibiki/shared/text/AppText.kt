@@ -32,6 +32,11 @@ enum class AppTextKey {
     FilterReset,
     FilterApply,
     CatalogError,
+    LibraryEmptyTitle,
+    LibraryEmptyBody,
+    LibraryFilteredEmptyTitle,
+    LibrarySearchEmptyTitle,
+    LibraryFilteredEmptyBody,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -158,6 +163,11 @@ class DefaultAppTextResolver(
             AppTextKey.FilterReset -> if (russian) "Сбросить" else "Reset"
             AppTextKey.FilterApply -> if (russian) "Применить" else "Apply"
             AppTextKey.CatalogError -> if (russian) "Ошибка каталога" else "Catalog error"
+            AppTextKey.LibraryEmptyTitle -> if (russian) "Библиотека пуста" else "Your library is empty"
+            AppTextKey.LibraryEmptyBody -> if (russian) "Добавленные тайтлы появятся здесь" else "Titles you add will appear here"
+            AppTextKey.LibraryFilteredEmptyTitle -> if (russian) "Ничего не найдено" else "Nothing found"
+            AppTextKey.LibrarySearchEmptyTitle -> if (russian) "Поиск не дал результатов" else "No search results"
+            AppTextKey.LibraryFilteredEmptyBody -> if (russian) "Попробуйте изменить фильтры" else "Try changing the filters"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

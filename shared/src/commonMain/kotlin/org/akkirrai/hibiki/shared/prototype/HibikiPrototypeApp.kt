@@ -77,8 +77,22 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.library.LibraryPresenter
+import org.akkirrai.hibiki.shared.library.LibraryUiState
 import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.library.AppLibraryEntriesContent
+import org.akkirrai.hibiki.shared.library.AppLibraryHeader
+import org.akkirrai.hibiki.shared.library.AppLibrarySearchBar
+import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
+import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
+import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
+import org.akkirrai.hibiki.shared.library.isRussianLibraryLanguage
+import org.akkirrai.hibiki.shared.library.toAnimeSearchFilters
+import org.akkirrai.hibiki.shared.library.toLibrarySearchFilters
+import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateText
+import org.akkirrai.hibiki.shared.library.icon
+import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
+import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
@@ -195,6 +209,7 @@ fun HibikiAppShell(
                     ) {
                         AppDestinationContent(
                             selectedTab = selectedTab,
+                            systemLanguage = systemLanguage,
                             catalogState = state,
                             catalogListState = catalogListState,
                             query = state.query,
@@ -209,6 +224,11 @@ fun HibikiAppShell(
                                 presenter.setFilters(state.filters.copy(sortAlias = sort.toAlias()))
                                 presenter.search()
                             },
+                            libraryState = libraryState,
+                            onLibraryCategorySelected = libraryPresenter::selectCategory,
+                            onLibrarySearchQueryChange = libraryPresenter::onSearchQueryChange,
+                            onLibrarySearchClear = libraryPresenter::clearSearch,
+                            onLibraryFiltersApply = libraryPresenter::applySearchFilters,
                             selectedAnime = state.selectedAnime,
                             onAnimeClick = presenter::openDetails,
                             onBackFromDetails = presenter::closeDetails,
@@ -532,6 +552,12 @@ private fun AppDestinationContent(
     onCatalogRetry: () -> Unit = {},
     onCatalogLoadMoreRetry: () -> Unit = {},
     onCatalogSortSelected: (CatalogSort) -> Unit = {},
+    libraryState: LibraryUiState = LibraryUiState(),
+    onLibraryCategorySelected: (LibraryCategory) -> Unit = {},
+    onLibrarySearchQueryChange: (String) -> Unit = {},
+    onLibrarySearchClear: () -> Unit = {},
+    onLibraryFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit = {},
+    systemLanguage: String = "en",
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -597,7 +623,14 @@ private fun AppDestinationContent(
                 )
                 AppDestination.LIBRARY -> LibraryScreen(
                     entries = libraryEntries,
+                    state = libraryState,
                     onAnimeClick = onAnimeClick,
+                    onCategorySelected = onLibraryCategorySelected,
+                    onSearchQueryChange = onLibrarySearchQueryChange,
+                    onSearchClear = onLibrarySearchClear,
+                    onFiltersApply = onLibraryFiltersApply,
+                    languageMode = languageMode,
+                    systemLanguage = systemLanguage,
                 )
                 AppDestination.PROFILE -> {
                     val categoryLabels = mapOf(
@@ -703,6 +736,17 @@ private fun LibraryCategory.profileTextKey(): AppTextKey = when (this) {
     LibraryCategory.OnHold -> AppTextKey.LibraryOnHold
     LibraryCategory.Favorite -> AppTextKey.LibraryFavorite
     LibraryCategory.Saved -> AppTextKey.LibrarySaved
+}
+
+@Composable
+private fun LibraryCategory.libraryText(): String = when (this) {
+    LibraryCategory.Watching -> appText(AppTextKey.LibraryWatching)
+    LibraryCategory.Planned -> appText(AppTextKey.LibraryPlanned)
+    LibraryCategory.Completed -> appText(AppTextKey.LibraryCompleted)
+    LibraryCategory.Dropped -> appText(AppTextKey.LibraryDropped)
+    LibraryCategory.OnHold -> appText(AppTextKey.LibraryOnHold)
+    LibraryCategory.Favorite -> appText(AppTextKey.LibraryFavorite)
+    LibraryCategory.Saved -> appText(AppTextKey.LibrarySaved)
 }
 
 @Composable
@@ -815,25 +859,103 @@ private fun ColumnScope.SearchScreen(
 @Composable
 private fun ColumnScope.LibraryScreen(
     entries: List<LibraryEntry>,
+    state: LibraryUiState,
     onAnimeClick: (Anime) -> Unit,
+    onCategorySelected: (LibraryCategory) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchClear: () -> Unit,
+    onFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit,
+    languageMode: LanguageMode,
+    systemLanguage: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader(
-            title = appText(AppTextKey.Library),
-            actionLabel = appText(AppTextKey.SeeAll),
-            onActionClick = { },
+    var isFilterSheetOpen by remember { mutableStateOf(false) }
+    val isRussian = isRussianLibraryLanguage(languageMode, systemLanguage)
+    val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
+    AppLibraryEntriesContent(
+        state = state,
+        modifier = Modifier.fillMaxSize(),
+        bottomContentPadding = 24.dp,
+        onEntryClick = { entry -> onAnimeClick(entry.anime) },
+        headerContent = {
+            AppLibraryHeader(
+                searchContent = { searchModifier ->
+                    AppLibrarySearchBar(
+                        query = state.searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        onClear = onSearchClear,
+                        placeholder = appText(AppTextKey.SearchPlaceholder),
+                        filterContentDescription = appText(AppTextKey.SearchFilters),
+                        clearContentDescription = appText(AppTextKey.Back),
+                        onFilterClick = { isFilterSheetOpen = true },
+                        modifier = searchModifier,
+                    )
+                },
+                selected = state.selectedCategory,
+                categories = state.orderedCategories,
+                counts = state.categoryCounts,
+                label = { category -> categoryLabels.getValue(category) },
+                icon = { category -> category.icon() },
+                onSelected = onCategorySelected,
+            )
+        },
+        emptyContent = { filtered ->
+            val emptyState = resolveLibraryEmptyStateText(
+                filtered = filtered,
+                searchQuery = state.searchQuery,
+                category = state.selectedCategory,
+                emptyTitle = appText(AppTextKey.LibraryEmptyTitle),
+                emptyMessage = appText(AppTextKey.LibraryEmptyBody),
+                filteredTitle = appText(AppTextKey.LibraryFilteredEmptyTitle),
+                searchTitle = appText(AppTextKey.LibrarySearchEmptyTitle),
+                filteredMessage = appText(AppTextKey.LibraryFilteredEmptyBody),
+                categoryLabels = categoryLabels,
+            )
+            AppLibraryEmptyState(title = emptyState.title, message = emptyState.message)
+        },
+        entryContent = { entry, entryModifier ->
+            AppLibraryEntryCard(
+                entry = entry,
+                announcementLabel = appText(AppTextKey.Announcement),
+                movieLabel = appText(AppTextKey.Type),
+                onClick = { onAnimeClick(entry.anime) },
+                libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+                modifier = entryModifier,
+            )
+        },
+    )
+
+    if (isFilterSheetOpen) {
+        val catalog = buildLibraryFilterCatalog(
+            typeOptions = state.filterCatalog.typeOptions,
+            statusOptions = state.filterCatalog.statusOptions,
+            genreOptions = state.filterCatalog.genreOptions,
+            isRussian = isRussian,
         )
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 210.dp),
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            items(entries) { entry ->
-                AnimeCatalogCard(entry.anime, onClick = { onAnimeClick(entry.anime) })
-            }
-        }
+        AppCatalogFilterSheet(
+            initialFilters = state.searchFilters.toAnimeSearchFilters(),
+            filterCatalog = catalog,
+            isFilterCatalogLoading = false,
+            onApply = { filters ->
+                onFiltersApply(filters.toLibrarySearchFilters(state.filterCatalog))
+                isFilterSheetOpen = false
+            },
+            onDismissRequest = { isFilterSheetOpen = false },
+            unavailableLabel = appText(AppTextKey.FilterUnavailable),
+            typeTitle = appText(AppTextKey.Type),
+            genresTitle = appText(AppTextKey.Genres),
+            yearTitle = appText(AppTextKey.ReleaseDate),
+            yearAllLabel = appText(AppTextKey.FilterAllYears),
+            yearFromLabel = appText(AppTextKey.FilterFromYear),
+            yearToLabel = appText(AppTextKey.FilterToYear),
+            statusTitle = appText(AppTextKey.Status),
+            resetLabel = appText(AppTextKey.FilterReset),
+            applyLabel = appText(AppTextKey.FilterApply),
+            defaultYearRange = defaultCatalogFilterYearRange(2026),
+            optionText = { it.title },
+            shape = RoundedCornerShape(UiDimens.LargeCorner),
+            maxCollapsedGenreGroups = 3,
+            maxCollapsedGenreItems = null,
+        )
     }
 }
 
