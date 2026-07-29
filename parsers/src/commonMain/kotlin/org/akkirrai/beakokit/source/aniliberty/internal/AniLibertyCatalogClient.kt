@@ -141,6 +141,8 @@ internal class AniLibertyCatalogClient(
         val poster = value["poster"].asObject()
         val posterPath = poster?.get("optimized").asObject()?.string("src")
             ?: poster?.string("src")
+        val posterFallbackPath = poster?.string("src")
+            ?.takeIf { it != posterPath }
         val availableEpisodeCount = value["episodes"].asArray().size.takeIf { it > 0 }
         return AnimeTitle(
             id = id,
@@ -153,6 +155,7 @@ internal class AniLibertyCatalogClient(
             type = value["type"].asObject()?.string("value"),
             episodeCount = value.int("episodes_total") ?: availableEpisodeCount,
             posterUrl = posterPath?.let { resolveUrl(PUBLIC_SITE_URL, it) },
+            posterFallbackUrl = posterFallbackPath?.let { resolveUrl(PUBLIC_SITE_URL, it) },
             status = when (value.bool("is_ongoing")) {
                 true -> "ongoing"
                 false -> "released"
