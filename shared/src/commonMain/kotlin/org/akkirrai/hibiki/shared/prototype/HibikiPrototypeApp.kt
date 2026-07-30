@@ -358,9 +358,20 @@ fun HibikiAppShell(
                         modifier = Modifier
                             .fillMaxSize()
                             .then(if (applyStatusBarPadding) Modifier.statusBarsPadding() else Modifier),
-                    ) {
+                    ) { animatedDestination ->
+                        val animatedTab = when (animatedDestination) {
+                            AppTopLevelDestination.HOME -> AppDestination.HOME
+                            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+                            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+                            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+                            AppTopLevelDestination.PROFILE -> if (selectedTab == AppDestination.SETTINGS) {
+                                AppDestination.SETTINGS
+                            } else {
+                                AppDestination.PROFILE
+                            }
+                        }
                         AppDestinationContent(
-                            selectedTab = selectedTab,
+                            selectedTab = animatedTab,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
                             catalogState = state,

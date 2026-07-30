@@ -29,7 +29,7 @@ fun AppProductionRoot(
             modifier = iconModifier,
         )
     },
-    content: @Composable () -> Unit,
+    content: @Composable (AppTopLevelDestination) -> Unit,
 ) {
     AppTopLevelScaffold(
         currentDestination = currentDestination,
@@ -53,8 +53,8 @@ fun AppProductionRoot(
                     )
                 },
                 label = "top_level_screen_transition",
-            ) {
-                content()
+            ) { destination ->
+                content(destination)
             }
         },
     )
