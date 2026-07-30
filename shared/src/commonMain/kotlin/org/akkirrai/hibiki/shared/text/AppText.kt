@@ -113,6 +113,7 @@ enum class AppTextKey {
     Favorite,
     Watch,
     WatchContinue,
+    EpisodesShort,
     WatchContinueEpisode,
     WatchContinueEpisodePosition,
     Trailer,
@@ -330,6 +331,7 @@ class DefaultAppTextResolver(
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.WatchContinue -> if (russian) "Продолжить" else "Continue"
+            AppTextKey.EpisodesShort -> if (russian) "сер." else "ep."
             AppTextKey.WatchContinueEpisode -> if (russian) "Продолжить · серия %s" else "Continue · Episode %s"
             AppTextKey.WatchContinueEpisodePosition -> if (russian) "Серия %s · %s" else "Episode %s · %s"
             AppTextKey.Trailer -> if (russian) "Трейлер" else "Trailer"

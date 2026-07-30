@@ -28,11 +28,12 @@ fun WatchSourcesList(
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {},
     isRefreshing: Boolean = false,
+    contentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
+        contentPadding = contentPadding ?: PaddingValues(
             start = WatchSourcesListHorizontalPadding,
             end = WatchSourcesListHorizontalPadding,
             top = WatchSourcesListTopPadding,

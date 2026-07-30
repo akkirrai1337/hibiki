@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.model.WatchSource
@@ -17,6 +18,7 @@ fun AppWatchSourcesContent(
     onRetry: () -> Unit,
     onSourceClick: (WatchSource) -> Unit,
     onLoadMore: () -> Unit,
+    listContentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
 ) {
     AppWatchSourcesStateContent(
@@ -45,6 +47,7 @@ fun AppWatchSourcesContent(
             isLoadingMore = state.isLoadingMore,
             onLoadMore = onLoadMore,
             isRefreshing = state.isRefreshing(),
+            contentPadding = listContentPadding,
         )
     }
 }

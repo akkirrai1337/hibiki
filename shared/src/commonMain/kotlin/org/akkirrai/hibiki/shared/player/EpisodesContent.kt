@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 
@@ -12,6 +13,7 @@ fun AppEpisodesContent(
     retryLabel: String,
     onRetry: () -> Unit,
     episodeContent: @Composable (WatchEpisode, androidx.compose.foundation.shape.RoundedCornerShape) -> Unit,
+    listContentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
 ) {
     AppEpisodesStateContent(
@@ -25,6 +27,7 @@ fun AppEpisodesContent(
         EpisodesList(
             episodes = episodes,
             episodeContent = episodeContent,
+            contentPadding = listContentPadding,
         )
     }
 }

@@ -518,6 +518,12 @@ fun HibikiAppShell(
                             watchAnime = watchAnime,
                             onWatchClick = { anime -> watchAnime = anime },
                             onBackFromWatch = {
+                                if (selectedWatchSource != null) {
+                                    selectedWatchSource = null
+                                    playbackError = null
+                                    playbackLoading = false
+                                    return@AppDestinationContent
+                                }
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
@@ -1079,19 +1085,20 @@ private fun AppDestinationContent(
             backEnabled = !playbackLoading,
             backContentDescription = appText(AppTextKey.Back),
             modifier = modifier,
-        ) {
+        ) { listContentPadding ->
             if (selectedWatchSource == null) {
                 AppWatchSourcesContent(
                     state = watchState,
                     emptyTitle = appText(AppTextKey.Watch),
                     emptyMessage = appText(AppTextKey.Watch),
                     retryLabel = appText(AppTextKey.SearchRetry),
-                    episodeLabel = appText(AppTextKey.Episodes),
+                    episodeLabel = appText(AppTextKey.EpisodesShort),
                     loadMoreLabel = appText(AppTextKey.Episodes),
                     enabled = !watchState.isLoading,
                     onRetry = onWatchRetry,
                     onSourceClick = onWatchSourceClick,
                     onLoadMore = onWatchLoadMore,
+                    listContentPadding = listContentPadding,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -1114,7 +1121,7 @@ private fun AppDestinationContent(
                         emptyMessage = appText(AppTextKey.Episodes),
                         retryLabel = appText(AppTextKey.SearchRetry),
                         onRetry = { onWatchSourceClick(selectedWatchSource) },
-                        episodeContent = { episode, _ ->
+                        episodeContent = { episode, shape ->
                             val progress = profileData.episodeProgress.firstOrNull { progress ->
                                 progress.titleId == watchAnime.id && progress.episodeId == episode.id
                             }
@@ -1134,9 +1141,11 @@ private fun AppDestinationContent(
                                 inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
                                 enabled = !playbackLoading,
                                 showDownloadAction = false,
+                                shape = shape,
                                 onClick = { onWatchEpisodeClick(episode) },
                             )
                         },
+                        listContentPadding = listContentPadding,
                         modifier = Modifier.weight(1f),
                     )
                 }

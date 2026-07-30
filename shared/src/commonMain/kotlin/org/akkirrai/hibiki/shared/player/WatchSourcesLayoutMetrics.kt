@@ -10,4 +10,6 @@ val WatchSourcesListBottomPadding = 12.dp
 val WatchSourcesListItemGap = 4.dp
 val WatchSourcesListAuxiliaryVerticalPadding = 18.dp
 val WatchScreenBackButtonTopPadding = 8.dp
+val WatchScreenBackButtonTouchSize = 48.dp
+val WatchScreenContentTopClearance = 12.dp
 val WatchSourceRowDefaultCornerRadius = 0.dp

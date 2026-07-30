@@ -14,11 +14,12 @@ import org.akkirrai.hibiki.shared.source.sourceItemShape
 fun EpisodesList(
     episodes: List<WatchEpisode>,
     episodeContent: @Composable (WatchEpisode, androidx.compose.foundation.shape.RoundedCornerShape) -> Unit,
+    contentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
+        contentPadding = contentPadding ?: PaddingValues(
             start = EpisodesListHorizontalPadding,
             end = EpisodesListHorizontalPadding,
             top = EpisodesListTopPadding,

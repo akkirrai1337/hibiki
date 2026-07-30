@@ -45,7 +45,7 @@ internal fun WatchScreenScaffold(
         backEnabled = !navigationLocked,
         backContentDescription = stringResource(R.string.cd_back),
         modifier = modifier,
-        content = content,
+        content = { _ -> content() },
     )
 }
 
