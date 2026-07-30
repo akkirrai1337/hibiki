@@ -169,16 +169,34 @@ private fun sharedAndroidSettingsLabels(
 ) = AppSettingsScreenLabels(
     appearance = stringResource(R.string.settings_appearance),
     theme = stringResource(R.string.settings_theme),
-    themeSystem = stringResource(R.string.settings_theme_system),
-    themeLight = stringResource(R.string.settings_theme_light),
-    themeDark = stringResource(R.string.settings_theme_dark),
+    themeSystem = stringResource(
+        R.string.settings_theme_option,
+        stringResource(R.string.settings_theme_system),
+    ),
+    themeLight = stringResource(
+        R.string.settings_theme_option,
+        stringResource(R.string.settings_theme_light),
+    ),
+    themeDark = stringResource(
+        R.string.settings_theme_option,
+        stringResource(R.string.settings_theme_dark),
+    ),
     systemColorScheme = stringResource(R.string.settings_use_system_color_scheme),
     amoled = stringResource(R.string.settings_amoled),
     preferences = stringResource(R.string.settings_preferences),
     language = stringResource(R.string.settings_language),
-    languageSystem = stringResource(R.string.settings_language_system),
-    languageRussian = stringResource(R.string.settings_language_russian),
-    languageEnglish = stringResource(R.string.settings_language_english),
+    languageSystem = stringResource(
+        R.string.settings_language_option,
+        stringResource(R.string.settings_language_system),
+    ),
+    languageRussian = stringResource(
+        R.string.settings_language_option,
+        stringResource(R.string.settings_language_russian),
+    ),
+    languageEnglish = stringResource(
+        R.string.settings_language_option,
+        stringResource(R.string.settings_language_english),
+    ),
     notifications = stringResource(R.string.settings_notifications),
     notificationsStatus = notificationPermissionLabel(notificationState),
     player = stringResource(R.string.settings_player),

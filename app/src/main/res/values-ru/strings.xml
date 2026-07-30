@@ -352,6 +352,7 @@
     <string name="settings_dark_theme_summary">Позже будет следование системе, пока оставлен ручной переключатель</string>
     <string name="settings_theme_sheet_description">Выберите, как приложение должно применять тему.</string>
     <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_option">Тема: %1$s</string>
     <string name="settings_theme_system_summary">Автоматически использовать светлую или темную тему устройства</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_light_summary">Всегда использовать светлую тему</string>
@@ -394,6 +395,7 @@
     <string name="settings_source_language">Язык источников</string>
     <string name="settings_source_language_summary">Позже можно будет добавить русские и английские источники</string>
     <string name="settings_language_system">Системный</string>
+    <string name="settings_language_option">Язык: %1$s</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_system_summary">По умолчанию использовать язык устройства</string>
     <string name="settings_language_russian">Русский</string>

@@ -368,6 +368,7 @@
     <string name="settings_dark_theme_summary">Follow system later, manual toggle for now</string>
     <string name="settings_theme_sheet_description">Choose how the app theme should be applied.</string>
     <string name="settings_theme_system">System</string>
+    <string name="settings_theme_option">Theme: %1$s</string>
     <string name="settings_theme_system_summary">Use the device light or dark theme automatically</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_light_summary">Always use the light theme</string>
@@ -415,6 +416,7 @@
     <string name="settings_source_language">Source language</string>
     <string name="settings_source_language_summary">Russian / English sources can be added later</string>
     <string name="settings_language_system">System</string>
+    <string name="settings_language_option">Language: %1$s</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_sheet_description">Choose the app interface language.</string>
     <string name="settings_language_system_summary">Follow the device language by default</string>
