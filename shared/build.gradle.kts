@@ -32,6 +32,7 @@ kotlin {
                 cinterops {
                     create("iosPlayer") {
                         defFile(project.file("src/nativeInterop/cinterop/iosPlayer.def"))
+                        compilerOpts("-I${project.file("src/nativeInterop/cinterop").absolutePath}")
                     }
                 }
             }
