@@ -37,4 +37,13 @@ class AppTextResolverTest {
                 .resolve(AppTextKey.SharedUiReady),
         )
     }
+
+    @Test
+    fun searchResultsCountMatchesEnglishAndRussianPluralRules() {
+        assertEquals("1 result", DefaultAppTextResolver(LanguageMode.ENGLISH).formatSearchResultsCount(1))
+        assertEquals("24 results", DefaultAppTextResolver(LanguageMode.ENGLISH).formatSearchResultsCount(24))
+        assertEquals("1 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442", DefaultAppTextResolver(LanguageMode.RUSSIAN).formatSearchResultsCount(1))
+        assertEquals("24 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u0430", DefaultAppTextResolver(LanguageMode.RUSSIAN).formatSearchResultsCount(24))
+        assertEquals("25 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u0432", DefaultAppTextResolver(LanguageMode.RUSSIAN).formatSearchResultsCount(25))
+    }
 }

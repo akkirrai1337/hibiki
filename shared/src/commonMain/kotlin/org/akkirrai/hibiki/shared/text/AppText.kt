@@ -165,6 +165,8 @@ enum class AppTextKey {
 
 interface AppTextResolver {
     fun resolve(key: AppTextKey): String
+
+    fun formatSearchResultsCount(count: Int): String
 }
 
 /**
@@ -175,12 +177,25 @@ class DefaultAppTextResolver(
     private val languageMode: LanguageMode,
     private val systemLanguage: String = "en",
 ) : AppTextResolver {
-    override fun resolve(key: AppTextKey): String {
-        val russian = when (languageMode) {
-            LanguageMode.RUSSIAN -> true
-            LanguageMode.ENGLISH -> false
-            LanguageMode.SYSTEM -> systemLanguage.lowercase().startsWith("ru")
+    private val russian = when (languageMode) {
+        LanguageMode.RUSSIAN -> true
+        LanguageMode.ENGLISH -> false
+        LanguageMode.SYSTEM -> systemLanguage.lowercase().startsWith("ru")
+    }
+
+    override fun formatSearchResultsCount(count: Int): String = if (russian) {
+        val lastTwoDigits = count % 100
+        val suffix = when {
+            count % 10 == 1 && lastTwoDigits != 11 -> "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442"
+            count % 10 in 2..4 && lastTwoDigits !in 12..14 -> "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u0430"
+            else -> "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u0432"
         }
+        "$count $suffix"
+    } else {
+        "$count ${if (count == 1) "result" else "results"}"
+    }
+
+    override fun resolve(key: AppTextKey): String {
         return when (key) {
             AppTextKey.SharedUiReady -> if (russian) "Общий UI готов" else "Shared UI is ready"
             AppTextKey.AppName -> "hibiki"
@@ -321,7 +336,7 @@ class DefaultAppTextResolver(
             AppTextKey.Genres -> if (russian) "Жанры" else "Genres"
             AppTextKey.Related -> if (russian) "Связанное" else "Related"
             AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
-            AppTextKey.Announcement -> if (russian) "Анонс" else "Announcement"
+            AppTextKey.Announcement -> if (russian) "Анонс" else "announcement"
             AppTextKey.Movie -> if (russian) "Фильм" else "Movie"
             AppTextKey.Ongoing -> if (russian) "Онгоинг" else "Ongoing"
             AppTextKey.Released -> if (russian) "Вышел" else "Released"
@@ -363,3 +378,6 @@ val LocalAppTextResolver = staticCompositionLocalOf<AppTextResolver> {
 
 @Composable
 fun appText(key: AppTextKey): String = LocalAppTextResolver.current.resolve(key)
+
+@Composable
+fun appSearchResultsCount(count: Int): String = LocalAppTextResolver.current.formatSearchResultsCount(count)

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -132,6 +133,7 @@ import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
+import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
@@ -142,6 +144,9 @@ import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 
 private const val DEFAULT_PROFILE_NAME = "hibiki"
+private const val HOME_SEARCH_DEBOUNCE_MS = 450L
+private const val HOME_SEARCH_MIN_QUERY_LENGTH = 3
+private const val HOME_SEARCH_PAGE_SIZE = 24
 
 @Composable
 fun HibikiAppShell(
@@ -172,7 +177,7 @@ fun HibikiAppShell(
             }
         }
     }
-    val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope) }
+    val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE) }
     val state by presenter.state.collectAsState()
     val homePresenter = remember(homeRepository) { HomePresenter() }
     val homeState by homePresenter.state.collectAsState()
@@ -184,6 +189,7 @@ fun HibikiAppShell(
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
     val profileState by profilePresenter.state.collectAsState()
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
+    var homeSearchQuery by remember { mutableStateOf("") }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
@@ -207,6 +213,13 @@ fun HibikiAppShell(
             presenter.close()
             sourceSearchPresenter.close()
         }
+    }
+
+    LaunchedEffect(homeSearchQuery) {
+        val query = homeSearchQuery.trim()
+        if (query.length < HOME_SEARCH_MIN_QUERY_LENGTH) return@LaunchedEffect
+        delay(HOME_SEARCH_DEBOUNCE_MS)
+        presenter.onQueryChange(query)
     }
 
     LaunchedEffect(libraryRepository, state.selectedAnime) {
@@ -370,6 +383,8 @@ fun HibikiAppShell(
                             catalogListState = catalogListState,
                             query = state.query,
                             onQueryChange = presenter::onQueryChange,
+                            homeQuery = homeSearchQuery,
+                            onHomeQueryChange = { homeSearchQuery = it },
                             items = state.items,
                             filters = state.filters,
                             filterCatalog = state.filterCatalog,
@@ -792,6 +807,8 @@ private fun AppDestinationContent(
     showSettingsBackButton: Boolean = false,
     onSettingsBack: () -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
+    homeQuery: String = query,
+    onHomeQueryChange: (String) -> Unit = onQueryChange,
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -816,8 +833,8 @@ private fun AppDestinationContent(
                     listState = catalogListState,
                     libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
                     libraryEntries = libraryEntries,
-                    query = query,
-                    onQueryChange = onQueryChange,
+                    query = homeQuery,
+                    onQueryChange = onHomeQueryChange,
                     items = items,
                     filters = filters,
                     filterCatalog = filterCatalog,
@@ -1057,7 +1074,7 @@ private fun defaultHomeScreenLabels(): AppHomeScreenLabels {
         searchLoadMore = appText(AppTextKey.HomeSearchLoadMore),
         searchEmptyTitle = appText(AppTextKey.HomeSearchEmptyTitle),
         searchEmptyMessage = appText(AppTextKey.HomeSearchEmptyBody),
-        resultsCountLabel = { count -> count.toString() },
+        resultsCountLabel = ::appSearchResultsCount,
         continueTitle = appText(AppTextKey.HomeContinueTitle),
         continueEmptyTitle = appText(AppTextKey.HomeContinueEmptyTitle),
         continueEmptyMessage = appText(AppTextKey.HomeContinueEmptyBody),
@@ -1106,7 +1123,8 @@ private fun ColumnScope.HomeScreen(
     onHomeRefresh: () -> Unit,
 ) {
     val searchResult = when {
-        query.isBlank() -> SearchUiState.Idle
+        query.trim().length < HOME_SEARCH_MIN_QUERY_LENGTH -> SearchUiState.Idle
+        state.query.trim() != query.trim() -> SearchUiState.Loading
         state.isLoading && items.isEmpty() -> SearchUiState.Loading
         items.isEmpty() -> SearchUiState.Empty
         else -> SearchUiState.Content(items = items, canLoadMore = false)
