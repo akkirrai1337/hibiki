@@ -12,7 +12,9 @@ import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import platform.UIKit.UIViewController
+import platform.UIKit.UIApplication
 import platform.Foundation.NSBundle
+import platform.Foundation.NSURL
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
@@ -82,6 +84,11 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 onProfileAvatarEdit = { onPicked ->
                     avatarPicker.present(hostController, onPicked)
                 },
+                onGitHubClick = {
+                    UIApplication.sharedApplication.openURL(
+                        NSURL(string = HIBIKI_GITHUB_URL),
+                    )
+                },
                 sources = IosSourceRegistry.sources,
                 selectedSourceId = selectedSourceId.value,
                 showSettingsBackButton = true,
@@ -97,3 +104,5 @@ fun MainViewController(systemLanguage: String): UIViewController {
     }
     return hostController
 }
+
+private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"

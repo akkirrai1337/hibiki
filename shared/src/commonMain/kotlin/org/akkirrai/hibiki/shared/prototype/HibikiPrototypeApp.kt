@@ -165,6 +165,7 @@ fun HibikiAppShell(
     onRequestOnboardingNotificationPermission: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
+    onGitHubClick: () -> Unit = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
@@ -461,6 +462,7 @@ fun HibikiAppShell(
                             },
                             onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
                             onProfileAvatarEdit = onProfileAvatarEdit,
+                            onGitHubClick = onGitHubClick,
                             onProfileAvatarPicked = { uri ->
                                 profileRepository.updateProfileAvatar(uri)
                                 profilePresenter.updateProfileAvatar(uri)
@@ -550,6 +552,7 @@ private fun WideAppLayout(
     onProfileSaveClick: () -> Unit,
     onProfileSettingsClick: () -> Unit,
     onProfileAvatarEdit: (((String) -> Unit) -> Unit),
+    onGitHubClick: () -> Unit,
     onProfileAvatarPicked: (String) -> Unit,
     profileRepository: LocalProfileDataRepository,
     sources: List<AppSourceDescriptor>,
@@ -819,6 +822,7 @@ private fun AppDestinationContent(
     onThemeModeChange: (ThemeMode) -> Unit = {},
     showSettingsBackButton: Boolean = false,
     onSettingsBack: () -> Unit = {},
+    onGitHubClick: () -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
@@ -1012,6 +1016,7 @@ private fun AppDestinationContent(
                     onConfigureNotifications = onConfigureNotifications,
                     showBackButton = showSettingsBackButton,
                     onBackClick = onSettingsBack,
+                    onGitHubClick = onGitHubClick,
                 )
         }
     }
@@ -1347,6 +1352,7 @@ private fun SettingsScreen(
     onConfigureNotifications: () -> Unit,
     showBackButton: Boolean = false,
     onBackClick: () -> Unit = {},
+    onGitHubClick: () -> Unit = {},
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -1388,6 +1394,7 @@ private fun SettingsScreen(
         onAmoledChange = onAmoledChange,
         onAutoSkipChange = onAutoSkipChange,
         onNotificationsClick = onConfigureNotifications,
+        onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),
         showBackButton = showBackButton,
         onBackClick = onBackClick,
