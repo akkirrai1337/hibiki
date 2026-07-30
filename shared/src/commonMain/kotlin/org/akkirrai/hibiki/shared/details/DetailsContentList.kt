@@ -20,6 +20,7 @@ fun AppDetailsContentList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = state,
+        overscrollEffect = null,
         contentPadding = PaddingValues(
             bottom = bottomContentPadding + additionalBottomPadding,
         ),

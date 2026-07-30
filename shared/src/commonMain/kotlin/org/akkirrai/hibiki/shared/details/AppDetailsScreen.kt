@@ -223,13 +223,19 @@ fun AppDetailsScreen(
                             )
                         },
                         mediaContent = { mediaModifier ->
+                            val heroPrimaryUrl = mediaData.trailer?.thumbnailUrl
+                                ?: uiModel.anime.screenshots.firstOrNull()
+                                ?: uiModel.anime.posterUrl
+                            val heroFallbackUrl = if (heroPrimaryUrl != uiModel.anime.posterUrl) {
+                                uiModel.anime.posterUrl ?: uiModel.anime.posterFallbackUrl
+                            } else {
+                                uiModel.anime.posterFallbackUrl
+                            }
                             AppDetailsHeroMedia(
                                 imageContent = {
                                     AppPosterImage(
-                                        primaryUrl = mediaData.trailer?.thumbnailUrl
-                                            ?: uiModel.anime.screenshots.firstOrNull()
-                                            ?: uiModel.anime.posterUrl,
-                                        fallbackUrl = uiModel.anime.posterFallbackUrl,
+                                        primaryUrl = heroPrimaryUrl,
+                                        fallbackUrl = heroFallbackUrl,
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop,
