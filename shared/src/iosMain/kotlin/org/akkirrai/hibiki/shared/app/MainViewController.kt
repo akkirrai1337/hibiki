@@ -84,6 +84,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 },
                 sources = IosSourceRegistry.sources,
                 selectedSourceId = selectedSourceId.value,
+                showSettingsBackButton = true,
                 onSourceSelected = { sourceId ->
                     repository.selectSource(sourceId)
                     sourceSelectionRepository.saveSelectedSourceId(sourceId)

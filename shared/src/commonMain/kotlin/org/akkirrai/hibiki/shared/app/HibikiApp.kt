@@ -34,6 +34,7 @@ fun HibikiApp(
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
+    showSettingsBackButton: Boolean = false,
 ) {
     HibikiAppShell(
         modifier = modifier,
@@ -52,5 +53,6 @@ fun HibikiApp(
         sources = sources,
         selectedSourceId = selectedSourceId,
         onSourceSelected = onSourceSelected,
+        showSettingsBackButton = showSettingsBackButton,
     )
 }

@@ -160,6 +160,7 @@ fun HibikiAppShell(
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
+    showSettingsBackButton: Boolean = false,
 ) {
     val scope = rememberCoroutineScope {
         CoroutineExceptionHandler { _, throwable ->
@@ -441,6 +442,8 @@ fun HibikiAppShell(
                                 sourceSearchPresenter.clear()
                                 onSourceSelected(sourceId)
                             },
+                            showSettingsBackButton = showSettingsBackButton,
+                            onSettingsBack = { selectedTab = AppDestination.PROFILE },
                             sourceSearchState = sourceSearchState,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,
@@ -779,6 +782,8 @@ private fun AppDestinationContent(
     onLibraryChanged: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.LIGHT,
     onThemeModeChange: (ThemeMode) -> Unit = {},
+    showSettingsBackButton: Boolean = false,
+    onSettingsBack: () -> Unit = {},
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(
@@ -966,6 +971,8 @@ private fun AppDestinationContent(
                     onAmoledChange = onAmoledChange,
                     onAutoSkipChange = onAutoSkipChange,
                     onConfigureNotifications = onConfigureNotifications,
+                    showBackButton = showSettingsBackButton,
+                    onBackClick = onSettingsBack,
                 )
         }
     }
@@ -1281,6 +1288,8 @@ private fun SettingsScreen(
     onAmoledChange: (Boolean) -> Unit,
     onAutoSkipChange: (Boolean) -> Unit,
     onConfigureNotifications: () -> Unit,
+    showBackButton: Boolean = false,
+    onBackClick: () -> Unit = {},
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -1323,6 +1332,9 @@ private fun SettingsScreen(
         onAutoSkipChange = onAutoSkipChange,
         onNotificationsClick = onConfigureNotifications,
         modifier = Modifier.fillMaxSize(),
+        showBackButton = showBackButton,
+        onBackClick = onBackClick,
+        backContentDescription = appText(AppTextKey.Back),
     )
 }
 

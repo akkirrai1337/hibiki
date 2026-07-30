@@ -2,6 +2,12 @@ package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import hibiki.shared.generated.resources.Res
@@ -50,6 +56,9 @@ fun AppSettingsScreen(
     showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
+    showBackButton: Boolean = false,
+    onBackClick: () -> Unit = {},
+    backContentDescription: String = "Back",
     onLanguageModeChange: (LanguageMode) -> Unit,
     onThemeChange: (Boolean) -> Unit,
     onThemeModeChange: ((ThemeMode) -> Unit)? = null,
@@ -67,6 +76,18 @@ fun AppSettingsScreen(
         bottomContentPadding = bottomContentPadding,
         modifier = modifier,
         content = {
+        if (showBackButton) {
+            item(key = "settings_back") {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = backContentDescription,
+                        )
+                    }
+                }
+            }
+        }
         item(key = SettingsSection.Appearance.key) {
             AppSettingsAppearanceSection(
                 sectionTitle = labels.appearance,

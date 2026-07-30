@@ -263,12 +263,12 @@ class DefaultAppTextResolver(
             } else {
                 "This shared screen is the place for language, theme, account, and playback settings. Android and Windows hosts can provide their own storage behind the same contract."
             }
-            AppTextKey.LanguageSystem -> if (russian) "Язык: системный" else "Language: System"
-            AppTextKey.LanguageEnglish -> if (russian) "Язык: английский" else "Language: English"
-            AppTextKey.LanguageRussian -> if (russian) "Язык: русский" else "Language: Russian"
-            AppTextKey.ThemeSystem -> if (russian) "Тема: системная" else "Theme: Follow system"
-            AppTextKey.ThemeLight -> if (russian) "Тема: светлая" else "Theme: Light"
-            AppTextKey.ThemeDark -> if (russian) "Тема: тёмная" else "Theme: Dark"
+            AppTextKey.LanguageSystem -> if (russian) "Системный" else "System"
+            AppTextKey.LanguageEnglish -> if (russian) "Английский" else "English"
+            AppTextKey.LanguageRussian -> if (russian) "Русский" else "Russian"
+            AppTextKey.ThemeSystem -> if (russian) "Системная" else "Follow system"
+            AppTextKey.ThemeLight -> if (russian) "Светлая" else "Light"
+            AppTextKey.ThemeDark -> if (russian) "Тёмная" else "Dark"
             AppTextKey.DesktopPreview -> if (russian) "Предпросмотр CMP для Desktop" else "CMP Desktop preview"
             AppTextKey.ProfileLibrary -> if (russian) "Библиотека" else "Library"
             AppTextKey.ProfileEpisodes -> if (russian) "Эпизоды" else "Episodes"
