@@ -69,6 +69,7 @@ import org.akkirrai.hibiki.shared.design.component.AppPosterAnimeCard
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
+import org.akkirrai.hibiki.shared.catalog.SourcesSearchPresenter
 import org.akkirrai.hibiki.shared.catalog.AppCatalogScreen
 import org.akkirrai.hibiki.shared.catalog.AppCatalogScreenLabels
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
@@ -142,6 +143,7 @@ import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
+import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 import org.akkirrai.beakokit.api.AnimeKey
 
@@ -185,7 +187,7 @@ fun HibikiAppShell(
     val homePresenter = remember(homeRepository) { HomePresenter() }
     val homeState by homePresenter.state.collectAsState()
     val catalogListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
-    val sourceSearchPresenter = remember(repository) { AnimeCatalogPresenter(repository, scope, 12) }
+    val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
@@ -565,7 +567,7 @@ private fun WideAppLayout(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
-    sourceSearchState: AnimeCatalogUiState,
+    sourceSearchState: SourcesSearchUiState,
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
@@ -650,7 +652,7 @@ private fun CompactAppLayout(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
-    sourceSearchState: AnimeCatalogUiState,
+    sourceSearchState: SourcesSearchUiState,
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
@@ -796,7 +798,7 @@ private fun AppDestinationContent(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     onSourceSelected: (String) -> Unit,
-    sourceSearchState: AnimeCatalogUiState,
+    sourceSearchState: SourcesSearchUiState,
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
@@ -976,27 +978,22 @@ private fun AppDestinationContent(
                     },
                     onSourceSelected = onSourceSelected,
                     searchQuery = sourceSearchState.query,
-                    searchItems = sourceSearchState.items,
-                    isSearchLoading = sourceSearchState.isLoading,
-                    searchError = sourceSearchState.error != null,
-                    searchSourceId = sources
-                        .firstOrNull { it.id == selectedSourceId && it.supportsSearch }
-                        ?.id
-                        ?: sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.id.orEmpty(),
-                    searchSourceName = sources
-                        .firstOrNull { it.id == selectedSourceId && it.supportsSearch }
-                        ?.name
-                        ?: sources.firstOrNull(AppSourceDescriptor::supportsSearch)?.name.orEmpty(),
+                    searchItems = emptyList(),
+                    isSearchLoading = sourceSearchState.isSearching,
+                    searchError = sourceSearchState.sections.any { it.hasError },
+                    searchSourceId = "",
+                    searchSourceName = "",
                     onSearchQueryChange = onSourceSearchQueryChange,
                     onSearchClear = onSourceSearchClear,
                     searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
-                    searchErrorLabel = sourceSearchState.error ?: appText(AppTextKey.Unknown),
+                    searchErrorLabel = appText(AppTextKey.Unknown),
                     searchRetryLabel = appText(AppTextKey.Search),
                     searchEmptyTitle = appText(AppTextKey.Sources),
                     announcementLabel = appText(AppTextKey.Announcement),
                     movieLabel = appText(AppTextKey.Movie),
                     onSearchRetry = onSourceSearchRetry,
                     onAnimeClick = onAnimeClick,
+                    searchSections = sourceSearchState.sections,
                     searchSourceIconContent = { section, iconModifier ->
                         AppSourceIconImage(
                             url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,

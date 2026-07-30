@@ -25,6 +25,11 @@ interface AnimeCatalogRepository {
         search(AnimeCatalogQuery(text = query)).items
 }
 
+/** Optional catalog capability for source-separated search results. */
+interface MultiSourceAnimeCatalogRepository : AnimeCatalogRepository {
+    suspend fun searchSource(sourceId: String, query: AnimeCatalogQuery): AnimeCatalogPage
+}
+
 data class AnimeCatalogQuery(
     val text: String = "",
     val page: Int = 1,

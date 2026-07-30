@@ -13,7 +13,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 internal class IosMultiSourceAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,
     initialSourceId: String? = null,
-) : AnimeCatalogRepository {
+) : MultiSourceAnimeCatalogRepository {
     private val knownSourceIds = listOf(
         BuiltInSources.YUMMY_ANIME_ID,
         BuiltInSources.ANI_LIBERTY_ID,
@@ -56,6 +56,9 @@ internal class IosMultiSourceAnimeCatalogRepository(
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog = activeRepository.filterCatalog()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage = activeRepository.search(query)
+
+    override suspend fun searchSource(sourceId: String, query: AnimeCatalogQuery): AnimeCatalogPage =
+        repositoryFor(SourceId(sourceId)).search(query)
 
     fun close() {
         repositories.values.forEach(IosAnimeCatalogRepository::close)
