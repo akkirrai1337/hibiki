@@ -151,8 +151,9 @@ import org.akkirrai.hibiki.shared.player.AppWatchSourcesContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesContent
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
-import org.akkirrai.hibiki.shared.player.PlaylistEpisodeRow
-import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.EpisodeRow
+import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
+import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
@@ -446,6 +447,10 @@ fun HibikiAppShell(
                             append(selectedTab.name)
                             append(':')
                             append(state.selectedAnime?.id.orEmpty())
+                            append(':')
+                            append(watchAnime?.id.orEmpty())
+                            append(':')
+                            append(selectedWatchSource?.sourceId.orEmpty())
                         },
                         modifier = Modifier
                             .fillMaxSize()
@@ -1110,12 +1115,25 @@ private fun AppDestinationContent(
                         retryLabel = appText(AppTextKey.SearchRetry),
                         onRetry = { onWatchSourceClick(selectedWatchSource) },
                         episodeContent = { episode, _ ->
-                            PlaylistEpisodeRow(
-                                headline = appText(AppTextKey.WatchContinueEpisode)
-                                    .replace("%s", formatEpisodeNumber(episode.number)),
+                            val progress = profileData.episodeProgress.firstOrNull { progress ->
+                                progress.titleId == watchAnime.id && progress.episodeId == episode.id
+                            }
+                            val status = resolveEpisodeProgressStatus(progress)
+                            val defaultHeadline = appText(AppTextKey.WatchContinueEpisode)
+                                .removePrefix("${appText(AppTextKey.WatchContinue)} · ")
+                            EpisodeRow(
+                                headline = buildEpisodeRowHeadline(
+                                    episode = episode,
+                                    progress = progress,
+                                    status = status,
+                                    watchedHeadline = { number -> "✓ $defaultHeadline".replace("%s", number) },
+                                    defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
+                                    watchedLabel = appText(AppTextKey.ProfileAnalyticsWatched),
+                                ),
                                 subtitle = episode.title,
-                                selected = false,
+                                inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
                                 enabled = !playbackLoading,
+                                showDownloadAction = false,
                                 onClick = { onWatchEpisodeClick(episode) },
                             )
                         },
