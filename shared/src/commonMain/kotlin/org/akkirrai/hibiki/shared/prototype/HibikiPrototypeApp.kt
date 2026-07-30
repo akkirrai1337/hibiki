@@ -113,6 +113,8 @@ import org.akkirrai.hibiki.shared.profile.ProfileAvatarImage
 import org.akkirrai.hibiki.shared.profile.ProfileAvatarPlaceholder
 import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshotLabels
 import org.akkirrai.hibiki.shared.profile.buildLocalProfileSnapshot
+import org.akkirrai.hibiki.shared.profile.defaultProfileActivityDateStrings
+import org.akkirrai.hibiki.shared.profile.profileActivityDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.ThemeMode
@@ -136,6 +138,8 @@ import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
+
+private const val DEFAULT_PROFILE_NAME = "hibiki"
 
 @Composable
 fun HibikiAppShell(
@@ -187,7 +191,9 @@ fun HibikiAppShell(
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
     }
     var isEditingProfile by remember { mutableStateOf(false) }
-    var editedProfileName by remember(profileState.data.profileName) { mutableStateOf(profileState.data.profileName) }
+    var editedProfileName by remember(profileState.data.profileName) {
+        mutableStateOf(profileState.data.profileName.ifBlank { DEFAULT_PROFILE_NAME })
+    }
 
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
@@ -404,10 +410,17 @@ fun HibikiAppShell(
                             isEditingProfile = isEditingProfile,
                             editedProfileName = editedProfileName,
                             onProfileNameChange = { editedProfileName = it },
-                            onProfileEditClick = { isEditingProfile = !isEditingProfile },
+                            onProfileEditClick = {
+                                if (editedProfileName.isBlank()) {
+                                    editedProfileName = DEFAULT_PROFILE_NAME
+                                }
+                                isEditingProfile = true
+                            },
                             onProfileSaveClick = {
-                                profileRepository.updateProfileName(editedProfileName)
-                                profilePresenter.updateProfileName(editedProfileName)
+                                val profileName = editedProfileName.trim().ifBlank { DEFAULT_PROFILE_NAME }
+                                profileRepository.updateProfileName(profileName)
+                                profilePresenter.updateProfileName(profileName)
+                                editedProfileName = profileName
                                 isEditingProfile = false
                             },
                             onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
@@ -842,12 +855,12 @@ private fun AppDestinationContent(
                     )
                     val snapshot = buildLocalProfileSnapshot(
                         data = profileData,
-                        activityDateStrings = profileData.activity.map { it.date }.distinct(),
+                        activityDateStrings = defaultProfileActivityDateStrings(),
                         labels = LocalProfileSnapshotLabels(
                             durationLabel = { duration -> "${formatDurationHours(duration)} h" },
                             categoryLabel = { category -> categoryLabels.getValue(category) },
                             dateLabel = { it.toString() },
-                            activityDateLabel = { it },
+                            activityDateLabel = ::profileActivityDateLabel,
                         ),
                     )
                     AppLocalProfileScreen(
