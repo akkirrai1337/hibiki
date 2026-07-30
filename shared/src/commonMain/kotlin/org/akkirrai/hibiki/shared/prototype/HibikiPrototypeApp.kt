@@ -852,7 +852,11 @@ private fun AppDestinationContent(
         return
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+    ) {
         when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(
                     state = catalogState,
