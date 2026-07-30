@@ -22,6 +22,7 @@ fun AppProductionRoot(
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     showBottomBar: Boolean = true,
     includeNavigationBarPadding: Boolean = true,
+    contentTransitionKey: Any? = null,
     iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit = { destination, iconModifier ->
         androidx.compose.material3.Icon(
             imageVector = destination.icon,
@@ -44,7 +45,10 @@ fun AppProductionRoot(
         modifier = modifier,
         content = {
             AnimatedContent(
-                targetState = currentDestination,
+                targetState = AppRootContentState(
+                    destination = currentDestination,
+                    transitionKey = contentTransitionKey ?: currentDestination,
+                ),
                 transitionSpec = {
                     fadeIn(
                         animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
@@ -53,9 +57,14 @@ fun AppProductionRoot(
                     )
                 },
                 label = "top_level_screen_transition",
-            ) { destination ->
-                content(destination)
+            ) { state ->
+                content(state.destination)
             }
         },
     )
 }
+
+private data class AppRootContentState(
+    val destination: AppTopLevelDestination,
+    val transitionKey: Any,
+)

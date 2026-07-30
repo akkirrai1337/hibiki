@@ -358,6 +358,13 @@ fun HibikiAppShell(
                         },
                         showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
                         includeNavigationBarPadding = includeNavigationBarPadding,
+                        contentTransitionKey = buildString {
+                            append(topLevelDestination.name)
+                            append(':')
+                            append(selectedTab.name)
+                            append(':')
+                            append(state.selectedAnime?.id.orEmpty())
+                        },
                         modifier = Modifier
                             .fillMaxSize()
                             .then(if (applyStatusBarPadding) Modifier.statusBarsPadding() else Modifier),
