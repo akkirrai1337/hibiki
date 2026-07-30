@@ -927,8 +927,8 @@ private fun AppDestinationContent(
                     emptyText = appText(AppTextKey.Sources),
                     languageLabel = { language ->
                         when (language.lowercase()) {
-                            "ru", "русский" -> appText(AppTextKey.LanguageRussian)
-                            "en", "english" -> appText(AppTextKey.LanguageEnglish)
+                            "ru", "русский" -> "RU"
+                            "en", "english" -> "EN"
                             else -> language.uppercase()
                         }
                     },

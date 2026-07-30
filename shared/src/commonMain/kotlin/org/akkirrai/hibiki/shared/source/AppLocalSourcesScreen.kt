@@ -104,7 +104,7 @@ fun AppLocalSourcesScreen(
                     AppSourceGridItem(
                         name = source.name,
                         selected = selected,
-                        onClick = { onSourceSelected(source.id) },
+                        onClick = { if (source.isAvailable) onSourceSelected(source.id) },
                         modifier = itemModifier,
                         iconContent = { iconModifier ->
                             sourceIconContent?.invoke(source, iconModifier)
