@@ -51,6 +51,17 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Restore Gradle and Kotlin/Native caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: ios-gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: |
+            ios-gradle-${{ runner.os }}-
+
       - name: Select Xcode compatible with Compose and Kotlin/Native
         shell: bash
         run: |
