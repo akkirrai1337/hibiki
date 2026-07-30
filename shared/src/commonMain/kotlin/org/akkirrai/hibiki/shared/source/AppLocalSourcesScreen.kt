@@ -8,6 +8,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.source_ani_liberty
+import hibiki.shared.generated.resources.source_yummy_anime
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun AppLocalSourcesScreen(
@@ -104,15 +108,19 @@ fun AppLocalSourcesScreen(
                     AppSourceGridItem(
                         name = source.name,
                         selected = selected,
-                        onClick = { if (source.isAvailable) onSourceSelected(source.id) },
+                        onClick = { onSourceSelected(source.id) },
                         modifier = itemModifier,
                         iconContent = { iconModifier ->
                             sourceIconContent?.invoke(source, iconModifier)
-                                ?: AppSourceIconImage(
-                                    url = source.iconUrl,
-                                    placeholder = null,
-                                    modifier = iconModifier,
-                                )
+                            ?: AppSourceIconImage(
+                                url = source.iconUrl,
+                                placeholder = when (source.id) {
+                                    "yummy-anime" -> painterResource(Res.drawable.source_yummy_anime)
+                                    "ani-liberty" -> painterResource(Res.drawable.source_ani_liberty)
+                                    else -> null
+                                },
+                                modifier = iconModifier,
+                            )
                         },
                     )
                 },

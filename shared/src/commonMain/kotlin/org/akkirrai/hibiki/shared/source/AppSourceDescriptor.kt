@@ -9,5 +9,4 @@ data class AppSourceDescriptor(
     val iconUrl: String? = null,
     val supportsPlayback: Boolean = false,
     val supportsSearch: Boolean = false,
-    val isAvailable: Boolean = true,
 )
