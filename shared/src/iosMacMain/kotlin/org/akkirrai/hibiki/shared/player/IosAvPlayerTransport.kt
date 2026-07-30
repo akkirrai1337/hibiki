@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.player
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import org.akkirrai.hibiki.shared.player.nativebridge.hibiki_av_player_get_duration_seconds
+import org.akkirrai.hibiki.shared.player.nativebridge.hibiki_av_player_get_buffered_position_seconds
 import org.akkirrai.hibiki.shared.player.nativebridge.hibiki_av_player_get_position_seconds
 import org.akkirrai.hibiki.shared.player.nativebridge.hibiki_av_player_get_rate
 import org.akkirrai.hibiki.shared.player.nativebridge.hibiki_av_player_pause
@@ -25,6 +26,9 @@ internal class IosAvPlayerTransport(
     fun positionMs(): Long = secondsToMillis(hibiki_av_player_get_position_seconds(player))
 
     fun durationMs(): Long = secondsToMillis(hibiki_av_player_get_duration_seconds(player))
+
+    fun bufferedPositionMs(): Long =
+        secondsToMillis(hibiki_av_player_get_buffered_position_seconds(player))
 
     fun seekToMs(positionMs: Long) {
         hibiki_av_player_seek_seconds(player, positionMs / 1_000.0)
