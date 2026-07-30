@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -62,3 +65,20 @@ fun AppFilterBottomSheet(
         )
     }
 }
+
+/** Keeps filter-sheet drag settling identical to Android Material3 defaults on every host. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun rememberAppFilterBottomSheetState(): SheetState {
+    val density = LocalDensity.current
+    return remember(density) {
+        SheetState(
+            skipPartiallyExpanded = false,
+            positionalThreshold = { with(density) { FilterSheetPositionalThreshold.toPx() } },
+            velocityThreshold = { with(density) { FilterSheetVelocityThreshold.toPx() } },
+        )
+    }
+}
+
+private val FilterSheetPositionalThreshold = 56.dp
+private val FilterSheetVelocityThreshold = 125.dp

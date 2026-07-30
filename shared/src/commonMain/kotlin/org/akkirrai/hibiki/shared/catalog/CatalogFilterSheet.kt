@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.shared.catalog
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +17,7 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.design.component.AppFilterBottomSheet
+import org.akkirrai.hibiki.shared.design.component.rememberAppFilterBottomSheetState
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +45,7 @@ fun AppCatalogFilterSheet(
     maxCollapsedGenreItems: Int? = 15,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberAppFilterBottomSheetState()
     val scope = rememberCoroutineScope()
     var pendingFilters by remember(initialFilters) { mutableStateOf(initialFilters) }
     var animeType by rememberSaveable(initialFilters) {
