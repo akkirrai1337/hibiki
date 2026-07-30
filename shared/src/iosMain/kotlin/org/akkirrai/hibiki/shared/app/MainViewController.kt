@@ -23,6 +23,13 @@ import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
 import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
+import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
+import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.PlaybackContext
+import platform.AVFoundation.AVPlayer
+import platform.AVFoundation.AVPlayerItem
+import platform.AVFoundation.AVURLAsset
+import platform.AVKit.AVPlayerViewController
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun MainViewController(systemLanguage: String): UIViewController {
@@ -37,6 +44,11 @@ fun MainViewController(systemLanguage: String): UIViewController {
         IosMultiSourceAnimeCatalogRepository(
             preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
             initialSourceId = initialSourceId,
+        )
+    }
+    val watchRepository = remember(systemLanguage) {
+        IosAnimeWatchRepository(
+            preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
         )
     }
     val libraryRepository = remember { IosLibraryRepository() }
@@ -63,6 +75,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
     DisposableEffect(repository) {
         onDispose { repository.close() }
     }
+    DisposableEffect(watchRepository) {
+        onDispose { watchRepository.close() }
+    }
     MaterialTheme(
         colorScheme = HibikiLightColorScheme,
         typography = HibikiTypography,
@@ -70,6 +85,17 @@ fun MainViewController(systemLanguage: String): UIViewController {
         Surface {
             HibikiApp(
                 repository = repository,
+                watchRepository = watchRepository,
+                onPlaybackReady = { playback, context ->
+                    presentPlayback(hostController, playback, context, watchStateRepository)
+                },
+                playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
+                    { playback, context, onBack ->
+                        IosEmbeddedPlaybackHost(playback, context, onBack)
+                    }
+                } else {
+                    null
+                },
                 homeRepository = homeRepository,
                 libraryRepository = libraryRepository,
                 profileRepository = profileRepository,
@@ -105,4 +131,31 @@ fun MainViewController(systemLanguage: String): UIViewController {
     return hostController
 }
 
+private fun presentPlayback(
+    hostController: UIViewController,
+    playback: PlaybackStream,
+    context: PlaybackContext,
+    watchStateRepository: IosWatchStateRepository,
+) {
+    val url = NSURL(string = playback.streamUrl)
+    val playerController = AVPlayerViewController()
+    val playbackHeaders = buildMap {
+        put("User-Agent", "Hibiki/0.1 iOS")
+        putAll(playback.headers)
+    }
+    val assetOptions = if (playbackHeaders.isEmpty()) {
+        null
+    } else {
+        mapOf<Any?, Any?>(
+            "AVURLAssetHTTPHeaderFieldsKey" to playbackHeaders,
+        )
+    }
+    val asset = AVURLAsset(uRL = url, options = assetOptions)
+    val playerItem = AVPlayerItem(asset = asset)
+    val player = AVPlayer(playerItem = playerItem)
+    playerController.player = player
+    hostController.presentViewController(playerController, animated = true, completion = null)
+}
+
 private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
+private const val USE_EMBEDDED_IOS_PLAYER = true

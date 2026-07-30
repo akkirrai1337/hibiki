@@ -21,6 +21,7 @@ fun PlaylistEpisodeRow(
     headline: String,
     subtitle: String?,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val titleColor = if (selected) Color.White else Color.White.copy(alpha = 0.92f)
@@ -28,7 +29,7 @@ fun PlaylistEpisodeRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .clip(RoundedCornerShape(PlaylistEpisodeRowCornerRadius)),
         color = if (selected) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.03f),
     ) {

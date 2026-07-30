@@ -24,7 +24,18 @@ kotlin {
     }
 
     val iosTargets = listOf(iosArm64(), iosSimulatorArm64())
+    val hostIsMacOs = System.getProperty("os.name").contains("mac", ignoreCase = true)
     iosTargets.forEach { target ->
+        if (hostIsMacOs) {
+            target.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("src/iosMacMain/kotlin")
+            target.compilations.getByName("main") {
+                cinterops {
+                    create("iosPlayer") {
+                        defFile(project.file("src/nativeInterop/cinterop/iosPlayer.def"))
+                    }
+                }
+            }
+        }
         target.binaries.framework {
             baseName = "shared"
             isStatic = true

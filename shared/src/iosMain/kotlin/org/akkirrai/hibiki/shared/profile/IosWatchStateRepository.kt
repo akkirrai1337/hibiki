@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.shared.profile
 
 import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.shared.model.PlaybackContext
+import org.akkirrai.hibiki.shared.model.PlaybackStream
+import kotlin.time.Clock
 import platform.Foundation.NSUserDefaults
 
 /** Reads the iOS playback records written by the shared player adapter. */
@@ -42,6 +45,31 @@ internal class IosWatchStateRepository(
         }
         .sortedBy(DailyWatchActivity::date)
         .toList()
+
+    fun saveEpisodeProgress(
+        context: PlaybackContext,
+        playback: PlaybackStream,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        val safePosition = positionMs.coerceAtLeast(0L)
+        val safeDuration = durationMs.coerceAtLeast(0L)
+        val updatedAt = Clock.System.now().toEpochMilliseconds()
+        val encoded = listOf(
+            context.episodeNumber.toString(),
+            context.sourceId,
+            context.sourceId,
+            context.sourceTitle,
+            playback.qualityLabel.orEmpty(),
+            safePosition.toString(),
+            safeDuration.toString(),
+            updatedAt.toString(),
+        ).joinToString(RECORD_SEPARATOR.toString())
+        defaults.setObject(
+            encoded,
+            forKey = "$PROGRESS_PREFIX${context.titleId}$EPISODE_KEY_SEPARATOR${context.episodeId}",
+        )
+    }
 
     private fun parseProgress(titleId: String, episodeId: String, encoded: String): EpisodeWatchProgress? {
         val parts = encoded.split(RECORD_SEPARATOR)

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
@@ -146,6 +147,19 @@ import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 import org.akkirrai.beakokit.api.AnimeKey
+import org.akkirrai.hibiki.shared.player.AppWatchSourcesContent
+import org.akkirrai.hibiki.shared.player.AppEpisodesContent
+import org.akkirrai.hibiki.shared.player.EpisodesScreenState
+import org.akkirrai.hibiki.shared.player.EpisodesUiState
+import org.akkirrai.hibiki.shared.player.PlaylistEpisodeRow
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
+import org.akkirrai.hibiki.shared.player.WatchDataRepository
+import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
+import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.shared.player.showAllWatchSources
+import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.model.PlaybackRoute
 
 private const val DEFAULT_PROFILE_NAME = "hibiki"
 private const val HOME_SEARCH_DEBOUNCE_MS = 450L
@@ -171,6 +185,9 @@ fun HibikiAppShell(
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
+    watchRepository: WatchDataRepository? = null,
+    onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
+    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -189,6 +206,19 @@ fun HibikiAppShell(
     val catalogListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
+    val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
+    val watchState by watchPresenter.state.collectAsState()
+    var watchAnime by remember { mutableStateOf<Anime?>(null) }
+    var watchLoadGeneration by remember { mutableStateOf(0) }
+    var episodesLoadGeneration by remember { mutableStateOf(0) }
+    val episodesPresenter = remember(watchRepository) { org.akkirrai.hibiki.shared.player.EpisodesPresenter() }
+    val episodesState by episodesPresenter.state.collectAsState()
+    var selectedWatchSource by remember { mutableStateOf<WatchSource?>(null) }
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    var playbackLoading by remember { mutableStateOf(false) }
+    var playbackRequestGeneration by remember { mutableStateOf(0) }
+    var playbackJob by remember { mutableStateOf<Job?>(null) }
+    var activePlaybackRoute by remember { mutableStateOf<PlaybackRoute?>(null) }
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
@@ -260,6 +290,56 @@ fun HibikiAppShell(
         } catch (_: Throwable) {
             profilePresenter.setData(LocalProfileData())
         }
+    }
+
+    LaunchedEffect(watchRepository, watchAnime?.id, watchLoadGeneration) {
+        val repositoryForWatch = watchRepository ?: return@LaunchedEffect
+        val anime = watchAnime ?: return@LaunchedEffect
+        watchPresenter.setState(WatchSourcesScreenState(isLoading = true))
+        runCatching { repositoryForWatch.loadSources(anime.id) }
+            .onSuccess { sourcesForWatch ->
+                watchPresenter.setState(
+                    WatchSourcesScreenState(
+                        allItems = sourcesForWatch,
+                        items = sourcesForWatch.take(3),
+                        isLoading = false,
+                        hasMoreItems = sourcesForWatch.size > 3,
+                    ),
+                )
+            }
+            .onFailure { error ->
+                watchPresenter.setState(
+                    WatchSourcesScreenState(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Unable to load watch sources",
+                    ),
+                )
+            }
+    }
+
+    LaunchedEffect(watchRepository, selectedWatchSource?.sourceId, episodesLoadGeneration) {
+        val repositoryForWatch = watchRepository ?: return@LaunchedEffect
+        val source = selectedWatchSource ?: return@LaunchedEffect
+        episodesPresenter.setState(EpisodesScreenState(EpisodesUiState.Loading))
+        runCatching { repositoryForWatch.getEpisodes(source.sourceId) }
+            .onSuccess { episodes ->
+                episodesPresenter.setState(
+                    EpisodesScreenState(
+                        result = if (episodes.isEmpty()) {
+                            EpisodesUiState.Empty
+                        } else {
+                            EpisodesUiState.Content(episodes)
+                        },
+                    ),
+                )
+            }
+            .onFailure { error ->
+                episodesPresenter.setState(
+                    EpisodesScreenState(
+                        result = EpisodesUiState.Error(error.message ?: "Unable to load episodes"),
+                    ),
+                )
+            }
     }
 
     val refreshLocalData = {
@@ -430,6 +510,85 @@ fun HibikiAppShell(
                             onBackFromDetails = presenter::closeDetails,
                             isDetailsLoading = state.isDetailsLoading,
                             detailsError = state.detailsError,
+                            watchAnime = watchAnime,
+                            onWatchClick = { anime -> watchAnime = anime },
+                            onBackFromWatch = {
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
+                                selectedWatchSource = null
+                                playbackError = null
+                                playbackLoading = false
+                                watchAnime = null
+                            },
+                            watchState = watchState,
+                            episodesState = episodesState,
+                            selectedWatchSource = selectedWatchSource,
+                            playbackError = playbackError,
+                            playbackLoading = playbackLoading,
+                            onWatchRetry = {
+                                if (selectedWatchSource == null) {
+                                    watchLoadGeneration++
+                                } else {
+                                    episodesLoadGeneration++
+                                }
+                            },
+                            onWatchLoadMore = { watchPresenter.update(WatchSourcesScreenState::showAllWatchSources) },
+                            onWatchSourceClick = { source ->
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
+                                playbackError = null
+                                playbackLoading = false
+                                selectedWatchSource = source
+                            },
+                            onWatchEpisodeClick = { episode ->
+                                val repositoryForPlayback = watchRepository
+                                val sourceForPlayback = selectedWatchSource
+                                if (repositoryForPlayback != null && sourceForPlayback != null) {
+                                    playbackJob?.cancel()
+                                    val requestGeneration = playbackRequestGeneration + 1
+                                    playbackRequestGeneration = requestGeneration
+                                    playbackError = null
+                                    playbackLoading = true
+                                    playbackJob = scope.launch {
+                                        val result = runCatching {
+                                            repositoryForPlayback.resolvePlayback(
+                                                sourceId = sourceForPlayback.sourceId,
+                                                episodeId = episode.id,
+                                                preferredQuality = sourceForPlayback.qualityLabel,
+                                            )
+                                        }
+                                        if (requestGeneration != playbackRequestGeneration || selectedWatchSource != sourceForPlayback) {
+                                            return@launch
+                                        }
+                                        result.onSuccess { playback ->
+                                                playbackLoading = false
+                                                val context = org.akkirrai.hibiki.shared.model.PlaybackContext(
+                                                        titleId = watchAnime?.id.orEmpty(),
+                                                        sourceId = sourceForPlayback.sourceId,
+                                                        episodeId = episode.id,
+                                                        episodeNumber = episode.number,
+                                                        sourceTitle = sourceForPlayback.title,
+                                                    )
+                                                if (playbackHost != null) {
+                                                    activePlaybackRoute = PlaybackRoute(playback, context)
+                                                } else {
+                                                    onPlaybackReady(playback, context)
+                                                }
+                                            }.onFailure { error ->
+                                                playbackLoading = false
+                                                playbackError = error.message ?: "Unable to resolve playback"
+                                                println(
+                                                    "Hibiki playback resolution failed: " +
+                                                        (error.message ?: error::class.simpleName),
+                                                )
+                                            }
+                                        playbackJob = null
+                                    }
+                                }
+                            },
+                            watchRepositoryAvailable = watchRepository != null,
                             libraryRepository = libraryRepository,
                             languageMode = languageMode,
                             onLanguageModeChange = onLanguageModeChange,
@@ -506,6 +665,14 @@ fun HibikiAppShell(
                         )
                     }
                     }
+                    if (playbackHost != null && activePlaybackRoute != null) {
+                        val route = requireNotNull(activePlaybackRoute)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            playbackHost(route.playback, route.context) {
+                                activePlaybackRoute = null
+                            }
+                        }
+                    }
                     if (enableOnboarding && !onboardingCompleted) {
                         AppOnboardingScreen(
                             sources = sources,
@@ -543,8 +710,21 @@ private fun WideAppLayout(
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     selectedAnime: Anime?,
+    watchAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    onWatchClick: (Anime) -> Unit,
+    onBackFromWatch: () -> Unit,
+    watchState: WatchSourcesScreenState,
+    episodesState: EpisodesScreenState,
+    selectedWatchSource: WatchSource?,
+    playbackError: String?,
+    playbackLoading: Boolean,
+    onWatchRetry: () -> Unit,
+    onWatchLoadMore: () -> Unit,
+    onWatchSourceClick: (org.akkirrai.hibiki.shared.model.WatchSource) -> Unit,
+    onWatchEpisodeClick: (org.akkirrai.hibiki.shared.model.WatchEpisode) -> Unit,
+    watchRepositoryAvailable: Boolean,
     isDetailsLoading: Boolean,
     detailsError: String?,
     libraryRepository: LibraryRepository,
@@ -585,8 +765,21 @@ private fun WideAppLayout(
             filterCatalog,
             onFiltersChange,
             selectedAnime,
+            watchAnime,
             onAnimeClick,
             onBackFromDetails,
+            onWatchClick,
+            onBackFromWatch,
+            watchState,
+            episodesState,
+            selectedWatchSource,
+            playbackError,
+            playbackLoading,
+            onWatchRetry,
+            onWatchLoadMore,
+            onWatchSourceClick,
+            onWatchEpisodeClick,
+            watchRepositoryAvailable,
             isDetailsLoading,
             detailsError,
             libraryRepository,
@@ -629,8 +822,21 @@ private fun CompactAppLayout(
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     selectedAnime: Anime?,
+    watchAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    onWatchClick: (Anime) -> Unit,
+    onBackFromWatch: () -> Unit,
+    watchState: WatchSourcesScreenState,
+    episodesState: EpisodesScreenState,
+    selectedWatchSource: WatchSource?,
+    playbackError: String?,
+    playbackLoading: Boolean,
+    onWatchRetry: () -> Unit,
+    onWatchLoadMore: () -> Unit,
+    onWatchSourceClick: (org.akkirrai.hibiki.shared.model.WatchSource) -> Unit,
+    onWatchEpisodeClick: (org.akkirrai.hibiki.shared.model.WatchEpisode) -> Unit,
+    watchRepositoryAvailable: Boolean,
     isDetailsLoading: Boolean,
     detailsError: String?,
     libraryRepository: LibraryRepository,
@@ -685,8 +891,21 @@ private fun CompactAppLayout(
             filterCatalog,
             onFiltersChange,
             selectedAnime,
+            watchAnime,
             onAnimeClick,
             onBackFromDetails,
+            onWatchClick,
+            onBackFromWatch,
+            watchState,
+            episodesState,
+            selectedWatchSource,
+            playbackError,
+            playbackLoading,
+            onWatchRetry,
+            onWatchLoadMore,
+            onWatchSourceClick,
+            onWatchEpisodeClick,
+            watchRepositoryAvailable,
             isDetailsLoading,
             detailsError,
             libraryRepository,
@@ -775,8 +994,21 @@ private fun AppDestinationContent(
     filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     selectedAnime: Anime?,
+    watchAnime: Anime?,
     onAnimeClick: (Anime) -> Unit,
     onBackFromDetails: () -> Unit,
+    onWatchClick: (Anime) -> Unit,
+    onBackFromWatch: () -> Unit,
+    watchState: WatchSourcesScreenState,
+    episodesState: EpisodesScreenState,
+    selectedWatchSource: WatchSource?,
+    playbackError: String?,
+    playbackLoading: Boolean,
+    onWatchRetry: () -> Unit,
+    onWatchLoadMore: () -> Unit,
+    onWatchSourceClick: (org.akkirrai.hibiki.shared.model.WatchSource) -> Unit,
+    onWatchEpisodeClick: (org.akkirrai.hibiki.shared.model.WatchEpisode) -> Unit,
+    watchRepositoryAvailable: Boolean,
     isDetailsLoading: Boolean,
     detailsError: String?,
     libraryRepository: LibraryRepository,
@@ -836,13 +1068,71 @@ private fun AppDestinationContent(
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
 ) {
+    if (watchAnime != null) {
+        WatchScreenScaffold(
+            onBackClick = onBackFromWatch,
+            backEnabled = !playbackLoading,
+            backContentDescription = appText(AppTextKey.Back),
+            modifier = modifier,
+        ) {
+            if (selectedWatchSource == null) {
+                AppWatchSourcesContent(
+                    state = watchState,
+                    emptyTitle = appText(AppTextKey.Watch),
+                    emptyMessage = appText(AppTextKey.Watch),
+                    retryLabel = appText(AppTextKey.SearchRetry),
+                    episodeLabel = appText(AppTextKey.Episodes),
+                    loadMoreLabel = appText(AppTextKey.Episodes),
+                    enabled = !watchState.isLoading,
+                    onRetry = onWatchRetry,
+                    onSourceClick = onWatchSourceClick,
+                    onLoadMore = onWatchLoadMore,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    playbackError?.let { message ->
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 16.dp, top = 56.dp, end = 16.dp, bottom = 8.dp),
+                        )
+                    }
+                    if (playbackLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    AppEpisodesContent(
+                        result = episodesState.result,
+                        sourceTitle = selectedWatchSource.title,
+                        emptyMessage = appText(AppTextKey.Episodes),
+                        retryLabel = appText(AppTextKey.SearchRetry),
+                        onRetry = { onWatchSourceClick(selectedWatchSource) },
+                        episodeContent = { episode, _ ->
+                            PlaylistEpisodeRow(
+                                headline = appText(AppTextKey.WatchContinueEpisode)
+                                    .replace("%s", formatEpisodeNumber(episode.number)),
+                                subtitle = episode.title,
+                                selected = false,
+                                enabled = !playbackLoading,
+                                onClick = { onWatchEpisodeClick(episode) },
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+        return
+    }
     if (selectedAnime != null) {
         AppDetailsScreen(
             anime = selectedAnime,
             onBackClick = onBackFromDetails,
             onRelatedAnimeClick = onAnimeClick,
-            canWatch = false,
-            onWatchClick = {},
+            canWatch = watchRepositoryAvailable,
+            onWatchClick = { onWatchClick(selectedAnime) },
             libraryRepository = libraryRepository,
             onLibraryCategoryChange = { onLibraryChanged() },
             modifier = modifier.fillMaxSize(),

@@ -14,6 +14,9 @@ import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.player.WatchDataRepository
+import org.akkirrai.hibiki.shared.model.PlaybackContext
+import org.akkirrai.hibiki.shared.model.PlaybackStream
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
@@ -35,6 +38,9 @@ fun HibikiApp(
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
+    watchRepository: WatchDataRepository? = null,
+    onPlaybackReady: (PlaybackStream, PlaybackContext) -> Unit = { _, _ -> },
+    playbackHost: (@Composable (PlaybackStream, PlaybackContext, () -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -57,6 +63,9 @@ fun HibikiApp(
         sources = sources,
         selectedSourceId = selectedSourceId,
         onSourceSelected = onSourceSelected,
+        watchRepository = watchRepository,
+        onPlaybackReady = onPlaybackReady,
+        playbackHost = playbackHost,
         showSettingsBackButton = showSettingsBackButton,
         includeNavigationBarPadding = includeNavigationBarPadding,
         applyStatusBarPadding = applyStatusBarPadding,

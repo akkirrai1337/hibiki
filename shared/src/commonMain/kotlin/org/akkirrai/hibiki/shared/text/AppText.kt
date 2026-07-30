@@ -59,6 +59,16 @@ enum class AppTextKey {
     SettingsNotificationsStatus,
     SettingsPlayer,
     SettingsAutoSkip,
+    PlayerSettingsRoot,
+    PlayerSettingsSpeed,
+    PlayerSettingsVoiceover,
+    PlayerSettingsPlayer,
+    PlayerSettingsQuality,
+    PlayerSettingsAutoSkip,
+    PlayerSettingsAutoPlayNext,
+    PlayerSettingsOn,
+    PlayerSettingsOff,
+    PlayerEpisodeNumber,
     SettingsExperimental,
     SettingsDiscord,
     SettingsUpdates,
@@ -251,6 +261,16 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsPlayer -> if (russian) "Плеер" else "Player"
             AppTextKey.SettingsAutoSkip -> if (russian) "Автопропуск опенинга/эндинга" else "Auto-skip opening/ending"
             AppTextKey.SettingsExperimental -> if (russian) "Экспериментальные" else "Experimental"
+            AppTextKey.PlayerSettingsRoot -> if (russian) "Настройки" else "Settings"
+            AppTextKey.PlayerSettingsSpeed -> if (russian) "Скорость" else "Speed"
+            AppTextKey.PlayerSettingsVoiceover -> if (russian) "Озвучка" else "Voiceover"
+            AppTextKey.PlayerSettingsPlayer -> if (russian) "Плеер" else "Player"
+            AppTextKey.PlayerSettingsQuality -> if (russian) "Качество" else "Quality"
+            AppTextKey.PlayerSettingsAutoSkip -> if (russian) "Автопропуск опенинга/эндинга" else "Auto-skip opening/ending"
+            AppTextKey.PlayerSettingsAutoPlayNext -> if (russian) "Автопереход к следующей серии" else "Autoplay next episode"
+            AppTextKey.PlayerSettingsOn -> if (russian) "Вкл" else "On"
+            AppTextKey.PlayerSettingsOff -> if (russian) "Выкл" else "Off"
+            AppTextKey.PlayerEpisodeNumber -> if (russian) "Серия %s" else "Episode %s"
             AppTextKey.SettingsDiscord -> "Discord Rich Presence"
             AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
