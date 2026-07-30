@@ -85,7 +85,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 sources = IosSourceRegistry.sources,
                 selectedSourceId = selectedSourceId.value,
                 showSettingsBackButton = true,
-                includeNavigationBarPadding = false,
+                includeNavigationBarPadding = true,
                 applyStatusBarPadding = true,
                 onSourceSelected = { sourceId ->
                     repository.selectSource(sourceId)
