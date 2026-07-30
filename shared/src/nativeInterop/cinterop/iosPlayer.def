@@ -1,4 +1,4 @@
 language = Objective-C
 package = org.akkirrai.hibiki.shared.player.nativebridge
 headers = iosPlayer.h
-linkerOpts = -framework AVFoundation
+linkerOpts = -framework AVFoundation -framework CoreMedia
