@@ -2,12 +2,9 @@ package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import hibiki.shared.generated.resources.Res
@@ -15,6 +12,7 @@ import hibiki.shared.generated.resources.ic_discord
 import hibiki.shared.generated.resources.ic_github
 import hibiki.shared.generated.resources.hibiki_app_icon
 import org.jetbrains.compose.resources.painterResource
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 
 data class AppSettingsScreenLabels(
     val appearance: String,
@@ -72,22 +70,16 @@ fun AppSettingsScreen(
     onExportLogs: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
 ) {
-    AppSettingsContentList(
-        bottomContentPadding = bottomContentPadding,
-        modifier = modifier,
-        content = {
-        if (showBackButton) {
-            item(key = "settings_back") {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = backContentDescription,
-                        )
-                    }
-                }
-            }
-        }
+    Box(modifier = modifier.fillMaxSize()) {
+        AppSettingsContentList(
+            bottomContentPadding = bottomContentPadding,
+            topContentPadding = if (showBackButton) {
+                SettingsContentTopPaddingWithBackButton
+            } else {
+                SettingsContentTopPadding
+            },
+            modifier = Modifier.fillMaxSize(),
+            content = {
         item(key = SettingsSection.Appearance.key) {
             AppSettingsAppearanceSection(
                 sectionTitle = labels.appearance,
@@ -192,6 +184,14 @@ fun AppSettingsScreen(
                 onGitHubClick = onGitHubClick,
             )
         }
-        },
-    )
+            },
+        )
+        if (showBackButton) {
+            AppDetailsHeroOverlayBackButton(
+                onClick = onBackClick,
+                contentDescription = backContentDescription,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+    }
 }

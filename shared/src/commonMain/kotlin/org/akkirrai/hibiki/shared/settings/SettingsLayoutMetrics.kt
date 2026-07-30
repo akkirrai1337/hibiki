@@ -13,6 +13,7 @@ val SettingsItemOuterCornerRadius = 24.dp
 val SettingsItemInnerCornerRadius = 4.dp
 val SettingsContentHorizontalPadding = 18.dp
 val SettingsContentTopPadding = 24.dp
+val SettingsContentTopPaddingWithBackButton = SettingsContentTopPadding + 56.dp
 val SettingsContentSectionGap = 28.dp
 val SettingsItemIconSize = 28.dp
 val SettingsAboutCardCornerRadius = 24.dp

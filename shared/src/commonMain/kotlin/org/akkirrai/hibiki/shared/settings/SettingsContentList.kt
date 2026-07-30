@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.Dp
 @Composable
 fun AppSettingsContentList(
     bottomContentPadding: Dp,
+    topContentPadding: Dp = SettingsContentTopPadding,
     content: LazyListScope.() -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -19,7 +20,7 @@ fun AppSettingsContentList(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = SettingsContentHorizontalPadding,
-            top = SettingsContentTopPadding,
+            top = topContentPadding,
             end = SettingsContentHorizontalPadding,
             bottom = bottomContentPadding,
         ),
