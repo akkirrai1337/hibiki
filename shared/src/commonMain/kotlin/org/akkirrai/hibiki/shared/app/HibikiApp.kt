@@ -35,6 +35,8 @@ fun HibikiApp(
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     showSettingsBackButton: Boolean = false,
+    includeNavigationBarPadding: Boolean = true,
+    applyStatusBarPadding: Boolean = false,
 ) {
     HibikiAppShell(
         modifier = modifier,
@@ -54,5 +56,7 @@ fun HibikiApp(
         selectedSourceId = selectedSourceId,
         onSourceSelected = onSourceSelected,
         showSettingsBackButton = showSettingsBackButton,
+        includeNavigationBarPadding = includeNavigationBarPadding,
+        applyStatusBarPadding = applyStatusBarPadding,
     )
 }

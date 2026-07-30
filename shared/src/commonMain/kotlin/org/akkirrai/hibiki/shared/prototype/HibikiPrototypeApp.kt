@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -161,6 +162,8 @@ fun HibikiAppShell(
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     showSettingsBackButton: Boolean = false,
+    includeNavigationBarPadding: Boolean = true,
+    applyStatusBarPadding: Boolean = false,
 ) {
     val scope = rememberCoroutineScope {
         CoroutineExceptionHandler { _, throwable ->
@@ -338,7 +341,10 @@ fun HibikiAppShell(
                             }
                         },
                         showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
-                        modifier = Modifier.fillMaxSize(),
+                        includeNavigationBarPadding = includeNavigationBarPadding,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(if (applyStatusBarPadding) Modifier.statusBarsPadding() else Modifier),
                     ) {
                         AppDestinationContent(
                             selectedTab = selectedTab,
@@ -443,6 +449,7 @@ fun HibikiAppShell(
                                 onSourceSelected(sourceId)
                             },
                             showSettingsBackButton = showSettingsBackButton,
+                            includeNavigationBarPadding = includeNavigationBarPadding,
                             onSettingsBack = { selectedTab = AppDestination.PROFILE },
                             sourceSearchState = sourceSearchState,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
@@ -784,6 +791,7 @@ private fun AppDestinationContent(
     onThemeModeChange: (ThemeMode) -> Unit = {},
     showSettingsBackButton: Boolean = false,
     onSettingsBack: () -> Unit = {},
+    includeNavigationBarPadding: Boolean = true,
 ) {
     if (selectedAnime != null) {
         AppDetailsScreen(

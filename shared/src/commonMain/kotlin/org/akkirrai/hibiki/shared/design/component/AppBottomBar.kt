@@ -58,9 +58,14 @@ fun AppBottomBar(
     iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit,
     label: @Composable (AppTopLevelDestination) -> String = { appText(it.labelKey) },
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
+    includeNavigationBarPadding: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationBarBottomPadding = if (includeNavigationBarPadding) {
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    } else {
+        0.dp
+    }
 
     Surface(
         modifier = modifier.fillMaxWidth(),

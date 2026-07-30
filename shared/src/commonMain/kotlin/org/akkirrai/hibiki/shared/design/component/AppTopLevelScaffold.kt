@@ -23,6 +23,7 @@ fun AppTopLevelScaffold(
     label: @Composable (AppTopLevelDestination) -> String,
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     showBottomBar: Boolean = true,
+    includeNavigationBarPadding: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -35,6 +36,7 @@ fun AppTopLevelScaffold(
                 onDestinationClick = onDestinationClick,
                 iconContent = iconContent,
                 label = label,
+                includeNavigationBarPadding = includeNavigationBarPadding,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }

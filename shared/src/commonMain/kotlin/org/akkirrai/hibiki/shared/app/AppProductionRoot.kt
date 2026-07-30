@@ -21,6 +21,7 @@ fun AppProductionRoot(
     modifier: Modifier = Modifier,
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     showBottomBar: Boolean = true,
+    includeNavigationBarPadding: Boolean = true,
     iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit = { destination, iconModifier ->
         androidx.compose.material3.Icon(
             imageVector = destination.icon,
@@ -39,6 +40,7 @@ fun AppProductionRoot(
         label = { destination -> appText(destination.labelKey) },
         destinations = destinations,
         showBottomBar = showBottomBar,
+        includeNavigationBarPadding = includeNavigationBarPadding,
         modifier = modifier,
         content = {
             AnimatedContent(
