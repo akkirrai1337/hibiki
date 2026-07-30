@@ -997,6 +997,7 @@ private fun AppDestinationContent(
                     searchSourceIconContent = { section, iconModifier ->
                         AppSourceIconImage(
                             url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,
+                            sourceId = section.sourceId,
                             modifier = iconModifier,
                         )
                     },
@@ -1291,6 +1292,7 @@ private fun ColumnScope.LibraryScreen(
                                 iconContent = { iconModifier ->
                                     AppSourceIconImage(
                                         url = source.iconUrl,
+                                        sourceId = source.id,
                                         modifier = iconModifier,
                                     )
                                 },

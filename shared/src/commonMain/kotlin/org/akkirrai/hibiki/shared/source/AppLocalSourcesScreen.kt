@@ -8,10 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import hibiki.shared.generated.resources.Res
-import hibiki.shared.generated.resources.source_ani_liberty
-import hibiki.shared.generated.resources.source_yummy_anime
-import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun AppLocalSourcesScreen(
@@ -77,7 +73,11 @@ fun AppLocalSourcesScreen(
                 },
                 sourceIconContent = { section, iconModifier ->
                     searchSourceIconContent?.invoke(section, iconModifier)
-                        ?: AppSourceIconImage(url = null, modifier = iconModifier)
+                        ?: AppSourceIconImage(
+                            url = null,
+                            sourceId = section.sourceId,
+                            modifier = iconModifier,
+                        )
                 },
                 itemContent = { anime ->
                     AppSourceSearchAnimeCard(
@@ -114,11 +114,7 @@ fun AppLocalSourcesScreen(
                             sourceIconContent?.invoke(source, iconModifier)
                             ?: AppSourceIconImage(
                                 url = source.iconUrl,
-                                placeholder = when (source.id) {
-                                    "yummy-anime" -> painterResource(Res.drawable.source_yummy_anime)
-                                    "ani-liberty" -> painterResource(Res.drawable.source_ani_liberty)
-                                    else -> null
-                                },
+                                sourceId = source.id,
                                 modifier = iconModifier,
                             )
                         },
