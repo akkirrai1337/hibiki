@@ -11,6 +11,7 @@
 		A10000010000000000000002 /* HibikiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* HibikiApp.swift */; };
 		A10000010000000000000003 /* shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* shared.framework */; };
 		A10000010000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* Assets.xcassets */; };
+		A10000010000000000000005 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +20,7 @@
 		A20000010000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000010000000000000002 /* HibikiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HibikiApp.swift; sourceTree = "<group>"; };
 		A20000010000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000010000000000000006 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +49,7 @@
 			children = (
 				A20000010000000000000001 /* ContentView.swift */,
 				A20000010000000000000002 /* HibikiApp.swift */,
+				A20000010000000000000006 /* LaunchScreen.storyboard */,
 				A20000010000000000000005 /* Assets.xcassets */,
 			);
 			path = iosApp;
@@ -123,6 +126,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000004 /* Assets.xcassets in Resources */,
+				A10000010000000000000005 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
