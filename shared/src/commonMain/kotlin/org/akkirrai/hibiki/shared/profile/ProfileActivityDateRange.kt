@@ -17,6 +17,14 @@ fun profileActivityDateLabel(date: String): String {
     return if (parts.size == 3) "${parts[2]}.${parts[1]}" else date
 }
 
+fun profileAddedDateLabel(value: Long): String {
+    val epochMillis = if (value in 1 until 1_000_000_000_000L) value * 1_000L else value
+    val epochDay = epochMillis / 86_400_000L
+    val isoDate = epochDayToIso(epochDay)
+    val parts = isoDate.split('-')
+    return if (parts.size == 3) "${parts[2]}.${parts[1]}.${parts[0]}" else isoDate
+}
+
 private fun epochDayToIso(epochDay: Long): String {
     val shiftedDay = epochDay + EPOCH_DAY_OFFSET
     val era = if (shiftedDay >= 0) shiftedDay / 146_097L else (shiftedDay - 146_096L) / 146_097L

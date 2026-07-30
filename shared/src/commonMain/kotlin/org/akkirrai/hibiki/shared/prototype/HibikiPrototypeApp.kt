@@ -115,6 +115,7 @@ import org.akkirrai.hibiki.shared.profile.LocalProfileSnapshotLabels
 import org.akkirrai.hibiki.shared.profile.buildLocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.defaultProfileActivityDateStrings
 import org.akkirrai.hibiki.shared.profile.profileActivityDateLabel
+import org.akkirrai.hibiki.shared.profile.profileAddedDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.ThemeMode
@@ -859,7 +860,7 @@ private fun AppDestinationContent(
                         labels = LocalProfileSnapshotLabels(
                             durationLabel = { duration -> "${formatDurationHours(duration)} h" },
                             categoryLabel = { category -> categoryLabels.getValue(category) },
-                            dateLabel = { it.toString() },
+                            dateLabel = ::profileAddedDateLabel,
                             activityDateLabel = ::profileActivityDateLabel,
                         ),
                     )
@@ -868,7 +869,7 @@ private fun AppDestinationContent(
                         profileName = profileData.profileName.ifBlank { appText(AppTextKey.AppName) },
                         isEditing = isEditingProfile,
                         editedName = editedProfileName,
-                        bottomContentPadding = 24.dp,
+                        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
                         labels = AppLocalProfileLabels(
                             overviewTab = appText(AppTextKey.ProfileTabOverview),
                             activityTab = appText(AppTextKey.ProfileTabActivity),
@@ -1109,7 +1110,7 @@ private fun ColumnScope.HomeScreen(
     AppHomeScreen(
         state = homeState,
         listState = listState,
-        bottomContentPadding = 0.dp,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
         currentYear = 2026,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
@@ -1145,7 +1146,7 @@ private fun ColumnScope.SearchScreen(
     AppCatalogScreen(
         state = state,
         listState = listState,
-        bottomContentPadding = 0.dp,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
         currentYear = 2026,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
