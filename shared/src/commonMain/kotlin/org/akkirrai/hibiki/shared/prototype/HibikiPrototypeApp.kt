@@ -78,6 +78,7 @@ import org.akkirrai.hibiki.shared.details.AppDetailsScreen
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
+import org.akkirrai.hibiki.shared.design.component.AppSourceBadge
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
@@ -142,6 +143,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
+import org.akkirrai.beakokit.api.AnimeKey
 
 private const val DEFAULT_PROFILE_NAME = "hibiki"
 private const val HOME_SEARCH_DEBOUNCE_MS = 450L
@@ -876,6 +878,7 @@ private fun AppDestinationContent(
                 )
                 AppDestination.LIBRARY -> LibraryScreen(
                     entries = libraryEntries,
+                    sources = sources,
                     state = libraryState,
                     onAnimeClick = onAnimeClick,
                     onCategorySelected = onLibraryCategorySelected,
@@ -1208,6 +1211,7 @@ private fun ColumnScope.SearchScreen(
 @Composable
 private fun ColumnScope.LibraryScreen(
     entries: List<LibraryEntry>,
+    sources: List<AppSourceDescriptor>,
     state: LibraryUiState,
     onAnimeClick: (Anime) -> Unit,
     onCategorySelected: (LibraryCategory) -> Unit,
@@ -1220,6 +1224,7 @@ private fun ColumnScope.LibraryScreen(
     var isFilterSheetOpen by remember { mutableStateOf(false) }
     val isRussian = isRussianLibraryLanguage(languageMode, systemLanguage)
     val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
+    val sourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
     AppLibraryEntriesContent(
         state = state,
         modifier = Modifier.fillMaxSize(),
@@ -1268,6 +1273,21 @@ private fun ColumnScope.LibraryScreen(
                 movieLabel = appText(AppTextKey.Type),
                 onClick = { onAnimeClick(entry.anime) },
                 libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+                sourceBadgeContent = { titleId ->
+                    AnimeKey.parse(titleId)?.sourceId?.value
+                        ?.let(sourcesById::get)
+                        ?.let { source ->
+                            AppSourceBadge(
+                                title = source.name,
+                                iconContent = { iconModifier ->
+                                    AppSourceIconImage(
+                                        url = source.iconUrl,
+                                        modifier = iconModifier,
+                                    )
+                                },
+                            )
+                        }
+                },
                 modifier = entryModifier,
             )
         },
