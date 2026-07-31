@@ -28,6 +28,9 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
@@ -59,6 +62,8 @@ internal fun AndroidCommonPlaybackHost(
     var playlistVisible by remember { mutableStateOf(false) }
     var controlsLocked by remember { mutableStateOf(false) }
     var unlockButtonVisible by remember { mutableStateOf(false) }
+    var settingsVisible by remember { mutableStateOf(false) }
+    var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     val videoScaleMode = preferencesState.videoScaleMode
     val episodeNavigation = resolveEpisodeNavigationAvailability(
         episodes = context.episodes,
@@ -190,6 +195,11 @@ internal fun AndroidCommonPlaybackHost(
                     isPictureInPictureActive = entered
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
+                onSettingsClick = {
+                    settingsDestination = PlayerSettingsDestination.Root
+                    settingsVisible = true
+                },
+                settingsContentDescription = appText(AppTextKey.Settings),
             )
         }
         AppPlayerUnlockOverlay(
@@ -220,6 +230,56 @@ internal fun AndroidCommonPlaybackHost(
             nowMs = SystemClock::elapsedRealtime,
             backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
         )
+        if (settingsVisible) {
+            AppPlayerSettingsLayer(
+                onDismissRequest = {
+                    settingsVisible = false
+                    settingsDestination = PlayerSettingsDestination.Root
+                },
+                nowMs = SystemClock::elapsedRealtime,
+                backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
+            ) { dismissPanel ->
+                AppPlayerSettingsContent(
+                    destination = settingsDestination,
+                    selectedSpeed = preferencesState.playbackSpeed,
+                    selectedSourceId = context.sourceId,
+                    selectedPlayerName = context.selectedPlayerName,
+                    selectedQualityLabel = context.selectedQualityLabel ?: playback.qualityLabel,
+                    availableQualityLabels = playback.availableQualityLabels,
+                    autoSkipSegments = preferencesState.autoSkipSegments,
+                    autoPlayNextEpisode = preferencesState.autoPlayNextEpisode,
+                    options = context.settingsOptions,
+                    onNavigate = { settingsDestination = it },
+                    onBack = { settingsDestination = PlayerSettingsDestination.Root },
+                    backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
+                    onSelectSpeed = { speed ->
+                        preferences.setPlaybackSpeed(speed)
+                        exoPlayer.setPlaybackSpeed(speed)
+                    },
+                    onSelectVoiceover = { source ->
+                        dismissPanel()
+                        settingsVisible = false
+                        onSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
+                    },
+                    onSelectPlayer = { playerName ->
+                        dismissPanel()
+                        settingsVisible = false
+                        onSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
+                    },
+                    onSelectQuality = { qualityLabel ->
+                        dismissPanel()
+                        settingsVisible = false
+                        onSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
+                    },
+                    onAutoSkipSegmentsChange = { enabled ->
+                        preferences.setAutoSkipSegments(enabled)
+                    },
+                    onAutoPlayNextEpisodeChange = { enabled ->
+                        preferences.setAutoPlayNextEpisode(enabled)
+                    },
+                )
+            }
+        }
     }
 }
 
