@@ -379,9 +379,16 @@ fun HibikiAppShell(
         playerPresenter.setState(PlayerUiState(isLoading = false))
     }
 
-    fun requestPlayback(episode: WatchEpisode) {
+    fun requestPlayback(
+        episode: WatchEpisode,
+        sourceOverride: WatchSource? = null,
+        preferredPlayerName: String? = null,
+        preferredQuality: String? = null,
+        episodesOverride: List<WatchEpisode>? = null,
+        replacePlayerRoute: Boolean = false,
+    ) {
         val repositoryForPlayback = watchRepository
-        val sourceForPlayback = selectedWatchSource
+        val sourceForPlayback = sourceOverride ?: selectedWatchSource
         if (repositoryForPlayback == null || sourceForPlayback == null) return
 
         playbackJob?.cancel()
@@ -399,12 +406,14 @@ fun HibikiAppShell(
                 repositoryForPlayback.resolvePlayback(
                     sourceId = sourceForPlayback.sourceId,
                     episodeId = episode.id,
-                    preferredQuality = sourceForPlayback.qualityLabel,
+                    preferredQuality = preferredQuality ?: sourceForPlayback.qualityLabel,
+                    preferredPlayerName = preferredPlayerName,
                 )
             }
-            if (requestGeneration != playbackRequestGeneration || selectedWatchSource != sourceForPlayback) return@launch
+            if (requestGeneration != playbackRequestGeneration) return@launch
             result.onSuccess { playback ->
-                val loadedEpisodes = (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+                val loadedEpisodes = episodesOverride
+                    ?: (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
                 playerPresenter.update {
                     it.withPlaybackLoaded(
                         stream = playback,
@@ -414,15 +423,24 @@ fun HibikiAppShell(
                         savedSeekMs = null,
                     )
                 }
-                navigationState = navigationState.reduce(
+                val playerNavigationEvent = if (replacePlayerRoute) {
+                    AppNavigationEvent.Replace(
+                        AppRoute.Player(
+                            sourceId = sourceForPlayback.sourceId,
+                            episodeId = episode.id,
+                            episodeNumber = episode.number,
+                        ),
+                    )
+                } else {
                     AppNavigationEvent.Navigate(
                         AppRoute.Player(
                             sourceId = sourceForPlayback.sourceId,
                             episodeId = episode.id,
                             episodeNumber = episode.number,
                         ),
-                    ),
-                )
+                    )
+                }
+                navigationState = navigationState.reduce(playerNavigationEvent)
                 val context = org.akkirrai.hibiki.shared.model.PlaybackContext(
                     titleId = watchAnime?.id.orEmpty(),
                     sourceId = sourceForPlayback.sourceId,
@@ -430,6 +448,8 @@ fun HibikiAppShell(
                     episodeNumber = episode.number,
                     sourceTitle = sourceForPlayback.title,
                     episodes = loadedEpisodes,
+                    selectedPlayerName = preferredPlayerName,
+                    selectedQualityLabel = preferredQuality ?: sourceForPlayback.qualityLabel,
                 )
                 if (playbackHost != null) {
                     activePlaybackRoute = PlaybackRoute(playback, context)
@@ -448,6 +468,64 @@ fun HibikiAppShell(
                 println("Hibiki playback resolution failed: ${error.message ?: error::class.simpleName}")
             }
             playbackJob = null
+        }
+    }
+
+    fun handlePlaybackSettingsAction(action: PlaybackSettingsAction) {
+        val route = activePlaybackRoute ?: return
+        val repositoryForPlayback = watchRepository ?: return
+        when (action) {
+            is PlaybackSettingsAction.SelectVoiceover -> scope.launch {
+                val episodes = runCatching { repositoryForPlayback.getEpisodes(action.source.sourceId) }
+                    .getOrNull()
+                    ?: return@launch
+                val episode = episodes.firstOrNull { it.number == route.context.episodeNumber }
+                    ?: episodes.firstOrNull()
+                    ?: return@launch
+                requestPlayback(
+                    episode = episode,
+                    sourceOverride = action.source,
+                    preferredQuality = action.source.qualityLabel,
+                    episodesOverride = episodes,
+                    replacePlayerRoute = true,
+                )
+            }
+            is PlaybackSettingsAction.SelectPlayer -> requestPlayback(
+                episode = WatchEpisode(
+                    id = route.context.episodeId,
+                    number = route.context.episodeNumber,
+                    title = null,
+                ),
+                sourceOverride = WatchSource(
+                    sourceId = route.context.sourceId,
+                    title = route.context.sourceTitle,
+                    episodeCount = route.context.episodes.size,
+                    qualityLabel = route.context.selectedQualityLabel,
+                ),
+                preferredPlayerName = action.playerName,
+                preferredQuality = route.context.selectedQualityLabel,
+                episodesOverride = route.context.episodes,
+                replacePlayerRoute = true,
+            )
+            is PlaybackSettingsAction.SelectQuality -> requestPlayback(
+                episode = WatchEpisode(
+                    id = route.context.episodeId,
+                    number = route.context.episodeNumber,
+                    title = null,
+                ),
+                sourceOverride = WatchSource(
+                    sourceId = route.context.sourceId,
+                    title = route.context.sourceTitle,
+                    episodeCount = route.context.episodes.size,
+                    qualityLabel = action.qualityLabel,
+                ),
+                preferredPlayerName = route.context.selectedPlayerName,
+                preferredQuality = action.qualityLabel,
+                episodesOverride = route.context.episodes,
+                replacePlayerRoute = true,
+            )
+            is PlaybackSettingsAction.SetAutoSkipSegments -> Unit
+            is PlaybackSettingsAction.SetAutoPlayNextEpisode -> Unit
         }
     }
 
@@ -793,7 +871,7 @@ fun HibikiAppShell(
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
                             onEpisodeSelected = ::requestPlayback,
-                            onSettingsAction = {},
+                            onSettingsAction = ::handlePlaybackSettingsAction,
                             content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction ->
                             playbackHost(playback, context, onDismiss, onEpisodeSelected, onSettingsAction)
                             },

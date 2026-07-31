@@ -179,9 +179,12 @@ class AnimeWatchRepository(
         sourceId: String,
         episodeId: String,
         preferredQuality: String?,
+        preferredPlayerName: String?,
     ): PlaybackStream = resolveStream(
         sourceId = sourceId,
         episodeId = episodeId,
+        preferredPlayerName = preferredPlayerName,
+        requiredPlayerName = preferredPlayerName,
         preferredQuality = preferredQuality,
     )
 

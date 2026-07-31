@@ -118,8 +118,9 @@ class SharedAnimeWatchRepository(
         sourceId: String,
         episodeId: String,
         preferredQuality: String?,
+        preferredPlayerName: String?,
     ): PlaybackStream {
-        val cacheKey = listOf(sourceId, episodeId, preferredQuality.orEmpty()).joinToString("|")
+        val cacheKey = listOf(sourceId, episodeId, preferredPlayerName.orEmpty(), preferredQuality.orEmpty()).joinToString("|")
         resolvedPlayback.get(cacheKey)?.let { return it }
         val payload = payloadFor(sourceId)
         val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
@@ -127,7 +128,7 @@ class SharedAnimeWatchRepository(
         val prioritizedLinks = selectPlaybackLinks(
             links = payload.playback.getPlayerLinks(payload.title, payload.group, episode),
             supports = { link -> playbackExtractors.any { extractor -> extractor.supports(link) } },
-            preferredPlayerName = null,
+            preferredPlayerName = preferredPlayerName,
             preferredQuality = preferredQuality,
         )
         val playback = playbackResolver.resolve(

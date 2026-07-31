@@ -19,6 +19,7 @@ interface WatchDataRepository : AutoCloseable {
         sourceId: String,
         episodeId: String,
         preferredQuality: String? = null,
+        preferredPlayerName: String? = null,
     ): PlaybackStream
 
     override fun close()
