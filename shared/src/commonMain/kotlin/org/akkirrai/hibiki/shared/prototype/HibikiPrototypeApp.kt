@@ -151,6 +151,7 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.shared.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
@@ -290,8 +291,23 @@ fun HibikiAppShell(
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
     val profileState by profilePresenter.state.collectAsState()
     val discordRpcState by (discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
-    var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
+    val discordAuthOverlay = AppOverlay.Dialog("discord-auth")
+    val isDiscordAuthDialogOpen = navigationState.overlays.lastOrNull() == discordAuthOverlay
+
+    fun openDiscordAuthDialog() {
+        if (!isDiscordAuthDialogOpen) {
+            navigationState = navigationState.reduce(
+                AppNavigationEvent.PresentOverlay(discordAuthOverlay),
+            )
+        }
+    }
+
+    fun closeDiscordAuthDialog() {
+        if (isDiscordAuthDialogOpen) {
+            navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
+        }
+    }
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
     var homeSearchQuery by remember { mutableStateOf("") }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
@@ -999,10 +1015,10 @@ fun HibikiAppShell(
                             onGitHubClick = onGitHubClick,
                             discordEnabled = discordRpcController?.isEnabled() == true,
                             discordAvailable = discordRpcController != null,
-                            onDiscordClick = { if (discordRpcController != null) isDiscordAuthDialogOpen = true },
+                            onDiscordClick = { if (discordRpcController != null) openDiscordAuthDialog() },
                             onDiscordChange = { enabled ->
                                 discordRpcController?.let { controller ->
-                                    if (enabled && !controller.hasToken()) isDiscordAuthDialogOpen = true
+                                    if (enabled && !controller.hasToken()) openDiscordAuthDialog()
                                     else controller.setEnabled(enabled)
                                 }
                             },
@@ -1116,15 +1132,15 @@ fun HibikiAppShell(
                             applyLabel = appText(AppTextKey.Apply),
                             onBrowserSignIn = { onDiscordBrowserSignIn { token ->
                                 pendingDiscordToken = token
-                                isDiscordAuthDialogOpen = true
+                                openDiscordAuthDialog()
                             } },
                             onDisconnect = {
                                 controller.signOut()
-                                isDiscordAuthDialogOpen = false
+                                closeDiscordAuthDialog()
                             },
                             onDismiss = {
                                 pendingDiscordToken = null
-                                isDiscordAuthDialogOpen = false
+                                closeDiscordAuthDialog()
                             },
                             onAuthenticate = controller::authenticate,
                         )
