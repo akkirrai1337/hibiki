@@ -418,6 +418,7 @@ internal fun AndroidCommonPlaybackHost(
             },
             onDismissRequest = {
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                controlsVisible = true
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
