@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -61,18 +60,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.shared.design.component.AppBackButton as SharedBackButton
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.dash.DashMediaSource
-import androidx.media3.exoplayer.hls.HlsMediaSource
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
@@ -83,7 +76,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.net.URI
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
@@ -99,7 +91,6 @@ import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackStream
-import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
@@ -767,7 +758,7 @@ fun PlayerScreen(
         keepControlsVisible()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        exoPlayer.setMediaSource(playback.toMediaSource(context))
+        exoPlayer.setMediaSource(playback.toAndroidMediaSource(context))
         applyPlaybackSpeed(playbackSpeed)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
@@ -1407,31 +1398,6 @@ private fun VideoScaleMode.contentDescriptionResId(): Int = when (localizationKe
     "watch_player_video_scale_crop" -> R.string.watch_player_video_scale_crop
     "watch_player_video_scale_stretch" -> R.string.watch_player_video_scale_stretch
     else -> error("Unknown video scale localization key")
-}
-
-private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
-    val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
-        context = context,
-        headers = headers,
-    )
-    val mediaItem = MediaItem.Builder()
-        .setUri(streamUrl.toUri())
-        .setMimeType(
-            when (streamType) {
-                PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
-                PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
-                PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
-            }
-        )
-        .build()
-
-    return when (streamType) {
-        PlaybackStreamType.HLS -> HlsMediaSource.Factory(dataSourceFactory)
-            .setAllowChunklessPreparation(true)
-            .createMediaSource(mediaItem)
-        PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-        PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-    }
 }
 
 @Composable
