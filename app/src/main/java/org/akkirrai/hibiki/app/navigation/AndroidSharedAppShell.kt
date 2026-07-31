@@ -1,12 +1,17 @@
 package org.akkirrai.hibiki.app.navigation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -37,6 +42,11 @@ internal fun AndroidSharedAppShell(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    var pendingAvatarCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.toString()?.let { pendingAvatarCallback?.invoke(it) }
+        pendingAvatarCallback = null
+    }
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = remember(dependencies) { dependencies.appSettingsStore() }
     val catalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
@@ -98,6 +108,10 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
+            onProfileAvatarEdit = { onPicked ->
+                pendingAvatarCallback = onPicked
+                avatarPicker.launch(arrayOf("image/*"))
+            },
             onOpenUrl = uriHandler::openUri,
             sources = sources,
             selectedSourceId = preferences.animeSource.value.takeIf { preferences.hasExplicitAnimeSource },
