@@ -84,6 +84,8 @@ fun AppDetailsScreen(
     detailsError: String? = null,
     posterPreviewOpen: Boolean? = null,
     onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
+    titleSheetOpen: Boolean? = null,
+    onTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
@@ -174,8 +176,12 @@ fun AppDetailsScreen(
         mutableStateOf(initialTitleSeedColor)
     }
     val posterPreviewVisible = posterPreviewOpen ?: isPosterPreviewOpen
+    val titleSheetVisible = titleSheetOpen ?: isTitleDetailsSheetOpen
     fun setPosterPreviewVisible(visible: Boolean) {
         onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
+    }
+    fun setTitleSheetVisible(visible: Boolean) {
+        onTitleSheetOpenChange?.invoke(visible) ?: run { isTitleDetailsSheetOpen = visible }
     }
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme
@@ -191,13 +197,13 @@ fun AppDetailsScreen(
         AppSystemBackHandler(
             enabled = detailsOverlayBackTarget(
                 librarySheetOpen = isLibrarySheetOpen,
-                titleSheetOpen = isTitleDetailsSheetOpen,
+                titleSheetOpen = titleSheetVisible,
                 posterPreviewOpen = posterPreviewVisible,
             ) != DetailsOverlayBackTarget.None,
             onBack = {
-                when (detailsOverlayBackTarget(isLibrarySheetOpen, isTitleDetailsSheetOpen, posterPreviewVisible)) {
+                when (detailsOverlayBackTarget(isLibrarySheetOpen, titleSheetVisible, posterPreviewVisible)) {
                     DetailsOverlayBackTarget.Library -> isLibrarySheetOpen = false
-                    DetailsOverlayBackTarget.Title -> isTitleDetailsSheetOpen = false
+                    DetailsOverlayBackTarget.Title -> setTitleSheetVisible(false)
                     DetailsOverlayBackTarget.Poster -> setPosterPreviewVisible(false)
                     DetailsOverlayBackTarget.None -> Unit
                 }
@@ -304,7 +310,7 @@ fun AppDetailsScreen(
                                 title = uiModel.anime.title,
                                 description = uiModel.description,
                                 backgroundColor = MaterialTheme.colorScheme.background,
-                                onTitleClick = { isTitleDetailsSheetOpen = true },
+                                onTitleClick = { setTitleSheetVisible(true) },
                                 ratingsContent = resolveDetailsHeroRatings(
                                     uiModel.anime.ratings,
                                     uiModel.anime.viewCount,
@@ -414,10 +420,10 @@ fun AppDetailsScreen(
             )
         }
 
-        if (isTitleDetailsSheetOpen) {
+        if (titleSheetVisible) {
             val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
             AppModalBottomSheet(
-                onDismissRequest = { isTitleDetailsSheetOpen = false },
+                onDismissRequest = { setTitleSheetVisible(false) },
                 sheetState = titleSheetState,
                 modifier = Modifier.fillMaxHeight(),
                 shape = titleSheetShape,
