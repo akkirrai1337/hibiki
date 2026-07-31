@@ -27,6 +27,7 @@ sealed interface AppOverlay {
     data object PlayerSettings : AppOverlay
     data object DetailsPosterPreview : AppOverlay
     data object DetailsTitleSheet : AppOverlay
+    data object DetailsLibrarySheet : AppOverlay
     data class Dialog(val id: String) : AppOverlay
     data class Sheet(val id: String) : AppOverlay
 }

@@ -86,6 +86,8 @@ fun AppDetailsScreen(
     onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
     titleSheetOpen: Boolean? = null,
     onTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
+    librarySheetOpen: Boolean? = null,
+    onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
@@ -177,11 +179,15 @@ fun AppDetailsScreen(
     }
     val posterPreviewVisible = posterPreviewOpen ?: isPosterPreviewOpen
     val titleSheetVisible = titleSheetOpen ?: isTitleDetailsSheetOpen
+    val librarySheetVisible = librarySheetOpen ?: isLibrarySheetOpen
     fun setPosterPreviewVisible(visible: Boolean) {
         onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
     }
     fun setTitleSheetVisible(visible: Boolean) {
         onTitleSheetOpenChange?.invoke(visible) ?: run { isTitleDetailsSheetOpen = visible }
+    }
+    fun setLibrarySheetVisible(visible: Boolean) {
+        onLibrarySheetOpenChange?.invoke(visible) ?: run { isLibrarySheetOpen = visible }
     }
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme
@@ -196,13 +202,13 @@ fun AppDetailsScreen(
     MaterialTheme(colorScheme = detailsColorScheme) {
         AppSystemBackHandler(
             enabled = detailsOverlayBackTarget(
-                librarySheetOpen = isLibrarySheetOpen,
+                librarySheetOpen = librarySheetVisible,
                 titleSheetOpen = titleSheetVisible,
                 posterPreviewOpen = posterPreviewVisible,
             ) != DetailsOverlayBackTarget.None,
             onBack = {
-                when (detailsOverlayBackTarget(isLibrarySheetOpen, titleSheetVisible, posterPreviewVisible)) {
-                    DetailsOverlayBackTarget.Library -> isLibrarySheetOpen = false
+                when (detailsOverlayBackTarget(librarySheetVisible, titleSheetVisible, posterPreviewVisible)) {
+                    DetailsOverlayBackTarget.Library -> setLibrarySheetVisible(false)
                     DetailsOverlayBackTarget.Title -> setTitleSheetVisible(false)
                     DetailsOverlayBackTarget.Poster -> setPosterPreviewVisible(false)
                     DetailsOverlayBackTarget.None -> Unit
@@ -228,7 +234,7 @@ fun AppDetailsScreen(
                         libraryLabel = appText(AppTextKey.Favorite),
                         watchLabel = appText(AppTextKey.Watch),
                         onPosterClick = { setPosterPreviewVisible(true) },
-                        onLibraryClick = { isLibrarySheetOpen = true },
+                        onLibraryClick = { setLibrarySheetVisible(true) },
                         onPrimaryClick = onWatchClick,
                         posterContent = {
                             AppPosterImage(
@@ -440,7 +446,7 @@ fun AppDetailsScreen(
             }
         }
 
-        if (isLibrarySheetOpen) {
+        if (librarySheetVisible) {
             AppLibraryCategorySheet(
                 selectedCategory = libraryCategory,
                 title = appText(AppTextKey.LibraryAddTitle),
@@ -452,15 +458,15 @@ fun AppDetailsScreen(
                     libraryRepository?.saveToLibrary(uiModel.anime, category)
                     libraryCategory = category
                     onLibraryCategoryChange(category)
-                    isLibrarySheetOpen = false
+                    setLibrarySheetVisible(false)
                 },
                 onRemoveClick = {
                     libraryRepository?.removeFromLibrary(uiModel.anime.id)
                     libraryCategory = null
                     onLibraryCategoryChange(null)
-                    isLibrarySheetOpen = false
+                    setLibrarySheetVisible(false)
                 },
-                onDismiss = { isLibrarySheetOpen = false },
+                onDismiss = { setLibrarySheetVisible(false) },
             )
         }
             }

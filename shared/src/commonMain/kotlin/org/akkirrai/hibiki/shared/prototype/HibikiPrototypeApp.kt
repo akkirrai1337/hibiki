@@ -1061,6 +1061,16 @@ fun HibikiAppShell(
                                     navigationState
                                 }
                             },
+                            detailsLibrarySheetOpen = navigationState.overlays.lastOrNull() == AppOverlay.DetailsLibrarySheet,
+                            onDetailsLibrarySheetOpenChange = { open ->
+                                navigationState = if (open) {
+                                    navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsLibrarySheet))
+                                } else if (navigationState.overlays.lastOrNull() == AppOverlay.DetailsLibrarySheet) {
+                                    navigationState.reduce(AppNavigationEvent.DismissOverlay)
+                                } else {
+                                    navigationState
+                                }
+                            },
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
                             onWatchRetry = {
@@ -1721,6 +1731,8 @@ private fun AppDestinationContent(
     onDetailsPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
     detailsTitleSheetOpen: Boolean? = null,
     onDetailsTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
+    detailsLibrarySheetOpen: Boolean? = null,
+    onDetailsLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val navigationLockKey = watchNavigationLockKey(
         animeId = watchAnime?.id,
@@ -1947,6 +1959,8 @@ private fun AppDestinationContent(
             onPosterPreviewOpenChange = onDetailsPosterPreviewOpenChange,
             titleSheetOpen = detailsTitleSheetOpen,
             onTitleSheetOpenChange = onDetailsTitleSheetOpenChange,
+            librarySheetOpen = detailsLibrarySheetOpen,
+            onLibrarySheetOpenChange = onDetailsLibrarySheetOpenChange,
         )
         return
     }
