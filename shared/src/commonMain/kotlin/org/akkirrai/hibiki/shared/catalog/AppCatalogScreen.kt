@@ -107,6 +107,11 @@ fun AppCatalogScreen(
     }
     val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
 
+    AppCatalogFilterVisibilityEffect(
+        hasFilters = hasCatalogFilters,
+        onFiltersUnavailable = { isFilterSheetOpen = false },
+    )
+
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
             fallbackCatalogSort(
