@@ -228,6 +228,7 @@ internal fun IosEmbeddedPlaybackHost(
             AppPlayerSettingsLayer(
                 onDismissRequest = {
                 onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+                controlsVisible = true
                 },
                 nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
                 backHandler = { enabled, callback ->
@@ -244,8 +245,14 @@ internal fun IosEmbeddedPlaybackHost(
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = context.settingsOptions,
-                    onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
-                    onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
+                    onNavigate = {
+                        controlsVisible = true
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it))
+                    },
+                    onBack = {
+                        controlsVisible = true
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
+                    },
                     backHandler = { enabled, callback ->
                         AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                     },

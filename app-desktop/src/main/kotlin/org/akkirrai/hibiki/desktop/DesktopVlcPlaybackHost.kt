@@ -312,6 +312,7 @@ internal fun DesktopVlcPlaybackHost(
                 AppPlayerSettingsLayer(
                     onDismissRequest = {
                         onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+                        controlsVisible = true
                     },
                     nowMs = { System.currentTimeMillis() },
                     backHandler = { enabled, callback ->
@@ -328,8 +329,14 @@ internal fun DesktopVlcPlaybackHost(
                         autoSkipSegments = autoSkipSegments,
                         autoPlayNextEpisode = autoPlayNextEpisode,
                         options = context.settingsOptions,
-                        onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
-                        onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
+                        onNavigate = {
+                            controlsVisible = true
+                            onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it))
+                        },
+                        onBack = {
+                            controlsVisible = true
+                            onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
+                        },
                         backHandler = { enabled, callback ->
                             AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                         },

@@ -447,6 +447,7 @@ internal fun AndroidCommonPlaybackHost(
             AppPlayerSettingsLayer(
                 onDismissRequest = {
                     onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+                    controlsVisible = true
                 },
                 nowMs = SystemClock::elapsedRealtime,
                 backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
@@ -461,8 +462,14 @@ internal fun AndroidCommonPlaybackHost(
                     autoSkipSegments = preferencesState.autoSkipSegments,
                     autoPlayNextEpisode = preferencesState.autoPlayNextEpisode,
                     options = context.settingsOptions,
-                    onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
-                    onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
+                    onNavigate = {
+                        controlsVisible = true
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it))
+                    },
+                    onBack = {
+                        controlsVisible = true
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
+                    },
                     backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
                     onSelectSpeed = { speed ->
                         preferences.setPlaybackSpeed(speed)
