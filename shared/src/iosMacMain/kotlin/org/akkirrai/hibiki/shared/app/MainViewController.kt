@@ -1,16 +1,23 @@
 package org.akkirrai.hibiki.shared.app
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
+import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
+import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.profile.IosAvatarPicker
 import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
@@ -66,8 +73,17 @@ fun MainViewController(systemLanguage: String): UIViewController {
         DisposableEffect(repository) { onDispose { repository.close() } }
         DisposableEffect(watchRepository) { onDispose { watchRepository.close() } }
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
-            Surface {
-                HibikiApp(
+            val density = LocalDensity.current
+            val safeDrawingInsets = AppLayoutEnvironment(
+                isProvided = true,
+                topSystemInset = with(density) { WindowInsets.safeDrawing.getTop(density).toDp() },
+                bottomSystemInset = with(density) { WindowInsets.safeDrawing.getBottom(density).toDp() },
+                navigationBarMode = AppNavigationBarMode.Inset,
+                edgePolicy = AppScreenEdgePolicy.ContentSafe,
+            )
+            CompositionLocalProvider(LocalAppLayoutEnvironment provides safeDrawingInsets) {
+                Surface {
+                    HibikiApp(
                     repository = repository,
                     watchRepository = watchRepository,
                     onPlaybackReady = { playback, context ->
@@ -99,7 +115,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         sourceSelectionRepository.saveSelectedSourceId(sourceId)
                         selectedSourceId.value = sourceId
                     },
-                )
+                    )
+                }
             }
         }
     }
