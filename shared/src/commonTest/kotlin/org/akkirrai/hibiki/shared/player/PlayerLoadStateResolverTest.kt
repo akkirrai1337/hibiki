@@ -22,6 +22,23 @@ class PlayerLoadStateResolverTest {
     }
 
     @Test
+    fun loadingKeepsCurrentPlaybackForTheLoadingOverlay() {
+        val stream = PlaybackStream(
+            animeTitle = "Anime",
+            sourceTitle = "Source",
+            episodeTitle = "Episode",
+            streamUrl = "https://video",
+            streamType = PlaybackStreamType.HLS,
+        )
+
+        val state = PlayerUiState(playback = stream)
+            .beginPlaybackLoad(emptySet())
+
+        assertTrue(state.isLoading)
+        assertEquals(stream, state.playback)
+    }
+
+    @Test
     fun loadedPlaybackUpdatesEpisodeAndClearsRecoveredStream() {
         val stream = PlaybackStream(
             animeTitle = "  Anime  ",
