@@ -19,6 +19,8 @@ import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
+private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
+
 /** Desktop entry point for the production shared shell. */
 fun main() = application {
     val catalogRepository = remember { DesktopCatalogRepository() }
@@ -77,6 +79,11 @@ fun main() = application {
                         onOpenUrl = { url ->
                             if (Desktop.isDesktopSupported()) {
                                 Desktop.getDesktop().browse(URI(url))
+                            }
+                        },
+                        onGitHubClick = {
+                            if (Desktop.isDesktopSupported()) {
+                                Desktop.getDesktop().browse(URI(HIBIKI_GITHUB_URL))
                             }
                         },
                         includeNavigationBarPadding = true,
