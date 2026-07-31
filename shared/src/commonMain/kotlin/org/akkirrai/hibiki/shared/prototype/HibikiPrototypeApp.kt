@@ -198,6 +198,7 @@ import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
+import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1185,7 +1186,12 @@ fun HibikiAppShell(
                         )
                     }
                     }
-                    if (playbackHost != null && (activePlaybackRoute != null || pendingPlaybackContext != null)) {
+                    if (playbackHost != null && shouldShowPlaybackHost(
+                            currentRoute = navigationState.currentRoute,
+                            hasPlayback = activePlaybackRoute != null,
+                            hasPendingContext = pendingPlaybackContext != null,
+                        )
+                    ) {
                         val route = activePlaybackRoute
                         AppPlaybackOverlayHost(
                             playback = route?.playback,
