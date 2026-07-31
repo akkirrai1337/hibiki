@@ -2,10 +2,14 @@ package org.akkirrai.hibiki.shared.app
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -13,11 +17,15 @@ import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
+import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.isPlaybackComplete
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
 import org.akkirrai.hibiki.shared.player.IosPlayerSession
 import org.akkirrai.hibiki.shared.player.IosPlayerSurface
@@ -25,6 +33,7 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import platform.Foundation.NSDate
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun IosEmbeddedPlaybackHost(
@@ -42,7 +51,48 @@ internal fun IosEmbeddedPlaybackHost(
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
+    var controlsVisible by remember { mutableStateOf(true) }
+    var positionMs by remember(session) { mutableLongStateOf(0L) }
+    var completionHandled by remember(session) { mutableStateOf(false) }
+    var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
+    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
+    LaunchedEffect(session, context.episodeId) {
+        while (true) {
+            positionMs = session.transport.positionMs()
+            if (!completionHandled &&
+                settingsStore.load().autoPlayNextEpisode &&
+                isPlaybackComplete(positionMs, session.transport.durationMs())
+            ) {
+                completionHandled = true
+                resolveAdjacentEpisode(context.episodes, context.episodeId, context.episodeNumber, 1)
+                    ?.let(onEpisodeSelected)
+            }
+            delay(500L)
+        }
+    }
+    val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
+        ?.takeIf { controlsVisible && !playlistVisible && !settingsVisible }
+    val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
+    val activeSkipSegment = rawActiveSkipSegment?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
+    LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
+        val key = activeSkipSegmentKey ?: run {
+            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            return@LaunchedEffect
+        }
+        val segment = rawActiveSkipSegment
+        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+            delay(1_000L)
+            if (hiddenSkipSegmentKey == key) return@LaunchedEffect
+            skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
+        }
+        if (settingsStore.load().autoSkipSegments && hiddenSkipSegmentKey != key) {
+            session.transport.seekToMs(segment.endMs)
+        } else if (hiddenSkipSegmentKey != key) {
+            hiddenSkipSegmentKey = key
+        }
+    }
     AppPlayerFrame {
         IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
         IosComposePlayerControls(
@@ -67,6 +117,7 @@ internal fun IosEmbeddedPlaybackHost(
                 settingsVisible = true
             },
             settingsContentDescription = appText(AppTextKey.Settings),
+            onControlsVisibilityChanged = { controlsVisible = it },
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,
@@ -135,5 +186,21 @@ internal fun IosEmbeddedPlaybackHost(
                 )
             }
         }
+        activeSkipSegment?.let { segment ->
+            AppPlayerSkipSegmentLayer(
+                visible = true,
+                controlsVisible = controlsVisible,
+                countdownSeconds = skipCountdownSeconds,
+                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                autoSkipEnabled = settingsStore.load().autoSkipSegments,
+                skipLabel = appText(AppTextKey.PlayerSkip),
+                watchLabel = appText(AppTextKey.PlayerWatch),
+                onSkipClick = { session.transport.seekToMs(segment.endMs) },
+                onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
+        }
     }
 }
+
+private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10

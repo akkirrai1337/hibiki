@@ -18,6 +18,7 @@ internal fun IosComposePlayerControls(
     onNextEpisode: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     settingsContentDescription: String? = null,
+    onControlsVisibilityChanged: (Boolean) -> Unit = {},
 ) {
     AppPlaybackControls(
         transport = session.transport,
@@ -34,5 +35,6 @@ internal fun IosComposePlayerControls(
         onNextEpisode = onNextEpisode,
         onSettingsClick = onSettingsClick,
         settingsContentDescription = settingsContentDescription,
+        onControlsVisibilityChanged = onControlsVisibilityChanged,
     )
 }
