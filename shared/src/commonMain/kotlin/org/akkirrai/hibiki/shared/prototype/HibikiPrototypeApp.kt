@@ -1815,6 +1815,9 @@ private fun AppDestinationContent(
             anime = selectedAnime,
             onBackClick = onBackFromDetails,
             onRelatedAnimeClick = onAnimeClick,
+            backHandler = { onBack ->
+                AppSystemBackHandler(enabled = true, onBack = onBack) {}
+            },
             canWatch = watchRepositoryAvailable,
             onWatchClick = { onWatchClick(selectedAnime) },
             onTrailerClick = selectedAnime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
