@@ -50,6 +50,7 @@ fun AppSettingsScreen(
     useAmoledTheme: Boolean,
     autoSkipSegments: Boolean,
     themeMode: ThemeMode? = null,
+    discordAvailable: Boolean = true,
     discordEnabled: Boolean = false,
     showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
@@ -131,21 +132,23 @@ fun AppSettingsScreen(
                 onAutoSkipChange = onAutoSkipChange,
             )
         }
-        item(key = SettingsSection.Experimental.key) {
-            AppSettingsExperimentalSection(
-                sectionTitle = labels.experimental,
-                discordIconContent = { iconModifier ->
-                    Image(
-                        painter = painterResource(Res.drawable.ic_discord),
-                        contentDescription = null,
-                        modifier = iconModifier,
-                    )
-                },
-                discordTitle = labels.discord,
-                discordEnabled = discordEnabled,
-                onDiscordClick = onDiscordClick,
-                onDiscordChange = onDiscordChange,
-            )
+        if (discordAvailable) {
+            item(key = SettingsSection.Experimental.key) {
+                AppSettingsExperimentalSection(
+                    sectionTitle = labels.experimental,
+                    discordIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.ic_discord),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    discordTitle = labels.discord,
+                    discordEnabled = discordEnabled,
+                    onDiscordClick = onDiscordClick,
+                    onDiscordChange = onDiscordChange,
+                )
+            }
         }
         if (showUpdates) {
             item(key = SettingsSection.Updates.key) {

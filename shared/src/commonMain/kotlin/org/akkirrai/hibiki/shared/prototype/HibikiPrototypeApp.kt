@@ -918,6 +918,7 @@ fun HibikiAppShell(
                             onProfileAvatarEdit = onProfileAvatarEdit,
                             onGitHubClick = onGitHubClick,
                             discordEnabled = discordRpcController?.isEnabled() == true,
+                            discordAvailable = discordRpcController != null,
                             onDiscordClick = { if (discordRpcController != null) isDiscordAuthDialogOpen = true },
                             onDiscordChange = { enabled ->
                                 discordRpcController?.let { controller ->
@@ -1423,6 +1424,7 @@ private fun AppDestinationContent(
     onOpenUrl: (String) -> Unit = {},
     onGitHubClick: () -> Unit = {},
     discordEnabled: Boolean = false,
+    discordAvailable: Boolean = true,
     onDiscordClick: () -> Unit = {},
     onDiscordChange: (Boolean) -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
@@ -1797,6 +1799,7 @@ private fun AppDestinationContent(
                     onBackClick = onSettingsBack,
                     onGitHubClick = onGitHubClick,
                     discordEnabled = discordEnabled,
+                    discordAvailable = discordAvailable,
                     onDiscordClick = onDiscordClick,
                     onDiscordChange = onDiscordChange,
                 )
@@ -2137,6 +2140,7 @@ private fun SettingsScreen(
     onBackClick: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
     discordEnabled: Boolean = false,
+    discordAvailable: Boolean = true,
     onDiscordClick: () -> Unit = {},
     onDiscordChange: (Boolean) -> Unit = {},
 ) {
@@ -2148,6 +2152,7 @@ private fun SettingsScreen(
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
         discordEnabled = discordEnabled,
+        discordAvailable = discordAvailable,
         labels = AppSettingsScreenLabels(
             appearance = appText(AppTextKey.SettingsAppearance),
             theme = appText(AppTextKey.SettingsTheme),
