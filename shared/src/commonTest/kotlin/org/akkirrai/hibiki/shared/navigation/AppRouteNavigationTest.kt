@@ -88,4 +88,20 @@ class AppRouteNavigationTest {
         assertEquals(AppTransitionDirection.Pop, pop.direction)
         assertEquals(AppTransitionSpec.DefaultDurationMillis, pop.durationMillis)
     }
+
+    @Test
+    fun `top level profile and library transitions use destination identities`() {
+        val details = AppRoute.Details("anime-1")
+        val profile = AppRoute.TopLevel(AppTopLevelDestination.PROFILE)
+        val library = AppRoute.TopLevel(AppTopLevelDestination.LIBRARY)
+
+        val profileSpec = appTransitionSpec(details, profile, AppTransitionDirection.Forward)
+        val libraryPopSpec = appTransitionSpec(profile, library, AppTransitionDirection.Pop)
+
+        assertEquals(AppTransitionKey("top-level", "profile"), profileSpec.enterKey)
+        assertEquals(details.transitionKey(), profileSpec.exitKey)
+        assertEquals(AppTransitionKey("top-level", "library"), libraryPopSpec.enterKey)
+        assertEquals(profile.transitionKey(), libraryPopSpec.exitKey)
+        assertEquals(AppTransitionDirection.Pop, libraryPopSpec.direction)
+    }
 }
