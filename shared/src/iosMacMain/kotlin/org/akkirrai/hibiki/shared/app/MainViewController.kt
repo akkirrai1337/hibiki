@@ -99,6 +99,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                                 onEpisodeSelected = onEpisodeSelected,
                                 settingsStore = settingsStore,
                                 onSettingsAction = onSettingsAction,
+                                progressRepository = watchStateRepository,
                             )
                         }
                     } else {

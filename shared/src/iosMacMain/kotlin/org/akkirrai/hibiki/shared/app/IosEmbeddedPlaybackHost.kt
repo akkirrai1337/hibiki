@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.app
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,6 +28,7 @@ import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.isPlaybackComplete
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
 import org.akkirrai.hibiki.shared.player.IosPlayerSession
 import org.akkirrai.hibiki.shared.player.IosPlayerSurface
@@ -44,6 +46,7 @@ internal fun IosEmbeddedPlaybackHost(
     onEpisodeSelected: (WatchEpisode) -> Unit,
     settingsStore: AppSettingsStore,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
+    progressRepository: PlaybackProgressRepository,
 ) {
     val session = remember(playback.streamUrl, playback.headers) {
         IosPlayerSession(playback).also {
@@ -63,6 +66,29 @@ internal fun IosEmbeddedPlaybackHost(
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
+
+    fun savePlaybackProgress() {
+        val position = session.transport.positionMs()
+        if (position <= 0L) return
+        progressRepository.saveEpisodeProgress(
+            context = context,
+            playback = playback,
+            positionMs = position,
+            durationMs = session.transport.durationMs(),
+        )
+    }
+
+    fun closePlayback() {
+        savePlaybackProgress()
+        onBack()
+    }
+
+    DisposableEffect(session) {
+        onDispose {
+            savePlaybackProgress()
+            session.release()
+        }
+    }
     LaunchedEffect(session, context.episodeId) {
         while (true) {
             positionMs = session.transport.positionMs()
@@ -105,7 +131,7 @@ internal fun IosEmbeddedPlaybackHost(
             session = session,
             playback = playback,
             context = context,
-            onBack = onBack,
+            onBack = ::closePlayback,
             onScaleClick = {
                 session.scaleMode = session.scaleMode.next()
                 settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))
