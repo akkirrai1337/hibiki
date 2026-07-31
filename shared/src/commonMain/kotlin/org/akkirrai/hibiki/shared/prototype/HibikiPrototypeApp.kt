@@ -203,6 +203,7 @@ import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
 import org.akkirrai.hibiki.shared.player.withPlaybackError
 import org.akkirrai.hibiki.shared.player.PlaybackRequest
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
@@ -1624,11 +1625,6 @@ private fun AppDestinationContent(
                         )
                     }
                     Column(modifier = Modifier.fillMaxSize()) {
-                        if (playbackLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            )
-                        }
                         AppEpisodesContent(
                         result = episodesState.result,
                         sourceTitle = currentWatchSource.title,
@@ -1721,6 +1717,7 @@ private fun AppDestinationContent(
                         modifier = Modifier.weight(1f),
                         )
                     }
+                    AppPlayerLoadingOverlay(visible = playbackLoading)
                     playbackError?.let { message ->
                         AppPlayerErrorOverlay(
                             message = message,
