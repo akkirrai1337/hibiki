@@ -49,6 +49,7 @@ import org.akkirrai.hibiki.shared.model.TitleWatchState
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
 import org.akkirrai.hibiki.shared.platform.currentEpochSeconds
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -181,11 +182,21 @@ fun AppDetailsScreen(
     } ?: fallbackColorScheme
 
     MaterialTheme(colorScheme = detailsColorScheme) {
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground,
+        AppSystemBackHandler(
+            enabled = isLibrarySheetOpen || isTitleDetailsSheetOpen || isPosterPreviewOpen,
+            onBack = {
+                when {
+                    isLibrarySheetOpen -> isLibrarySheetOpen = false
+                    isTitleDetailsSheetOpen -> isTitleDetailsSheetOpen = false
+                    isPosterPreviewOpen -> isPosterPreviewOpen = false
+                }
+            },
         ) {
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+            ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AppDetailsContentList(
                 state = listState,
@@ -435,7 +446,8 @@ fun AppDetailsScreen(
                 onDismiss = { isLibrarySheetOpen = false },
             )
         }
-    }
+            }
+        }
     }
 }
 
