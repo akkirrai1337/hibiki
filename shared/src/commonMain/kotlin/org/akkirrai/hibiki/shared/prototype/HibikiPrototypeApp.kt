@@ -197,6 +197,7 @@ import org.akkirrai.hibiki.shared.player.keepsTitleSaved
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
 import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
+import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1036,6 +1037,7 @@ fun HibikiAppShell(
                             watchState = watchState,
                             episodesState = episodesState,
                             selectedWatchSource = selectedWatchSource,
+                            isPlayerRoute = navigationState.currentRoute is AppRoute.Player,
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
                             onWatchRetry = {
@@ -1685,7 +1687,14 @@ private fun AppDestinationContent(
     onExportLogs: () -> Unit = {},
     notificationsAvailable: Boolean = true,
     onResumePlayback: (TitleWatchState) -> Unit = {},
+    isPlayerRoute: Boolean = false,
 ) {
+    val navigationLockKey = watchNavigationLockKey(
+        animeId = watchAnime?.id,
+        sourceId = selectedWatchSource?.sourceId,
+        isPlayerRoute = isPlayerRoute,
+    )
+    var navigationLocked by remember(navigationLockKey) { mutableStateOf(false) }
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
         sourceId = episodeDownloadSourceId,
@@ -1707,8 +1716,13 @@ private fun AppDestinationContent(
     }
     if (watchAnime != null) {
         WatchScreenScaffold(
-            onBackClick = onBackFromWatch,
-            backEnabled = true,
+            onBackClick = {
+                if (!navigationLocked) {
+                    navigationLocked = true
+                    onBackFromWatch()
+                }
+            },
+            backEnabled = !navigationLocked,
             backContentDescription = appText(AppTextKey.Back),
             modifier = modifier,
         ) { listContentPadding ->
@@ -1720,9 +1734,14 @@ private fun AppDestinationContent(
                     retryLabel = appText(AppTextKey.SearchRetry),
                     episodeLabel = appText(AppTextKey.EpisodesShort),
                     loadMoreLabel = appText(AppTextKey.WatchSourcesLoadMore),
-                    enabled = !watchState.isLoading,
+                    enabled = !watchState.isLoading && !navigationLocked,
                     onRetry = onWatchRetry,
-                    onSourceClick = onWatchSourceClick,
+                    onSourceClick = { source ->
+                        if (!navigationLocked) {
+                            navigationLocked = true
+                            onWatchSourceClick(source)
+                        }
+                    },
                     onLoadMore = onWatchLoadMore,
                     listContentPadding = listContentPadding,
                     modifier = Modifier.fillMaxSize(),
@@ -1767,7 +1786,7 @@ private fun AppDestinationContent(
                                             ?: EpisodeDownloadState.NotDownloaded.toEpisodeDownloadActionState(),
                                         showDownloadControls = downloadControlsVisible.value,
                                         shape = shape,
-                                        enabled = !playbackLoading,
+                                        enabled = !playbackLoading && !navigationLocked,
                                         watchedHeadline = { number -> appText(AppTextKey.WatchEpisodeHeadlineWatched).replace("%s", number) },
                                         defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
                                         watchedLabel = appText(AppTextKey.WatchStatusWatched),
@@ -1783,7 +1802,12 @@ private fun AppDestinationContent(
                                         pauseContentDescription = appText(AppTextKey.WatchPause),
                                         resumeContentDescription = appText(AppTextKey.WatchResume),
                                         removeContentDescription = appText(AppTextKey.WatchRemoveDownload),
-                                        onClick = { onWatchEpisodeClick(episode) },
+                                        onClick = {
+                                            if (!navigationLocked) {
+                                                navigationLocked = true
+                                                onWatchEpisodeClick(episode)
+                                            }
+                                        },
                                         onDownloadClick = {
                                             episodeDownloadStates = episodeDownloadStates +
                                                 (episode.id to EpisodeDownloadState.Queued)
@@ -1825,10 +1849,15 @@ private fun AppDestinationContent(
                                 ),
                                         subtitle = episode.title,
                                         inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
-                                        enabled = !playbackLoading,
+                                        enabled = !playbackLoading && !navigationLocked,
                                         showDownloadAction = false,
                                         shape = shape,
-                                        onClick = { onWatchEpisodeClick(episode) },
+                                        onClick = {
+                                            if (!navigationLocked) {
+                                                navigationLocked = true
+                                                onWatchEpisodeClick(episode)
+                                            }
+                                        },
                                     )
                                 }
                         },
