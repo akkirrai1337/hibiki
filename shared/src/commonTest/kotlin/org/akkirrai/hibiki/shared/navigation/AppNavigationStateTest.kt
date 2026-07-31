@@ -55,4 +55,26 @@ class AppNavigationStateTest {
         assertEquals(emptyList(), dismissed.overlays)
         assertEquals(AppPlayerSettingsDestination.Root, dismissed.playerSettingsDestination)
     }
+
+    @Test
+    fun backDismissesPlaylistBeforePlayerRoute() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source", "episode", 1.0)))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+
+        val dismissed = state.reduce(AppNavigationEvent.Back)
+        assertEquals(emptyList(), dismissed.overlays)
+        assertEquals(AppRoute.Player("source", "episode", 1.0), dismissed.currentRoute)
+    }
+
+    @Test
+    fun dismissingPlayerSettingsResetsNestedDestination() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Quality))
+
+        val dismissed = state.reduce(AppNavigationEvent.DismissOverlay)
+        assertEquals(emptyList(), dismissed.overlays)
+        assertEquals(AppPlayerSettingsDestination.Root, dismissed.playerSettingsDestination)
+    }
 }
