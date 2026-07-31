@@ -24,6 +24,9 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.shared.player.PlayerPresenter
 import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
+import org.akkirrai.hibiki.shared.player.withPlaybackError
+import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.settingsOptionsKey
 import org.akkirrai.hibiki.shared.player.resolveCurrentEpisode
@@ -65,14 +68,7 @@ class PlayerViewModel(
     ) {
         loadJob?.cancel()
         val state = presenter.state.value
-        presenter.update {
-            it.copy(
-                isLoading = true,
-                errorMessage = null,
-                failedStreamUrls = it.failedStreamUrls + excludedStreamUrls,
-                recoveryAttempted = excludedStreamUrls.isNotEmpty(),
-            )
-        }
+        presenter.update { it.beginPlaybackLoad(excludedStreamUrls) }
         loadSettingsOptions()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val episodesResult = runCatching {
@@ -131,19 +127,12 @@ class PlayerViewModel(
                         episodes = episodes,
                     )
                     presenter.update {
-                        it.copy(
-                            isLoading = false,
-                            playback = stream,
-                            animeTitle = stream.animeTitle.trim().takeIf(String::isNotBlank)
-                                ?: it.animeTitle,
-                            errorMessage = null,
+                        it.withPlaybackLoaded(
+                            stream = stream,
                             episodes = episodes,
-                            currentEpisodeId = effectiveEpisodeId,
-                            currentEpisodeNumber = effectiveEpisodeNumber,
-                            pendingSeekMs = savedSeekMs ?: it.pendingSeekMs,
-                            failedStreamUrls = it.failedStreamUrls - stream.streamUrl,
-                            recoveryAttempted = false,
-                            selectedQualityLabel = stream.qualityLabel ?: it.selectedQualityLabel,
+                            episodeId = effectiveEpisodeId,
+                            episodeNumber = effectiveEpisodeNumber,
+                            savedSeekMs = savedSeekMs,
                         )
                     }
                     loadSettingsOptions()
@@ -156,14 +145,11 @@ class PlayerViewModel(
                         throwable
                     )
                     presenter.update {
-                        it.copy(
-                            isLoading = false,
-                            playback = null,
-                            errorMessage = throwable.toUiMessage(),
+                        it.withPlaybackError(
+                            message = throwable.toUiMessage(),
                             episodes = episodes,
-                            currentEpisodeId = effectiveEpisodeId,
-                            currentEpisodeNumber = effectiveEpisodeNumber,
-                            recoveryAttempted = false,
+                            episodeId = effectiveEpisodeId,
+                            episodeNumber = effectiveEpisodeNumber,
                         )
                     }
                 }

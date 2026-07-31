@@ -1,0 +1,73 @@
+package org.akkirrai.hibiki.shared.player
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.model.WatchEpisode
+
+class PlayerLoadStateResolverTest {
+    @Test
+    fun loadingMarksExcludedStreamAndRecoveryAttempt() {
+        val state = PlayerUiState(failedStreamUrls = setOf("old"))
+            .beginPlaybackLoad(setOf("failed"))
+
+        assertTrue(state.isLoading)
+        assertEquals(setOf("old", "failed"), state.failedStreamUrls)
+        assertTrue(state.recoveryAttempted)
+        assertEquals(null, state.errorMessage)
+    }
+
+    @Test
+    fun loadedPlaybackUpdatesEpisodeAndClearsRecoveredStream() {
+        val stream = PlaybackStream(
+            animeTitle = "  Anime  ",
+            sourceTitle = "Source",
+            episodeTitle = "Episode",
+            streamUrl = "https://video",
+            streamType = PlaybackStreamType.HLS,
+            qualityLabel = "1080p",
+        )
+        val state = PlayerUiState(
+            failedStreamUrls = setOf("https://video"),
+            pendingSeekMs = 100L,
+            recoveryAttempted = true,
+        ).withPlaybackLoaded(
+            stream = stream,
+            episodes = listOf(WatchEpisode("ep-2", 2.0, "Two")),
+            episodeId = "ep-2",
+            episodeNumber = 2.0,
+            savedSeekMs = null,
+        )
+
+        assertFalse(state.isLoading)
+        assertEquals(stream, state.playback)
+        assertEquals("Anime", state.animeTitle)
+        assertEquals(100L, state.pendingSeekMs)
+        assertEquals(emptySet(), state.failedStreamUrls)
+        assertFalse(state.recoveryAttempted)
+    }
+
+    @Test
+    fun failureClearsPlaybackButKeepsResolvedEpisode() {
+        val state = PlayerUiState(playback = PlaybackStream(
+            animeTitle = "Anime",
+            sourceTitle = "Source",
+            episodeTitle = "Episode",
+            streamUrl = "https://video",
+            streamType = PlaybackStreamType.MP4,
+        )).withPlaybackError(
+            message = "failure",
+            episodes = emptyList(),
+            episodeId = "ep-1",
+            episodeNumber = 1.0,
+        )
+
+        assertFalse(state.isLoading)
+        assertEquals(null, state.playback)
+        assertEquals("failure", state.errorMessage)
+        assertEquals("ep-1", state.currentEpisodeId)
+    }
+}
