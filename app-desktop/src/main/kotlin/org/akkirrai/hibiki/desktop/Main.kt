@@ -63,6 +63,7 @@ fun main() = application {
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
                         profileRepository = profileRepository,
+                        onPlaybackSelectionChanged = progressRepository::savePlaybackSelection,
                         playbackHost = { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,

@@ -7,6 +7,7 @@ import java.time.ZoneId
 import java.util.prefs.Preferences
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.PlaybackSelection
 import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.shared.profile.DailyWatchActivity
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -43,6 +44,15 @@ internal class DesktopPlaybackProgressRepository(
             durationMs = durationMs,
             updatedAt = updatedAt,
         )
+        preferences.flush()
+    }
+
+    fun savePlaybackSelection(selection: PlaybackSelection) {
+        val key = encode(selection.titleId)
+        preferences.put("$SELECTION_PREFIX${key}_source", selection.sourceId)
+        preferences.put("$SELECTION_PREFIX${key}_source_title", selection.sourceTitle)
+        preferences.put("$SELECTION_PREFIX${key}_quality", selection.quality.orEmpty())
+        preferences.put("$SELECTION_PREFIX${key}_player", selection.playerName.orEmpty())
         preferences.flush()
     }
 
@@ -160,6 +170,7 @@ internal class DesktopPlaybackProgressRepository(
 
     private companion object {
         const val PROGRESS_PREFIX = "progress_"
+        const val SELECTION_PREFIX = "playback_selection_"
         const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
         const val ACTIVITY_COMPLETED_PREFIX = "activity_completed_"
         const val ACTIVITY_RETENTION_DAYS = 90

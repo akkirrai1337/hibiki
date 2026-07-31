@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.profile
 import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.PlaybackSelection
 import kotlin.time.Clock
 import kotlinx.datetime.toLocalDateTime
 import platform.Foundation.NSUserDefaults
@@ -89,6 +90,13 @@ internal class IosWatchStateRepository(
         )
     }
 
+    internal fun savePlaybackSelection(selection: PlaybackSelection) {
+        defaults.setObject(selection.sourceId, forKey = "${SELECTION_PREFIX}${selection.titleId}_source")
+        defaults.setObject(selection.sourceTitle, forKey = "${SELECTION_PREFIX}${selection.titleId}_source_title")
+        defaults.setObject(selection.quality, forKey = "${SELECTION_PREFIX}${selection.titleId}_quality")
+        defaults.setObject(selection.playerName, forKey = "${SELECTION_PREFIX}${selection.titleId}_player")
+    }
+
     private fun recordActivity(
         titleId: String,
         episodeId: String,
@@ -137,6 +145,7 @@ internal class IosWatchStateRepository(
 
     private companion object {
         const val PROGRESS_PREFIX = "progress_"
+        const val SELECTION_PREFIX = "playback_selection_"
         const val EPISODE_KEY_SEPARATOR = "|episode|"
         const val RECORD_SEPARATOR = '\u001F'
         const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
