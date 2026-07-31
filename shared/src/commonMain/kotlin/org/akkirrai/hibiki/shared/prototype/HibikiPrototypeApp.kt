@@ -212,7 +212,7 @@ fun HibikiAppShell(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
-    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -889,8 +889,9 @@ fun HibikiAppShell(
                             },
                             onEpisodeSelected = ::requestPlayback,
                             onSettingsAction = ::handlePlaybackSettingsAction,
-                            content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction ->
-                            playbackHost(playback, context, onDismiss, onEpisodeSelected, onSettingsAction)
+                            onOverlayEvent = { event -> navigationState = navigationState.reduce(event) },
+                            content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+                            playbackHost(playback, context, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent)
                             },
                         )
                     }

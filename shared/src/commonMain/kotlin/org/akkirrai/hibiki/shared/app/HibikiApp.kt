@@ -20,6 +20,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
@@ -44,7 +45,7 @@ fun HibikiApp(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (PlaybackStream, PlaybackContext) -> Unit = { _, _ -> },
-    playbackHost: (@Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
