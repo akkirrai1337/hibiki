@@ -396,7 +396,7 @@ internal fun AndroidCommonPlaybackHost(
                 onSettingsClick = {
                     onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
                 },
-                settingsContentDescription = appText(AppTextKey.Settings),
+                settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
             )
         }

@@ -261,7 +261,7 @@ internal fun DesktopVlcPlaybackHost(
                     onSettingsClick = {
                         onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
                     },
-                    settingsContentDescription = appText(AppTextKey.Settings),
+                    settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 )
             }
             AppPlayerUnlockOverlay(

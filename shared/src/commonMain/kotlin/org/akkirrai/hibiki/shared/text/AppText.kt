@@ -60,6 +60,7 @@ enum class AppTextKey {
     SettingsPlayer,
     SettingsAutoSkip,
     PlayerSettingsRoot,
+    PlayerSettings,
     PlayerSettingsSpeed,
     PlayerSettingsVoiceover,
     PlayerSettingsPlayer,
@@ -306,6 +307,7 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsAutoSkip -> if (russian) "Автопропуск опенинга/эндинга" else "Auto-skip opening/ending"
             AppTextKey.SettingsExperimental -> if (russian) "Экспериментальные" else "Experimental"
             AppTextKey.PlayerSettingsRoot -> if (russian) "Настройки" else "Settings"
+            AppTextKey.PlayerSettings -> if (russian) "Настройки плеера" else "Player settings"
             AppTextKey.PlayerSettingsSpeed -> if (russian) "Скорость" else "Speed"
             AppTextKey.PlayerSettingsVoiceover -> if (russian) "Озвучка" else "Voiceover"
             AppTextKey.PlayerSettingsPlayer -> if (russian) "Плеер" else "Player"

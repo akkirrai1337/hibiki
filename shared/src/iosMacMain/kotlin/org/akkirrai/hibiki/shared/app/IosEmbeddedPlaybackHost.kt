@@ -202,7 +202,7 @@ internal fun IosEmbeddedPlaybackHost(
                 onSettingsClick = {
                     onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
                 },
-                settingsContentDescription = appText(AppTextKey.Settings),
+                settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onLockClick = {
                     controlsLocked = true
                     controlsVisible = false
