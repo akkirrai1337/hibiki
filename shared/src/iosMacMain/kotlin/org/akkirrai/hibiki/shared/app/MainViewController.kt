@@ -109,6 +109,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     libraryRepository = libraryRepository,
                     profileRepository = profileRepository,
                     settingsStore = settingsStore,
+                    progressRepository = watchStateRepository,
                     systemLanguage = systemLanguage,
                     enableOnboarding = true,
                     onboardingNotificationPermissionState = notificationPermissionState.value,

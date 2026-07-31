@@ -109,6 +109,7 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.profile.LocalProfilePresenter
 import org.akkirrai.hibiki.shared.profile.LocalProfileSummary
@@ -196,6 +197,7 @@ fun HibikiAppShell(
     libraryRepository: LibraryRepository,
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
+    progressRepository: PlaybackProgressRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -421,7 +423,14 @@ fun HibikiAppShell(
                         episodes = loadedEpisodes,
                         episodeId = episode.id,
                         episodeNumber = episode.number,
-                        savedSeekMs = null,
+                        savedSeekMs = progressRepository
+                            ?.getPlaybackProgress(watchAnime?.id.orEmpty(), episode.id)
+                            ?.let { progress ->
+                                org.akkirrai.hibiki.shared.player.resolveResumablePlaybackPosition(
+                                    progress.positionMs,
+                                    progress.durationMs,
+                                )
+                            },
                     )
                 }
                 val playerNavigationEvent = if (replacePlayerRoute) {

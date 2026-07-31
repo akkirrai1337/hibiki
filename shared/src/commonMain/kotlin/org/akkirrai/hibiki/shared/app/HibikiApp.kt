@@ -19,6 +19,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
@@ -29,6 +30,7 @@ fun HibikiApp(
     libraryRepository: LibraryRepository = PrototypeLibraryRepository,
     profileRepository: LocalProfileDataRepository = PrototypeLocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
+    progressRepository: PlaybackProgressRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -54,6 +56,7 @@ fun HibikiApp(
         libraryRepository = libraryRepository,
         profileRepository = profileRepository,
         settingsStore = settingsStore,
+        progressRepository = progressRepository,
         systemLanguage = systemLanguage,
         appVersionName = appVersionName,
         enableOnboarding = enableOnboarding,

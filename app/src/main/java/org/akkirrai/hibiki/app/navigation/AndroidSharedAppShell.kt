@@ -48,6 +48,7 @@ internal fun AndroidSharedAppShell(
         libraryRepository = libraryRepository,
         profileRepository = profileRepository,
         settingsStore = settingsStore,
+        progressRepository = watchStateRepository,
         systemLanguage = LocalAppLanguage.current.tag ?: "en",
         appVersionName = BuildConfig.VERSION_NAME,
         onConfigureNotifications = onConfigureNotifications,
