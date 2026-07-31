@@ -317,7 +317,7 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerEpisodeNumber -> if (russian) "Серия %s" else "Episode %s"
             AppTextKey.PlayerErrorTitle -> if (russian) "Ошибка воспроизведения" else "Playback error"
             AppTextKey.PlayerRetry -> if (russian) "Повторить" else "Retry"
-            AppTextKey.PlayerLock -> if (russian) "Заблокировать" else "Lock"
+            AppTextKey.PlayerLock -> if (russian) "Заблокировать интерфейс плеера" else "Lock player controls"
             AppTextKey.PlayerUnlock -> if (russian) "Разблокировать" else "Unlock"
             AppTextKey.PlayerPictureInPicture -> if (russian) "Картинка в картинке" else "Picture-in-picture"
             AppTextKey.PlayerSkip -> if (russian) "Пропустить" else "Skip"
