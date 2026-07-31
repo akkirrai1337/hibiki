@@ -673,6 +673,20 @@ fun HibikiAppShell(
         }
     }
 
+    fun openDetails(anime: Anime) {
+        presenter.openDetails(anime)
+        navigationState = navigationState.reduce(
+            AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
+        )
+    }
+
+    fun closeDetails() {
+        if (navigationState.currentRoute is AppRoute.Details) {
+            navigationState = navigationState.reduce(AppNavigationEvent.Back)
+        }
+        presenter.closeDetails()
+    }
+
     CompositionLocalProvider(
         LocalAppTextResolver provides DefaultAppTextResolver(languageMode, systemLanguage),
     ) {
@@ -866,8 +880,8 @@ fun HibikiAppShell(
                             onOpenLibrary = { selectRootTab(AppDestination.LIBRARY) },
                             selectedAnime = detailsAnime ?: state.selectedAnime,
                             detailsResumeState = detailsResumeState,
-                            onAnimeClick = presenter::openDetails,
-                            onBackFromDetails = presenter::closeDetails,
+                            onAnimeClick = ::openDetails,
+                            onBackFromDetails = ::closeDetails,
                             isDetailsLoading = state.isDetailsLoading,
                             detailsError = state.detailsError,
                             watchAnime = watchAnime,
