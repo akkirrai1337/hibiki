@@ -154,6 +154,7 @@ import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
+import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
 import org.akkirrai.hibiki.shared.navigation.currentRoute
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.transitionKey
@@ -749,21 +750,13 @@ fun HibikiAppShell(
                         },
                         showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
                         includeNavigationBarPadding = includeNavigationBarPadding,
-                        contentTransitionKey = AppTransitionKey(
-                            route = "app-shell",
-                            identity = buildString {
-                                append(topLevelDestination.name)
-                                append(':')
-                                append(selectedTab.name)
-                                append(':')
-                                append(state.selectedAnime?.id.orEmpty())
-                                append(':')
-                                append(watchAnime?.id.orEmpty())
-                                append(':')
-                                append(selectedWatchSource?.sourceId.orEmpty())
-                                append(':')
-                                append(navigationState.currentRoute.transitionKey().identity)
-                            },
+                        contentTransitionKey = appShellTransitionKey(
+                            topLevelDestination = topLevelDestination,
+                            selectedTab = selectedTab.name,
+                            detailsId = state.selectedAnime?.id,
+                            watchId = watchAnime?.id,
+                            sourceId = selectedWatchSource?.sourceId,
+                            routeKey = navigationState.currentRoute.transitionKey(),
                         ),
                         modifier = Modifier
                             .fillMaxSize()
