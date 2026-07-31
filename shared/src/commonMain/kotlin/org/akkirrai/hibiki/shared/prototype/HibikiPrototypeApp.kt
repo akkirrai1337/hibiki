@@ -1007,6 +1007,23 @@ fun HibikiAppShell(
                                 )
                             },
                             onWatchEpisodeClick = ::requestPlayback,
+                            onResumePlayback = { progress ->
+                                watchAnime = state.selectedAnime
+                                requestPlayback(
+                                    episode = WatchEpisode(
+                                        id = progress.episodeId,
+                                        number = progress.episodeNumber,
+                                        title = null,
+                                    ),
+                                    sourceOverride = WatchSource(
+                                        sourceId = progress.sourceId,
+                                        title = progress.sourceTitle,
+                                        episodeCount = null,
+                                        qualityLabel = progress.quality,
+                                    ),
+                                    preferredQuality = progress.quality,
+                                )
+                            },
                             watchRepositoryAvailable = watchRepository != null,
                             libraryRepository = libraryRepository,
                             languageMode = languageMode,
@@ -1602,6 +1619,7 @@ private fun AppDestinationContent(
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     notificationsAvailable: Boolean = true,
+    onResumePlayback: (TitleWatchState) -> Unit = {},
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1777,6 +1795,7 @@ private fun AppDestinationContent(
             onWatchClick = { onWatchClick(selectedAnime) },
             onTrailerClick = selectedAnime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
             resumeState = detailsResumeState,
+            onResumeClick = onResumePlayback,
             resumeFrameContent = detailsResumeState?.let { state ->
                 resumeFrameContent?.let { content ->
                     { frameModifier -> content(state.titleId, frameModifier) }
