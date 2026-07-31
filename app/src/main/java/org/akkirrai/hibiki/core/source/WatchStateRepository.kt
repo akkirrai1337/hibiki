@@ -300,6 +300,9 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
             )
         }
 
+    override fun getAllPlaybackProgress(): List<org.akkirrai.hibiki.shared.model.EpisodeWatchProgress> =
+        getAllEpisodeProgress()
+
     private fun parseProgress(
         titleId: String,
         episodeId: String,

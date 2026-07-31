@@ -23,6 +23,9 @@ fun main() = application {
     val watchRepository = remember { DesktopAnimeWatchRepository() }
     val settingsStore = remember { DesktopSettingsStore() }
     val progressRepository = remember { DesktopPlaybackProgressRepository() }
+    val profileRepository = remember(progressRepository) {
+        DesktopLocalProfileDataRepository(progressRepository)
+    }
     Window(
         onCloseRequest = {
             catalogRepository.close()
@@ -51,6 +54,7 @@ fun main() = application {
                         watchRepository = watchRepository,
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
+                        profileRepository = profileRepository,
                         playbackHost = { playback, context, onBack, onEpisodeSelected, onSettingsAction ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,

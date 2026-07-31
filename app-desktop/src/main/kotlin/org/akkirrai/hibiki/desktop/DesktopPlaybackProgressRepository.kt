@@ -51,6 +51,19 @@ internal class DesktopPlaybackProgressRepository : PlaybackProgressRepository {
         )
     }
 
+    override fun getAllPlaybackProgress(): List<EpisodeWatchProgress> = preferences.keys()
+        .asSequence()
+        .filter { it.startsWith(PROGRESS_PREFIX) }
+        .mapNotNull { key ->
+            val identity = runCatching {
+                String(Base64.getUrlDecoder().decode(key.removePrefix(PROGRESS_PREFIX)), Charsets.UTF_8)
+            }.getOrNull() ?: return@mapNotNull null
+            val separator = identity.indexOf('|')
+            if (separator <= 0) return@mapNotNull null
+            getPlaybackProgress(identity.substring(0, separator), identity.substring(separator + 1))
+        }
+        .toList()
+
     private fun encode(value: String): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(value.toByteArray(Charsets.UTF_8))
 

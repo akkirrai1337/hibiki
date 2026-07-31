@@ -52,6 +52,8 @@ internal class IosWatchStateRepository(
     ): EpisodeWatchProgress? = getAllEpisodeProgress()
         .firstOrNull { it.titleId == titleId && it.episodeId == episodeId }
 
+    override fun getAllPlaybackProgress(): List<EpisodeWatchProgress> = getAllEpisodeProgress()
+
     override fun saveEpisodeProgress(
         context: PlaybackContext,
         playback: PlaybackStream,

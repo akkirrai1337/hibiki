@@ -6,6 +6,8 @@ import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 
 /** Platform storage boundary for playback progress written by shared hosts. */
 interface PlaybackProgressRepository {
+    fun getAllPlaybackProgress(): List<EpisodeWatchProgress>
+
     fun getPlaybackProgress(titleId: String, episodeId: String): EpisodeWatchProgress?
 
     fun saveEpisodeProgress(
