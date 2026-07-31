@@ -106,6 +106,7 @@ internal fun AndroidCommonPlaybackHost(
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var isPlaying by remember(exoPlayer) { mutableStateOf(true) }
     var lifecycleResumePositionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
     var resumePlaybackAfterLifecyclePause by remember(exoPlayer) { mutableStateOf(false) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
@@ -205,7 +206,7 @@ internal fun AndroidCommonPlaybackHost(
         }
     }
 
-    LaunchedEffect(exoPlayer, context.episodeId, playback.streamUrl) {
+    LaunchedEffect(exoPlayer, context.episodeId, playback.streamUrl, isPlaying) {
         while (true) {
             DiscordRpcManager.get(androidContext).showPlayback(
                 DiscordPlaybackPresence(
@@ -213,12 +214,12 @@ internal fun AndroidCommonPlaybackHost(
                     animeTitle = playback.animeTitle,
                     voiceover = playback.sourceTitle,
                     episodeNumber = context.episodeNumber,
-                    positionMs = transport.positionMs().coerceAtLeast(0L),
+                    positionMs = positionMs.coerceAtLeast(0L),
                     durationMs = transport.durationMs(),
-                    isPlaying = exoPlayer.isPlaying,
+                    isPlaying = isPlaying,
                 ),
             )
-            if (!exoPlayer.isPlaying) return@LaunchedEffect
+            if (!isPlaying) return@LaunchedEffect
             delay(1_000L)
         }
     }
@@ -226,6 +227,7 @@ internal fun AndroidCommonPlaybackHost(
     LaunchedEffect(exoPlayer, context.episodeId) {
         while (true) {
             positionMs = transport.positionMs()
+            isPlaying = exoPlayer.isPlaying
             delay(250L)
         }
     }
