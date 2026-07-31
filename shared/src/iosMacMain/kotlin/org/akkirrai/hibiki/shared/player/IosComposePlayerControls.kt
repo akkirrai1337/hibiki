@@ -10,6 +10,12 @@ internal fun IosComposePlayerControls(
     playback: PlaybackStream,
     context: PlaybackContext,
     onBack: () -> Unit,
+    playlistEnabled: Boolean = false,
+    onPlaylistClick: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    hasNextEpisode: Boolean = false,
+    onPreviousEpisode: () -> Unit = {},
+    onNextEpisode: () -> Unit = {},
 ) {
     AppPlaybackControls(
         transport = session.transport,
@@ -18,5 +24,11 @@ internal fun IosComposePlayerControls(
         scaleMode = session.scaleMode,
         onScaleClick = { session.scaleMode = session.scaleMode.next() },
         onBack = onBack,
+        playlistEnabled = playlistEnabled,
+        onPlaylistClick = onPlaylistClick,
+        hasPreviousEpisode = hasPreviousEpisode,
+        hasNextEpisode = hasNextEpisode,
+        onPreviousEpisode = onPreviousEpisode,
+        onNextEpisode = onNextEpisode,
     )
 }
