@@ -744,6 +744,11 @@ fun HibikiAppShell(
                         AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
                         AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
                     }
+                    val activeDownloadMode = when (val route = navigationState.currentRoute) {
+                        is AppRoute.WatchSources -> route.downloadMode
+                        is AppRoute.Episodes -> route.downloadMode
+                        else -> false
+                    }
                     if (!enableOnboarding || onboardingCompleted) {
                     AppProductionRoot(
                         currentDestination = topLevelDestination,
@@ -789,7 +794,7 @@ fun HibikiAppShell(
                             offlineWatchDataRepository = offlineWatchDataRepository,
                             offlineTitleMetadataRepository = offlineTitleMetadataRepository,
                             resumeFrameContent = resumeFrameContent,
-                            downloadMode = (navigationState.currentRoute as? AppRoute.Episodes)?.downloadMode == true,
+                            downloadMode = activeDownloadMode,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
                             catalogState = state,
@@ -841,7 +846,9 @@ fun HibikiAppShell(
                             onWatchClick = { anime ->
                                 watchAnime = anime
                                 navigationState = navigationState.reduce(
-                                    AppNavigationEvent.Navigate(AppRoute.WatchSources(anime.id)),
+                                    AppNavigationEvent.Navigate(
+                                        AppRoute.WatchSources(anime.id, downloadMode = activeDownloadMode),
+                                    ),
                                 )
                             },
                             onBackFromWatch = {
@@ -879,7 +886,11 @@ fun HibikiAppShell(
                                 resetPlayerState()
                                 navigationState = navigationState.reduce(
                                     AppNavigationEvent.Navigate(
-                                        AppRoute.Episodes(source, animeId = watchAnime?.id),
+                                        AppRoute.Episodes(
+                                            source,
+                                            downloadMode = activeDownloadMode,
+                                            animeId = watchAnime?.id,
+                                        ),
                                     ),
                                 )
                             },
