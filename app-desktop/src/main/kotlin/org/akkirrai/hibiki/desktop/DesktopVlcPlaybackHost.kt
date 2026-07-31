@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
@@ -50,6 +51,7 @@ internal fun DesktopVlcPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
     settingsStore: AppSettingsStore,
+    progressRepository: PlaybackProgressRepository,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
@@ -75,9 +77,28 @@ internal fun DesktopVlcPlaybackHost(
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
+
+    fun savePlaybackProgress() {
+        val position = session.transport.positionMs()
+        if (position <= 0L) return
+        progressRepository.saveEpisodeProgress(
+            context = context,
+            playback = playback,
+            positionMs = position,
+            durationMs = session.transport.durationMs(),
+        )
+    }
+
+    fun closePlayback() {
+        savePlaybackProgress()
+        onBack()
+    }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
     DisposableEffect(session) {
-        onDispose { session.release() }
+        onDispose {
+            savePlaybackProgress()
+            session.release()
+        }
     }
     LaunchedEffect(session) {
         while (true) {
@@ -184,7 +205,7 @@ internal fun DesktopVlcPlaybackHost(
                         scaleMode = scaleMode.next()
                         settingsStore.save(settingsStore.load().copy(videoScaleMode = scaleMode))
                     },
-                    onBack = onBack,
+                    onBack = ::closePlayback,
                     playlistEnabled = context.episodes.isNotEmpty(),
                     onPlaylistClick = { playlistVisible = true },
                     hasPreviousEpisode = episodeNavigation.hasPrevious,

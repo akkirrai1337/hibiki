@@ -22,6 +22,7 @@ fun main() = application {
     val homeRepository = remember(catalogRepository) { DesktopHomeRepository(catalogRepository) }
     val watchRepository = remember { DesktopAnimeWatchRepository() }
     val settingsStore = remember { DesktopSettingsStore() }
+    val progressRepository = remember { DesktopPlaybackProgressRepository() }
     Window(
         onCloseRequest = {
             catalogRepository.close()
@@ -54,6 +55,7 @@ fun main() = application {
                                 playback = playback,
                                 context = context,
                                 settingsStore = settingsStore,
+                                progressRepository = progressRepository,
                                 onBack = onBack,
                                 onEpisodeSelected = onEpisodeSelected,
                                 onSettingsAction = onSettingsAction,
