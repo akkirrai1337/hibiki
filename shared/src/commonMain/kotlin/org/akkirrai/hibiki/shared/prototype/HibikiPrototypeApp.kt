@@ -625,6 +625,10 @@ fun HibikiAppShell(
     }
 
     fun handleSystemBack() {
+        if (selectedTab == AppDestination.SETTINGS) {
+            selectedTab = AppDestination.PROFILE
+            return
+        }
         if (navigationState.overlays.isNotEmpty()) {
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
             return
