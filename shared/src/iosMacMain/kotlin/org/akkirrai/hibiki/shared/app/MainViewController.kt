@@ -26,6 +26,7 @@ import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
+import org.akkirrai.hibiki.shared.platform.IosBackBridge
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import platform.AVFoundation.AVPlayer
@@ -129,6 +130,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
             }
         }
     }
+    IosBackBridge.install(hostController)
     return hostController
 }
 
