@@ -105,6 +105,11 @@ internal fun AndroidCommonPlaybackHost(
         onBack()
     }
 
+    fun dispatchSettingsAction(action: PlaybackSettingsAction) {
+        savePlaybackProgress()
+        onSettingsAction(action)
+    }
+
     fun selectAdjacentEpisode(offset: Int) {
         resolveAdjacentEpisode(
             episodes = context.episodes,
@@ -352,17 +357,17 @@ internal fun AndroidCommonPlaybackHost(
                     onSelectVoiceover = { source ->
                         dismissPanel()
                         settingsVisible = false
-                        onSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
+                        dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                     },
                     onSelectPlayer = { playerName ->
                         dismissPanel()
                         settingsVisible = false
-                        onSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
+                        dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                     },
                     onSelectQuality = { qualityLabel ->
                         dismissPanel()
                         settingsVisible = false
-                        onSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
+                        dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },
                     onAutoSkipSegmentsChange = { enabled ->
                         onSettingsAction(PlaybackSettingsAction.SetAutoSkipSegments(enabled))
