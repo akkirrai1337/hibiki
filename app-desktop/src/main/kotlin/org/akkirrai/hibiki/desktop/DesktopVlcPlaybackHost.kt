@@ -22,6 +22,7 @@ import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
+import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
@@ -40,6 +41,7 @@ import org.akkirrai.hibiki.shared.text.appText
 internal fun DesktopVlcPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
+    settingsStore: AppSettingsStore,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
@@ -53,6 +55,7 @@ internal fun DesktopVlcPlaybackHost(
     var playlistVisible by remember(session) { mutableStateOf(false) }
     var controlsLocked by remember(session) { mutableStateOf(false) }
     var unlockButtonVisible by remember(session) { mutableStateOf(false) }
+    var completionHandled by remember(session) { mutableStateOf(false) }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
     DisposableEffect(session) {
         onDispose { session.release() }
@@ -64,6 +67,26 @@ internal fun DesktopVlcPlaybackHost(
                 videoHeight = height
             }
             delay(VideoDimensionPollMillis)
+        }
+    }
+    LaunchedEffect(session, context.episodeId) {
+        while (true) {
+            if (!completionHandled &&
+                settingsStore.load().autoPlayNextEpisode &&
+                org.akkirrai.hibiki.shared.player.isPlaybackComplete(
+                    positionMs = session.transport.positionMs(),
+                    durationMs = session.transport.durationMs(),
+                )
+            ) {
+                completionHandled = true
+                resolveAdjacentEpisode(
+                    context.episodes,
+                    context.episodeId,
+                    context.episodeNumber,
+                    1,
+                )?.let(onEpisodeSelected)
+            }
+            delay(500L)
         }
     }
     BoxWithConstraints(
