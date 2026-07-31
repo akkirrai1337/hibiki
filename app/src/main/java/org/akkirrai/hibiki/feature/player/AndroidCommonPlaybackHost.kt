@@ -15,6 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.os.SystemClock
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
@@ -60,6 +63,7 @@ internal fun AndroidCommonPlaybackHost(
     modifier: Modifier = Modifier,
 ) {
     val androidContext = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
     val preferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
@@ -218,6 +222,14 @@ internal fun AndroidCommonPlaybackHost(
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
+    }
+
+    DisposableEffect(exoPlayer, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) savePlaybackProgress()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
