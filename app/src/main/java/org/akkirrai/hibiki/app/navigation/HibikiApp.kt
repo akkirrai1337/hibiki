@@ -370,6 +370,15 @@ private fun HibikiNavHost(
                     },
                     onResumePlayback = { progress ->
                         navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(
+                                AppNavigationEvent.Navigate(
+                                    AppRoute.Player(
+                                        sourceId = progress.sourceId,
+                                        episodeId = progress.episodeId,
+                                        episodeNumber = progress.episodeNumber,
+                                    ),
+                                ),
+                            )
                             navController.navigateSingleTopTo(
                                 AnimeNavType.createPlayerRoute(
                                     sourceId = progress.sourceId,
@@ -425,6 +434,11 @@ private fun HibikiNavHost(
                                 quality = source.qualityLabel,
                                 autoSelect = false,
                             )
+                            sharedNavigationState = sharedNavigationState.reduce(
+                                AppNavigationEvent.Navigate(
+                                    AppRoute.Episodes(source, downloadMode = downloadMode),
+                                ),
+                            )
                             navController.navigateSingleTopTo(
                                 AnimeNavType.createEpisodesRoute(source, downloadMode = downloadMode)
                             )
@@ -459,11 +473,23 @@ private fun HibikiNavHost(
                     sourceTitle = routeArgs.stringArg(AnimeNavType.SOURCE_TITLE_ARG),
                     downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG),
                     onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                        navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(AppNavigationEvent.Back)
+                            navController.navigateUp()
+                        }
                     },
                     onEpisodeClick = { episode ->
                         navController.runIfCurrent(backStackEntry) {
                             val sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG)
+                            sharedNavigationState = sharedNavigationState.reduce(
+                                AppNavigationEvent.Navigate(
+                                    AppRoute.Player(
+                                        sourceId = sourceId,
+                                        episodeId = episode.id,
+                                        episodeNumber = episode.number,
+                                    ),
+                                ),
+                            )
                             navController.navigateSingleTopTo(
                                 AnimeNavType.createPlayerRoute(
                                     sourceId = sourceId,
@@ -502,7 +528,10 @@ private fun HibikiNavHost(
                     episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
                     episodeNumberHint = routeArgs.doubleArg(AnimeNavType.EPISODE_NUMBER_ARG),
                     onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                        navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(AppNavigationEvent.Back)
+                            navController.navigateUp()
+                        }
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
