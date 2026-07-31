@@ -27,6 +27,7 @@ val hasReleaseSigning = listOf(
     releaseKeyAlias,
     releaseKeyPassword
 ).all { !it.isNullOrBlank() }
+val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL").orNull == "true"
 
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)
@@ -43,6 +44,7 @@ android {
         versionName = "2.2.0"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
+        buildConfigField("boolean", "SHARED_APP_SHELL_ENABLED", sharedAppShellEnabled.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
                         amoled = preferences.useAmoledTheme,
                     ) {
                         if (preferences.onboardingCompleted) {
-                            if (USE_SHARED_APP_SHELL) {
+                            if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
                                 AndroidSharedAppShell(
                                     onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                     onConfigureNotifications = ::configureNotifications,
@@ -446,7 +446,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        private const val USE_SHARED_APP_SHELL = false
         private const val UPDATE_PREFERENCES = "app_update"
         private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
         private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"
