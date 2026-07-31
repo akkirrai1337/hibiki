@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.layout
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -37,4 +38,11 @@ fun Modifier.appBottomSystemInsetPadding(): Modifier {
         AppNavigationBarMode.Inset -> padding(bottom = environment.bottomSystemInset)
         AppNavigationBarMode.Overlay -> this
     }
+}
+
+@Composable
+fun Modifier.appTopSystemInsetPadding(): Modifier {
+    val environment = LocalAppLayoutEnvironment.current
+    if (!environment.isProvided) return statusBarsPadding()
+    return padding(top = environment.topSystemInset)
 }

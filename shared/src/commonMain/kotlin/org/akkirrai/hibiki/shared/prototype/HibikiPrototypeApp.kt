@@ -131,6 +131,7 @@ import org.akkirrai.hibiki.shared.profile.profileAddedDateLabel
 import org.akkirrai.hibiki.shared.profile.profileRecentDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.hibiki.shared.settings.ThemeMode
@@ -1761,12 +1762,7 @@ private fun AppDestinationContent(
         isPlayerRoute = isPlayerRoute,
     )
     var navigationLocked by remember(navigationLockKey) { mutableStateOf(false) }
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val topInsetModifier = if (layoutEnvironment.isProvided) {
-        Modifier.padding(top = layoutEnvironment.topSystemInset)
-    } else {
-        Modifier.statusBarsPadding()
-    }
+    val topInsetModifier = Modifier.appTopSystemInsetPadding()
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
         sourceId = episodeDownloadSourceId,

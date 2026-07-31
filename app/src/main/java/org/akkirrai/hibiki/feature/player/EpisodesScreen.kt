@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +48,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeDownloadSubtitle
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.layout.appTopSystemInsetPadding
 
 @Composable
 fun EpisodesScreen(
@@ -121,7 +121,7 @@ fun EpisodesScreen(
             onClick = { downloadControlsVisible = !downloadControlsVisible },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .statusBarsPadding()
+                .appTopSystemInsetPadding()
                 .padding(
                     end = EpisodesDownloadToggleEndPadding,
                     top = EpisodesDownloadToggleTopPadding,
