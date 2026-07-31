@@ -5,17 +5,17 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import org.akkirrai.hibiki.shared.design.AppMotion
+import org.akkirrai.hibiki.shared.navigation.AppTransitionSpec
 
 fun appScreenEnterTransition(): EnterTransition {
     return fadeIn(
-        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+        animationSpec = tween(AppTransitionSpec.DefaultDurationMillis),
     )
 }
 
 fun appScreenExitTransition(): ExitTransition {
     return fadeOut(
-        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+        animationSpec = tween(AppTransitionSpec.DefaultDurationMillis),
     )
 }
 

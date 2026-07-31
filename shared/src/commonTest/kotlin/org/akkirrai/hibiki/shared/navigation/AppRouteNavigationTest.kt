@@ -73,4 +73,19 @@ class AppRouteNavigationTest {
         assertTrue(first != next)
         assertEquals(350, AppTransitionSpec(first, next).durationMillis)
     }
+
+    @Test
+    fun `transition spec keeps route keys and distinguishes push from pop`() {
+        val details = AppRoute.Details("anime-1")
+        val sources = AppRoute.WatchSources("anime-1")
+
+        val push = appTransitionSpec(details, sources, AppTransitionDirection.Forward)
+        val pop = appTransitionSpec(sources, details, AppTransitionDirection.Pop)
+
+        assertEquals(sources.transitionKey(), push.enterKey)
+        assertEquals(details.transitionKey(), push.exitKey)
+        assertEquals(AppTransitionDirection.Forward, push.direction)
+        assertEquals(AppTransitionDirection.Pop, pop.direction)
+        assertEquals(AppTransitionSpec.DefaultDurationMillis, pop.durationMillis)
+    }
 }

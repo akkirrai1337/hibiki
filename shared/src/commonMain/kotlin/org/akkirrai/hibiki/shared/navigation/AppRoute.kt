@@ -37,8 +37,25 @@ fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
     is AppRoute.Player -> AppTransitionKey("player", "$sourceId:$episodeId")
 }
 
+enum class AppTransitionDirection { Forward, Pop }
+
 data class AppTransitionSpec(
     val enterKey: AppTransitionKey,
     val exitKey: AppTransitionKey?,
     val durationMillis: Int = AppMotion.ScreenTransitionDurationMillis,
+    val direction: AppTransitionDirection = AppTransitionDirection.Forward,
+) {
+    companion object {
+        const val DefaultDurationMillis = AppMotion.ScreenTransitionDurationMillis
+    }
+}
+
+fun appTransitionSpec(
+    from: AppRoute?,
+    to: AppRoute,
+    direction: AppTransitionDirection,
+): AppTransitionSpec = AppTransitionSpec(
+    enterKey = to.transitionKey(),
+    exitKey = from?.transitionKey(),
+    direction = direction,
 )
