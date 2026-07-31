@@ -749,31 +749,45 @@ fun HibikiAppShell(
                         is AppRoute.Episodes -> route.downloadMode
                         else -> false
                     }
+                    fun selectRootTab(destination: AppDestination) {
+                        val target = when (destination) {
+                            AppDestination.HOME -> AppTopLevelDestination.HOME
+                            AppDestination.CATALOG -> AppTopLevelDestination.CATALOG
+                            AppDestination.LIBRARY -> AppTopLevelDestination.LIBRARY
+                            AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
+                            AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
+                        }
+                        if (target == topLevelDestination) return
+                        navigationState = navigationState.reduce(
+                            AppNavigationEvent.SelectTopLevel(target),
+                        )
+                        selectedTab = destination
+                        presenter.closeDetails()
+                        detailsAnime = null
+                        watchAnime = null
+                        playbackJob?.cancel()
+                        playbackJob = null
+                        playbackRequestGeneration++
+                        activePlaybackRoute = null
+                        episodesPresenter.setState(EpisodesScreenState())
+                        resetPlayerState()
+                    }
                     if (!enableOnboarding || onboardingCompleted) {
                     AppProductionRoot(
                         currentDestination = topLevelDestination,
-                        onNavigationEvent = { event ->
-                            if (event is AppNavigationEvent.SelectTopLevel) {
-                                if (event.destination == topLevelDestination) return@AppProductionRoot
-                                navigationState = navigationState.reduce(event)
-                                selectedTab = when (event.destination) {
-                                    AppTopLevelDestination.HOME -> AppDestination.HOME
-                                    AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
-                                    AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
-                                    AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
-                                    AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
+                            onNavigationEvent = { event ->
+                                if (event is AppNavigationEvent.SelectTopLevel) {
+                                    selectRootTab(
+                                        when (event.destination) {
+                                            AppTopLevelDestination.HOME -> AppDestination.HOME
+                                            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+                                            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+                                            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+                                            AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
+                                        },
+                                    )
                                 }
-                                presenter.closeDetails()
-                                detailsAnime = null
-                                watchAnime = null
-                                playbackJob?.cancel()
-                                playbackJob = null
-                                playbackRequestGeneration++
-                                activePlaybackRoute = null
-                                episodesPresenter.setState(EpisodesScreenState())
-                                resetPlayerState()
-                            }
-                        },
+                            },
                         showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
                         includeNavigationBarPadding = includeNavigationBarPadding,
                         contentTransitionKey = appShellTransitionKey(
@@ -845,8 +859,8 @@ fun HibikiAppShell(
                             onLibrarySearchQueryChange = libraryPresenter::onSearchQueryChange,
                             onLibrarySearchClear = libraryPresenter::clearSearch,
                             onLibraryFiltersApply = libraryPresenter::applySearchFilters,
-                            onBrowseCatalog = { selectedTab = AppDestination.CATALOG },
-                            onOpenLibrary = { selectedTab = AppDestination.LIBRARY },
+                            onBrowseCatalog = { selectRootTab(AppDestination.CATALOG) },
+                            onOpenLibrary = { selectRootTab(AppDestination.LIBRARY) },
                             selectedAnime = detailsAnime ?: state.selectedAnime,
                             detailsResumeState = detailsResumeState,
                             onAnimeClick = presenter::openDetails,
