@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
+import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.text.appText
 
 val AppBottomBarHeight = 64.dp
@@ -61,10 +63,16 @@ fun AppBottomBar(
     includeNavigationBarPadding: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val navigationBarBottomPadding = if (includeNavigationBarPadding) {
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    } else {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val navigationBarBottomPadding = if (!includeNavigationBarPadding) {
         0.dp
+    } else if (layoutEnvironment.isProvided) {
+        when (layoutEnvironment.navigationBarMode) {
+            AppNavigationBarMode.Inset -> layoutEnvironment.bottomSystemInset
+            AppNavigationBarMode.Overlay -> 0.dp
+        }
+    } else {
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     }
 
     Surface(
