@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +27,9 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -64,6 +68,11 @@ internal fun DesktopVlcPlaybackHost(
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
+    var settingsVisible by remember { mutableStateOf(false) }
+    var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
+    var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
+    var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
+    var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
     DisposableEffect(session) {
         onDispose { session.release() }
@@ -104,7 +113,7 @@ internal fun DesktopVlcPlaybackHost(
         }
     }
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible }
+        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
@@ -198,6 +207,11 @@ internal fun DesktopVlcPlaybackHost(
                     },
                     lockContentDescription = appText(AppTextKey.PlayerLock),
                     onControlsVisibilityChanged = { controlsVisible = it },
+                    onSettingsClick = {
+                        settingsDestination = PlayerSettingsDestination.Root
+                        settingsVisible = true
+                    },
+                    settingsContentDescription = appText(AppTextKey.Settings),
                 )
             }
             AppPlayerUnlockOverlay(
@@ -243,6 +257,63 @@ internal fun DesktopVlcPlaybackHost(
                     onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
                     modifier = Modifier.align(Alignment.BottomEnd),
                 )
+            }
+            if (settingsVisible) {
+                AppPlayerSettingsLayer(
+                    onDismissRequest = {
+                        settingsVisible = false
+                        settingsDestination = PlayerSettingsDestination.Root
+                    },
+                    nowMs = { System.currentTimeMillis() },
+                    backHandler = { enabled, callback ->
+                        AppSystemBackHandler(enabled = enabled, onBack = callback) {}
+                    },
+                ) { dismissPanel ->
+                    AppPlayerSettingsContent(
+                        destination = settingsDestination,
+                        selectedSpeed = selectedSpeed,
+                        selectedSourceId = context.sourceId,
+                        selectedPlayerName = context.selectedPlayerName,
+                        selectedQualityLabel = context.selectedQualityLabel ?: playback.qualityLabel,
+                        availableQualityLabels = playback.availableQualityLabels,
+                        autoSkipSegments = autoSkipSegments,
+                        autoPlayNextEpisode = autoPlayNextEpisode,
+                        options = context.settingsOptions,
+                        onNavigate = { settingsDestination = it },
+                        onBack = { settingsDestination = PlayerSettingsDestination.Root },
+                        backHandler = { enabled, callback ->
+                            AppSystemBackHandler(enabled = enabled, onBack = callback) {}
+                        },
+                        onSelectSpeed = { speed ->
+                            selectedSpeed = speed
+                            session.transport.setRate(speed)
+                            settingsStore.save(settingsStore.load().copy(playbackSpeed = speed))
+                        },
+                        onSelectVoiceover = { source ->
+                            dismissPanel()
+                            settingsVisible = false
+                            onSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
+                        },
+                        onSelectPlayer = { playerName ->
+                            dismissPanel()
+                            settingsVisible = false
+                            onSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
+                        },
+                        onSelectQuality = { qualityLabel ->
+                            dismissPanel()
+                            settingsVisible = false
+                            onSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
+                        },
+                        onAutoSkipSegmentsChange = { enabled ->
+                            autoSkipSegments = enabled
+                            onSettingsAction(PlaybackSettingsAction.SetAutoSkipSegments(enabled))
+                        },
+                        onAutoPlayNextEpisodeChange = { enabled ->
+                            autoPlayNextEpisode = enabled
+                            onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
+                        },
+                    )
+                }
             }
         }
         }
