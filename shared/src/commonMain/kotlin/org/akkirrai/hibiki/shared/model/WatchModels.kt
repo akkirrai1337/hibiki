@@ -29,6 +29,7 @@ data class PlaybackContext(
     val episodeId: String,
     val episodeNumber: Double,
     val sourceTitle: String,
+    val episodes: List<WatchEpisode> = emptyList(),
 )
 
 data class PlaybackRoute(

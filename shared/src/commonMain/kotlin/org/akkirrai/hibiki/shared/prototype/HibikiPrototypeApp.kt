@@ -664,10 +664,11 @@ fun HibikiAppShell(
                                                 val context = org.akkirrai.hibiki.shared.model.PlaybackContext(
                                                         titleId = watchAnime?.id.orEmpty(),
                                                         sourceId = sourceForPlayback.sourceId,
-                                                        episodeId = episode.id,
-                                                        episodeNumber = episode.number,
-                                                        sourceTitle = sourceForPlayback.title,
-                                                    )
+                                                         episodeId = episode.id,
+                                                         episodeNumber = episode.number,
+                                                         sourceTitle = sourceForPlayback.title,
+                                                         episodes = loadedEpisodes,
+                                                     )
                                                 if (playbackHost != null) {
                                                     activePlaybackRoute = PlaybackRoute(playback, context)
                                                 } else {
