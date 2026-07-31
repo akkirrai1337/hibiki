@@ -2,7 +2,8 @@ package org.akkirrai.hibiki.shared.player
 
 import org.akkirrai.hibiki.shared.model.WatchSource
 
-const val INITIAL_VISIBLE_SOURCE_COUNT = 6
+/** Android reference shows three source rows before expanding the list. */
+const val INITIAL_VISIBLE_SOURCE_COUNT = 3
 
 fun visibleWatchSources(allItems: List<WatchSource>, showAllItems: Boolean): List<WatchSource> =
     if (showAllItems) allItems else allItems.take(INITIAL_VISIBLE_SOURCE_COUNT)

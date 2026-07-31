@@ -24,7 +24,7 @@ class WatchSourcesStateResolverTest {
         val sources = (1..7).map { source("source-$it", it.toString()) }
         val visible = visibleWatchSources(sources, showAllItems = false)
 
-        assertEquals(6, visible.size)
+        assertEquals(3, visible.size)
         assertTrue(hasMoreWatchSources(sources, visible, showAllItems = false))
         assertEquals(sources, visibleWatchSources(sources, showAllItems = true))
         assertFalse(hasMoreWatchSources(sources, sources, showAllItems = true))
