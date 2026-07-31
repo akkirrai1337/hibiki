@@ -305,6 +305,9 @@ fun HibikiAppShell(
     var onboardingSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
     }
+    var currentSelectedSourceId by remember(settingsStore, selectedSourceId) {
+        mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
+    }
     var isEditingProfile by remember { mutableStateOf(false) }
     var editedProfileName by remember(profileState.data.profileName) {
         mutableStateOf(profileState.data.profileName.ifBlank { DEFAULT_PROFILE_NAME })
@@ -943,8 +946,9 @@ fun HibikiAppShell(
                             },
                             profileRepository = profileRepository,
                             sources = sources,
-                            selectedSourceId = selectedSourceId,
+                            selectedSourceId = currentSelectedSourceId,
                             onSourceSelected = { sourceId ->
+                                currentSelectedSourceId = sourceId
                                 repository.selectSource(sourceId)
                                 presenter.clear()
                                 presenter.loadFilterCatalog()
@@ -996,6 +1000,7 @@ fun HibikiAppShell(
                             onRequestNotificationPermission = onRequestOnboardingNotificationPermission,
                             onComplete = { sourceId ->
                                 onboardingSourceId = sourceId
+                                currentSelectedSourceId = sourceId
                                 onboardingCompleted = true
                                 settingsStore.save(
                                     settingsStore.load().copy(
