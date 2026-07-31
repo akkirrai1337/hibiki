@@ -56,12 +56,13 @@ internal fun AndroidSharedAppShell(
             settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
         },
         watchRepository = watchRepository,
-        playbackHost = { playback, playbackContext, onBack, onEpisodeSelected ->
+        playbackHost = { playback, playbackContext, onBack, onEpisodeSelected, onSettingsAction ->
             AndroidCommonPlaybackHost(
                 playback = playback,
                 context = playbackContext,
                 onBack = onBack,
                 onEpisodeSelected = onEpisodeSelected,
+                onSettingsAction = onSettingsAction,
             )
         },
     )

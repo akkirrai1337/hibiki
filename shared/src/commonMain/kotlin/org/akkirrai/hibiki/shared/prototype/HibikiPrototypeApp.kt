@@ -165,6 +165,7 @@ import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
+import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
@@ -208,7 +209,7 @@ fun HibikiAppShell(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
-    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit, (WatchEpisode) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -776,8 +777,9 @@ fun HibikiAppShell(
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
                             onEpisodeSelected = ::requestPlayback,
-                            content = { playback, context, onDismiss, onEpisodeSelected ->
-                            playbackHost(playback, context, onDismiss, onEpisodeSelected)
+                            onSettingsAction = {},
+                            content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction ->
+                            playbackHost(playback, context, onDismiss, onEpisodeSelected, onSettingsAction)
                             },
                         )
                     }

@@ -14,10 +14,11 @@ fun AppPlaybackOverlayHost(
     playback: PlaybackStream,
     context: PlaybackContext,
     onDismiss: () -> Unit,
-    content: @Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit) -> Unit,
+    content: @Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit) -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
+    onSettingsAction: (PlaybackSettingsAction) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        content(playback, context, onDismiss, onEpisodeSelected)
+        content(playback, context, onDismiss, onEpisodeSelected, onSettingsAction)
     }
 }

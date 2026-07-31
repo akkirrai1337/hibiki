@@ -29,6 +29,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
+import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
@@ -43,6 +44,7 @@ internal fun AndroidCommonPlaybackHost(
     context: PlaybackContext,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
+    onSettingsAction: (PlaybackSettingsAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val androidContext = LocalContext.current
