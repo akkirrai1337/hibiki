@@ -119,6 +119,7 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
+import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
@@ -288,6 +289,10 @@ fun HibikiAppShell(
     val state by presenter.state.collectAsState()
     val homePresenter = remember(homeRepository) { HomePresenter() }
     val homeState by homePresenter.state.collectAsState()
+
+    fun setHomeStatePreservingDescriptions(state: HomeUiState) {
+        homePresenter.setState(state.preserveHomeDescriptions(homePresenter.state.value))
+    }
     val catalogListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
@@ -386,7 +391,7 @@ fun HibikiAppShell(
             scope.launch {
                 try {
                     homePresenter.update { it.copy(isLoading = true, errorMessage = null) }
-                    homePresenter.setState(repositoryForHome.refreshHomeState())
+                    setHomeStatePreservingDescriptions(repositoryForHome.refreshHomeState())
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (throwable: Throwable) {
@@ -431,7 +436,7 @@ fun HibikiAppShell(
                 homePresenter.setState(HomeUiState())
             } else {
                 homePresenter.setState(homeRepository.fallbackHomeState())
-                homePresenter.setState(homeRepository.loadHomeState())
+                setHomeStatePreservingDescriptions(homeRepository.loadHomeState())
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -816,7 +821,7 @@ fun HibikiAppShell(
                 libraryPresenter.updateEntries(libraryRepository.getEntries())
                 profilePresenter.load(profileRepository)
                 homeRepository?.let { repository ->
-                    homePresenter.setState(repository.loadHomeState())
+                    setHomeStatePreservingDescriptions(repository.loadHomeState())
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -1077,7 +1082,7 @@ fun HibikiAppShell(
                                     scope.launch {
                                         try {
                                             homePresenter.setState(homePresenter.state.value.copy(isLoading = true))
-                                            homePresenter.setState(repo.refreshHomeState())
+                                            setHomeStatePreservingDescriptions(repo.refreshHomeState())
                                         } catch (cancelled: CancellationException) {
                                             throw cancelled
                                         } catch (throwable: Throwable) {
