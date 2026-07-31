@@ -154,6 +154,7 @@ import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesContent
+import org.akkirrai.hibiki.shared.player.AppPlaybackOverlayHost
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodeRow
@@ -706,11 +707,15 @@ fun HibikiAppShell(
                     }
                     if (playbackHost != null && activePlaybackRoute != null) {
                         val route = requireNotNull(activePlaybackRoute)
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            playbackHost(route.playback, route.context) {
+                        AppPlaybackOverlayHost(
+                            playback = route.playback,
+                            context = route.context,
+                            onDismiss = {
                                 activePlaybackRoute = null
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
-                            }
+                            },
+                        ) { playback, context, onDismiss ->
+                            playbackHost(playback, context, onDismiss)
                         }
                     }
                     if (enableOnboarding && !onboardingCompleted) {
