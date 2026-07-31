@@ -169,6 +169,15 @@ import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
+import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRowContent
+import org.akkirrai.hibiki.shared.player.AppEpisodesDownloadToggle
+import org.akkirrai.hibiki.shared.player.rememberEpisodesDownloadControlsVisible
+import org.akkirrai.hibiki.shared.player.toEpisodeDownloadActionState
+import org.akkirrai.hibiki.shared.player.keepsTitleSaved
+import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleEndPadding
+import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
@@ -719,6 +728,7 @@ fun HibikiAppShell(
                         AppDestinationContent(
                             selectedTab = animatedTab,
                             episodeDownloadRepository = episodeDownloadRepository,
+                            downloadMode = (navigationState.currentRoute as? AppRoute.Episodes)?.downloadMode == true,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
                             catalogState = state,
@@ -1291,6 +1301,7 @@ private fun AppDestinationContent(
     onAutoSkipChange: (Boolean) -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
+    downloadMode: Boolean = false,
     onLibraryChanged: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.LIGHT,
     onThemeModeChange: (ThemeMode) -> Unit = {},
@@ -1301,6 +1312,25 @@ private fun AppDestinationContent(
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
 ) {
+    val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
+    val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
+        sourceId = episodeDownloadSourceId,
+        downloadMode = downloadMode,
+    )
+    var episodeDownloadStates by remember(episodeDownloadSourceId) {
+        mutableStateOf<Map<String, EpisodeDownloadState>>(emptyMap())
+    }
+    val downloadScope = rememberCoroutineScope()
+    LaunchedEffect(episodeDownloadRepository, episodeDownloadSourceId, episodesState.result) {
+        val repository = episodeDownloadRepository ?: return@LaunchedEffect
+        val sourceId = episodeDownloadSourceId.takeIf(String::isNotBlank) ?: return@LaunchedEffect
+        val episodes = (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+        if (episodes.isEmpty()) return@LaunchedEffect
+        while (true) {
+            episodeDownloadStates = repository.getEpisodeStates(sourceId, episodes.map(WatchEpisode::id))
+            delay(700L)
+        }
+    }
     if (watchAnime != null) {
         WatchScreenScaffold(
             onBackClick = onBackFromWatch,
@@ -1324,34 +1354,107 @@ private fun AppDestinationContent(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    playbackError?.let { message ->
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(start = 16.dp, top = 56.dp, end = 16.dp, bottom = 8.dp),
+                val currentWatchSource = requireNotNull(selectedWatchSource)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (episodeDownloadRepository != null) {
+                        AppEpisodesDownloadToggle(
+                            isVisible = downloadControlsVisible.value,
+                            contentDescription = appText(AppTextKey.WatchDownload),
+                            onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .statusBarsPadding()
+                                .padding(
+                                    end = EpisodesDownloadToggleEndPadding,
+                                    top = EpisodesDownloadToggleTopPadding,
+                                ),
                         )
                     }
-                    if (playbackLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-                    AppEpisodesContent(
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        playbackError?.let { message ->
+                            Text(
+                                text = message,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 16.dp, top = 56.dp, end = 16.dp, bottom = 8.dp),
+                            )
+                        }
+                        if (playbackLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                        AppEpisodesContent(
                         result = episodesState.result,
-                        sourceTitle = selectedWatchSource.title,
+                        sourceTitle = currentWatchSource.title,
                         emptyMessage = appText(AppTextKey.Episodes),
                         retryLabel = appText(AppTextKey.SearchRetry),
-                        onRetry = { onWatchSourceClick(selectedWatchSource) },
-                        episodeContent = { episode, shape ->
+                        onRetry = { onWatchSourceClick(currentWatchSource) },
+                            episodeContent = { episode, shape ->
                             val progress = profileData.episodeProgress.firstOrNull { progress ->
                                 progress.titleId == watchAnime.id && progress.episodeId == episode.id
                             }
                             val status = resolveEpisodeProgressStatus(progress)
                             val defaultHeadline = appText(AppTextKey.WatchContinueEpisode)
                                 .removePrefix("${appText(AppTextKey.WatchContinue)} · ")
-                            EpisodeRow(
-                                headline = buildEpisodeRowHeadline(
+                                if (episodeDownloadRepository != null) {
+                                    AppEpisodeDownloadRowContent(
+                                        episode = episode,
+                                        progress = progress,
+                                        status = status,
+                                        downloadState = episodeDownloadStates[episode.id]
+                                            ?.toEpisodeDownloadActionState()
+                                            ?: EpisodeDownloadState.NotDownloaded.toEpisodeDownloadActionState(),
+                                        showDownloadControls = downloadControlsVisible.value,
+                                        shape = shape,
+                                        enabled = !playbackLoading,
+                                        watchedHeadline = { number -> "✓ $defaultHeadline".replace("%s", number) },
+                                        defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
+                                        watchedLabel = appText(AppTextKey.ProfileAnalyticsWatched),
+                                        queuedLabel = appText(AppTextKey.WatchStatusQueued),
+                                        downloadingLabel = { percent ->
+                                            appText(AppTextKey.WatchStatusDownloading).replace("%s", percent.toString())
+                                        },
+                                        pausedLabel = appText(AppTextKey.WatchStatusPaused),
+                                        downloadedLabel = appText(AppTextKey.WatchDownloaded),
+                                        failedLabel = appText(AppTextKey.WatchStatusFailed),
+                                        downloadedContentDescription = appText(AppTextKey.WatchDownloaded),
+                                        downloadContentDescription = appText(AppTextKey.WatchDownload),
+                                        pauseContentDescription = appText(AppTextKey.WatchPause),
+                                        resumeContentDescription = appText(AppTextKey.WatchResume),
+                                        removeContentDescription = appText(AppTextKey.WatchRemoveDownload),
+                                        onClick = { onWatchEpisodeClick(episode) },
+                                        onDownloadClick = {
+                                            episodeDownloadStates = episodeDownloadStates +
+                                                (episode.id to EpisodeDownloadState.Queued)
+                                            downloadScope.launch {
+                                                episodeDownloadRepository.enqueueEpisodes(
+                                                    currentWatchSource,
+                                                    listOf(episode),
+                                                )
+                                            }
+                                        },
+                                        onPauseClick = {
+                                            episodeDownloadRepository.pauseEpisode(currentWatchSource.sourceId, episode.id)
+                                        },
+                                        onResumeClick = {
+                                            episodeDownloadRepository.resumeEpisode(currentWatchSource.sourceId, episode.id)
+                                        },
+                                        onRemoveClick = {
+                                            episodeDownloadRepository.removeEpisode(currentWatchSource.sourceId, episode.id)
+                                            episodeDownloadStates = episodeDownloadStates +
+                                                (episode.id to EpisodeDownloadState.NotDownloaded)
+                                            if (!episodeDownloadStates.values
+                                                    .map(EpisodeDownloadState::toEpisodeDownloadActionState)
+                                                    .any(EpisodeDownloadActionState::keepsTitleSaved)
+                                            ) {
+                                                watchAnime?.id?.let(libraryRepository::removeSavedFromLibrary)
+                                            }
+                                            onLibraryChanged()
+                                        },
+                                    )
+                                } else {
+                                    EpisodeRow(
+                                        headline = buildEpisodeRowHeadline(
                                     episode = episode,
                                     progress = progress,
                                     status = status,
@@ -1359,17 +1462,19 @@ private fun AppDestinationContent(
                                     defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
                                     watchedLabel = appText(AppTextKey.ProfileAnalyticsWatched),
                                 ),
-                                subtitle = episode.title,
-                                inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
-                                enabled = !playbackLoading,
-                                showDownloadAction = false,
-                                shape = shape,
-                                onClick = { onWatchEpisodeClick(episode) },
-                            )
+                                        subtitle = episode.title,
+                                        inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
+                                        enabled = !playbackLoading,
+                                        showDownloadAction = false,
+                                        shape = shape,
+                                        onClick = { onWatchEpisodeClick(episode) },
+                                    )
+                                }
                         },
                         listContentPadding = listContentPadding,
                         modifier = Modifier.weight(1f),
-                    )
+                        )
+                    }
                 }
             }
         }

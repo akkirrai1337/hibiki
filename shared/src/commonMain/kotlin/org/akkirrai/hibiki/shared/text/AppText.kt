@@ -117,6 +117,15 @@ enum class AppTextKey {
     Back,
     Favorite,
     Watch,
+    WatchDownload,
+    WatchPause,
+    WatchRemoveDownload,
+    WatchResume,
+    WatchDownloaded,
+    WatchStatusQueued,
+    WatchStatusDownloading,
+    WatchStatusPaused,
+    WatchStatusFailed,
     WatchContinue,
     EpisodesShort,
     WatchContinueEpisode,
@@ -340,6 +349,15 @@ class DefaultAppTextResolver(
             AppTextKey.Back -> if (russian) "Назад" else "Back"
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
+            AppTextKey.WatchDownload -> if (russian) "Скачать" else "Download"
+            AppTextKey.WatchPause -> if (russian) "Пауза" else "Pause"
+            AppTextKey.WatchRemoveDownload -> if (russian) "Удалить загрузку" else "Remove download"
+            AppTextKey.WatchResume -> if (russian) "Продолжить" else "Resume"
+            AppTextKey.WatchDownloaded -> if (russian) "Скачано" else "Downloaded"
+            AppTextKey.WatchStatusQueued -> if (russian) "В очереди" else "Queued"
+            AppTextKey.WatchStatusDownloading -> if (russian) "Скачивается %s%%" else "Downloading %s%%"
+            AppTextKey.WatchStatusPaused -> if (russian) "На паузе" else "Paused"
+            AppTextKey.WatchStatusFailed -> if (russian) "Ошибка загрузки" else "Download failed"
             AppTextKey.WatchContinue -> if (russian) "Продолжить" else "Continue"
             AppTextKey.EpisodesShort -> if (russian) "сер." else "ep."
             AppTextKey.WatchContinueEpisode -> if (russian) "Продолжить · серия %s" else "Continue · Episode %s"
