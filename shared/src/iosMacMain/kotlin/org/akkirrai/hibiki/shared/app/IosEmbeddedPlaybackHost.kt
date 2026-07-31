@@ -45,7 +45,9 @@ internal fun IosEmbeddedPlaybackHost(
     settingsStore: AppSettingsStore,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
 ) {
-    val session = remember(playback.streamUrl, playback.headers) { IosPlayerSession(playback) }
+    val session = remember(playback.streamUrl, playback.headers) {
+        IosPlayerSession(playback).also { it.scaleMode = settingsStore.load().videoScaleMode }
+    }
     var playlistVisible by remember(session) { mutableStateOf(false) }
     var settingsVisible by remember(session) { mutableStateOf(false) }
     var settingsDestination by remember(session) { mutableStateOf(PlayerSettingsDestination.Root) }
@@ -101,6 +103,10 @@ internal fun IosEmbeddedPlaybackHost(
             playback = playback,
             context = context,
             onBack = onBack,
+            onScaleClick = {
+                session.scaleMode = session.scaleMode.next()
+                settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))
+            },
             playlistEnabled = context.episodes.isNotEmpty(),
             onPlaylistClick = { playlistVisible = true },
             hasPreviousEpisode = episodeNavigation.hasPrevious,
