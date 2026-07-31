@@ -118,6 +118,7 @@ import org.akkirrai.hibiki.shared.home.HomeUiState
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.model.SearchUiState
+import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
@@ -317,10 +318,24 @@ fun HibikiAppShell(
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
     val profileState by profilePresenter.state.collectAsState()
+    val homeDescriptionRequests = remember(homeRepository) { mutableSetOf<String>() }
     val discordRpcState by (discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
     val discordAuthOverlay = AppOverlay.Dialog("discord-auth")
     val isDiscordAuthDialogOpen = navigationState.overlays.lastOrNull() == discordAuthOverlay
+
+    fun enrichHomeDescription(anime: Anime) {
+        val targetRepository = homeRepository ?: return
+        if (!anime.description.isNullOrBlank() || !homeDescriptionRequests.add(anime.id)) return
+        scope.launch {
+            val enriched = runCatching { targetRepository.enrichDescription(anime) }.getOrNull()
+            homeDescriptionRequests.remove(anime.id)
+            if (homeRepository !== targetRepository || enriched?.description.isNullOrBlank()) return@launch
+            homePresenter.update { state ->
+                state.applyHomeDescriptionUpdates(mapOf(enriched.id to enriched))
+            }
+        }
+    }
 
     fun openDiscordAuthDialog() {
         if (!isDiscordAuthDialogOpen) {
@@ -1056,6 +1071,7 @@ fun HibikiAppShell(
                             appVersionName = appVersionName,
                             catalogState = state,
                             homeState = homeState,
+                            onHomeItemVisible = ::enrichHomeDescription,
                             onHomeRefresh = {
                                 homeRepository?.let { repo ->
                                     scope.launch {
@@ -1804,6 +1820,7 @@ private fun AppDestinationContent(
     onBrowseCatalog: () -> Unit = {},
     onOpenLibrary: () -> Unit = {},
     homeState: HomeUiState = HomeUiState(),
+    onHomeItemVisible: (Anime) -> Unit = {},
     onHomeRefresh: () -> Unit = {},
     useSystemColorScheme: Boolean = true,
     useAmoledTheme: Boolean = false,
@@ -2104,6 +2121,7 @@ private fun AppDestinationContent(
                     onBrowseCatalog = onBrowseCatalog,
                     onOpenLibrary = onOpenLibrary,
                     baseHomeState = homeState,
+                    onItemVisible = onHomeItemVisible,
                     onHomeRefresh = onHomeRefresh,
                 )
                 AppDestination.CATALOG -> SearchScreen(
@@ -2401,6 +2419,7 @@ private fun ColumnScope.HomeScreen(
     onSortSelected: (CatalogSort) -> Unit,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
+    onItemVisible: (Anime) -> Unit = {},
     onHomeRefresh: () -> Unit,
 ) {
     val searchResult = when {
@@ -2436,7 +2455,7 @@ private fun ColumnScope.HomeScreen(
         onAnimeClick = onAnimeClick,
         onBrowseCatalog = onBrowseCatalog,
         onOpenLibrary = onOpenLibrary,
-        onItemVisible = {},
+        onItemVisible = onItemVisible,
         modifier = Modifier.fillMaxSize(),
     )
 }
