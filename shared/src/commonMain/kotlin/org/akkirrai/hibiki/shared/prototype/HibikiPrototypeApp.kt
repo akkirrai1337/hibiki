@@ -204,6 +204,7 @@ import org.akkirrai.hibiki.shared.player.withPlaybackError
 import org.akkirrai.hibiki.shared.player.PlaybackRequest
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
+import org.akkirrai.hibiki.shared.player.resetForNavigation
 import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
@@ -470,7 +471,7 @@ fun HibikiAppShell(
     }
 
     fun resetPlayerState() {
-        playerPresenter.setState(PlayerUiState(isLoading = false))
+        playerPresenter.setState(playerPresenter.state.value.resetForNavigation())
     }
 
     fun requestPlayback(

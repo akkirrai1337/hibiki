@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.shared.player
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 
+fun PlayerUiState.resetForNavigation(): PlayerUiState = PlayerUiState(isLoading = false)
+
 fun PlayerUiState.beginPlaybackLoad(excludedStreamUrls: Set<String>): PlayerUiState = copy(
     isLoading = true,
     errorMessage = null,

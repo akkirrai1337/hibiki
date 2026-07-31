@@ -85,4 +85,29 @@ class PlayerLoadStateResolverTest {
 
         assertEquals(request, state.lastPlaybackRequest)
     }
+
+    @Test
+    fun resetForNavigationClearsPlaybackErrorAndRetryRequest() {
+        val request = PlaybackRequest(
+            episode = WatchEpisode("episode-1", 1.0, "Episode"),
+            source = WatchSource("source-1", "Source", 12),
+        )
+        val state = PlayerUiState(
+            isLoading = true,
+            playback = PlaybackStream(
+                animeTitle = "Anime",
+                sourceTitle = "Source",
+                episodeTitle = "Episode",
+                streamUrl = "https://video",
+                streamType = PlaybackStreamType.MP4,
+            ),
+            errorMessage = "failed",
+            lastPlaybackRequest = request,
+        ).resetForNavigation()
+
+        assertFalse(state.isLoading)
+        assertEquals(null, state.playback)
+        assertEquals(null, state.errorMessage)
+        assertEquals(null, state.lastPlaybackRequest)
+    }
 }
