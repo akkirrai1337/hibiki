@@ -35,6 +35,42 @@ fun WatchSourcesScreenState.withSources(
     )
 }
 
+fun initialWatchSourcesState(
+    cachedSources: List<WatchSource>?,
+    offlineSources: List<WatchSource>,
+    forceRefresh: Boolean,
+): WatchSourcesScreenState {
+    if (forceRefresh) {
+        return WatchSourcesScreenState(isLoading = true)
+    }
+
+    val mergedSources = mergeWatchSources(cachedSources.orEmpty(), offlineSources)
+    val visibleItems = visibleWatchSources(mergedSources, showAllItems = false)
+    return WatchSourcesScreenState(
+        allItems = mergedSources,
+        items = visibleItems,
+        isLoading = cachedSources == null,
+        hasMoreItems = hasMoreWatchSources(mergedSources, visibleItems, showAllItems = false),
+    )
+}
+
+fun WatchSourcesScreenState.withLoadedSources(
+    sources: List<WatchSource>,
+    offlineSources: List<WatchSource>,
+    isLoading: Boolean,
+): WatchSourcesScreenState = withSources(
+    sources = mergeWatchSources(sources, offlineSources),
+    isLoading = isLoading,
+    isLoadingMore = false,
+    showAllItems = false,
+)
+
+fun WatchSourcesScreenState.withWatchSourcesError(errorMessage: String): WatchSourcesScreenState = copy(
+    isLoading = false,
+    isLoadingMore = false,
+    errorMessage = errorMessage.takeIf { items.isEmpty() },
+)
+
 fun WatchSourcesScreenState.showAllWatchSources(): WatchSourcesScreenState = copy(
     showAllItems = true,
     items = allItems,

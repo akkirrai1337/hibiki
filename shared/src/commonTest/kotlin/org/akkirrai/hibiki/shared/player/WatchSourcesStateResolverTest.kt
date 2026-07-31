@@ -30,6 +30,39 @@ class WatchSourcesStateResolverTest {
         assertFalse(hasMoreWatchSources(sources, sources, showAllItems = true))
     }
 
+    @Test
+    fun buildsCachedAndRefreshingStatesFromTheSameCommonRules() {
+        val cached = listOf(source("cached", "Cached"))
+        val offline = listOf(source("offline", "Offline"))
+
+        val cachedState = initialWatchSourcesState(cached, offline, forceRefresh = false)
+        assertEquals(listOf("cached", "offline"), cachedState.items.map(WatchSource::sourceId))
+        assertFalse(cachedState.isLoading)
+
+        val refreshingState = initialWatchSourcesState(cached, offline, forceRefresh = true)
+        assertTrue(refreshingState.isLoading)
+        assertTrue(refreshingState.items.isEmpty())
+    }
+
+    @Test
+    fun loadedAndErrorStatesPreserveTheAndroidEmptyErrorRule() {
+        val state = WatchSourcesScreenState(isLoading = true)
+            .withLoadedSources(
+                sources = listOf(source("one", "One")),
+                offlineSources = emptyList(),
+                isLoading = false,
+            )
+        assertEquals(listOf("one"), state.items.map(WatchSource::sourceId))
+        assertEquals(
+            "failure",
+            WatchSourcesScreenState(isLoading = true).withWatchSourcesError("failure").errorMessage,
+        )
+        assertEquals(
+            null,
+            state.withWatchSourcesError("ignored").errorMessage,
+        )
+    }
+
     private fun source(id: String, title: String) = WatchSource(
         sourceId = id,
         title = title,
