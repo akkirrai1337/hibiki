@@ -64,6 +64,16 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `related details back returns to previous details`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-2")))
+
+        assertEquals(AppRoute.Details("anime-2"), state.currentRoute)
+        assertEquals(AppRoute.Details("anime-1"), state.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
     fun `settings route backs to profile root`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
