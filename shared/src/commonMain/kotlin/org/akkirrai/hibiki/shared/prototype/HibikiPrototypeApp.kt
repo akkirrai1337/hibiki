@@ -295,6 +295,7 @@ fun HibikiAppShell(
     val playerState by playerPresenter.state.collectAsState()
     var playbackRequestGeneration by remember { mutableStateOf(0) }
     var playbackJob by remember { mutableStateOf<Job?>(null) }
+    var homeRefreshJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by remember { mutableStateOf<PlaybackRoute?>(null) }
     var pendingPlaybackContext by remember { mutableStateOf<PlaybackContext?>(null) }
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
@@ -349,6 +350,21 @@ fun HibikiAppShell(
         presenter.search()
         sourceSearchPresenter.clear()
         onSourceSelected(sourceId)
+        homeRefreshJob?.cancel()
+        homeRefreshJob = homeRepository?.let { repositoryForHome ->
+            scope.launch {
+                try {
+                    homePresenter.update { it.copy(isLoading = true, errorMessage = null) }
+                    homePresenter.setState(repositoryForHome.refreshHomeState())
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (throwable: Throwable) {
+                    homePresenter.update {
+                        it.copy(isLoading = false, errorMessage = throwable.message ?: "Home loading failed")
+                    }
+                }
+            }
+        }
     }
 
     DisposableEffect(presenter) {
@@ -357,6 +373,7 @@ fun HibikiAppShell(
         onDispose {
             presenter.close()
             sourceSearchPresenter.close()
+            homeRefreshJob?.cancel()
         }
     }
 
