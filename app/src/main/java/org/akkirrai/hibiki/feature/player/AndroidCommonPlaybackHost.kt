@@ -29,11 +29,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
@@ -81,6 +83,9 @@ internal fun AndroidCommonPlaybackHost(
     val preferencesState = LocalAppPreferencesState.current
     val exoPlayer = remember(androidContext, playback.streamUrl, playback.headers) {
         ExoPlayer.Builder(androidContext).build()
+    }
+    val mediaSession = remember(exoPlayer) {
+        MediaSession.Builder(androidContext, exoPlayer).build()
     }
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
     val progressCoordinator = remember(exoPlayer) {
@@ -200,6 +205,24 @@ internal fun AndroidCommonPlaybackHost(
         }
     }
 
+    LaunchedEffect(exoPlayer, context.episodeId, playback.streamUrl) {
+        while (true) {
+            DiscordRpcManager.get(androidContext).showPlayback(
+                DiscordPlaybackPresence(
+                    titleId = context.titleId,
+                    animeTitle = playback.animeTitle,
+                    voiceover = playback.sourceTitle,
+                    episodeNumber = context.episodeNumber,
+                    positionMs = transport.positionMs().coerceAtLeast(0L),
+                    durationMs = transport.durationMs(),
+                    isPlaying = exoPlayer.isPlaying,
+                ),
+            )
+            if (!exoPlayer.isPlaying) return@LaunchedEffect
+            delay(1_000L)
+        }
+    }
+
     LaunchedEffect(exoPlayer, context.episodeId) {
         while (true) {
             positionMs = transport.positionMs()
@@ -295,6 +318,7 @@ internal fun AndroidCommonPlaybackHost(
         exoPlayer.playWhenReady = true
         onDispose {
             savePlaybackProgress()
+            mediaSession.release()
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
