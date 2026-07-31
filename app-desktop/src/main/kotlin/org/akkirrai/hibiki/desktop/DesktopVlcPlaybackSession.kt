@@ -21,6 +21,9 @@ internal class DesktopVlcPlaybackSession(
     fun release() {
         component.release()
     }
+
+    fun videoDimensions(): Pair<Int, Int>? = component.mediaPlayer().video().videoDimension()
+        ?.let { dimension -> dimension.width to dimension.height }
 }
 
 private class VlcPlaybackTransport(
