@@ -90,8 +90,15 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         presentPlayback(hostController, playback, context)
                     },
                     playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
-                        { playback, context, onBack, onEpisodeSelected, _ ->
-                            IosEmbeddedPlaybackHost(playback, context, onBack, onEpisodeSelected)
+                        { playback, context, onBack, onEpisodeSelected, onSettingsAction ->
+                            IosEmbeddedPlaybackHost(
+                                playback = playback,
+                                context = context,
+                                onBack = onBack,
+                                onEpisodeSelected = onEpisodeSelected,
+                                settingsStore = settingsStore,
+                                onSettingsAction = onSettingsAction,
+                            )
                         }
                     } else {
                         null

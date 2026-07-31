@@ -16,6 +16,8 @@ internal fun IosComposePlayerControls(
     hasNextEpisode: Boolean = false,
     onPreviousEpisode: () -> Unit = {},
     onNextEpisode: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    settingsContentDescription: String? = null,
 ) {
     AppPlaybackControls(
         transport = session.transport,
@@ -30,5 +32,7 @@ internal fun IosComposePlayerControls(
         hasNextEpisode = hasNextEpisode,
         onPreviousEpisode = onPreviousEpisode,
         onNextEpisode = onNextEpisode,
+        onSettingsClick = onSettingsClick,
+        settingsContentDescription = settingsContentDescription,
     )
 }
