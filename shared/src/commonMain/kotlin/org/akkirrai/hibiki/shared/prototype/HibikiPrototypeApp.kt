@@ -213,6 +213,7 @@ import org.akkirrai.hibiki.shared.player.resolveResumeWatchState
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.WatchEpisode
+import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackRoute
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 
@@ -294,6 +295,7 @@ fun HibikiAppShell(
     var playbackRequestGeneration by remember { mutableStateOf(0) }
     var playbackJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by remember { mutableStateOf<PlaybackRoute?>(null) }
+    var pendingPlaybackContext by remember { mutableStateOf<PlaybackContext?>(null) }
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
@@ -501,6 +503,31 @@ fun HibikiAppShell(
         )
         val effectivePlayerName = effectivePreferences.playerName
         val effectiveQuality = effectivePreferences.quality
+        val requestEpisodes = episodesOverride
+            ?: (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+        val requestContext = PlaybackContext(
+            titleId = watchAnime?.id.orEmpty(),
+            sourceId = sourceForPlayback.sourceId,
+            episodeId = episode.id,
+            episodeNumber = episode.number,
+            sourceTitle = sourceForPlayback.title,
+            episodes = requestEpisodes,
+            selectedPlayerName = effectivePlayerName,
+            selectedQualityLabel = effectiveQuality ?: sourceForPlayback.qualityLabel,
+        )
+        val playerRoute = AppRoute.Player(
+            sourceId = sourceForPlayback.sourceId,
+            episodeId = episode.id,
+            episodeNumber = episode.number,
+        )
+        pendingPlaybackContext = requestContext
+        navigationState = navigationState.reduce(
+            if (navigationState.currentRoute is AppRoute.Player) {
+                AppNavigationEvent.Replace(playerRoute)
+            } else {
+                AppNavigationEvent.Navigate(playerRoute)
+            },
+        )
 
         playbackJob?.cancel()
         val requestGeneration = playbackRequestGeneration + 1
@@ -529,8 +556,7 @@ fun HibikiAppShell(
             }
             if (requestGeneration != playbackRequestGeneration) return@launch
             result.onSuccess { playback ->
-                val loadedEpisodes = episodesOverride
-                    ?: (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+                val loadedEpisodes = requestEpisodes
                 playerPresenter.update {
                     it.withPlaybackLoaded(
                         stream = playback,
@@ -547,34 +573,9 @@ fun HibikiAppShell(
                             },
                     )
                 }
-                val playerNavigationEvent = if (replacePlayerRoute) {
-                    AppNavigationEvent.Replace(
-                        AppRoute.Player(
-                            sourceId = sourceForPlayback.sourceId,
-                            episodeId = episode.id,
-                            episodeNumber = episode.number,
-                        ),
-                    )
-                } else {
-                    AppNavigationEvent.Navigate(
-                        AppRoute.Player(
-                            sourceId = sourceForPlayback.sourceId,
-                            episodeId = episode.id,
-                            episodeNumber = episode.number,
-                        ),
-                    )
-                }
-                navigationState = navigationState.reduce(playerNavigationEvent)
-                val context = org.akkirrai.hibiki.shared.model.PlaybackContext(
-                    titleId = watchAnime?.id.orEmpty(),
-                    sourceId = sourceForPlayback.sourceId,
-                    episodeId = episode.id,
-                    episodeNumber = episode.number,
-                    sourceTitle = sourceForPlayback.title,
-                    episodes = loadedEpisodes,
-                    selectedPlayerName = effectivePlayerName,
-                    selectedQualityLabel = effectiveQuality ?: sourceForPlayback.qualityLabel,
-                )
+                navigationState = navigationState.reduce(AppNavigationEvent.Replace(playerRoute))
+                val context = requestContext.copy(episodes = loadedEpisodes)
+                pendingPlaybackContext = null
                 onPlaybackSelectionChanged(
                     org.akkirrai.hibiki.shared.model.PlaybackSelection(
                         titleId = context.titleId,
@@ -699,6 +700,7 @@ fun HibikiAppShell(
         }
         if (activePlaybackRoute != null) {
             activePlaybackRoute = null
+            pendingPlaybackContext = null
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
             return
         }
@@ -709,6 +711,7 @@ fun HibikiAppShell(
             is AppRoute.Player -> {
                 playbackJob?.cancel()
                 playbackJob = null
+                pendingPlaybackContext = null
                 resetPlayerState()
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
@@ -1127,11 +1130,11 @@ fun HibikiAppShell(
                         )
                     }
                     }
-                    if (playbackHost != null && activePlaybackRoute != null) {
-                        val route = requireNotNull(activePlaybackRoute)
+                    if (playbackHost != null && (activePlaybackRoute != null || pendingPlaybackContext != null)) {
+                        val route = activePlaybackRoute
                         AppPlaybackOverlayHost(
-                            playback = route.playback,
-                            context = route.context,
+                            playback = route?.playback,
+                            context = route?.context ?: requireNotNull(pendingPlaybackContext),
                             navigationState = navigationState,
                             playbackLoading = playerState.isLoading,
                             playbackError = playerState.errorMessage,
@@ -1147,6 +1150,7 @@ fun HibikiAppShell(
                             },
                             onDismiss = {
                                 activePlaybackRoute = null
+                                pendingPlaybackContext = null
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
                             onEpisodeSelected = { episode ->
