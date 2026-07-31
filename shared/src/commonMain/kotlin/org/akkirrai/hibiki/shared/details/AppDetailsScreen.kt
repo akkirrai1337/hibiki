@@ -355,7 +355,7 @@ fun AppDetailsScreen(
                         title = appText(AppTextKey.Information),
                         emptyValue = appText(AppTextKey.Unknown),
                         statusLabel = appText(AppTextKey.Status),
-                        episodesLabel = appText(AppTextKey.Episodes),
+                        episodesLabel = appText(AppTextKey.EpisodesReleased),
                         typeLabel = appText(AppTextKey.Type),
                         releaseDateLabel = appText(AppTextKey.ReleaseDate),
                         sourceMaterialLabel = appText(AppTextKey.SourceMaterial),

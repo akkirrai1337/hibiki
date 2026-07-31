@@ -164,6 +164,7 @@ enum class AppTextKey {
     Information,
     Status,
     Episodes,
+    EpisodesReleased,
     Type,
     ReleaseDate,
     SourceMaterial,
@@ -421,6 +422,7 @@ class DefaultAppTextResolver(
             AppTextKey.Information -> if (russian) "Информация" else "Information"
             AppTextKey.Status -> if (russian) "Статус" else "Status"
             AppTextKey.Episodes -> if (russian) "Эпизоды" else "Episodes"
+            AppTextKey.EpisodesReleased -> if (russian) "Серий вышло" else "Episodes released"
             AppTextKey.Type -> if (russian) "Тип" else "Type"
             AppTextKey.ReleaseDate -> if (russian) "Дата выхода" else "Release date"
             AppTextKey.SourceMaterial -> if (russian) "Источник" else "Source material"
