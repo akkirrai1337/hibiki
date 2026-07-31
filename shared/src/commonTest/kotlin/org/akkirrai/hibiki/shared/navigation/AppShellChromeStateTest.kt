@@ -7,19 +7,44 @@ import kotlin.test.assertTrue
 class AppShellChromeStateTest {
     @Test
     fun rootHomeShowsBottomBar() {
-        assertTrue(appBottomBarVisible(AppDestination.HOME, false, false, false))
+        assertTrue(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.TopLevel(AppTopLevelDestination.HOME),
+            ),
+        )
     }
 
     @Test
     fun nestedScreensHideBottomBar() {
-        assertFalse(appBottomBarVisible(AppDestination.HOME, true, false, false))
-        assertFalse(appBottomBarVisible(AppDestination.HOME, false, true, false))
-        assertFalse(appBottomBarVisible(AppDestination.HOME, false, false, true))
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.Details("anime-1"),
+            ),
+        )
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.WatchSources("anime-1"),
+            ),
+        )
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.Player("source-1", "episode-1"),
+            ),
+        )
     }
 
     @Test
     fun settingsHidesBottomBar() {
-        assertFalse(appBottomBarVisible(AppDestination.SETTINGS, false, false, false))
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.PROFILE,
+                currentRoute = AppRoute.Settings,
+            ),
+        )
     }
 
     @Test
@@ -36,11 +61,6 @@ class AppShellChromeStateTest {
                 currentRoute = AppRoute.Player("source-1", "episode-1"),
             ),
         )
-        assertFalse(
-            appBottomBarVisible(
-                selectedTab = AppDestination.PROFILE,
-                currentRoute = AppRoute.Settings,
-            ),
-        )
+        assertFalse(appBottomBarVisible(AppDestination.SETTINGS, AppRoute.TopLevel(AppTopLevelDestination.PROFILE)))
     }
 }
