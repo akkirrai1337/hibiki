@@ -19,7 +19,7 @@ internal class IosAvPlayerTransport(
 
     override fun pause() = hibiki_av_player_pause(player)
 
-    fun setRate(rate: Float) = hibiki_av_player_set_rate(player, rate)
+    override fun setRate(rate: Float) = hibiki_av_player_set_rate(player, rate)
 
     override fun rate(): Float = hibiki_av_player_get_rate(player)
 

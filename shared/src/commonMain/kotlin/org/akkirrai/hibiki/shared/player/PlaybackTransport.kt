@@ -4,6 +4,7 @@ package org.akkirrai.hibiki.shared.player
 interface PlaybackTransport {
     fun play()
     fun pause()
+    fun setRate(rate: Float)
     fun rate(): Float
     fun positionMs(): Long
     fun durationMs(): Long

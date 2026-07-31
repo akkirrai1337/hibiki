@@ -15,6 +15,10 @@ internal class AndroidMedia3PlaybackTransport(
         player.pause()
     }
 
+    override fun setRate(rate: Float) {
+        player.setPlaybackSpeed(rate)
+    }
+
     override fun rate(): Float = if (player.isPlaying) {
         player.playbackParameters.speed
     } else {

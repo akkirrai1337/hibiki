@@ -35,6 +35,10 @@ private class VlcPlaybackTransport(
 
     override fun pause() = player.controls().pause()
 
+    override fun setRate(rate: Float) {
+        player.controls().setRate(rate)
+    }
+
     override fun rate(): Float = player.status().rate()
 
     override fun positionMs(): Long = (player.status().position().coerceIn(0f, 1f) * durationMs()).toLong()
