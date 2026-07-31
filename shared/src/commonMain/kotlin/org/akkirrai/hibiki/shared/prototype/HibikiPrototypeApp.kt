@@ -955,6 +955,18 @@ fun HibikiAppShell(
                             detailsError = state.detailsError,
                             watchAnime = watchAnime,
                             onWatchClick = { anime ->
+                                watchPresenter.setState(
+                                    initialWatchSourcesState(
+                                        cachedSources = null,
+                                        offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
+                                        forceRefresh = true,
+                                    ),
+                                )
+                                episodesPresenter.setState(EpisodesScreenState())
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
+                                resetPlayerState()
                                 watchAnime = anime
                                 navigationState = navigationState.reduce(
                                     AppNavigationEvent.Navigate(
