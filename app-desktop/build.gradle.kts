@@ -23,6 +23,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(libs.ktor.client.cio)
+    implementation(libs.vlcj)
 }
 
 compose.desktop {
