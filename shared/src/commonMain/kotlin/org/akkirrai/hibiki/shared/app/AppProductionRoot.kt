@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.design.AppMotion
 import org.akkirrai.hibiki.shared.design.component.AppTopLevelScaffold
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
+import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.text.appText
 
 /** Shared production shell used by platform hosts while they own screen orchestration. */
@@ -22,7 +23,7 @@ fun AppProductionRoot(
     destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
     showBottomBar: Boolean = true,
     includeNavigationBarPadding: Boolean = true,
-    contentTransitionKey: Any? = null,
+    contentTransitionKey: AppTransitionKey? = null,
     iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit = { destination, iconModifier ->
         androidx.compose.material3.Icon(
             imageVector = destination.icon,
@@ -47,7 +48,8 @@ fun AppProductionRoot(
             AnimatedContent(
                 targetState = AppRootContentState(
                     destination = currentDestination,
-                    transitionKey = contentTransitionKey ?: currentDestination,
+                    transitionKey = contentTransitionKey
+                        ?: AppTransitionKey("top-level", currentDestination.route),
                 ),
                 transitionSpec = {
                     fadeIn(
@@ -66,5 +68,5 @@ fun AppProductionRoot(
 
 private data class AppRootContentState(
     val destination: AppTopLevelDestination,
-    val transitionKey: Any,
+    val transitionKey: AppTransitionKey,
 )
