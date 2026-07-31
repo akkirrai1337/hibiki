@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 object AppFloatingHeaderDefaults {
     val ControlHeight: Dp = 48.dp
@@ -37,8 +38,15 @@ fun AppFloatingHeader(
     containerColor: Color = AppFloatingHeaderDefaults.containerColor(),
     actions: (@Composable () -> Unit)? = null,
 ) {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
     val baseModifier = if (includeStatusBarsPadding) {
-        modifier.statusBarsPadding()
+        modifier.then(
+            if (layoutEnvironment.isProvided) {
+                Modifier.padding(top = layoutEnvironment.topSystemInset)
+            } else {
+                Modifier.statusBarsPadding()
+            },
+        )
     } else {
         modifier
     }
