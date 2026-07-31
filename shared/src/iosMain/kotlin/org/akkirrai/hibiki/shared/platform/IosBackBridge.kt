@@ -14,12 +14,13 @@ import platform.darwin.NSObject
 /** UIKit edge-pan bridge used by the common back handler on iOS. */
 @OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
 internal object IosBackBridge {
-    private var handler: (() -> Unit)? = null
+    private var nextToken = 0L
+    private val handlers = linkedMapOf<Long, () -> Unit>()
     private var gestureTarget: IosBackGestureTarget? = null
 
     fun install(viewController: UIViewController) {
         if (gestureTarget != null) return
-        val target = IosBackGestureTarget { handler?.invoke() }
+        val target = IosBackGestureTarget { handlers.values.lastOrNull()?.invoke() }
         val gesture = UIScreenEdgePanGestureRecognizer(
             target = target,
             action = NSSelectorFromString("handleEdgePan:"),
@@ -29,8 +30,14 @@ internal object IosBackBridge {
         gestureTarget = target
     }
 
-    fun update(enabled: Boolean, onBack: () -> Unit) {
-        handler = onBack.takeIf { enabled }
+    fun register(): Long = ++nextToken
+
+    fun update(token: Long, enabled: Boolean, onBack: () -> Unit) {
+        if (enabled) handlers[token] = onBack else handlers.remove(token)
+    }
+
+    fun unregister(token: Long) {
+        handlers.remove(token)
     }
 }
 

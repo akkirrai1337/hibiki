@@ -2,6 +2,9 @@ package org.akkirrai.hibiki.shared.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 
 @Composable
 actual fun AppSystemBackHandler(
@@ -9,9 +12,11 @@ actual fun AppSystemBackHandler(
     onBack: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    DisposableEffect(enabled) {
-        IosBackBridge.update(enabled, onBack)
-        onDispose { IosBackBridge.update(false, onBack) }
+    val currentOnBack by rememberUpdatedState(onBack)
+    val token = remember { IosBackBridge.register() }
+    DisposableEffect(token, enabled) {
+        IosBackBridge.update(token, enabled) { currentOnBack() }
+        onDispose { IosBackBridge.unregister(token) }
     }
     content()
 }
