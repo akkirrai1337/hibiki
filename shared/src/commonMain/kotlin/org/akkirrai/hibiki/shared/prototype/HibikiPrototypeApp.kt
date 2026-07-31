@@ -151,6 +151,7 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
@@ -689,9 +690,12 @@ fun HibikiAppShell(
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 AppSystemBackHandler(
-                    enabled = navigationState.backStack.isNotEmpty() ||
-                        navigationState.overlays.isNotEmpty() ||
-                        activePlaybackRoute != null,
+                    enabled = appBackHandlerEnabled(
+                        selectedTab = selectedTab,
+                        hasBackStack = navigationState.backStack.isNotEmpty(),
+                        hasOverlay = navigationState.overlays.isNotEmpty(),
+                        hasActivePlayback = activePlaybackRoute != null,
+                    ),
                     onBack = ::handleSystemBack,
                 ) {
                 Box {
