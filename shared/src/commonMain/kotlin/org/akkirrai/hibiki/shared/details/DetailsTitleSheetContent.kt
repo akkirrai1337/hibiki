@@ -14,12 +14,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 @Composable
 fun AppDetailsTitleSheetContent(
     title: String,
     description: String,
 ) {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val bottomInsetModifier = if (
+        layoutEnvironment.isProvided && layoutEnvironment.navigationBarMode == AppNavigationBarMode.Inset
+    ) {
+        Modifier.padding(bottom = layoutEnvironment.bottomSystemInset)
+    } else if (layoutEnvironment.isProvided) {
+        Modifier
+    } else {
+        Modifier.navigationBarsPadding()
+    }
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
@@ -47,7 +59,7 @@ fun AppDetailsTitleSheetContent(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = DetailsTitleSheetDescriptionHorizontalPadding, vertical = DetailsTitleSheetDescriptionVerticalPadding)
-                .navigationBarsPadding(),
+                .then(bottomInsetModifier),
         )
     }
 }
