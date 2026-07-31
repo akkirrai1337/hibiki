@@ -43,6 +43,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.isPlaybackComplete
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -52,6 +53,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 internal fun AndroidCommonPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
+    progressRepository: PlaybackProgressRepository,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
@@ -85,6 +87,22 @@ internal fun AndroidCommonPlaybackHost(
     var isPictureInPictureActive by remember { mutableStateOf(false) }
     val pictureInPictureSupported = remember(activity) {
         activity?.packageManager?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
+    }
+
+    fun savePlaybackProgress() {
+        val position = transport.positionMs()
+        if (position <= 0L) return
+        progressRepository.saveEpisodeProgress(
+            context = context,
+            playback = playback,
+            positionMs = position,
+            durationMs = transport.durationMs(),
+        )
+    }
+
+    fun closePlayback() {
+        savePlaybackProgress()
+        onBack()
     }
 
     fun selectAdjacentEpisode(offset: Int) {
@@ -190,6 +208,7 @@ internal fun AndroidCommonPlaybackHost(
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
         onDispose {
+            savePlaybackProgress()
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
@@ -211,7 +230,7 @@ internal fun AndroidCommonPlaybackHost(
                 context = context,
                 scaleMode = videoScaleMode,
                 onScaleClick = { preferences.setVideoScaleMode(videoScaleMode.next()) },
-                onBack = onBack,
+                onBack = ::closePlayback,
                 playlistEnabled = context.episodes.isNotEmpty(),
                 onPlaylistClick = { playlistVisible = true },
                 hasPreviousEpisode = episodeNavigation.hasPrevious,

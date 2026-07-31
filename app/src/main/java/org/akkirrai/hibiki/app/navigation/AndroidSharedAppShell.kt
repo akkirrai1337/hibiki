@@ -28,6 +28,7 @@ internal fun AndroidSharedAppShell(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
+    val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val preferences = LocalAppPreferencesState.current
     val sources = remember {
         AnimeSourceRegistry.sources.map { source ->
@@ -60,6 +61,7 @@ internal fun AndroidSharedAppShell(
             AndroidCommonPlaybackHost(
                 playback = playback,
                 context = playbackContext,
+                progressRepository = watchStateRepository,
                 onBack = onBack,
                 onEpisodeSelected = onEpisodeSelected,
                 onSettingsAction = onSettingsAction,
