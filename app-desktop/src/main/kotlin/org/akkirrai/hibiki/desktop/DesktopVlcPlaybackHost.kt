@@ -24,6 +24,8 @@ import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
@@ -55,6 +57,7 @@ internal fun DesktopVlcPlaybackHost(
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
     val session = remember(playback.streamUrl, playback.headers) {
         DesktopVlcPlaybackSession(playback).also {
@@ -188,7 +191,10 @@ internal fun DesktopVlcPlaybackHost(
         )
         AppSystemBackHandler(
             enabled = playlistVisible,
-            onBack = { playlistVisible = false },
+            onBack = {
+                playlistVisible = false
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            },
         ) {
         Box(modifier = Modifier.fillMaxSize()) {
             SwingPanel(
@@ -222,7 +228,10 @@ internal fun DesktopVlcPlaybackHost(
                     },
                     onBack = ::closePlayback,
                     playlistEnabled = context.episodes.isNotEmpty(),
-                    onPlaylistClick = { playlistVisible = true },
+                    onPlaylistClick = {
+                        playlistVisible = true
+                        onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+                    },
                     hasPreviousEpisode = episodeNavigation.hasPrevious,
                     hasNextEpisode = episodeNavigation.hasNext,
                 onPreviousEpisode = { selectAdjacentEpisode(-1) },
@@ -230,13 +239,17 @@ internal fun DesktopVlcPlaybackHost(
                     onLockClick = {
                         controlsLocked = true
                         unlockButtonVisible = true
-                        playlistVisible = false
+                        if (playlistVisible) {
+                            playlistVisible = false
+                            onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                        }
                     },
                     lockContentDescription = appText(AppTextKey.PlayerLock),
                     onControlsVisibilityChanged = { controlsVisible = it },
                     onSettingsClick = {
                         settingsDestination = PlayerSettingsDestination.Root
                         settingsVisible = true
+                        onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                     },
                     settingsContentDescription = appText(AppTextKey.Settings),
                 )
@@ -262,9 +275,14 @@ internal fun DesktopVlcPlaybackHost(
                     appText(AppTextKey.PlayerEpisodeNumber)
                         .replace("%s", org.akkirrai.hibiki.shared.player.formatEpisodeNumber(episode.number))
                 },
-                onDismissRequest = { playlistVisible = false },
+                onDismissRequest = {
+                    playlistVisible = false
+                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                },
                 onEpisodeClick = { episodeId ->
                     context.episodes.firstOrNull { it.id == episodeId }?.let {
+                        playlistVisible = false
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         savePlaybackProgress()
                         onEpisodeSelected(it)
                     }
@@ -293,6 +311,7 @@ internal fun DesktopVlcPlaybackHost(
                     onDismissRequest = {
                         settingsVisible = false
                         settingsDestination = PlayerSettingsDestination.Root
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     },
                     nowMs = { System.currentTimeMillis() },
                     backHandler = { enabled, callback ->
@@ -322,16 +341,19 @@ internal fun DesktopVlcPlaybackHost(
                         onSelectVoiceover = { source ->
                             dismissPanel()
                             settingsVisible = false
+                            onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                         },
                         onSelectPlayer = { playerName ->
                             dismissPanel()
                             settingsVisible = false
+                            onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                         },
                         onSelectQuality = { qualityLabel ->
                             dismissPanel()
                             settingsVisible = false
+                            onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                         },
                         onAutoSkipSegmentsChange = { enabled ->

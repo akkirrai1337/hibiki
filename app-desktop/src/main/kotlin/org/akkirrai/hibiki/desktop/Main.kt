@@ -59,7 +59,7 @@ fun main() = application {
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
                         profileRepository = profileRepository,
-                        playbackHost = { playback, context, onBack, onEpisodeSelected, onSettingsAction, _ ->
+                        playbackHost = { playback, context, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,
                                 context = context,
@@ -68,6 +68,7 @@ fun main() = application {
                                 onBack = onBack,
                                 onEpisodeSelected = onEpisodeSelected,
                                 onSettingsAction = onSettingsAction,
+                                onOverlayEvent = onOverlayEvent,
                             )
                         },
                         systemLanguage = systemLanguage,
