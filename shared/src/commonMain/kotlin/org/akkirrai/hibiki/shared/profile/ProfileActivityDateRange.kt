@@ -1,12 +1,15 @@
 package org.akkirrai.hibiki.shared.profile
 
 import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 private const val PROFILE_ACTIVITY_HISTORY_DAYS = 30
 private const val EPOCH_DAY_OFFSET = 719468L
 
 fun defaultProfileActivityDateStrings(): List<String> {
-    val today = Clock.System.now().epochSeconds / 86_400L
+    val today = currentLocalEpochDay()
     return (0 until PROFILE_ACTIVITY_HISTORY_DAYS).map { offset ->
         epochDayToIso(today - (PROFILE_ACTIVITY_HISTORY_DAYS - 1 - offset))
     }
@@ -18,8 +21,7 @@ fun profileActivityDateLabel(date: String): String {
 }
 
 fun profileAddedDateLabel(value: Long, languageTag: String = "en"): String {
-    val epochMillis = if (value in 1 until 1_000_000_000_000L) value * 1_000L else value
-    val epochDay = epochMillis / 86_400_000L
+    val epochDay = epochValueToLocalEpochDay(value)
     val isoDate = epochDayToIso(epochDay)
     val parts = isoDate.split('-')
     if (parts.size != 3) return isoDate
@@ -35,9 +37,8 @@ fun profileRecentDateLabel(
     yesterdayLabel: String,
     daysAgoLabel: (Int) -> String,
 ): String {
-    val valueEpochSeconds = if (value in 1 until 1_000_000_000_000L) value else value / 1_000L
-    val today = Clock.System.now().epochSeconds / 86_400L
-    val date = valueEpochSeconds / 86_400L
+    val today = currentLocalEpochDay()
+    val date = epochValueToLocalEpochDay(value)
     val daysAgo = (today - date).toInt()
     return when {
         daysAgo <= 0 -> todayLabel
@@ -45,6 +46,20 @@ fun profileRecentDateLabel(
         daysAgo < 7 -> daysAgoLabel(daysAgo)
         else -> profileAddedDateLabel(value, languageTag)
     }
+}
+
+private fun currentLocalEpochDay(): Long = Clock.System.now()
+    .toLocalDateTime(TimeZone.currentSystemDefault())
+    .date
+    .toEpochDays()
+
+private fun epochValueToLocalEpochDay(value: Long): Long {
+    val instant = if (value in 1 until 1_000_000_000_000L) {
+        Instant.fromEpochSeconds(value)
+    } else {
+        Instant.fromEpochMilliseconds(value)
+    }
+    return instant.toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays()
 }
 
 private val ENGLISH_MONTHS = listOf(

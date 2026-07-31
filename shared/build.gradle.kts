@@ -55,6 +55,7 @@ kotlin {
                 implementation(libs.coil.compose)
                 implementation(libs.material.kolor)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
                 implementation(project(":parsers"))
             }
         }
