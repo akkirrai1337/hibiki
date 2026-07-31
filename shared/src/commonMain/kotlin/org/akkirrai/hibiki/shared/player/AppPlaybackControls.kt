@@ -62,10 +62,11 @@ fun AppPlaybackControls(
     }
     LaunchedEffect(transport, isSeeking) {
         while (true) {
-            positionMs = transport.positionMs()
-            durationMs = transport.durationMs()
-            bufferedPositionMs = transport.bufferedPositionMs()
-            isPlaying = transport.rate() > 0f
+            val transportState = transport.readState()
+            positionMs = transportState.positionMs
+            durationMs = transportState.durationMs
+            bufferedPositionMs = transportState.bufferedPositionMs
+            isPlaying = transportState.isPlaying
             if (!isSeeking) sliderPositionMs = positionMs
             delay(AppPlaybackPositionPollMillis)
         }
