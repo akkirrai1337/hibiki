@@ -46,6 +46,12 @@ internal class IosWatchStateRepository(
         .sortedBy(DailyWatchActivity::date)
         .toList()
 
+    override fun getPlaybackProgress(
+        titleId: String,
+        episodeId: String,
+    ): EpisodeWatchProgress? = getAllEpisodeProgress()
+        .firstOrNull { it.titleId == titleId && it.episodeId == episodeId }
+
     override fun saveEpisodeProgress(
         context: PlaybackContext,
         playback: PlaybackStream,

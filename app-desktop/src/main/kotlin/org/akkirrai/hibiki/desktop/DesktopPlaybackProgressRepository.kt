@@ -4,6 +4,7 @@ import java.util.Base64
 import java.util.prefs.Preferences
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 
 internal class DesktopPlaybackProgressRepository : PlaybackProgressRepository {
@@ -28,6 +29,26 @@ internal class DesktopPlaybackProgressRepository : PlaybackProgressRepository {
         ).joinToString(RECORD_SEPARATOR)
         preferences.put("$PROGRESS_PREFIX$key", value)
         preferences.flush()
+    }
+
+    override fun getPlaybackProgress(titleId: String, episodeId: String): EpisodeWatchProgress? {
+        val key = encode("$titleId|$episodeId")
+        val parts = preferences.get("$PROGRESS_PREFIX$key", null)
+            ?.split(RECORD_SEPARATOR)
+            ?: return null
+        if (parts.size != 7) return null
+        return EpisodeWatchProgress(
+            titleId = titleId,
+            episodeId = episodeId,
+            episodeNumber = parts[0].toDoubleOrNull() ?: return null,
+            sourceId = parts[1],
+            voiceoverId = parts[1],
+            sourceTitle = parts[2],
+            quality = parts[3].ifBlank { null },
+            positionMs = parts[4].toLongOrNull() ?: return null,
+            durationMs = parts[5].toLongOrNull() ?: return null,
+            updatedAt = parts[6].toLongOrNull() ?: return null,
+        )
     }
 
     private fun encode(value: String): String =
