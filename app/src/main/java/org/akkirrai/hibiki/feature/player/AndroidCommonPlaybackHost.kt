@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -412,8 +411,8 @@ internal fun AndroidCommonPlaybackHost(
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
                 .padding(bottom = PlayerUnlockBottomPadding),
+            includeSystemBottomInset = true,
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,

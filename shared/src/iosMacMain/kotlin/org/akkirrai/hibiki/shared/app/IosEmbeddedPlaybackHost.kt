@@ -235,6 +235,7 @@ internal fun IosEmbeddedPlaybackHost(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = PlayerUnlockBottomPadding),
+            includeSystemBottomInset = true,
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,
