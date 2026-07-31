@@ -849,6 +849,7 @@ fun HibikiAppShell(
                         playbackJob = null
                         playbackRequestGeneration++
                         activePlaybackRoute = null
+                        pendingPlaybackContext = null
                         episodesPresenter.setState(EpisodesScreenState())
                         resetPlayerState()
                     }
