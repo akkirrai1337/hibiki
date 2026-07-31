@@ -1195,7 +1195,6 @@ fun HibikiAppShell(
                             onRequestNotificationPermission = onRequestOnboardingNotificationPermission,
                             onComplete = { sourceId ->
                                 onboardingSourceId = sourceId
-                                currentSelectedSourceId = sourceId
                                 onboardingCompleted = true
                                 settingsStore.save(
                                     settingsStore.load().copy(
@@ -1203,8 +1202,7 @@ fun HibikiAppShell(
                                         selectedSourceId = sourceId,
                                     ),
                                 )
-                                repository.selectSource(sourceId)
-                                onSourceSelected(sourceId)
+                                handleSourceSelected(sourceId)
                             },
                         )
                     }
