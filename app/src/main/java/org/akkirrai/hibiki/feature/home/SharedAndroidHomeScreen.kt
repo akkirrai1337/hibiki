@@ -1,6 +1,5 @@
 package org.akkirrai.hibiki.feature.home
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.isImeVisible
@@ -48,15 +47,6 @@ fun SharedAndroidHomeScreen(
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
-    BackHandler(enabled = isImeVisible || state.isSearchActive) {
-        if (isImeVisible) {
-            keyboardController?.hide()
-            focusManager.clearFocus(force = true)
-        } else {
-            viewModel.dispatch(HomeAction.ClearSearch)
-        }
-    }
-
     if (isActive) {
         LaunchedEffect(Unit) {
             viewModel.dispatch(HomeAction.Refresh)
@@ -97,6 +87,11 @@ fun SharedAndroidHomeScreen(
         onOpenLibrary = onOpenLibrary,
         sourceBadgeContent = { anime -> AnimeSourceBadge(titleId = anime.id) },
         onItemVisible = { viewModel.dispatch(HomeAction.EnrichDescription(it)) },
+        isImeVisible = isImeVisible,
+        onDismissIme = {
+            keyboardController?.hide()
+            focusManager.clearFocus(force = true)
+        },
         modifier = modifier,
     )
 

@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
 import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
@@ -72,13 +73,26 @@ fun AppHomeScreen(
     onOpenLibrary: () -> Unit,
     sourceBadgeContent: @Composable (Anime) -> Unit = {},
     onItemVisible: (Anime) -> Unit,
+    isImeVisible: Boolean = false,
+    onDismissIme: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var isFilterSheetOpen by remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
+    val searchBackAction = homeSearchBackAction(isImeVisible, state.isSearchActive)
+    AppSystemBackHandler(
+        enabled = searchBackAction != HomeSearchBackAction.None,
+        onBack = {
+            when (searchBackAction) {
+                HomeSearchBackAction.DismissIme -> onDismissIme()
+                HomeSearchBackAction.ClearSearch -> onClearSearch()
+                HomeSearchBackAction.None -> Unit
+            }
+        },
+    ) {
+        var isFilterSheetOpen by remember { mutableStateOf(false) }
+        val pullToRefreshState = rememberPullToRefreshState()
 
-    androidx.compose.foundation.layout.Box(modifier = modifier) {
-        AppHomeContentSwitcher(
+        androidx.compose.foundation.layout.Box(modifier = modifier) {
+            AppHomeContentSwitcher(
             isSearchActive = state.isSearchActive,
             searchContent = {
                 AppHomeSearchResultsZone(
@@ -140,11 +154,11 @@ fun AppHomeScreen(
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true,
             scrimHeight = HomeTopSearchScrimHeight,
-        )
-    }
+            )
+        }
 
-    if (isFilterSheetOpen) {
-        AppCatalogFilterSheet(
+        if (isFilterSheetOpen) {
+            AppCatalogFilterSheet(
             initialFilters = state.searchFilters,
             filterCatalog = state.searchFilterCatalog,
             isFilterCatalogLoading = state.isSearchFilterCatalogLoading,
@@ -166,6 +180,7 @@ fun AppHomeScreen(
             defaultYearRange = defaultCatalogFilterYearRange(currentYear),
             optionText = labels.optionText,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-        )
+            )
+        }
     }
 }
