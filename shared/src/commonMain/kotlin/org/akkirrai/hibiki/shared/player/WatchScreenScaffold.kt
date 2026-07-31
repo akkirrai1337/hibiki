@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppBackButton
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 @Composable
 fun WatchScreenScaffold(
@@ -27,7 +28,26 @@ fun WatchScreenScaffold(
     content: @Composable BoxScope.(PaddingValues) -> Unit,
 ) {
     val density = LocalDensity.current
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val statusBarHeight = if (layoutEnvironment.isProvided) {
+        layoutEnvironment.topSystemInset
+    } else {
+        with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    }
+    val contentModifier = if (layoutEnvironment.isProvided) {
+        when (layoutEnvironment.navigationBarMode) {
+            org.akkirrai.hibiki.shared.layout.AppNavigationBarMode.Inset ->
+                Modifier.padding(bottom = layoutEnvironment.bottomSystemInset)
+            org.akkirrai.hibiki.shared.layout.AppNavigationBarMode.Overlay -> Modifier
+        }
+    } else {
+        Modifier.navigationBarsPadding()
+    }
+    val backButtonModifier = if (layoutEnvironment.isProvided) {
+        Modifier.padding(top = layoutEnvironment.topSystemInset)
+    } else {
+        Modifier.statusBarsPadding()
+    }
     val contentPadding = PaddingValues(
         top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize + WatchScreenContentTopClearance,
     )
@@ -35,7 +55,7 @@ fun WatchScreenScaffold(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
-            .navigationBarsPadding(),
+            .then(contentModifier),
     ) {
         content(contentPadding)
         AppBackButton(
@@ -44,7 +64,7 @@ fun WatchScreenScaffold(
             enabled = backEnabled,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .statusBarsPadding()
+                .then(backButtonModifier)
                 .padding(start = UiDimens.ScreenPadding, top = WatchScreenBackButtonTopPadding),
         )
     }

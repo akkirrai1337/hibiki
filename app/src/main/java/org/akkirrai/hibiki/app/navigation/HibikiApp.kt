@@ -94,6 +94,7 @@ fun HibikiApp(
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val layoutEnvironment = AppLayoutEnvironment(
+        isProvided = true,
         topSystemInset = statusBarTopPadding,
         bottomSystemInset = navigationBarBottomPadding,
         navigationBarMode = AppNavigationBarMode.Inset,

@@ -9,6 +9,7 @@ class AppLayoutEnvironmentTest {
     fun `default environment is safe and inset based`() {
         val environment = AppLayoutEnvironment()
 
+        assertEquals(false, environment.isProvided)
         assertEquals(0.dp, environment.topSystemInset)
         assertEquals(0.dp, environment.bottomSystemInset)
         assertEquals(AppNavigationBarMode.Inset, environment.navigationBarMode)

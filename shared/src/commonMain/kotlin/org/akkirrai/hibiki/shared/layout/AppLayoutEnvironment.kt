@@ -16,6 +16,7 @@ enum class AppScreenEdgePolicy {
 
 /** Platform-neutral window geometry supplied by each host. */
 data class AppLayoutEnvironment(
+    val isProvided: Boolean = false,
     val topSystemInset: Dp = 0.dp,
     val bottomSystemInset: Dp = 0.dp,
     val navigationBarMode: AppNavigationBarMode = AppNavigationBarMode.Inset,
