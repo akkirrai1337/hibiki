@@ -9,6 +9,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -48,11 +53,25 @@ fun main() = application {
                         isProvided = true,
                     ),
                 ) {
-                    Surface {
-                        var navigationState by remember {
-                            mutableStateOf(AppNavigationState(AppTopLevelDestination.CATALOG))
-                        }
-                        var selectedAnime by remember { mutableStateOf<Anime?>(null) }
+                    var navigationState by remember {
+                        mutableStateOf(AppNavigationState(AppTopLevelDestination.CATALOG))
+                    }
+                    var selectedAnime by remember { mutableStateOf<Anime?>(null) }
+                    Surface(
+                        modifier = Modifier.onPreviewKeyEvent { event ->
+                            if (
+                                event.type == KeyEventType.KeyDown &&
+                                event.key == Key.Escape &&
+                                navigationState.backStack.isNotEmpty()
+                            ) {
+                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
+                                selectedAnime = null
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    ) {
                         val detailsRoute = navigationState.currentRoute as? AppRoute.Details
                         AppProductionRoot(
                             currentDestination = navigationState.currentTopLevel,
