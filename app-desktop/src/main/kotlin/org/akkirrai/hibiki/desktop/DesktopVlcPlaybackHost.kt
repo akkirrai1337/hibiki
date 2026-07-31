@@ -57,7 +57,7 @@ internal fun DesktopVlcPlaybackHost(
     val session = remember(playback.streamUrl, playback.headers) {
         DesktopVlcPlaybackSession(playback)
     }
-    var scaleMode by remember(session) { mutableStateOf(VideoScaleMode.FIT) }
+    var scaleMode by remember(session) { mutableStateOf(settingsStore.load().videoScaleMode) }
     var videoWidth by remember(session) { mutableIntStateOf(0) }
     var videoHeight by remember(session) { mutableIntStateOf(0) }
     var playlistVisible by remember(session) { mutableStateOf(false) }
@@ -178,7 +178,10 @@ internal fun DesktopVlcPlaybackHost(
                     playback = playback,
                     context = context,
                     scaleMode = scaleMode,
-                    onScaleClick = { scaleMode = scaleMode.next() },
+                    onScaleClick = {
+                        scaleMode = scaleMode.next()
+                        settingsStore.save(settingsStore.load().copy(videoScaleMode = scaleMode))
+                    },
                     onBack = onBack,
                     playlistEnabled = context.episodes.isNotEmpty(),
                     onPlaylistClick = { playlistVisible = true },
