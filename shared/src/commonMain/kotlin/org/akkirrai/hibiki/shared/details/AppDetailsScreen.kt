@@ -90,7 +90,7 @@ fun AppDetailsScreen(
     onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
-    val relatedTitle = appText(AppTextKey.Related)
+    val relatedTitle = appText(AppTextKey.DetailsRelatedTitle)
     val similarTitle = appText(AppTextKey.Similar)
     val announcementLabel = appText(AppTextKey.Announcement)
     val localizedStatus = resolveDetailsStatusLabel(

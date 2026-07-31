@@ -181,6 +181,7 @@ enum class AppTextKey {
     Studio,
     Genres,
     Related,
+    DetailsRelatedTitle,
     Similar,
     Announcement,
     Movie,
@@ -441,6 +442,7 @@ class DefaultAppTextResolver(
             AppTextKey.Studio -> if (russian) "Студия" else "Studio"
             AppTextKey.Genres -> if (russian) "Жанры" else "Genres"
             AppTextKey.Related -> if (russian) "Связанное" else "Related"
+            AppTextKey.DetailsRelatedTitle -> if (russian) "Связанное" else "Related titles"
             AppTextKey.Similar -> if (russian) "Похожее" else "Similar"
             AppTextKey.Announcement -> if (russian) "Анонс" else "announcement"
             AppTextKey.Movie -> if (russian) "Фильм" else "Movie"
