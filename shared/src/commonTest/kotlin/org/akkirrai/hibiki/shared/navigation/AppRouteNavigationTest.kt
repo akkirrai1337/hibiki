@@ -51,6 +51,23 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `details overlay dismisses before entering watch flow`() {
+        val details = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
+
+        val detailsAfterDismiss = details.reduce(AppNavigationEvent.Back)
+        val player = detailsAfterDismiss
+            .reduce(AppNavigationEvent.Navigate(AppRoute.WatchSources("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Episodes(source)))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+
+        assertEquals(AppRoute.Details("anime-1"), detailsAfterDismiss.currentRoute)
+        assertEquals(emptyList(), detailsAfterDismiss.overlays)
+        assertEquals(AppRoute.Episodes(source), player.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
     fun `back and dismiss close overlays before routes`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
