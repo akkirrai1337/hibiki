@@ -126,6 +126,9 @@ enum class AppTextKey {
     ProfileAnalyticsGenresLabel,
     ProfileAnalyticsWatched,
     ProfileActivity,
+    ProfileDateToday,
+    ProfileDateYesterday,
+    ProfileDateDaysAgo,
     Back,
     Favorite,
     Watch,
@@ -316,6 +319,9 @@ class DefaultAppTextResolver(
             AppTextKey.DiscordStatusError -> if (russian) "Ошибка подключения; повторяем в фоне" else "Connection error; retrying silently"
             AppTextKey.Cancel -> if (russian) "Отмена" else "Cancel"
             AppTextKey.Apply -> if (russian) "Применить" else "Apply"
+            AppTextKey.ProfileDateToday -> if (russian) "Сегодня" else "Today"
+            AppTextKey.ProfileDateYesterday -> if (russian) "Вчера" else "Yesterday"
+            AppTextKey.ProfileDateDaysAgo -> if (russian) "%d дн. назад" else "%d d ago"
             AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
             AppTextKey.SettingsSupport -> if (russian) "Поддержка" else "Support"

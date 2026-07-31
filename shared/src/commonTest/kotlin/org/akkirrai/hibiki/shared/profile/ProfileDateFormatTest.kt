@@ -2,23 +2,25 @@ package org.akkirrai.hibiki.shared.profile
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Clock
 
 class ProfileDateFormatTest {
     @Test
-    fun addedDateUsesTheSelectedAppLanguage() {
-        val januaryFifth2026 = 1_767_571_200_000L
-
-        assertEquals("5 Jan", profileAddedDateLabel(januaryFifth2026, "en"))
-        assertEquals("5 янв.", profileAddedDateLabel(januaryFifth2026, "ru"))
-    }
-
-    @Test
-    fun secondsAndMillisecondsUseTheSameFormattedDate() {
-        val januaryFifth2026Millis = 1_767_571_200_000L
+    fun recentDateUsesAndroidRelativeLabels() {
+        val now = Clock.System.now().epochSeconds
+        val labels = { days: Int -> "$days d ago" }
 
         assertEquals(
-            profileAddedDateLabel(januaryFifth2026Millis, "en"),
-            profileAddedDateLabel(januaryFifth2026Millis / 1_000L, "en"),
+            "Today",
+            profileRecentDateLabel(now, todayLabel = "Today", yesterdayLabel = "Yesterday", daysAgoLabel = labels),
+        )
+        assertEquals(
+            "Yesterday",
+            profileRecentDateLabel(now - 86_400L, todayLabel = "Today", yesterdayLabel = "Yesterday", daysAgoLabel = labels),
+        )
+        assertEquals(
+            "3 d ago",
+            profileRecentDateLabel(now - 3 * 86_400L, todayLabel = "Today", yesterdayLabel = "Yesterday", daysAgoLabel = labels),
         )
     }
 }

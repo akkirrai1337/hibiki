@@ -28,6 +28,25 @@ fun profileAddedDateLabel(value: Long, languageTag: String = "en"): String {
     return "${parts[2].toIntOrNull() ?: parts[2]} ${monthNames.getOrElse(month) { parts[1] }}"
 }
 
+fun profileRecentDateLabel(
+    value: Long,
+    languageTag: String = "en",
+    todayLabel: String,
+    yesterdayLabel: String,
+    daysAgoLabel: (Int) -> String,
+): String {
+    val valueEpochSeconds = if (value in 1 until 1_000_000_000_000L) value else value / 1_000L
+    val today = Clock.System.now().epochSeconds / 86_400L
+    val date = valueEpochSeconds / 86_400L
+    val daysAgo = (today - date).toInt()
+    return when {
+        daysAgo <= 0 -> todayLabel
+        daysAgo == 1 -> yesterdayLabel
+        daysAgo < 7 -> daysAgoLabel(daysAgo)
+        else -> profileAddedDateLabel(value, languageTag)
+    }
+}
+
 private val ENGLISH_MONTHS = listOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

@@ -126,6 +126,7 @@ import org.akkirrai.hibiki.shared.profile.buildLocalProfileSnapshot
 import org.akkirrai.hibiki.shared.profile.defaultProfileActivityDateStrings
 import org.akkirrai.hibiki.shared.profile.profileActivityDateLabel
 import org.akkirrai.hibiki.shared.profile.profileAddedDateLabel
+import org.akkirrai.hibiki.shared.profile.profileRecentDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
@@ -1685,6 +1686,9 @@ private fun AppDestinationContent(
                     systemLanguage = systemLanguage,
                 )
                 AppDestination.PROFILE -> {
+                    val profileDateTodayLabel = appText(AppTextKey.ProfileDateToday)
+                    val profileDateYesterdayLabel = appText(AppTextKey.ProfileDateYesterday)
+                    val profileDateDaysAgoTemplate = appText(AppTextKey.ProfileDateDaysAgo)
                     val categoryLabels = mapOf(
                         LibraryCategory.Watching to appText(AppTextKey.LibraryWatching),
                         LibraryCategory.Planned to appText(AppTextKey.LibraryPlanned),
@@ -1701,7 +1705,15 @@ private fun AppDestinationContent(
                             durationLabel = { duration -> "${formatDurationHours(duration)} h" },
                             categoryLabel = { category -> categoryLabels.getValue(category) },
                             dateLabel = { value ->
-                                profileAddedDateLabel(value, resolveAppLanguageTag(languageMode, systemLanguage))
+                                profileRecentDateLabel(
+                                    value = value,
+                                    languageTag = resolveAppLanguageTag(languageMode, systemLanguage),
+                                    todayLabel = profileDateTodayLabel,
+                                    yesterdayLabel = profileDateYesterdayLabel,
+                                    daysAgoLabel = { days ->
+                                        profileDateDaysAgoTemplate.replace("%d", days.toString())
+                                    },
+                                )
                             },
                             activityDateLabel = ::profileActivityDateLabel,
                         ),
