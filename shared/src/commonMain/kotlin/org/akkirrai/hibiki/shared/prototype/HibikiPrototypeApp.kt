@@ -651,15 +651,15 @@ fun HibikiAppShell(
     }
 
     fun handleSystemBack() {
+        if (navigationState.overlays.isNotEmpty()) {
+            navigationState = navigationState.reduce(AppNavigationEvent.Back)
+            return
+        }
         if (selectedTab == AppDestination.SETTINGS) {
             if (navigationState.currentRoute is AppRoute.Settings) {
                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
             }
             selectedTab = AppDestination.PROFILE
-            return
-        }
-        if (navigationState.overlays.isNotEmpty()) {
-            navigationState = navigationState.reduce(AppNavigationEvent.Back)
             return
         }
         if (activePlaybackRoute != null) {
