@@ -14,6 +14,8 @@ import androidx.compose.ui.Alignment
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
@@ -50,6 +52,7 @@ internal fun IosEmbeddedPlaybackHost(
     settingsStore: AppSettingsStore,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     progressRepository: PlaybackProgressRepository,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
     val session = remember(playback.streamUrl, playback.headers) {
         IosPlayerSession(playback).also {
@@ -162,7 +165,10 @@ internal fun IosEmbeddedPlaybackHost(
                 settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))
             },
             playlistEnabled = context.episodes.isNotEmpty(),
-            onPlaylistClick = { playlistVisible = true },
+            onPlaylistClick = {
+                playlistVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+            },
             hasPreviousEpisode = episodeNavigation.hasPrevious,
             hasNextEpisode = episodeNavigation.hasNext,
             onPreviousEpisode = {
@@ -174,6 +180,7 @@ internal fun IosEmbeddedPlaybackHost(
             onSettingsClick = {
                 settingsDestination = PlayerSettingsDestination.Root
                 settingsVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
             },
             settingsContentDescription = appText(AppTextKey.Settings),
             onControlsVisibilityChanged = { controlsVisible = it },
@@ -190,9 +197,14 @@ internal fun IosEmbeddedPlaybackHost(
             headline = { episode ->
                 appText(AppTextKey.PlayerEpisodeNumber).replace("%s", formatEpisodeNumber(episode.number))
             },
-            onDismissRequest = { playlistVisible = false },
+            onDismissRequest = {
+                playlistVisible = false
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
+                    playlistVisible = false
+                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     savePlaybackProgress()
                     onEpisodeSelected(it)
                 }
@@ -207,6 +219,7 @@ internal fun IosEmbeddedPlaybackHost(
                 onDismissRequest = {
                     settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
                 nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
                 backHandler = { enabled, callback ->
@@ -236,16 +249,19 @@ internal fun IosEmbeddedPlaybackHost(
                     onSelectVoiceover = { source ->
                         dismissPanel()
                         settingsVisible = false
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                     },
                     onSelectPlayer = { playerName ->
                         dismissPanel()
                         settingsVisible = false
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                     },
                     onSelectQuality = { qualityLabel ->
                         dismissPanel()
                         settingsVisible = false
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },
                     onAutoSkipSegmentsChange = { enabled ->
