@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -79,6 +81,10 @@ import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.reduce
+import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
+import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 @Composable
 fun HibikiApp(
@@ -86,6 +92,13 @@ fun HibikiApp(
     onConfigureNotifications: () -> Unit = {},
 ) {
     val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val layoutEnvironment = AppLayoutEnvironment(
+        topSystemInset = statusBarTopPadding,
+        bottomSystemInset = navigationBarBottomPadding,
+        navigationBarMode = AppNavigationBarMode.Inset,
+        edgePolicy = AppScreenEdgePolicy.ContentSafe,
+    )
     val topLevelBottomContentPadding = AppBottomBarHeight + navigationBarBottomPadding + AppBottomBarContentExtraPadding
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -110,20 +123,22 @@ fun HibikiApp(
         )
         discordRpcManager.showGeneralStatus(currentRoute)
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        HibikiNavHost(
-            modifier = Modifier.fillMaxSize(),
-            navController = navController,
-            topLevelBottomContentPadding = topLevelBottomContentPadding,
-            isTopLevelDestination = isTopLevelDestination,
-            currentTopLevel = currentTopLevel,
-            onCheckForUpdates = onCheckForUpdates,
-            onConfigureNotifications = onConfigureNotifications,
-        )
+    CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            HibikiNavHost(
+                modifier = Modifier.fillMaxSize(),
+                navController = navController,
+                topLevelBottomContentPadding = topLevelBottomContentPadding,
+                isTopLevelDestination = isTopLevelDestination,
+                currentTopLevel = currentTopLevel,
+                onCheckForUpdates = onCheckForUpdates,
+                onConfigureNotifications = onConfigureNotifications,
+            )
+        }
     }
 }
 
