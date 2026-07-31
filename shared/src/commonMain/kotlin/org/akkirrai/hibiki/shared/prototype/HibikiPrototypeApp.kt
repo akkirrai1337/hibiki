@@ -837,7 +837,7 @@ fun HibikiAppShell(
                             AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
                             AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
                         }
-                        if (target == topLevelDestination) return
+                        if (target == topLevelDestination && selectedTab == destination) return
                         navigationState = navigationState.reduce(
                             AppNavigationEvent.SelectTopLevel(target),
                         )
