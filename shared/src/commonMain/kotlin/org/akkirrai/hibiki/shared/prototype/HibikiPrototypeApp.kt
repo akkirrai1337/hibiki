@@ -736,9 +736,21 @@ fun HibikiAppShell(
             return
         }
         if (activePlaybackRoute != null) {
+            playbackJob?.cancel()
+            playbackJob = null
+            playbackRequestGeneration++
             activePlaybackRoute = null
             pendingPlaybackContext = null
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
+            if (navigationState.currentRoute is AppRoute.Episodes ||
+                navigationState.currentRoute is AppRoute.WatchSources
+            ) {
+                episodesPresenter.setState(EpisodesScreenState())
+                resetPlayerState()
+                return
+            }
+            resetPlayerState()
+            watchAnime = null
             return
         }
         if (navigationState.backStack.isEmpty()) return
