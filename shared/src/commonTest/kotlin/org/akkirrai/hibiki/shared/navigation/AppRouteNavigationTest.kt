@@ -101,6 +101,29 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `settings back returns to root before dismissing overlay and player`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+            .reduce(
+                AppNavigationEvent.SetPlayerSettingsDestination(
+                    AppPlayerSettingsDestination.Quality,
+                ),
+            )
+
+        val root = state.reduce(AppNavigationEvent.Back)
+        assertEquals(AppPlayerSettingsDestination.Root, root.playerSettingsDestination)
+        assertEquals(listOf(AppOverlay.PlayerSettings), root.overlays)
+        assertEquals(AppRoute.Player("source-1", "episode-1"), root.currentRoute)
+
+        val dismissed = root.reduce(AppNavigationEvent.Back)
+        assertEquals(emptyList(), dismissed.overlays)
+        assertEquals(AppRoute.Player("source-1", "episode-1"), dismissed.currentRoute)
+        assertEquals(AppRoute.Details("anime-1"), dismissed.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
     fun `transition keys are stable and identify route instances`() {
         val first = AppRoute.Player("source-1", "episode-1").transitionKey()
         val same = AppRoute.Player("source-1", "episode-1").transitionKey()
