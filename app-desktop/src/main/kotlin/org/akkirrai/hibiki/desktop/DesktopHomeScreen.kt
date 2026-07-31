@@ -1,8 +1,5 @@
 package org.akkirrai.hibiki.desktop
 
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -16,21 +13,13 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
-import org.akkirrai.hibiki.shared.design.component.AppBottomBarHeight
-import org.akkirrai.hibiki.shared.home.AppHomeContentSwitcher
-import org.akkirrai.hibiki.shared.home.AppHomeFeedZone
-import org.akkirrai.hibiki.shared.home.AppHomeSearchOverlay
-import org.akkirrai.hibiki.shared.home.AppHomeSearchResultsZone
-import org.akkirrai.hibiki.shared.home.HomeSearchEmptyIcon
+import org.akkirrai.hibiki.shared.home.AppHomeScreen
+import org.akkirrai.hibiki.shared.home.AppHomeScreenLabels
 import org.akkirrai.hibiki.shared.home.HomePresenter
-import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
-import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DesktopHomeScreen(
     repository: DesktopHomeRepository,
@@ -42,8 +31,6 @@ fun DesktopHomeScreen(
         HomePresenter(initialState = repository.fallbackHomeState().copy(isLoading = true))
     }
     val state by presenter.state.collectAsState()
-    val listState = rememberLazyListState()
-    val pullToRefreshState = rememberPullToRefreshState()
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
     fun refresh() {
@@ -120,67 +107,55 @@ fun DesktopHomeScreen(
 
     LaunchedEffect(Unit) { refresh() }
 
-    androidx.compose.foundation.layout.Box(modifier = modifier) {
-        AppHomeContentSwitcher(
-            isSearchActive = state.searchQuery.isNotBlank(),
-            modifier = Modifier,
-            searchContent = {
-                AppHomeSearchResultsZone(
-                    state = state.searchResult,
-                    topContentPadding = HomeContentTopPadding,
-                    bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
-                    onAnimeClick = onAnimeClick,
-                    metaText = { anime -> anime.title },
-                    onLoadMore = ::loadMoreSearchResults,
-                    loadMoreLabel = "Load more",
-                    resultsCountLabel = { count -> "$count results" },
-                    emptyTitle = "No results",
-                    emptyMessage = "Try another search.",
-                    emptyIcon = HomeSearchEmptyIcon,
-                    libraryStatusByAnimeId = emptyMap(),
-                    libraryStatusLabel = { "Saved" },
-                    onItemVisible = {},
-                    modifier = Modifier,
-                )
-            },
-            feedContent = {
-                AppHomeFeedZone(
-                    state = state,
-                    listState = listState,
-                    pullToRefreshState = pullToRefreshState,
-                    topContentPadding = HomeContentTopPadding,
-                    bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
-                    indicatorTopPadding = HomePullRefreshIndicatorTopOffset,
-                    continueSectionTitle = "Continue watching",
-                    continueEmptyTitle = "Nothing to continue",
-                    continueEmptyMessage = "Start watching anime to see it here.",
-                    continueOpenHint = "Open",
-                    recentlyWatchedTitle = "Recently watched",
-                    recentlyAddedTitle = "Recently added",
-                    announcementLabel = "Announcement",
-                    movieLabel = "Movie",
-                    personalEmptyTitle = "Your home is empty",
-                    personalEmptyMessage = "Browse the catalog to start building your library.",
-                    personalEmptyActionLabel = "Browse catalog",
-                    onRefresh = ::refresh,
-                    onAnimeClick = onAnimeClick,
-                    onBrowseCatalog = {},
-                    onOpenLibrary = {},
-                    sourceBadgeContent = {},
-                    modifier = Modifier,
-                )
-            },
-        )
-        AppHomeSearchOverlay(
-            query = state.searchQuery,
-            onQueryChange = ::updateSearchQuery,
-            onClear = { updateSearchQuery("") },
-            placeholder = "Search anime",
-            filterContentDescription = "Filters",
-            clearContentDescription = "Clear search",
-            onFilterClick = {},
-            showFilterButton = false,
-            scrimHeight = org.akkirrai.hibiki.shared.home.HomeTopSearchScrimHeight,
-        )
-    }
+    AppHomeScreen(
+        state = state,
+        listState = androidx.compose.foundation.lazy.rememberLazyListState(),
+        bottomContentPadding = 96.dp,
+        currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
+        libraryStatusByAnimeId = emptyMap(),
+        labels = desktopHomeScreenLabels(),
+        onQueryChange = ::updateSearchQuery,
+        onClearSearch = { updateSearchQuery("") },
+        onFilterApply = {},
+        onRefresh = ::refresh,
+        onLoadMoreSearch = ::loadMoreSearchResults,
+        onAnimeClick = onAnimeClick,
+        onBrowseCatalog = {},
+        onOpenLibrary = {},
+        onItemVisible = {},
+        modifier = modifier,
+    )
 }
+
+private fun desktopHomeScreenLabels() = AppHomeScreenLabels(
+    searchPlaceholder = "Search anime",
+    searchFilters = "Filters",
+    searchClear = "Clear search",
+    searchLoadMore = "Load more",
+    searchEmptyTitle = "No results",
+    searchEmptyMessage = "Try another search.",
+    resultsCountLabel = { count -> "$count results" },
+    continueTitle = "Continue watching",
+    continueEmptyTitle = "Nothing to continue",
+    continueEmptyMessage = "Start watching anime to see it here.",
+    continueOpenHint = "Open",
+    recentlyWatchedTitle = "Recently watched",
+    recentlyAddedTitle = "Recently added",
+    announcementLabel = "Announcement",
+    movieLabel = "Movie",
+    personalEmptyTitle = "Your home is empty",
+    personalEmptyMessage = "Browse the catalog to start building your library.",
+    personalEmptyActionLabel = "Browse catalog",
+    filterUnavailable = "Filters unavailable",
+    typeTitle = "Type",
+    genresTitle = "Genres",
+    yearTitle = "Release date",
+    yearAllLabel = "All years",
+    yearFromLabel = "From",
+    yearToLabel = "To",
+    statusTitle = "Status",
+    resetLabel = "Reset",
+    applyLabel = "Apply",
+    libraryStatusLabel = { category -> category.name },
+    optionText = { it.title },
+)
