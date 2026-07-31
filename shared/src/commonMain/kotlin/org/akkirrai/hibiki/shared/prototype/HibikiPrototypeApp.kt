@@ -707,6 +707,7 @@ fun HibikiAppShell(
                     episode = episode,
                     sourceOverride = action.source,
                     preferredQuality = action.source.qualityLabel,
+                    forceRefresh = true,
                     episodesOverride = episodes,
                     replacePlayerRoute = true,
                 )
@@ -725,6 +726,7 @@ fun HibikiAppShell(
                 ),
                 preferredPlayerName = action.playerName,
                 preferredQuality = route.context.selectedQualityLabel,
+                forceRefresh = true,
                 episodesOverride = route.context.episodes,
                 replacePlayerRoute = true,
             )
@@ -742,6 +744,7 @@ fun HibikiAppShell(
                 ),
                 preferredPlayerName = route.context.selectedPlayerName,
                 preferredQuality = action.qualityLabel,
+                forceRefresh = true,
                 episodesOverride = route.context.episodes,
                 replacePlayerRoute = true,
             )
