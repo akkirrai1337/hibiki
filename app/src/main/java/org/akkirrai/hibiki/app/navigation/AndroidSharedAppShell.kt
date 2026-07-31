@@ -124,6 +124,7 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
+            onCheckForUpdates = onCheckForUpdates,
             onProfileAvatarEdit = { onPicked ->
                 pendingAvatarCallback = onPicked
                 avatarPicker.launch(arrayOf("image/*"))

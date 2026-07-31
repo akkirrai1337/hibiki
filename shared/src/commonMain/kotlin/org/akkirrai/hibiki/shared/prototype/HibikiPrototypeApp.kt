@@ -232,6 +232,7 @@ fun HibikiAppShell(
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onRequestOnboardingNotificationPermission: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     profileAvatarEditAvailable: Boolean = false,
@@ -893,6 +894,7 @@ fun HibikiAppShell(
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
                             onConfigureNotifications = onConfigureNotifications,
+                            onCheckForUpdates = onCheckForUpdates,
                             onOpenUrl = onOpenUrl,
                             onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
@@ -1433,6 +1435,7 @@ private fun AppDestinationContent(
     onHomeQueryChange: (String) -> Unit = onQueryChange,
     profileLoading: Boolean = false,
     profileAvatarEditAvailable: Boolean = false,
+    onCheckForUpdates: () -> Unit = {},
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1818,6 +1821,7 @@ private fun AppDestinationContent(
                     discordAvailable = discordAvailable,
                     onDiscordClick = onDiscordClick,
                     onDiscordChange = onDiscordChange,
+                    onCheckForUpdates = onCheckForUpdates,
                 )
         }
     }
@@ -2159,6 +2163,7 @@ private fun SettingsScreen(
     discordAvailable: Boolean = true,
     onDiscordClick: () -> Unit = {},
     onDiscordChange: (Boolean) -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -2203,6 +2208,7 @@ private fun SettingsScreen(
         onAutoSkipChange = onAutoSkipChange,
         onDiscordClick = onDiscordClick,
         onDiscordChange = onDiscordChange,
+        onCheckForUpdates = onCheckForUpdates,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),
