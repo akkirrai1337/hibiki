@@ -593,10 +593,10 @@ fun HibikiAppShell(
             ).beginPlaybackLoad(emptySet())
         }
         playbackJob = scope.launch {
+            val offlinePlayback = offlineWatchDataRepository
+                ?.getOfflinePlayback(sourceForPlayback.sourceId, episode.id)
             val result = runCatching {
-                offlineWatchDataRepository
-                    ?.getOfflinePlayback(sourceForPlayback.sourceId, episode.id)
-                    ?: repositoryForPlayback.resolvePlayback(
+                offlinePlayback ?: repositoryForPlayback.resolvePlayback(
                         sourceId = sourceForPlayback.sourceId,
                         episodeId = episode.id,
                         preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
@@ -605,7 +605,17 @@ fun HibikiAppShell(
                     )
             }
             if (requestGeneration != playbackRequestGeneration) return@launch
-            result.onSuccess { playback ->
+            result.onSuccess { resolvedPlayback ->
+                val playback = if (offlinePlayback != null) {
+                    offlineTitleMetadataRepository
+                        ?.get(watchAnime?.id.orEmpty())
+                        ?.title
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { title -> resolvedPlayback.copy(animeTitle = title) }
+                        ?: resolvedPlayback
+                } else {
+                    resolvedPlayback
+                }
                 val loadedEpisodes = requestEpisodes
                 playerPresenter.update {
                     it.withPlaybackLoaded(
