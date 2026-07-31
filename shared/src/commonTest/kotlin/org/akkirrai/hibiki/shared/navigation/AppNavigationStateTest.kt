@@ -112,6 +112,17 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun detailsPosterPreviewParticipatesInOverlayBackStack() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
+
+        assertEquals(listOf(AppOverlay.DetailsPosterPreview), state.overlays)
+        assertEquals(AppRoute.Details("anime-1"), state.reduce(AppNavigationEvent.Back).currentRoute)
+        assertEquals(emptyList(), state.reduce(AppNavigationEvent.Back).overlays)
+    }
+
+    @Test
     fun playbackOverlaysAreMutuallyExclusive() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))

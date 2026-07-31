@@ -1041,6 +1041,16 @@ fun HibikiAppShell(
                             selectedWatchSource = selectedWatchSource,
                             isPlayerRoute = navigationState.currentRoute is AppRoute.Player,
                             playbackHostAvailable = playbackHost != null,
+                            detailsPosterPreviewOpen = navigationState.overlays.lastOrNull() == AppOverlay.DetailsPosterPreview,
+                            onDetailsPosterPreviewOpenChange = { open ->
+                                navigationState = if (open) {
+                                    navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
+                                } else if (navigationState.overlays.lastOrNull() == AppOverlay.DetailsPosterPreview) {
+                                    navigationState.reduce(AppNavigationEvent.DismissOverlay)
+                                } else {
+                                    navigationState
+                                }
+                            },
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
                             onWatchRetry = {
@@ -1697,6 +1707,8 @@ private fun AppDestinationContent(
     onResumePlayback: (TitleWatchState) -> Unit = {},
     isPlayerRoute: Boolean = false,
     playbackHostAvailable: Boolean = false,
+    detailsPosterPreviewOpen: Boolean? = null,
+    onDetailsPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val navigationLockKey = watchNavigationLockKey(
         animeId = watchAnime?.id,
@@ -1919,6 +1931,8 @@ private fun AppDestinationContent(
             modifier = modifier.fillMaxSize(),
             isDetailsLoading = isDetailsLoading,
             detailsError = detailsError,
+            posterPreviewOpen = detailsPosterPreviewOpen,
+            onPosterPreviewOpenChange = onDetailsPosterPreviewOpenChange,
         )
         return
     }

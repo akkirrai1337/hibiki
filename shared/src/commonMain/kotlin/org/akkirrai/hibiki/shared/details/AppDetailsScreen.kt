@@ -82,6 +82,8 @@ fun AppDetailsScreen(
     onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
     isDetailsLoading: Boolean = false,
     detailsError: String? = null,
+    posterPreviewOpen: Boolean? = null,
+    onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
 ) {
     val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.Related)
@@ -171,6 +173,10 @@ fun AppDetailsScreen(
     var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
         mutableStateOf(initialTitleSeedColor)
     }
+    val posterPreviewVisible = posterPreviewOpen ?: isPosterPreviewOpen
+    fun setPosterPreviewVisible(visible: Boolean) {
+        onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
+    }
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme
     val detailsColorScheme = titleSeedColor?.let { seedColor ->
@@ -186,13 +192,13 @@ fun AppDetailsScreen(
             enabled = detailsOverlayBackTarget(
                 librarySheetOpen = isLibrarySheetOpen,
                 titleSheetOpen = isTitleDetailsSheetOpen,
-                posterPreviewOpen = isPosterPreviewOpen,
+                posterPreviewOpen = posterPreviewVisible,
             ) != DetailsOverlayBackTarget.None,
             onBack = {
-                when (detailsOverlayBackTarget(isLibrarySheetOpen, isTitleDetailsSheetOpen, isPosterPreviewOpen)) {
+                when (detailsOverlayBackTarget(isLibrarySheetOpen, isTitleDetailsSheetOpen, posterPreviewVisible)) {
                     DetailsOverlayBackTarget.Library -> isLibrarySheetOpen = false
                     DetailsOverlayBackTarget.Title -> isTitleDetailsSheetOpen = false
-                    DetailsOverlayBackTarget.Poster -> isPosterPreviewOpen = false
+                    DetailsOverlayBackTarget.Poster -> setPosterPreviewVisible(false)
                     DetailsOverlayBackTarget.None -> Unit
                 }
             },
@@ -215,7 +221,7 @@ fun AppDetailsScreen(
                         canWatch = canWatch,
                         libraryLabel = appText(AppTextKey.Favorite),
                         watchLabel = appText(AppTextKey.Watch),
-                        onPosterClick = { isPosterPreviewOpen = true },
+                        onPosterClick = { setPosterPreviewVisible(true) },
                         onLibraryClick = { isLibrarySheetOpen = true },
                         onPrimaryClick = onWatchClick,
                         posterContent = {
@@ -385,9 +391,9 @@ fun AppDetailsScreen(
             )
         }
 
-        if (isPosterPreviewOpen) {
+        if (posterPreviewVisible) {
             AppDetailsPosterPreviewOverlay(
-                onDismissRequest = { isPosterPreviewOpen = false },
+                onDismissRequest = { setPosterPreviewVisible(false) },
                 backHandler = backHandler,
                 posterContent = { posterModifier ->
                     AppPosterImage(
