@@ -49,7 +49,10 @@ fun WatchScreenScaffold(
         Modifier.statusBarsPadding()
     }
     val contentPadding = PaddingValues(
-        top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize + WatchScreenContentTopClearance,
+        start = WatchSourcesListHorizontalPadding,
+        end = WatchSourcesListHorizontalPadding,
+        top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize,
+        bottom = WatchSourcesListBottomPadding,
     )
     Box(
         modifier = modifier
