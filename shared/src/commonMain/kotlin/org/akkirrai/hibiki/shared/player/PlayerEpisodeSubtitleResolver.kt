@@ -7,10 +7,18 @@ fun resolvePlayerEpisodeSubtitle(
     state: PlayerUiState,
     episodeLabel: @Composable (String) -> String,
 ): String = resolveLocalizedEpisodeTitle(
-    resolveCurrentEpisodeTitle(
+    title = resolveCurrentEpisodeTitle(
         playbackTitle = state.playback?.episodeTitle,
         currentEpisodeId = state.currentEpisodeId,
         episodes = state.episodes,
-    ),
+    ).let { fallbackTitle ->
+        if (state.playback?.episodeTitle.isNullOrBlank()) {
+            resolveCurrentEpisodeNumber(state.currentEpisodeId, state.episodes)
+                ?.let { number -> episodeLabel(number) }
+                ?: fallbackTitle
+        } else {
+            fallbackTitle
+        }
+    },
     episodeLabel = episodeLabel,
 )

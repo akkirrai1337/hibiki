@@ -10,8 +10,14 @@ fun resolveCurrentEpisodeTitle(
     val title = playbackTitle.orEmpty().trim()
     if (title.isNotBlank()) return title
 
-    return episodes
-        .firstOrNull { it.id == currentEpisodeId }
-        ?.let { "Episode ${formatEpisodeNumber(it.number)}" }
+    return resolveCurrentEpisodeNumber(currentEpisodeId, episodes)
+        ?.let { "Episode $it" }
         .orEmpty()
 }
+
+fun resolveCurrentEpisodeNumber(
+    currentEpisodeId: String?,
+    episodes: List<WatchEpisode>,
+): String? = episodes
+    .firstOrNull { it.id == currentEpisodeId }
+    ?.let { formatEpisodeNumber(it.number) }
