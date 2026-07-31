@@ -237,4 +237,12 @@ class AppRouteNavigationTest {
 
         assertEquals(AppRoute.Episodes(source), loaded.reduce(AppNavigationEvent.Back).currentRoute)
     }
+
+    @Test
+    fun `player back keeps watch anime only inside watch flow`() {
+        assertTrue(shouldKeepWatchAnimeAfterPlayerBack(AppRoute.WatchSources("anime-1")))
+        assertTrue(shouldKeepWatchAnimeAfterPlayerBack(AppRoute.Episodes(source)))
+        assertTrue(!shouldKeepWatchAnimeAfterPlayerBack(AppRoute.Details("anime-1")))
+        assertTrue(!shouldKeepWatchAnimeAfterPlayerBack(AppRoute.TopLevel(AppTopLevelDestination.HOME)))
+    }
 }

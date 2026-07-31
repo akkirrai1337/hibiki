@@ -160,6 +160,7 @@ import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
 import org.akkirrai.hibiki.shared.navigation.currentRoute
 import org.akkirrai.hibiki.shared.navigation.reduce
+import org.akkirrai.hibiki.shared.navigation.shouldKeepWatchAnimeAfterPlayerBack
 import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
@@ -742,6 +743,9 @@ fun HibikiAppShell(
                 playbackJob = null
                 pendingPlaybackContext = null
                 resetPlayerState()
+                if (!shouldKeepWatchAnimeAfterPlayerBack(navigationState.currentRoute)) {
+                    watchAnime = null
+                }
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
                 playbackJob?.cancel()
