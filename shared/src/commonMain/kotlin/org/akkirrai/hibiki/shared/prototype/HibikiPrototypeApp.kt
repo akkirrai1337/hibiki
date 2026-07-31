@@ -1072,7 +1072,12 @@ fun HibikiAppShell(
                                 activePlaybackRoute = null
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
-                            onEpisodeSelected = ::requestPlayback,
+                            onEpisodeSelected = { episode ->
+                                requestPlayback(
+                                    episode = episode,
+                                    replacePlayerRoute = true,
+                                )
+                            },
                             onSettingsAction = ::handlePlaybackSettingsAction,
                             onOverlayEvent = { event -> navigationState = navigationState.reduce(event) },
                             content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
