@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,24 +13,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
-import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetPadding
 
 @Composable
 fun AppDetailsTitleSheetContent(
     title: String,
     description: String,
 ) {
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val bottomInsetModifier = if (
-        layoutEnvironment.isProvided && layoutEnvironment.navigationBarMode == AppNavigationBarMode.Inset
-    ) {
-        Modifier.padding(bottom = layoutEnvironment.bottomSystemInset)
-    } else if (layoutEnvironment.isProvided) {
-        Modifier
-    } else {
-        Modifier.navigationBarsPadding()
-    }
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
@@ -59,7 +47,7 @@ fun AppDetailsTitleSheetContent(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = DetailsTitleSheetDescriptionHorizontalPadding, vertical = DetailsTitleSheetDescriptionVerticalPadding)
-                .then(bottomInsetModifier),
+                .appBottomSystemInsetPadding(),
         )
     }
 }
