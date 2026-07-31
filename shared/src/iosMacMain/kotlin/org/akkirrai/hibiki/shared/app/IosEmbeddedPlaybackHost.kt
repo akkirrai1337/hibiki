@@ -257,17 +257,14 @@ internal fun IosEmbeddedPlaybackHost(
                     },
                     onSelectVoiceover = { source ->
                         dismissPanel()
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                     },
                     onSelectPlayer = { playerName ->
                         dismissPanel()
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                     },
                     onSelectQuality = { qualityLabel ->
                         dismissPanel()
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },
                     onAutoSkipSegmentsChange = { enabled ->

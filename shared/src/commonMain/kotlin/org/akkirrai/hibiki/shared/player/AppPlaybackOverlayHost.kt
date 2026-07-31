@@ -38,9 +38,22 @@ fun AppPlaybackOverlayHost(
         }
         onEpisodeSelected(episode)
     }
+    val handleSettingsAction: (PlaybackSettingsAction) -> Unit = { action ->
+        if (
+            navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings &&
+            (
+                action is PlaybackSettingsAction.SelectVoiceover ||
+                    action is PlaybackSettingsAction.SelectPlayer ||
+                    action is PlaybackSettingsAction.SelectQuality
+                )
+        ) {
+            onOverlayEvent(AppNavigationEvent.DismissOverlay)
+        }
+        onSettingsAction(action)
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         if (playback != null) {
-            content(playback, context, navigationState, onDismiss, handleEpisodeSelected, onSettingsAction, onOverlayEvent)
+            content(playback, context, navigationState, onDismiss, handleEpisodeSelected, handleSettingsAction, onOverlayEvent)
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))
         }
