@@ -775,9 +775,8 @@ fun HibikiAppShell(
                 AppSystemBackHandler(
                     enabled = appBackHandlerEnabled(
                         selectedTab = selectedTab,
-                        hasBackStack = navigationState.backStack.isNotEmpty(),
+                        currentRoute = navigationState.currentRoute,
                         hasOverlay = navigationState.overlays.isNotEmpty(),
-                        hasActivePlayback = activePlaybackRoute != null,
                     ),
                     onBack = ::handleSystemBack,
                 ) {

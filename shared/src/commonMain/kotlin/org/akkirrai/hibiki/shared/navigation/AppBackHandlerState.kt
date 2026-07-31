@@ -1,12 +1,10 @@
 package org.akkirrai.hibiki.shared.navigation
 
-/** Whether the platform back bridge must be active for the current shared shell state. */
+/** Whether the platform back bridge must be active for the current shared shell route. */
 fun appBackHandlerEnabled(
     selectedTab: AppDestination,
-    hasBackStack: Boolean,
+    currentRoute: AppRoute,
     hasOverlay: Boolean,
-    hasActivePlayback: Boolean,
 ): Boolean = selectedTab == AppDestination.SETTINGS ||
-    hasBackStack ||
-    hasOverlay ||
-    hasActivePlayback
+    currentRoute !is AppRoute.TopLevel ||
+    hasOverlay

@@ -10,9 +10,8 @@ class AppBackHandlerStateTest {
         assertTrue(
             appBackHandlerEnabled(
                 selectedTab = AppDestination.SETTINGS,
-                hasBackStack = false,
+                currentRoute = AppRoute.TopLevel(AppTopLevelDestination.PROFILE),
                 hasOverlay = false,
-                hasActivePlayback = false,
             ),
         )
     }
@@ -22,9 +21,8 @@ class AppBackHandlerStateTest {
         assertFalse(
             appBackHandlerEnabled(
                 selectedTab = AppDestination.HOME,
-                hasBackStack = false,
+                currentRoute = AppRoute.TopLevel(AppTopLevelDestination.HOME),
                 hasOverlay = false,
-                hasActivePlayback = false,
             ),
         )
     }
@@ -34,9 +32,8 @@ class AppBackHandlerStateTest {
         assertTrue(
             appBackHandlerEnabled(
                 selectedTab = AppDestination.HOME,
-                hasBackStack = true,
+                currentRoute = AppRoute.Details("anime-1"),
                 hasOverlay = false,
-                hasActivePlayback = false,
             ),
         )
     }
@@ -46,9 +43,8 @@ class AppBackHandlerStateTest {
         assertTrue(
             appBackHandlerEnabled(
                 selectedTab = AppDestination.HOME,
-                hasBackStack = false,
+                currentRoute = AppRoute.TopLevel(AppTopLevelDestination.HOME),
                 hasOverlay = true,
-                hasActivePlayback = false,
             ),
         )
     }
@@ -58,9 +54,8 @@ class AppBackHandlerStateTest {
         assertTrue(
             appBackHandlerEnabled(
                 selectedTab = AppDestination.HOME,
-                hasBackStack = false,
+                currentRoute = AppRoute.Player("source-1", "episode-1"),
                 hasOverlay = false,
-                hasActivePlayback = true,
             ),
         )
     }
