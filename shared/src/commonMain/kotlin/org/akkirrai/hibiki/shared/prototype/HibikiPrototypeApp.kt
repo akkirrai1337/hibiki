@@ -1926,7 +1926,7 @@ private fun AppDestinationContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding(),
+            .then(topInsetModifier),
     ) {
         when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(
