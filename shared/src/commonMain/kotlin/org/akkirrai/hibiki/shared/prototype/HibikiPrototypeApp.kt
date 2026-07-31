@@ -1190,6 +1190,7 @@ fun HibikiAppShell(
                         AppOnboardingScreen(
                             sources = sources,
                             initialSourceId = onboardingSourceId,
+                            systemLanguage = systemLanguage,
                             notificationPermissionState = onboardingNotificationPermissionState,
                             onRequestNotificationPermission = onRequestOnboardingNotificationPermission,
                             onComplete = { sourceId ->

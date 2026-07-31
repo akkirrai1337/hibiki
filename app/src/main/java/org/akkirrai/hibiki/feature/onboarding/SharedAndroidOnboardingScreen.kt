@@ -61,6 +61,7 @@ fun SharedAndroidOnboardingScreen(
         AppOnboardingScreen(
             sources = appSources,
             initialSourceId = initialSource?.value,
+            systemLanguage = systemLanguage,
             notificationPermissionState = notificationPermissionState,
             onRequestNotificationPermission = onRequestNotificationPermission,
             onComplete = { sourceId -> onComplete(SourceId(sourceId)) },

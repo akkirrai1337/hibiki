@@ -29,6 +29,7 @@ import org.jetbrains.compose.resources.painterResource
 fun AppOnboardingScreen(
     sources: List<AppSourceDescriptor>,
     initialSourceId: String?,
+    systemLanguage: String = "en",
     notificationPermissionState: NotificationPermissionState,
     onRequestNotificationPermission: () -> Unit,
     onComplete: (String) -> Unit,
@@ -43,7 +44,18 @@ fun AppOnboardingScreen(
     var stepName by rememberSaveable { mutableStateOf(OnboardingStep.WELCOME.name) }
     var selectedSourceId by rememberSaveable { mutableStateOf(initialSourceId) }
     val step = OnboardingStep.valueOf(stepName)
-    val displayedSources = sources
+    val displayedSources = includeSelectedOnboardingSource(
+        allSources = sources,
+        visibleSources = filterOnboardingSourcesByLanguage(
+            sources = sources,
+            systemLanguage = systemLanguage,
+            russianTag = "ru",
+            englishTag = "en",
+            languageTags = AppSourceDescriptor::languageTags,
+        ),
+        selectedKey = initialSourceId,
+        keyOf = AppSourceDescriptor::id,
+    )
 
     LaunchedEffect(displayedSources, initialSourceId) {
         if (selectedSourceId == null && displayedSources.size == 1) {
