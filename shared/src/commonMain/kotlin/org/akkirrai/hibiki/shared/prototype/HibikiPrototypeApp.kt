@@ -139,6 +139,11 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
+import org.akkirrai.hibiki.shared.navigation.AppRoute
+import org.akkirrai.hibiki.shared.navigation.currentRoute
+import org.akkirrai.hibiki.shared.navigation.reduce
+import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
@@ -159,8 +164,6 @@ import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
-import org.akkirrai.hibiki.shared.player.WatchFlowDestination
-import org.akkirrai.hibiki.shared.player.backDestination
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.PlaybackRoute
 
@@ -216,8 +219,10 @@ fun HibikiAppShell(
     var episodesLoadGeneration by remember { mutableStateOf(0) }
     val episodesPresenter = remember(watchRepository) { org.akkirrai.hibiki.shared.player.EpisodesPresenter() }
     val episodesState by episodesPresenter.state.collectAsState()
-    var watchDestination by remember { mutableStateOf<WatchFlowDestination>(WatchFlowDestination.Sources) }
-    val selectedWatchSource = (watchDestination as? WatchFlowDestination.Episodes)?.source
+    var navigationState by remember { mutableStateOf(AppNavigationState()) }
+    val selectedWatchSource = navigationState.backStack.asReversed()
+        .mapNotNull { (it as? AppRoute.Episodes)?.source }
+        .firstOrNull()
     var playbackError by remember { mutableStateOf<String?>(null) }
     var playbackLoading by remember { mutableStateOf(false) }
     var playbackRequestGeneration by remember { mutableStateOf(0) }
@@ -454,6 +459,8 @@ fun HibikiAppShell(
                             append(watchAnime?.id.orEmpty())
                             append(':')
                             append(selectedWatchSource?.sourceId.orEmpty())
+                            append(':')
+                            append(navigationState.currentRoute.transitionKey().identity)
                         },
                         modifier = Modifier
                             .fillMaxSize()
@@ -519,11 +526,17 @@ fun HibikiAppShell(
                             isDetailsLoading = state.isDetailsLoading,
                             detailsError = state.detailsError,
                             watchAnime = watchAnime,
-                            onWatchClick = { anime -> watchAnime = anime },
+                            onWatchClick = { anime ->
+                                watchAnime = anime
+                                navigationState = navigationState.reduce(
+                                    AppNavigationEvent.Navigate(AppRoute.WatchSources(anime.id)),
+                                )
+                            },
                             onBackFromWatch = {
-                                val previousWatchDestination = watchDestination.backDestination()
-                                if (previousWatchDestination != null) {
-                                    watchDestination = previousWatchDestination
+                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
+                                if (navigationState.currentRoute is AppRoute.Episodes ||
+                                    navigationState.currentRoute is AppRoute.WatchSources
+                                ) {
                                     episodesPresenter.setState(EpisodesScreenState())
                                     playbackError = null
                                     playbackLoading = false
@@ -532,7 +545,6 @@ fun HibikiAppShell(
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
-                                watchDestination = WatchFlowDestination.Sources
                                 playbackError = null
                                 playbackLoading = false
                                 watchAnime = null
@@ -556,7 +568,9 @@ fun HibikiAppShell(
                                 playbackRequestGeneration++
                                 playbackError = null
                                 playbackLoading = false
-                                watchDestination = WatchFlowDestination.Episodes(source)
+                                navigationState = navigationState.reduce(
+                                    AppNavigationEvent.Navigate(AppRoute.Episodes(source)),
+                                )
                             },
                             onWatchEpisodeClick = { episode ->
                                 val repositoryForPlayback = watchRepository
@@ -580,6 +594,15 @@ fun HibikiAppShell(
                                         }
                                         result.onSuccess { playback ->
                                                 playbackLoading = false
+                                                navigationState = navigationState.reduce(
+                                                    AppNavigationEvent.Navigate(
+                                                        AppRoute.Player(
+                                                            sourceId = sourceForPlayback.sourceId,
+                                                            episodeId = episode.id,
+                                                            episodeNumber = episode.number,
+                                                        ),
+                                                    ),
+                                                )
                                                 val context = org.akkirrai.hibiki.shared.model.PlaybackContext(
                                                         titleId = watchAnime?.id.orEmpty(),
                                                         sourceId = sourceForPlayback.sourceId,
@@ -686,6 +709,7 @@ fun HibikiAppShell(
                         Box(modifier = Modifier.fillMaxSize()) {
                             playbackHost(route.playback, route.context) {
                                 activePlaybackRoute = null
+                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             }
                         }
                     }

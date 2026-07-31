@@ -2,12 +2,36 @@ package org.akkirrai.hibiki.shared.navigation
 
 data class AppNavigationState(
     val currentTopLevel: AppTopLevelDestination = AppTopLevelDestination.HOME,
+    val backStack: List<AppRoute> = emptyList(),
+    val overlays: List<AppOverlay> = emptyList(),
 )
 
-/** Applies only navigation state changes that are platform-neutral. */
+val AppNavigationState.currentRoute: AppRoute
+    get() = backStack.lastOrNull() ?: AppRoute.TopLevel(currentTopLevel)
+
+/** Applies Android's existing push/pop behavior without depending on a platform navigator. */
 fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = when (event) {
-    is AppNavigationEvent.SelectTopLevel -> copy(currentTopLevel = event.destination)
-    AppNavigationEvent.Back,
-    is AppNavigationEvent.OpenDetails,
-    -> this
+    is AppNavigationEvent.SelectTopLevel -> copy(
+        currentTopLevel = event.destination,
+        backStack = emptyList(),
+        overlays = emptyList(),
+    )
+    is AppNavigationEvent.Navigate -> when (val route = event.route) {
+        is AppRoute.TopLevel -> reduce(AppNavigationEvent.SelectTopLevel(route.destination))
+        else -> copy(backStack = backStack + route)
+    }
+    is AppNavigationEvent.Replace -> when (val route = event.route) {
+        is AppRoute.TopLevel -> reduce(AppNavigationEvent.SelectTopLevel(route.destination))
+        else -> copy(backStack = backStack.dropLast(1) + route)
+    }
+    is AppNavigationEvent.PresentOverlay -> copy(overlays = overlays + event.overlay)
+    AppNavigationEvent.DismissOverlay -> copy(overlays = overlays.dropLast(1))
+    AppNavigationEvent.Back -> when {
+        overlays.isNotEmpty() -> copy(overlays = overlays.dropLast(1))
+        backStack.isNotEmpty() -> copy(backStack = backStack.dropLast(1))
+        else -> this
+    }
+    is AppNavigationEvent.OpenDetails -> reduce(
+        AppNavigationEvent.Navigate(AppRoute.Details(event.animeId)),
+    )
 }

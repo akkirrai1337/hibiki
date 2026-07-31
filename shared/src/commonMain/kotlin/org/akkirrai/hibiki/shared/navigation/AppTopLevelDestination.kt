@@ -24,6 +24,10 @@ enum class AppTopLevelDestination(
 
 sealed interface AppNavigationEvent {
     data class SelectTopLevel(val destination: AppTopLevelDestination) : AppNavigationEvent
+    data class Navigate(val route: AppRoute) : AppNavigationEvent
+    data class Replace(val route: AppRoute) : AppNavigationEvent
+    data class PresentOverlay(val overlay: AppOverlay) : AppNavigationEvent
+    data object DismissOverlay : AppNavigationEvent
     data object Back : AppNavigationEvent
     data class OpenDetails(val animeId: String) : AppNavigationEvent
 }

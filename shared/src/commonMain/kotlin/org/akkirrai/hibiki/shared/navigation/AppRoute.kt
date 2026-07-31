@@ -1,0 +1,44 @@
+package org.akkirrai.hibiki.shared.navigation
+
+import org.akkirrai.hibiki.shared.design.AppMotion
+import org.akkirrai.hibiki.shared.model.WatchSource
+
+/** The platform-neutral destinations used by the application shell. */
+sealed interface AppRoute {
+    data class TopLevel(val destination: AppTopLevelDestination) : AppRoute
+    data class Details(val animeId: String) : AppRoute
+    data class WatchSources(val animeId: String, val downloadMode: Boolean = false) : AppRoute
+    data class Episodes(
+        val source: WatchSource,
+        val downloadMode: Boolean = false,
+    ) : AppRoute
+    data class Player(
+        val sourceId: String,
+        val episodeId: String,
+        val episodeNumber: Double? = null,
+    ) : AppRoute
+}
+
+/** Modal UI belongs to the same common stack and is dismissed before routes. */
+sealed interface AppOverlay {
+    data object Playlist : AppOverlay
+    data object PlayerSettings : AppOverlay
+    data class Dialog(val id: String) : AppOverlay
+    data class Sheet(val id: String) : AppOverlay
+}
+
+data class AppTransitionKey(val route: String, val identity: String)
+
+fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
+    is AppRoute.TopLevel -> AppTransitionKey("top-level", destination.route)
+    is AppRoute.Details -> AppTransitionKey("details", animeId)
+    is AppRoute.WatchSources -> AppTransitionKey("watch-sources", animeId)
+    is AppRoute.Episodes -> AppTransitionKey("episodes", source.sourceId)
+    is AppRoute.Player -> AppTransitionKey("player", "$sourceId:$episodeId")
+}
+
+data class AppTransitionSpec(
+    val enterKey: AppTransitionKey,
+    val exitKey: AppTransitionKey?,
+    val durationMillis: Int = AppMotion.ScreenTransitionDurationMillis,
+)

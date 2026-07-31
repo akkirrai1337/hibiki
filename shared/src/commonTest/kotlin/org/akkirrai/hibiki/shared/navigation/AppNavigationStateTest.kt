@@ -18,6 +18,9 @@ class AppNavigationStateTest {
         val state = AppNavigationState(AppTopLevelDestination.CATALOG)
 
         assertEquals(state, state.reduce(AppNavigationEvent.Back))
-        assertEquals(state, state.reduce(AppNavigationEvent.OpenDetails("anime-1")))
+        assertEquals(
+            AppRoute.Details("anime-1"),
+            state.reduce(AppNavigationEvent.OpenDetails("anime-1")).currentRoute,
+        )
     }
 }
