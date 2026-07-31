@@ -218,6 +218,7 @@ import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
 import org.akkirrai.hibiki.shared.player.resolveResumeWatchState
+import org.akkirrai.hibiki.shared.player.resolveCurrentEpisode
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -593,8 +594,6 @@ fun HibikiAppShell(
             ).beginPlaybackLoad(emptySet())
         }
         playbackJob = scope.launch {
-            val offlinePlayback = offlineWatchDataRepository
-                ?.getOfflinePlayback(sourceForPlayback.sourceId, episode.id)
             val loadedEpisodes = if (requestEpisodes.isNotEmpty()) {
                 requestEpisodes
             } else {
@@ -605,10 +604,20 @@ fun HibikiAppShell(
                         repositoryForPlayback.getEpisodes(sourceForPlayback.sourceId)
                     }.getOrDefault(emptyList())
             }
+            val effectiveEpisode = resolveCurrentEpisode(
+                requestedEpisodeId = episode.id,
+                requestedEpisodeNumber = episode.number,
+                episodes = loadedEpisodes,
+                currentEpisodes = requestEpisodes,
+            ) ?: episode
+            val effectiveEpisodeId = effectiveEpisode.id
+            val effectiveEpisodeNumber = effectiveEpisode.number
+            val offlinePlayback = offlineWatchDataRepository
+                ?.getOfflinePlayback(sourceForPlayback.sourceId, effectiveEpisodeId)
             val result = runCatching {
                 offlinePlayback ?: repositoryForPlayback.resolvePlayback(
                         sourceId = sourceForPlayback.sourceId,
-                        episodeId = episode.id,
+                        episodeId = effectiveEpisodeId,
                         preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
                         preferredPlayerName = effectivePlayerName,
                         forceRefresh = forceRefresh,
@@ -630,10 +639,10 @@ fun HibikiAppShell(
                     it.withPlaybackLoaded(
                         stream = playback,
                         episodes = loadedEpisodes,
-                        episodeId = episode.id,
-                        episodeNumber = episode.number,
+                        episodeId = effectiveEpisodeId,
+                        episodeNumber = effectiveEpisodeNumber,
                         savedSeekMs = progressRepository
-                            ?.getPlaybackProgress(watchAnime?.id.orEmpty(), episode.id)
+                            ?.getPlaybackProgress(watchAnime?.id.orEmpty(), effectiveEpisodeId)
                             ?.let { progress ->
                                 org.akkirrai.hibiki.shared.player.resolveResumablePlaybackPosition(
                                     progress.positionMs,
@@ -642,8 +651,17 @@ fun HibikiAppShell(
                             },
                     )
                 }
-                navigationState = navigationState.reduce(AppNavigationEvent.Replace(playerRoute))
-                val context = requestContext.copy(episodes = loadedEpisodes)
+                val effectivePlayerRoute = AppRoute.Player(
+                    sourceId = sourceForPlayback.sourceId,
+                    episodeId = effectiveEpisodeId,
+                    episodeNumber = effectiveEpisodeNumber,
+                )
+                navigationState = navigationState.reduce(AppNavigationEvent.Replace(effectivePlayerRoute))
+                val context = requestContext.copy(
+                    episodeId = effectiveEpisodeId,
+                    episodeNumber = effectiveEpisodeNumber,
+                    episodes = loadedEpisodes,
+                )
                 pendingPlaybackContext = null
                 onPlaybackSelectionChanged(
                     org.akkirrai.hibiki.shared.model.PlaybackSelection(
@@ -664,8 +682,8 @@ fun HibikiAppShell(
                     it.withPlaybackError(
                         message = error.message ?: "Unable to resolve playback",
                         episodes = loadedEpisodes,
-                        episodeId = episode.id,
-                        episodeNumber = episode.number,
+                        episodeId = effectiveEpisodeId,
+                        episodeNumber = effectiveEpisodeNumber,
                     )
                 }
                 println("Hibiki playback resolution failed: ${error.message ?: error::class.simpleName}")
