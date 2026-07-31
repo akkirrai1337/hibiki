@@ -27,12 +27,14 @@ import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.home.HomePullRefreshIndicatorTopOffset
 import org.akkirrai.hibiki.shared.home.HomeContentTopPadding
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.model.SearchUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DesktopHomeScreen(
     repository: DesktopHomeRepository,
+    onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -127,7 +129,7 @@ fun DesktopHomeScreen(
                     state = state.searchResult,
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
-                    onAnimeClick = {},
+                    onAnimeClick = onAnimeClick,
                     metaText = { anime -> anime.title },
                     onLoadMore = ::loadMoreSearchResults,
                     loadMoreLabel = "Load more",
@@ -161,7 +163,7 @@ fun DesktopHomeScreen(
                     personalEmptyMessage = "Browse the catalog to start building your library.",
                     personalEmptyActionLabel = "Browse catalog",
                     onRefresh = ::refresh,
-                    onAnimeClick = {},
+                    onAnimeClick = onAnimeClick,
                     onBrowseCatalog = {},
                     onOpenLibrary = {},
                     sourceBadgeContent = {},

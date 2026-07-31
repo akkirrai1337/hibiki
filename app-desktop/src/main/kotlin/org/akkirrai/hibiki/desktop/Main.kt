@@ -83,7 +83,15 @@ fun main() = application {
                                 )
                             } else {
                                 when (navigationState.currentTopLevel) {
-                                    AppTopLevelDestination.HOME -> DesktopHomeScreen(repository = homeRepository)
+                                    AppTopLevelDestination.HOME -> DesktopHomeScreen(
+                                        repository = homeRepository,
+                                        onAnimeClick = { anime ->
+                                            selectedAnime = anime
+                                            navigationState = navigationState.reduce(
+                                                AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
+                                            )
+                                        },
+                                    )
                                     AppTopLevelDestination.CATALOG -> DesktopCatalogScreen(
                                         repository = catalogRepository,
                                         onAnimeClick = { anime ->
