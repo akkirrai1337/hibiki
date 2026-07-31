@@ -248,9 +248,13 @@ internal fun DesktopVlcPlaybackHost(
                 onNextEpisode = { selectAdjacentEpisode(1) },
                     onLockClick = {
                         controlsLocked = true
+                        controlsVisible = false
                         unlockButtonVisible = true
                         if (playlistVisible) {
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                        }
+                        if (settingsVisible) {
+                            onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                         }
                     },
                     lockContentDescription = appText(AppTextKey.PlayerLock),
@@ -267,6 +271,7 @@ internal fun DesktopVlcPlaybackHost(
                 onClick = {
                     controlsLocked = false
                     unlockButtonVisible = false
+                    controlsVisible = true
                 },
                 contentDescription = null,
                 modifier = Modifier
