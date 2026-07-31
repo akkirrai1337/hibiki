@@ -77,4 +77,17 @@ class AppNavigationStateTest {
         assertEquals(emptyList(), dismissed.overlays)
         assertEquals(AppPlayerSettingsDestination.Root, dismissed.playerSettingsDestination)
     }
+
+    @Test
+    fun playbackOverlaysAreMutuallyExclusive() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+
+        assertEquals(listOf(AppOverlay.PlayerSettings), state.overlays)
+        assertEquals(
+            emptyList(),
+            state.reduce(AppNavigationEvent.Back).overlays,
+        )
+    }
 }

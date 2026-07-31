@@ -26,14 +26,22 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
         is AppRoute.TopLevel -> reduce(AppNavigationEvent.SelectTopLevel(route.destination))
         else -> copy(backStack = backStack.dropLast(1) + route)
     }
-    is AppNavigationEvent.PresentOverlay -> copy(
-        overlays = overlays + event.overlay,
-        playerSettingsDestination = if (event.overlay is AppOverlay.PlayerSettings) {
-            AppPlayerSettingsDestination.Root
-        } else {
-            playerSettingsDestination
-        },
-    )
+    is AppNavigationEvent.PresentOverlay -> {
+        val playbackOverlay = event.overlay is AppOverlay.Playlist ||
+            event.overlay is AppOverlay.PlayerSettings
+        copy(
+            overlays = if (playbackOverlay) {
+                overlays.filterNot { it is AppOverlay.Playlist || it is AppOverlay.PlayerSettings } + event.overlay
+            } else {
+                overlays + event.overlay
+            },
+            playerSettingsDestination = if (event.overlay is AppOverlay.PlayerSettings) {
+                AppPlayerSettingsDestination.Root
+            } else {
+                playerSettingsDestination
+            },
+        )
+    }
     AppNavigationEvent.DismissOverlay -> copy(
         overlays = overlays.dropLast(1),
         playerSettingsDestination = if (overlays.lastOrNull() is AppOverlay.PlayerSettings) {
