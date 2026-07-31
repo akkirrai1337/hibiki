@@ -202,6 +202,7 @@ import org.akkirrai.hibiki.shared.player.loadedEpisodesState
 import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
 import org.akkirrai.hibiki.shared.player.withPlaybackError
 import org.akkirrai.hibiki.shared.player.PlaybackRequest
+import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
@@ -1623,13 +1624,6 @@ private fun AppDestinationContent(
                         )
                     }
                     Column(modifier = Modifier.fillMaxSize()) {
-                        playbackError?.let { message ->
-                            Text(
-                                text = message,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(start = 16.dp, top = 56.dp, end = 16.dp, bottom = 8.dp),
-                            )
-                        }
                         if (playbackLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -1725,6 +1719,14 @@ private fun AppDestinationContent(
                         },
                         listContentPadding = listContentPadding,
                         modifier = Modifier.weight(1f),
+                        )
+                    }
+                    playbackError?.let { message ->
+                        AppPlayerErrorOverlay(
+                            message = message,
+                            title = appText(AppTextKey.PlayerErrorTitle),
+                            retryLabel = appText(AppTextKey.PlayerRetry),
+                            onRetry = onWatchRetry,
                         )
                     }
                 }

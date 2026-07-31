@@ -69,6 +69,8 @@ enum class AppTextKey {
     PlayerSettingsOn,
     PlayerSettingsOff,
     PlayerEpisodeNumber,
+    PlayerErrorTitle,
+    PlayerRetry,
     PlayerLock,
     PlayerUnlock,
     PlayerPictureInPicture,
@@ -301,6 +303,8 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerSettingsOn -> if (russian) "Вкл" else "On"
             AppTextKey.PlayerSettingsOff -> if (russian) "Выкл" else "Off"
             AppTextKey.PlayerEpisodeNumber -> if (russian) "Серия %s" else "Episode %s"
+            AppTextKey.PlayerErrorTitle -> if (russian) "Ошибка воспроизведения" else "Playback error"
+            AppTextKey.PlayerRetry -> if (russian) "Повторить" else "Retry"
             AppTextKey.PlayerLock -> if (russian) "Заблокировать" else "Lock"
             AppTextKey.PlayerUnlock -> if (russian) "Разблокировать" else "Unlock"
             AppTextKey.PlayerPictureInPicture -> if (russian) "Картинка в картинке" else "Picture-in-picture"
