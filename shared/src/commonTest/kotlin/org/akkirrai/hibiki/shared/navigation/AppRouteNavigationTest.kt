@@ -64,6 +64,19 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `library filter sheet backs before leaving library`() {
+        val filterSheet = AppOverlay.Sheet("library-filter")
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.LIBRARY))
+            .reduce(AppNavigationEvent.PresentOverlay(filterSheet))
+
+        val dismissed = state.reduce(AppNavigationEvent.Back)
+
+        assertEquals(emptyList(), dismissed.overlays)
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.LIBRARY), dismissed.currentRoute)
+    }
+
+    @Test
     fun `related details back returns to previous details`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))

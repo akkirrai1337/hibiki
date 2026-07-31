@@ -291,6 +291,8 @@ fun HibikiAppShell(
     val episodesPresenter = remember(watchRepository) { org.akkirrai.hibiki.shared.player.EpisodesPresenter() }
     val episodesState by episodesPresenter.state.collectAsState()
     var navigationState by remember { mutableStateOf(AppNavigationState()) }
+    val libraryFilterOverlay = remember { AppOverlay.Sheet("library-filter") }
+    val isLibraryFilterOverlayOpen = navigationState.overlays.lastOrNull() == libraryFilterOverlay
     val selectedWatchSource = navigationState.backStack.asReversed()
         .mapNotNull { (it as? AppRoute.Episodes)?.source }
         .firstOrNull()
@@ -976,6 +978,17 @@ fun HibikiAppShell(
                             onLibrarySearchQueryChange = libraryPresenter::onSearchQueryChange,
                             onLibrarySearchClear = libraryPresenter::clearSearch,
                             onLibraryFiltersApply = libraryPresenter::applySearchFilters,
+                            libraryFilterOverlayOpen = isLibraryFilterOverlayOpen,
+                            onLibraryFilterOpen = {
+                                navigationState = navigationState.reduce(
+                                    AppNavigationEvent.PresentOverlay(libraryFilterOverlay),
+                                )
+                            },
+                            onLibraryFilterVisibilityChange = { visible ->
+                                if (!visible && isLibraryFilterOverlayOpen) {
+                                    navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
+                                }
+                            },
                             onBrowseCatalog = { selectRootTab(AppDestination.CATALOG) },
                             onOpenLibrary = { selectRootTab(AppDestination.LIBRARY) },
                             selectedAnime = detailsAnime ?: state.selectedAnime,
@@ -1630,6 +1643,9 @@ private fun AppDestinationContent(
     onLibrarySearchQueryChange: (String) -> Unit = {},
     onLibrarySearchClear: () -> Unit = {},
     onLibraryFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit = {},
+    libraryFilterOverlayOpen: Boolean = false,
+    onLibraryFilterOpen: () -> Unit = {},
+    onLibraryFilterVisibilityChange: (Boolean) -> Unit = {},
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     onBrowseCatalog: () -> Unit = {},
@@ -1912,6 +1928,9 @@ private fun AppDestinationContent(
                     onSearchQueryChange = onLibrarySearchQueryChange,
                     onSearchClear = onLibrarySearchClear,
                     onFiltersApply = onLibraryFiltersApply,
+                    filterOverlayOpen = libraryFilterOverlayOpen,
+                    onFilterOpen = onLibraryFilterOpen,
+                    onFilterVisibilityChange = onLibraryFilterVisibilityChange,
                     languageMode = languageMode,
                     systemLanguage = systemLanguage,
                 )
@@ -2264,6 +2283,9 @@ private fun ColumnScope.LibraryScreen(
     onSearchQueryChange: (String) -> Unit,
     onSearchClear: () -> Unit,
     onFiltersApply: (org.akkirrai.hibiki.shared.library.LibrarySearchFilters) -> Unit,
+    filterOverlayOpen: Boolean,
+    onFilterOpen: () -> Unit,
+    onFilterVisibilityChange: (Boolean) -> Unit,
     languageMode: LanguageMode,
     systemLanguage: String,
 ) {
@@ -2291,7 +2313,7 @@ private fun ColumnScope.LibraryScreen(
         onAnimeClick = onAnimeClick,
         onSearchQueryChange = onSearchQueryChange,
         onClearSearch = onSearchClear,
-        onFilterClick = {},
+        onFilterClick = onFilterOpen,
         onCategorySelected = onCategorySelected,
         entryContent = { entry, entryModifier ->
             AppLibraryEntryCard(
@@ -2351,6 +2373,8 @@ private fun ColumnScope.LibraryScreen(
                 maxCollapsedGenreItems = null,
             )
         },
+        filterVisible = filterOverlayOpen,
+        onFilterVisibilityChange = onFilterVisibilityChange,
         modifier = Modifier.fillMaxSize(),
     )
 }

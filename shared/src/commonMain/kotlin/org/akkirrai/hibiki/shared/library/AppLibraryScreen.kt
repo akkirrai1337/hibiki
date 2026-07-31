@@ -37,9 +37,16 @@ fun AppLibraryScreen(
     onCategorySelected: (LibraryCategory) -> Unit,
     entryContent: @Composable (LibraryEntry, Modifier) -> Unit,
     filterContent: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
+    filterVisible: Boolean? = null,
+    onFilterVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var isFilterVisible by remember { mutableStateOf(false) }
+    var localFilterVisible by remember { mutableStateOf(false) }
+    val isFilterVisible = filterVisible ?: localFilterVisible
+    fun setFilterVisible(visible: Boolean) {
+        if (filterVisible == null) localFilterVisible = visible
+        onFilterVisibilityChange(visible)
+    }
 
     AppLibraryEntriesContent(
         state = state,
@@ -58,7 +65,7 @@ fun AppLibraryScreen(
                         clearContentDescription = labels.clearContentDescription,
                         onFilterClick = {
                             onFilterClick()
-                            isFilterVisible = true
+                            setFilterVisible(true)
                         },
                         modifier = searchModifier,
                     )
@@ -89,6 +96,6 @@ fun AppLibraryScreen(
     )
 
     if (isFilterVisible && filterContent != null) {
-        filterContent { isFilterVisible = false }
+        filterContent { setFilterVisible(false) }
     }
 }
