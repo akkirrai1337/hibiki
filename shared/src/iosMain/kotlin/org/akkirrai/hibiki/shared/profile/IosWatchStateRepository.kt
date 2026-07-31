@@ -4,6 +4,7 @@ import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import kotlin.time.Clock
+import kotlinx.datetime.toLocalDateTime
 import platform.Foundation.NSUserDefaults
 
 /** Reads the iOS playback records written by the shared player adapter. */
@@ -60,6 +61,7 @@ internal class IosWatchStateRepository(
         positionMs: Long,
         durationMs: Long,
     ) {
+        val previous = getPlaybackProgress(context.titleId, context.episodeId)
         val safePosition = positionMs.coerceAtLeast(0L)
         val safeDuration = durationMs.coerceAtLeast(0L)
         val updatedAt = Clock.System.now().toEpochMilliseconds()
@@ -77,6 +79,43 @@ internal class IosWatchStateRepository(
             encoded,
             forKey = "$PROGRESS_PREFIX${context.titleId}$EPISODE_KEY_SEPARATOR${context.episodeId}",
         )
+        recordActivity(
+            titleId = context.titleId,
+            episodeId = context.episodeId,
+            previousPositionMs = previous?.positionMs ?: 0L,
+            positionMs = safePosition,
+            durationMs = safeDuration,
+            updatedAt = updatedAt,
+        )
+    }
+
+    private fun recordActivity(
+        titleId: String,
+        episodeId: String,
+        previousPositionMs: Long,
+        positionMs: Long,
+        durationMs: Long,
+        updatedAt: Long,
+    ) {
+        val deltaMs = (positionMs - previousPositionMs).coerceAtLeast(0L).coerceAtMost(durationMs)
+        val completed = durationMs > 0L && positionMs >= durationMs * COMPLETION_THRESHOLD_PERCENT / 100L
+        if (deltaMs == 0L && !completed) return
+
+        val date = kotlinx.datetime.Instant.fromEpochMilliseconds(updatedAt)
+            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+            .date
+            .toString()
+        val completedKey = "$ACTIVITY_COMPLETED_PREFIX$date"
+        val completedEpisodes = defaults.arrayForKey(completedKey)
+            ?.filterIsInstance<String>()
+            ?.toMutableSet()
+            ?: mutableSetOf()
+        if (completed) completedEpisodes += "$titleId:$episodeId"
+        defaults.setObject(
+            (defaults.objectForKey("$ACTIVITY_WATCHED_PREFIX$date") as? Number ?: 0L).toLong() + deltaMs,
+            forKey = "$ACTIVITY_WATCHED_PREFIX$date",
+        )
+        defaults.setObject(completedEpisodes.toList(), forKey = completedKey)
     }
 
     private fun parseProgress(titleId: String, episodeId: String, encoded: String): EpisodeWatchProgress? {
@@ -102,5 +141,6 @@ internal class IosWatchStateRepository(
         const val RECORD_SEPARATOR = '\u001F'
         const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
         const val ACTIVITY_COMPLETED_PREFIX = "activity_completed_"
+        const val COMPLETION_THRESHOLD_PERCENT = 90L
     }
 }

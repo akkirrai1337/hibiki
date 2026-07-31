@@ -9,5 +9,6 @@ internal class DesktopLocalProfileDataRepository(
     override suspend fun load(): LocalProfileData = LocalProfileData(
         profileName = "hibiki",
         episodeProgress = progressRepository.getAllPlaybackProgress(),
+        activity = progressRepository.getDailyWatchActivity(),
     )
 }
