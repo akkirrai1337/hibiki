@@ -27,6 +27,19 @@ fun AppPlaybackControls(
     scaleMode: VideoScaleMode,
     onScaleClick: () -> Unit,
     onBack: () -> Unit,
+    playlistEnabled: Boolean = false,
+    onPlaylistClick: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    hasNextEpisode: Boolean = false,
+    onPreviousEpisode: () -> Unit = {},
+    onNextEpisode: () -> Unit = {},
+    onLockClick: () -> Unit = {},
+    lockContentDescription: String? = null,
+    pictureInPictureEnabled: Boolean = false,
+    onPictureInPictureClick: () -> Unit = {},
+    pictureInPictureContentDescription: String? = null,
+    onSettingsClick: () -> Unit = {},
+    settingsContentDescription: String? = null,
 ) {
     var controlsVisible by remember { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
@@ -68,12 +81,12 @@ fun AppPlaybackControls(
         visible = controlsVisible,
         title = playback.animeTitle,
         subtitle = appText(AppTextKey.PlayerEpisodeNumber).replace("%s", formatEpisodeNumber(context.episodeNumber)),
-        playlistEnabled = false,
+        playlistEnabled = playlistEnabled,
         onBackClick = onBack,
         backContentDescription = appText(AppTextKey.Back),
-        onPlaylistClick = {},
-        hasPreviousEpisode = false,
-        hasNextEpisode = false,
+        onPlaylistClick = onPlaylistClick,
+        hasPreviousEpisode = hasPreviousEpisode,
+        hasNextEpisode = hasNextEpisode,
         isPlaying = isPlaying,
         seekOverlayActive = false,
         onTogglePlay = {
@@ -81,8 +94,8 @@ fun AppPlaybackControls(
             if (isPlaying) transport.pause() else transport.play()
             isPlaying = !isPlaying
         },
-        onPreviousEpisode = {},
-        onNextEpisode = {},
+        onPreviousEpisode = onPreviousEpisode,
+        onNextEpisode = onNextEpisode,
         positionLabel = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
         durationMs = durationMs,
         bufferedPositionMs = bufferedPositionMs,
@@ -100,13 +113,13 @@ fun AppPlaybackControls(
         scaleMode = scaleMode,
         scaleContentDescription = null,
         onScaleClick = { onScaleClick(); keepControlsVisible() },
-        onLockClick = {},
-        lockContentDescription = null,
-        pictureInPictureEnabled = false,
-        onPictureInPictureClick = {},
-        pictureInPictureContentDescription = null,
-        onSettingsClick = { keepControlsVisible() },
-        settingsContentDescription = null,
+        onLockClick = onLockClick,
+        lockContentDescription = lockContentDescription,
+        pictureInPictureEnabled = pictureInPictureEnabled,
+        onPictureInPictureClick = onPictureInPictureClick,
+        pictureInPictureContentDescription = pictureInPictureContentDescription,
+        onSettingsClick = { onSettingsClick(); keepControlsVisible() },
+        settingsContentDescription = settingsContentDescription,
         modifier = Modifier.fillMaxSize().pointerInput(Unit) {
             detectTapGestures(onTap = {
                 controlsVisible = !controlsVisible
