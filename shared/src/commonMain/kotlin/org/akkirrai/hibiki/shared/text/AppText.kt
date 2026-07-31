@@ -134,6 +134,9 @@ enum class AppTextKey {
     Back,
     Favorite,
     Watch,
+    WatchSourcesEmptyTitle,
+    WatchSourcesEmptyMessage,
+    WatchSourcesLoadMore,
     WatchDownload,
     WatchPause,
     WatchRemoveDownload,
@@ -383,6 +386,9 @@ class DefaultAppTextResolver(
             AppTextKey.Back -> if (russian) "Назад" else "Back"
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
+            AppTextKey.WatchSourcesEmptyTitle -> if (russian) "Озвучки не найдены" else "No watch sources"
+            AppTextKey.WatchSourcesEmptyMessage -> if (russian) "Для этого тайтла пока нет доступных источников." else "This title has no available sources yet."
+            AppTextKey.WatchSourcesLoadMore -> if (russian) "Загрузить ещё" else "Load more"
             AppTextKey.WatchDownload -> if (russian) "Скачать" else "Download"
             AppTextKey.WatchPause -> if (russian) "Пауза" else "Pause"
             AppTextKey.WatchRemoveDownload -> if (russian) "Удалить загрузку" else "Remove download"

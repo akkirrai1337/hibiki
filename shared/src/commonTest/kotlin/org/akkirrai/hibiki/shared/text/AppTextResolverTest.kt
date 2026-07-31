@@ -46,4 +46,15 @@ class AppTextResolverTest {
         assertEquals("24 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u0430", DefaultAppTextResolver(LanguageMode.RUSSIAN).formatSearchResultsCount(24))
         assertEquals("25 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u0432", DefaultAppTextResolver(LanguageMode.RUSSIAN).formatSearchResultsCount(25))
     }
+
+    @Test
+    fun watchSourcesLabelsMatchAndroidReference() {
+        val english = DefaultAppTextResolver(LanguageMode.ENGLISH)
+        val russian = DefaultAppTextResolver(LanguageMode.RUSSIAN)
+
+        assertEquals("No watch sources", english.resolve(AppTextKey.WatchSourcesEmptyTitle))
+        assertEquals("Load more", english.resolve(AppTextKey.WatchSourcesLoadMore))
+        assertEquals("Озвучки не найдены", russian.resolve(AppTextKey.WatchSourcesEmptyTitle))
+        assertEquals("Загрузить ещё", russian.resolve(AppTextKey.WatchSourcesLoadMore))
+    }
 }

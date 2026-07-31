@@ -1715,11 +1715,11 @@ private fun AppDestinationContent(
             if (selectedWatchSource == null) {
                 AppWatchSourcesContent(
                     state = watchState,
-                    emptyTitle = appText(AppTextKey.Watch),
-                    emptyMessage = appText(AppTextKey.Watch),
+                    emptyTitle = appText(AppTextKey.WatchSourcesEmptyTitle),
+                    emptyMessage = appText(AppTextKey.WatchSourcesEmptyMessage),
                     retryLabel = appText(AppTextKey.SearchRetry),
                     episodeLabel = appText(AppTextKey.EpisodesShort),
-                    loadMoreLabel = appText(AppTextKey.Episodes),
+                    loadMoreLabel = appText(AppTextKey.WatchSourcesLoadMore),
                     enabled = !watchState.isLoading,
                     onRetry = onWatchRetry,
                     onSourceClick = onWatchSourceClick,
