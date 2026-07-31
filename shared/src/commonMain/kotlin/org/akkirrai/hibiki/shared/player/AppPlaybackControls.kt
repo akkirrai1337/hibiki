@@ -40,6 +40,7 @@ fun AppPlaybackControls(
     pictureInPictureContentDescription: String? = null,
     onSettingsClick: () -> Unit = {},
     settingsContentDescription: String? = null,
+    onControlsVisibilityChanged: (Boolean) -> Unit = {},
 ) {
     var controlsVisible by remember { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
@@ -68,6 +69,9 @@ fun AppPlaybackControls(
             if (!isSeeking) sliderPositionMs = positionMs
             delay(AppPlaybackPositionPollMillis)
         }
+    }
+    LaunchedEffect(controlsVisible) {
+        onControlsVisibilityChanged(controlsVisible)
     }
     AppAutoHideVisibilityEffect(
         enabled = true,

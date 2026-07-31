@@ -9,6 +9,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +33,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -38,6 +41,8 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.isPlaybackComplete
+import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
+import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -67,6 +72,10 @@ internal fun AndroidCommonPlaybackHost(
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
+    var controlsVisible by remember { mutableStateOf(true) }
+    var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
+    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val videoScaleMode = preferencesState.videoScaleMode
     val episodeNavigation = resolveEpisodeNavigationAvailability(
         episodes = context.episodes,
@@ -97,6 +106,39 @@ internal fun AndroidCommonPlaybackHost(
                 selectAdjacentEpisode(1)
             }
             delay(500L)
+        }
+    }
+
+    LaunchedEffect(exoPlayer, context.episodeId) {
+        while (true) {
+            positionMs = transport.positionMs()
+            delay(250L)
+        }
+    }
+
+    val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
+        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
+    val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
+    val activeSkipSegment = rawActiveSkipSegment
+        ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
+
+    LaunchedEffect(activeSkipSegmentKey, preferencesState.autoSkipSegments) {
+        val key = activeSkipSegmentKey ?: run {
+            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            return@LaunchedEffect
+        }
+        val segment = rawActiveSkipSegment
+        if (hiddenSkipSegmentKey == key) return@LaunchedEffect
+        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+            delay(1_000L)
+            if (hiddenSkipSegmentKey == key) return@LaunchedEffect
+            skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
+        }
+        if (preferencesState.autoSkipSegments && hiddenSkipSegmentKey != key) {
+            transport.seekToMs(segment.endMs)
+        } else if (hiddenSkipSegmentKey != key) {
+            hiddenSkipSegmentKey = key
         }
     }
 
@@ -216,6 +258,7 @@ internal fun AndroidCommonPlaybackHost(
                     settingsVisible = true
                 },
                 settingsContentDescription = appText(AppTextKey.Settings),
+                onControlsVisibilityChanged = { controlsVisible = it },
             )
         }
         AppPlayerUnlockOverlay(
@@ -246,6 +289,20 @@ internal fun AndroidCommonPlaybackHost(
             nowMs = SystemClock::elapsedRealtime,
             backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
         )
+        activeSkipSegment?.let { segment ->
+            AppPlayerSkipSegmentLayer(
+                visible = true,
+                controlsVisible = controlsVisible,
+                countdownSeconds = skipCountdownSeconds,
+                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                autoSkipEnabled = preferencesState.autoSkipSegments,
+                skipLabel = appText(AppTextKey.PlayerSkip),
+                watchLabel = appText(AppTextKey.PlayerWatch),
+                onSkipClick = { transport.seekToMs(segment.endMs) },
+                onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
+        }
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
@@ -300,3 +357,4 @@ internal fun AndroidCommonPlaybackHost(
 }
 
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
+private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10

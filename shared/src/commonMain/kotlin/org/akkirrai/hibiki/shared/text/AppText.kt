@@ -72,6 +72,8 @@ enum class AppTextKey {
     PlayerLock,
     PlayerUnlock,
     PlayerPictureInPicture,
+    PlayerSkip,
+    PlayerWatch,
     SettingsExperimental,
     SettingsDiscord,
     SettingsUpdates,
@@ -278,6 +280,8 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerLock -> if (russian) "Заблокировать" else "Lock"
             AppTextKey.PlayerUnlock -> if (russian) "Разблокировать" else "Unlock"
             AppTextKey.PlayerPictureInPicture -> if (russian) "Картинка в картинке" else "Picture-in-picture"
+            AppTextKey.PlayerSkip -> if (russian) "Пропустить" else "Skip"
+            AppTextKey.PlayerWatch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.SettingsDiscord -> "Discord Rich Presence"
             AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
