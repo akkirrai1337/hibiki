@@ -124,43 +124,6 @@ internal fun AndroidCommonPlaybackHost(
         activity?.packageManager?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
     }
 
-    DisposableEffect(activity) {
-        if (activity == null) {
-            onDispose {}
-        } else {
-            val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
-            val previousOrientation = activity.requestedOrientation
-            val previousBehavior = controller.systemBarsBehavior
-            val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                activity.window.attributes.layoutInDisplayCutoutMode
-            } else {
-                null
-            }
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                activity.window.attributes = activity.window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-            }
-            onDispose {
-                controller.show(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = previousBehavior
-                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                activity.requestedOrientation = previousOrientation
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
-                    activity.window.attributes = activity.window.attributes.apply {
-                        layoutInDisplayCutoutMode = previousCutoutMode
-                    }
-                }
-            }
-        }
-    }
-
     fun savePlaybackProgress() {
         val position = transport.positionMs()
         resolvePersistablePlaybackProgress(position, transport.durationMs())?.let { progress ->
@@ -525,6 +488,49 @@ internal fun AndroidCommonPlaybackHost(
                         onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
                     },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AndroidPlayerWindowMode(active: Boolean) {
+    val androidContext = LocalContext.current
+    val activity = remember(androidContext) { androidContext.findHibikiActivity() }
+
+    DisposableEffect(activity, active) {
+        if (!active || activity == null) {
+            onDispose {}
+        } else {
+            val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+            val previousOrientation = activity.requestedOrientation
+            val previousBehavior = controller.systemBarsBehavior
+            val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                activity.window.attributes.layoutInDisplayCutoutMode
+            } else {
+                null
+            }
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                activity.window.attributes = activity.window.attributes.apply {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+            onDispose {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = previousBehavior
+                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                activity.requestedOrientation = previousOrientation
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
+                    activity.window.attributes = activity.window.attributes.apply {
+                        layoutInDisplayCutoutMode = previousCutoutMode
+                    }
+                }
             }
         }
     }

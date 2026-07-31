@@ -259,6 +259,7 @@ fun HibikiAppShell(
     onPlaybackSelectionChanged: (org.akkirrai.hibiki.shared.model.PlaybackSelection) -> Unit = {},
     loadPlaybackSelection: (String) -> org.akkirrai.hibiki.shared.model.PlaybackSelection? = { null },
     playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
+    playerWindowMode: @Composable (Boolean) -> Unit = {},
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -770,6 +771,7 @@ fun HibikiAppShell(
             typography = HibikiTypography,
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                playerWindowMode(navigationState.currentRoute is AppRoute.Player)
                 AppSystemBackHandler(
                     enabled = appBackHandlerEnabled(
                         selectedTab = selectedTab,

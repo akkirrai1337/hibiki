@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
+import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowMode
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
 import org.akkirrai.hibiki.feature.settings.AndroidDiscordRpcController
@@ -195,6 +196,9 @@ internal fun AndroidSharedAppShell(
                     onSettingsAction = onSettingsAction,
                     onOverlayEvent = onOverlayEvent,
                 )
+            },
+            playerWindowMode = { active ->
+                AndroidPlayerWindowMode(active)
             },
         )
     }
