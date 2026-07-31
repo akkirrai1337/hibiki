@@ -1090,6 +1090,18 @@ fun HibikiAppShell(
                             playback = route.playback,
                             context = route.context,
                             navigationState = navigationState,
+                            playbackLoading = playerState.isLoading,
+                            playbackError = playerState.errorMessage,
+                            onRetry = {
+                                playerState.lastPlaybackRequest?.let { failedRequest ->
+                                    requestPlayback(
+                                        episode = failedRequest.episode,
+                                        sourceOverride = failedRequest.source,
+                                        preferredPlayerName = failedRequest.preferredPlayerName,
+                                        preferredQuality = failedRequest.preferredQuality,
+                                    )
+                                }
+                            },
                             onDismiss = {
                                 activePlaybackRoute = null
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
