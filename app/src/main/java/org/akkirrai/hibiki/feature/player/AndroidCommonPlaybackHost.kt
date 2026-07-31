@@ -272,10 +272,10 @@ internal fun AndroidCommonPlaybackHost(
                         onSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },
                     onAutoSkipSegmentsChange = { enabled ->
-                        preferences.setAutoSkipSegments(enabled)
+                        onSettingsAction(PlaybackSettingsAction.SetAutoSkipSegments(enabled))
                     },
                     onAutoPlayNextEpisodeChange = { enabled ->
-                        preferences.setAutoPlayNextEpisode(enabled)
+                        onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
                     },
                 )
             }

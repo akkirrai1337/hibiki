@@ -257,6 +257,7 @@ fun HibikiAppShell(
     var useSystemColorScheme by remember(settingsStore) { mutableStateOf(initialSettings.useSystemColorScheme) }
     var useAmoledTheme by remember(settingsStore) { mutableStateOf(initialSettings.useAmoledTheme) }
     var autoSkipSegments by remember(settingsStore) { mutableStateOf(initialSettings.autoSkipSegments) }
+    var autoPlayNextEpisode by remember(settingsStore) { mutableStateOf(initialSettings.autoPlayNextEpisode) }
     var onboardingCompleted by remember(settingsStore) { mutableStateOf(initialSettings.onboardingCompleted) }
     var onboardingSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
@@ -524,8 +525,14 @@ fun HibikiAppShell(
                 episodesOverride = route.context.episodes,
                 replacePlayerRoute = true,
             )
-            is PlaybackSettingsAction.SetAutoSkipSegments -> Unit
-            is PlaybackSettingsAction.SetAutoPlayNextEpisode -> Unit
+            is PlaybackSettingsAction.SetAutoSkipSegments -> {
+                autoSkipSegments = action.enabled
+                settingsStore.save(settingsStore.load().copy(autoSkipSegments = action.enabled))
+            }
+            is PlaybackSettingsAction.SetAutoPlayNextEpisode -> {
+                autoPlayNextEpisode = action.enabled
+                settingsStore.save(settingsStore.load().copy(autoPlayNextEpisode = action.enabled))
+            }
         }
     }
 
@@ -604,16 +611,16 @@ fun HibikiAppShell(
                 Box {
                     fun saveSettings() {
                         settingsStore.save(
-                            AppSettingsState(
+                            settingsStore.load().copy(
                                 languageMode = languageMode,
                                 darkTheme = darkTheme,
                                 themeMode = themeMode,
                                 useSystemColorScheme = useSystemColorScheme,
                                 useAmoledTheme = useAmoledTheme,
                                 autoSkipSegments = autoSkipSegments,
+                                autoPlayNextEpisode = autoPlayNextEpisode,
                                 onboardingCompleted = onboardingCompleted,
                                 selectedSourceId = onboardingSourceId,
-                                notificationPermissionState = settingsStore.load().notificationPermissionState,
                             ),
                         )
                     }
