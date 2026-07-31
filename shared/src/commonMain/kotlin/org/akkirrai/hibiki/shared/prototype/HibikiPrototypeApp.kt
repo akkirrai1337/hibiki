@@ -165,6 +165,9 @@ import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.shared.player.initialWatchSourcesState
+import org.akkirrai.hibiki.shared.player.withLoadedSources
+import org.akkirrai.hibiki.shared.player.withWatchSourcesError
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.PlaybackRoute
@@ -307,25 +310,27 @@ fun HibikiAppShell(
     LaunchedEffect(watchRepository, watchAnime?.id, watchLoadGeneration) {
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val anime = watchAnime ?: return@LaunchedEffect
-        watchPresenter.setState(WatchSourcesScreenState(isLoading = true))
+        watchPresenter.setState(
+            initialWatchSourcesState(
+                cachedSources = null,
+                offlineSources = emptyList(),
+                forceRefresh = true,
+            ),
+        )
         runCatching { repositoryForWatch.loadSources(anime.id) }
             .onSuccess { sourcesForWatch ->
-                watchPresenter.setState(
-                    WatchSourcesScreenState(
-                        allItems = sourcesForWatch,
-                        items = sourcesForWatch.take(3),
+                watchPresenter.update { state ->
+                    state.withLoadedSources(
+                        sources = sourcesForWatch,
+                        offlineSources = emptyList(),
                         isLoading = false,
-                        hasMoreItems = sourcesForWatch.size > 3,
-                    ),
-                )
+                    )
+                }
             }
             .onFailure { error ->
-                watchPresenter.setState(
-                    WatchSourcesScreenState(
-                        isLoading = false,
-                        errorMessage = error.message ?: "Unable to load watch sources",
-                    ),
-                )
+                watchPresenter.update {
+                    it.withWatchSourcesError(error.message ?: "Unable to load watch sources")
+                }
             }
     }
 
