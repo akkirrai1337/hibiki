@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.shared.profile.LocalWatchStateRepository
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 
 import android.content.Context
 import java.time.Instant
@@ -39,7 +40,7 @@ internal fun parseProgressStorageKey(key: String): ProgressStorageKey? {
     )
 }
 
-class WatchStateRepository(context: Context) : LocalWatchStateRepository {
+class WatchStateRepository(context: Context) : LocalWatchStateRepository, PlaybackProgressRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getSelectedSource(titleId: String): WatchSourceSelection {
@@ -258,6 +259,25 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository {
             positionMs = positionMs,
             durationMs = durationMs,
             updatedAt = updatedAt,
+        )
+    }
+
+    override fun saveEpisodeProgress(
+        context: org.akkirrai.hibiki.shared.model.PlaybackContext,
+        playback: org.akkirrai.hibiki.shared.model.PlaybackStream,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        saveEpisodeProgress(
+            titleId = context.titleId,
+            episodeId = context.episodeId,
+            episodeNumber = context.episodeNumber,
+            sourceId = context.sourceId,
+            voiceoverId = context.sourceId,
+            sourceTitle = context.sourceTitle,
+            quality = playback.qualityLabel,
+            positionMs = positionMs.coerceAtLeast(0L),
+            durationMs = durationMs.coerceAtLeast(0L),
         )
     }
 

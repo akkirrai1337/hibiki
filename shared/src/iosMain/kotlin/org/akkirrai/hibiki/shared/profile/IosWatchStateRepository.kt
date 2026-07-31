@@ -9,7 +9,7 @@ import platform.Foundation.NSUserDefaults
 /** Reads the iOS playback records written by the shared player adapter. */
 internal class IosWatchStateRepository(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
-) : LocalWatchStateRepository {
+) : LocalWatchStateRepository, PlaybackProgressRepository {
     override fun getAllEpisodeProgress(): List<EpisodeWatchProgress> = defaults
         .dictionaryRepresentation()
         .asSequence()
@@ -46,7 +46,7 @@ internal class IosWatchStateRepository(
         .sortedBy(DailyWatchActivity::date)
         .toList()
 
-    fun saveEpisodeProgress(
+    override fun saveEpisodeProgress(
         context: PlaybackContext,
         playback: PlaybackStream,
         positionMs: Long,
