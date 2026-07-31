@@ -14,23 +14,23 @@ import platform.AVFoundation.AVPlayer
 @OptIn(ExperimentalForeignApi::class)
 internal class IosAvPlayerTransport(
     private val player: AVPlayer,
-) {
-    fun play() = hibiki_av_player_play(player)
+) : PlaybackTransport {
+    override fun play() = hibiki_av_player_play(player)
 
-    fun pause() = hibiki_av_player_pause(player)
+    override fun pause() = hibiki_av_player_pause(player)
 
     fun setRate(rate: Float) = hibiki_av_player_set_rate(player, rate)
 
-    fun rate(): Float = hibiki_av_player_get_rate(player)
+    override fun rate(): Float = hibiki_av_player_get_rate(player)
 
-    fun positionMs(): Long = secondsToMillis(hibiki_av_player_get_position_seconds(player))
+    override fun positionMs(): Long = secondsToMillis(hibiki_av_player_get_position_seconds(player))
 
-    fun durationMs(): Long = secondsToMillis(hibiki_av_player_get_duration_seconds(player))
+    override fun durationMs(): Long = secondsToMillis(hibiki_av_player_get_duration_seconds(player))
 
-    fun bufferedPositionMs(): Long =
+    override fun bufferedPositionMs(): Long =
         secondsToMillis(hibiki_av_player_get_buffered_position_seconds(player))
 
-    fun seekToMs(positionMs: Long) {
+    override fun seekToMs(positionMs: Long) {
         hibiki_av_player_seek_seconds(player, positionMs / 1_000.0)
     }
 
