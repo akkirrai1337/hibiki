@@ -26,6 +26,7 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.isPlaybackComplete
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
 import org.akkirrai.hibiki.shared.player.IosPlayerSession
 import org.akkirrai.hibiki.shared.player.IosPlayerSurface
@@ -131,7 +132,9 @@ internal fun IosEmbeddedPlaybackHost(
                 context.episodes.firstOrNull { it.id == episodeId }?.let(onEpisodeSelected)
             },
             nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
-            backHandler = { _, _ -> },
+            backHandler = { enabled, callback ->
+                AppSystemBackHandler(enabled = enabled, onBack = callback) {}
+            },
         )
         if (settingsVisible) {
             AppPlayerSettingsLayer(
@@ -140,7 +143,9 @@ internal fun IosEmbeddedPlaybackHost(
                     settingsDestination = PlayerSettingsDestination.Root
                 },
                 nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
-                backHandler = { _, _ -> },
+                backHandler = { enabled, callback ->
+                    AppSystemBackHandler(enabled = enabled, onBack = callback) {}
+                },
             ) { dismissPanel ->
                 AppPlayerSettingsContent(
                     destination = settingsDestination,
@@ -154,7 +159,9 @@ internal fun IosEmbeddedPlaybackHost(
                     options = context.settingsOptions,
                     onNavigate = { settingsDestination = it },
                     onBack = { settingsDestination = PlayerSettingsDestination.Root },
-                    backHandler = { _, _ -> },
+                    backHandler = { enabled, callback ->
+                        AppSystemBackHandler(enabled = enabled, onBack = callback) {}
+                    },
                     onSelectSpeed = { speed ->
                         selectedSpeed = speed
                         session.transport.setRate(speed)
