@@ -119,6 +119,11 @@ internal fun IosEmbeddedPlaybackHost(
             },
             settingsContentDescription = appText(AppTextKey.Settings),
             onControlsVisibilityChanged = { controlsVisible = it },
+            pictureInPictureEnabled = session.pictureInPictureController != null,
+            onPictureInPictureClick = {
+                session.pictureInPictureController?.startPictureInPicture()
+            },
+            pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,

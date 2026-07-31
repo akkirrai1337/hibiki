@@ -16,6 +16,7 @@ import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
 import platform.AVFoundation.AVPlayerLayer
 import platform.AVFoundation.AVURLAsset
+import platform.AVKit.AVPictureInPictureController
 import platform.CoreGraphics.CGRectZero
 import platform.Foundation.NSURL
 import platform.UIKit.UIView
@@ -25,8 +26,19 @@ internal class IosPlayerSession(playback: PlaybackStream) {
     val player = playback.toIosPlayer()
     val transport = IosAvPlayerTransport(player)
     var scaleMode by mutableStateOf(VideoScaleMode.FIT)
+    var pictureInPictureController: AVPictureInPictureController? by mutableStateOf(null)
 
-    fun release() = transport.pause()
+    fun bindPictureInPictureLayer(layer: AVPlayerLayer) {
+        if (pictureInPictureController == null && AVPictureInPictureController.isPictureInPictureSupported()) {
+            pictureInPictureController = AVPictureInPictureController(playerLayer = layer)
+        }
+    }
+
+    fun release() {
+        pictureInPictureController?.stopPictureInPicture()
+        pictureInPictureController = null
+        transport.pause()
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -38,7 +50,10 @@ internal fun IosPlayerSurface(
 ) {
     UIKitView(
         factory = { IosVideoView() },
-        update = { view -> view.bind(session.player, scaleMode) },
+        update = { view ->
+            view.bind(session.player, scaleMode)
+            view.pictureInPictureLayer()?.let(session::bindPictureInPictureLayer)
+        },
         onRelease = { view -> view.releasePlayerLayer() },
         modifier = modifier,
     )
@@ -65,6 +80,8 @@ private class IosVideoView : UIView(frame = CGRectZero.readValue()) {
         playerLayer?.removeFromSuperlayer()
         playerLayer = null
     }
+
+    fun pictureInPictureLayer(): AVPlayerLayer? = playerLayer
 
     override fun layoutSubviews() {
         super.layoutSubviews()
