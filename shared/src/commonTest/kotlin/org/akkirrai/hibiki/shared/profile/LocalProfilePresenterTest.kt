@@ -31,4 +31,16 @@ class LocalProfilePresenterTest {
 
         assertFalse(presenter.state.value.isLoading)
     }
+
+    @Test
+    fun profileMutationsUpdateSharedState() {
+        val presenter = LocalProfilePresenter()
+
+        presenter.updateProfileName("hibiki")
+        presenter.updateProfileAvatar("content://avatar")
+
+        assertEquals("hibiki", presenter.state.value.data.profileName)
+        assertEquals("content://avatar", presenter.state.value.data.profileAvatarUri)
+        assertFalse(presenter.state.value.isLoading)
+    }
 }
