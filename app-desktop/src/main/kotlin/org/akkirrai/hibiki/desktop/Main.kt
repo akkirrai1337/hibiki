@@ -18,6 +18,9 @@ import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.source.BuiltInSources
 
 private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
 
@@ -27,6 +30,26 @@ fun main() = application {
     val homeRepository = remember(catalogRepository) { DesktopHomeRepository(catalogRepository) }
     val watchRepository = remember { DesktopAnimeWatchRepository() }
     val settingsStore = remember { DesktopSettingsStore() }
+    val sources = remember {
+        listOf(
+            BuiltInSources.YUMMY_ANIME_ID,
+            BuiltInSources.ANI_LIBERTY_ID,
+        ).map { sourceId ->
+            val info = BuiltInSources.catalog.require(sourceId)
+            AppSourceDescriptor(
+                id = info.id.value,
+                name = info.name,
+                language = info.primaryLanguage.tag,
+                languageTags = info.languages.mapTo(linkedSetOf()) { it.tag },
+                iconUrl = info.iconUrl,
+                supportsPlayback = SourceCapability.PLAYBACK in info.capabilities,
+                supportsSearch = true,
+            )
+        }
+    }
+    val selectedSourceId = remember(settingsStore, sources) {
+        settingsStore.load().selectedSourceId ?: sources.firstOrNull()?.id
+    }
     val progressRepository = remember { DesktopPlaybackProgressRepository() }
     val libraryRepository = remember { DesktopLibraryRepository() }
     val systemLanguage = Locale.getDefault().language.ifBlank { "en" }
@@ -63,6 +86,11 @@ fun main() = application {
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
                         profileRepository = profileRepository,
+                        sources = sources,
+                        selectedSourceId = selectedSourceId,
+                        onSourceSelected = { sourceId ->
+                            settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
+                        },
                         onPlaybackSelectionChanged = progressRepository::savePlaybackSelection,
                         loadPlaybackSelection = progressRepository::loadPlaybackSelection,
                         onWatchSourceSelected = { titleId, source ->
