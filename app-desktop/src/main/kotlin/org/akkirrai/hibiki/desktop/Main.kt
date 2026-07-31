@@ -23,8 +23,9 @@ fun main() = application {
     val watchRepository = remember { DesktopAnimeWatchRepository() }
     val settingsStore = remember { DesktopSettingsStore() }
     val progressRepository = remember { DesktopPlaybackProgressRepository() }
+    val libraryRepository = remember { DesktopLibraryRepository() }
     val profileRepository = remember(progressRepository) {
-        DesktopLocalProfileDataRepository(progressRepository)
+        DesktopLocalProfileDataRepository(progressRepository, libraryRepository)
     }
     Window(
         onCloseRequest = {
@@ -51,6 +52,7 @@ fun main() = application {
                     HibikiApp(
                         repository = catalogRepository,
                         homeRepository = homeRepository,
+                        libraryRepository = libraryRepository,
                         watchRepository = watchRepository,
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
