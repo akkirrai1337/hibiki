@@ -183,12 +183,17 @@ fun AppDetailsScreen(
 
     MaterialTheme(colorScheme = detailsColorScheme) {
         AppSystemBackHandler(
-            enabled = isLibrarySheetOpen || isTitleDetailsSheetOpen || isPosterPreviewOpen,
+            enabled = detailsOverlayBackTarget(
+                librarySheetOpen = isLibrarySheetOpen,
+                titleSheetOpen = isTitleDetailsSheetOpen,
+                posterPreviewOpen = isPosterPreviewOpen,
+            ) != DetailsOverlayBackTarget.None,
             onBack = {
-                when {
-                    isLibrarySheetOpen -> isLibrarySheetOpen = false
-                    isTitleDetailsSheetOpen -> isTitleDetailsSheetOpen = false
-                    isPosterPreviewOpen -> isPosterPreviewOpen = false
+                when (detailsOverlayBackTarget(isLibrarySheetOpen, isTitleDetailsSheetOpen, isPosterPreviewOpen)) {
+                    DetailsOverlayBackTarget.Library -> isLibrarySheetOpen = false
+                    DetailsOverlayBackTarget.Title -> isTitleDetailsSheetOpen = false
+                    DetailsOverlayBackTarget.Poster -> isPosterPreviewOpen = false
+                    DetailsOverlayBackTarget.None -> Unit
                 }
             },
         ) {
