@@ -16,6 +16,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
+import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.app.HibikiApp as SharedHibikiApp
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
@@ -39,6 +40,9 @@ internal fun AndroidSharedAppShell(
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
+    val episodeDownloadRepository = remember(dependencies) {
+        AndroidEpisodeDownloadRepository(dependencies.offlineDownloadRepository())
+    }
     val preferences = LocalAppPreferencesState.current
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
@@ -69,6 +73,7 @@ internal fun AndroidSharedAppShell(
             profileRepository = profileRepository,
             settingsStore = settingsStore,
             progressRepository = watchStateRepository,
+            episodeDownloadRepository = episodeDownloadRepository,
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,

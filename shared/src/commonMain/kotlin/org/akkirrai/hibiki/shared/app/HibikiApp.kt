@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 
 /** Canonical shared application entry point for platform hosts. */
 @Composable
@@ -32,6 +33,7 @@ fun HibikiApp(
     profileRepository: LocalProfileDataRepository = PrototypeLocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     progressRepository: PlaybackProgressRepository? = null,
+    episodeDownloadRepository: EpisodeDownloadRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -58,6 +60,7 @@ fun HibikiApp(
         profileRepository = profileRepository,
         settingsStore = settingsStore,
         progressRepository = progressRepository,
+        episodeDownloadRepository = episodeDownloadRepository,
         systemLanguage = systemLanguage,
         appVersionName = appVersionName,
         enableOnboarding = enableOnboarding,

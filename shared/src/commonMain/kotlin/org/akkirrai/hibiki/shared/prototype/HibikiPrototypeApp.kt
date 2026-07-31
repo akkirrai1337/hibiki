@@ -168,6 +168,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
+import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
@@ -199,6 +200,7 @@ fun HibikiAppShell(
     profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     progressRepository: PlaybackProgressRepository? = null,
+    episodeDownloadRepository: EpisodeDownloadRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -716,6 +718,7 @@ fun HibikiAppShell(
                         }
                         AppDestinationContent(
                             selectedTab = animatedTab,
+                            episodeDownloadRepository = episodeDownloadRepository,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
                             catalogState = state,
@@ -1287,6 +1290,7 @@ private fun AppDestinationContent(
     onAmoledChange: (Boolean) -> Unit = {},
     onAutoSkipChange: (Boolean) -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    episodeDownloadRepository: EpisodeDownloadRepository? = null,
     onLibraryChanged: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.LIGHT,
     onThemeModeChange: (ThemeMode) -> Unit = {},
