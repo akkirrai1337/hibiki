@@ -53,6 +53,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
+import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -81,7 +82,7 @@ internal fun AndroidCommonPlaybackHost(
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
     val preferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
-    val exoPlayer = remember(androidContext, playback.streamUrl, playback.headers) {
+    val exoPlayer = remember(androidContext, playback.sessionKey()) {
         ExoPlayer.Builder(androidContext).build()
     }
     val mediaSession = remember(exoPlayer) {

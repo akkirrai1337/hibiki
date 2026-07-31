@@ -32,6 +32,7 @@ import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
+import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
@@ -58,7 +59,7 @@ internal fun IosEmbeddedPlaybackHost(
     progressRepository: PlaybackProgressRepository,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
-    val session = remember(playback.streamUrl, playback.headers) {
+    val session = remember(playback.sessionKey()) {
         IosPlayerSession(playback).also {
             it.scaleMode = settingsStore.load().videoScaleMode
             it.transport.setRate(settingsStore.load().playbackSpeed)

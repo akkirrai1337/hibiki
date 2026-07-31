@@ -43,6 +43,7 @@ import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
+import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
@@ -64,7 +65,7 @@ internal fun DesktopVlcPlaybackHost(
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
-    val session = remember(playback.streamUrl, playback.headers) {
+    val session = remember(playback.sessionKey()) {
         DesktopVlcPlaybackSession(playback).also {
             it.transport.setRate(settingsStore.load().playbackSpeed)
         }
