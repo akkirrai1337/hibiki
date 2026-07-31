@@ -74,6 +74,7 @@ internal fun AndroidSharedAppShell(
             settingsStore = settingsStore,
             progressRepository = watchStateRepository,
             episodeDownloadRepository = episodeDownloadRepository,
+            offlineWatchDataRepository = episodeDownloadRepository,
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,

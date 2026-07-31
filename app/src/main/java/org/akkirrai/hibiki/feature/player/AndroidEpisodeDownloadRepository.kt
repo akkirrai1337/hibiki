@@ -6,11 +6,12 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
+import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository
 
 /** Android adapter that preserves the existing Media3 download queue semantics. */
 internal class AndroidEpisodeDownloadRepository(
     private val delegate: OfflineDownloadRepository,
-) : EpisodeDownloadRepository {
+) : EpisodeDownloadRepository, OfflineWatchDataRepository {
     override suspend fun enqueueEpisodes(
         source: WatchSource,
         episodes: List<WatchEpisode>,
@@ -34,6 +35,10 @@ internal class AndroidEpisodeDownloadRepository(
     override fun removeEpisode(sourceId: String, episodeId: String) {
         delegate.removeEpisode(sourceId, episodeId)
     }
+
+    override fun getOfflineSources(titleId: String): List<WatchSource> = delegate.getOfflineSources(titleId)
+
+    override fun getOfflineEpisodes(sourceId: String): List<WatchEpisode> = delegate.getOfflineEpisodes(sourceId)
 }
 
 private fun OfflineEpisodeDownloadState.toSharedState(): EpisodeDownloadState = when (this) {

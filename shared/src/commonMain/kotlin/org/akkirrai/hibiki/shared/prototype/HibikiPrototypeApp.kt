@@ -169,6 +169,7 @@ import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
+import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.player.AppEpisodeDownloadRowContent
@@ -210,6 +211,7 @@ fun HibikiAppShell(
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     progressRepository: PlaybackProgressRepository? = null,
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
+    offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -338,7 +340,7 @@ fun HibikiAppShell(
         watchPresenter.setState(
             initialWatchSourcesState(
                 cachedSources = null,
-                offlineSources = emptyList(),
+                offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
                 forceRefresh = true,
             ),
         )
@@ -347,7 +349,7 @@ fun HibikiAppShell(
                 watchPresenter.update { state ->
                     state.withLoadedSources(
                         sources = sourcesForWatch,
-                        offlineSources = emptyList(),
+                        offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
                         isLoading = false,
                     )
                 }
@@ -378,14 +380,15 @@ fun HibikiAppShell(
     LaunchedEffect(watchRepository, selectedWatchSource?.sourceId, episodesLoadGeneration) {
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val source = selectedWatchSource ?: return@LaunchedEffect
-        episodesPresenter.setState(initialEpisodesState(emptyList()))
+        val offlineEpisodes = offlineWatchDataRepository?.getOfflineEpisodes(source.sourceId).orEmpty()
+        episodesPresenter.setState(initialEpisodesState(offlineEpisodes))
         runCatching { repositoryForWatch.getEpisodes(source.sourceId) }
             .onSuccess { episodes ->
-                episodesPresenter.setState(loadedEpisodesState(episodes, emptyList()))
+                episodesPresenter.setState(loadedEpisodesState(episodes, offlineEpisodes))
             }
             .onFailure { error ->
                 episodesPresenter.setState(
-                    errorEpisodesState(error.message ?: "Unable to load episodes", emptyList()),
+                    errorEpisodesState(error.message ?: "Unable to load episodes", offlineEpisodes),
                 )
             }
     }
@@ -728,6 +731,7 @@ fun HibikiAppShell(
                         AppDestinationContent(
                             selectedTab = animatedTab,
                             episodeDownloadRepository = episodeDownloadRepository,
+                            offlineWatchDataRepository = offlineWatchDataRepository,
                             downloadMode = (navigationState.currentRoute as? AppRoute.Episodes)?.downloadMode == true,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
@@ -1301,6 +1305,7 @@ private fun AppDestinationContent(
     onAutoSkipChange: (Boolean) -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
+    offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     downloadMode: Boolean = false,
     onLibraryChanged: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.LIGHT,
