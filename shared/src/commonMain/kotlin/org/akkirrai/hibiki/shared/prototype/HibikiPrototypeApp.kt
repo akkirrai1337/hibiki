@@ -62,6 +62,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPadding
@@ -2422,7 +2425,7 @@ private fun ColumnScope.HomeScreen(
         state = homeState,
         listState = listState,
         bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
-        currentYear = 2026,
+        currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
         onQueryChange = onQueryChange,
@@ -2458,7 +2461,7 @@ private fun ColumnScope.SearchScreen(
         state = state,
         listState = listState,
         bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
-        currentYear = 2026,
+        currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
         onQueryChange = onQueryChange,
@@ -2565,7 +2568,9 @@ private fun ColumnScope.LibraryScreen(
                 statusTitle = appText(AppTextKey.Status),
                 resetLabel = appText(AppTextKey.FilterReset),
                 applyLabel = appText(AppTextKey.FilterApply),
-                defaultYearRange = defaultCatalogFilterYearRange(2026),
+                defaultYearRange = defaultCatalogFilterYearRange(
+                    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
+                ),
                 optionText = { it.title },
                 shape = RoundedCornerShape(UiDimens.LargeCorner),
                 maxCollapsedGenreGroups = 3,
@@ -2691,7 +2696,9 @@ private fun ColumnScope.LegacyLibraryScreen(
             statusTitle = appText(AppTextKey.Status),
             resetLabel = appText(AppTextKey.FilterReset),
             applyLabel = appText(AppTextKey.FilterApply),
-            defaultYearRange = defaultCatalogFilterYearRange(2026),
+            defaultYearRange = defaultCatalogFilterYearRange(
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
+            ),
             optionText = { it.title },
             shape = RoundedCornerShape(UiDimens.LargeCorner),
             maxCollapsedGenreGroups = 3,
