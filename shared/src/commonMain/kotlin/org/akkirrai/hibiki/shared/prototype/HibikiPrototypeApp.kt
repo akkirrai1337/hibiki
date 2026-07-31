@@ -82,6 +82,7 @@ import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.design.component.AppSourceBadge
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.TitleWatchState
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.library.LibraryEntry
@@ -190,6 +191,7 @@ import org.akkirrai.hibiki.shared.player.withPlaybackError
 import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
+import org.akkirrai.hibiki.shared.player.resolveResumeWatchState
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -247,6 +249,7 @@ fun HibikiAppShell(
     val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
     val watchState by watchPresenter.state.collectAsState()
     var watchAnime by remember { mutableStateOf<Anime?>(null) }
+    var detailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
     var watchLoadGeneration by remember { mutableStateOf(0) }
     var episodesLoadGeneration by remember { mutableStateOf(0) }
     val episodesPresenter = remember(watchRepository) { org.akkirrai.hibiki.shared.player.EpisodesPresenter() }
@@ -331,6 +334,17 @@ fun HibikiAppShell(
             throw cancelled
         } catch (_: Throwable) {
             profilePresenter.setData(LocalProfileData())
+        }
+    }
+
+    LaunchedEffect(progressRepository, state.selectedAnime?.id) {
+        val animeId = state.selectedAnime?.id
+        detailsResumeState = if (progressRepository != null && animeId != null) {
+            resolveResumeWatchState(
+                progressRepository.getAllPlaybackProgress().filter { it.titleId == animeId },
+            )
+        } else {
+            null
         }
     }
 
@@ -775,6 +789,7 @@ fun HibikiAppShell(
                             onBrowseCatalog = { selectedTab = AppDestination.CATALOG },
                             onOpenLibrary = { selectedTab = AppDestination.LIBRARY },
                             selectedAnime = state.selectedAnime,
+                            detailsResumeState = detailsResumeState,
                             onAnimeClick = presenter::openDetails,
                             onBackFromDetails = presenter::closeDetails,
                             isDetailsLoading = state.isDetailsLoading,
@@ -1307,6 +1322,7 @@ private fun AppDestinationContent(
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     downloadMode: Boolean = false,
+    detailsResumeState: TitleWatchState? = null,
     onLibraryChanged: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.LIGHT,
     onThemeModeChange: (ThemeMode) -> Unit = {},
@@ -1492,6 +1508,7 @@ private fun AppDestinationContent(
             onRelatedAnimeClick = onAnimeClick,
             canWatch = watchRepositoryAvailable,
             onWatchClick = { onWatchClick(selectedAnime) },
+            resumeState = detailsResumeState,
             libraryRepository = libraryRepository,
             onLibraryCategoryChange = { onLibraryChanged() },
             modifier = modifier.fillMaxSize(),
