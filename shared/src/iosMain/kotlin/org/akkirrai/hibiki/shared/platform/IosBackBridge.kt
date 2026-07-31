@@ -17,9 +17,14 @@ internal object IosBackBridge {
     private var nextToken = 0L
     private val handlers = linkedMapOf<Long, () -> Unit>()
     private var gestureTarget: IosBackGestureTarget? = null
+    private var installedViewController: UIViewController? = null
+    private var gestureRecognizer: UIScreenEdgePanGestureRecognizer? = null
 
     fun install(viewController: UIViewController) {
-        if (gestureTarget != null) return
+        if (installedViewController === viewController && gestureTarget != null) return
+        installedViewController?.view?.let { view ->
+            gestureRecognizer?.let(view::removeGestureRecognizer)
+        }
         val target = IosBackGestureTarget { handlers.values.lastOrNull()?.invoke() }
         val gesture = UIScreenEdgePanGestureRecognizer(
             target = target,
@@ -28,6 +33,8 @@ internal object IosBackBridge {
         gesture.edges = UIRectEdgeLeft
         viewController.view.addGestureRecognizer(gesture)
         gestureTarget = target
+        gestureRecognizer = gesture
+        installedViewController = viewController
     }
 
     fun register(): Long = ++nextToken
