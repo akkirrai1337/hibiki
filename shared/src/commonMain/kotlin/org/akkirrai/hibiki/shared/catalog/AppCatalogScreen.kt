@@ -15,7 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.model.Anime
@@ -75,6 +77,8 @@ fun AppCatalogScreen(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
             modifier = Modifier.width(CatalogSortMenuWidth),
+            offset = DpOffset(x = 0.dp, y = CatalogSortMenuOffsetY),
+            shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
         ) {
             AppCatalogSortMenuContent(
                 title = title,
