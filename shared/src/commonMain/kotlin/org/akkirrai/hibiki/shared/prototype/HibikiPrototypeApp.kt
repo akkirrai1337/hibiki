@@ -491,7 +491,11 @@ fun HibikiAppShell(
             }
     }
 
-    LaunchedEffect(watchRepository, activePlaybackRoute?.context?.episodeId) {
+    LaunchedEffect(
+        watchRepository,
+        activePlaybackRoute?.context?.sourceId,
+        activePlaybackRoute?.context?.episodeId,
+    ) {
         val repositoryForPlayback = watchRepository ?: return@LaunchedEffect
         val route = activePlaybackRoute ?: return@LaunchedEffect
         val options = runCatching {
