@@ -1039,6 +1039,7 @@ fun HibikiAppShell(
                             episodesState = episodesState,
                             selectedWatchSource = selectedWatchSource,
                             isPlayerRoute = navigationState.currentRoute is AppRoute.Player,
+                            playbackHostAvailable = playbackHost != null,
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
                             onWatchRetry = {
@@ -1694,6 +1695,7 @@ private fun AppDestinationContent(
     notificationsAvailable: Boolean = true,
     onResumePlayback: (TitleWatchState) -> Unit = {},
     isPlayerRoute: Boolean = false,
+    playbackHostAvailable: Boolean = false,
 ) {
     val navigationLockKey = watchNavigationLockKey(
         animeId = watchAnime?.id,
@@ -1871,14 +1873,16 @@ private fun AppDestinationContent(
                         modifier = Modifier.weight(1f),
                         )
                     }
-                    AppPlayerLoadingOverlay(visible = playbackLoading)
-                    playbackError?.let { message ->
-                        AppPlayerErrorOverlay(
-                            message = message,
-                            title = appText(AppTextKey.PlayerErrorTitle),
-                            retryLabel = appText(AppTextKey.PlayerRetry),
-                            onRetry = onWatchRetry,
-                        )
+                    if (!isPlayerRoute || !playbackHostAvailable) {
+                        AppPlayerLoadingOverlay(visible = playbackLoading)
+                        playbackError?.let { message ->
+                            AppPlayerErrorOverlay(
+                                message = message,
+                                title = appText(AppTextKey.PlayerErrorTitle),
+                                retryLabel = appText(AppTextKey.PlayerRetry),
+                                onRetry = onWatchRetry,
+                            )
+                        }
                     }
                 }
             }
