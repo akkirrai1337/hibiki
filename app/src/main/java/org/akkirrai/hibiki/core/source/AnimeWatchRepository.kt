@@ -329,7 +329,7 @@ class AnimeWatchRepository(
         return ResolvedPlayerStream(playerName = playerName, playback = playback)
     }
 
-    suspend fun getPlaybackSettingsOptions(
+    override suspend fun getPlaybackSettingsOptions(
         sourceId: String,
         episodeId: String,
     ): PlaybackSettingsOptions {

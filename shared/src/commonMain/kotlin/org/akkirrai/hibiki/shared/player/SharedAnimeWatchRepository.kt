@@ -25,6 +25,8 @@ import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.PlaybackLinkOption
+import org.akkirrai.hibiki.shared.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.model.WatchSource
 import kotlin.time.Clock
@@ -93,6 +95,23 @@ class SharedAnimeWatchRepository(
         val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
             ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
         return payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+    }
+
+    override suspend fun getPlaybackSettingsOptions(
+        sourceId: String,
+        episodeId: String,
+    ): PlaybackSettingsOptions {
+        val payload = payloadFor(sourceId)
+        val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
+            ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
+        val voiceovers = payloads.values
+            .filter { it.title == payload.title }
+            .map(WatchPayload::source)
+            .distinctBy(WatchSource::sourceId)
+        val links = payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+            .map { link -> PlaybackLinkOption(link.playerName, link.quality) }
+            .distinct()
+        return PlaybackSettingsOptions(voiceovers = voiceovers, links = links)
     }
 
     override suspend fun resolvePlayback(
