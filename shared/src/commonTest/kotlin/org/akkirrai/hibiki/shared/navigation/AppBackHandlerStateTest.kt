@@ -28,4 +28,40 @@ class AppBackHandlerStateTest {
             ),
         )
     }
+
+    @Test
+    fun nestedRouteEnablesSystemBackBridge() {
+        assertTrue(
+            appBackHandlerEnabled(
+                selectedTab = AppDestination.HOME,
+                hasBackStack = true,
+                hasOverlay = false,
+                hasActivePlayback = false,
+            ),
+        )
+    }
+
+    @Test
+    fun overlayEnablesSystemBackBridge() {
+        assertTrue(
+            appBackHandlerEnabled(
+                selectedTab = AppDestination.HOME,
+                hasBackStack = false,
+                hasOverlay = true,
+                hasActivePlayback = false,
+            ),
+        )
+    }
+
+    @Test
+    fun activePlaybackEnablesSystemBackBridge() {
+        assertTrue(
+            appBackHandlerEnabled(
+                selectedTab = AppDestination.HOME,
+                hasBackStack = false,
+                hasOverlay = false,
+                hasActivePlayback = true,
+            ),
+        )
+    }
 }
