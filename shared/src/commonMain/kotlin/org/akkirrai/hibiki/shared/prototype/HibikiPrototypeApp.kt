@@ -871,11 +871,7 @@ fun HibikiAppShell(
                             },
                         showBottomBar = appBottomBarVisible(
                             selectedTab = selectedTab,
-                            hasDetails = navigationState.currentRoute is AppRoute.Details,
-                            hasWatchFlow = navigationState.currentRoute is AppRoute.WatchSources ||
-                                navigationState.currentRoute is AppRoute.Episodes ||
-                                navigationState.currentRoute is AppRoute.Player,
-                            hasActivePlayback = activePlaybackRoute != null,
+                            currentRoute = navigationState.currentRoute,
                         ),
                         includeNavigationBarPadding = includeNavigationBarPadding,
                         contentTransitionKey = appShellTransitionKey(

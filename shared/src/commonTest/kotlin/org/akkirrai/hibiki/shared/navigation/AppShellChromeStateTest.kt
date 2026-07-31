@@ -21,4 +21,26 @@ class AppShellChromeStateTest {
     fun settingsHidesBottomBar() {
         assertFalse(appBottomBarVisible(AppDestination.SETTINGS, false, false, false))
     }
+
+    @Test
+    fun routeDrivenPolicyShowsOnlyTopLevelContent() {
+        assertTrue(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.TopLevel(AppTopLevelDestination.HOME),
+            ),
+        )
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.HOME,
+                currentRoute = AppRoute.Player("source-1", "episode-1"),
+            ),
+        )
+        assertFalse(
+            appBottomBarVisible(
+                selectedTab = AppDestination.PROFILE,
+                currentRoute = AppRoute.Settings,
+            ),
+        )
+    }
 }
