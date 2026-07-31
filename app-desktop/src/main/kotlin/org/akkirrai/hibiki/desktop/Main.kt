@@ -47,11 +47,13 @@ fun main() = application {
                         repository = catalogRepository,
                         homeRepository = homeRepository,
                         watchRepository = watchRepository,
-                        playbackHost = { playback, context, onBack, _, _ ->
+                        playbackHost = { playback, context, onBack, onEpisodeSelected, onSettingsAction ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,
                                 context = context,
                                 onBack = onBack,
+                                onEpisodeSelected = onEpisodeSelected,
+                                onSettingsAction = onSettingsAction,
                             )
                         },
                         systemLanguage = "en",
