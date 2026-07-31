@@ -1149,8 +1149,12 @@ fun HibikiAppShell(
                                 }
                             },
                             onDismiss = {
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
                                 activePlaybackRoute = null
                                 pendingPlaybackContext = null
+                                resetPlayerState()
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
                             onEpisodeSelected = { episode ->
