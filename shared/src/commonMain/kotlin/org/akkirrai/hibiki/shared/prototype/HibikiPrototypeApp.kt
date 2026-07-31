@@ -949,7 +949,15 @@ fun HibikiAppShell(
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
                             onWatchRetry = {
-                                if (selectedWatchSource == null) {
+                                val failedRequest = playerState.lastPlaybackRequest
+                                if (playerState.errorMessage != null && failedRequest != null) {
+                                    requestPlayback(
+                                        episode = failedRequest.episode,
+                                        sourceOverride = failedRequest.source,
+                                        preferredPlayerName = failedRequest.preferredPlayerName,
+                                        preferredQuality = failedRequest.preferredQuality,
+                                    )
+                                } else if (selectedWatchSource == null) {
                                     watchLoadGeneration++
                                 } else {
                                     episodesLoadGeneration++
@@ -1632,7 +1640,7 @@ private fun AppDestinationContent(
                         sourceTitle = currentWatchSource.title,
                         emptyMessage = appText(AppTextKey.Episodes),
                         retryLabel = appText(AppTextKey.SearchRetry),
-                        onRetry = { onWatchSourceClick(currentWatchSource) },
+                        onRetry = onWatchRetry,
                             episodeContent = { episode, shape ->
                             val progress = profileData.episodeProgress.firstOrNull { progress ->
                                 progress.titleId == watchAnime.id && progress.episodeId == episode.id
