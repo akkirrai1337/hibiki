@@ -6,8 +6,9 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 
-class DesktopSettingsStore : AppSettingsStore {
-    private val preferences = Preferences.userNodeForPackage(DesktopSettingsStore::class.java)
+class DesktopSettingsStore(
+    private val preferences: Preferences = Preferences.userNodeForPackage(DesktopSettingsStore::class.java),
+) : AppSettingsStore {
 
     override fun load(): AppSettingsState {
         val languageMode = when (preferences.get(LANGUAGE_KEY, LanguageMode.SYSTEM.name)) {
