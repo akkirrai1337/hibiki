@@ -23,4 +23,21 @@ class AppNavigationStateTest {
             state.reduce(AppNavigationEvent.OpenDetails("anime-1")).currentRoute,
         )
     }
+
+    @Test
+    fun selectingProfileOrLibraryClearsNestedRouteAndOverlays() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("library")))
+
+        val profile = state.reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
+        assertEquals(AppTopLevelDestination.PROFILE, profile.currentTopLevel)
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.PROFILE), profile.currentRoute)
+        assertEquals(emptyList(), profile.backStack)
+        assertEquals(emptyList(), profile.overlays)
+
+        val library = profile.reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.LIBRARY))
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.LIBRARY), library.currentRoute)
+        assertEquals(library, library.reduce(AppNavigationEvent.Back))
+    }
 }
