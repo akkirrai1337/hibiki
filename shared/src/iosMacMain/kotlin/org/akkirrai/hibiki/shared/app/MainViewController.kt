@@ -119,6 +119,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev",
                     onProfileAvatarEdit = { onPicked -> avatarPicker.present(hostController, onPicked) },
                     onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
+                    onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
                     sources = IosSourceRegistry.sources,
                     selectedSourceId = selectedSourceId.value,
                     showSettingsBackButton = true,

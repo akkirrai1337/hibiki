@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.desktop
 
+import java.awt.Desktop
+import java.net.URI
 import java.util.Locale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -72,6 +74,11 @@ fun main() = application {
                             )
                         },
                         systemLanguage = systemLanguage,
+                        onOpenUrl = { url ->
+                            if (Desktop.isDesktopSupported()) {
+                                Desktop.getDesktop().browse(URI(url))
+                            }
+                        },
                         includeNavigationBarPadding = true,
                     )
                 }
