@@ -43,7 +43,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
-import org.akkirrai.hibiki.shared.player.isPlaybackComplete
+import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -130,9 +130,15 @@ internal fun AndroidCommonPlaybackHost(
 
     LaunchedEffect(exoPlayer, context.episodeId, preferencesState.autoPlayNextEpisode) {
         while (true) {
-            if (!completionHandled &&
-                preferencesState.autoPlayNextEpisode &&
-                isPlaybackComplete(transport.positionMs(), transport.durationMs())
+            if (resolveAutoPlayNextEpisode(
+                    episodes = context.episodes,
+                    currentEpisodeId = context.episodeId,
+                    currentEpisodeNumber = context.episodeNumber,
+                    positionMs = transport.positionMs(),
+                    durationMs = transport.durationMs(),
+                    autoPlayEnabled = preferencesState.autoPlayNextEpisode,
+                    completionHandled = completionHandled,
+                ) != null
             ) {
                 completionHandled = true
                 selectAdjacentEpisode(1)

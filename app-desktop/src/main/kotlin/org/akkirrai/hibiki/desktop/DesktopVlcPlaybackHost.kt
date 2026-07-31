@@ -40,6 +40,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
+import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
@@ -130,20 +131,18 @@ internal fun DesktopVlcPlaybackHost(
     }
     LaunchedEffect(session, context.episodeId) {
         while (true) {
-            if (!completionHandled &&
-                settingsStore.load().autoPlayNextEpisode &&
-                org.akkirrai.hibiki.shared.player.isPlaybackComplete(
-                    positionMs = session.transport.positionMs(),
-                    durationMs = session.transport.durationMs(),
-                )
-            ) {
+            resolveAutoPlayNextEpisode(
+                episodes = context.episodes,
+                currentEpisodeId = context.episodeId,
+                currentEpisodeNumber = context.episodeNumber,
+                positionMs = session.transport.positionMs(),
+                durationMs = session.transport.durationMs(),
+                autoPlayEnabled = settingsStore.load().autoPlayNextEpisode,
+                completionHandled = completionHandled,
+            )?.let {
                 completionHandled = true
-                resolveAdjacentEpisode(
-                    context.episodes,
-                    context.episodeId,
-                    context.episodeNumber,
-                    1,
-                )?.let(onEpisodeSelected)
+                savePlaybackProgress()
+                onEpisodeSelected(it)
             }
             delay(500L)
         }

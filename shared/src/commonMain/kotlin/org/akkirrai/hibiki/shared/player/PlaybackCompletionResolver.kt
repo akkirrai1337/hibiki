@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
+import org.akkirrai.hibiki.shared.model.WatchEpisode
+
 /**
  * Returns whether a transport has reached the end of the current episode.
  *
@@ -13,4 +15,25 @@ fun isPlaybackComplete(
 ): Boolean {
     if (durationMs <= 0L || toleranceMs < 0L) return false
     return positionMs >= (durationMs - toleranceMs).coerceAtLeast(0L)
+}
+
+/** Resolves the next episode once, using the same completion policy on every host. */
+fun resolveAutoPlayNextEpisode(
+    episodes: List<WatchEpisode>,
+    currentEpisodeId: String,
+    currentEpisodeNumber: Double?,
+    positionMs: Long,
+    durationMs: Long,
+    autoPlayEnabled: Boolean,
+    completionHandled: Boolean,
+): WatchEpisode? {
+    if (!autoPlayEnabled || completionHandled || !isPlaybackComplete(positionMs, durationMs)) {
+        return null
+    }
+    return resolveAdjacentEpisode(
+        episodes = episodes,
+        currentEpisodeId = currentEpisodeId,
+        currentEpisodeNumber = currentEpisodeNumber,
+        offset = 1,
+    )
 }

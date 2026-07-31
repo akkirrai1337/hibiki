@@ -29,7 +29,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
-import org.akkirrai.hibiki.shared.player.isPlaybackComplete
+import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
@@ -121,13 +121,18 @@ internal fun IosEmbeddedPlaybackHost(
     LaunchedEffect(session, context.episodeId) {
         while (true) {
             positionMs = session.transport.positionMs()
-            if (!completionHandled &&
-                settingsStore.load().autoPlayNextEpisode &&
-                isPlaybackComplete(positionMs, session.transport.durationMs())
-            ) {
+            resolveAutoPlayNextEpisode(
+                episodes = context.episodes,
+                currentEpisodeId = context.episodeId,
+                currentEpisodeNumber = context.episodeNumber,
+                positionMs = positionMs,
+                durationMs = session.transport.durationMs(),
+                autoPlayEnabled = settingsStore.load().autoPlayNextEpisode,
+                completionHandled = completionHandled,
+            )?.let {
                 completionHandled = true
-                resolveAdjacentEpisode(context.episodes, context.episodeId, context.episodeNumber, 1)
-                    ?.let(onEpisodeSelected)
+                savePlaybackProgress()
+                onEpisodeSelected(it)
             }
             delay(500L)
         }
