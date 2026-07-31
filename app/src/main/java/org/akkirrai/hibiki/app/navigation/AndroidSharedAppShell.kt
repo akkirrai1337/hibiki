@@ -127,6 +127,7 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
+            notificationsAvailable = true,
             onCheckForUpdates = onCheckForUpdates,
             onExportLogs = {
                 AppLogger.shareLogs(context).onFailure {

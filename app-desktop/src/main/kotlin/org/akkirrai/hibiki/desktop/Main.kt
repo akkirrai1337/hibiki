@@ -86,6 +86,7 @@ fun main() = application {
                                 Desktop.getDesktop().browse(URI(HIBIKI_GITHUB_URL))
                             }
                         },
+                        notificationsAvailable = false,
                         includeNavigationBarPadding = true,
                     )
                 }

@@ -232,6 +232,7 @@ fun HibikiAppShell(
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onRequestOnboardingNotificationPermission: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    notificationsAvailable: Boolean = true,
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
@@ -895,6 +896,7 @@ fun HibikiAppShell(
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
                             onConfigureNotifications = onConfigureNotifications,
+                            notificationsAvailable = notificationsAvailable,
                             onCheckForUpdates = onCheckForUpdates,
                             onExportLogs = onExportLogs,
                             onOpenUrl = onOpenUrl,
@@ -1439,6 +1441,7 @@ private fun AppDestinationContent(
     profileAvatarEditAvailable: Boolean = false,
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
+    notificationsAvailable: Boolean = true,
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1826,6 +1829,7 @@ private fun AppDestinationContent(
                     onDiscordChange = onDiscordChange,
                     onCheckForUpdates = onCheckForUpdates,
                     onExportLogs = onExportLogs,
+                    notificationsAvailable = notificationsAvailable,
                 )
         }
     }
@@ -2169,6 +2173,7 @@ private fun SettingsScreen(
     onDiscordChange: (Boolean) -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
+    notificationsAvailable: Boolean = true,
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -2215,6 +2220,7 @@ private fun SettingsScreen(
         onDiscordChange = onDiscordChange,
         onCheckForUpdates = onCheckForUpdates,
         onExportLogs = onExportLogs,
+        notificationsAvailable = notificationsAvailable,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),

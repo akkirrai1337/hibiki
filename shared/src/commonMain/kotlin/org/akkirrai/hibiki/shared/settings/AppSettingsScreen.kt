@@ -51,6 +51,7 @@ fun AppSettingsScreen(
     autoSkipSegments: Boolean,
     themeMode: ThemeMode? = null,
     discordAvailable: Boolean = true,
+    notificationsAvailable: Boolean = true,
     discordEnabled: Boolean = false,
     showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
@@ -121,6 +122,7 @@ fun AppSettingsScreen(
                 onLanguageSelected = onLanguageModeChange,
                 notificationsTitle = labels.notifications,
                 notificationsSubtitle = labels.notificationsStatus,
+                notificationsAvailable = notificationsAvailable,
                 onNotificationsClick = onNotificationsClick,
             )
         }

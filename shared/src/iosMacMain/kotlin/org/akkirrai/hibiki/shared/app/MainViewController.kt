@@ -116,6 +116,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onboardingNotificationPermissionState = notificationPermissionState.value,
                     onRequestOnboardingNotificationPermission = requestNotificationPermission,
                     onConfigureNotifications = requestNotificationPermission,
+                    notificationsAvailable = true,
                     appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev",
                     onProfileAvatarEdit = { onPicked -> avatarPicker.present(hostController, onPicked) },
                     profileAvatarEditAvailable = true,

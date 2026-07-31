@@ -12,10 +12,11 @@ fun AppSettingsPreferencesSection(
     onLanguageSelected: (LanguageMode) -> Unit,
     notificationsTitle: String,
     notificationsSubtitle: String,
+    notificationsAvailable: Boolean = true,
     onNotificationsClick: () -> Unit,
 ) {
     AppSettingsSection(title = sectionTitle) {
-        AppSettingsItems(count = 2) { index, shape ->
+        AppSettingsItems(count = if (notificationsAvailable) 2 else 1) { index, shape ->
             when (index) {
                 0 -> AppSettingsIconVerticalItem(
                     icon = SettingsLanguageIcon,
