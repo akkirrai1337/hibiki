@@ -8,6 +8,7 @@ import org.junit.Before
 import org.junit.Test
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.settings.ThemeMode
 
 class DesktopSettingsStoreTest {
     private lateinit var preferences: Preferences
@@ -30,5 +31,22 @@ class DesktopSettingsStoreTest {
 
         DesktopSettingsStore(preferences).save(AppSettingsState(languageMode = LanguageMode.ENGLISH))
         assertEquals(LanguageMode.ENGLISH, DesktopSettingsStore(preferences).load().languageMode)
+    }
+
+    @Test
+    fun sharedThemeAndCapabilitySettingsPersistAcrossStoreInstances() {
+        val expected = AppSettingsState(
+            languageMode = LanguageMode.ENGLISH,
+            themeMode = ThemeMode.DARK,
+            darkTheme = true,
+            useSystemColorScheme = false,
+            useAmoledTheme = true,
+            onboardingCompleted = true,
+            selectedSourceId = "ani-liberty",
+        )
+
+        DesktopSettingsStore(preferences).save(expected)
+
+        assertEquals(expected, DesktopSettingsStore(preferences).load())
     }
 }
