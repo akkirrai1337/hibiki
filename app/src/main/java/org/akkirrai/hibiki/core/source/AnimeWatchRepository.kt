@@ -56,6 +56,7 @@ import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildWatchSourceId
 import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
@@ -73,7 +74,7 @@ data class ResolvedPlayerStream(
 class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
-) {
+) : WatchDataRepository {
     private val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
     private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
     private val sourcePayloadLanguages = ConcurrentHashMap<String, String>()
@@ -150,7 +151,10 @@ class AnimeWatchRepository(
         return result
     }
 
-    suspend fun getEpisodes(sourceId: String): List<WatchEpisode> {
+    override suspend fun loadSources(animeId: String): List<WatchSource> =
+        loadSources(animeId = animeId, onUpdate = {})
+
+    override suspend fun getEpisodes(sourceId: String): List<WatchEpisode> {
         val payload = ensureSourcePayload(sourceId) ?: return emptyList()
         return payload.episodes
             .sortedBy(Episode::number)
@@ -162,6 +166,24 @@ class AnimeWatchRepository(
                 )
             }
     }
+
+    override suspend fun getPlayerLinks(sourceId: String, episodeId: String): List<PlayerLink> {
+        val payload = ensureSourcePayload(sourceId)
+            ?: throw IllegalArgumentException("Source is not registered: $sourceId")
+        val episode = payload.episodes.firstOrNull { it.id == episodeId }
+            ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
+        return getFilteredLinks(payload, episode)
+    }
+
+    override suspend fun resolvePlayback(
+        sourceId: String,
+        episodeId: String,
+        preferredQuality: String?,
+    ): PlaybackStream = resolveStream(
+        sourceId = sourceId,
+        episodeId = episodeId,
+        preferredQuality = preferredQuality,
+    )
 
     fun getCachedEpisodes(sourceId: String): List<WatchEpisode>? {
         val payload = sourcePayloads[sourceId] ?: return null
@@ -347,7 +369,7 @@ class AnimeWatchRepository(
         inFlightLoads.clear()
     }
 
-    fun close() {
+    override fun close() {
         clearCaches()
         client.close()
     }
