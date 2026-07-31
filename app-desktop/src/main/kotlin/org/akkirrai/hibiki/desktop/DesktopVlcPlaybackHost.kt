@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -52,6 +53,7 @@ import org.akkirrai.hibiki.shared.text.appText
 internal fun DesktopVlcPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
+    navigationState: AppNavigationState,
     settingsStore: AppSettingsStore,
     progressRepository: PlaybackProgressRepository,
     onBack: () -> Unit,
@@ -67,7 +69,7 @@ internal fun DesktopVlcPlaybackHost(
     var scaleMode by remember(session) { mutableStateOf(settingsStore.load().videoScaleMode) }
     var videoWidth by remember(session) { mutableIntStateOf(0) }
     var videoHeight by remember(session) { mutableIntStateOf(0) }
-    var playlistVisible by remember(session) { mutableStateOf(false) }
+    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     var controlsLocked by remember(session) { mutableStateOf(false) }
     var unlockButtonVisible by remember(session) { mutableStateOf(false) }
     var completionHandled by remember(session) { mutableStateOf(false) }
@@ -75,7 +77,7 @@ internal fun DesktopVlcPlaybackHost(
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
-    var settingsVisible by remember { mutableStateOf(false) }
+    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
@@ -192,7 +194,6 @@ internal fun DesktopVlcPlaybackHost(
         AppSystemBackHandler(
             enabled = playlistVisible,
             onBack = {
-                playlistVisible = false
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
             },
         ) {
@@ -229,7 +230,6 @@ internal fun DesktopVlcPlaybackHost(
                     onBack = ::closePlayback,
                     playlistEnabled = context.episodes.isNotEmpty(),
                     onPlaylistClick = {
-                        playlistVisible = true
                         onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
                     },
                     hasPreviousEpisode = episodeNavigation.hasPrevious,
@@ -240,7 +240,6 @@ internal fun DesktopVlcPlaybackHost(
                         controlsLocked = true
                         unlockButtonVisible = true
                         if (playlistVisible) {
-                            playlistVisible = false
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         }
                     },
@@ -248,7 +247,6 @@ internal fun DesktopVlcPlaybackHost(
                     onControlsVisibilityChanged = { controlsVisible = it },
                     onSettingsClick = {
                         settingsDestination = PlayerSettingsDestination.Root
-                        settingsVisible = true
                         onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                     },
                     settingsContentDescription = appText(AppTextKey.Settings),
@@ -276,12 +274,10 @@ internal fun DesktopVlcPlaybackHost(
                         .replace("%s", org.akkirrai.hibiki.shared.player.formatEpisodeNumber(episode.number))
                 },
                 onDismissRequest = {
-                    playlistVisible = false
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
                 onEpisodeClick = { episodeId ->
                     context.episodes.firstOrNull { it.id == episodeId }?.let {
-                        playlistVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         savePlaybackProgress()
                         onEpisodeSelected(it)
@@ -309,8 +305,7 @@ internal fun DesktopVlcPlaybackHost(
             if (settingsVisible) {
                 AppPlayerSettingsLayer(
                     onDismissRequest = {
-                        settingsVisible = false
-                        settingsDestination = PlayerSettingsDestination.Root
+                settingsDestination = PlayerSettingsDestination.Root
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     },
                     nowMs = { System.currentTimeMillis() },
@@ -340,19 +335,16 @@ internal fun DesktopVlcPlaybackHost(
                         },
                         onSelectVoiceover = { source ->
                             dismissPanel()
-                            settingsVisible = false
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                         },
                         onSelectPlayer = { playerName ->
                             dismissPanel()
-                            settingsVisible = false
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                         },
                         onSelectQuality = { qualityLabel ->
                             dismissPanel()
-                            settingsVisible = false
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
                             dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                         },

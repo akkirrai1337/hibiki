@@ -15,6 +15,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
@@ -47,6 +48,7 @@ import kotlinx.coroutines.delay
 internal fun IosEmbeddedPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
+    navigationState: AppNavigationState,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     settingsStore: AppSettingsStore,
@@ -60,8 +62,8 @@ internal fun IosEmbeddedPlaybackHost(
             it.transport.setRate(settingsStore.load().playbackSpeed)
         }
     }
-    var playlistVisible by remember(session) { mutableStateOf(false) }
-    var settingsVisible by remember(session) { mutableStateOf(false) }
+    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
+    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
     var settingsDestination by remember(session) { mutableStateOf(PlayerSettingsDestination.Root) }
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
@@ -166,7 +168,6 @@ internal fun IosEmbeddedPlaybackHost(
             },
             playlistEnabled = context.episodes.isNotEmpty(),
             onPlaylistClick = {
-                playlistVisible = true
                 onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
             },
             hasPreviousEpisode = episodeNavigation.hasPrevious,
@@ -179,7 +180,6 @@ internal fun IosEmbeddedPlaybackHost(
             },
             onSettingsClick = {
                 settingsDestination = PlayerSettingsDestination.Root
-                settingsVisible = true
                 onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
             },
             settingsContentDescription = appText(AppTextKey.Settings),
@@ -198,12 +198,10 @@ internal fun IosEmbeddedPlaybackHost(
                 appText(AppTextKey.PlayerEpisodeNumber).replace("%s", formatEpisodeNumber(episode.number))
             },
             onDismissRequest = {
-                playlistVisible = false
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                    playlistVisible = false
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     savePlaybackProgress()
                     onEpisodeSelected(it)
@@ -217,7 +215,6 @@ internal fun IosEmbeddedPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
@@ -248,19 +245,16 @@ internal fun IosEmbeddedPlaybackHost(
                     },
                     onSelectVoiceover = { source ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                     },
                     onSelectPlayer = { playerName ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                     },
                     onSelectQuality = { qualityLabel ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },

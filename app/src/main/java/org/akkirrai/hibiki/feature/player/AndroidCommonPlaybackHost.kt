@@ -51,6 +51,7 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
 
 /** Android platform host for the common playback controls and Media3 transport. */
@@ -58,6 +59,7 @@ import org.akkirrai.hibiki.shared.navigation.AppOverlay
 internal fun AndroidCommonPlaybackHost(
     playback: PlaybackStream,
     context: PlaybackContext,
+    navigationState: AppNavigationState,
     progressRepository: PlaybackProgressRepository,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
@@ -75,10 +77,10 @@ internal fun AndroidCommonPlaybackHost(
     }
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
     var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
-    var playlistVisible by remember { mutableStateOf(false) }
+    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     var controlsLocked by remember { mutableStateOf(false) }
     var unlockButtonVisible by remember { mutableStateOf(false) }
-    var settingsVisible by remember { mutableStateOf(false) }
+    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
@@ -254,7 +256,6 @@ internal fun AndroidCommonPlaybackHost(
                 onBack = ::closePlayback,
                 playlistEnabled = context.episodes.isNotEmpty(),
                 onPlaylistClick = {
-                    playlistVisible = true
                     onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
                 },
                 hasPreviousEpisode = episodeNavigation.hasPrevious,
@@ -269,7 +270,6 @@ internal fun AndroidCommonPlaybackHost(
                     controlsLocked = true
                     unlockButtonVisible = true
                     if (playlistVisible) {
-                        playlistVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     }
                 },
@@ -292,7 +292,6 @@ internal fun AndroidCommonPlaybackHost(
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
                 onSettingsClick = {
                     settingsDestination = PlayerSettingsDestination.Root
-                    settingsVisible = true
                     onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                 },
                 settingsContentDescription = appText(AppTextKey.Settings),
@@ -321,12 +320,10 @@ internal fun AndroidCommonPlaybackHost(
                     .replace("%s", formatEpisodeNumber(episode.number))
             },
             onDismissRequest = {
-                playlistVisible = false
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                    playlistVisible = false
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     savePlaybackProgress()
                     onEpisodeSelected(it)
@@ -352,7 +349,6 @@ internal fun AndroidCommonPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
@@ -378,19 +374,16 @@ internal fun AndroidCommonPlaybackHost(
                     },
                     onSelectVoiceover = { source ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
                     },
                     onSelectPlayer = { playerName ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
                     },
                     onSelectQuality = { qualityLabel ->
                         dismissPanel()
-                        settingsVisible = false
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
                     },

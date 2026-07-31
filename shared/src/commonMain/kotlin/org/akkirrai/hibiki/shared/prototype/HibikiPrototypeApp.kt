@@ -249,7 +249,7 @@ fun HibikiAppShell(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
-    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
@@ -1071,6 +1071,7 @@ fun HibikiAppShell(
                         AppPlaybackOverlayHost(
                             playback = route.playback,
                             context = route.context,
+                            navigationState = navigationState,
                             onDismiss = {
                                 activePlaybackRoute = null
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
@@ -1083,8 +1084,8 @@ fun HibikiAppShell(
                             },
                             onSettingsAction = ::handlePlaybackSettingsAction,
                             onOverlayEvent = { event -> navigationState = navigationState.reduce(event) },
-                            content = { playback, context, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                            playbackHost(playback, context, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent)
+                            content = { playback, context, navigationState, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+                            playbackHost(playback, context, navigationState, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent)
                             },
                         )
                     }

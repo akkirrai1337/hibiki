@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository
 import org.akkirrai.hibiki.shared.details.OfflineTitleMetadataRepository
@@ -60,7 +61,7 @@ fun HibikiApp(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (PlaybackStream, PlaybackContext) -> Unit = { _, _ -> },
-    playbackHost: (@Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (PlaybackStream, PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
