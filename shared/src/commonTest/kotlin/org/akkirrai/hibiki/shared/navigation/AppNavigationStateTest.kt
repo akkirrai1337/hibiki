@@ -42,6 +42,20 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun selectingTopLevelResetsPlayerSettingsDestination() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Quality))
+
+        val root = state.reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.HOME))
+
+        assertEquals(emptyList(), root.backStack)
+        assertEquals(emptyList(), root.overlays)
+        assertEquals(AppPlayerSettingsDestination.Root, root.playerSettingsDestination)
+    }
+
+    @Test
     fun playerSettingsDestinationIsSharedAndBackReturnsToRootBeforeDismiss() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
