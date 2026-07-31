@@ -147,7 +147,7 @@ internal fun AndroidSharedAppShell(
                 discordAuthLauncher.launch(Intent(context, DiscordAuthActivity::class.java))
             },
             sources = sources,
-            selectedSourceId = preferences.animeSource.value.takeIf { preferences.hasExplicitAnimeSource },
+            selectedSourceId = preferences.animeSource.value,
             onSourceSelected = { sourceId ->
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
             },
