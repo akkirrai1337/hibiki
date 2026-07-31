@@ -931,6 +931,9 @@ fun HibikiAppShell(
                                 )
                             },
                             onBackFromWatch = {
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                                 if (navigationState.currentRoute is AppRoute.Episodes ||
                                     navigationState.currentRoute is AppRoute.WatchSources
@@ -939,9 +942,6 @@ fun HibikiAppShell(
                                     resetPlayerState()
                                     return@AppDestinationContent
                                 }
-                                playbackJob?.cancel()
-                                playbackJob = null
-                                playbackRequestGeneration++
                                 resetPlayerState()
                                 watchAnime = null
                             },
@@ -1588,7 +1588,7 @@ private fun AppDestinationContent(
     if (watchAnime != null) {
         WatchScreenScaffold(
             onBackClick = onBackFromWatch,
-            backEnabled = !playbackLoading,
+            backEnabled = true,
             backContentDescription = appText(AppTextKey.Back),
             modifier = modifier,
         ) { listContentPadding ->
