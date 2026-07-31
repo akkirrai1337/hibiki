@@ -30,6 +30,7 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
+import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
@@ -76,13 +77,14 @@ internal fun IosEmbeddedPlaybackHost(
 
     fun savePlaybackProgress() {
         val position = session.transport.positionMs()
-        if (position <= 0L) return
-        progressRepository.saveEpisodeProgress(
+        resolvePersistablePlaybackProgress(position, session.transport.durationMs())?.let { progress ->
+            progressRepository.saveEpisodeProgress(
             context = context,
             playback = playback,
-            positionMs = position,
-            durationMs = session.transport.durationMs(),
-        )
+            positionMs = progress.positionMs,
+            durationMs = progress.durationMs,
+            )
+        }
     }
 
     fun closePlayback() {

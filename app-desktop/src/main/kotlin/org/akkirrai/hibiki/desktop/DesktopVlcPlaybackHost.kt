@@ -41,6 +41,7 @@ import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
+import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
@@ -85,13 +86,14 @@ internal fun DesktopVlcPlaybackHost(
 
     fun savePlaybackProgress() {
         val position = session.transport.positionMs()
-        if (position <= 0L) return
-        progressRepository.saveEpisodeProgress(
+        resolvePersistablePlaybackProgress(position, session.transport.durationMs())?.let { progress ->
+            progressRepository.saveEpisodeProgress(
             context = context,
             playback = playback,
-            positionMs = position,
-            durationMs = session.transport.durationMs(),
-        )
+            positionMs = progress.positionMs,
+            durationMs = progress.durationMs,
+            )
+        }
     }
 
     fun closePlayback() {
