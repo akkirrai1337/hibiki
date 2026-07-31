@@ -14,8 +14,9 @@ import org.akkirrai.hibiki.shared.model.AnimeTrailer
 import org.akkirrai.hibiki.shared.model.RelatedAnime
 
 /** Desktop persistent adapter matching the Android library category semantics. */
-internal class DesktopLibraryRepository : LibraryRepository {
-    private val preferences = Preferences.userNodeForPackage(DesktopLibraryRepository::class.java)
+internal class DesktopLibraryRepository(
+    private val preferences: Preferences = Preferences.userNodeForPackage(DesktopLibraryRepository::class.java),
+) : LibraryRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun getEntries(): List<LibraryEntry> = getLibraryEntries()

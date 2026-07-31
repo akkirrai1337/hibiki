@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.vlcj)
+    testImplementation(libs.junit)
 }
 
 compose.desktop {
