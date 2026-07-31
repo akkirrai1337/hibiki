@@ -137,6 +137,7 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
+        controlsVisible = true
         savePlaybackProgress()
         onSettingsAction(action)
     }

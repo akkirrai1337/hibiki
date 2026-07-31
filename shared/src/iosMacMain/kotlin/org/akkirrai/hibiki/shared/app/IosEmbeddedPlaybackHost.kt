@@ -110,6 +110,7 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
+        controlsVisible = true
         savePlaybackProgress()
         onSettingsAction(action)
     }

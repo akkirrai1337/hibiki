@@ -119,6 +119,7 @@ internal fun DesktopVlcPlaybackHost(
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
+        controlsVisible = true
         savePlaybackProgress()
         onSettingsAction(action)
     }
