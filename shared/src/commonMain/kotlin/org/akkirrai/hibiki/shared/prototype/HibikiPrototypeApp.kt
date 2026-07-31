@@ -233,6 +233,7 @@ fun HibikiAppShell(
     onRequestOnboardingNotificationPermission: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     profileAvatarEditAvailable: Boolean = false,
@@ -895,6 +896,7 @@ fun HibikiAppShell(
                             onAutoSkipChange = onAutoSkipChange,
                             onConfigureNotifications = onConfigureNotifications,
                             onCheckForUpdates = onCheckForUpdates,
+                            onExportLogs = onExportLogs,
                             onOpenUrl = onOpenUrl,
                             onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
@@ -1436,6 +1438,7 @@ private fun AppDestinationContent(
     profileLoading: Boolean = false,
     profileAvatarEditAvailable: Boolean = false,
     onCheckForUpdates: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1822,6 +1825,7 @@ private fun AppDestinationContent(
                     onDiscordClick = onDiscordClick,
                     onDiscordChange = onDiscordChange,
                     onCheckForUpdates = onCheckForUpdates,
+                    onExportLogs = onExportLogs,
                 )
         }
     }
@@ -2164,6 +2168,7 @@ private fun SettingsScreen(
     onDiscordClick: () -> Unit = {},
     onDiscordChange: (Boolean) -> Unit = {},
     onCheckForUpdates: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -2209,6 +2214,7 @@ private fun SettingsScreen(
         onDiscordClick = onDiscordClick,
         onDiscordChange = onDiscordChange,
         onCheckForUpdates = onCheckForUpdates,
+        onExportLogs = onExportLogs,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),

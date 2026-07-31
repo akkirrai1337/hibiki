@@ -29,6 +29,9 @@ import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
 import org.akkirrai.hibiki.feature.settings.AndroidDiscordRpcController
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
+import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.R
+import android.widget.Toast
 import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.shared.app.HibikiApp as SharedHibikiApp
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
@@ -125,6 +128,11 @@ internal fun AndroidSharedAppShell(
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
             onCheckForUpdates = onCheckForUpdates,
+            onExportLogs = {
+                AppLogger.shareLogs(context).onFailure {
+                    Toast.makeText(context, R.string.settings_export_logs_failed, Toast.LENGTH_SHORT).show()
+                }
+            },
             onProfileAvatarEdit = { onPicked ->
                 pendingAvatarCallback = onPicked
                 avatarPicker.launch(arrayOf("image/*"))
