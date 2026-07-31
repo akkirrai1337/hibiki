@@ -15,9 +15,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppBackButton
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+
+fun watchScreenContentPadding(statusBarHeight: Dp): PaddingValues = PaddingValues(
+    start = WatchSourcesListHorizontalPadding,
+    end = WatchSourcesListHorizontalPadding,
+    top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize,
+    bottom = WatchSourcesListBottomPadding,
+)
 
 @Composable
 fun WatchScreenScaffold(
@@ -48,12 +56,7 @@ fun WatchScreenScaffold(
     } else {
         Modifier.statusBarsPadding()
     }
-    val contentPadding = PaddingValues(
-        start = WatchSourcesListHorizontalPadding,
-        end = WatchSourcesListHorizontalPadding,
-        top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize,
-        bottom = WatchSourcesListBottomPadding,
-    )
+    val contentPadding = watchScreenContentPadding(statusBarHeight)
     Box(
         modifier = modifier
             .fillMaxSize()
