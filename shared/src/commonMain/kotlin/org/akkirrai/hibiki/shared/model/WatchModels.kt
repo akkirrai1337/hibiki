@@ -30,6 +30,9 @@ data class PlaybackContext(
     val episodeNumber: Double,
     val sourceTitle: String,
     val episodes: List<WatchEpisode> = emptyList(),
+    val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
+    val selectedPlayerName: String? = null,
+    val selectedQualityLabel: String? = null,
 )
 
 data class PlaybackRoute(

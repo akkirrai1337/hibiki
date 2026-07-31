@@ -344,6 +344,22 @@ fun HibikiAppShell(
             }
     }
 
+    LaunchedEffect(watchRepository, activePlaybackRoute?.context?.episodeId) {
+        val repositoryForPlayback = watchRepository ?: return@LaunchedEffect
+        val route = activePlaybackRoute ?: return@LaunchedEffect
+        val options = runCatching {
+            repositoryForPlayback.getPlaybackSettingsOptions(
+                sourceId = route.context.sourceId,
+                episodeId = route.context.episodeId,
+            )
+        }.getOrNull() ?: return@LaunchedEffect
+        if (activePlaybackRoute?.context?.episodeId == route.context.episodeId) {
+            activePlaybackRoute = route.copy(
+                context = route.context.copy(settingsOptions = options),
+            )
+        }
+    }
+
     LaunchedEffect(watchRepository, selectedWatchSource?.sourceId, episodesLoadGeneration) {
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val source = selectedWatchSource ?: return@LaunchedEffect
