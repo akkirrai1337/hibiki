@@ -7,7 +7,8 @@ fun <T> filterOnboardingSourcesByLanguage(
     englishTag: String,
     languageTags: (T) -> Set<String>,
 ): List<T> {
-    val preferredTag = if (systemLanguage.lowercase() in setOf("ru", "uk", "be")) {
+    val normalizedLanguage = systemLanguage.lowercase()
+    val preferredTag = if (setOf("ru", "uk", "be").any(normalizedLanguage::startsWith)) {
         russianTag
     } else {
         englishTag
