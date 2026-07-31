@@ -93,6 +93,25 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun playerSettingsOpenAndCloseAreAtomicOverlayEvents() {
+        val opened = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Quality))
+            .reduce(AppNavigationEvent.OpenPlayerSettings)
+
+        assertEquals(listOf(AppOverlay.PlayerSettings), opened.overlays)
+        assertEquals(AppPlayerSettingsDestination.Root, opened.playerSettingsDestination)
+
+        val closed = opened
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Speed))
+            .reduce(AppNavigationEvent.ClosePlayerSettings)
+
+        assertEquals(emptyList(), closed.overlays)
+        assertEquals(AppPlayerSettingsDestination.Root, closed.playerSettingsDestination)
+    }
+
+    @Test
     fun playbackOverlaysAreMutuallyExclusive() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))

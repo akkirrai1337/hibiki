@@ -54,6 +54,19 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
     is AppNavigationEvent.SetPlayerSettingsDestination -> copy(
         playerSettingsDestination = event.destination,
     )
+    AppNavigationEvent.OpenPlayerSettings -> copy(
+        overlays = overlays.filterNot { it is AppOverlay.Playlist || it is AppOverlay.PlayerSettings } +
+            AppOverlay.PlayerSettings,
+        playerSettingsDestination = AppPlayerSettingsDestination.Root,
+    )
+    AppNavigationEvent.ClosePlayerSettings -> copy(
+        overlays = if (overlays.lastOrNull() is AppOverlay.PlayerSettings) {
+            overlays.dropLast(1)
+        } else {
+            overlays
+        },
+        playerSettingsDestination = AppPlayerSettingsDestination.Root,
+    )
     AppNavigationEvent.Back -> when {
         overlays.lastOrNull() is AppOverlay.PlayerSettings &&
             playerSettingsDestination != AppPlayerSettingsDestination.Root -> copy(
