@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.HibikiApp
+import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -157,10 +158,17 @@ class MainActivity : ComponentActivity() {
                         amoled = preferences.useAmoledTheme,
                     ) {
                         if (preferences.onboardingCompleted) {
-                            HibikiApp(
-                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                onConfigureNotifications = ::configureNotifications,
-                            )
+                            if (USE_SHARED_APP_SHELL) {
+                                AndroidSharedAppShell(
+                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                    onConfigureNotifications = ::configureNotifications,
+                                )
+                            } else {
+                                HibikiApp(
+                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                    onConfigureNotifications = ::configureNotifications,
+                                )
+                            }
                         } else {
                             SharedAndroidOnboardingScreen(
                                 initialSource = preferences.animeSource
@@ -438,6 +446,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        private const val USE_SHARED_APP_SHELL = false
         private const val UPDATE_PREFERENCES = "app_update"
         private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
         private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"
