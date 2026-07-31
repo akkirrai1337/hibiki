@@ -276,7 +276,13 @@ internal fun AndroidCommonPlaybackHost(
         onDispose { androidContext.unregisterReceiver(receiver) }
     }
 
-    LaunchedEffect(isPictureInPictureActive, context.episodeId, episodeNavigation) {
+    LaunchedEffect(
+        isPictureInPictureActive,
+        isAudioOnly,
+        isPlaying,
+        context.episodeId,
+        episodeNavigation,
+    ) {
         if (isPictureInPictureActive) {
             activity?.setPictureInPictureParams(
                 createAndroidPictureInPictureParams(
