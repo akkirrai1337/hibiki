@@ -179,4 +179,29 @@ class AppRouteNavigationTest {
             ).enterKey,
         )
     }
+
+    @Test
+    fun `route first player resolve keeps details as back target`() {
+        val loading = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+        val loaded = loading.reduce(
+            AppNavigationEvent.Replace(AppRoute.Player("source-1", "episode-1", 1.0)),
+        )
+
+        assertEquals(loading.backStack.size, loaded.backStack.size)
+        assertEquals(AppRoute.Details("anime-1"), loaded.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
+    fun `route first player resolve keeps episodes as back target`() {
+        val loading = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Episodes(source)))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+        val loaded = loading.reduce(
+            AppNavigationEvent.Replace(AppRoute.Player("source-1", "episode-1", 1.0)),
+        )
+
+        assertEquals(AppRoute.Episodes(source), loaded.reduce(AppNavigationEvent.Back).currentRoute)
+    }
 }
