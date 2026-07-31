@@ -231,7 +231,7 @@ fun AppDetailsScreen(
                         posterExpanded = isAtTop,
                         isInLibrary = libraryCategory != null && libraryCategory != LibraryCategory.Saved,
                         canWatch = canWatch,
-                        libraryLabel = appText(AppTextKey.Favorite),
+                        libraryLabel = appText(AppTextKey.DetailsFavorite),
                         watchLabel = appText(AppTextKey.Watch),
                         onPosterClick = { setPosterPreviewVisible(true) },
                         onLibraryClick = { setLibrarySheetVisible(true) },

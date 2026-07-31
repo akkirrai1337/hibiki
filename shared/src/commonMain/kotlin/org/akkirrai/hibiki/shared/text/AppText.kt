@@ -133,6 +133,7 @@ enum class AppTextKey {
     ProfileDateDaysAgo,
     Back,
     Favorite,
+    DetailsFavorite,
     Watch,
     WatchSourcesEmptyTitle,
     WatchSourcesEmptyMessage,
@@ -391,6 +392,7 @@ class DefaultAppTextResolver(
             AppTextKey.ProfileActivity -> if (russian) "Активность" else "Activity"
             AppTextKey.Back -> if (russian) "Назад" else "Back"
             AppTextKey.Favorite -> if (russian) "В библиотеку" else "Library"
+            AppTextKey.DetailsFavorite -> if (russian) "В избранное" else "Add to favorites"
             AppTextKey.Watch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.WatchSourcesEmptyTitle -> if (russian) "Озвучки не найдены" else "No watch sources"
             AppTextKey.WatchSourcesEmptyMessage -> if (russian) "Для этого тайтла пока нет доступных источников." else "This title has no available sources yet."
