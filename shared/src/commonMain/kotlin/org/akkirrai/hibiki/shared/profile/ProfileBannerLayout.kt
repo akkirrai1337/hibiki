@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +26,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 @Composable
 fun AppProfileBannerLayout(
@@ -40,9 +41,14 @@ fun AppProfileBannerLayout(
     minBannerPadding: Dp = ProfileBannerMinPadding,
 ) {
     val density = LocalDensity.current
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
     var bannerHeightPx by remember { mutableFloatStateOf(with(density) { maxBannerHeight.toPx() }) }
     var ratio by remember { mutableFloatStateOf(1f) }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    val statusBarHeight = if (layoutEnvironment.isProvided) {
+        layoutEnvironment.topSystemInset
+    } else {
+        with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    }
     val minBannerHeightPx = with(density) { (statusBarHeight + minBannerPadding).toPx() }
     val maxBannerHeightPx = with(density) { maxBannerHeight.toPx() }
 
