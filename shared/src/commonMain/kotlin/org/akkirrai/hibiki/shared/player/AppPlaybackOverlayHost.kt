@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
@@ -31,9 +32,15 @@ fun AppPlaybackOverlayHost(
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
+    val handleEpisodeSelected: (WatchEpisode) -> Unit = { episode ->
+        if (navigationState.overlays.lastOrNull() == AppOverlay.Playlist) {
+            onOverlayEvent(AppNavigationEvent.DismissOverlay)
+        }
+        onEpisodeSelected(episode)
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         if (playback != null) {
-            content(playback, context, navigationState, onDismiss, onEpisodeSelected, onSettingsAction, onOverlayEvent)
+            content(playback, context, navigationState, onDismiss, handleEpisodeSelected, onSettingsAction, onOverlayEvent)
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))
         }

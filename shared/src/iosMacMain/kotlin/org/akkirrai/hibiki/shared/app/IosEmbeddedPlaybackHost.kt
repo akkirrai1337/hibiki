@@ -215,7 +215,6 @@ internal fun IosEmbeddedPlaybackHost(
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     savePlaybackProgress()
                     onEpisodeSelected(it)
                 }

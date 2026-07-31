@@ -283,9 +283,8 @@ internal fun DesktopVlcPlaybackHost(
                 onDismissRequest = {
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
-                onEpisodeClick = { episodeId ->
-                    context.episodes.firstOrNull { it.id == episodeId }?.let {
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            onEpisodeClick = { episodeId ->
+                context.episodes.firstOrNull { it.id == episodeId }?.let {
                         savePlaybackProgress()
                         onEpisodeSelected(it)
                     }
