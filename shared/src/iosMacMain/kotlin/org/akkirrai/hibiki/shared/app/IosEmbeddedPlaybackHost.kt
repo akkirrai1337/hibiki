@@ -36,6 +36,9 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import platform.Foundation.NSDate
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
+import platform.UIKit.UIApplicationWillResignActiveNotification
 import kotlinx.coroutines.delay
 
 @Composable
@@ -99,7 +102,14 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     DisposableEffect(session) {
+        val backgroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+            name = UIApplicationWillResignActiveNotification,
+            obj = null,
+            queue = NSOperationQueue.mainQueue,
+            usingBlock = { savePlaybackProgress() },
+        )
         onDispose {
+            NSNotificationCenter.defaultCenter.removeObserver(backgroundObserver)
             savePlaybackProgress()
             session.release()
         }
