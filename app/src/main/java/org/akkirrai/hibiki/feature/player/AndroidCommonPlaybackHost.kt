@@ -389,8 +389,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
                 onSettingsClick = {
-                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                    onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+                    onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
                 },
                 settingsContentDescription = appText(AppTextKey.Settings),
                 onControlsVisibilityChanged = { controlsVisible = it },
@@ -446,8 +445,7 @@ internal fun AndroidCommonPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                    onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                 },
                 nowMs = SystemClock::elapsedRealtime,
                 backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },

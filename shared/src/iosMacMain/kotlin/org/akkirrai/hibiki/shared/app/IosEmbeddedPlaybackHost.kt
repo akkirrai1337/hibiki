@@ -192,8 +192,7 @@ internal fun IosEmbeddedPlaybackHost(
                 selectAdjacentEpisode(1)
             },
             onSettingsClick = {
-                onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+                onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
             },
             settingsContentDescription = appText(AppTextKey.Settings),
             onControlsVisibilityChanged = { controlsVisible = it },
@@ -227,8 +226,7 @@ internal fun IosEmbeddedPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                 },
                 nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
                 backHandler = { enabled, callback ->

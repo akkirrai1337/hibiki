@@ -253,8 +253,7 @@ internal fun DesktopVlcPlaybackHost(
                     lockContentDescription = appText(AppTextKey.PlayerLock),
                     onControlsVisibilityChanged = { controlsVisible = it },
                     onSettingsClick = {
-                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                        onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+                        onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
                     },
                     settingsContentDescription = appText(AppTextKey.Settings),
                 )
@@ -311,8 +310,7 @@ internal fun DesktopVlcPlaybackHost(
             if (settingsVisible) {
                 AppPlayerSettingsLayer(
                     onDismissRequest = {
-                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                        onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                     },
                     nowMs = { System.currentTimeMillis() },
                     backHandler = { enabled, callback ->
