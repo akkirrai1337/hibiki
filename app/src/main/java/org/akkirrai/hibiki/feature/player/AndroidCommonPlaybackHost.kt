@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
 import android.os.SystemClock
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +37,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
+import org.akkirrai.hibiki.shared.player.isPlaybackComplete
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -64,6 +66,7 @@ internal fun AndroidCommonPlaybackHost(
     var unlockButtonVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
+    var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     val videoScaleMode = preferencesState.videoScaleMode
     val episodeNavigation = resolveEpisodeNavigationAvailability(
         episodes = context.episodes,
@@ -82,6 +85,19 @@ internal fun AndroidCommonPlaybackHost(
             currentEpisodeNumber = context.episodeNumber,
             offset = offset,
         )?.let(onEpisodeSelected)
+    }
+
+    LaunchedEffect(exoPlayer, context.episodeId, preferencesState.autoPlayNextEpisode) {
+        while (true) {
+            if (!completionHandled &&
+                preferencesState.autoPlayNextEpisode &&
+                isPlaybackComplete(transport.positionMs(), transport.durationMs())
+            ) {
+                completionHandled = true
+                selectAdjacentEpisode(1)
+            }
+            delay(500L)
+        }
     }
 
     DisposableEffect(androidContext, context.episodeId, episodeNavigation) {
