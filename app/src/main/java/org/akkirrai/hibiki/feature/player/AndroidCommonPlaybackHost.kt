@@ -111,6 +111,7 @@ internal fun AndroidCommonPlaybackHost(
         currentEpisodeId = context.episodeId,
     )
     var isAudioOnly by remember { mutableStateOf(false) }
+    var isEnteringPictureInPicture by remember { mutableStateOf(false) }
     var isPictureInPictureActive by remember { mutableStateOf(false) }
     val pictureInPictureSupported = remember(activity) {
         activity?.packageManager?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
@@ -239,7 +240,6 @@ internal fun AndroidCommonPlaybackHost(
                 exoPlayer.play()
                 isAudioOnly = true
                 isPictureInPictureActive = false
-                DiscordRpcManager.get(androidContext).setBackgroundAudioActive(true)
                 activity?.moveTaskToBack(true)
             },
             onTogglePlayback = {
@@ -262,6 +262,20 @@ internal fun AndroidCommonPlaybackHost(
                     hasNextEpisode = episodeNavigation.hasNext,
                 ),
             )
+        }
+    }
+
+    LaunchedEffect(isEnteringPictureInPicture, isPictureInPictureActive, isAudioOnly) {
+        val discord = DiscordRpcManager.get(androidContext)
+        discord.setPictureInPictureActive(isEnteringPictureInPicture || isPictureInPictureActive)
+        discord.setBackgroundAudioActive(isAudioOnly)
+    }
+
+    DisposableEffect(androidContext) {
+        onDispose {
+            val discord = DiscordRpcManager.get(androidContext)
+            discord.setPictureInPictureActive(false)
+            discord.setBackgroundAudioActive(false)
         }
     }
 
@@ -321,8 +335,8 @@ internal fun AndroidCommonPlaybackHost(
 
     Box(modifier = modifier.fillMaxSize()) {
         AndroidPlayerSurface(
-            exoPlayer = exoPlayer,
-            isAudioOnly = false,
+                exoPlayer = exoPlayer,
+            isAudioOnly = isAudioOnly,
             videoScaleMode = videoScaleMode,
             videoAspectRatio = videoAspectRatio,
             isClosing = false,
@@ -358,6 +372,8 @@ internal fun AndroidCommonPlaybackHost(
                 lockContentDescription = appText(AppTextKey.PlayerLock),
                 pictureInPictureEnabled = pictureInPictureSupported,
                 onPictureInPictureClick = {
+                    isEnteringPictureInPicture = true
+                    DiscordRpcManager.get(androidContext).setPictureInPictureActive(true)
                     val entered = runCatching {
                         activity?.enterPictureInPictureMode(
                             createAndroidPictureInPictureParams(
@@ -370,6 +386,10 @@ internal fun AndroidCommonPlaybackHost(
                         ) ?: false
                     }.getOrDefault(false)
                     isPictureInPictureActive = entered
+                    if (!entered) {
+                        isEnteringPictureInPicture = false
+                        DiscordRpcManager.get(androidContext).setPictureInPictureActive(false)
+                    }
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
                 onSettingsClick = {
