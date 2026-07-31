@@ -677,6 +677,9 @@ fun HibikiAppShell(
                 resetPlayerState()
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
+                playbackJob?.cancel()
+                playbackJob = null
+                playbackRequestGeneration++
                 episodesPresenter.setState(EpisodesScreenState())
                 resetPlayerState()
                 if (navigationState.currentRoute !is AppRoute.Episodes &&
