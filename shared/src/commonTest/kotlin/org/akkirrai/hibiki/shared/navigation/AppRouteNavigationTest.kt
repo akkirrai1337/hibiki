@@ -104,4 +104,29 @@ class AppRouteNavigationTest {
         assertEquals(profile.transitionKey(), libraryPopSpec.exitKey)
         assertEquals(AppTransitionDirection.Pop, libraryPopSpec.direction)
     }
+
+    @Test
+    fun `replacing player episode keeps stack depth and back target`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.WatchSources("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Episodes(source)))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1", 1.0)))
+
+        val replaced = state.reduce(
+            AppNavigationEvent.Replace(AppRoute.Player("source-1", "episode-2", 2.0)),
+        )
+
+        assertEquals(state.backStack.size, replaced.backStack.size)
+        assertEquals(AppRoute.Player("source-1", "episode-2", 2.0), replaced.currentRoute)
+        assertEquals(AppRoute.Episodes(source), replaced.reduce(AppNavigationEvent.Back).currentRoute)
+        assertEquals(
+            AppRoute.Player("source-1", "episode-2").transitionKey(),
+            appTransitionSpec(
+                AppRoute.Player("source-1", "episode-1"),
+                replaced.currentRoute,
+                AppTransitionDirection.Forward,
+            ).enterKey,
+        )
+    }
 }
