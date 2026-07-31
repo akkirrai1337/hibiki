@@ -186,6 +186,7 @@ internal fun AndroidCommonPlaybackHost(
         }
         exoPlayer.addListener(listener)
         exoPlayer.setMediaSource(playback.toAndroidMediaSource(androidContext))
+        exoPlayer.setPlaybackSpeed(preferencesState.playbackSpeed)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
         onDispose {

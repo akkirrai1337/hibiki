@@ -55,7 +55,9 @@ internal fun DesktopVlcPlaybackHost(
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
 ) {
     val session = remember(playback.streamUrl, playback.headers) {
-        DesktopVlcPlaybackSession(playback)
+        DesktopVlcPlaybackSession(playback).also {
+            it.transport.setRate(settingsStore.load().playbackSpeed)
+        }
     }
     var scaleMode by remember(session) { mutableStateOf(settingsStore.load().videoScaleMode) }
     var videoWidth by remember(session) { mutableIntStateOf(0) }

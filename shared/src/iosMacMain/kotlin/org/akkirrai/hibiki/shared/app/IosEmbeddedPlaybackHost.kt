@@ -46,7 +46,10 @@ internal fun IosEmbeddedPlaybackHost(
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
 ) {
     val session = remember(playback.streamUrl, playback.headers) {
-        IosPlayerSession(playback).also { it.scaleMode = settingsStore.load().videoScaleMode }
+        IosPlayerSession(playback).also {
+            it.scaleMode = settingsStore.load().videoScaleMode
+            it.transport.setRate(settingsStore.load().playbackSpeed)
+        }
     }
     var playlistVisible by remember(session) { mutableStateOf(false) }
     var settingsVisible by remember(session) { mutableStateOf(false) }
