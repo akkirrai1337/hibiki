@@ -78,7 +78,6 @@ internal fun DesktopVlcPlaybackHost(
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
-    var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
@@ -246,7 +245,7 @@ internal fun DesktopVlcPlaybackHost(
                     lockContentDescription = appText(AppTextKey.PlayerLock),
                     onControlsVisibilityChanged = { controlsVisible = it },
                     onSettingsClick = {
-                        settingsDestination = PlayerSettingsDestination.Root
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                         onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                     },
                     settingsContentDescription = appText(AppTextKey.Settings),
@@ -305,7 +304,7 @@ internal fun DesktopVlcPlaybackHost(
             if (settingsVisible) {
                 AppPlayerSettingsLayer(
                     onDismissRequest = {
-                settingsDestination = PlayerSettingsDestination.Root
+                        onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     },
                     nowMs = { System.currentTimeMillis() },
@@ -314,7 +313,7 @@ internal fun DesktopVlcPlaybackHost(
                     },
                 ) { dismissPanel ->
                     AppPlayerSettingsContent(
-                        destination = settingsDestination,
+                        destination = navigationState.playerSettingsDestination,
                         selectedSpeed = selectedSpeed,
                         selectedSourceId = context.sourceId,
                         selectedPlayerName = context.selectedPlayerName,
@@ -323,8 +322,8 @@ internal fun DesktopVlcPlaybackHost(
                         autoSkipSegments = autoSkipSegments,
                         autoPlayNextEpisode = autoPlayNextEpisode,
                         options = context.settingsOptions,
-                        onNavigate = { settingsDestination = it },
-                        onBack = { settingsDestination = PlayerSettingsDestination.Root },
+                        onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
+                        onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
                         backHandler = { enabled, callback ->
                             AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                         },

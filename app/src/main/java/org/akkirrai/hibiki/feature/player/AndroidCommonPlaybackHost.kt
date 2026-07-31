@@ -81,7 +81,6 @@ internal fun AndroidCommonPlaybackHost(
     var controlsLocked by remember { mutableStateOf(false) }
     var unlockButtonVisible by remember { mutableStateOf(false) }
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
-    var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
@@ -291,7 +290,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
                 onSettingsClick = {
-                    settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                     onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                 },
                 settingsContentDescription = appText(AppTextKey.Settings),
@@ -349,14 +348,14 @@ internal fun AndroidCommonPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
                 nowMs = SystemClock::elapsedRealtime,
                 backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
             ) { dismissPanel ->
                 AppPlayerSettingsContent(
-                    destination = settingsDestination,
+                    destination = navigationState.playerSettingsDestination,
                     selectedSpeed = preferencesState.playbackSpeed,
                     selectedSourceId = context.sourceId,
                     selectedPlayerName = context.selectedPlayerName,
@@ -365,8 +364,8 @@ internal fun AndroidCommonPlaybackHost(
                     autoSkipSegments = preferencesState.autoSkipSegments,
                     autoPlayNextEpisode = preferencesState.autoPlayNextEpisode,
                     options = context.settingsOptions,
-                    onNavigate = { settingsDestination = it },
-                    onBack = { settingsDestination = PlayerSettingsDestination.Root },
+                    onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
+                    onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
                     backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
                     onSelectSpeed = { speed ->
                         preferences.setPlaybackSpeed(speed)

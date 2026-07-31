@@ -27,6 +27,7 @@ sealed interface AppNavigationEvent {
     data class Navigate(val route: AppRoute) : AppNavigationEvent
     data class Replace(val route: AppRoute) : AppNavigationEvent
     data class PresentOverlay(val overlay: AppOverlay) : AppNavigationEvent
+    data class SetPlayerSettingsDestination(val destination: AppPlayerSettingsDestination) : AppNavigationEvent
     data object DismissOverlay : AppNavigationEvent
     data object Back : AppNavigationEvent
     data class OpenDetails(val animeId: String) : AppNavigationEvent

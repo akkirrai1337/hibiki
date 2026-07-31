@@ -1,9 +1,4 @@
 package org.akkirrai.hibiki.shared.player
 
-enum class PlayerSettingsDestination {
-    Root,
-    Speed,
-    Voiceover,
-    Player,
-    Quality,
-}
+typealias PlayerSettingsDestination =
+    org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination

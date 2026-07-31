@@ -40,4 +40,19 @@ class AppNavigationStateTest {
         assertEquals(AppRoute.TopLevel(AppTopLevelDestination.LIBRARY), library.currentRoute)
         assertEquals(library, library.reduce(AppNavigationEvent.Back))
     }
+
+    @Test
+    fun playerSettingsDestinationIsSharedAndBackReturnsToRootBeforeDismiss() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Speed))
+
+        val root = state.reduce(AppNavigationEvent.Back)
+        assertEquals(AppPlayerSettingsDestination.Root, root.playerSettingsDestination)
+        assertEquals(listOf(AppOverlay.PlayerSettings), root.overlays)
+
+        val dismissed = root.reduce(AppNavigationEvent.Back)
+        assertEquals(emptyList(), dismissed.overlays)
+        assertEquals(AppPlayerSettingsDestination.Root, dismissed.playerSettingsDestination)
+    }
 }

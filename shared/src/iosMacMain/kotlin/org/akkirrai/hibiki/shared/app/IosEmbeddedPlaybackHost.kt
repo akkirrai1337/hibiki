@@ -64,7 +64,6 @@ internal fun IosEmbeddedPlaybackHost(
     }
     val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
-    var settingsDestination by remember(session) { mutableStateOf(PlayerSettingsDestination.Root) }
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
@@ -179,7 +178,7 @@ internal fun IosEmbeddedPlaybackHost(
                 selectAdjacentEpisode(1)
             },
             onSettingsClick = {
-                settingsDestination = PlayerSettingsDestination.Root
+                onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                 onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
             },
             settingsContentDescription = appText(AppTextKey.Settings),
@@ -215,7 +214,7 @@ internal fun IosEmbeddedPlaybackHost(
         if (settingsVisible) {
             AppPlayerSettingsLayer(
                 onDismissRequest = {
-                    settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 },
                 nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
@@ -224,7 +223,7 @@ internal fun IosEmbeddedPlaybackHost(
                 },
             ) { dismissPanel ->
                 AppPlayerSettingsContent(
-                    destination = settingsDestination,
+                    destination = navigationState.playerSettingsDestination,
                     selectedSpeed = selectedSpeed,
                     selectedSourceId = context.sourceId,
                     selectedPlayerName = context.selectedPlayerName,
@@ -233,8 +232,8 @@ internal fun IosEmbeddedPlaybackHost(
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = context.settingsOptions,
-                    onNavigate = { settingsDestination = it },
-                    onBack = { settingsDestination = PlayerSettingsDestination.Root },
+                    onNavigate = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it)) },
+                    onBack = { onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root)) },
                     backHandler = { enabled, callback ->
                         AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                     },

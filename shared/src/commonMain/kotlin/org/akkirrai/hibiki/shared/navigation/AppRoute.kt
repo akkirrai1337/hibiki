@@ -29,6 +29,14 @@ sealed interface AppOverlay {
     data class Sheet(val id: String) : AppOverlay
 }
 
+enum class AppPlayerSettingsDestination {
+    Root,
+    Speed,
+    Voiceover,
+    Player,
+    Quality,
+}
+
 data class AppTransitionKey(val route: String, val identity: String)
 
 fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
