@@ -58,5 +58,8 @@ class AppTextResolverTest {
         assertEquals("Загрузить ещё", russian.resolve(AppTextKey.WatchSourcesLoadMore))
         assertEquals("No episodes", english.resolve(AppTextKey.WatchEpisodesEmptyTitle))
         assertEquals("Озвучка", russian.resolve(AppTextKey.WatchSourceFallback))
+        assertEquals("Episode %s", english.resolve(AppTextKey.WatchEpisodeHeadline))
+        assertEquals("✓ Серия %s", russian.resolve(AppTextKey.WatchEpisodeHeadlineWatched))
+        assertEquals("Просмотрено", russian.resolve(AppTextKey.WatchStatusWatched))
     }
 }

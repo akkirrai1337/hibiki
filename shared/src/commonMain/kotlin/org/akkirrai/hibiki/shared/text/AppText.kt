@@ -139,6 +139,9 @@ enum class AppTextKey {
     WatchSourcesLoadMore,
     WatchEpisodesEmptyTitle,
     WatchSourceFallback,
+    WatchEpisodeHeadline,
+    WatchEpisodeHeadlineWatched,
+    WatchStatusWatched,
     WatchDownload,
     WatchPause,
     WatchRemoveDownload,
@@ -393,6 +396,9 @@ class DefaultAppTextResolver(
             AppTextKey.WatchSourcesLoadMore -> if (russian) "Загрузить ещё" else "Load more"
             AppTextKey.WatchEpisodesEmptyTitle -> if (russian) "Серии не найдены" else "No episodes"
             AppTextKey.WatchSourceFallback -> if (russian) "Озвучка" else "Voiceover"
+            AppTextKey.WatchEpisodeHeadline -> if (russian) "Серия %s" else "Episode %s"
+            AppTextKey.WatchEpisodeHeadlineWatched -> if (russian) "✓ Серия %s" else "✓ Episode %s"
+            AppTextKey.WatchStatusWatched -> if (russian) "Просмотрено" else "Watched"
             AppTextKey.WatchDownload -> if (russian) "Скачать" else "Download"
             AppTextKey.WatchPause -> if (russian) "Пауза" else "Pause"
             AppTextKey.WatchRemoveDownload -> if (russian) "Удалить загрузку" else "Remove download"

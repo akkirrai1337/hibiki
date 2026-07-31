@@ -1756,8 +1756,7 @@ private fun AppDestinationContent(
                                 progress.titleId == watchAnime.id && progress.episodeId == episode.id
                             }
                             val status = resolveEpisodeProgressStatus(progress)
-                            val defaultHeadline = appText(AppTextKey.WatchContinueEpisode)
-                                .removePrefix("${appText(AppTextKey.WatchContinue)} · ")
+                            val defaultHeadline = appText(AppTextKey.WatchEpisodeHeadline)
                                 if (episodeDownloadRepository != null) {
                                     AppEpisodeDownloadRowContent(
                                         episode = episode,
@@ -1769,9 +1768,9 @@ private fun AppDestinationContent(
                                         showDownloadControls = downloadControlsVisible.value,
                                         shape = shape,
                                         enabled = !playbackLoading,
-                                        watchedHeadline = { number -> "✓ $defaultHeadline".replace("%s", number) },
+                                        watchedHeadline = { number -> appText(AppTextKey.WatchEpisodeHeadlineWatched).replace("%s", number) },
                                         defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
-                                        watchedLabel = appText(AppTextKey.ProfileAnalyticsWatched),
+                                        watchedLabel = appText(AppTextKey.WatchStatusWatched),
                                         queuedLabel = appText(AppTextKey.WatchStatusQueued),
                                         downloadingLabel = { percent ->
                                             appText(AppTextKey.WatchStatusDownloading).replace("%s", percent.toString())
@@ -1820,9 +1819,9 @@ private fun AppDestinationContent(
                                     episode = episode,
                                     progress = progress,
                                     status = status,
-                                    watchedHeadline = { number -> "✓ $defaultHeadline".replace("%s", number) },
+                                    watchedHeadline = { number -> appText(AppTextKey.WatchEpisodeHeadlineWatched).replace("%s", number) },
                                     defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
-                                    watchedLabel = appText(AppTextKey.ProfileAnalyticsWatched),
+                                    watchedLabel = appText(AppTextKey.WatchStatusWatched),
                                 ),
                                         subtitle = episode.title,
                                         inProgress = status == org.akkirrai.hibiki.shared.model.EpisodeProgressStatus.InProgress,
