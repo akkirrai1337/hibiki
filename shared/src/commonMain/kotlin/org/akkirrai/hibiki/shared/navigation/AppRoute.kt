@@ -11,6 +11,7 @@ sealed interface AppRoute {
     data class Episodes(
         val source: WatchSource,
         val downloadMode: Boolean = false,
+        val animeId: String? = null,
     ) : AppRoute
     data class Player(
         val sourceId: String,
@@ -33,7 +34,10 @@ fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
     is AppRoute.TopLevel -> AppTransitionKey("top-level", destination.route)
     is AppRoute.Details -> AppTransitionKey("details", animeId)
     is AppRoute.WatchSources -> AppTransitionKey("watch-sources", animeId)
-    is AppRoute.Episodes -> AppTransitionKey("episodes", source.sourceId)
+    is AppRoute.Episodes -> AppTransitionKey(
+        "episodes",
+        "${animeId.orEmpty()}:${source.sourceId}:$downloadMode",
+    )
     is AppRoute.Player -> AppTransitionKey("player", "$sourceId:$episodeId")
 }
 

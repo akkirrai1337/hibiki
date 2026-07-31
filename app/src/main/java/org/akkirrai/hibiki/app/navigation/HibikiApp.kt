@@ -452,7 +452,11 @@ private fun HibikiNavHost(
                             )
                             sharedNavigationState = sharedNavigationState.reduce(
                                 AppNavigationEvent.Navigate(
-                                    AppRoute.Episodes(source, downloadMode = downloadMode),
+                                    AppRoute.Episodes(
+                                        source,
+                                        downloadMode = downloadMode,
+                                        animeId = animeId,
+                                    ),
                                 ),
                             )
                             navController.navigateSingleTopTo(

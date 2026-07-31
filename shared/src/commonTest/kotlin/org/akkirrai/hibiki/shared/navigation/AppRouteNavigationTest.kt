@@ -89,6 +89,21 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `episodes transition keys identify anime and download mode`() {
+        val source = WatchSource("source-1", "Dub", 12)
+        val first = AppRoute.Episodes(source, animeId = "anime-1").transitionKey()
+        val otherAnime = AppRoute.Episodes(source, animeId = "anime-2").transitionKey()
+        val download = AppRoute.Episodes(
+            source,
+            downloadMode = true,
+            animeId = "anime-1",
+        ).transitionKey()
+
+        assertTrue(first != otherAnime)
+        assertTrue(first != download)
+    }
+
+    @Test
     fun `transition spec keeps route keys and distinguishes push from pop`() {
         val details = AppRoute.Details("anime-1")
         val sources = AppRoute.WatchSources("anime-1")

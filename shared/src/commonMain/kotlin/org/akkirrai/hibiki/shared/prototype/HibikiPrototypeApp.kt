@@ -878,7 +878,9 @@ fun HibikiAppShell(
                                 playbackRequestGeneration++
                                 resetPlayerState()
                                 navigationState = navigationState.reduce(
-                                    AppNavigationEvent.Navigate(AppRoute.Episodes(source)),
+                                    AppNavigationEvent.Navigate(
+                                        AppRoute.Episodes(source, animeId = watchAnime?.id),
+                                    ),
                                 )
                             },
                             onWatchEpisodeClick = ::requestPlayback,
