@@ -564,6 +564,10 @@ fun HibikiAppShell(
     }
 
     fun handleSystemBack() {
+        if (navigationState.overlays.isNotEmpty()) {
+            navigationState = navigationState.reduce(AppNavigationEvent.Back)
+            return
+        }
         if (activePlaybackRoute != null) {
             activePlaybackRoute = null
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
@@ -615,7 +619,9 @@ fun HibikiAppShell(
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 AppSystemBackHandler(
-                    enabled = navigationState.backStack.isNotEmpty() || activePlaybackRoute != null,
+                    enabled = navigationState.backStack.isNotEmpty() ||
+                        navigationState.overlays.isNotEmpty() ||
+                        activePlaybackRoute != null,
                     onBack = ::handleSystemBack,
                 ) {
                 Box {
