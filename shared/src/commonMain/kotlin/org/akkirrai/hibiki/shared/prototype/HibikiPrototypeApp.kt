@@ -595,6 +595,16 @@ fun HibikiAppShell(
         playbackJob = scope.launch {
             val offlinePlayback = offlineWatchDataRepository
                 ?.getOfflinePlayback(sourceForPlayback.sourceId, episode.id)
+            val loadedEpisodes = if (requestEpisodes.isNotEmpty()) {
+                requestEpisodes
+            } else {
+                offlineWatchDataRepository
+                    ?.getOfflineEpisodes(sourceForPlayback.sourceId)
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: runCatching {
+                        repositoryForPlayback.getEpisodes(sourceForPlayback.sourceId)
+                    }.getOrDefault(emptyList())
+            }
             val result = runCatching {
                 offlinePlayback ?: repositoryForPlayback.resolvePlayback(
                         sourceId = sourceForPlayback.sourceId,
@@ -616,7 +626,6 @@ fun HibikiAppShell(
                 } else {
                     resolvedPlayback
                 }
-                val loadedEpisodes = requestEpisodes
                 playerPresenter.update {
                     it.withPlaybackLoaded(
                         stream = playback,
@@ -654,7 +663,7 @@ fun HibikiAppShell(
                 playerPresenter.update {
                     it.withPlaybackError(
                         message = error.message ?: "Unable to resolve playback",
-                        episodes = it.episodes,
+                        episodes = loadedEpisodes,
                         episodeId = episode.id,
                         episodeNumber = episode.number,
                     )
