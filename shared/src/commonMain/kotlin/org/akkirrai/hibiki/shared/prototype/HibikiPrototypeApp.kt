@@ -692,9 +692,12 @@ fun HibikiAppShell(
 
     fun openDetails(anime: Anime) {
         presenter.openDetails(anime)
-        navigationState = navigationState.reduce(
-            AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
-        )
+        val currentRoute = navigationState.currentRoute
+        if (currentRoute !is AppRoute.Details || currentRoute.animeId != anime.id) {
+            navigationState = navigationState.reduce(
+                AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
+            )
+        }
     }
 
     fun closeDetails() {
