@@ -593,12 +593,14 @@ fun HibikiAppShell(
         }
         playbackJob = scope.launch {
             val result = runCatching {
-                repositoryForPlayback.resolvePlayback(
-                    sourceId = sourceForPlayback.sourceId,
-                    episodeId = episode.id,
-                    preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
-                    preferredPlayerName = effectivePlayerName,
-                )
+                offlineWatchDataRepository
+                    ?.getOfflinePlayback(sourceForPlayback.sourceId, episode.id)
+                    ?: repositoryForPlayback.resolvePlayback(
+                        sourceId = sourceForPlayback.sourceId,
+                        episodeId = episode.id,
+                        preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
+                        preferredPlayerName = effectivePlayerName,
+                    )
             }
             if (requestGeneration != playbackRequestGeneration) return@launch
             result.onSuccess { playback ->

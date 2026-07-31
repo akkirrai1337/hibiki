@@ -4,6 +4,7 @@ import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
 import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository
@@ -39,6 +40,9 @@ internal class AndroidEpisodeDownloadRepository(
     override fun getOfflineSources(titleId: String): List<WatchSource> = delegate.getOfflineSources(titleId)
 
     override fun getOfflineEpisodes(sourceId: String): List<WatchEpisode> = delegate.getOfflineEpisodes(sourceId)
+
+    override fun getOfflinePlayback(sourceId: String, episodeId: String): PlaybackStream? =
+        delegate.getOfflinePlayback(sourceId, episodeId)
 }
 
 private fun OfflineEpisodeDownloadState.toSharedState(): EpisodeDownloadState = when (this) {
