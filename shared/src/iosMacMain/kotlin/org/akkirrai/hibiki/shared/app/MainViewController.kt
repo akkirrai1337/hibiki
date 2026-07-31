@@ -118,6 +118,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onConfigureNotifications = requestNotificationPermission,
                     appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev",
                     onProfileAvatarEdit = { onPicked -> avatarPicker.present(hostController, onPicked) },
+                    profileAvatarEditAvailable = true,
                     onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
                     onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
                     sources = IosSourceRegistry.sources,

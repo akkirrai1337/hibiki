@@ -50,6 +50,7 @@ fun AppLocalProfileScreen(
     editedName: String,
     bottomContentPadding: Dp,
     isLoading: Boolean = false,
+    avatarEditAvailable: Boolean = true,
     labels: AppLocalProfileLabels,
     onNameChange: (String) -> Unit,
     onAvatarEditClick: () -> Unit,
@@ -74,9 +75,9 @@ fun AppLocalProfileScreen(
         AppProfileBannerLayout(
             banner = { ratio, bannerModifier ->
                 Box(modifier = bannerModifier) {
-                    ProfileAvatar(
-                        ratio = ratio,
-                        isEditing = isEditing,
+                        ProfileAvatar(
+                            ratio = ratio,
+                            isEditing = isEditing && avatarEditAvailable,
                         editContentDescription = labels.changeAvatarContentDescription,
                         onEditClick = onAvatarEditClick,
                         modifier = Modifier.align(Alignment.BottomCenter),

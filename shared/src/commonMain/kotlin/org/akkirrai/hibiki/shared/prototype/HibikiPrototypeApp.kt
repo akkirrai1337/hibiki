@@ -232,6 +232,7 @@ fun HibikiAppShell(
     onConfigureNotifications: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
+    profileAvatarEditAvailable: Boolean = false,
     onGitHubClick: () -> Unit = {},
     discordRpcController: DiscordRpcController? = null,
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
@@ -917,6 +918,7 @@ fun HibikiAppShell(
                             },
                             onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
                             onProfileAvatarEdit = onProfileAvatarEdit,
+                            profileAvatarEditAvailable = profileAvatarEditAvailable,
                             onGitHubClick = onGitHubClick,
                             discordEnabled = discordRpcController?.isEnabled() == true,
                             discordAvailable = discordRpcController != null,
@@ -1432,6 +1434,7 @@ private fun AppDestinationContent(
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
     profileLoading: Boolean = false,
+    profileAvatarEditAvailable: Boolean = false,
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1703,6 +1706,7 @@ private fun AppDestinationContent(
                         snapshot = snapshot,
                         profileName = profileData.profileName.ifBlank { appText(AppTextKey.AppName) },
                         isLoading = profileLoading,
+                        avatarEditAvailable = profileAvatarEditAvailable,
                         isEditing = isEditingProfile,
                         editedName = editedProfileName,
                         bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,

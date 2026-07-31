@@ -128,6 +128,7 @@ internal fun AndroidSharedAppShell(
                 pendingAvatarCallback = onPicked
                 avatarPicker.launch(arrayOf("image/*"))
             },
+            profileAvatarEditAvailable = true,
             onOpenUrl = uriHandler::openUri,
             discordRpcController = discordRpcController,
             onDiscordBrowserSignIn = { onToken ->
