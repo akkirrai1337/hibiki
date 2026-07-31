@@ -55,6 +55,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
@@ -346,6 +347,7 @@ internal fun AndroidCommonPlaybackHost(
                 context = context,
                 scaleMode = videoScaleMode,
                 onScaleClick = { preferences.setVideoScaleMode(videoScaleMode.next()) },
+                scaleContentDescription = appText(videoScaleMode.textKey()),
                 onBack = ::closePlayback,
                 playlistEnabled = context.episodes.isNotEmpty(),
                 onPlaylistClick = {

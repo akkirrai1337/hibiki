@@ -30,6 +30,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
@@ -183,6 +184,7 @@ internal fun IosEmbeddedPlaybackHost(
                 playback = playback,
                 context = context,
                 onBack = ::closePlayback,
+                scaleContentDescription = appText(session.scaleMode.textKey()),
                 onScaleClick = {
                     session.scaleMode = session.scaleMode.next()
                     settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))

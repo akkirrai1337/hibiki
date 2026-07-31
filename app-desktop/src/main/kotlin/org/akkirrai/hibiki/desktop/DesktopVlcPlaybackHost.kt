@@ -45,6 +45,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
+import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
@@ -236,6 +237,7 @@ internal fun DesktopVlcPlaybackHost(
                         scaleMode = scaleMode.next()
                         settingsStore.save(settingsStore.load().copy(videoScaleMode = scaleMode))
                     },
+                    scaleContentDescription = appText(scaleMode.textKey()),
                     onBack = ::closePlayback,
                     playlistEnabled = context.episodes.isNotEmpty(),
                     onPlaylistClick = {

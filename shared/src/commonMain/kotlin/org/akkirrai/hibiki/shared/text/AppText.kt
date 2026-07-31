@@ -75,6 +75,9 @@ enum class AppTextKey {
     PlayerLock,
     PlayerUnlock,
     PlayerPictureInPicture,
+    PlayerVideoScaleFit,
+    PlayerVideoScaleCrop,
+    PlayerVideoScaleStretch,
     PlayerSkip,
     PlayerWatch,
     SettingsExperimental,
@@ -322,6 +325,9 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerLock -> if (russian) "Заблокировать интерфейс плеера" else "Lock player controls"
             AppTextKey.PlayerUnlock -> if (russian) "Разблокировать" else "Unlock"
             AppTextKey.PlayerPictureInPicture -> if (russian) "Картинка в картинке" else "Picture-in-picture"
+            AppTextKey.PlayerVideoScaleFit -> if (russian) "Масштаб видео: Вписать" else "Video scale: Fit"
+            AppTextKey.PlayerVideoScaleCrop -> if (russian) "Масштаб видео: Обрезать" else "Video scale: Crop"
+            AppTextKey.PlayerVideoScaleStretch -> if (russian) "Масштаб видео: Растянуть" else "Video scale: Stretch"
             AppTextKey.PlayerSkip -> if (russian) "Пропустить" else "Skip"
             AppTextKey.PlayerWatch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.SettingsDiscord -> "Discord Rich Presence"

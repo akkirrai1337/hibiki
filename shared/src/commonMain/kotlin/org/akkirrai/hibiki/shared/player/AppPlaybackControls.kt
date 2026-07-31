@@ -26,6 +26,7 @@ fun AppPlaybackControls(
     context: PlaybackContext,
     scaleMode: VideoScaleMode,
     onScaleClick: () -> Unit,
+    scaleContentDescription: String? = null,
     onBack: () -> Unit,
     playlistEnabled: Boolean = false,
     onPlaylistClick: () -> Unit = {},
@@ -116,7 +117,7 @@ fun AppPlaybackControls(
             keepControlsVisible()
         },
         scaleMode = scaleMode,
-        scaleContentDescription = null,
+        scaleContentDescription = scaleContentDescription,
         onScaleClick = { onScaleClick(); keepControlsVisible() },
         onLockClick = onLockClick,
         lockContentDescription = lockContentDescription,
