@@ -20,6 +20,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 
 /** Embedded Desktop video surface with the shared playback controls layered above it. */
 @Composable
@@ -51,31 +52,13 @@ internal fun DesktopVlcPlaybackHost(
     ) {
         val viewportWidth = constraints.maxWidth.toFloat()
         val viewportHeight = constraints.maxHeight.toFloat()
-        val sourceAspect = if (videoWidth > 0 && videoHeight > 0) {
-            videoWidth.toFloat() / videoHeight.toFloat()
-        } else {
-            0f
-        }
-        val viewportAspect = if (viewportWidth > 0f && viewportHeight > 0f) {
-            viewportWidth / viewportHeight
-        } else {
-            0f
-        }
-        val cropScale = if (sourceAspect > 0f && viewportAspect > 0f) {
-            maxOf(sourceAspect / viewportAspect, viewportAspect / sourceAspect)
-        } else {
-            1f
-        }
-        val stretchX = if (sourceAspect > 0f && viewportAspect > 0f) {
-            if (sourceAspect >= viewportAspect) 1f else viewportAspect / sourceAspect
-        } else {
-            1f
-        }
-        val stretchY = if (sourceAspect > 0f && viewportAspect > 0f) {
-            if (sourceAspect >= viewportAspect) sourceAspect / viewportAspect else 1f
-        } else {
-            1f
-        }
+        val scale = resolvePlaybackViewportScale(
+            mode = scaleMode,
+            sourceWidth = videoWidth,
+            sourceHeight = videoHeight,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+        )
         Box(modifier = Modifier.fillMaxSize()) {
             SwingPanel(
                 factory = { session.component },
@@ -85,12 +68,12 @@ internal fun DesktopVlcPlaybackHost(
                         when (scaleMode) {
                             VideoScaleMode.FIT -> Unit
                             VideoScaleMode.CROP -> {
-                                scaleX = cropScale
-                                scaleY = cropScale
+                                scaleX = scale.scaleX
+                                scaleY = scale.scaleY
                             }
                             VideoScaleMode.STRETCH -> {
-                                scaleX = stretchX
-                                scaleY = stretchY
+                                scaleX = scale.scaleX
+                                scaleY = scale.scaleY
                             }
                         }
                     },
