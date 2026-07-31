@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -32,6 +34,8 @@ import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
+import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
+import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
@@ -56,6 +60,10 @@ internal fun DesktopVlcPlaybackHost(
     var controlsLocked by remember(session) { mutableStateOf(false) }
     var unlockButtonVisible by remember(session) { mutableStateOf(false) }
     var completionHandled by remember(session) { mutableStateOf(false) }
+    var controlsVisible by remember { mutableStateOf(true) }
+    var positionMs by remember(session) { mutableLongStateOf(0L) }
+    var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
+    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
     DisposableEffect(session) {
         onDispose { session.release() }
@@ -87,6 +95,36 @@ internal fun DesktopVlcPlaybackHost(
                 )?.let(onEpisodeSelected)
             }
             delay(500L)
+        }
+    }
+    LaunchedEffect(session, context.episodeId) {
+        while (true) {
+            positionMs = session.transport.positionMs()
+            delay(250L)
+        }
+    }
+    val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
+        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible }
+    val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
+    val activeSkipSegment = rawActiveSkipSegment
+        ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
+    LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
+        val key = activeSkipSegmentKey ?: run {
+            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            return@LaunchedEffect
+        }
+        val segment = rawActiveSkipSegment
+        if (hiddenSkipSegmentKey == key) return@LaunchedEffect
+        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+            delay(1_000L)
+            if (hiddenSkipSegmentKey == key) return@LaunchedEffect
+            skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
+        }
+        if (settingsStore.load().autoSkipSegments && hiddenSkipSegmentKey != key) {
+            session.transport.seekToMs(segment.endMs)
+        } else if (hiddenSkipSegmentKey != key) {
+            hiddenSkipSegmentKey = key
         }
     }
     BoxWithConstraints(
@@ -159,6 +197,7 @@ internal fun DesktopVlcPlaybackHost(
                         playlistVisible = false
                     },
                     lockContentDescription = appText(AppTextKey.PlayerLock),
+                    onControlsVisibilityChanged = { controlsVisible = it },
                 )
             }
             AppPlayerUnlockOverlay(
@@ -191,9 +230,24 @@ internal fun DesktopVlcPlaybackHost(
                     AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                 },
             )
+            activeSkipSegment?.let { segment ->
+                AppPlayerSkipSegmentLayer(
+                    visible = true,
+                    controlsVisible = controlsVisible,
+                    countdownSeconds = skipCountdownSeconds,
+                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                    autoSkipEnabled = settingsStore.load().autoSkipSegments,
+                    skipLabel = appText(AppTextKey.PlayerSkip),
+                    watchLabel = appText(AppTextKey.PlayerWatch),
+                    onSkipClick = { session.transport.seekToMs(segment.endMs) },
+                    onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
         }
         }
     }
 }
 
 private const val VideoDimensionPollMillis = 500L
+private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
