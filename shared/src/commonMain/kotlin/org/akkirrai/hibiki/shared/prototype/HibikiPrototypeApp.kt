@@ -165,7 +165,10 @@ import org.akkirrai.hibiki.shared.player.WatchScreenScaffold
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.shared.player.errorEpisodesState
+import org.akkirrai.hibiki.shared.player.initialEpisodesState
 import org.akkirrai.hibiki.shared.player.initialWatchSourcesState
+import org.akkirrai.hibiki.shared.player.loadedEpisodesState
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
@@ -337,24 +340,14 @@ fun HibikiAppShell(
     LaunchedEffect(watchRepository, selectedWatchSource?.sourceId, episodesLoadGeneration) {
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val source = selectedWatchSource ?: return@LaunchedEffect
-        episodesPresenter.setState(EpisodesScreenState(EpisodesUiState.Loading))
+        episodesPresenter.setState(initialEpisodesState(emptyList()))
         runCatching { repositoryForWatch.getEpisodes(source.sourceId) }
             .onSuccess { episodes ->
-                episodesPresenter.setState(
-                    EpisodesScreenState(
-                        result = if (episodes.isEmpty()) {
-                            EpisodesUiState.Empty
-                        } else {
-                            EpisodesUiState.Content(episodes)
-                        },
-                    ),
-                )
+                episodesPresenter.setState(loadedEpisodesState(episodes, emptyList()))
             }
             .onFailure { error ->
                 episodesPresenter.setState(
-                    EpisodesScreenState(
-                        result = EpisodesUiState.Error(error.message ?: "Unable to load episodes"),
-                    ),
+                    errorEpisodesState(error.message ?: "Unable to load episodes", emptyList()),
                 )
             }
     }
