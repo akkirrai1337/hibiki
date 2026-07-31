@@ -1079,9 +1079,11 @@ fun HibikiAppShell(
                             },
                             onProfileSettingsClick = {
                                 selectedTab = AppDestination.SETTINGS
-                                navigationState = navigationState.reduce(
-                                    AppNavigationEvent.Navigate(AppRoute.Settings),
-                                )
+                                if (navigationState.currentRoute !is AppRoute.Settings) {
+                                    navigationState = navigationState.reduce(
+                                        AppNavigationEvent.Navigate(AppRoute.Settings),
+                                    )
+                                }
                             },
                             onProfileAvatarEdit = onProfileAvatarEdit,
                             profileAvatarEditAvailable = profileAvatarEditAvailable,
