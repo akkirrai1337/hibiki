@@ -83,6 +83,16 @@ internal fun IosEmbeddedPlaybackHost(
         onBack()
     }
 
+    fun selectAdjacentEpisode(offset: Int) {
+        savePlaybackProgress()
+        resolveAdjacentEpisode(
+            context.episodes,
+            context.episodeId,
+            context.episodeNumber,
+            offset,
+        )?.let(onEpisodeSelected)
+    }
+
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
         savePlaybackProgress()
         onSettingsAction(action)
@@ -146,12 +156,10 @@ internal fun IosEmbeddedPlaybackHost(
             hasPreviousEpisode = episodeNavigation.hasPrevious,
             hasNextEpisode = episodeNavigation.hasNext,
             onPreviousEpisode = {
-                resolveAdjacentEpisode(context.episodes, context.episodeId, context.episodeNumber, -1)
-                    ?.let(onEpisodeSelected)
+                selectAdjacentEpisode(-1)
             },
             onNextEpisode = {
-                resolveAdjacentEpisode(context.episodes, context.episodeId, context.episodeNumber, 1)
-                    ?.let(onEpisodeSelected)
+                selectAdjacentEpisode(1)
             },
             onSettingsClick = {
                 settingsDestination = PlayerSettingsDestination.Root
@@ -174,7 +182,10 @@ internal fun IosEmbeddedPlaybackHost(
             },
             onDismissRequest = { playlistVisible = false },
             onEpisodeClick = { episodeId ->
-                context.episodes.firstOrNull { it.id == episodeId }?.let(onEpisodeSelected)
+                context.episodes.firstOrNull { it.id == episodeId }?.let {
+                    savePlaybackProgress()
+                    onEpisodeSelected(it)
+                }
             },
             nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
             backHandler = { enabled, callback ->

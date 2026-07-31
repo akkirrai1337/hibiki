@@ -94,6 +94,16 @@ internal fun DesktopVlcPlaybackHost(
         onBack()
     }
 
+    fun selectAdjacentEpisode(offset: Int) {
+        savePlaybackProgress()
+        resolveAdjacentEpisode(
+            context.episodes,
+            context.episodeId,
+            context.episodeNumber,
+            offset,
+        )?.let(onEpisodeSelected)
+    }
+
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
         savePlaybackProgress()
         onSettingsAction(action)
@@ -215,22 +225,8 @@ internal fun DesktopVlcPlaybackHost(
                     onPlaylistClick = { playlistVisible = true },
                     hasPreviousEpisode = episodeNavigation.hasPrevious,
                     hasNextEpisode = episodeNavigation.hasNext,
-                    onPreviousEpisode = {
-                        resolveAdjacentEpisode(
-                            context.episodes,
-                            context.episodeId,
-                            context.episodeNumber,
-                            -1,
-                        )?.let(onEpisodeSelected)
-                    },
-                    onNextEpisode = {
-                        resolveAdjacentEpisode(
-                            context.episodes,
-                            context.episodeId,
-                            context.episodeNumber,
-                            1,
-                        )?.let(onEpisodeSelected)
-                    },
+                onPreviousEpisode = { selectAdjacentEpisode(-1) },
+                onNextEpisode = { selectAdjacentEpisode(1) },
                     onLockClick = {
                         controlsLocked = true
                         unlockButtonVisible = true
@@ -268,7 +264,10 @@ internal fun DesktopVlcPlaybackHost(
                 },
                 onDismissRequest = { playlistVisible = false },
                 onEpisodeClick = { episodeId ->
-                    context.episodes.firstOrNull { it.id == episodeId }?.let(onEpisodeSelected)
+                    context.episodes.firstOrNull { it.id == episodeId }?.let {
+                        savePlaybackProgress()
+                        onEpisodeSelected(it)
+                    }
                 },
                 nowMs = { System.currentTimeMillis() },
                 backHandler = { enabled, callback ->

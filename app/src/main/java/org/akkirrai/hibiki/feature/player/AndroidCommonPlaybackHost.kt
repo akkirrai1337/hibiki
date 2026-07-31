@@ -111,6 +111,7 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
+        savePlaybackProgress()
         resolveAdjacentEpisode(
             episodes = context.episodes,
             currentEpisodeId = context.episodeId,
@@ -241,20 +242,10 @@ internal fun AndroidCommonPlaybackHost(
                 hasPreviousEpisode = episodeNavigation.hasPrevious,
                 hasNextEpisode = episodeNavigation.hasNext,
                 onPreviousEpisode = {
-                    resolveAdjacentEpisode(
-                        episodes = context.episodes,
-                        currentEpisodeId = context.episodeId,
-                        currentEpisodeNumber = context.episodeNumber,
-                        offset = -1,
-                    )?.let(onEpisodeSelected)
+                    selectAdjacentEpisode(-1)
                 },
                 onNextEpisode = {
-                    resolveAdjacentEpisode(
-                        episodes = context.episodes,
-                        currentEpisodeId = context.episodeId,
-                        currentEpisodeNumber = context.episodeNumber,
-                        offset = 1,
-                    )?.let(onEpisodeSelected)
+                    selectAdjacentEpisode(1)
                 },
                 onLockClick = {
                     controlsLocked = true
@@ -309,7 +300,10 @@ internal fun AndroidCommonPlaybackHost(
             },
             onDismissRequest = { playlistVisible = false },
             onEpisodeClick = { episodeId ->
-                context.episodes.firstOrNull { it.id == episodeId }?.let(onEpisodeSelected)
+                context.episodes.firstOrNull { it.id == episodeId }?.let {
+                    savePlaybackProgress()
+                    onEpisodeSelected(it)
+                }
             },
             nowMs = SystemClock::elapsedRealtime,
             backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
