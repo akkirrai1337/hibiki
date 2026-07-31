@@ -531,6 +531,7 @@ fun HibikiAppShell(
         sourceOverride: WatchSource? = null,
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
+        forceRefresh: Boolean = false,
         episodesOverride: List<WatchEpisode>? = null,
         replacePlayerRoute: Boolean = false,
     ) {
@@ -600,6 +601,7 @@ fun HibikiAppShell(
                         episodeId = episode.id,
                         preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
                         preferredPlayerName = effectivePlayerName,
+                        forceRefresh = forceRefresh,
                     )
             }
             if (requestGeneration != playbackRequestGeneration) return@launch
@@ -1114,6 +1116,7 @@ fun HibikiAppShell(
                                         sourceOverride = failedRequest.source,
                                         preferredPlayerName = failedRequest.preferredPlayerName,
                                         preferredQuality = failedRequest.preferredQuality,
+                                        forceRefresh = true,
                                     )
                                 } else if (selectedWatchSource == null) {
                                     forceWatchSourcesRefresh = true

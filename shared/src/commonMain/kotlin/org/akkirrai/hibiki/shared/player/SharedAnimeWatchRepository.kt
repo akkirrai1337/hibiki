@@ -119,9 +119,12 @@ class SharedAnimeWatchRepository(
         episodeId: String,
         preferredQuality: String?,
         preferredPlayerName: String?,
+        forceRefresh: Boolean,
     ): PlaybackStream {
         val cacheKey = listOf(sourceId, episodeId, preferredPlayerName.orEmpty(), preferredQuality.orEmpty()).joinToString("|")
-        resolvedPlayback.get(cacheKey)?.let { return it }
+        if (!forceRefresh) {
+            resolvedPlayback.get(cacheKey)?.let { return it }
+        }
         val payload = payloadFor(sourceId)
         val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
             ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
