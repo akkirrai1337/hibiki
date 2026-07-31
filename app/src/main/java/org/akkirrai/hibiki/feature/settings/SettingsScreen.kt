@@ -335,7 +335,13 @@ private fun LegacyDiscordAuthDialog(
         onDismissRequest = onDismiss,
         headerContent = {
             AppDiscordAuthDialogHeader(
-                        icon = ImageVector.vectorResource(R.drawable.ic_discord),
+                iconContent = { iconModifier ->
+                    androidx.compose.material3.Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                    )
+                },
                         title = stringResource(R.string.discord_rpc_title),
                         statusText = listOfNotNull(
                                 state.account?.displayName,
@@ -345,7 +351,13 @@ private fun LegacyDiscordAuthDialog(
         },
         tokenContent = {
             AppDiscordAuthTokenCard(
-                    icon = ImageVector.vectorResource(R.drawable.ic_discord),
+                    iconContent = { iconModifier ->
+                        androidx.compose.material3.Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
                     manualToken = manualToken,
                     onManualTokenChange = {
                         manualToken = it
@@ -406,7 +418,13 @@ private fun DiscordAuthDialog(
                 discordRpcStatusLabel(state.status),
             ).distinct().joinToString(" â€¢ "),
             isChecking = isChecking,
-            icon = ImageVector.vectorResource(R.drawable.ic_discord),
+            iconContent = { iconModifier ->
+                androidx.compose.material3.Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                    contentDescription = null,
+                    modifier = iconModifier,
+                )
+            },
             title = stringResource(R.string.discord_rpc_title),
             manualTokenLabel = stringResource(R.string.discord_rpc_manual_token),
             invalidTokenLabel = stringResource(R.string.discord_rpc_invalid_token),

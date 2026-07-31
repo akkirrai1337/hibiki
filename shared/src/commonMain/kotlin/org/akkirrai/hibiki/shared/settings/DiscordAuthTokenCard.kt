@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -16,12 +15,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 fun AppDiscordAuthTokenCard(
-    icon: ImageVector,
+    iconContent: @Composable (Modifier) -> Unit,
     manualToken: String,
     onManualTokenChange: (String) -> Unit,
     manualTokenLabel: String,
@@ -76,11 +74,7 @@ fun AppDiscordAuthTokenCard(
                         .height(SettingsDiscordActionHeight),
                     enabled = !isChecking,
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(SettingsDiscordBrowserIconSize),
-                    )
+                    iconContent(Modifier.size(SettingsDiscordBrowserIconSize))
                     Text(
                         text = browserSignInLabel,
                         modifier = Modifier.padding(start = SettingsDiscordBrowserLabelStartPadding),

@@ -140,7 +140,13 @@ fun SharedAndroidSettingsScreen(
                 ),
             ).distinct().joinToString(" • "),
             isChecking = discordState.status.isBusy(),
-            icon = ImageVector.vectorResource(R.drawable.ic_discord),
+            iconContent = { iconModifier ->
+                androidx.compose.material3.Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
+                    contentDescription = null,
+                    modifier = iconModifier,
+                )
+            },
             title = stringResource(R.string.discord_rpc_title),
             manualTokenLabel = stringResource(R.string.discord_rpc_manual_token),
             invalidTokenLabel = stringResource(R.string.discord_rpc_invalid_token),

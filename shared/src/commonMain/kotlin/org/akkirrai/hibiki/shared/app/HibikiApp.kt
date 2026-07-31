@@ -12,6 +12,7 @@ import org.akkirrai.hibiki.shared.prototype.HibikiAppShell
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.shared.settings.DiscordRpcController
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
@@ -48,6 +49,8 @@ fun HibikiApp(
     onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     onGitHubClick: () -> Unit = {},
+    discordRpcController: DiscordRpcController? = null,
+    onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
@@ -79,6 +82,8 @@ fun HibikiApp(
         onOpenUrl = onOpenUrl,
         onProfileAvatarEdit = onProfileAvatarEdit,
         onGitHubClick = onGitHubClick,
+        discordRpcController = discordRpcController,
+        onDiscordBrowserSignIn = onDiscordBrowserSignIn,
         sources = sources,
         selectedSourceId = selectedSourceId,
         onSourceSelected = onSourceSelected,

@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_discord
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -132,6 +134,11 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.shared.settings.DiscordRpcController
+import org.akkirrai.hibiki.shared.settings.DiscordRpcUiState
+import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialog
+import org.akkirrai.hibiki.shared.settings.isBusy
+import org.akkirrai.hibiki.shared.settings.resolveDiscordRpcStatusLabel
 import org.akkirrai.hibiki.shared.settings.AppSettingsCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
@@ -226,6 +233,8 @@ fun HibikiAppShell(
     onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     onGitHubClick: () -> Unit = {},
+    discordRpcController: DiscordRpcController? = null,
+    onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
@@ -272,6 +281,9 @@ fun HibikiAppShell(
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
     val profileState by profilePresenter.state.collectAsState()
+    val discordRpcState by (discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
+    var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
+    var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
     var homeSearchQuery by remember { mutableStateOf("") }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
@@ -905,6 +917,14 @@ fun HibikiAppShell(
                             onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
                             onProfileAvatarEdit = onProfileAvatarEdit,
                             onGitHubClick = onGitHubClick,
+                            discordEnabled = discordRpcController?.isEnabled() == true,
+                            onDiscordClick = { if (discordRpcController != null) isDiscordAuthDialogOpen = true },
+                            onDiscordChange = { enabled ->
+                                discordRpcController?.let { controller ->
+                                    if (enabled && !controller.hasToken()) isDiscordAuthDialogOpen = true
+                                    else controller.setEnabled(enabled)
+                                }
+                            },
                             onProfileAvatarPicked = { uri ->
                                 profileRepository.updateProfileAvatar(uri)
                                 profilePresenter.updateProfileAvatar(uri)
@@ -974,6 +994,53 @@ fun HibikiAppShell(
                                 repository.selectSource(sourceId)
                                 onSourceSelected(sourceId)
                             },
+                        )
+                    }
+                    if (isDiscordAuthDialogOpen && discordRpcController != null) {
+                        val controller = discordRpcController
+                        AppDiscordAuthDialog(
+                            initialToken = pendingDiscordToken ?: controller.tokenForEditing().orEmpty(),
+                            isSignedIn = controller.hasToken(),
+                            statusText = listOfNotNull(
+                                discordRpcState.accountName,
+                                resolveDiscordRpcStatusLabel(
+                                    status = discordRpcState.status,
+                                    disabledLabel = appText(AppTextKey.DiscordStatusDisabled),
+                                    signedOutLabel = appText(AppTextKey.DiscordStatusSignedOut),
+                                    checkingLabel = appText(AppTextKey.DiscordStatusChecking),
+                                    connectingLabel = appText(AppTextKey.DiscordStatusConnecting),
+                                    connectedLabel = appText(AppTextKey.DiscordStatusConnected),
+                                    errorLabel = appText(AppTextKey.DiscordStatusError),
+                                ),
+                            ).distinct().joinToString(" · "),
+                            isChecking = discordRpcState.status.isBusy(),
+                            iconContent = { iconModifier ->
+                                androidx.compose.foundation.Image(
+                                    painter = org.jetbrains.compose.resources.painterResource(Res.drawable.ic_discord),
+                                    contentDescription = null,
+                                    modifier = iconModifier,
+                                )
+                            },
+                            title = appText(AppTextKey.SettingsDiscord),
+                            manualTokenLabel = appText(AppTextKey.DiscordManualToken),
+                            invalidTokenLabel = appText(AppTextKey.DiscordInvalidToken),
+                            disconnectLabel = appText(AppTextKey.DiscordDisconnect),
+                            browserSignInLabel = appText(AppTextKey.DiscordBrowserSignIn),
+                            cancelLabel = appText(AppTextKey.Cancel),
+                            applyLabel = appText(AppTextKey.Apply),
+                            onBrowserSignIn = { onDiscordBrowserSignIn { token ->
+                                pendingDiscordToken = token
+                                isDiscordAuthDialogOpen = true
+                            } },
+                            onDisconnect = {
+                                controller.signOut()
+                                isDiscordAuthDialogOpen = false
+                            },
+                            onDismiss = {
+                                pendingDiscordToken = null
+                                isDiscordAuthDialogOpen = false
+                            },
+                            onAuthenticate = controller::authenticate,
                         )
                     }
                 }
@@ -1355,6 +1422,9 @@ private fun AppDestinationContent(
     onSettingsBack: () -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onGitHubClick: () -> Unit = {},
+    discordEnabled: Boolean = false,
+    onDiscordClick: () -> Unit = {},
+    onDiscordChange: (Boolean) -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
@@ -1726,6 +1796,9 @@ private fun AppDestinationContent(
                     showBackButton = showSettingsBackButton,
                     onBackClick = onSettingsBack,
                     onGitHubClick = onGitHubClick,
+                    discordEnabled = discordEnabled,
+                    onDiscordClick = onDiscordClick,
+                    onDiscordChange = onDiscordChange,
                 )
         }
     }
@@ -2063,6 +2136,9 @@ private fun SettingsScreen(
     showBackButton: Boolean = false,
     onBackClick: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
+    discordEnabled: Boolean = false,
+    onDiscordClick: () -> Unit = {},
+    onDiscordChange: (Boolean) -> Unit = {},
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -2071,6 +2147,7 @@ private fun SettingsScreen(
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
+        discordEnabled = discordEnabled,
         labels = AppSettingsScreenLabels(
             appearance = appText(AppTextKey.SettingsAppearance),
             theme = appText(AppTextKey.SettingsTheme),
@@ -2103,6 +2180,8 @@ private fun SettingsScreen(
         onSystemColorSchemeChange = onSystemColorSchemeChange,
         onAmoledChange = onAmoledChange,
         onAutoSkipChange = onAutoSkipChange,
+        onDiscordClick = onDiscordClick,
+        onDiscordChange = onDiscordChange,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),

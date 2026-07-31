@@ -8,20 +8,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun AppDiscordAuthDialogHeader(
-    icon: ImageVector,
+    iconContent: @Composable (Modifier) -> Unit,
     title: String,
     statusText: String,
     modifier: Modifier = Modifier,
@@ -38,12 +36,7 @@ fun AppDiscordAuthDialogHeader(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(SettingsDiscordHeaderIconContentSize),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            iconContent(Modifier.size(SettingsDiscordHeaderIconContentSize))
         }
         Column(
             modifier = Modifier.weight(1f),

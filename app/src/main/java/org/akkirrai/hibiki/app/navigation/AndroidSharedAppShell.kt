@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.app.navigation
 
+import android.app.Activity
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +27,8 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
+import org.akkirrai.hibiki.feature.settings.AndroidDiscordRpcController
+import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.shared.app.HibikiApp as SharedHibikiApp
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
@@ -43,12 +47,24 @@ internal fun AndroidSharedAppShell(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     var pendingAvatarCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
+    var pendingDiscordTokenCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.toString()?.let { pendingAvatarCallback?.invoke(it) }
         pendingAvatarCallback = null
     }
+    val discordAuthLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            DiscordAuthActivity.tokenFromResult(result.data)?.let { token ->
+                pendingDiscordTokenCallback?.invoke(token)
+            }
+        }
+        pendingDiscordTokenCallback = null
+    }
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = remember(dependencies) { dependencies.appSettingsStore() }
+    val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val catalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
     val homeRepository = remember(dependencies) { dependencies.homeRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
@@ -113,6 +129,11 @@ internal fun AndroidSharedAppShell(
                 avatarPicker.launch(arrayOf("image/*"))
             },
             onOpenUrl = uriHandler::openUri,
+            discordRpcController = discordRpcController,
+            onDiscordBrowserSignIn = { onToken ->
+                pendingDiscordTokenCallback = onToken
+                discordAuthLauncher.launch(Intent(context, DiscordAuthActivity::class.java))
+            },
             sources = sources,
             selectedSourceId = preferences.animeSource.value.takeIf { preferences.hasExplicitAnimeSource },
             onSourceSelected = { sourceId ->

@@ -76,6 +76,18 @@ enum class AppTextKey {
     PlayerWatch,
     SettingsExperimental,
     SettingsDiscord,
+    DiscordBrowserSignIn,
+    DiscordManualToken,
+    DiscordInvalidToken,
+    DiscordDisconnect,
+    DiscordStatusDisabled,
+    DiscordStatusSignedOut,
+    DiscordStatusChecking,
+    DiscordStatusConnecting,
+    DiscordStatusConnected,
+    DiscordStatusError,
+    Cancel,
+    Apply,
     SettingsUpdates,
     SettingsCheckUpdates,
     SettingsSupport,
@@ -292,6 +304,18 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerSkip -> if (russian) "Пропустить" else "Skip"
             AppTextKey.PlayerWatch -> if (russian) "Смотреть" else "Watch"
             AppTextKey.SettingsDiscord -> "Discord Rich Presence"
+            AppTextKey.DiscordBrowserSignIn -> if (russian) "Войти через Discord" else "Sign in with Discord"
+            AppTextKey.DiscordManualToken -> if (russian) "Токен Discord" else "Discord token"
+            AppTextKey.DiscordInvalidToken -> if (russian) "Токен недействителен или Discord недоступен" else "The token is invalid or Discord could not be reached"
+            AppTextKey.DiscordDisconnect -> if (russian) "Выйти из Discord" else "Log out"
+            AppTextKey.DiscordStatusDisabled -> if (russian) "Выключено" else "Disabled"
+            AppTextKey.DiscordStatusSignedOut -> if (russian) "Аккаунт не подключён" else "Account is not connected"
+            AppTextKey.DiscordStatusChecking -> if (russian) "Проверка аккаунта…" else "Checking account…"
+            AppTextKey.DiscordStatusConnecting -> if (russian) "Подключение…" else "Connecting…"
+            AppTextKey.DiscordStatusConnected -> if (russian) "Подключено" else "Connected"
+            AppTextKey.DiscordStatusError -> if (russian) "Ошибка подключения; повторяем в фоне" else "Connection error; retrying silently"
+            AppTextKey.Cancel -> if (russian) "Отмена" else "Cancel"
+            AppTextKey.Apply -> if (russian) "Применить" else "Apply"
             AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
             AppTextKey.SettingsSupport -> if (russian) "Поддержка" else "Support"

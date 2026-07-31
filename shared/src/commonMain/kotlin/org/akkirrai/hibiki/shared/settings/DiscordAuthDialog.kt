@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 
 @Composable
@@ -15,7 +15,7 @@ fun AppDiscordAuthDialog(
     isSignedIn: Boolean,
     statusText: String,
     isChecking: Boolean,
-    icon: ImageVector,
+    iconContent: @Composable (Modifier) -> Unit,
     title: String,
     manualTokenLabel: String,
     invalidTokenLabel: String,
@@ -35,11 +35,11 @@ fun AppDiscordAuthDialog(
     AppDiscordAuthDialogSurface(
         onDismissRequest = onDismiss,
         headerContent = {
-            AppDiscordAuthDialogHeader(icon = icon, title = title, statusText = statusText)
+            AppDiscordAuthDialogHeader(iconContent = iconContent, title = title, statusText = statusText)
         },
         tokenContent = {
             AppDiscordAuthTokenCard(
-                icon = icon,
+                iconContent = iconContent,
                 manualToken = manualToken,
                 onManualTokenChange = {
                     manualToken = it
