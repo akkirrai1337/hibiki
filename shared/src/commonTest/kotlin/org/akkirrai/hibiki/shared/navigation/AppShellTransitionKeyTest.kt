@@ -62,4 +62,26 @@ class AppShellTransitionKeyTest {
         assertNotEquals(sources, episodes)
         assertNotEquals(details, episodes)
     }
+
+    @Test
+    fun routeTypeIsPartOfShellTransitionIdentity() {
+        val details = appShellTransitionKey(
+            topLevelDestination = AppTopLevelDestination.HOME,
+            selectedTab = "HOME",
+            detailsId = null,
+            watchId = null,
+            sourceId = null,
+            routeKey = AppTransitionKey("details", "same-id"),
+        )
+        val player = appShellTransitionKey(
+            topLevelDestination = AppTopLevelDestination.HOME,
+            selectedTab = "HOME",
+            detailsId = null,
+            watchId = null,
+            sourceId = null,
+            routeKey = AppTransitionKey("player", "same-id"),
+        )
+
+        assertNotEquals(details, player)
+    }
 }

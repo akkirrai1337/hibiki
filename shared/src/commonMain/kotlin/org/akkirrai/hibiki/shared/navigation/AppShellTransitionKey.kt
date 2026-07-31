@@ -21,6 +21,8 @@ fun appShellTransitionKey(
         append(':')
         append(sourceId.orEmpty())
         append(':')
+        append(routeKey.route)
+        append(':')
         append(routeKey.identity)
     },
 )
