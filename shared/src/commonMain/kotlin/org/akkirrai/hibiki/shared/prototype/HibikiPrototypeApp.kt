@@ -275,7 +275,7 @@ fun HibikiAppShell(
     val state by presenter.state.collectAsState()
     val homePresenter = remember(homeRepository) { HomePresenter() }
     val homeState by homePresenter.state.collectAsState()
-    val catalogListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val catalogListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
