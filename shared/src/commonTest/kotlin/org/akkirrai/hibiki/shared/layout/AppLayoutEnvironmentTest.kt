@@ -15,4 +15,20 @@ class AppLayoutEnvironmentTest {
         assertEquals(AppNavigationBarMode.Inset, environment.navigationBarMode)
         assertEquals(AppScreenEdgePolicy.ContentSafe, environment.edgePolicy)
     }
+
+    @Test
+    fun `provided environment preserves host insets and edge policy`() {
+        val environment = AppLayoutEnvironment(
+            isProvided = true,
+            topSystemInset = 24.dp,
+            bottomSystemInset = 34.dp,
+            navigationBarMode = AppNavigationBarMode.Overlay,
+            edgePolicy = AppScreenEdgePolicy.EdgeToEdge,
+        )
+
+        assertEquals(24.dp, environment.topSystemInset)
+        assertEquals(34.dp, environment.bottomSystemInset)
+        assertEquals(AppNavigationBarMode.Overlay, environment.navigationBarMode)
+        assertEquals(AppScreenEdgePolicy.EdgeToEdge, environment.edgePolicy)
+    }
 }
