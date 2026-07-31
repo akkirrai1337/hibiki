@@ -7,6 +7,7 @@ import kotlin.test.assertTrue
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.PlaybackStreamType
 import org.akkirrai.hibiki.shared.model.WatchEpisode
+import org.akkirrai.hibiki.shared.model.WatchSource
 
 class PlayerLoadStateResolverTest {
     @Test
@@ -69,5 +70,19 @@ class PlayerLoadStateResolverTest {
         assertEquals(null, state.playback)
         assertEquals("failure", state.errorMessage)
         assertEquals("ep-1", state.currentEpisodeId)
+    }
+
+    @Test
+    fun keepsTheFailedPlaybackRequestForExactRetry() {
+        val request = PlaybackRequest(
+            episode = WatchEpisode("episode-1", 1.0, "Episode"),
+            source = WatchSource("source-1", "Source", 12),
+            preferredPlayerName = "mpv",
+            preferredQuality = "1080p",
+        )
+        val state = PlayerUiState(lastPlaybackRequest = request)
+            .withPlaybackError("failed", emptyList(), request.episode.id, request.episode.number)
+
+        assertEquals(request, state.lastPlaybackRequest)
     }
 }

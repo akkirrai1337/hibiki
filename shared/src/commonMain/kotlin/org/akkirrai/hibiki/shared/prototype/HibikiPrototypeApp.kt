@@ -201,6 +201,7 @@ import org.akkirrai.hibiki.shared.player.initialWatchSourcesState
 import org.akkirrai.hibiki.shared.player.loadedEpisodesState
 import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
 import org.akkirrai.hibiki.shared.player.withPlaybackError
+import org.akkirrai.hibiki.shared.player.PlaybackRequest
 import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
@@ -490,6 +491,12 @@ fun HibikiAppShell(
                 currentSourceId = sourceForPlayback.sourceId,
                 currentEpisodeId = episode.id,
                 currentEpisodeNumber = episode.number,
+                lastPlaybackRequest = PlaybackRequest(
+                    episode = episode,
+                    source = sourceForPlayback,
+                    preferredPlayerName = preferredPlayerName,
+                    preferredQuality = preferredQuality,
+                ),
             ).beginPlaybackLoad(emptySet())
         }
         playbackJob = scope.launch {
