@@ -754,6 +754,8 @@ fun HibikiAppShell(
                         currentDestination = topLevelDestination,
                         onNavigationEvent = { event ->
                             if (event is AppNavigationEvent.SelectTopLevel) {
+                                if (event.destination == topLevelDestination) return@AppProductionRoot
+                                navigationState = navigationState.reduce(event)
                                 selectedTab = when (event.destination) {
                                     AppTopLevelDestination.HOME -> AppDestination.HOME
                                     AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
@@ -761,6 +763,15 @@ fun HibikiAppShell(
                                     AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
                                     AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
                                 }
+                                presenter.closeDetails()
+                                detailsAnime = null
+                                watchAnime = null
+                                playbackJob?.cancel()
+                                playbackJob = null
+                                playbackRequestGeneration++
+                                activePlaybackRoute = null
+                                episodesPresenter.setState(EpisodesScreenState())
+                                resetPlayerState()
                             }
                         },
                         showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
