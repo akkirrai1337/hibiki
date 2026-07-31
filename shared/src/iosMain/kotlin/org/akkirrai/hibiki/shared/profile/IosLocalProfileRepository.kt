@@ -30,7 +30,9 @@ internal class IosLocalProfileRepository(
             }
 
         return LocalProfileData(
-            profileName = defaults.stringForKey(PROFILE_NAME_KEY).orEmpty(),
+            profileName = defaults.stringForKey(PROFILE_NAME_KEY).orEmpty()
+                .trim()
+                .ifBlank { DEFAULT_PROFILE_NAME },
             profileAvatarUri = defaults.stringForKey(PROFILE_AVATAR_URI_KEY),
             episodeProgress = watchStateRepository.getAllEpisodeProgress(),
             activity = watchStateRepository.getDailyWatchActivity(),
@@ -39,8 +41,9 @@ internal class IosLocalProfileRepository(
     }
 
     override fun updateProfileName(name: String): String {
-        defaults.setObject(name, forKey = PROFILE_NAME_KEY)
-        return name
+        val profileName = name.trim().ifBlank { DEFAULT_PROFILE_NAME }
+        defaults.setObject(profileName, forKey = PROFILE_NAME_KEY)
+        return profileName
     }
 
     override fun updateProfileAvatar(uri: String) {
@@ -48,6 +51,7 @@ internal class IosLocalProfileRepository(
     }
 
     private companion object {
+        const val DEFAULT_PROFILE_NAME = "hibiki"
         const val PROFILE_NAME_KEY = "hibiki.profile.name"
         const val PROFILE_AVATAR_URI_KEY = "hibiki.profile.avatar"
     }
