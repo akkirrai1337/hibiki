@@ -903,6 +903,7 @@ fun HibikiAppShell(
                         episodesPresenter.setState(EpisodesScreenState())
                         resetPlayerState()
                     }
+                    val rootLayoutEnvironment = LocalAppLayoutEnvironment.current
                     if (!enableOnboarding || onboardingCompleted) {
                     AppProductionRoot(
                         currentDestination = topLevelDestination,
@@ -934,7 +935,15 @@ fun HibikiAppShell(
                         ),
                         modifier = Modifier
                             .fillMaxSize()
-                            .then(if (applyStatusBarPadding) Modifier.statusBarsPadding() else Modifier),
+                            .then(
+                                if (!applyStatusBarPadding) {
+                                    Modifier
+                                } else if (rootLayoutEnvironment.isProvided) {
+                                    Modifier.padding(top = rootLayoutEnvironment.topSystemInset)
+                                } else {
+                                    Modifier.statusBarsPadding()
+                                },
+                            ),
                     ) { animatedDestination ->
                         val animatedTab = when (animatedDestination) {
                             AppTopLevelDestination.HOME -> AppDestination.HOME
