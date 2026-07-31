@@ -202,6 +202,7 @@ import org.akkirrai.hibiki.shared.player.loadedEpisodesState
 import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
 import org.akkirrai.hibiki.shared.player.withPlaybackError
 import org.akkirrai.hibiki.shared.player.PlaybackRequest
+import org.akkirrai.hibiki.shared.player.resolvePlaybackPreferences
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.resetForNavigation
@@ -489,16 +490,17 @@ fun HibikiAppShell(
         val sourceForPlayback = sourceOverride ?: selectedWatchSource
         if (repositoryForPlayback == null || sourceForPlayback == null) return
 
-        val savedSelection = if (
-            sourceOverride == null && preferredPlayerName == null && preferredQuality == null
-        ) {
-            loadPlaybackSelection(watchAnime?.id.orEmpty())
-                ?.takeIf { it.sourceId == sourceForPlayback.sourceId }
-        } else {
-            null
-        }
-        val effectivePlayerName = preferredPlayerName ?: savedSelection?.playerName
-        val effectiveQuality = preferredQuality ?: savedSelection?.quality
+        val effectivePreferences = resolvePlaybackPreferences(
+            sourceId = sourceForPlayback.sourceId,
+            savedSelection = loadPlaybackSelection(watchAnime?.id.orEmpty()),
+            explicitPlayerName = preferredPlayerName,
+            explicitQuality = preferredQuality,
+            allowSavedSelection = sourceOverride == null &&
+                preferredPlayerName == null &&
+                preferredQuality == null,
+        )
+        val effectivePlayerName = effectivePreferences.playerName
+        val effectiveQuality = effectivePreferences.quality
 
         playbackJob?.cancel()
         val requestGeneration = playbackRequestGeneration + 1
