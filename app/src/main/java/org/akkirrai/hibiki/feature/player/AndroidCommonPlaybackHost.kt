@@ -101,6 +101,8 @@ internal fun AndroidCommonPlaybackHost(
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var lifecycleResumePositionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var resumePlaybackAfterLifecyclePause by remember(exoPlayer) { mutableStateOf(false) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     val videoScaleMode = preferencesState.videoScaleMode
@@ -286,7 +288,32 @@ internal fun AndroidCommonPlaybackHost(
 
     DisposableEffect(exoPlayer, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) savePlaybackProgress()
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    savePlaybackProgress()
+                    if (isPictureInPictureActive || isAudioOnly) return@LifecycleEventObserver
+                    lifecycleResumePositionMs = transport.positionMs().coerceAtLeast(0L)
+                    resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
+                    exoPlayer.pause()
+                }
+
+                Lifecycle.Event.ON_STOP -> savePlaybackProgress()
+
+                Lifecycle.Event.ON_RESUME -> {
+                    isPictureInPictureActive = false
+                    isAudioOnly = false
+                    val resumePositionMs = lifecycleResumePositionMs
+                    if (resumePositionMs > 0L) {
+                        exoPlayer.seekTo(resumePositionMs)
+                        positionMs = resumePositionMs
+                        lifecycleResumePositionMs = 0L
+                    }
+                    if (resumePlaybackAfterLifecyclePause) exoPlayer.play()
+                    resumePlaybackAfterLifecyclePause = false
+                }
+
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
