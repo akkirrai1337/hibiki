@@ -45,6 +45,7 @@ import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
+import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -77,6 +78,16 @@ internal fun AndroidCommonPlaybackHost(
         ExoPlayer.Builder(androidContext).build()
     }
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
+    val progressCoordinator = remember(exoPlayer) {
+        PlaybackProgressCoordinator { progress ->
+            progressRepository.saveEpisodeProgress(
+                context = context,
+                playback = playback,
+                positionMs = progress.positionMs,
+                durationMs = progress.durationMs,
+            )
+        }
+    }
     var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
     val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     var controlsLocked by remember { mutableStateOf(false) }
@@ -101,12 +112,7 @@ internal fun AndroidCommonPlaybackHost(
     fun savePlaybackProgress() {
         val position = transport.positionMs()
         resolvePersistablePlaybackProgress(position, transport.durationMs())?.let { progress ->
-            progressRepository.saveEpisodeProgress(
-            context = context,
-            playback = playback,
-            positionMs = progress.positionMs,
-            durationMs = progress.durationMs,
-            )
+            progressCoordinator.persistIfChanged(progress)
         }
     }
 

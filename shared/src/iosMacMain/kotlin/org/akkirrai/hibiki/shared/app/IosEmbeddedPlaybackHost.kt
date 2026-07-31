@@ -31,6 +31,7 @@ import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
+import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
@@ -63,6 +64,16 @@ internal fun IosEmbeddedPlaybackHost(
             it.transport.setRate(settingsStore.load().playbackSpeed)
         }
     }
+    val progressCoordinator = remember(session) {
+        PlaybackProgressCoordinator { progress ->
+            progressRepository.saveEpisodeProgress(
+                context = context,
+                playback = playback,
+                positionMs = progress.positionMs,
+                durationMs = progress.durationMs,
+            )
+        }
+    }
     val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
@@ -78,12 +89,7 @@ internal fun IosEmbeddedPlaybackHost(
     fun savePlaybackProgress() {
         val position = session.transport.positionMs()
         resolvePersistablePlaybackProgress(position, session.transport.durationMs())?.let { progress ->
-            progressRepository.saveEpisodeProgress(
-            context = context,
-            playback = playback,
-            positionMs = progress.positionMs,
-            durationMs = progress.durationMs,
-            )
+            progressCoordinator.persistIfChanged(progress)
         }
     }
 

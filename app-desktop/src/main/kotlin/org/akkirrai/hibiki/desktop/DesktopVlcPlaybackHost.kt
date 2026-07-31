@@ -42,6 +42,7 @@ import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
+import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
@@ -68,6 +69,16 @@ internal fun DesktopVlcPlaybackHost(
             it.transport.setRate(settingsStore.load().playbackSpeed)
         }
     }
+    val progressCoordinator = remember(session) {
+        PlaybackProgressCoordinator { progress ->
+            progressRepository.saveEpisodeProgress(
+                context = context,
+                playback = playback,
+                positionMs = progress.positionMs,
+                durationMs = progress.durationMs,
+            )
+        }
+    }
     var scaleMode by remember(session) { mutableStateOf(settingsStore.load().videoScaleMode) }
     var videoWidth by remember(session) { mutableIntStateOf(0) }
     var videoHeight by remember(session) { mutableIntStateOf(0) }
@@ -87,12 +98,7 @@ internal fun DesktopVlcPlaybackHost(
     fun savePlaybackProgress() {
         val position = session.transport.positionMs()
         resolvePersistablePlaybackProgress(position, session.transport.durationMs())?.let { progress ->
-            progressRepository.saveEpisodeProgress(
-            context = context,
-            playback = playback,
-            positionMs = progress.positionMs,
-            durationMs = progress.durationMs,
-            )
+            progressCoordinator.persistIfChanged(progress)
         }
     }
 
