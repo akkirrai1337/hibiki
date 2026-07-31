@@ -152,6 +152,7 @@ import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
+import org.akkirrai.hibiki.shared.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
@@ -805,7 +806,12 @@ fun HibikiAppShell(
                                     )
                                 }
                             },
-                        showBottomBar = state.selectedAnime == null && selectedTab != AppDestination.SETTINGS,
+                        showBottomBar = appBottomBarVisible(
+                            selectedTab = selectedTab,
+                            hasDetails = state.selectedAnime != null,
+                            hasWatchFlow = watchAnime != null,
+                            hasActivePlayback = activePlaybackRoute != null,
+                        ),
                         includeNavigationBarPadding = includeNavigationBarPadding,
                         contentTransitionKey = appShellTransitionKey(
                             topLevelDestination = topLevelDestination,
