@@ -11,8 +11,9 @@ import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.shared.profile.DailyWatchActivity
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 
-internal class DesktopPlaybackProgressRepository : PlaybackProgressRepository {
-    private val preferences = Preferences.userNodeForPackage(DesktopPlaybackProgressRepository::class.java)
+internal class DesktopPlaybackProgressRepository(
+    private val preferences: Preferences = Preferences.userNodeForPackage(DesktopPlaybackProgressRepository::class.java),
+) : PlaybackProgressRepository {
 
     override fun saveEpisodeProgress(
         context: PlaybackContext,
