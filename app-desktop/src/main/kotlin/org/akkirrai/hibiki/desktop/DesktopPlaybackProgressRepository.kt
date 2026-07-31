@@ -56,6 +56,18 @@ internal class DesktopPlaybackProgressRepository(
         preferences.flush()
     }
 
+    fun loadPlaybackSelection(titleId: String): PlaybackSelection? {
+        val key = encode(titleId)
+        val sourceId = preferences.get("$SELECTION_PREFIX${key}_source", null) ?: return null
+        return PlaybackSelection(
+            titleId = titleId,
+            sourceId = sourceId,
+            sourceTitle = preferences.get("$SELECTION_PREFIX${key}_source_title", ""),
+            quality = preferences.get("$SELECTION_PREFIX${key}_quality", "").ifBlank { null },
+            playerName = preferences.get("$SELECTION_PREFIX${key}_player", "").ifBlank { null },
+        )
+    }
+
     fun getDailyWatchActivity(): List<DailyWatchActivity> {
         val cutoffDate = activityCutoffDate()
         pruneActivityBefore(cutoffDate)

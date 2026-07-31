@@ -93,6 +93,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onPlaybackSelectionChanged = { selection ->
                         watchStateRepository.savePlaybackSelection(selection)
                     },
+                    loadPlaybackSelection = watchStateRepository::loadPlaybackSelection,
                     playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
                         { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             IosEmbeddedPlaybackHost(

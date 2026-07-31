@@ -254,6 +254,7 @@ fun HibikiAppShell(
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
     onPlaybackSelectionChanged: (org.akkirrai.hibiki.shared.model.PlaybackSelection) -> Unit = {},
+    loadPlaybackSelection: (String) -> org.akkirrai.hibiki.shared.model.PlaybackSelection? = { null },
     playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
@@ -487,6 +488,17 @@ fun HibikiAppShell(
         val sourceForPlayback = sourceOverride ?: selectedWatchSource
         if (repositoryForPlayback == null || sourceForPlayback == null) return
 
+        val savedSelection = if (
+            sourceOverride == null && preferredPlayerName == null && preferredQuality == null
+        ) {
+            loadPlaybackSelection(watchAnime?.id.orEmpty())
+                ?.takeIf { it.sourceId == sourceForPlayback.sourceId }
+        } else {
+            null
+        }
+        val effectivePlayerName = preferredPlayerName ?: savedSelection?.playerName
+        val effectiveQuality = preferredQuality ?: savedSelection?.quality
+
         playbackJob?.cancel()
         val requestGeneration = playbackRequestGeneration + 1
         playbackRequestGeneration = requestGeneration
@@ -498,8 +510,8 @@ fun HibikiAppShell(
                 lastPlaybackRequest = PlaybackRequest(
                     episode = episode,
                     source = sourceForPlayback,
-                    preferredPlayerName = preferredPlayerName,
-                    preferredQuality = preferredQuality,
+                    preferredPlayerName = effectivePlayerName,
+                    preferredQuality = effectiveQuality,
                 ),
             ).beginPlaybackLoad(emptySet())
         }
@@ -508,8 +520,8 @@ fun HibikiAppShell(
                 repositoryForPlayback.resolvePlayback(
                     sourceId = sourceForPlayback.sourceId,
                     episodeId = episode.id,
-                    preferredQuality = preferredQuality ?: sourceForPlayback.qualityLabel,
-                    preferredPlayerName = preferredPlayerName,
+                    preferredQuality = effectiveQuality ?: sourceForPlayback.qualityLabel,
+                    preferredPlayerName = effectivePlayerName,
                 )
             }
             if (requestGeneration != playbackRequestGeneration) return@launch
@@ -557,8 +569,8 @@ fun HibikiAppShell(
                     episodeNumber = episode.number,
                     sourceTitle = sourceForPlayback.title,
                     episodes = loadedEpisodes,
-                    selectedPlayerName = preferredPlayerName,
-                    selectedQualityLabel = preferredQuality ?: sourceForPlayback.qualityLabel,
+                    selectedPlayerName = effectivePlayerName,
+                    selectedQualityLabel = effectiveQuality ?: sourceForPlayback.qualityLabel,
                 )
                 onPlaybackSelectionChanged(
                     org.akkirrai.hibiki.shared.model.PlaybackSelection(

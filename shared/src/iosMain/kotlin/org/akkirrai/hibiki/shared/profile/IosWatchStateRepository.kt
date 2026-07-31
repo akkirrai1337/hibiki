@@ -97,6 +97,17 @@ internal class IosWatchStateRepository(
         defaults.setObject(selection.playerName, forKey = "${SELECTION_PREFIX}${selection.titleId}_player")
     }
 
+    internal fun loadPlaybackSelection(titleId: String): PlaybackSelection? {
+        val sourceId = defaults.stringForKey("${SELECTION_PREFIX}${titleId}_source") ?: return null
+        return PlaybackSelection(
+            titleId = titleId,
+            sourceId = sourceId,
+            sourceTitle = defaults.stringForKey("${SELECTION_PREFIX}${titleId}_source_title").orEmpty(),
+            quality = defaults.stringForKey("${SELECTION_PREFIX}${titleId}_quality"),
+            playerName = defaults.stringForKey("${SELECTION_PREFIX}${titleId}_player"),
+        )
+    }
+
     private fun recordActivity(
         titleId: String,
         episodeId: String,

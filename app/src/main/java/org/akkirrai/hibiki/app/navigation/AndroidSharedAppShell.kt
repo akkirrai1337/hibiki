@@ -160,6 +160,19 @@ internal fun AndroidSharedAppShell(
                     autoSelect = false,
                 )
             },
+            loadPlaybackSelection = { titleId ->
+                watchStateRepository.getSelectedSource(titleId).let { selection ->
+                    selection.sourceId?.let { sourceId ->
+                        org.akkirrai.hibiki.shared.model.PlaybackSelection(
+                            titleId = titleId,
+                            sourceId = sourceId,
+                            sourceTitle = selection.sourceTitle.orEmpty(),
+                            quality = selection.quality,
+                            playerName = selection.playerName,
+                        )
+                    }
+                }
+            },
             watchRepository = watchRepository,
             playbackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                 AndroidCommonPlaybackHost(
