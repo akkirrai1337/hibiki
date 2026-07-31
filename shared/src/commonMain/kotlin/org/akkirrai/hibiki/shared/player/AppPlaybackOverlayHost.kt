@@ -17,6 +17,16 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 
+fun shouldDismissPlayerSettingsForAction(action: PlaybackSettingsAction): Boolean = when (action) {
+    is PlaybackSettingsAction.SelectVoiceover,
+    is PlaybackSettingsAction.SelectPlayer,
+    is PlaybackSettingsAction.SelectQuality,
+    -> true
+    is PlaybackSettingsAction.SetAutoSkipSegments,
+    is PlaybackSettingsAction.SetAutoPlayNextEpisode,
+    -> false
+}
+
 /** Common full-screen overlay boundary for platform media playback surfaces. */
 @Composable
 fun AppPlaybackOverlayHost(
@@ -39,13 +49,8 @@ fun AppPlaybackOverlayHost(
         onEpisodeSelected(episode)
     }
     val handleSettingsAction: (PlaybackSettingsAction) -> Unit = { action ->
-        if (
-            navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings &&
-            (
-                action is PlaybackSettingsAction.SelectVoiceover ||
-                    action is PlaybackSettingsAction.SelectPlayer ||
-                    action is PlaybackSettingsAction.SelectQuality
-                )
+        if (navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings &&
+            shouldDismissPlayerSettingsForAction(action)
         ) {
             onOverlayEvent(AppNavigationEvent.DismissOverlay)
         }
