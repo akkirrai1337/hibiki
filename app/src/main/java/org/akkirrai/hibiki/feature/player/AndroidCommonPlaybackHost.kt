@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
@@ -44,6 +46,7 @@ internal fun AndroidCommonPlaybackHost(
     modifier: Modifier = Modifier,
 ) {
     val androidContext = LocalContext.current
+    val activity = remember(androidContext) { androidContext.findHibikiActivity() }
     val preferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
     val exoPlayer = remember(androidContext, playback.streamUrl, playback.headers) {
@@ -59,6 +62,53 @@ internal fun AndroidCommonPlaybackHost(
         episodes = context.episodes,
         currentEpisodeId = context.episodeId,
     )
+    var isAudioOnly by remember { mutableStateOf(false) }
+    var isPictureInPictureActive by remember { mutableStateOf(false) }
+    val pictureInPictureSupported = remember(activity) {
+        activity?.packageManager?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
+    }
+
+    fun selectAdjacentEpisode(offset: Int) {
+        resolveAdjacentEpisode(
+            episodes = context.episodes,
+            currentEpisodeId = context.episodeId,
+            currentEpisodeNumber = context.episodeNumber,
+            offset = offset,
+        )?.let(onEpisodeSelected)
+    }
+
+    DisposableEffect(androidContext, context.episodeId, episodeNavigation) {
+        val receiver = registerPictureInPictureReceiver(
+            context = androidContext,
+            onToggleAudioOnly = {
+                exoPlayer.play()
+                isAudioOnly = true
+                isPictureInPictureActive = false
+                DiscordRpcManager.get(androidContext).setBackgroundAudioActive(true)
+                activity?.moveTaskToBack(true)
+            },
+            onTogglePlayback = {
+                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+            },
+            onPreviousEpisode = { if (episodeNavigation.hasPrevious) selectAdjacentEpisode(-1) },
+            onNextEpisode = { if (episodeNavigation.hasNext) selectAdjacentEpisode(1) },
+        )
+        onDispose { androidContext.unregisterReceiver(receiver) }
+    }
+
+    LaunchedEffect(isPictureInPictureActive, context.episodeId, episodeNavigation) {
+        if (isPictureInPictureActive) {
+            activity?.setPictureInPictureParams(
+                createAndroidPictureInPictureParams(
+                    context = androidContext,
+                    isPlaying = exoPlayer.isPlaying,
+                    isAudioOnly = isAudioOnly,
+                    hasPreviousEpisode = episodeNavigation.hasPrevious,
+                    hasNextEpisode = episodeNavigation.hasNext,
+                ),
+            )
+        }
+    }
 
     DisposableEffect(exoPlayer, playback.streamUrl) {
         val listener = object : Player.Listener {
@@ -122,6 +172,22 @@ internal fun AndroidCommonPlaybackHost(
                     playlistVisible = false
                 },
                 lockContentDescription = appText(AppTextKey.PlayerLock),
+                pictureInPictureEnabled = pictureInPictureSupported,
+                onPictureInPictureClick = {
+                    val entered = runCatching {
+                        activity?.enterPictureInPictureMode(
+                            createAndroidPictureInPictureParams(
+                                context = androidContext,
+                                isPlaying = exoPlayer.isPlaying,
+                                isAudioOnly = isAudioOnly,
+                                hasPreviousEpisode = episodeNavigation.hasPrevious,
+                                hasNextEpisode = episodeNavigation.hasNext,
+                            ),
+                        ) ?: false
+                    }.getOrDefault(false)
+                    isPictureInPictureActive = entered
+                },
+                pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
             )
         }
         AppPlayerUnlockOverlay(
