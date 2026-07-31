@@ -64,6 +64,20 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `back closes player overlay before player route`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+
+        val overlayDismissed = state.reduce(AppNavigationEvent.Back)
+
+        assertEquals(emptyList(), overlayDismissed.overlays)
+        assertEquals(AppRoute.Player("source-1", "episode-1"), overlayDismissed.currentRoute)
+        assertEquals(AppRoute.Details("anime-1"), overlayDismissed.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
     fun `transition keys are stable and identify route instances`() {
         val first = AppRoute.Player("source-1", "episode-1").transitionKey()
         val same = AppRoute.Player("source-1", "episode-1").transitionKey()
