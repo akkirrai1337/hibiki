@@ -253,6 +253,7 @@ fun HibikiAppShell(
     onSourceSelected: (String) -> Unit = {},
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
+    onPlaybackSelectionChanged: (org.akkirrai.hibiki.shared.model.PlaybackSelection) -> Unit = {},
     playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     showSettingsBackButton: Boolean = false,
     includeNavigationBarPadding: Boolean = true,
@@ -558,6 +559,15 @@ fun HibikiAppShell(
                     episodes = loadedEpisodes,
                     selectedPlayerName = preferredPlayerName,
                     selectedQualityLabel = preferredQuality ?: sourceForPlayback.qualityLabel,
+                )
+                onPlaybackSelectionChanged(
+                    org.akkirrai.hibiki.shared.model.PlaybackSelection(
+                        titleId = context.titleId,
+                        sourceId = context.sourceId,
+                        sourceTitle = context.sourceTitle,
+                        quality = playback.qualityLabel ?: context.selectedQualityLabel,
+                        playerName = context.selectedPlayerName,
+                    ),
                 )
                 if (playbackHost != null) {
                     activePlaybackRoute = PlaybackRoute(playback, context)

@@ -150,6 +150,16 @@ internal fun AndroidSharedAppShell(
             onSourceSelected = { sourceId ->
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
             },
+            onPlaybackSelectionChanged = { selection ->
+                watchStateRepository.saveSelectedSource(
+                    titleId = selection.titleId,
+                    sourceId = selection.sourceId,
+                    sourceTitle = selection.sourceTitle,
+                    quality = selection.quality,
+                    playerName = selection.playerName,
+                    autoSelect = false,
+                )
+            },
             watchRepository = watchRepository,
             playbackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                 AndroidCommonPlaybackHost(

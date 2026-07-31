@@ -35,6 +35,14 @@ data class PlaybackContext(
     val selectedQualityLabel: String? = null,
 )
 
+data class PlaybackSelection(
+    val titleId: String,
+    val sourceId: String,
+    val sourceTitle: String,
+    val quality: String?,
+    val playerName: String?,
+)
+
 data class PlaybackRoute(
     val playback: PlaybackStream,
     val context: PlaybackContext,
