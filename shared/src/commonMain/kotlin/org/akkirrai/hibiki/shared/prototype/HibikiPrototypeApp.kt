@@ -379,7 +379,6 @@ fun HibikiAppShell(
 
     fun handleSourceSelected(sourceId: String) {
         currentSelectedSourceId = sourceId
-        homeSearchQuery = ""
         repository.selectSource(sourceId)
         presenter.clear()
         presenter.loadFilterCatalog()
