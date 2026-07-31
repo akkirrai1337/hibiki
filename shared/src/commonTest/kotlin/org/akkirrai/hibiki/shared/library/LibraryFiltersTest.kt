@@ -24,4 +24,17 @@ class LibraryFiltersTest {
         assertFalse(LibrarySearchFilters(type = "Movie").matches(entry))
         assertTrue(entry.anime.extractLibraryType() == "TV")
     }
+
+    @Test
+    fun extractsTypeFromAndroidStyleMiddleDotSubtitle() {
+        val anime = Anime(
+            id = "2",
+            title = "Demo",
+            subtitle = "TV · 2024",
+            episodesLabel = "12",
+            status = "Ongoing",
+        )
+
+        assertTrue(anime.extractLibraryType() == "TV")
+    }
 }
