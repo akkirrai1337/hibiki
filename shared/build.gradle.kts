@@ -66,6 +66,7 @@ kotlin {
             dependencies {
                 implementation(libs.coil.network.okhttp)
                 implementation(libs.androidx.palette.ktx)
+                implementation(libs.androidx.activity.compose)
             }
         }
         val desktopMain by getting {

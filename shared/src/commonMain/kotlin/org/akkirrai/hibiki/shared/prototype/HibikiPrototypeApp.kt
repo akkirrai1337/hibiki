@@ -167,6 +167,7 @@ import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.PlaybackRoute
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 
 private const val DEFAULT_PROFILE_NAME = "hibiki"
 private const val HOME_SEARCH_DEBOUNCE_MS = 450L
@@ -369,6 +370,37 @@ fun HibikiAppShell(
         Unit
     }
 
+    fun handleSystemBack() {
+        if (activePlaybackRoute != null) {
+            activePlaybackRoute = null
+            navigationState = navigationState.reduce(AppNavigationEvent.Back)
+            return
+        }
+        if (navigationState.backStack.isEmpty()) return
+        val routeBeforeBack = navigationState.currentRoute
+        navigationState = navigationState.reduce(AppNavigationEvent.Back)
+        when (routeBeforeBack) {
+            is AppRoute.Player -> {
+                playbackJob?.cancel()
+                playbackJob = null
+                playbackLoading = false
+                playbackError = null
+            }
+            is AppRoute.Episodes, is AppRoute.WatchSources -> {
+                episodesPresenter.setState(EpisodesScreenState())
+                playbackLoading = false
+                playbackError = null
+                if (navigationState.currentRoute !is AppRoute.Episodes &&
+                    navigationState.currentRoute !is AppRoute.WatchSources
+                ) {
+                    watchAnime = null
+                }
+            }
+            is AppRoute.Details -> presenter.closeDetails()
+            else -> Unit
+        }
+    }
+
     CompositionLocalProvider(
         LocalAppTextResolver provides DefaultAppTextResolver(languageMode, systemLanguage),
     ) {
@@ -391,6 +423,10 @@ fun HibikiAppShell(
             typography = HibikiTypography,
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                AppSystemBackHandler(
+                    enabled = navigationState.backStack.isNotEmpty() || activePlaybackRoute != null,
+                    onBack = ::handleSystemBack,
+                ) {
                 Box {
                     fun saveSettings() {
                         settingsStore.save(
@@ -743,6 +779,7 @@ fun HibikiAppShell(
         }
     }
 }
+}
 
 @Composable
 private fun WideAppLayout(
@@ -924,7 +961,7 @@ private fun CompactAppLayout(
                         )
                     }
                 }
-            }
+                }
         },
     ) { padding ->
         AppDestinationContent(
