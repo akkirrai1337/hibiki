@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AnimeCatalogPresenterTest {
@@ -107,6 +108,25 @@ class AnimeCatalogPresenterTest {
 
         presenter.clearDetails()
 
+        assertEquals(null, presenter.state.value.selectedAnime)
+    }
+
+    @Test
+    fun catalogFiltersSurviveDetailsRoundTrip() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        val filters = AnimeSearchFilters(typeAlias = "tv", yearFrom = 2020, yearTo = 2024)
+
+        presenter.setFilters(filters)
+        presenter.openDetails(Anime("one", "One", "", "", ""))
+        advanceUntilIdle()
+        presenter.closeDetails()
+
+        assertEquals(filters, presenter.state.value.filters)
         assertEquals(null, presenter.state.value.selectedAnime)
     }
 }
