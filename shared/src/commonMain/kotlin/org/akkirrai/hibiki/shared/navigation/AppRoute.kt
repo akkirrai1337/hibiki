@@ -33,7 +33,10 @@ data class AppTransitionKey(val route: String, val identity: String)
 fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
     is AppRoute.TopLevel -> AppTransitionKey("top-level", destination.route)
     is AppRoute.Details -> AppTransitionKey("details", animeId)
-    is AppRoute.WatchSources -> AppTransitionKey("watch-sources", animeId)
+    is AppRoute.WatchSources -> AppTransitionKey(
+        "watch-sources",
+        "$animeId:$downloadMode",
+    )
     is AppRoute.Episodes -> AppTransitionKey(
         "episodes",
         "${animeId.orEmpty()}:${source.sourceId}:$downloadMode",

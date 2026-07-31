@@ -104,6 +104,14 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `watch sources transition keys identify download mode`() {
+        val regular = AppRoute.WatchSources("anime-1").transitionKey()
+        val downloads = AppRoute.WatchSources("anime-1", downloadMode = true).transitionKey()
+
+        assertTrue(regular != downloads)
+    }
+
+    @Test
     fun `transition spec keeps route keys and distinguishes push from pop`() {
         val details = AppRoute.Details("anime-1")
         val sources = AppRoute.WatchSources("anime-1")
