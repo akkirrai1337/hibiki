@@ -89,4 +89,24 @@ class AnimeCatalogPresenterTest {
         presenter.closeDetails()
         assertEquals(null, presenter.state.value.selectedAnime)
     }
+
+    @Test
+    fun clearDetailsDropsAllRelatedDetailsAtOnce() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+
+            override suspend fun getDetails(id: String, fallback: Anime): Anime = fallback
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        presenter.openDetails(Anime("one", "One", "", "", ""))
+        advanceUntilIdle()
+        presenter.openDetails(Anime("two", "Two", "", "", ""))
+        advanceUntilIdle()
+
+        presenter.clearDetails()
+
+        assertEquals(null, presenter.state.value.selectedAnime)
+    }
 }

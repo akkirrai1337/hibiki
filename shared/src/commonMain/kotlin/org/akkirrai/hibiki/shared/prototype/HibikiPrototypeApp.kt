@@ -780,7 +780,7 @@ fun HibikiAppShell(
                             AppNavigationEvent.SelectTopLevel(target),
                         )
                         selectedTab = destination
-                        presenter.closeDetails()
+                        presenter.clearDetails()
                         detailsAnime = null
                         watchAnime = null
                         playbackJob?.cancel()

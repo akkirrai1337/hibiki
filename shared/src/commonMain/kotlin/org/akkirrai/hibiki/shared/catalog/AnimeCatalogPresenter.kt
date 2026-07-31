@@ -235,6 +235,12 @@ class AnimeCatalogPresenter(
         }
     }
 
+    fun clearDetails() {
+        detailsJob?.cancel()
+        detailsBackStack.clear()
+        _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
+    }
+
     private fun preserveLoadedDescriptions(
         previousItems: List<Anime>,
         updatedItems: List<Anime>,
