@@ -635,6 +635,9 @@ fun HibikiAppShell(
 
     fun handleSystemBack() {
         if (selectedTab == AppDestination.SETTINGS) {
+            if (navigationState.currentRoute is AppRoute.Settings) {
+                navigationState = navigationState.reduce(AppNavigationEvent.Back)
+            }
             selectedTab = AppDestination.PROFILE
             return
         }
@@ -965,7 +968,12 @@ fun HibikiAppShell(
                                 editedProfileName = profileName
                                 isEditingProfile = false
                             },
-                            onProfileSettingsClick = { selectedTab = AppDestination.SETTINGS },
+                            onProfileSettingsClick = {
+                                selectedTab = AppDestination.SETTINGS
+                                navigationState = navigationState.reduce(
+                                    AppNavigationEvent.Navigate(AppRoute.Settings),
+                                )
+                            },
                             onProfileAvatarEdit = onProfileAvatarEdit,
                             profileAvatarEditAvailable = profileAvatarEditAvailable,
                             onGitHubClick = onGitHubClick,
@@ -996,7 +1004,10 @@ fun HibikiAppShell(
                             },
                             showSettingsBackButton = showSettingsBackButton,
                             includeNavigationBarPadding = includeNavigationBarPadding,
-                            onSettingsBack = { selectedTab = AppDestination.PROFILE },
+                            onSettingsBack = {
+                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
+                                selectedTab = AppDestination.PROFILE
+                            },
                             sourceSearchState = sourceSearchState,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,

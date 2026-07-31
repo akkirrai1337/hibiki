@@ -64,6 +64,19 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `settings route backs to profile root`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
+
+        assertEquals(AppRoute.Settings, state.currentRoute)
+        assertEquals(
+            AppRoute.TopLevel(AppTopLevelDestination.PROFILE),
+            state.reduce(AppNavigationEvent.Back).currentRoute,
+        )
+    }
+
+    @Test
     fun `back closes player overlay before player route`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
