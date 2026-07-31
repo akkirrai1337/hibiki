@@ -341,6 +341,16 @@ fun HibikiAppShell(
         mutableStateOf(profileState.data.profileName.ifBlank { DEFAULT_PROFILE_NAME })
     }
 
+    fun handleSourceSelected(sourceId: String) {
+        currentSelectedSourceId = sourceId
+        repository.selectSource(sourceId)
+        presenter.clear()
+        presenter.loadFilterCatalog()
+        presenter.search()
+        sourceSearchPresenter.clear()
+        onSourceSelected(sourceId)
+    }
+
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
         presenter.search()
@@ -1113,15 +1123,7 @@ fun HibikiAppShell(
                             profileRepository = profileRepository,
                             sources = sources,
                             selectedSourceId = currentSelectedSourceId,
-                            onSourceSelected = { sourceId ->
-                                currentSelectedSourceId = sourceId
-                                repository.selectSource(sourceId)
-                                presenter.clear()
-                                presenter.loadFilterCatalog()
-                                presenter.search()
-                                sourceSearchPresenter.clear()
-                                onSourceSelected(sourceId)
-                            },
+                            onSourceSelected = ::handleSourceSelected,
                             showSettingsBackButton = showSettingsBackButton,
                             includeNavigationBarPadding = includeNavigationBarPadding,
                             onSettingsBack = {
