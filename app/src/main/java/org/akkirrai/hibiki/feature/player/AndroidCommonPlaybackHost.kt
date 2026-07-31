@@ -23,6 +23,8 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
+import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -46,6 +48,10 @@ internal fun AndroidCommonPlaybackHost(
     var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
     var playlistVisible by remember { mutableStateOf(false) }
     val videoScaleMode = preferencesState.videoScaleMode
+    val episodeNavigation = resolveEpisodeNavigationAvailability(
+        episodes = context.episodes,
+        currentEpisodeId = context.episodeId,
+    )
 
     DisposableEffect(exoPlayer, playback.streamUrl) {
         val listener = object : Player.Listener {
@@ -84,6 +90,24 @@ internal fun AndroidCommonPlaybackHost(
             onBack = onBack,
             playlistEnabled = context.episodes.isNotEmpty(),
             onPlaylistClick = { playlistVisible = true },
+            hasPreviousEpisode = episodeNavigation.hasPrevious,
+            hasNextEpisode = episodeNavigation.hasNext,
+            onPreviousEpisode = {
+                resolveAdjacentEpisode(
+                    episodes = context.episodes,
+                    currentEpisodeId = context.episodeId,
+                    currentEpisodeNumber = context.episodeNumber,
+                    offset = -1,
+                )?.let(onEpisodeSelected)
+            },
+            onNextEpisode = {
+                resolveAdjacentEpisode(
+                    episodes = context.episodes,
+                    currentEpisodeId = context.episodeId,
+                    currentEpisodeNumber = context.episodeNumber,
+                    offset = 1,
+                )?.let(onEpisodeSelected)
+            },
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,
