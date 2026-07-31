@@ -56,5 +56,7 @@ class AppTextResolverTest {
         assertEquals("Load more", english.resolve(AppTextKey.WatchSourcesLoadMore))
         assertEquals("Озвучки не найдены", russian.resolve(AppTextKey.WatchSourcesEmptyTitle))
         assertEquals("Загрузить ещё", russian.resolve(AppTextKey.WatchSourcesLoadMore))
+        assertEquals("No episodes", english.resolve(AppTextKey.WatchEpisodesEmptyTitle))
+        assertEquals("Озвучка", russian.resolve(AppTextKey.WatchSourceFallback))
     }
 }

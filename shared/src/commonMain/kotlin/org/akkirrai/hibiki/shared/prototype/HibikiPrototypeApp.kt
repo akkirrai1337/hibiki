@@ -1747,8 +1747,8 @@ private fun AppDestinationContent(
                     Column(modifier = Modifier.fillMaxSize()) {
                         AppEpisodesContent(
                         result = episodesState.result,
-                        sourceTitle = currentWatchSource.title,
-                        emptyMessage = appText(AppTextKey.Episodes),
+                        sourceTitle = currentWatchSource.title.ifBlank { appText(AppTextKey.WatchSourceFallback) },
+                        emptyMessage = appText(AppTextKey.WatchEpisodesEmptyTitle),
                         retryLabel = appText(AppTextKey.SearchRetry),
                         onRetry = onWatchRetry,
                             episodeContent = { episode, shape ->
