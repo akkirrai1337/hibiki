@@ -8,6 +8,9 @@ interface LibraryRepository {
 
     fun saveToLibrary(anime: org.akkirrai.hibiki.shared.model.Anime, category: LibraryCategory) = Unit
 
+    /** Removes only the Saved/download category while preserving other categories. */
+    fun removeSavedFromLibrary(id: String) = Unit
+
     fun removeFromLibrary(id: String) = Unit
 }
 

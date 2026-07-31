@@ -61,4 +61,20 @@ class DesktopLibraryRepositoryTest {
         )
         assertEquals(LibraryCategory.Saved, repository.getLibraryCategory(anime.id))
     }
+
+    @Test
+    fun removingSavedKeepsPrimaryAndFavoriteCategories() = runBlocking {
+        val anime = Anime(id = "title-3", title = "Title 3", subtitle = "", episodesLabel = "12", status = "Ongoing")
+
+        repository.saveToLibrary(anime, LibraryCategory.Planned)
+        repository.saveToLibrary(anime, LibraryCategory.Favorite)
+        repository.saveToLibrary(anime, LibraryCategory.Saved)
+
+        repository.removeSavedFromLibrary(anime.id)
+
+        assertEquals(
+            listOf(LibraryCategory.Planned, LibraryCategory.Favorite),
+            repository.getEntries().map { it.category },
+        )
+    }
 }

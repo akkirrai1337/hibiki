@@ -129,7 +129,7 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.L
         saveCategoriesOrRemove(id, remainingCategories)
     }
 
-    fun removeSavedFromLibrary(id: String) {
+    override fun removeSavedFromLibrary(id: String) {
         val remainingCategories = getLibraryCategories(id) - LibraryCategory.Saved
         saveCategoriesOrRemove(id, remainingCategories)
     }

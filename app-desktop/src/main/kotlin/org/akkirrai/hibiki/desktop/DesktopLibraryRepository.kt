@@ -53,6 +53,16 @@ internal class DesktopLibraryRepository(
         }
     }
 
+    override fun removeSavedFromLibrary(id: String) {
+        val remaining = getCategories(id).filterTo(linkedSetOf()) { it != LibraryCategory.Saved }
+        if (remaining.isEmpty()) {
+            removeRecord(id)
+        } else {
+            preferences.put(categoriesKey(id), remaining.joinToString(CATEGORY_SEPARATOR) { it.storageValue })
+            flush()
+        }
+    }
+
     private fun getLibraryEntries(): List<LibraryEntry> = readIds().flatMap { id ->
         val anime = preferences.get(animeKey(id), null)
             ?.let { encoded -> runCatching { json.decodeFromString<StoredAnime>(encoded).toAnime() }.getOrNull() }
