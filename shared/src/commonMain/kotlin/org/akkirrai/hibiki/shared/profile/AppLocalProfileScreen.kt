@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ fun AppLocalProfileScreen(
     isEditing: Boolean,
     editedName: String,
     bottomContentPadding: Dp,
+    isLoading: Boolean = false,
     labels: AppLocalProfileLabels,
     onNameChange: (String) -> Unit,
     onAvatarEditClick: () -> Unit,
@@ -56,6 +58,15 @@ fun AppLocalProfileScreen(
     avatarContent: @Composable BoxScope.(Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (isLoading) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),

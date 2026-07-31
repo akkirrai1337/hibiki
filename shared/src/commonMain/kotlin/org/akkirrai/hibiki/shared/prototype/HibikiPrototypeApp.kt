@@ -898,6 +898,7 @@ fun HibikiAppShell(
                             onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
                             profileData = profileState.data,
+                            profileLoading = profileState.isLoading,
                             isEditingProfile = isEditingProfile,
                             editedProfileName = editedProfileName,
                             onProfileNameChange = { editedProfileName = it },
@@ -1430,6 +1431,7 @@ private fun AppDestinationContent(
     includeNavigationBarPadding: Boolean = true,
     homeQuery: String = query,
     onHomeQueryChange: (String) -> Unit = onQueryChange,
+    profileLoading: Boolean = false,
 ) {
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
@@ -1700,6 +1702,7 @@ private fun AppDestinationContent(
                     AppLocalProfileScreen(
                         snapshot = snapshot,
                         profileName = profileData.profileName.ifBlank { appText(AppTextKey.AppName) },
+                        isLoading = profileLoading,
                         isEditing = isEditingProfile,
                         editedName = editedProfileName,
                         bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,

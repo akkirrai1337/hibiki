@@ -58,6 +58,7 @@ fun SharedAndroidLocalProfileScreen(
     AppLocalProfileScreen(
         snapshot = snapshot,
         profileName = state.data.profileName,
+        isLoading = state.isLoading,
         isEditing = isEditingProfile,
         editedName = editedName,
         bottomContentPadding = bottomContentPadding,
