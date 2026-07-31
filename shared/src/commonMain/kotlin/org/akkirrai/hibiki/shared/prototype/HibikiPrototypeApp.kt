@@ -156,6 +156,8 @@ import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.shared.player.AppWatchSourcesContent
 import org.akkirrai.hibiki.shared.player.AppEpisodesContent
 import org.akkirrai.hibiki.shared.player.AppPlaybackOverlayHost
+import org.akkirrai.hibiki.shared.player.PlayerPresenter
+import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
 import org.akkirrai.hibiki.shared.player.EpisodesUiState
 import org.akkirrai.hibiki.shared.player.EpisodeRow
@@ -169,6 +171,9 @@ import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
 import org.akkirrai.hibiki.shared.player.initialWatchSourcesState
 import org.akkirrai.hibiki.shared.player.loadedEpisodesState
+import org.akkirrai.hibiki.shared.player.beginPlaybackLoad
+import org.akkirrai.hibiki.shared.player.withPlaybackError
+import org.akkirrai.hibiki.shared.player.withPlaybackLoaded
 import org.akkirrai.hibiki.shared.player.withLoadedSources
 import org.akkirrai.hibiki.shared.player.withWatchSourcesError
 import org.akkirrai.hibiki.shared.player.showAllWatchSources
@@ -232,8 +237,8 @@ fun HibikiAppShell(
     val selectedWatchSource = navigationState.backStack.asReversed()
         .mapNotNull { (it as? AppRoute.Episodes)?.source }
         .firstOrNull()
-    var playbackError by remember { mutableStateOf<String?>(null) }
-    var playbackLoading by remember { mutableStateOf(false) }
+    val playerPresenter = remember(watchRepository) { PlayerPresenter(PlayerUiState(isLoading = false)) }
+    val playerState by playerPresenter.state.collectAsState()
     var playbackRequestGeneration by remember { mutableStateOf(0) }
     var playbackJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by remember { mutableStateOf<PlaybackRoute?>(null) }
@@ -352,6 +357,10 @@ fun HibikiAppShell(
             }
     }
 
+    fun resetPlayerState() {
+        playerPresenter.setState(PlayerUiState(isLoading = false))
+    }
+
     val refreshLocalData = {
         scope.launch {
             try {
@@ -382,13 +391,11 @@ fun HibikiAppShell(
             is AppRoute.Player -> {
                 playbackJob?.cancel()
                 playbackJob = null
-                playbackLoading = false
-                playbackError = null
+                resetPlayerState()
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
                 episodesPresenter.setState(EpisodesScreenState())
-                playbackLoading = false
-                playbackError = null
+                resetPlayerState()
                 if (navigationState.currentRoute !is AppRoute.Episodes &&
                     navigationState.currentRoute !is AppRoute.WatchSources
                 ) {
@@ -577,22 +584,20 @@ fun HibikiAppShell(
                                     navigationState.currentRoute is AppRoute.WatchSources
                                 ) {
                                     episodesPresenter.setState(EpisodesScreenState())
-                                    playbackError = null
-                                    playbackLoading = false
+                                    resetPlayerState()
                                     return@AppDestinationContent
                                 }
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
-                                playbackError = null
-                                playbackLoading = false
+                                resetPlayerState()
                                 watchAnime = null
                             },
                             watchState = watchState,
                             episodesState = episodesState,
                             selectedWatchSource = selectedWatchSource,
-                            playbackError = playbackError,
-                            playbackLoading = playbackLoading,
+                            playbackError = playerState.errorMessage,
+                            playbackLoading = playerState.isLoading,
                             onWatchRetry = {
                                 if (selectedWatchSource == null) {
                                     watchLoadGeneration++
@@ -605,8 +610,7 @@ fun HibikiAppShell(
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
-                                playbackError = null
-                                playbackLoading = false
+                                resetPlayerState()
                                 navigationState = navigationState.reduce(
                                     AppNavigationEvent.Navigate(AppRoute.Episodes(source)),
                                 )
@@ -618,8 +622,13 @@ fun HibikiAppShell(
                                     playbackJob?.cancel()
                                     val requestGeneration = playbackRequestGeneration + 1
                                     playbackRequestGeneration = requestGeneration
-                                    playbackError = null
-                                    playbackLoading = true
+                                    playerPresenter.update {
+                                        it.copy(
+                                            currentSourceId = sourceForPlayback.sourceId,
+                                            currentEpisodeId = episode.id,
+                                            currentEpisodeNumber = episode.number,
+                                        ).beginPlaybackLoad(emptySet())
+                                    }
                                     playbackJob = scope.launch {
                                         val result = runCatching {
                                             repositoryForPlayback.resolvePlayback(
@@ -632,7 +641,17 @@ fun HibikiAppShell(
                                             return@launch
                                         }
                                         result.onSuccess { playback ->
-                                                playbackLoading = false
+                                                val loadedEpisodes =
+                                                    (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+                                                playerPresenter.update {
+                                                    it.withPlaybackLoaded(
+                                                        stream = playback,
+                                                        episodes = loadedEpisodes,
+                                                        episodeId = episode.id,
+                                                        episodeNumber = episode.number,
+                                                        savedSeekMs = null,
+                                                    )
+                                                }
                                                 navigationState = navigationState.reduce(
                                                     AppNavigationEvent.Navigate(
                                                         AppRoute.Player(
@@ -654,9 +673,15 @@ fun HibikiAppShell(
                                                 } else {
                                                     onPlaybackReady(playback, context)
                                                 }
-                                            }.onFailure { error ->
-                                                playbackLoading = false
-                                                playbackError = error.message ?: "Unable to resolve playback"
+                                             }.onFailure { error ->
+                                                playerPresenter.update {
+                                                    it.withPlaybackError(
+                                                        message = error.message ?: "Unable to resolve playback",
+                                                        episodes = it.episodes,
+                                                        episodeId = episode.id,
+                                                        episodeNumber = episode.number,
+                                                    )
+                                                }
                                                 println(
                                                     "Hibiki playback resolution failed: " +
                                                         (error.message ?: error::class.simpleName),
