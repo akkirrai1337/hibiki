@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
@@ -32,6 +33,7 @@ import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
+import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
@@ -81,6 +83,8 @@ internal fun IosEmbeddedPlaybackHost(
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
     var controlsVisible by remember { mutableStateOf(true) }
+    var controlsLocked by remember { mutableStateOf(false) }
+    var unlockButtonVisible by remember { mutableStateOf(false) }
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var completionHandled by remember(session) { mutableStateOf(false) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
@@ -150,7 +154,7 @@ internal fun IosEmbeddedPlaybackHost(
         }
     }
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !playlistVisible && !settingsVisible }
+        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
     LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
@@ -173,37 +177,64 @@ internal fun IosEmbeddedPlaybackHost(
     }
     AppPlayerFrame {
         IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
-        IosComposePlayerControls(
-            session = session,
-            playback = playback,
-            context = context,
-            onBack = ::closePlayback,
-            onScaleClick = {
-                session.scaleMode = session.scaleMode.next()
-                settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))
+        if (!controlsLocked) {
+            IosComposePlayerControls(
+                session = session,
+                playback = playback,
+                context = context,
+                onBack = ::closePlayback,
+                onScaleClick = {
+                    session.scaleMode = session.scaleMode.next()
+                    settingsStore.save(settingsStore.load().copy(videoScaleMode = session.scaleMode))
+                },
+                playlistEnabled = context.episodes.isNotEmpty(),
+                onPlaylistClick = {
+                    onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+                },
+                hasPreviousEpisode = episodeNavigation.hasPrevious,
+                hasNextEpisode = episodeNavigation.hasNext,
+                onPreviousEpisode = {
+                    selectAdjacentEpisode(-1)
+                },
+                onNextEpisode = {
+                    selectAdjacentEpisode(1)
+                },
+                onSettingsClick = {
+                    onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
+                },
+                settingsContentDescription = appText(AppTextKey.Settings),
+                onLockClick = {
+                    controlsLocked = true
+                    controlsVisible = false
+                    unlockButtonVisible = true
+                    if (playlistVisible) {
+                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                    }
+                    if (settingsVisible) {
+                        onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+                    }
+                },
+                lockContentDescription = appText(AppTextKey.PlayerLock),
+                onControlsVisibilityChanged = { controlsVisible = it },
+                pictureInPictureEnabled = session.pictureInPictureController != null,
+                onPictureInPictureClick = {
+                    session.pictureInPictureController?.startPictureInPicture()
+                },
+                pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
+            )
+        }
+        AppPlayerUnlockOverlay(
+            visible = controlsLocked && unlockButtonVisible,
+            label = appText(AppTextKey.PlayerUnlock),
+            onClick = {
+                controlsLocked = false
+                unlockButtonVisible = false
+                controlsVisible = true
             },
-            playlistEnabled = context.episodes.isNotEmpty(),
-            onPlaylistClick = {
-                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
-            },
-            hasPreviousEpisode = episodeNavigation.hasPrevious,
-            hasNextEpisode = episodeNavigation.hasNext,
-            onPreviousEpisode = {
-                selectAdjacentEpisode(-1)
-            },
-            onNextEpisode = {
-                selectAdjacentEpisode(1)
-            },
-            onSettingsClick = {
-                onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
-            },
-            settingsContentDescription = appText(AppTextKey.Settings),
-            onControlsVisibilityChanged = { controlsVisible = it },
-            pictureInPictureEnabled = session.pictureInPictureController != null,
-            onPictureInPictureClick = {
-                session.pictureInPictureController?.startPictureInPicture()
-            },
-            pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = PlayerUnlockBottomPadding),
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,
