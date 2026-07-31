@@ -35,10 +35,11 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
             } else {
                 overlays + event.overlay
             },
-            playerSettingsDestination = if (event.overlay is AppOverlay.PlayerSettings) {
-                AppPlayerSettingsDestination.Root
-            } else {
-                playerSettingsDestination
+            playerSettingsDestination = when (event.overlay) {
+                AppOverlay.Playlist,
+                AppOverlay.PlayerSettings,
+                -> AppPlayerSettingsDestination.Root
+                else -> playerSettingsDestination
             },
         )
     }

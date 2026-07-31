@@ -90,4 +90,15 @@ class AppNavigationStateTest {
             state.reduce(AppNavigationEvent.Back).overlays,
         )
     }
+
+    @Test
+    fun replacingNestedPlayerSettingsWithPlaylistResetsSettingsDestination() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+            .reduce(AppNavigationEvent.SetPlayerSettingsDestination(AppPlayerSettingsDestination.Quality))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+
+        assertEquals(AppPlayerSettingsDestination.Root, state.playerSettingsDestination)
+        assertEquals(listOf(AppOverlay.Playlist), state.overlays)
+    }
 }
