@@ -18,6 +18,7 @@ fun AppPlayerStatusOverlays(
     retryLabel: String,
     onRetry: () -> Unit,
     unlockModifier: Modifier = Modifier,
+    includeSystemBottomInset: Boolean = false,
 ) {
     AppPlayerUnlockOverlay(
         visible = controlsLocked && unlockButtonVisible,
@@ -25,6 +26,7 @@ fun AppPlayerStatusOverlays(
         onClick = onUnlockClick,
         contentDescription = unlockContentDescription,
         modifier = unlockModifier,
+        includeSystemBottomInset = includeSystemBottomInset,
     )
 
     AppPlayerLoadingOverlay(
