@@ -143,6 +143,7 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
+        controlsVisible = true
         savePlaybackProgress()
         resolveAdjacentEpisode(
             episodes = context.episodes,
@@ -423,6 +424,7 @@ internal fun AndroidCommonPlaybackHost(
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
+                    controlsVisible = true
                     savePlaybackProgress()
                     onEpisodeSelected(it)
                 }

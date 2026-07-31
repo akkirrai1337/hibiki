@@ -100,6 +100,7 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
+        controlsVisible = true
         savePlaybackProgress()
         resolveAdjacentEpisode(
             context.episodes,
@@ -141,6 +142,7 @@ internal fun IosEmbeddedPlaybackHost(
                 completionHandled = completionHandled,
             )?.let {
                 completionHandled = true
+                controlsVisible = true
                 savePlaybackProgress()
                 onEpisodeSelected(it)
             }
@@ -216,6 +218,7 @@ internal fun IosEmbeddedPlaybackHost(
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
+                    controlsVisible = true
                     savePlaybackProgress()
                     onEpisodeSelected(it)
                 }
