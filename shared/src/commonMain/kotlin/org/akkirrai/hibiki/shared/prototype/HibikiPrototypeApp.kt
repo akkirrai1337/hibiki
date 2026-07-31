@@ -79,6 +79,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
+import org.akkirrai.hibiki.shared.details.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.shared.details.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
@@ -1950,6 +1951,13 @@ private fun AppDestinationContent(
         return
     }
     if (selectedAnime != null) {
+        val canWatch = resolveDetailsPlaybackAvailability(
+            watchRepositoryAvailable = watchRepositoryAvailable,
+            sources = sources,
+            selectedSourceId = selectedSourceId,
+            status = selectedAnime.status,
+            episodesLabel = selectedAnime.episodesLabel,
+        )
         AppDetailsScreen(
             anime = selectedAnime,
             onBackClick = onBackFromDetails,
@@ -1957,7 +1965,7 @@ private fun AppDestinationContent(
             backHandler = { onBack ->
                 AppSystemBackHandler(enabled = true, onBack = onBack) {}
             },
-            canWatch = watchRepositoryAvailable,
+            canWatch = canWatch,
             onWatchClick = { onWatchClick(selectedAnime) },
             onTrailerClick = selectedAnime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
             resumeState = detailsResumeState,
