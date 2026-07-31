@@ -19,6 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import hibiki.shared.generated.resources.Res
 import hibiki.shared.generated.resources.hibiki_app_icon
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -63,11 +64,15 @@ fun AppOnboardingScreen(
         }
     }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
+    AppSystemBackHandler(
+        enabled = onboardingBackEnabled(step),
+        onBack = { step.previous()?.let { stepName = it.name } },
     ) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -160,6 +165,7 @@ fun AppOnboardingScreen(
                         ?: selectedSourceId?.let(onComplete)
                 },
             )
+        }
         }
     }
 }

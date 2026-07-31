@@ -12,6 +12,8 @@ fun OnboardingStep.previous(): OnboardingStep? = when (this) {
     OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE
 }
 
+fun onboardingBackEnabled(step: OnboardingStep): Boolean = step != OnboardingStep.WELCOME
+
 fun OnboardingStep.next(): OnboardingStep? = when (this) {
     OnboardingStep.WELCOME -> OnboardingStep.SOURCE
     OnboardingStep.SOURCE -> OnboardingStep.NOTIFICATIONS
