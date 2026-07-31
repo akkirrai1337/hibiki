@@ -109,10 +109,11 @@ class AnimeWatchRepository(
     suspend fun loadSources(
         animeId: String,
         onUpdate: (List<WatchSource>) -> Unit,
+        forceRefresh: Boolean = false,
     ): List<WatchSource> {
         val canonicalId = resolveAnimeId(animeId)
         val cacheKey = languageCacheKey(canonicalId)
-        cachedSources[cacheKey]?.let {
+        if (!forceRefresh) cachedSources[cacheKey]?.let {
             onUpdate(it.sources)
             return it.sources
         }
@@ -153,6 +154,9 @@ class AnimeWatchRepository(
 
     override suspend fun loadSources(animeId: String): List<WatchSource> =
         loadSources(animeId = animeId, onUpdate = {})
+
+    override suspend fun refreshSources(animeId: String): List<WatchSource> =
+        loadSources(animeId = animeId, onUpdate = {}, forceRefresh = true)
 
     override suspend fun getEpisodes(sourceId: String): List<WatchEpisode> {
         val payload = ensureSourcePayload(sourceId) ?: return emptyList()

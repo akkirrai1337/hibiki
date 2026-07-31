@@ -292,6 +292,7 @@ fun HibikiAppShell(
     var detailsAnime by remember { mutableStateOf<Anime?>(null) }
     var detailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
     var watchLoadGeneration by remember { mutableStateOf(0) }
+    var forceWatchSourcesRefresh by remember { mutableStateOf(false) }
     var episodesLoadGeneration by remember { mutableStateOf(0) }
     val episodesPresenter = remember(watchRepository) { org.akkirrai.hibiki.shared.player.EpisodesPresenter() }
     val episodesState by episodesPresenter.state.collectAsState()
@@ -466,7 +467,13 @@ fun HibikiAppShell(
                 forceRefresh = true,
             ),
         )
-        runCatching { repositoryForWatch.loadSources(anime.id) }
+        runCatching {
+            if (forceWatchSourcesRefresh) {
+                repositoryForWatch.refreshSources(anime.id)
+            } else {
+                repositoryForWatch.loadSources(anime.id)
+            }
+        }
             .onSuccess { sourcesForWatch ->
                 watchPresenter.update { state ->
                     state.withLoadedSources(
@@ -1025,6 +1032,7 @@ fun HibikiAppShell(
                             detailsError = state.detailsError,
                             watchAnime = watchAnime,
                             onWatchClick = { anime ->
+                                forceWatchSourcesRefresh = false
                                 watchPresenter.setState(
                                     initialWatchSourcesState(
                                         cachedSources = null,
@@ -1106,6 +1114,7 @@ fun HibikiAppShell(
                                         preferredQuality = failedRequest.preferredQuality,
                                     )
                                 } else if (selectedWatchSource == null) {
+                                    forceWatchSourcesRefresh = true
                                     watchLoadGeneration++
                                 } else {
                                     episodesLoadGeneration++

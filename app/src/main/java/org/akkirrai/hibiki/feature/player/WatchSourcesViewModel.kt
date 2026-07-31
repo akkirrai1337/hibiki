@@ -61,7 +61,7 @@ class WatchSourcesViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                repository.loadSources(animeId = animeId) { updated ->
+                repository.loadSources(animeId = animeId, onUpdate = { updated ->
                     val currentOfflineSources = offlineDownloadRepository.getOfflineSources(animeId)
                     presenter.update { state ->
                         state.withLoadedSources(
@@ -70,7 +70,7 @@ class WatchSourcesViewModel(
                             isLoading = true,
                         )
                     }
-                }
+                })
             }.onSuccess { sources ->
                 val currentOfflineSources = offlineDownloadRepository.getOfflineSources(animeId)
                 presenter.update { state ->

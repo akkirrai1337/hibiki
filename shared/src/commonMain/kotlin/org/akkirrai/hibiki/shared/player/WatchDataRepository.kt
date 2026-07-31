@@ -10,6 +10,9 @@ import org.akkirrai.hibiki.shared.model.WatchSource
 interface WatchDataRepository : AutoCloseable {
     suspend fun loadSources(animeId: String): List<WatchSource>
 
+    /** Refreshes remote sources when the user explicitly retries the flow. */
+    suspend fun refreshSources(animeId: String): List<WatchSource> = loadSources(animeId)
+
     suspend fun getEpisodes(sourceId: String): List<WatchEpisode>
 
     suspend fun getPlayerLinks(sourceId: String, episodeId: String): List<PlayerLink>
