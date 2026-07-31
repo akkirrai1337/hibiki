@@ -24,7 +24,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,6 +75,10 @@ import org.akkirrai.hibiki.shared.design.component.AppBottomBarContentExtraPaddi
 import org.akkirrai.hibiki.shared.design.component.AppBottomBarHeight
 import org.akkirrai.hibiki.shared.design.component.AppTopLevelScaffold
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppNavigationState
+import org.akkirrai.hibiki.shared.navigation.AppRoute
+import org.akkirrai.hibiki.shared.navigation.reduce
 
 @Composable
 fun HibikiApp(
@@ -130,6 +137,7 @@ private fun HibikiNavHost(
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
 ) {
+    var sharedNavigationState by remember { mutableStateOf(AppNavigationState()) }
     val baseScreenModifier = Modifier
         .fillMaxSize()
         .background(MaterialTheme.colorScheme.surface)
@@ -333,10 +341,19 @@ private fun HibikiNavHost(
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
             DestinationScreenContainer {
+                val anime = animeFromArguments(backStackEntry.arguments)
+                LaunchedEffect(backStackEntry.id) {
+                    sharedNavigationState = sharedNavigationState.reduce(
+                        AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
+                    )
+                }
                 SharedAndroidDetailsScreen(
-                    anime = animeFromArguments(backStackEntry.arguments),
+                    anime = anime,
                     onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                        navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(AppNavigationEvent.Back)
+                            navController.navigateUp()
+                        }
                     },
                     onRelatedAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
@@ -345,6 +362,9 @@ private fun HibikiNavHost(
                     },
                     onOpenSources = { anime ->
                         navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(
+                                AppNavigationEvent.Navigate(AppRoute.WatchSources(anime.id)),
+                            )
                             navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
                         }
                     },
@@ -391,7 +411,10 @@ private fun HibikiNavHost(
                 WatchSourcesScreen(
                     animeId = animeId,
                     onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                        navController.runIfCurrent(backStackEntry) {
+                            sharedNavigationState = sharedNavigationState.reduce(AppNavigationEvent.Back)
+                            navController.navigateUp()
+                        }
                     },
                     onSourceClick = { source ->
                         navController.runIfCurrent(backStackEntry) {
