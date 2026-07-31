@@ -22,7 +22,9 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
+import org.akkirrai.hibiki.shared.details.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.shared.player.resolveResumeWatchState
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 @Composable
 fun SharedAndroidDetailsScreen(
@@ -91,6 +93,15 @@ fun SharedAndroidDetailsScreen(
         }
     }
 
+    val sourceDescriptor = remember(currentAnime.id, preferences.animeSource) {
+        AnimeSourceRegistry.descriptorForTitle(currentAnime.id, preferences.animeSource)
+    }
+    val canWatch = resolveDetailsPlaybackAvailability(
+        supportsPlayback = sourceDescriptor.supportsPlayback,
+        status = currentAnime.status,
+        episodesLabel = currentAnime.episodesLabel,
+    )
+
     AppDetailsScreen(
         anime = currentAnime,
         onBackClick = onBackClick,
@@ -109,7 +120,7 @@ fun SharedAndroidDetailsScreen(
         },
         onResumeClick = onResumePlayback,
         onTrailerClick = { currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri) },
-        canWatch = true,
+        canWatch = canWatch,
         onWatchClick = { onOpenSources(currentAnime) },
         initialTitleSeedColor = initialTitleSeedColor,
         onTitleSeedColorChange = { color ->
