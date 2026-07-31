@@ -543,6 +543,9 @@ private fun HibikiNavHost(
                     sourceId = routeArgs.stringArg(AnimeNavType.SOURCE_ID_ARG),
                     episodeId = routeArgs.stringArg(AnimeNavType.EPISODE_ID_ARG),
                     episodeNumberHint = routeArgs.doubleArg(AnimeNavType.EPISODE_NUMBER_ARG),
+                    onOverlayEvent = { event ->
+                        sharedNavigationState = sharedNavigationState.reduce(event)
+                    },
                     onBackClick = {
                         navController.runIfCurrent(backStackEntry) {
                             sharedNavigationState = sharedNavigationState.reduce(AppNavigationEvent.Back)

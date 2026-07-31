@@ -154,6 +154,8 @@ import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
 import org.akkirrai.hibiki.shared.player.AppPlaylistBottomSheet
 import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 
 @Composable
 fun PlayerScreen(
@@ -161,6 +163,7 @@ fun PlayerScreen(
     episodeId: String,
     episodeNumberHint: Double? = null,
     onBackClick: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(
         factory = PlayerViewModel.Factory(
@@ -510,6 +513,9 @@ fun PlayerScreen(
             isClosing = true
             resetAccumulatedDoubleTapSeek()
             controlsVisible = false
+            if (playlistVisible || settingsVisible) {
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            }
             playlistVisible = false
             settingsVisible = false
             viewModel.savePlaybackProgress(
@@ -1061,6 +1067,7 @@ fun PlayerScreen(
             onPlaylistClick = {
                 keepControlsVisible()
                 playlistVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
             },
             hasPreviousEpisode = hasPreviousEpisode,
             hasNextEpisode = hasNextEpisode,
@@ -1122,6 +1129,7 @@ fun PlayerScreen(
                 keepControlsVisible()
                 settingsDestination = PlayerSettingsDestination.Root
                 settingsVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
                 viewModel.loadSettingsOptions()
             },
             settingsContentDescription = stringResource(R.string.watch_player_settings),
@@ -1161,6 +1169,7 @@ fun PlayerScreen(
             },
             onDismissRequest = {
                 playlistVisible = false
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
                 keepControlsVisible()
             },
             onEpisodeClick = { episodeId ->
@@ -1175,6 +1184,7 @@ fun PlayerScreen(
                 onDismissRequest = {
                     settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     keepControlsVisible()
                 },
                 nowMs = SystemClock::elapsedRealtime,
