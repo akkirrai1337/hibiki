@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.desktop
 
+import java.util.Locale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -24,6 +25,7 @@ fun main() = application {
     val settingsStore = remember { DesktopSettingsStore() }
     val progressRepository = remember { DesktopPlaybackProgressRepository() }
     val libraryRepository = remember { DesktopLibraryRepository() }
+    val systemLanguage = Locale.getDefault().language.ifBlank { "en" }
     val profileRepository = remember(progressRepository) {
         DesktopLocalProfileDataRepository(progressRepository, libraryRepository)
     }
@@ -68,7 +70,7 @@ fun main() = application {
                                 onSettingsAction = onSettingsAction,
                             )
                         },
-                        systemLanguage = "en",
+                        systemLanguage = systemLanguage,
                         includeNavigationBarPadding = true,
                     )
                 }
