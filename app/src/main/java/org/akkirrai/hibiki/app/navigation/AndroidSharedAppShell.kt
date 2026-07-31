@@ -8,11 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
@@ -41,6 +41,7 @@ internal fun AndroidSharedAppShell(
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val preferences = LocalAppPreferencesState.current
     val density = LocalDensity.current
+    val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = AppLayoutEnvironment(
         isProvided = true,
         topSystemInset = with(density) { WindowInsets.statusBars.getTop(this).toDp() },
@@ -68,7 +69,7 @@ internal fun AndroidSharedAppShell(
             profileRepository = profileRepository,
             settingsStore = settingsStore,
             progressRepository = watchStateRepository,
-            systemLanguage = LocalAppLanguage.current.tag ?: "en",
+            systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
             sources = sources,
