@@ -94,6 +94,17 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         watchStateRepository.savePlaybackSelection(selection)
                     },
                     loadPlaybackSelection = watchStateRepository::loadPlaybackSelection,
+                    onWatchSourceSelected = { titleId, source ->
+                        watchStateRepository.savePlaybackSelection(
+                            org.akkirrai.hibiki.shared.model.PlaybackSelection(
+                                titleId = titleId,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                playerName = null,
+                            ),
+                        )
+                    },
                     playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
                         { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             IosEmbeddedPlaybackHost(

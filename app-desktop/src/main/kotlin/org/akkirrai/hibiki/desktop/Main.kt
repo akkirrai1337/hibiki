@@ -65,6 +65,17 @@ fun main() = application {
                         profileRepository = profileRepository,
                         onPlaybackSelectionChanged = progressRepository::savePlaybackSelection,
                         loadPlaybackSelection = progressRepository::loadPlaybackSelection,
+                        onWatchSourceSelected = { titleId, source ->
+                            progressRepository.savePlaybackSelection(
+                                org.akkirrai.hibiki.shared.model.PlaybackSelection(
+                                    titleId = titleId,
+                                    sourceId = source.sourceId,
+                                    sourceTitle = source.title,
+                                    quality = source.qualityLabel,
+                                    playerName = null,
+                                ),
+                            )
+                        },
                         playbackHost = { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,

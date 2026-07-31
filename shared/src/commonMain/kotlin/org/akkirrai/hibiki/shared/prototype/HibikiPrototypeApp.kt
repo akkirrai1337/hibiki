@@ -251,6 +251,7 @@ fun HibikiAppShell(
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
+    onWatchSourceSelected: (String, org.akkirrai.hibiki.shared.model.WatchSource) -> Unit = { _, _ -> },
     watchRepository: WatchDataRepository? = null,
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
     onPlaybackSelectionChanged: (org.akkirrai.hibiki.shared.model.PlaybackSelection) -> Unit = {},
@@ -990,6 +991,7 @@ fun HibikiAppShell(
                             },
                             onWatchLoadMore = { watchPresenter.update(WatchSourcesScreenState::showAllWatchSources) },
                             onWatchSourceClick = { source ->
+                                onWatchSourceSelected(watchAnime?.id.orEmpty(), source)
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
