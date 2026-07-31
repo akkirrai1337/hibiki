@@ -19,6 +19,9 @@ class AndroidAppSettingsStore(context: Context) : AppSettingsStore, AutoCloseabl
         preferences.setUseSystemColorScheme(state.useSystemColorScheme)
         preferences.setUseAmoledTheme(state.useAmoledTheme)
         preferences.setAutoSkipSegments(state.autoSkipSegments)
+        preferences.setAutoPlayNextEpisode(state.autoPlayNextEpisode)
+        preferences.setPlaybackSpeed(state.playbackSpeed)
+        preferences.setVideoScaleMode(state.videoScaleMode)
         preferences.setNotificationPermissionState(state.notificationPermissionState)
         val selectedSourceId = state.selectedSourceId
         if (state.onboardingCompleted && selectedSourceId != null) {
@@ -39,6 +42,9 @@ private fun org.akkirrai.hibiki.app.settings.AppPreferencesState.toSharedState()
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
+        autoPlayNextEpisode = autoPlayNextEpisode,
+        playbackSpeed = playbackSpeed,
+        videoScaleMode = videoScaleMode,
         onboardingCompleted = onboardingCompleted,
         selectedSourceId = animeSource.value.takeIf { hasExplicitAnimeSource },
         notificationPermissionState = notificationPermissionState,
