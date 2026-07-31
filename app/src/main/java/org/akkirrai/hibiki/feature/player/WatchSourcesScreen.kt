@@ -38,7 +38,7 @@ fun WatchSourcesScreen(
         },
         navigationLocked = navigationLocked,
         modifier = modifier,
-    ) {
+    ) { listContentPadding ->
         AppWatchSourcesContent(
             state = state,
             emptyTitle = stringResource(R.string.watch_sources_empty_title),
@@ -55,6 +55,7 @@ fun WatchSourcesScreen(
                 }
             },
             onLoadMore = viewModel::loadMore,
+            listContentPadding = listContentPadding,
         )
     }
 }

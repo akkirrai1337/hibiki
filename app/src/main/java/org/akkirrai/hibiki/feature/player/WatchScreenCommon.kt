@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
@@ -38,14 +39,14 @@ internal fun WatchScreenScaffold(
     onBackClick: () -> Unit,
     navigationLocked: Boolean,
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.(PaddingValues) -> Unit,
 ) {
     org.akkirrai.hibiki.shared.player.WatchScreenScaffold(
         onBackClick = onBackClick,
         backEnabled = !navigationLocked,
         backContentDescription = stringResource(R.string.cd_back),
         modifier = modifier,
-        content = { _ -> content() },
+        content = content,
     )
 }
 

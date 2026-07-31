@@ -114,7 +114,7 @@ fun EpisodesScreen(
         },
         navigationLocked = navigationLocked,
         modifier = modifier,
-    ) {
+    ) { listContentPadding ->
         AppEpisodesDownloadToggle(
             isVisible = downloadControlsVisible,
             contentDescription = stringResource(R.string.watch_download),
@@ -135,6 +135,7 @@ fun EpisodesScreen(
             emptyMessage = stringResource(R.string.watch_episodes_empty_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
+            listContentPadding = listContentPadding,
             episodeContent = { episode, shape ->
                 val watchSourceFallback = stringResource(R.string.watch_source_fallback)
                 val downloadSource = remember(sourceId, sourceTitle, episodeCount) {
