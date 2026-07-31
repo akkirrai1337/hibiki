@@ -124,6 +124,7 @@ import org.akkirrai.hibiki.shared.profile.profileActivityDateLabel
 import org.akkirrai.hibiki.shared.profile.profileAddedDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
 import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.hibiki.shared.settings.ThemeMode
 import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
@@ -1448,7 +1449,9 @@ private fun AppDestinationContent(
                         labels = LocalProfileSnapshotLabels(
                             durationLabel = { duration -> "${formatDurationHours(duration)} h" },
                             categoryLabel = { category -> categoryLabels.getValue(category) },
-                            dateLabel = ::profileAddedDateLabel,
+                            dateLabel = { value ->
+                                profileAddedDateLabel(value, resolveAppLanguageTag(languageMode, systemLanguage))
+                            },
                             activityDateLabel = ::profileActivityDateLabel,
                         ),
                     )

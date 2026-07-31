@@ -17,13 +17,26 @@ fun profileActivityDateLabel(date: String): String {
     return if (parts.size == 3) "${parts[2]}.${parts[1]}" else date
 }
 
-fun profileAddedDateLabel(value: Long): String {
+fun profileAddedDateLabel(value: Long, languageTag: String = "en"): String {
     val epochMillis = if (value in 1 until 1_000_000_000_000L) value * 1_000L else value
     val epochDay = epochMillis / 86_400_000L
     val isoDate = epochDayToIso(epochDay)
     val parts = isoDate.split('-')
-    return if (parts.size == 3) "${parts[2]}.${parts[1]}.${parts[0]}" else isoDate
+    if (parts.size != 3) return isoDate
+    val month = parts[1].toIntOrNull()?.minus(1) ?: return isoDate
+    val monthNames = if (languageTag.lowercase().startsWith("ru")) RUSSIAN_MONTHS else ENGLISH_MONTHS
+    return "${parts[2].toIntOrNull() ?: parts[2]} ${monthNames.getOrElse(month) { parts[1] }}"
 }
+
+private val ENGLISH_MONTHS = listOf(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
+private val RUSSIAN_MONTHS = listOf(
+    "янв.", "февр.", "март", "апр.", "май", "июнь",
+    "июль", "авг.", "сент.", "окт.", "нояб.", "дек.",
+)
 
 private fun epochDayToIso(epochDay: Long): String {
     val shiftedDay = epochDay + EPOCH_DAY_OFFSET
