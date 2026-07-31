@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetPadding
 
 @Composable
 fun AppPlayerOverlaySurface(
@@ -56,7 +56,7 @@ fun AppPlayerOverlaySurface(
             modifier = Modifier
                 .fillMaxWidth(widthFraction)
                 .widthIn(max = maxWidth)
-                .navigationBarsPadding()
+                .appBottomSystemInsetPadding()
                 .padding(
                     horizontal = PlayerOverlayPanelPadding,
                     vertical = PlayerOverlayPanelPadding,

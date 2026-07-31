@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetPadding
 
 @Composable
 fun AppPlayerBottomOverlay(
@@ -37,7 +37,7 @@ fun AppPlayerBottomOverlay(
                     1f to Color.Black.copy(alpha = 0.92f),
                 ),
             )
-            .navigationBarsPadding()
+            .appBottomSystemInsetPadding()
             .padding(
                 start = PlayerBottomOverlayHorizontalPadding,
                 end = PlayerBottomOverlayHorizontalPadding,

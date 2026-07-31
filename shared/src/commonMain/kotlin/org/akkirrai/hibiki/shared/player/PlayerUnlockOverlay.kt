@@ -5,14 +5,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetPadding
 
 @Composable
 fun AppPlayerUnlockOverlay(
@@ -23,13 +21,8 @@ fun AppPlayerUnlockOverlay(
     modifier: Modifier = Modifier,
     includeSystemBottomInset: Boolean = false,
 ) {
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
     val insetModifier = if (includeSystemBottomInset) {
-        if (layoutEnvironment.isProvided) {
-            Modifier.padding(bottom = layoutEnvironment.bottomSystemInset)
-        } else {
-            Modifier.navigationBarsPadding()
-        }
+        Modifier.appBottomSystemInsetPadding()
     } else {
         Modifier
     }
