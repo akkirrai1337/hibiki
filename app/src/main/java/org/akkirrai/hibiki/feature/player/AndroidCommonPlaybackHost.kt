@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.feature.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -12,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
 import android.os.SystemClock
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
@@ -21,7 +24,9 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
+import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
@@ -47,6 +52,8 @@ internal fun AndroidCommonPlaybackHost(
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
     var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
     var playlistVisible by remember { mutableStateOf(false) }
+    var controlsLocked by remember { mutableStateOf(false) }
+    var unlockButtonVisible by remember { mutableStateOf(false) }
     val videoScaleMode = preferencesState.videoScaleMode
     val episodeNavigation = resolveEpisodeNavigationAvailability(
         episodes = context.episodes,
@@ -81,33 +88,54 @@ internal fun AndroidCommonPlaybackHost(
             isClosing = false,
             onAttached = {},
         )
-        AppPlaybackControls(
-            transport = transport,
-            playback = playback,
-            context = context,
-            scaleMode = videoScaleMode,
-            onScaleClick = { preferences.setVideoScaleMode(videoScaleMode.next()) },
-            onBack = onBack,
-            playlistEnabled = context.episodes.isNotEmpty(),
-            onPlaylistClick = { playlistVisible = true },
-            hasPreviousEpisode = episodeNavigation.hasPrevious,
-            hasNextEpisode = episodeNavigation.hasNext,
-            onPreviousEpisode = {
-                resolveAdjacentEpisode(
-                    episodes = context.episodes,
-                    currentEpisodeId = context.episodeId,
-                    currentEpisodeNumber = context.episodeNumber,
-                    offset = -1,
-                )?.let(onEpisodeSelected)
+        if (!controlsLocked) {
+            AppPlaybackControls(
+                transport = transport,
+                playback = playback,
+                context = context,
+                scaleMode = videoScaleMode,
+                onScaleClick = { preferences.setVideoScaleMode(videoScaleMode.next()) },
+                onBack = onBack,
+                playlistEnabled = context.episodes.isNotEmpty(),
+                onPlaylistClick = { playlistVisible = true },
+                hasPreviousEpisode = episodeNavigation.hasPrevious,
+                hasNextEpisode = episodeNavigation.hasNext,
+                onPreviousEpisode = {
+                    resolveAdjacentEpisode(
+                        episodes = context.episodes,
+                        currentEpisodeId = context.episodeId,
+                        currentEpisodeNumber = context.episodeNumber,
+                        offset = -1,
+                    )?.let(onEpisodeSelected)
+                },
+                onNextEpisode = {
+                    resolveAdjacentEpisode(
+                        episodes = context.episodes,
+                        currentEpisodeId = context.episodeId,
+                        currentEpisodeNumber = context.episodeNumber,
+                        offset = 1,
+                    )?.let(onEpisodeSelected)
+                },
+                onLockClick = {
+                    controlsLocked = true
+                    unlockButtonVisible = true
+                    playlistVisible = false
+                },
+                lockContentDescription = appText(AppTextKey.PlayerLock),
+            )
+        }
+        AppPlayerUnlockOverlay(
+            visible = controlsLocked && unlockButtonVisible,
+            label = appText(AppTextKey.PlayerUnlock),
+            onClick = {
+                controlsLocked = false
+                unlockButtonVisible = false
             },
-            onNextEpisode = {
-                resolveAdjacentEpisode(
-                    episodes = context.episodes,
-                    currentEpisodeId = context.episodeId,
-                    currentEpisodeNumber = context.episodeNumber,
-                    offset = 1,
-                )?.let(onEpisodeSelected)
-            },
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = PlayerUnlockBottomPadding),
         )
         AppPlayerPlaylistLayer(
             visible = playlistVisible,

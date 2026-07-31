@@ -69,6 +69,8 @@ enum class AppTextKey {
     PlayerSettingsOn,
     PlayerSettingsOff,
     PlayerEpisodeNumber,
+    PlayerLock,
+    PlayerUnlock,
     SettingsExperimental,
     SettingsDiscord,
     SettingsUpdates,
@@ -272,6 +274,8 @@ class DefaultAppTextResolver(
             AppTextKey.PlayerSettingsOn -> if (russian) "Вкл" else "On"
             AppTextKey.PlayerSettingsOff -> if (russian) "Выкл" else "Off"
             AppTextKey.PlayerEpisodeNumber -> if (russian) "Серия %s" else "Episode %s"
+            AppTextKey.PlayerLock -> if (russian) "Заблокировать" else "Lock"
+            AppTextKey.PlayerUnlock -> if (russian) "Разблокировать" else "Unlock"
             AppTextKey.SettingsDiscord -> "Discord Rich Presence"
             AppTextKey.SettingsUpdates -> if (russian) "Обновления" else "Updates"
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
