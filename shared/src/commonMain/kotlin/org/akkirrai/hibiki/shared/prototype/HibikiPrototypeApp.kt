@@ -699,6 +699,21 @@ fun HibikiAppShell(
     fun handlePlaybackSettingsAction(action: PlaybackSettingsAction) {
         val route = activePlaybackRoute ?: return
         val repositoryForPlayback = watchRepository ?: return
+        fun persistPlaybackSelection(
+            source: WatchSource,
+            playerName: String?,
+            qualityLabel: String?,
+        ) {
+            onPlaybackSelectionChanged(
+                org.akkirrai.hibiki.shared.model.PlaybackSelection(
+                    titleId = route.context.titleId,
+                    sourceId = source.sourceId,
+                    sourceTitle = source.title,
+                    quality = qualityLabel,
+                    playerName = playerName,
+                ),
+            )
+        }
         when (action) {
             is PlaybackSettingsAction.SelectVoiceover -> scope.launch {
                 val episodes = runCatching { repositoryForPlayback.getEpisodes(action.source.sourceId) }
@@ -707,6 +722,12 @@ fun HibikiAppShell(
                 val episode = episodes.firstOrNull { it.number == route.context.episodeNumber }
                     ?: episodes.firstOrNull()
                     ?: return@launch
+                onWatchSourceSelected(route.context.titleId, action.source)
+                persistPlaybackSelection(
+                    source = action.source,
+                    playerName = null,
+                    qualityLabel = action.source.qualityLabel,
+                )
                 requestPlayback(
                     episode = episode,
                     sourceOverride = action.source,
@@ -716,42 +737,50 @@ fun HibikiAppShell(
                     replacePlayerRoute = true,
                 )
             }
-            is PlaybackSettingsAction.SelectPlayer -> requestPlayback(
+            is PlaybackSettingsAction.SelectPlayer -> {
+                val source = WatchSource(
+                    sourceId = route.context.sourceId,
+                    title = route.context.sourceTitle,
+                    episodeCount = route.context.episodes.size,
+                    qualityLabel = route.context.selectedQualityLabel,
+                )
+                persistPlaybackSelection(source, action.playerName, route.context.selectedQualityLabel)
+                requestPlayback(
                 episode = WatchEpisode(
                     id = route.context.episodeId,
                     number = route.context.episodeNumber,
                     title = null,
                 ),
-                sourceOverride = WatchSource(
-                    sourceId = route.context.sourceId,
-                    title = route.context.sourceTitle,
-                    episodeCount = route.context.episodes.size,
-                    qualityLabel = route.context.selectedQualityLabel,
-                ),
+                sourceOverride = source,
                 preferredPlayerName = action.playerName,
                 preferredQuality = route.context.selectedQualityLabel,
                 forceRefresh = true,
                 episodesOverride = route.context.episodes,
                 replacePlayerRoute = true,
-            )
-            is PlaybackSettingsAction.SelectQuality -> requestPlayback(
+                )
+            }
+            is PlaybackSettingsAction.SelectQuality -> {
+                val source = WatchSource(
+                    sourceId = route.context.sourceId,
+                    title = route.context.sourceTitle,
+                    episodeCount = route.context.episodes.size,
+                    qualityLabel = action.qualityLabel,
+                )
+                persistPlaybackSelection(source, route.context.selectedPlayerName, action.qualityLabel)
+                requestPlayback(
                 episode = WatchEpisode(
                     id = route.context.episodeId,
                     number = route.context.episodeNumber,
                     title = null,
                 ),
-                sourceOverride = WatchSource(
-                    sourceId = route.context.sourceId,
-                    title = route.context.sourceTitle,
-                    episodeCount = route.context.episodes.size,
-                    qualityLabel = action.qualityLabel,
-                ),
+                sourceOverride = source,
                 preferredPlayerName = route.context.selectedPlayerName,
                 preferredQuality = action.qualityLabel,
                 forceRefresh = true,
                 episodesOverride = route.context.episodes,
                 replacePlayerRoute = true,
-            )
+                )
+            }
             is PlaybackSettingsAction.SetAutoSkipSegments -> {
                 autoSkipSegments = action.enabled
                 settingsStore.save(settingsStore.load().copy(autoSkipSegments = action.enabled))
