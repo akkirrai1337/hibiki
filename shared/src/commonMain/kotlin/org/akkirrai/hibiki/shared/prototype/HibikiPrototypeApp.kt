@@ -77,6 +77,7 @@ import org.akkirrai.hibiki.shared.catalog.CatalogSort
 import org.akkirrai.hibiki.shared.catalog.toAlias
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
+import org.akkirrai.hibiki.shared.details.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
@@ -214,6 +215,7 @@ fun HibikiAppShell(
     progressRepository: PlaybackProgressRepository? = null,
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
+    offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -249,6 +251,7 @@ fun HibikiAppShell(
     val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
     val watchState by watchPresenter.state.collectAsState()
     var watchAnime by remember { mutableStateOf<Anime?>(null) }
+    var detailsAnime by remember { mutableStateOf<Anime?>(null) }
     var detailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
     var watchLoadGeneration by remember { mutableStateOf(0) }
     var episodesLoadGeneration by remember { mutableStateOf(0) }
@@ -345,6 +348,21 @@ fun HibikiAppShell(
             )
         } else {
             null
+        }
+    }
+
+    LaunchedEffect(offlineTitleMetadataRepository, state.selectedAnime?.id) {
+        val selected = state.selectedAnime
+        detailsAnime = selected?.let { anime ->
+            offlineTitleMetadataRepository?.get(anime.id) ?: anime
+        }
+    }
+
+    LaunchedEffect(offlineTitleMetadataRepository, state.selectedAnime, state.isDetailsLoading) {
+        val selected = state.selectedAnime ?: return@LaunchedEffect
+        if (!state.isDetailsLoading) {
+            offlineTitleMetadataRepository?.save(selected)
+            detailsAnime = selected
         }
     }
 
@@ -746,6 +764,7 @@ fun HibikiAppShell(
                             selectedTab = animatedTab,
                             episodeDownloadRepository = episodeDownloadRepository,
                             offlineWatchDataRepository = offlineWatchDataRepository,
+                            offlineTitleMetadataRepository = offlineTitleMetadataRepository,
                             downloadMode = (navigationState.currentRoute as? AppRoute.Episodes)?.downloadMode == true,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
@@ -788,7 +807,7 @@ fun HibikiAppShell(
                             onLibraryFiltersApply = libraryPresenter::applySearchFilters,
                             onBrowseCatalog = { selectedTab = AppDestination.CATALOG },
                             onOpenLibrary = { selectedTab = AppDestination.LIBRARY },
-                            selectedAnime = state.selectedAnime,
+                            selectedAnime = detailsAnime ?: state.selectedAnime,
                             detailsResumeState = detailsResumeState,
                             onAnimeClick = presenter::openDetails,
                             onBackFromDetails = presenter::closeDetails,
@@ -1321,6 +1340,7 @@ private fun AppDestinationContent(
     onConfigureNotifications: () -> Unit = {},
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
+    offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
     downloadMode: Boolean = false,
     detailsResumeState: TitleWatchState? = null,
     onLibraryChanged: () -> Unit = {},
