@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -18,6 +19,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
+import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.shared.app.HibikiApp as SharedHibikiApp
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
@@ -47,6 +49,7 @@ internal fun AndroidSharedAppShell(
     val offlineTitleMetadataRepository = remember(dependencies) {
         AndroidOfflineTitleMetadataRepository(dependencies.offlineTitleMetadataRepository())
     }
+    val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val preferences = LocalAppPreferencesState.current
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
@@ -80,6 +83,16 @@ internal fun AndroidSharedAppShell(
             episodeDownloadRepository = episodeDownloadRepository,
             offlineWatchDataRepository = episodeDownloadRepository,
             offlineTitleMetadataRepository = offlineTitleMetadataRepository,
+            resumeFrameContent = { titleId, frameModifier ->
+                resumeFrameRepository.getFrame(titleId)?.let { frame ->
+                    AsyncImage(
+                        model = frame,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = frameModifier,
+                    )
+                }
+            },
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,

@@ -216,6 +216,7 @@ fun HibikiAppShell(
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
+    resumeFrameContent: (@Composable (String, Modifier) -> Unit)? = null,
     systemLanguage: String = "en",
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
@@ -765,6 +766,7 @@ fun HibikiAppShell(
                             episodeDownloadRepository = episodeDownloadRepository,
                             offlineWatchDataRepository = offlineWatchDataRepository,
                             offlineTitleMetadataRepository = offlineTitleMetadataRepository,
+                            resumeFrameContent = resumeFrameContent,
                             downloadMode = (navigationState.currentRoute as? AppRoute.Episodes)?.downloadMode == true,
                             systemLanguage = systemLanguage,
                             appVersionName = appVersionName,
@@ -1341,6 +1343,7 @@ private fun AppDestinationContent(
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
+    resumeFrameContent: (@Composable (String, Modifier) -> Unit)? = null,
     downloadMode: Boolean = false,
     detailsResumeState: TitleWatchState? = null,
     onLibraryChanged: () -> Unit = {},
@@ -1529,6 +1532,11 @@ private fun AppDestinationContent(
             canWatch = watchRepositoryAvailable,
             onWatchClick = { onWatchClick(selectedAnime) },
             resumeState = detailsResumeState,
+            resumeFrameContent = detailsResumeState?.let { state ->
+                resumeFrameContent?.let { content ->
+                    { frameModifier -> content(state.titleId, frameModifier) }
+                }
+            },
             libraryRepository = libraryRepository,
             onLibraryCategoryChange = { onLibraryChanged() },
             modifier = modifier.fillMaxSize(),
