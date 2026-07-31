@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import org.akkirrai.hibiki.BuildConfig
@@ -35,6 +36,7 @@ internal fun AndroidSharedAppShell(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = remember(dependencies) { dependencies.appSettingsStore() }
     val catalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
@@ -96,6 +98,7 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             onConfigureNotifications = onConfigureNotifications,
+            onOpenUrl = uriHandler::openUri,
             sources = sources,
             selectedSourceId = preferences.animeSource.value.takeIf { preferences.hasExplicitAnimeSource },
             onSourceSelected = { sourceId ->

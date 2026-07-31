@@ -223,6 +223,7 @@ fun HibikiAppShell(
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     onRequestOnboardingNotificationPermission: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    onOpenUrl: (String) -> Unit = {},
     onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     onGitHubClick: () -> Unit = {},
     sources: List<AppSourceDescriptor> = emptyList(),
@@ -881,6 +882,7 @@ fun HibikiAppShell(
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
                             onConfigureNotifications = onConfigureNotifications,
+                            onOpenUrl = onOpenUrl,
                             onLibraryChanged = refreshLocalData,
                             libraryEntries = libraryState.visibleEntries,
                             profileData = profileState.data,
@@ -1351,6 +1353,7 @@ private fun AppDestinationContent(
     onThemeModeChange: (ThemeMode) -> Unit = {},
     showSettingsBackButton: Boolean = false,
     onSettingsBack: () -> Unit = {},
+    onOpenUrl: (String) -> Unit = {},
     onGitHubClick: () -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
     homeQuery: String = query,
@@ -1531,6 +1534,7 @@ private fun AppDestinationContent(
             onRelatedAnimeClick = onAnimeClick,
             canWatch = watchRepositoryAvailable,
             onWatchClick = { onWatchClick(selectedAnime) },
+            onTrailerClick = selectedAnime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
             resumeState = detailsResumeState,
             resumeFrameContent = detailsResumeState?.let { state ->
                 resumeFrameContent?.let { content ->
