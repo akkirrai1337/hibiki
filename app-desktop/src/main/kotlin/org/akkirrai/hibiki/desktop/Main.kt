@@ -47,7 +47,7 @@ fun main() = application {
                         repository = catalogRepository,
                         homeRepository = homeRepository,
                         watchRepository = watchRepository,
-                        playbackHost = { playback, context, onBack ->
+                        playbackHost = { playback, context, onBack, _ ->
                             DesktopVlcPlaybackHost(
                                 playback = playback,
                                 context = context,

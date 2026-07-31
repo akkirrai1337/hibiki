@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.model.WatchEpisode
 
 /** Common full-screen overlay boundary for platform media playback surfaces. */
 @Composable
@@ -13,9 +14,10 @@ fun AppPlaybackOverlayHost(
     playback: PlaybackStream,
     context: PlaybackContext,
     onDismiss: () -> Unit,
-    content: @Composable (PlaybackStream, PlaybackContext, () -> Unit) -> Unit,
+    content: @Composable (PlaybackStream, PlaybackContext, () -> Unit, (WatchEpisode) -> Unit) -> Unit,
+    onEpisodeSelected: (WatchEpisode) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        content(playback, context, onDismiss)
+        content(playback, context, onDismiss, onEpisodeSelected)
     }
 }
