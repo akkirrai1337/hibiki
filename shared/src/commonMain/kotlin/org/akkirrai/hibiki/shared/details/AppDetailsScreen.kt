@@ -305,7 +305,7 @@ fun AppDetailsScreen(
                                         },
                                         trailerEnabled = mediaData.trailer != null && onTrailerClick != null,
                                         onTrailerClick = onTrailerClick ?: {},
-                                        trailerContentDescription = appText(AppTextKey.Trailer),
+                                        trailerContentDescription = appText(AppTextKey.DetailsTrailer),
                                     )
                                 },
                                 modifier = mediaModifier,

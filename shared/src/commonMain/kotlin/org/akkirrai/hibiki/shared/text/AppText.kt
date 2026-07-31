@@ -157,6 +157,7 @@ enum class AppTextKey {
     WatchContinueEpisode,
     WatchContinueEpisodePosition,
     Trailer,
+    DetailsTrailer,
     NextEpisodeCountdown,
     NextEpisodeCountdownNumbered,
     NextEpisodeEtaDaysHours,
@@ -416,6 +417,7 @@ class DefaultAppTextResolver(
             AppTextKey.WatchContinueEpisode -> if (russian) "Продолжить · серия %s" else "Continue · Episode %s"
             AppTextKey.WatchContinueEpisodePosition -> if (russian) "Серия %s · %s" else "Episode %s · %s"
             AppTextKey.Trailer -> if (russian) "Трейлер" else "Trailer"
+            AppTextKey.DetailsTrailer -> if (russian) "Воспроизвести трейлер" else "Play trailer"
             AppTextKey.NextEpisodeCountdown -> if (russian) "Следующая серия через %s" else "Next episode in %s"
             AppTextKey.NextEpisodeCountdownNumbered -> if (russian) "Серия %d через %s" else "Ep %d in %s"
             AppTextKey.NextEpisodeEtaDaysHours -> if (russian) "%dд %dч" else "%dd %dh"
