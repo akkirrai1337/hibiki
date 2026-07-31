@@ -145,6 +145,19 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun detailsOverlayBackThenWatchSourcesPreservesRouteOrder() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
+
+        val details = state.reduce(AppNavigationEvent.Back)
+        val sources = details.reduce(AppNavigationEvent.Navigate(AppRoute.WatchSources("anime-1")))
+
+        assertEquals(AppRoute.WatchSources("anime-1"), sources.currentRoute)
+        assertEquals(AppRoute.Details("anime-1"), sources.reduce(AppNavigationEvent.Back).currentRoute)
+    }
+
+    @Test
     fun playbackOverlaysAreMutuallyExclusive() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
