@@ -25,6 +25,8 @@ class AppRouteNavigationTest {
             ),
             state.backStack,
         )
+        assertEquals(AppRoute.Player("source-1", "episode-1", 1.0), state.currentWatchRoute)
+        assertEquals(source, state.selectedWatchSource)
     }
 
     @Test

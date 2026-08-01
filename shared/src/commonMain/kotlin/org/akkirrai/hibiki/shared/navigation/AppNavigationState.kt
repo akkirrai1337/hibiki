@@ -10,6 +10,16 @@ data class AppNavigationState(
 val AppNavigationState.currentRoute: AppRoute
     get() = backStack.lastOrNull() ?: AppRoute.TopLevel(currentTopLevel)
 
+val AppNavigationState.currentWatchRoute: AppRoute?
+    get() = currentRoute.takeIf {
+        it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
+    }
+
+val AppNavigationState.selectedWatchSource: org.akkirrai.hibiki.shared.model.WatchSource?
+    get() = backStack.asReversed()
+        .mapNotNull { (it as? AppRoute.Episodes)?.source }
+        .firstOrNull()
+
 /** Resolves the visible root tab, including Settings nested under Profile. */
 fun AppNavigationState.selectedAppDestination(): AppDestination = when {
     currentRoute is AppRoute.Settings -> AppDestination.SETTINGS

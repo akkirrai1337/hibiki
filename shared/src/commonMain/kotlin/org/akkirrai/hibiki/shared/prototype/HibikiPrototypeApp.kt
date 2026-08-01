@@ -175,6 +175,7 @@ import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
 import org.akkirrai.hibiki.shared.navigation.currentRoute
+import org.akkirrai.hibiki.shared.navigation.selectedWatchSource
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
 import org.akkirrai.hibiki.shared.navigation.shouldKeepWatchAnimeAfterPlayerBack
@@ -318,9 +319,7 @@ fun HibikiAppShell(
     var navigationState by remember { mutableStateOf(AppNavigationState()) }
     val libraryFilterOverlay = remember { AppOverlay.Sheet("library-filter") }
     val isLibraryFilterOverlayOpen = navigationState.overlays.lastOrNull() == libraryFilterOverlay
-    val selectedWatchSource = navigationState.backStack.asReversed()
-        .mapNotNull { (it as? AppRoute.Episodes)?.source }
-        .firstOrNull()
+    val selectedWatchSource = navigationState.selectedWatchSource
     val playerPresenter = remember(watchRepository) { PlayerPresenter(PlayerUiState(isLoading = false)) }
     val playerState by playerPresenter.state.collectAsState()
     var playbackRequestGeneration by remember { mutableStateOf(0) }
