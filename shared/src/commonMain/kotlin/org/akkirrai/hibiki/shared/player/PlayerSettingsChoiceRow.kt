@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,8 +28,8 @@ fun PlayerSettingsChoiceRow(
         modifier = Modifier
             .padding(horizontal = PlayerSettingsChoiceOuterHorizontalPadding)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(PlayerSettingsChoiceCornerRadius))
             .clickable(onClick = onClick),
+        shape = RoundedCornerShape(PlayerSettingsChoiceCornerRadius),
         color = if (selected) Color.White.copy(alpha = 0.10f) else Color.Transparent,
     ) {
         Row(
