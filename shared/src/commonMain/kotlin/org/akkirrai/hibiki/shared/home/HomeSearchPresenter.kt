@@ -122,6 +122,10 @@ class HomeSearchPresenter(
         }
     }
 
+    fun retrySearch() {
+        scheduleSearch(immediate = true)
+    }
+
     fun close() {
         searchJob?.cancel()
         filterCatalogJob?.cancel()

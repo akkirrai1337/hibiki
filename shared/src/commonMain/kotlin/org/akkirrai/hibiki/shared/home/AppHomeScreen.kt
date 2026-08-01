@@ -68,6 +68,7 @@ fun AppHomeScreen(
     onFilterApply: (AnimeSearchFilters) -> Unit,
     onRefresh: () -> Unit,
     onLoadMoreSearch: () -> Unit,
+    onRetrySearch: () -> Unit = {},
     onAnimeClick: (Anime) -> Unit,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
@@ -107,6 +108,7 @@ fun AppHomeScreen(
                         )
                     },
                     onLoadMore = onLoadMoreSearch,
+                    onRetrySearch = onRetrySearch,
                     loadMoreLabel = labels.searchLoadMore,
                     resultsCountLabel = labels.resultsCountLabel,
                     emptyTitle = labels.searchEmptyTitle,
