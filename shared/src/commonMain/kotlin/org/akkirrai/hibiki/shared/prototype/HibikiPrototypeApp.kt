@@ -443,8 +443,12 @@ fun HibikiAppShell(
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Throwable) {
-            homePresenter.setState(HomeUiState())
+        } catch (throwable: Throwable) {
+            homePresenter.setState(
+                HomeUiState(
+                    errorMessage = throwable.message ?: "Home loading failed",
+                ),
+            )
         }
     }
 
