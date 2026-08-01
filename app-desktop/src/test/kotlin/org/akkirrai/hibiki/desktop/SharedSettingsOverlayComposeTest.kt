@@ -48,4 +48,38 @@ class SharedSettingsOverlayComposeTest {
 
         assertTrue(browserSignInRequested)
     }
+
+    @Test
+    fun commonDiscordDialogCancelDismissesOverlay() = runComposeUiTest {
+        var dismissed = false
+
+        setContent {
+            MaterialTheme {
+                AppDiscordAuthDialog(
+                    initialToken = "token",
+                    isSignedIn = false,
+                    statusText = "Signed out",
+                    isChecking = false,
+                    iconContent = { _: Modifier -> },
+                    title = "Discord RPC",
+                    manualTokenLabel = "Token",
+                    invalidTokenLabel = "Invalid token",
+                    disconnectLabel = "Disconnect",
+                    browserSignInLabel = "Sign in browser",
+                    cancelLabel = "Cancel",
+                    applyLabel = "Apply",
+                    onBrowserSignIn = {},
+                    onDisconnect = {},
+                    onDismiss = { dismissed = true },
+                    onAuthenticate = { Result.success(Unit) },
+                )
+            }
+        }
+
+        onNodeWithText("Cancel")
+            .assertIsDisplayed()
+            .performClick()
+
+        assertTrue(dismissed)
+    }
 }
