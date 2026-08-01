@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.design.AppMotion
@@ -49,6 +50,7 @@ fun AppProductionRoot(
         modifier = modifier,
         content = {
             AnimatedContent(
+                modifier = Modifier.fillMaxSize(),
                 targetState = AppRootContentState(
                     destination = currentDestination,
                     transitionKey = contentTransitionKey
