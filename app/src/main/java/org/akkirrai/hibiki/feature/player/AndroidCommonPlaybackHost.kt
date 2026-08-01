@@ -37,7 +37,7 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.player.AppPlayerLockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
@@ -406,19 +406,19 @@ internal fun AndroidCommonPlaybackHost(
                 onControlsVisibilityChanged = { controlsVisible = it },
             )
         }
-        AppPlayerLockOverlay(
-            state = playerLockState,
-            label = appText(AppTextKey.PlayerUnlock),
+        AppPlayerOverlayStack(
+            lockState = playerLockState,
+            unlockLabel = appText(AppTextKey.PlayerUnlock),
             onUnlock = {
                 playerLockState = playerLockState.unlock()
                 controlsVisible = true
             },
-            modifier = Modifier
+            unlockModifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = PlayerUnlockBottomPadding),
             includeSystemBottomInset = true,
-        )
-        AppPlayerPanelOverlays(
+        ) {
+            AppPlayerPanelOverlays(
             playlistVisible = playlistVisible,
             settingsVisible = settingsVisible,
             currentEpisodeId = context.episodeId,
@@ -496,8 +496,9 @@ internal fun AndroidCommonPlaybackHost(
             watchLabel = appText(AppTextKey.PlayerWatch),
             onSkipClick = { activeSkipSegment?.let { transport.seekToMs(it.endMs) } },
             onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-            skipModifier = Modifier.align(Alignment.BottomEnd),
-        )
+                skipModifier = Modifier.align(Alignment.BottomEnd),
+            )
+        }
     }
 }
 

@@ -22,7 +22,7 @@ import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
-import org.akkirrai.hibiki.shared.player.AppPlayerLockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
@@ -233,19 +233,19 @@ internal fun IosEmbeddedPlaybackHost(
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
             )
         }
-        AppPlayerLockOverlay(
-            state = playerLockState,
-            label = appText(AppTextKey.PlayerUnlock),
+        AppPlayerOverlayStack(
+            lockState = playerLockState,
+            unlockLabel = appText(AppTextKey.PlayerUnlock),
             onUnlock = {
                 playerLockState = playerLockState.unlock()
                 controlsVisible = true
             },
-            modifier = Modifier
+            unlockModifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = PlayerUnlockBottomPadding),
             includeSystemBottomInset = true,
-        )
-        AppPlayerPanelOverlays(
+        ) {
+            AppPlayerPanelOverlays(
             playlistVisible = playlistVisible,
             settingsVisible = settingsVisible,
             currentEpisodeId = context.episodeId,
@@ -329,7 +329,8 @@ internal fun IosEmbeddedPlaybackHost(
             watchLabel = appText(AppTextKey.PlayerWatch),
             onSkipClick = { activeSkipSegment?.let { session.transport.seekToMs(it.endMs) } },
             onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-            skipModifier = Modifier.align(Alignment.BottomEnd),
-        )
+                skipModifier = Modifier.align(Alignment.BottomEnd),
+            )
+        }
     }
 }

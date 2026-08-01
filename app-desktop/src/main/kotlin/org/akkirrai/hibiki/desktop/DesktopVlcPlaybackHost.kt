@@ -32,7 +32,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
-import org.akkirrai.hibiki.shared.player.AppPlayerLockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -272,19 +272,19 @@ internal fun DesktopVlcPlaybackHost(
                     settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 )
             }
-            AppPlayerLockOverlay(
-                state = playerLockState,
-                label = appText(AppTextKey.PlayerUnlock),
+            AppPlayerOverlayStack(
+                lockState = playerLockState,
+                unlockLabel = appText(AppTextKey.PlayerUnlock),
                 onUnlock = {
                     playerLockState = playerLockState.unlock()
                     controlsVisible = true
                 },
-                modifier = Modifier
+                unlockModifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = PlayerUnlockBottomPadding),
                 includeSystemBottomInset = true,
-            )
-            AppPlayerPanelOverlays(
+            ) {
+                AppPlayerPanelOverlays(
                 playlistVisible = playlistVisible,
                 settingsVisible = settingsVisible,
                 currentEpisodeId = context.episodeId,
@@ -369,8 +369,9 @@ internal fun DesktopVlcPlaybackHost(
                 watchLabel = appText(AppTextKey.PlayerWatch),
                 onSkipClick = { activeSkipSegment?.let { session.transport.seekToMs(it.endMs) } },
                 onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-                skipModifier = Modifier.align(Alignment.BottomEnd),
-            )
+                    skipModifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
         }
         }
     }
