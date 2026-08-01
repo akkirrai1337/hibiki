@@ -183,8 +183,8 @@ import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
 import org.akkirrai.hibiki.shared.navigation.selectRootDestination
 import org.akkirrai.hibiki.shared.navigation.toTopLevelDestination
+import org.akkirrai.hibiki.shared.navigation.toAppDestination
 import org.akkirrai.hibiki.shared.navigation.transitionKey
-import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
@@ -1009,13 +1009,7 @@ fun HibikiAppShell(
                         autoSkipSegments = enabled
                         saveSettings()
                     }
-                    val topLevelDestination = when (selectedTab) {
-                        AppDestination.HOME -> AppTopLevelDestination.HOME
-                        AppDestination.CATALOG -> AppTopLevelDestination.CATALOG
-                        AppDestination.LIBRARY -> AppTopLevelDestination.LIBRARY
-                        AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
-                        AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
-                    }
+                    val topLevelDestination = selectedTab.toTopLevelDestination()
                     val activeDownloadMode = when (val route = navigationState.currentRoute) {
                         is AppRoute.WatchSources -> route.downloadMode
                         is AppRoute.Episodes -> route.downloadMode
@@ -1040,15 +1034,7 @@ fun HibikiAppShell(
                         currentDestination = topLevelDestination,
                             onNavigationEvent = { event ->
                                 if (event is AppNavigationEvent.SelectTopLevel) {
-                                    selectRootTab(
-                                        when (event.destination) {
-                                            AppTopLevelDestination.HOME -> AppDestination.HOME
-                                            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
-                                            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
-                                            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
-                                            AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
-                                        },
-                                    )
+                                    selectRootTab(event.destination.toAppDestination())
                                 }
                             },
                         showBottomBar = appBottomBarVisible(
@@ -1069,17 +1055,9 @@ fun HibikiAppShell(
                             .fillMaxSize()
                             .appRootTopInsetPadding(applyStatusBarPadding),
                     ) { animatedDestination ->
-                        val animatedTab = when (animatedDestination) {
-                            AppTopLevelDestination.HOME -> AppDestination.HOME
-                            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
-                            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
-                            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
-                            AppTopLevelDestination.PROFILE -> if (selectedTab == AppDestination.SETTINGS) {
-                                AppDestination.SETTINGS
-                            } else {
-                                AppDestination.PROFILE
-                            }
-                        }
+                        val animatedTab = animatedDestination.toAppDestination(
+                            settingsVisible = selectedTab == AppDestination.SETTINGS,
+                        )
                         AppDestinationContent(
                             selectedTab = animatedTab,
                             currentRoute = navigationState.currentRoute,

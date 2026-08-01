@@ -12,6 +12,12 @@ class RootNavigationTest {
         assertEquals(AppTopLevelDestination.SOURCES, AppDestination.SOURCES.toTopLevelDestination())
         assertEquals(AppTopLevelDestination.PROFILE, AppDestination.PROFILE.toTopLevelDestination())
         assertEquals(AppTopLevelDestination.PROFILE, AppDestination.SETTINGS.toTopLevelDestination())
+        assertEquals(AppDestination.HOME, AppTopLevelDestination.HOME.toAppDestination())
+        assertEquals(AppDestination.CATALOG, AppTopLevelDestination.CATALOG.toAppDestination())
+        assertEquals(AppDestination.LIBRARY, AppTopLevelDestination.LIBRARY.toAppDestination())
+        assertEquals(AppDestination.SOURCES, AppTopLevelDestination.SOURCES.toAppDestination())
+        assertEquals(AppDestination.PROFILE, AppTopLevelDestination.PROFILE.toAppDestination())
+        assertEquals(AppDestination.SETTINGS, AppTopLevelDestination.PROFILE.toAppDestination(settingsVisible = true))
     }
 
     @Test

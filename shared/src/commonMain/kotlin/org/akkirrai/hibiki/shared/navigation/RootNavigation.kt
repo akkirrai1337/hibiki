@@ -11,5 +11,13 @@ fun AppDestination.toTopLevelDestination(): AppTopLevelDestination = when (this)
     -> AppTopLevelDestination.PROFILE
 }
 
+fun AppTopLevelDestination.toAppDestination(settingsVisible: Boolean = false): AppDestination = when (this) {
+    AppTopLevelDestination.HOME -> AppDestination.HOME
+    AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+    AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+    AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+    AppTopLevelDestination.PROFILE -> if (settingsVisible) AppDestination.SETTINGS else AppDestination.PROFILE
+}
+
 fun AppNavigationState.selectRootDestination(destination: AppDestination): AppNavigationState =
     reduce(AppNavigationEvent.SelectTopLevel(destination.toTopLevelDestination()))
