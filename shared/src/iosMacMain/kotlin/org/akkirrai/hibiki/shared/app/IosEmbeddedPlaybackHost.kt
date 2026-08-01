@@ -188,7 +188,7 @@ internal fun IosEmbeddedPlaybackHost(
                 IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
             },
             controlsEnabled = !playerLockState.isLocked,
-        ) {
+            controls = {
             IosComposePlayerControls(
                 session = session,
                 playback = playback,
@@ -233,8 +233,9 @@ internal fun IosEmbeddedPlaybackHost(
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
             )
-        }
-        AppPlayerOverlayStack(
+            },
+            overlayContent = {
+                AppPlayerOverlayStack(
             lockState = playerLockState,
             unlockLabel = appText(AppTextKey.PlayerUnlock),
             onUnlock = {
@@ -331,7 +332,9 @@ internal fun IosEmbeddedPlaybackHost(
             onSkipClick = { activeSkipSegment?.let { session.transport.seekToMs(it.endMs) } },
             onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
                 skipModifier = Modifier.align(Alignment.BottomEnd),
-            )
-        }
+                )
+            }
+        },
+        )
     }
 }
