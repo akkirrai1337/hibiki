@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
+import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.model.Anime
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -146,5 +147,44 @@ class SharedDetailsComposeTest {
             .assertCountEquals(2)
             .get(1)
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun detailsLibrarySheetSelectsCategoryAndDismisses() = runComposeUiTest {
+        val librarySheetOpen = mutableStateOf(false)
+        var selectedCategory: LibraryCategory? = null
+
+        setContent {
+            MaterialTheme {
+                AppDetailsScreen(
+                    anime = Anime(
+                        id = "ani-liberty:test-title",
+                        title = "Test anime",
+                        subtitle = "TV | 2026",
+                        episodesLabel = "12 episodes",
+                        status = "Ongoing",
+                    ),
+                    onBackClick = {},
+                    onRelatedAnimeClick = {},
+                    librarySheetOpen = librarySheetOpen.value,
+                    onLibrarySheetOpenChange = { librarySheetOpen.value = it },
+                    onLibraryCategoryChange = { selectedCategory = it },
+                )
+            }
+        }
+
+        onNodeWithContentDescription("Add to favorites")
+            .assertIsDisplayed()
+            .performClick()
+        waitForIdle()
+
+        assertEquals(true, librarySheetOpen.value)
+        onNodeWithText("Watching")
+            .assertIsDisplayed()
+            .performClick()
+        waitForIdle()
+
+        assertEquals(LibraryCategory.Watching, selectedCategory)
+        assertEquals(false, librarySheetOpen.value)
     }
 }
