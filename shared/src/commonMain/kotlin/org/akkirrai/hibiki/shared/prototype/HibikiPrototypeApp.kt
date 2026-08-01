@@ -222,6 +222,7 @@ import org.akkirrai.hibiki.shared.navigation.navigateToDetails
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
+import org.akkirrai.hibiki.shared.navigation.reduceDetailsOverlayChange
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1196,33 +1197,24 @@ fun HibikiAppShell(
                             playbackHostAvailable = playbackHost != null,
                             detailsPosterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
                             onDetailsPosterPreviewOpenChange = { open ->
-                                navigationState = if (open) {
-                                    navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
-                                } else if (navigationState.activeOverlay == AppOverlay.DetailsPosterPreview) {
-                                    navigationState.reduce(AppNavigationEvent.DismissOverlay)
-                                } else {
-                                    navigationState
-                                }
+                                navigationState = navigationState.reduceDetailsOverlayChange(
+                                    overlay = AppOverlay.DetailsPosterPreview,
+                                    open = open,
+                                )
                             },
                             detailsTitleSheetOpen = navigationState.activeOverlay == AppOverlay.DetailsTitleSheet,
                             onDetailsTitleSheetOpenChange = { open ->
-                                navigationState = if (open) {
-                                    navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
-                                } else if (navigationState.activeOverlay == AppOverlay.DetailsTitleSheet) {
-                                    navigationState.reduce(AppNavigationEvent.DismissOverlay)
-                                } else {
-                                    navigationState
-                                }
+                                navigationState = navigationState.reduceDetailsOverlayChange(
+                                    overlay = AppOverlay.DetailsTitleSheet,
+                                    open = open,
+                                )
                             },
                             detailsLibrarySheetOpen = navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet,
                             onDetailsLibrarySheetOpenChange = { open ->
-                                navigationState = if (open) {
-                                    navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsLibrarySheet))
-                                } else if (navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet) {
-                                    navigationState.reduce(AppNavigationEvent.DismissOverlay)
-                                } else {
-                                    navigationState
-                                }
+                                navigationState = navigationState.reduceDetailsOverlayChange(
+                                    overlay = AppOverlay.DetailsLibrarySheet,
+                                    open = open,
+                                )
                             },
                             playbackError = playerState.errorMessage,
                             playbackLoading = playerState.isLoading,
