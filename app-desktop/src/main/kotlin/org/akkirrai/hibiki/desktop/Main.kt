@@ -26,10 +26,11 @@ private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
 
 /** Desktop entry point for the production shared shell. */
 fun main() = application {
-    val catalogRepository = remember { DesktopCatalogRepository() }
+    val settingsStore = remember { DesktopSettingsStore() }
+    val initialSourceId = remember(settingsStore) { settingsStore.load().selectedSourceId }
+    val catalogRepository = remember(initialSourceId) { DesktopCatalogRepository(initialSourceId) }
     val homeRepository = remember(catalogRepository) { DesktopHomeRepository(catalogRepository) }
     val watchRepository = remember { DesktopAnimeWatchRepository() }
-    val settingsStore = remember { DesktopSettingsStore() }
     val sources = remember {
         listOf(
             BuiltInSources.YUMMY_ANIME_ID,
