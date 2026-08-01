@@ -37,4 +37,30 @@ class PlayerEpisodeSelectionActionsTest {
         assertEquals(false, dispatched)
         assertEquals(emptyList(), events)
     }
+
+    @Test
+    fun closePersistsBeforeBack() {
+        val events = mutableListOf<String>()
+
+        dispatchPlayerClose(
+            persistProgress = { events += "progress" },
+            onBack = { events += "back" },
+        )
+
+        assertEquals(listOf("progress", "back"), events)
+    }
+
+    @Test
+    fun settingsActionMakesControlsVisibleBeforePersistenceAndDispatch() {
+        val events = mutableListOf<String>()
+
+        dispatchPlayerSettingsAction(
+            action = PlaybackSettingsAction.SetAutoSkipSegments(true),
+            setControlsVisible = { events += "controls" },
+            persistProgress = { events += "progress" },
+            onSettingsAction = { events += "settings" },
+        )
+
+        assertEquals(listOf("controls", "progress", "settings"), events)
+    }
 }

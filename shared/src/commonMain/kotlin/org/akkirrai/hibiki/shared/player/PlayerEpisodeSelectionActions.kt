@@ -37,3 +37,22 @@ fun dispatchAdjacentPlayerEpisodeSelection(
     )
     return true
 }
+
+fun dispatchPlayerClose(
+    persistProgress: () -> Unit,
+    onBack: () -> Unit,
+) {
+    persistProgress()
+    onBack()
+}
+
+fun dispatchPlayerSettingsAction(
+    action: PlaybackSettingsAction,
+    setControlsVisible: () -> Unit,
+    persistProgress: () -> Unit,
+    onSettingsAction: (PlaybackSettingsAction) -> Unit,
+) {
+    setControlsVisible()
+    persistProgress()
+    onSettingsAction(action)
+}

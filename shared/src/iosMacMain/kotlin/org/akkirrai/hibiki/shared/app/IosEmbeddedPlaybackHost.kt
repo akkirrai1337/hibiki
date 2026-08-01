@@ -26,6 +26,8 @@ import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
 import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
+import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
@@ -99,8 +101,7 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     fun closePlayback() {
-        savePlaybackProgress()
-        onBack()
+        dispatchPlayerClose(::savePlaybackProgress, onBack)
     }
 
     fun selectAdjacentEpisode(offset: Int) {
@@ -116,9 +117,12 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
-        controlsVisible = true
-        savePlaybackProgress()
-        onSettingsAction(action)
+        dispatchPlayerSettingsAction(
+            action = action,
+            setControlsVisible = { controlsVisible = true },
+            persistProgress = ::savePlaybackProgress,
+            onSettingsAction = onSettingsAction,
+        )
     }
 
     DisposableEffect(session) {
