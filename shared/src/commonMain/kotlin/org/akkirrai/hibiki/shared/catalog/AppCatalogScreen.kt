@@ -15,6 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,11 +76,18 @@ fun AppCatalogScreen(
         title: String,
         label: (CatalogSort) -> String,
     ) -> Unit = { selectedSort, availableSorts, expanded, onExpandedChange, onSortSelected, title, label ->
+        val layoutDirection = LocalLayoutDirection.current
+        val density = LocalDensity.current
+        val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
+        val offsetX = (screenWidthDp - (UiDimens.ScreenPadding * 2) - CatalogSortMenuWidth) / 2
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
             modifier = Modifier.width(CatalogSortMenuWidth),
-            offset = DpOffset(x = 0.dp, y = CatalogSortMenuOffsetY),
+            offset = DpOffset(
+                x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
+                y = CatalogSortMenuOffsetY,
+            ),
             shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
         ) {
             AppCatalogSortMenuContent(
