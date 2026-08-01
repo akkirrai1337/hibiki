@@ -235,7 +235,7 @@ internal fun DesktopVlcPlaybackHost(
                     )
                 },
                 controlsEnabled = !playerLockState.isLocked,
-            ) {
+                controls = {
                 AppPlaybackControls(
                     transport = session.transport,
                     playback = playback,
@@ -272,8 +272,9 @@ internal fun DesktopVlcPlaybackHost(
                     },
                     settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 )
-            }
-            AppPlayerOverlayStack(
+                },
+                overlayContent = {
+                    AppPlayerOverlayStack(
                 lockState = playerLockState,
                 unlockLabel = appText(AppTextKey.PlayerUnlock),
                 onUnlock = {
@@ -371,8 +372,10 @@ internal fun DesktopVlcPlaybackHost(
                 onSkipClick = { activeSkipSegment?.let { session.transport.seekToMs(it.endMs) } },
                 onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
                     skipModifier = Modifier.align(Alignment.BottomEnd),
-                )
-            }
+                    )
+                }
+            },
+            )
         }
         }
     }
