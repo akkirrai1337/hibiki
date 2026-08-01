@@ -879,6 +879,7 @@ fun HibikiAppShell(
             navigationState = backTransition.state
             when (backTransition.effect) {
                 WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                    episodesLoadGeneration++
                     episodesPresenter.setState(EpisodesScreenState())
                     resetPlayerState()
                 }
@@ -899,6 +900,7 @@ fun HibikiAppShell(
                 pendingPlaybackContext = null
                 when (backTransition.effect) {
                     WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                        episodesLoadGeneration++
                         episodesPresenter.setState(EpisodesScreenState())
                         resetPlayerState()
                     }
@@ -914,6 +916,7 @@ fun HibikiAppShell(
                 playbackRequestGeneration++
                 when (backTransition.effect) {
                     WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                        episodesLoadGeneration++
                         episodesPresenter.setState(EpisodesScreenState())
                         resetPlayerState()
                     }
