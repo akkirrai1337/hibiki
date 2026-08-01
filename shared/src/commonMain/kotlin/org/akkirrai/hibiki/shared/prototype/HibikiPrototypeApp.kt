@@ -219,6 +219,7 @@ import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
+import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1164,10 +1165,9 @@ fun HibikiAppShell(
                                 playbackJob = null
                                 playbackRequestGeneration++
                                 resetPlayerState()
-                                navigationState = navigationState.reduce(
-                                    AppNavigationEvent.Navigate(
-                                        AppRoute.WatchSources(anime.id, downloadMode = activeDownloadMode),
-                                    ),
+                                navigationState = navigationState.navigateToWatchSources(
+                                    animeId = anime.id,
+                                    downloadMode = activeDownloadMode,
                                 )
                             },
                             onBackFromWatch = {

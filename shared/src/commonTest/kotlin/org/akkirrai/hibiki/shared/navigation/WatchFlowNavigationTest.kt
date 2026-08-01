@@ -6,6 +6,23 @@ import org.akkirrai.hibiki.shared.model.WatchSource
 
 class WatchFlowNavigationTest {
     @Test
+    fun `details to sources keeps anime and download mode`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .navigateToWatchSources("anime-1", downloadMode = true)
+
+        assertEquals(
+            AppRoute.WatchSources("anime-1", downloadMode = true),
+            state.currentRoute,
+        )
+        assertEquals(AppTransitionDirection.Forward, state.transitionDirection)
+        assertEquals(
+            AppRoute.WatchSources("anime-1", downloadMode = true).transitionKey(),
+            state.currentTransitionKey,
+        )
+    }
+
+    @Test
     fun `sources to episodes keeps source anime and download mode`() {
         val source = WatchSource("source-1", "Dub", 12)
 

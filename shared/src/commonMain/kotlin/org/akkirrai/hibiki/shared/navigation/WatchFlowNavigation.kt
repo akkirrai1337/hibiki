@@ -2,6 +2,18 @@ package org.akkirrai.hibiki.shared.navigation
 
 import org.akkirrai.hibiki.shared.model.WatchSource
 
+fun AppNavigationState.navigateToWatchSources(
+    animeId: String,
+    downloadMode: Boolean = false,
+): AppNavigationState = reduce(
+    AppNavigationEvent.Navigate(
+        AppRoute.WatchSources(
+            animeId = animeId,
+            downloadMode = downloadMode,
+        ),
+    ),
+)
+
 /** Builds the shared Sources -> Episodes transition used by every application host. */
 fun AppNavigationState.navigateToEpisodes(
     source: WatchSource,
