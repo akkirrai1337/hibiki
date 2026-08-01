@@ -67,7 +67,7 @@ fun HibikiApp(
     loadPlaybackSelection: (String) -> PlaybackSelection? = { null },
     playbackHost: (@Composable (PlaybackStream, PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     playerWindowMode: @Composable (Boolean) -> Unit = {},
-    showSettingsBackButton: Boolean = false,
+    showSettingsBackButton: Boolean = true,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
 ) {

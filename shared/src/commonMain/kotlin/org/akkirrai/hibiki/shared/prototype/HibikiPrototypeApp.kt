@@ -299,7 +299,7 @@ fun HibikiAppShell(
     loadPlaybackSelection: (String) -> org.akkirrai.hibiki.shared.model.PlaybackSelection? = { null },
     playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     playerWindowMode: @Composable (Boolean) -> Unit = {},
-    showSettingsBackButton: Boolean = false,
+    showSettingsBackButton: Boolean = true,
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
 ) {
