@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import hibiki.shared.generated.resources.Res
 import hibiki.shared.generated.resources.ic_discord
@@ -1864,9 +1865,14 @@ private fun AppDestinationContent(
     currentRoute: AppRoute? = null,
 ) {
     val homeSourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
-    // AppTopLevelScaffold reserves the bottom navigation surface itself.
-    // Top-level lists must not reserve it a second time.
-    val topLevelBottomContentPadding = 0.dp
+    val bottomSystemInset = appBottomSystemInsetValue(includeNavigationBarPadding)
+    val topLevelBottomContentPadding = if (
+        selectedTab != AppDestination.SETTINGS && currentRoute is AppRoute.TopLevel
+    ) {
+        AppBottomBarHeight + bottomSystemInset + AppBottomBarContentExtraPadding
+    } else {
+        bottomSystemInset
+    }
     val routeDrivenWatch = currentRoute?.let {
         it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
     } ?: (watchAnime != null)
@@ -2131,6 +2137,7 @@ private fun AppDestinationContent(
                     baseHomeState = homeState,
                     onItemVisible = onHomeItemVisible,
                     onHomeRefresh = onHomeRefresh,
+                    bottomContentPadding = topLevelBottomContentPadding,
                 )
                 AppDestination.CATALOG -> SearchScreen(
                     state = catalogState,
@@ -2146,6 +2153,7 @@ private fun AppDestinationContent(
                     onRetry = onCatalogRetry,
                     onLoadMoreRetry = onCatalogLoadMoreRetry,
                     onSortSelected = onCatalogSortSelected,
+                    bottomContentPadding = topLevelBottomContentPadding,
                 )
                 AppDestination.LIBRARY -> LibraryScreen(
                     entries = libraryEntries,
@@ -2161,6 +2169,7 @@ private fun AppDestinationContent(
                     onFilterVisibilityChange = onLibraryFilterVisibilityChange,
                     languageMode = languageMode,
                     systemLanguage = systemLanguage,
+                    bottomContentPadding = topLevelBottomContentPadding,
                 )
                 AppDestination.PROFILE -> {
                     val profileDateTodayLabel = appText(AppTextKey.ProfileDateToday)
@@ -2306,6 +2315,7 @@ private fun AppDestinationContent(
                     onCheckForUpdates = onCheckForUpdates,
                     onExportLogs = onExportLogs,
                     notificationsAvailable = notificationsAvailable,
+                    bottomContentPadding = topLevelBottomContentPadding,
                 )
         }
     }
@@ -2431,6 +2441,7 @@ private fun ColumnScope.HomeScreen(
     onOpenLibrary: () -> Unit,
     onItemVisible: (Anime) -> Unit = {},
     onHomeRefresh: () -> Unit,
+    bottomContentPadding: Dp,
 ) {
     val homeState = baseHomeState.copy(
         recentlyAddedToLibrary = if (baseHomeState.recentlyAddedToLibrary.isEmpty()) {
@@ -2463,7 +2474,7 @@ private fun ColumnScope.HomeScreen(
     AppHomeScreen(
         state = homeState,
         listState = listState,
-        bottomContentPadding = 0.dp,
+        bottomContentPadding = bottomContentPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
@@ -2512,11 +2523,12 @@ private fun ColumnScope.SearchScreen(
     onRetry: () -> Unit,
     onLoadMoreRetry: () -> Unit,
     onSortSelected: (CatalogSort) -> Unit,
+    bottomContentPadding: Dp,
 ) {
     AppCatalogScreen(
         state = state,
         listState = listState,
-        bottomContentPadding = 0.dp,
+        bottomContentPadding = bottomContentPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
@@ -2546,6 +2558,7 @@ private fun ColumnScope.LibraryScreen(
     onFilterVisibilityChange: (Boolean) -> Unit,
     languageMode: LanguageMode,
     systemLanguage: String,
+    bottomContentPadding: Dp,
 ) {
     val isRussian = isRussianLibraryLanguage(languageMode, systemLanguage)
     val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
@@ -2567,7 +2580,7 @@ private fun ColumnScope.LibraryScreen(
             movieLabel = appText(AppTextKey.Type),
             libraryStatusLabel = { category -> categoryLabels.getValue(category) },
         ),
-        bottomContentPadding = 0.dp,
+        bottomContentPadding = bottomContentPadding,
         onAnimeClick = onAnimeClick,
         onSearchQueryChange = onSearchQueryChange,
         onClearSearch = onSearchClear,
@@ -2790,6 +2803,7 @@ private fun SettingsScreen(
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     notificationsAvailable: Boolean = true,
+    bottomContentPadding: Dp,
 ) {
     AppSettingsScreen(
         languageMode = languageMode,
@@ -2840,6 +2854,7 @@ private fun SettingsScreen(
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
         modifier = Modifier.fillMaxSize(),
+        bottomContentPadding = bottomContentPadding,
         showBackButton = showBackButton,
         onBackClick = onBackClick,
         backContentDescription = appText(AppTextKey.Back),

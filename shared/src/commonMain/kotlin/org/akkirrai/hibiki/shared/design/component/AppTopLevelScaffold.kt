@@ -2,12 +2,10 @@ package org.akkirrai.hibiki.shared.design.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 
 /** Places a top-level screen above the shared bottom navigation surface. */
@@ -30,21 +28,7 @@ fun AppTopLevelScaffold(
     content: @Composable () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier = if (showBottomBar) {
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        bottom = AppBottomBarHeight +
-                            AppBottomBarDividerHeight +
-                            appBottomSystemInsetValue(includeNavigationBarPadding),
-                    )
-            } else {
-                Modifier.fillMaxSize()
-            },
-        ) {
-            content()
-        }
+        content()
         if (showBottomBar) {
             AppBottomBar(
                 destinations = destinations,
