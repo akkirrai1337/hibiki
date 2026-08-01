@@ -111,6 +111,7 @@ import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateText
 import org.akkirrai.hibiki.shared.library.icon
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
 import org.akkirrai.hibiki.shared.catalog.defaultCatalogFilterYearRange
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.shared.home.AppHomeScreen
 import org.akkirrai.hibiki.shared.home.AppHomeScreenLabels
 import org.akkirrai.hibiki.shared.home.HomeUiState
@@ -1862,6 +1863,8 @@ private fun AppDestinationContent(
     onDetailsLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
     currentRoute: AppRoute? = null,
 ) {
+    val topLevelBottomContentPadding =
+        AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue()
     val routeDrivenWatch = currentRoute?.let {
         it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
     } ?: (watchAnime != null)
@@ -2196,7 +2199,7 @@ private fun AppDestinationContent(
                         avatarEditAvailable = profileAvatarEditAvailable,
                         isEditing = isEditingProfile,
                         editedName = editedProfileName,
-                        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
+                        bottomContentPadding = topLevelBottomContentPadding,
                         labels = AppLocalProfileLabels(
                             overviewTab = appText(AppTextKey.ProfileTabOverview),
                             activityTab = appText(AppTextKey.ProfileTabActivity),
@@ -2237,7 +2240,7 @@ private fun AppDestinationContent(
                 AppDestination.SOURCES -> AppLocalSourcesScreen(
                     sources = sources,
                     selectedSourceId = selectedSourceId,
-                    bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
+                    bottomContentPadding = topLevelBottomContentPadding,
                     emptyText = appText(AppTextKey.SourcesEmptyTitle),
                     languageLabel = { language ->
                         when (language.lowercase()) {
@@ -2456,7 +2459,7 @@ private fun ColumnScope.HomeScreen(
     AppHomeScreen(
         state = homeState,
         listState = listState,
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
@@ -2493,7 +2496,7 @@ private fun ColumnScope.SearchScreen(
     AppCatalogScreen(
         state = state,
         listState = listState,
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
@@ -2544,7 +2547,7 @@ private fun ColumnScope.LibraryScreen(
             movieLabel = appText(AppTextKey.Type),
             libraryStatusLabel = { category -> categoryLabels.getValue(category) },
         ),
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
         onAnimeClick = onAnimeClick,
         onSearchQueryChange = onSearchQueryChange,
         onClearSearch = onSearchClear,
