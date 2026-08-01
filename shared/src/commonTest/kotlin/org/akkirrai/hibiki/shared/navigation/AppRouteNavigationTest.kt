@@ -144,6 +144,19 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `details overlay backs before leaving details route`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("details-poster")))
+
+        val returned = state.reduce(AppNavigationEvent.Back)
+
+        assertEquals(AppRoute.Details("anime-1"), returned.currentRoute)
+        assertTrue(returned.overlays.isEmpty())
+        assertEquals(AppTransitionDirection.Pop, returned.transitionDirection)
+    }
+
+    @Test
     fun `back closes player overlay before player route`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
