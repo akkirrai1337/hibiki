@@ -32,11 +32,7 @@ fun main() = application {
     val homeRepository = remember(catalogRepository) { DesktopHomeRepository(catalogRepository) }
     val watchRepository = remember { DesktopAnimeWatchRepository() }
     val sources = remember {
-        listOf(
-            BuiltInSources.YUMMY_ANIME_ID,
-            BuiltInSources.ANI_LIBERTY_ID,
-        ).map { sourceId ->
-            val info = BuiltInSources.catalog.require(sourceId)
+        BuiltInSources.catalog.sources.map { info ->
             AppSourceDescriptor(
                 id = info.id.value,
                 name = info.name,
