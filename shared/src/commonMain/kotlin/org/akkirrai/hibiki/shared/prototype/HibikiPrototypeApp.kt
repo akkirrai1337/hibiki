@@ -1130,6 +1130,7 @@ fun HibikiAppShell(
                             watchAnime = watchAnime,
                             onWatchClick = { anime ->
                                 forceWatchSourcesRefresh = false
+                                watchLoadGeneration++
                                 watchPresenter.setState(
                                     initialWatchSourcesState(
                                         cachedSources = null,
