@@ -63,6 +63,57 @@ class WatchSourcesStateResolverTest {
         )
     }
 
+    @Test
+    fun forceRefreshDoesNotExposeStaleSourcesWhileLoading() {
+        val state = initialWatchSourcesState(
+            cachedSources = listOf(source("cached", "Cached")),
+            offlineSources = listOf(source("offline", "Offline")),
+            forceRefresh = true,
+        )
+
+        assertTrue(state.isLoading)
+        assertTrue(state.items.isEmpty())
+        assertTrue(state.allItems.isEmpty())
+        assertFalse(state.hasMoreItems)
+    }
+
+    @Test
+    fun loadedSourcesMergeOfflineEntriesAndKeepAndroidVisibleCount() {
+        val state = WatchSourcesScreenState().withLoadedSources(
+            sources = listOf(
+                source("one", "One"),
+                source("two", "Two"),
+                source("three", "Three"),
+                source("four", "Four"),
+            ),
+            offlineSources = listOf(source("two", "Offline Two"), source("offline", "Offline")),
+            isLoading = false,
+        )
+
+        assertFalse(state.isLoading)
+        assertEquals(listOf("one", "two", "three"), state.items.map(WatchSource::sourceId))
+        assertEquals(
+            listOf("one", "two", "three", "four", "offline"),
+            state.allItems.map(WatchSource::sourceId),
+        )
+        assertTrue(state.hasMoreItems)
+    }
+
+    @Test
+    fun errorKeepsOfflineSourcesVisibleAndDoesNotHideTheirRows() {
+        val initial = initialWatchSourcesState(
+            cachedSources = null,
+            offlineSources = listOf(source("offline", "Offline")),
+            forceRefresh = false,
+        )
+
+        val state = initial.withWatchSourcesError("Network error")
+
+        assertFalse(state.isLoading)
+        assertEquals(listOf("offline"), state.items.map(WatchSource::sourceId))
+        assertEquals(null, state.errorMessage)
+    }
+
     private fun source(id: String, title: String) = WatchSource(
         sourceId = id,
         title = title,
