@@ -28,6 +28,9 @@ import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
+import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
@@ -211,7 +214,7 @@ internal fun IosEmbeddedPlaybackHost(
                 },
                 playlistEnabled = context.episodes.isNotEmpty(),
                 onPlaylistClick = {
-                    onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+                    dispatchPlayerPlaylistOpen(onOverlayEvent)
                 },
                 hasPreviousEpisode = episodeNavigation.hasPrevious,
                 hasNextEpisode = episodeNavigation.hasNext,
@@ -222,18 +225,13 @@ internal fun IosEmbeddedPlaybackHost(
                     selectAdjacentEpisode(1)
                 },
                 onSettingsClick = {
-                    onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
+                    dispatchPlayerSettingsOpen(onOverlayEvent)
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onLockClick = {
                     playerLockState = playerLockState.lock()
                     controlsVisible = false
-                    if (playlistVisible) {
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
-                    }
-                    if (settingsVisible) {
-                        onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                    }
+                    dispatchPlayerOverlayDismissalsForLock(playlistVisible, settingsVisible, onOverlayEvent)
                 },
                 lockContentDescription = appText(AppTextKey.PlayerLock),
                 onControlsVisibilityChanged = { controlsVisible = it },

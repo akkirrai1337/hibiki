@@ -46,6 +46,9 @@ import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
+import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -364,7 +367,7 @@ internal fun AndroidCommonPlaybackHost(
                 onBack = ::closePlayback,
                 playlistEnabled = context.episodes.isNotEmpty(),
                 onPlaylistClick = {
-                    onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+                    dispatchPlayerPlaylistOpen(onOverlayEvent)
                 },
                 hasPreviousEpisode = episodeNavigation.hasPrevious,
                 hasNextEpisode = episodeNavigation.hasNext,
@@ -377,12 +380,7 @@ internal fun AndroidCommonPlaybackHost(
                 onLockClick = {
                     playerLockState = playerLockState.lock()
                     controlsVisible = false
-                    if (playlistVisible) {
-                        onOverlayEvent(AppNavigationEvent.DismissOverlay)
-                    }
-                    if (settingsVisible) {
-                        onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                    }
+                    dispatchPlayerOverlayDismissalsForLock(playlistVisible, settingsVisible, onOverlayEvent)
                 },
                 lockContentDescription = appText(AppTextKey.PlayerLock),
                 pictureInPictureEnabled = pictureInPictureSupported,
@@ -408,7 +406,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 pictureInPictureContentDescription = appText(AppTextKey.PlayerPictureInPicture),
                 onSettingsClick = {
-                    onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
+                    dispatchPlayerSettingsOpen(onOverlayEvent)
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
