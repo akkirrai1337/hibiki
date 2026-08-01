@@ -363,7 +363,16 @@ fun HibikiAppShell(
             navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
         }
     }
-    var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
+    val selectedTab = when {
+        navigationState.currentRoute is AppRoute.Settings -> AppDestination.SETTINGS
+        else -> when (navigationState.currentTopLevel) {
+            AppTopLevelDestination.HOME -> AppDestination.HOME
+            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+            AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
+        }
+    }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
@@ -843,7 +852,6 @@ fun HibikiAppShell(
             if (navigationState.currentRoute is AppRoute.Settings) {
                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
             }
-            selectedTab = AppDestination.PROFILE
             return
         }
         if (activePlaybackRoute != null) {
@@ -1002,7 +1010,6 @@ fun HibikiAppShell(
                         navigationState = navigationState.reduce(
                             AppNavigationEvent.SelectTopLevel(target),
                         )
-                        selectedTab = destination
                         presenter.clearDetails()
                         detailsAnime = null
                         watchAnime = null
@@ -1309,7 +1316,6 @@ fun HibikiAppShell(
                                 isEditingProfile = false
                             },
                             onProfileSettingsClick = {
-                                selectedTab = AppDestination.SETTINGS
                                 if (navigationState.currentRoute !is AppRoute.Settings) {
                                     navigationState = navigationState.reduce(
                                         AppNavigationEvent.Navigate(AppRoute.Settings),
@@ -1340,7 +1346,6 @@ fun HibikiAppShell(
                             includeNavigationBarPadding = includeNavigationBarPadding,
                             onSettingsBack = {
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
-                                selectedTab = AppDestination.PROFILE
                             },
                             sourceSearchState = sourceSearchState,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
