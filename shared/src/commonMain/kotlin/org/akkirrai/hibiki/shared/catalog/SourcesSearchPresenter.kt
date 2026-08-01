@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
 import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_RESULTS_PER_SOURCE
 import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
+import org.akkirrai.hibiki.shared.source.shouldRestrictSourceSearchToRussian
 
 /** Shared source search presenter. Results stay grouped by their originating source. */
 class SourcesSearchPresenter(
@@ -32,9 +33,10 @@ class SourcesSearchPresenter(
     private var searchJob: Job? = null
 
     fun onQueryChange(query: String) {
-        _state.update { it.copy(query = query) }
+        val normalizedQuery = query.trimStart()
+        _state.update { it.copy(query = normalizedQuery) }
         searchJob?.cancel()
-        if (query.trim().length < SOURCE_SEARCH_MIN_QUERY_LENGTH) {
+        if (normalizedQuery.trim().length < SOURCE_SEARCH_MIN_QUERY_LENGTH) {
             _state.update { it.copy(sections = emptyList(), isSearching = false, hasSearched = false) }
             return
         }
@@ -54,7 +56,8 @@ class SourcesSearchPresenter(
         val query = state.value.query.trim()
         if (query.length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
         searchJob = scope.launch {
-            val loadingSections = searchableSources.map { source ->
+            val sources = sourcesForQuery(query)
+            val loadingSections = sources.map { source ->
                 SourceSearchSectionState<Anime>(
                     sourceId = source.id,
                     sourceName = source.name,
@@ -63,7 +66,7 @@ class SourcesSearchPresenter(
             }
             _state.update { it.copy(sections = loadingSections, isSearching = true, hasSearched = true) }
             val results = supervisorScope {
-                searchableSources.map { source ->
+                sources.map { source ->
                     async {
                         runCatching {
                             val result = when (val multiSourceRepository = repository as? MultiSourceAnimeCatalogRepository) {
@@ -98,6 +101,57 @@ class SourcesSearchPresenter(
             }
         }
     }
+
+    fun retry(sourceId: String) {
+        searchJob?.cancel()
+        val query = state.value.query.trim()
+        if (query.length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
+        val source = searchableSources.firstOrNull { it.id == sourceId } ?: return
+        searchJob = scope.launch {
+            _state.update { current ->
+                current.copy(
+                    sections = current.sections.map { section ->
+                        if (section.sourceId == sourceId) section.copy(hasError = false, isLoading = true)
+                        else section
+                    },
+                    isSearching = true,
+                )
+            }
+            val result = runCatching {
+                when (val multiSourceRepository = repository as? MultiSourceAnimeCatalogRepository) {
+                    null -> repository.search(
+                        AnimeCatalogQuery(text = query, pageSize = SOURCE_SEARCH_RESULTS_PER_SOURCE),
+                    )
+                    else -> multiSourceRepository.searchSource(
+                        sourceId = source.id,
+                        query = AnimeCatalogQuery(text = query, pageSize = SOURCE_SEARCH_RESULTS_PER_SOURCE),
+                    )
+                }
+            }
+            _state.update { current ->
+                current.copy(
+                    sections = current.sections.map { section ->
+                        if (section.sourceId != sourceId) section
+                        else result.fold(
+                            onSuccess = { page -> section.copy(items = page.items, hasError = false, isLoading = false) },
+                            onFailure = { section.copy(hasError = true, isLoading = false) },
+                        )
+                    },
+                    isSearching = false,
+                )
+            }
+        }
+    }
+
+    private fun sourcesForQuery(query: String): List<AppSourceDescriptor> =
+        if (shouldRestrictSourceSearchToRussian(query)) {
+            searchableSources.filter { languageIsRussian(it.language) }
+        } else {
+            searchableSources
+        }
+
+    private fun languageIsRussian(language: String): Boolean =
+        language.lowercase() in setOf("ru", "russian", "русский")
 
     fun close() {
         searchJob?.cancel()

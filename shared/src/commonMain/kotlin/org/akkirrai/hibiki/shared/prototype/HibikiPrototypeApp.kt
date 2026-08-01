@@ -1346,6 +1346,7 @@ fun HibikiAppShell(
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,
                             onSourceSearchRetry = sourceSearchPresenter::search,
+                            onSourceSearchRetryForSource = sourceSearchPresenter::retry,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(
@@ -1813,6 +1814,7 @@ private fun AppDestinationContent(
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onSourceSearchRetryForSource: (String) -> Unit = {},
     catalogState: AnimeCatalogUiState = AnimeCatalogUiState(),
     catalogListState: LazyListState = LazyListState(),
     onCatalogRetry: () -> Unit = {},
@@ -2277,6 +2279,7 @@ private fun AppDestinationContent(
                     onSearchRetry = onSourceSearchRetry,
                     onAnimeClick = onAnimeClick,
                     searchSections = sourceSearchState.sections,
+                    onSearchRetryForSource = onSourceSearchRetryForSource,
                     searchSourceIconContent = { section, iconModifier ->
                         AppSourceIconImage(
                             url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,
