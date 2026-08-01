@@ -105,7 +105,11 @@ internal fun IosEmbeddedPlaybackHost(
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var completionState by remember(session) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerCompletionState()) }
     var playerSkipState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerSkipState()) }
-    val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
+    val episodeNavigation = resolveEpisodeNavigationAvailability(
+        episodes = context.episodes,
+        currentEpisodeId = context.episodeId,
+        currentEpisodeNumber = context.episodeNumber,
+    )
 
     fun savePlaybackProgress() {
         progressCoordinator.persistCurrentPosition(session.transport)

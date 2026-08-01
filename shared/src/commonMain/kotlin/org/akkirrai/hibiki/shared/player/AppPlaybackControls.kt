@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,6 +20,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.abs
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -59,6 +62,7 @@ fun AppPlaybackControls(
     var seekOverlayVisible by remember { mutableStateOf(false) }
     var seekOverlayDeltaMs by remember { mutableLongStateOf(0L) }
     var seekOverlayJob by remember { mutableStateOf<Job?>(null) }
+    var holdSpeedOverlayVisible by remember { mutableStateOf(false) }
     val gestureScope = rememberCoroutineScope()
 
     fun keepControlsVisible() {
@@ -111,17 +115,70 @@ fun AppPlaybackControls(
     )
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
+            modifier = Modifier.fillMaxSize().pointerInput(transport) {
+                awaitEachGesture {
+                    val firstDown = awaitFirstDown(requireUnconsumed = false)
+                    var lastEventTimeMillis = firstDown.uptimeMillis
+                    var holdSpeedEligible = true
+                    var holdSpeedActive = false
+                    var heldPlaybackRate = 1f
+
+                    while (true) {
+                        val event = if (holdSpeedEligible && !holdSpeedActive) {
+                            val remainingMillis = (
+                                viewConfiguration.longPressTimeoutMillis -
+                                    (lastEventTimeMillis - firstDown.uptimeMillis)
+                                ).coerceAtLeast(1L)
+                            withTimeoutOrNull(remainingMillis) { awaitPointerEvent() }
+                        } else {
+                            awaitPointerEvent()
+                        }
+                        if (event == null) {
+                            holdSpeedActive = true
+                            holdSpeedOverlayVisible = true
+                            heldPlaybackRate = transport.rate().takeIf { it > 0f } ?: 1f
+                            transport.setRate(2f)
+                            continue
+                        }
+                        val change = event.changes.firstOrNull { it.id == firstDown.id } ?: break
+                        lastEventTimeMillis = change.uptimeMillis
+                        if (!change.pressed) break
+
+                        val movedTooFar =
+                            abs(change.position.x - firstDown.position.x) >= viewConfiguration.touchSlop ||
+                                abs(change.position.y - firstDown.position.y) >= viewConfiguration.touchSlop
+                        if (movedTooFar) holdSpeedEligible = false
+                    }
+
+                    if (holdSpeedActive) {
+                        holdSpeedOverlayVisible = false
+                        transport.setRate(heldPlaybackRate)
+                        return@awaitEachGesture
+                    }
+
+                    val secondDown = withTimeoutOrNull(AppPlaybackControlsDoubleTapTimeoutMillis) {
+                        awaitFirstDown(requireUnconsumed = false)
+                    }
+                    if (secondDown == null) {
                         controlsVisible = !controlsVisible
                         if (controlsVisible) interactionTick += 1
-                    },
-                    onDoubleTap = { offset ->
-                        keepControlsVisible()
-                        handleDoubleTapSeek(offset.x, size.width)
-                    },
-                )
+                        return@awaitEachGesture
+                    }
+
+                    var secondTapCompleted = false
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == secondDown.id } ?: break
+                        if (!change.pressed) {
+                            secondTapCompleted = true
+                            break
+                        }
+                    }
+                    if (secondTapCompleted) {
+                        controlsVisible = false
+                        handleDoubleTapSeek(secondDown.position.x, size.width)
+                    }
+                }
             },
         )
         AppPlayerControlsLayer(
@@ -174,8 +231,14 @@ fun AppPlaybackControls(
             label = formatSeekDeltaLabel(seekOverlayDeltaMs),
             modifier = Modifier.align(Alignment.Center),
         )
+        AppPlayerSpeedOverlay(
+            visible = holdSpeedOverlayVisible,
+            label = "2×",
+            modifier = Modifier.align(Alignment.Center),
+        )
     }
 }
 
 private const val AppPlaybackPositionPollMillis = 500L
 private const val AppPlaybackControlsAutoHideMillis = 4_000L
+private const val AppPlaybackControlsDoubleTapTimeoutMillis = 260L
