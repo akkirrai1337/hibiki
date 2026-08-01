@@ -18,6 +18,7 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
@@ -115,7 +116,12 @@ internal class IosAnimeCatalogRepository(
                 },
                 genreOptions = catalog.genreOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
                 capabilities = AnimeCatalogCapabilities(
-                    supportedSorts = catalog.capabilities.supportedSorts.map { it.name.lowercase() }.toSet(),
+                    supportedSorts = buildSet {
+                        addAll(catalog.capabilities.supportedSorts.map { it.name.lowercase() })
+                        if (CatalogFeature.LATEST_RELEASES in catalog.capabilities.features) {
+                            add("updated")
+                        }
+                    },
                     supportedFilters = catalog.capabilities.supportedFilters.mapNotNull { filter ->
                         when (filter.name) {
                             "TYPE" -> AnimeCatalogFilter.TYPE
@@ -140,26 +146,39 @@ internal class IosAnimeCatalogRepository(
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
-        val titles = source.search(
-            source.catalogCapabilities.adapt(
-                AnimeSearchRequest(
-                    query = query.text,
-                    limit = query.pageSize,
-                    offset = query.offset,
-                    sort = when (filters.sortAlias.lowercase()) {
-                        "alphabetical", "title" -> AnimeSearchSort.TITLE
-                        "popular", "rating" -> AnimeSearchSort.RATING
-                        else -> AnimeSearchSort.RELEVANCE
-                    },
-                    typeAliases = listOfNotNull(filters.typeAlias),
-                    statusAliases = listOfNotNull(filters.statusAlias),
-                    includedGenreAliases = filters.includedGenreAliases.sorted(),
-                    excludedGenreAliases = filters.excludedGenreAliases.sorted(),
-                    yearFrom = filters.yearFrom,
-                    yearTo = filters.yearTo,
+        val titles = if (filters.sortAlias.equals("updated", ignoreCase = true)) {
+            (source as? LatestSource)
+                ?.latest((query.offset + query.pageSize).coerceAtLeast(1))
+                ?.asSequence()
+                ?.drop(query.offset)
+                ?.take(query.pageSize)
+                ?.filter { title ->
+                    query.text.isBlank() || title.displayName.contains(query.text, ignoreCase = true)
+                }
+                ?.toList()
+                .orEmpty()
+        } else {
+            source.search(
+                source.catalogCapabilities.adapt(
+                    AnimeSearchRequest(
+                        query = query.text,
+                        limit = query.pageSize,
+                        offset = query.offset,
+                        sort = when (filters.sortAlias.lowercase()) {
+                            "alphabetical", "title" -> AnimeSearchSort.TITLE
+                            "popular", "rating" -> AnimeSearchSort.RATING
+                            else -> AnimeSearchSort.RELEVANCE
+                        },
+                        typeAliases = listOfNotNull(filters.typeAlias),
+                        statusAliases = listOfNotNull(filters.statusAlias),
+                        includedGenreAliases = filters.includedGenreAliases.sorted(),
+                        excludedGenreAliases = filters.excludedGenreAliases.sorted(),
+                        yearFrom = filters.yearFrom,
+                        yearTo = filters.yearTo,
+                    ),
                 ),
-            ),
-        )
+            )
+        }
         val items = titles.map { it.toSharedAnime(sourceId, preferEnglish) }
         return AnimeCatalogPage(
             items = items,
