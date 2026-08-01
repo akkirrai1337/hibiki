@@ -83,13 +83,24 @@ class AppBackHandlerStateTest {
             .reduce(AppNavigationEvent.Navigate(AppRoute.WatchSources("anime-1")))
             .reduce(AppNavigationEvent.Navigate(AppRoute.Episodes(source, animeId = "anime-1")))
             .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
 
         assertTrue(appBackHandlerEnabled(player))
-        val episodes = player.reduce(AppNavigationEvent.Back).reduce(AppNavigationEvent.Back)
+        val playerWithOverlay = player.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+        assertFalse(appBackHandlerEnabled(playerWithOverlay))
+        val episodes = playerWithOverlay.reduce(AppNavigationEvent.Back).reduce(AppNavigationEvent.Back)
         assertTrue(appBackHandlerEnabled(episodes))
         val sources = episodes.reduce(AppNavigationEvent.Back)
         assertTrue(appBackHandlerEnabled(sources))
         assertTrue(appBackHandlerEnabled(sources.reduce(AppNavigationEvent.Back)))
+    }
+
+    @Test
+    fun playerOverlayUsesItsOwnBackHandler() {
+        val player = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source-1", "episode-1")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+
+        assertFalse(appBackHandlerEnabled(player))
+        assertTrue(appBackHandlerEnabled(player.reduce(AppNavigationEvent.DismissOverlay)))
     }
 }

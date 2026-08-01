@@ -25,6 +25,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
+import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowMode
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
@@ -79,6 +80,7 @@ internal fun AndroidSharedAppShell(
     val episodeDownloadRepository = remember(dependencies) {
         AndroidEpisodeDownloadRepository(dependencies.offlineDownloadRepository())
     }
+    val playerWindowController = remember { AndroidPlayerWindowController() }
     val offlineTitleMetadataRepository = remember(dependencies) {
         AndroidOfflineTitleMetadataRepository(dependencies.offlineTitleMetadataRepository())
     }
@@ -196,6 +198,7 @@ internal fun AndroidSharedAppShell(
                     context = playbackContext,
                     navigationState = navigationState,
                     progressRepository = watchStateRepository,
+                    windowController = playerWindowController,
                     onBack = onBack,
                     onEpisodeSelected = onEpisodeSelected,
                     onSettingsAction = onSettingsAction,
@@ -203,7 +206,7 @@ internal fun AndroidSharedAppShell(
                 )
             },
             playerWindowMode = { active ->
-                AndroidPlayerWindowMode(active)
+                AndroidPlayerWindowMode(active, playerWindowController)
             },
         )
     }

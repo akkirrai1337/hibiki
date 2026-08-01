@@ -75,6 +75,19 @@ import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
 
+/** Coordinates Android window restoration with the shared player route lifecycle. */
+internal class AndroidPlayerWindowController {
+    private var restoreAction: (() -> Unit)? = null
+
+    fun restore() {
+        restoreAction?.invoke()
+    }
+
+    internal fun setRestoreAction(action: (() -> Unit)?) {
+        restoreAction = action
+    }
+}
+
 /** Android platform host for the common playback controls and Media3 transport. */
 @Composable
 internal fun AndroidCommonPlaybackHost(
@@ -82,6 +95,7 @@ internal fun AndroidCommonPlaybackHost(
     context: PlaybackContext,
     navigationState: AppNavigationState,
     progressRepository: PlaybackProgressRepository,
+    windowController: AndroidPlayerWindowController,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
@@ -138,7 +152,13 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun closePlayback() {
-        dispatchPlayerClose(::savePlaybackProgress, onBack)
+        dispatchPlayerClose(
+            persistProgress = ::savePlaybackProgress,
+            onBack = {
+                windowController.restore()
+                onBack()
+            },
+        )
     }
 
     fun selectAdjacentEpisode(offset: Int) {
@@ -535,25 +555,29 @@ internal fun AndroidCommonPlaybackHost(
 }
 
 @Composable
-internal fun AndroidPlayerWindowMode(active: Boolean) {
+internal fun AndroidPlayerWindowMode(
+    active: Boolean,
+    controller: AndroidPlayerWindowController,
+) {
     val androidContext = LocalContext.current
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
 
     DisposableEffect(activity, active) {
         if (!active || activity == null) {
+            controller.setRestoreAction(null)
             onDispose {}
         } else {
-            val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+            val windowInsetsController = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
             val previousOrientation = activity.requestedOrientation
-            val previousBehavior = controller.systemBarsBehavior
+            val previousBehavior = windowInsetsController.systemBarsBehavior
             val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 activity.window.attributes.layoutInDisplayCutoutMode
             } else {
                 null
             }
-            controller.systemBarsBehavior =
+            windowInsetsController.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -562,9 +586,12 @@ internal fun AndroidPlayerWindowMode(active: Boolean) {
                         WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                 }
             }
-            onDispose {
-                controller.show(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = previousBehavior
+            var restored = false
+            fun restoreWindowUi() {
+                if (restored) return
+                restored = true
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                windowInsetsController.systemBarsBehavior = previousBehavior
                 activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 activity.requestedOrientation = previousOrientation
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
@@ -572,6 +599,11 @@ internal fun AndroidPlayerWindowMode(active: Boolean) {
                         layoutInDisplayCutoutMode = previousCutoutMode
                     }
                 }
+            }
+            controller.setRestoreAction(::restoreWindowUi)
+            onDispose {
+                restoreWindowUi()
+                controller.setRestoreAction(null)
             }
         }
     }
