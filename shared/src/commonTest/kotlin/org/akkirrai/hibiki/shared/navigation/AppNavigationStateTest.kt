@@ -70,6 +70,19 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun activeOverlayAlwaysPointsToTheTopOfTheCommonOverlayStack() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("first")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Dialog("second")))
+
+        assertEquals(AppOverlay.Dialog("second"), state.activeOverlay)
+        assertEquals(
+            AppOverlay.Sheet("first"),
+            state.reduce(AppNavigationEvent.DismissOverlay).activeOverlay,
+        )
+    }
+
+    @Test
     fun playerSettingsDestinationIsSharedAndBackReturnsToRootBeforeDismiss() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))

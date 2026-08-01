@@ -168,6 +168,7 @@ import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
+import org.akkirrai.hibiki.shared.navigation.activeOverlay
 import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.shared.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
@@ -318,7 +319,7 @@ fun HibikiAppShell(
     val episodesState by episodesPresenter.state.collectAsState()
     var navigationState by remember { mutableStateOf(AppNavigationState()) }
     val libraryFilterOverlay = remember { AppOverlay.Sheet("library-filter") }
-    val isLibraryFilterOverlayOpen = navigationState.overlays.lastOrNull() == libraryFilterOverlay
+    val isLibraryFilterOverlayOpen = navigationState.activeOverlay == libraryFilterOverlay
     val selectedWatchSource = navigationState.selectedWatchSource
     val playerPresenter = remember(watchRepository) { PlayerPresenter(PlayerUiState(isLoading = false)) }
     val playerState by playerPresenter.state.collectAsState()
@@ -335,7 +336,7 @@ fun HibikiAppShell(
     val discordRpcState by (discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
     val discordAuthOverlay = AppOverlay.Dialog("discord-auth")
-    val isDiscordAuthDialogOpen = navigationState.overlays.lastOrNull() == discordAuthOverlay
+    val isDiscordAuthDialogOpen = navigationState.activeOverlay == discordAuthOverlay
 
     fun enrichHomeDescription(anime: Anime) {
         val targetRepository = homeRepository ?: return
@@ -1172,31 +1173,31 @@ fun HibikiAppShell(
                             selectedWatchSource = selectedWatchSource,
                             isPlayerRoute = navigationState.currentRoute is AppRoute.Player,
                             playbackHostAvailable = playbackHost != null,
-                            detailsPosterPreviewOpen = navigationState.overlays.lastOrNull() == AppOverlay.DetailsPosterPreview,
+                            detailsPosterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
                             onDetailsPosterPreviewOpenChange = { open ->
                                 navigationState = if (open) {
                                     navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
-                                } else if (navigationState.overlays.lastOrNull() == AppOverlay.DetailsPosterPreview) {
+                                } else if (navigationState.activeOverlay == AppOverlay.DetailsPosterPreview) {
                                     navigationState.reduce(AppNavigationEvent.DismissOverlay)
                                 } else {
                                     navigationState
                                 }
                             },
-                            detailsTitleSheetOpen = navigationState.overlays.lastOrNull() == AppOverlay.DetailsTitleSheet,
+                            detailsTitleSheetOpen = navigationState.activeOverlay == AppOverlay.DetailsTitleSheet,
                             onDetailsTitleSheetOpenChange = { open ->
                                 navigationState = if (open) {
                                     navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
-                                } else if (navigationState.overlays.lastOrNull() == AppOverlay.DetailsTitleSheet) {
+                                } else if (navigationState.activeOverlay == AppOverlay.DetailsTitleSheet) {
                                     navigationState.reduce(AppNavigationEvent.DismissOverlay)
                                 } else {
                                     navigationState
                                 }
                             },
-                            detailsLibrarySheetOpen = navigationState.overlays.lastOrNull() == AppOverlay.DetailsLibrarySheet,
+                            detailsLibrarySheetOpen = navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet,
                             onDetailsLibrarySheetOpenChange = { open ->
                                 navigationState = if (open) {
                                     navigationState.reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsLibrarySheet))
-                                } else if (navigationState.overlays.lastOrNull() == AppOverlay.DetailsLibrarySheet) {
+                                } else if (navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet) {
                                     navigationState.reduce(AppNavigationEvent.DismissOverlay)
                                 } else {
                                     navigationState

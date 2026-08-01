@@ -15,6 +15,9 @@ val AppNavigationState.currentWatchRoute: AppRoute?
         it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
     }
 
+val AppNavigationState.activeOverlay: AppOverlay?
+    get() = overlays.lastOrNull()
+
 val AppNavigationState.selectedWatchSource: org.akkirrai.hibiki.shared.model.WatchSource?
     get() = backStack.asReversed()
         .mapNotNull { (it as? AppRoute.Episodes)?.source }
