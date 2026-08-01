@@ -34,6 +34,7 @@ import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.shared.text.appText
 
 val AppBottomBarHeight = 64.dp
+val AppBottomBarDividerHeight = 1.dp
 val AppBottomBarContentExtraPadding = 12.dp
 val AppBottomBarContentHeight = 64.dp
 val AppBottomBarHorizontalPadding = 14.dp
@@ -76,7 +77,7 @@ fun AppBottomBar(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(AppBottomBarDividerHeight)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
             )
             BoxWithConstraints(

@@ -1864,8 +1864,7 @@ private fun AppDestinationContent(
     currentRoute: AppRoute? = null,
 ) {
     val homeSourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
-    val topLevelBottomContentPadding =
-        AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue()
+    val topLevelBottomContentPadding = AppBottomBarContentExtraPadding
     val routeDrivenWatch = currentRoute?.let {
         it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
     } ?: (watchAnime != null)
@@ -2462,7 +2461,7 @@ private fun ColumnScope.HomeScreen(
     AppHomeScreen(
         state = homeState,
         listState = listState,
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
+        bottomContentPadding = AppBottomBarContentExtraPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
@@ -2515,7 +2514,7 @@ private fun ColumnScope.SearchScreen(
     AppCatalogScreen(
         state = state,
         listState = listState,
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
+        bottomContentPadding = AppBottomBarContentExtraPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
@@ -2566,7 +2565,7 @@ private fun ColumnScope.LibraryScreen(
             movieLabel = appText(AppTextKey.Type),
             libraryStatusLabel = { category -> categoryLabels.getValue(category) },
         ),
-        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue(),
+        bottomContentPadding = AppBottomBarContentExtraPadding,
         onAnimeClick = onAnimeClick,
         onSearchQueryChange = onSearchQueryChange,
         onClearSearch = onSearchClear,
