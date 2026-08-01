@@ -1398,7 +1398,7 @@ fun HibikiAppShell(
                                 activePlaybackRoute = null
                                 pendingPlaybackContext = null
                                 resetPlayerState()
-                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
+                                navigationState = navigationState.reduceWatchFlowBack().state
                             },
                             onEpisodeSelected = { episode ->
                                 requestPlayback(
