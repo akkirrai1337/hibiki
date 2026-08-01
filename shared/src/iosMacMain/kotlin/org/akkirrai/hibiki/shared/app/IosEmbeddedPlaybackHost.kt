@@ -17,6 +17,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
+import org.akkirrai.hibiki.shared.navigation.activeOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
@@ -78,8 +79,8 @@ internal fun IosEmbeddedPlaybackHost(
             )
         }
     }
-    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
-    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
+    val playlistVisible = navigationState.activeOverlay == AppOverlay.Playlist
+    val settingsVisible = navigationState.activeOverlay == AppOverlay.PlayerSettings
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
