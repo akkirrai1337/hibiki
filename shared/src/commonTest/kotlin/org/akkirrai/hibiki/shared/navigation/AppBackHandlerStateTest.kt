@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.navigation
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.akkirrai.hibiki.shared.model.WatchSource
@@ -15,6 +16,22 @@ class AppBackHandlerStateTest {
                 hasOverlay = false,
             ),
         )
+    }
+
+    @Test
+    fun profileSettingsBackReturnsToRootAndReleasesSystemBackBridge() {
+        val settings = AppNavigationState()
+            .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
+
+        assertTrue(appBackHandlerEnabled(settings))
+
+        val profile = settings.reduce(AppNavigationEvent.Back)
+        assertEquals(
+            AppRoute.TopLevel(AppTopLevelDestination.PROFILE),
+            profile.currentRoute,
+        )
+        assertFalse(appBackHandlerEnabled(profile))
     }
 
     @Test
