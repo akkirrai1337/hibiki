@@ -16,3 +16,23 @@ fun AppNavigationState.navigateToEpisodes(
         ),
     ),
 )
+
+/** Uses Replace for an already visible player and Navigate for a new player route. */
+fun AppNavigationState.navigateToPlayer(
+    sourceId: String,
+    episodeId: String,
+    episodeNumber: Double? = null,
+): AppNavigationState {
+    val route = AppRoute.Player(
+        sourceId = sourceId,
+        episodeId = episodeId,
+        episodeNumber = episodeNumber,
+    )
+    return reduce(
+        if (currentRoute is AppRoute.Player) {
+            AppNavigationEvent.Replace(route)
+        } else {
+            AppNavigationEvent.Navigate(route)
+        },
+    )
+}

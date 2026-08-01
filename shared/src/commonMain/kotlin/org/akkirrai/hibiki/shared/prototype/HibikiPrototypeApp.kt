@@ -218,6 +218,7 @@ import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
+import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -605,12 +606,10 @@ fun HibikiAppShell(
             episodeNumber = episode.number,
         )
         pendingPlaybackContext = requestContext
-        navigationState = navigationState.reduce(
-            if (navigationState.currentRoute is AppRoute.Player) {
-                AppNavigationEvent.Replace(playerRoute)
-            } else {
-                AppNavigationEvent.Navigate(playerRoute)
-            },
+        navigationState = navigationState.navigateToPlayer(
+            sourceId = playerRoute.sourceId,
+            episodeId = playerRoute.episodeId,
+            episodeNumber = playerRoute.episodeNumber,
         )
 
         playbackJob?.cancel()
@@ -692,7 +691,11 @@ fun HibikiAppShell(
                     episodeId = effectiveEpisodeId,
                     episodeNumber = effectiveEpisodeNumber,
                 )
-                navigationState = navigationState.reduce(AppNavigationEvent.Replace(effectivePlayerRoute))
+                navigationState = navigationState.navigateToPlayer(
+                    sourceId = effectivePlayerRoute.sourceId,
+                    episodeId = effectivePlayerRoute.episodeId,
+                    episodeNumber = effectivePlayerRoute.episodeNumber,
+                )
                 val context = requestContext.copy(
                     episodeId = effectiveEpisodeId,
                     episodeNumber = effectiveEpisodeNumber,

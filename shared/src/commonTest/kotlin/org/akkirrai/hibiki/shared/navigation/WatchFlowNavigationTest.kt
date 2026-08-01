@@ -23,4 +23,31 @@ class WatchFlowNavigationTest {
             state.currentTransitionKey,
         )
     }
+
+    @Test
+    fun `episodes to player navigates and player to player replaces`() {
+        val first = AppNavigationState()
+            .navigateToEpisodes(
+                source = WatchSource("source-1", "Dub", 12),
+                animeId = "anime-1",
+            )
+            .navigateToPlayer("source-1", "episode-1", 1.0)
+
+        assertEquals(AppTransitionDirection.Forward, first.transitionDirection)
+        assertEquals(
+            AppRoute.Player("source-1", "episode-1", 1.0),
+            first.currentRoute,
+        )
+
+        val replaced = first.navigateToPlayer("source-1", "episode-2", 2.0)
+
+        assertEquals(
+            listOf(
+                AppRoute.Episodes(WatchSource("source-1", "Dub", 12), animeId = "anime-1"),
+                AppRoute.Player("source-1", "episode-2", 2.0),
+            ),
+            replaced.backStack,
+        )
+        assertEquals(AppTransitionDirection.Forward, replaced.transitionDirection)
+    }
 }
