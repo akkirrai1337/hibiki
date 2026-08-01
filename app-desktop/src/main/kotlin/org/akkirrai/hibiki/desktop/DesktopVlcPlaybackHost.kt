@@ -26,6 +26,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
+import org.akkirrai.hibiki.shared.navigation.activeOverlay
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
@@ -83,7 +84,7 @@ internal fun DesktopVlcPlaybackHost(
     var scaleMode by remember(session) { mutableStateOf(settingsStore.load().videoScaleMode) }
     var videoWidth by remember(session) { mutableIntStateOf(0) }
     var videoHeight by remember(session) { mutableIntStateOf(0) }
-    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
+    val playlistVisible = navigationState.activeOverlay == AppOverlay.Playlist
     var controlsLocked by remember(session) { mutableStateOf(false) }
     var unlockButtonVisible by remember(session) { mutableStateOf(false) }
     var completionHandled by remember(session) { mutableStateOf(false) }
@@ -91,7 +92,7 @@ internal fun DesktopVlcPlaybackHost(
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
-    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
+    val settingsVisible = navigationState.activeOverlay == AppOverlay.PlayerSettings
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
