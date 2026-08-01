@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -110,5 +111,40 @@ class SharedDetailsComposeTest {
         waitForIdle()
 
         assertEquals(false, posterPreviewOpen.value)
+    }
+
+    @Test
+    fun detailsTitleSheetOpensFromCommonHeroTitle() = runComposeUiTest {
+        val titleSheetOpen = mutableStateOf(false)
+
+        setContent {
+            MaterialTheme {
+                AppDetailsScreen(
+                    anime = Anime(
+                        id = "ani-liberty:test-title",
+                        title = "Test anime",
+                        subtitle = "TV | 2026",
+                        episodesLabel = "12 episodes",
+                        status = "Ongoing",
+                        description = "A shared description",
+                    ),
+                    onBackClick = {},
+                    onRelatedAnimeClick = {},
+                    titleSheetOpen = titleSheetOpen.value,
+                    onTitleSheetOpenChange = { titleSheetOpen.value = it },
+                )
+            }
+        }
+
+        onNodeWithText("Test anime")
+            .assertIsDisplayed()
+            .performClick()
+        waitForIdle()
+
+        assertEquals(true, titleSheetOpen.value)
+        onAllNodesWithText("A shared description")
+            .assertCountEquals(2)
+            .get(1)
+            .assertIsDisplayed()
     }
 }
