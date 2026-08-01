@@ -88,6 +88,7 @@ private final class PlayerOrientationViewController: UIViewController {
         guard playerIsActive != active else { return }
         playerIsActive = active
         configurePlayerAudioSession(active: active)
+        applyPlayerBackground(active: active)
         setNeedsUpdateOfSupportedInterfaceOrientations()
         UIViewController.attemptRotationToDeviceOrientation()
 
@@ -98,6 +99,13 @@ private final class PlayerOrientationViewController: UIViewController {
         windowScene.requestGeometryUpdate(preferences) { error in
             print("Unable to update player orientation: \(error.localizedDescription)")
         }
+    }
+
+    private func applyPlayerBackground(active: Bool) {
+        let color: UIColor = active ? .black : .systemBackground
+        view.backgroundColor = color
+        contentViewController.view.backgroundColor = color
+        view.window?.backgroundColor = color
     }
 
     private func configurePlayerAudioSession(active: Bool) {
