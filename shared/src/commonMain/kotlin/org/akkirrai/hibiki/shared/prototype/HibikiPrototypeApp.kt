@@ -2251,11 +2251,11 @@ private fun AppDestinationContent(
                     sources = sources,
                     selectedSourceId = selectedSourceId,
                     bottomContentPadding = 24.dp,
-                    emptyText = appText(AppTextKey.Sources),
+                    emptyText = appText(AppTextKey.SourcesEmptyTitle),
                     languageLabel = { language ->
                         when (language.lowercase()) {
-                            "ru", "русский" -> "RU"
-                            "en", "english" -> "EN"
+                            "ru", "russian" -> appText(AppTextKey.LanguageRussian)
+                            "en", "english" -> appText(AppTextKey.LanguageEnglish)
                             else -> language.uppercase()
                         }
                     },
@@ -2269,9 +2269,9 @@ private fun AppDestinationContent(
                     onSearchQueryChange = onSourceSearchQueryChange,
                     onSearchClear = onSourceSearchClear,
                     searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
-                    searchErrorLabel = appText(AppTextKey.Unknown),
-                    searchRetryLabel = appText(AppTextKey.Search),
-                    searchEmptyTitle = appText(AppTextKey.Sources),
+                    searchErrorLabel = appText(AppTextKey.SourcesSearchFailed),
+                    searchRetryLabel = appText(AppTextKey.SearchRetry),
+                    searchEmptyTitle = appText(AppTextKey.SourcesSearchEmptyTitle),
                     announcementLabel = appText(AppTextKey.Announcement),
                     movieLabel = appText(AppTextKey.Movie),
                     onSearchRetry = onSourceSearchRetry,

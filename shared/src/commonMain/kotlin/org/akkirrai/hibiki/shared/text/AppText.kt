@@ -13,6 +13,9 @@ enum class AppTextKey {
     Search,
     Library,
     Sources,
+    SourcesEmptyTitle,
+    SourcesSearchFailed,
+    SourcesSearchEmptyTitle,
     Profile,
     Settings,
     Featured,
@@ -263,6 +266,9 @@ class DefaultAppTextResolver(
             AppTextKey.Library -> if (russian) "Библиотека" else "Library"
             AppTextKey.Catalog -> if (russian) "Каталог" else "Catalog"
             AppTextKey.Sources -> if (russian) "Источники" else "Sources"
+            AppTextKey.SourcesEmptyTitle -> if (russian) "Источников пока нет" else "No sources yet"
+            AppTextKey.SourcesSearchFailed -> if (russian) "Не удалось выполнить поиск в этом источнике" else "This source could not be searched."
+            AppTextKey.SourcesSearchEmptyTitle -> if (russian) "Результатов по источникам нет" else "No source results"
             AppTextKey.Profile -> if (russian) "Профиль" else "Profile"
             AppTextKey.Settings -> if (russian) "Настройки" else "Settings"
             AppTextKey.Featured -> if (russian) "Рекомендуем" else "Featured"
