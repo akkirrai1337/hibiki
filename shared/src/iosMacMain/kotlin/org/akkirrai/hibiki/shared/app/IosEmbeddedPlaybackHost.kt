@@ -20,9 +20,8 @@ import org.akkirrai.hibiki.shared.navigation.AppOverlay
 import org.akkirrai.hibiki.shared.navigation.isPlayerSettingsOverlayActive
 import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.player.AppPlayerFrame
-import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
-import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -247,15 +246,20 @@ internal fun IosEmbeddedPlaybackHost(
                 .padding(bottom = PlayerUnlockBottomPadding),
             includeSystemBottomInset = true,
         )
-        AppPlayerPlaylistLayer(
-            visible = playlistVisible,
+        AppPlayerPanelOverlays(
+            playlistVisible = playlistVisible,
+            settingsVisible = settingsVisible,
             currentEpisodeId = context.episodeId,
             episodes = context.episodes,
-            headline = { episode ->
+            episodeHeadline = { episode ->
                 appText(AppTextKey.PlayerEpisodeNumber).replace("%s", formatEpisodeNumber(episode.number))
             },
-            onDismissRequest = {
+            onDismissPlaylist = {
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                controlsVisible = true
+            },
+            onDismissSettings = {
+                onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                 controlsVisible = true
             },
             onEpisodeClick = { episodeId ->
@@ -269,18 +273,7 @@ internal fun IosEmbeddedPlaybackHost(
             backHandler = { enabled, callback ->
                 AppSystemBackHandler(enabled = enabled, onBack = callback) {}
             },
-        )
-        if (settingsVisible) {
-            AppPlayerSettingsLayer(
-                onDismissRequest = {
-                onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                controlsVisible = true
-                },
-                nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },
-                backHandler = { enabled, callback ->
-                    AppSystemBackHandler(enabled = enabled, onBack = callback) {}
-                },
-            ) { dismissPanel ->
+            settingsContent = { dismissPanel ->
                 AppPlayerSettingsContent(
                     destination = navigationState.playerSettingsDestination,
                     selectedSpeed = selectedSpeed,
@@ -328,8 +321,8 @@ internal fun IosEmbeddedPlaybackHost(
                         onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
                     },
                 )
-            }
-        }
+            },
+        )
         activeSkipSegment?.let { segment ->
             AppPlayerSkipSegmentLayer(
                 visible = true,
