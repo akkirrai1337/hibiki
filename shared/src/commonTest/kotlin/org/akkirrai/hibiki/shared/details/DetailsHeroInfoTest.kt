@@ -23,10 +23,10 @@ class DetailsHeroInfoTest {
     fun localizesEpisodeLabelWithoutChangingEpisodeNumber() {
         val result = resolveDetailsHeroInfo(
             Anime("1", "Title", "TV | 2024", "12 episodes", "Ongoing"),
-            localizedEpisodeWord = "серий",
+            localizedEpisodeWord = "\u0441\u0435\u0440\u0438\u0439",
         )
 
-        assertEquals("12 серий", result.episodes)
+        assertEquals("12 \u0441\u0435\u0440\u0438\u0439", result.episodes)
         assertEquals(13, result.nextEpisodeNumber)
         assertEquals("Ongoing", result.status)
     }
