@@ -61,6 +61,8 @@ enum class AppTextKey {
     SettingsLanguage,
     SettingsNotifications,
     SettingsNotificationsStatus,
+    SettingsNotificationsGranted,
+    SettingsNotificationsDenied,
     SettingsPlayer,
     SettingsAutoSkip,
     PlayerSettingsRoot,
@@ -314,6 +316,8 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsLanguage -> if (russian) "Язык" else "Language"
             AppTextKey.SettingsNotifications -> if (russian) "Уведомления" else "Notifications"
             AppTextKey.SettingsNotificationsStatus -> if (russian) "Разрешение ещё не запрашивалось" else "Permission has not been requested"
+            AppTextKey.SettingsNotificationsGranted -> if (russian) "Разрешение предоставлено" else "Permission granted"
+            AppTextKey.SettingsNotificationsDenied -> if (russian) "Разрешение отклонено" else "Permission denied"
             AppTextKey.SettingsPlayer -> if (russian) "Плеер" else "Player"
             AppTextKey.SettingsAutoSkip -> if (russian) "Автопропуск опенинга/эндинга" else "Auto-skip opening/ending"
             AppTextKey.SettingsExperimental -> if (russian) "Экспериментальные" else "Experimental"

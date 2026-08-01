@@ -393,12 +393,23 @@ fun HibikiAppShell(
     var useAmoledTheme by remember(settingsStore) { mutableStateOf(initialSettings.useAmoledTheme) }
     var autoSkipSegments by remember(settingsStore) { mutableStateOf(initialSettings.autoSkipSegments) }
     var autoPlayNextEpisode by remember(settingsStore) { mutableStateOf(initialSettings.autoPlayNextEpisode) }
+    var notificationPermissionState by remember(settingsStore) {
+        mutableStateOf(initialSettings.notificationPermissionState)
+    }
     var onboardingCompleted by remember(settingsStore) { mutableStateOf(initialSettings.onboardingCompleted) }
     var onboardingSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
     }
     var currentSelectedSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
+    }
+    LaunchedEffect(onboardingNotificationPermissionState) {
+        if (
+            onboardingNotificationPermissionState != NotificationPermissionState.NOT_ASKED ||
+            notificationPermissionState == NotificationPermissionState.NOT_ASKED
+        ) {
+            notificationPermissionState = onboardingNotificationPermissionState
+        }
     }
     var isEditingProfile by remember { mutableStateOf(false) }
     var editedProfileName by remember(profileState.data.profileName) {
@@ -1280,6 +1291,7 @@ fun HibikiAppShell(
                             onAmoledChange = onAmoledChange,
                             onAutoSkipChange = onAutoSkipChange,
                             onConfigureNotifications = onConfigureNotifications,
+                            notificationPermissionState = notificationPermissionState,
                             notificationsAvailable = notificationsAvailable,
                             onCheckForUpdates = onCheckForUpdates,
                             onExportLogs = onExportLogs,
@@ -1830,6 +1842,7 @@ private fun AppDestinationContent(
     onAmoledChange: (Boolean) -> Unit = {},
     onAutoSkipChange: (Boolean) -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    notificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
     offlineWatchDataRepository: OfflineWatchDataRepository? = null,
     offlineTitleMetadataRepository: OfflineTitleMetadataRepository? = null,
@@ -2299,6 +2312,7 @@ private fun AppDestinationContent(
                     onAmoledChange = onAmoledChange,
                     onAutoSkipChange = onAutoSkipChange,
                     onConfigureNotifications = onConfigureNotifications,
+                    notificationPermissionState = notificationPermissionState,
                     showBackButton = showSettingsBackButton,
                     onBackClick = onSettingsBack,
                     onGitHubClick = onGitHubClick,
@@ -2787,6 +2801,7 @@ private fun SettingsScreen(
     onAmoledChange: (Boolean) -> Unit,
     onAutoSkipChange: (Boolean) -> Unit,
     onConfigureNotifications: () -> Unit,
+    notificationPermissionState: NotificationPermissionState,
     showBackButton: Boolean = false,
     onBackClick: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
@@ -2822,7 +2837,7 @@ private fun SettingsScreen(
             languageRussian = appText(AppTextKey.LanguageRussian),
             languageEnglish = appText(AppTextKey.LanguageEnglish),
             notifications = appText(AppTextKey.SettingsNotifications),
-            notificationsStatus = appText(AppTextKey.SettingsNotificationsStatus),
+            notificationsStatus = appText(notificationPermissionState.textKey()),
             player = appText(AppTextKey.SettingsPlayer),
             autoSkip = appText(AppTextKey.SettingsAutoSkip),
             experimental = appText(AppTextKey.SettingsExperimental),
@@ -2853,6 +2868,12 @@ private fun SettingsScreen(
         onBackClick = onBackClick,
         backContentDescription = appText(AppTextKey.Back),
     )
+}
+
+private fun NotificationPermissionState.textKey(): AppTextKey = when (this) {
+    NotificationPermissionState.NOT_ASKED -> AppTextKey.SettingsNotificationsStatus
+    NotificationPermissionState.GRANTED -> AppTextKey.SettingsNotificationsGranted
+    NotificationPermissionState.DENIED -> AppTextKey.SettingsNotificationsDenied
 }
 
 @Composable
