@@ -98,6 +98,8 @@ internal fun AndroidSharedAppShell(
                 id = source.id.value,
                 name = source.name,
                 language = source.language.toString(),
+                languageTags = source.info.languages.mapTo(linkedSetOf()) { it.tag },
+                iconUrl = source.iconUrl,
                 supportsPlayback = source.supportsPlayback,
                 supportsSearch = true,
             )
