@@ -222,12 +222,6 @@ internal fun DesktopVlcPlaybackHost(
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
         )
-        AppSystemBackHandler(
-            enabled = playlistVisible,
-            onBack = {
-                onOverlayEvent(AppNavigationEvent.DismissOverlay)
-            },
-        ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AppPlayerChrome(
                 surface = {
@@ -393,7 +387,6 @@ internal fun DesktopVlcPlaybackHost(
                 }
             },
             )
-        }
         }
     }
 }
