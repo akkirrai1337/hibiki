@@ -11,6 +11,7 @@ import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
@@ -77,5 +78,56 @@ class SharedPlaybackOverlayHostComposeTest {
         assertEquals(PlaybackSettingsAction.SelectQuality("1080p"), selectedAction)
         assertEquals(AppNavigationEvent.DismissOverlay, overlayEvent)
         assertTrue(navigationState.isPlayerSettingsOverlayActive)
+    }
+
+    @Test
+    fun selectingPlaylistEpisodeDismissesCommonPlaylistOverlay() = runComposeUiTest {
+        val navigationState = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source", "episode")))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+        val playback = PlaybackStream(
+            animeTitle = "Title",
+            sourceTitle = "Source",
+            episodeTitle = "Episode 1",
+            streamUrl = "https://example.test/video.mp4",
+            streamType = PlaybackStreamType.MP4,
+        )
+        val context = PlaybackContext(
+            titleId = "title",
+            sourceId = "source",
+            episodeId = "episode",
+            episodeNumber = 1.0,
+            sourceTitle = "Source",
+        )
+        val episode = WatchEpisode("episode-2", 2.0, "Second episode")
+        var selectedEpisode: WatchEpisode? = null
+        var overlayEvent: AppNavigationEvent? = null
+
+        setContent {
+            AppPlaybackOverlayHost(
+                playback = playback,
+                context = context,
+                navigationState = navigationState,
+                playbackLoading = false,
+                playbackError = null,
+                onRetry = {},
+                onDismiss = {},
+                content = { _, _, _, _, onEpisodeSelected, _, _ ->
+                    Button(onClick = { onEpisodeSelected(episode) }) {
+                        Text("Select episode")
+                    }
+                },
+                onEpisodeSelected = { selectedEpisode = it },
+                onSettingsAction = {},
+                onOverlayEvent = { overlayEvent = it },
+            )
+        }
+
+        onNodeWithText("Select episode")
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(episode, selectedEpisode)
+        assertEquals(AppNavigationEvent.DismissOverlay, overlayEvent)
     }
 }
