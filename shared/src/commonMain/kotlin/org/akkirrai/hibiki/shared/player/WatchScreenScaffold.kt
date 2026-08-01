@@ -23,7 +23,7 @@ import org.akkirrai.hibiki.shared.layout.appTopSystemInsetPadding
 fun watchScreenContentPadding(statusBarHeight: Dp): PaddingValues = PaddingValues(
     start = WatchSourcesListHorizontalPadding,
     end = WatchSourcesListHorizontalPadding,
-    top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonTouchSize,
+    top = statusBarHeight + WatchScreenBackButtonTopPadding + WatchScreenBackButtonIconSize + WatchScreenContentTopClearance,
     bottom = WatchSourcesListBottomPadding,
 )
 
