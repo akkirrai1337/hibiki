@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.home
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -37,6 +38,46 @@ class HomeSearchPresenterTest {
         presenter.close()
     }
 
+    @Test
+    fun failedSearchCanBeRetried() = runTest {
+        val repository = RetryRepository(failSearchAttempts = 1)
+        val presenter = HomeSearchPresenter(repository, backgroundScope)
+        presenter.onQueryChange("nar")
+        advanceSearch()
+
+        assertIs<SearchUiState.Error>(presenter.state.value.result)
+        presenter.retrySearch()
+        runCurrent()
+
+        assertIs<SearchUiState.Content>(presenter.state.value.result)
+        presenter.close()
+    }
+
+    @Test
+    fun failedLoadMoreCanBeRetriedAndUsesNextPage() = runTest {
+        val repository = RetryRepository(failLoadMoreAttempts = 1)
+        val presenter = HomeSearchPresenter(repository, backgroundScope, pageSize = 1)
+        presenter.onQueryChange("nar")
+        advanceSearch()
+        presenter.loadMore()
+        runCurrent()
+
+        val failed = assertIs<SearchUiState.Content>(presenter.state.value.result)
+        assertEquals("load more failed", failed.loadMoreError)
+        presenter.loadMore()
+        runCurrent()
+
+        val loaded = assertIs<SearchUiState.Content>(presenter.state.value.result)
+        assertEquals(listOf("Naruto", "Boruto"), loaded.items.map { it.title })
+        assertEquals(listOf(1, 2, 2), repository.requestedPages)
+        presenter.close()
+    }
+
+    private suspend fun kotlinx.coroutines.test.TestScope.advanceSearch() {
+        testScheduler.advanceTimeBy(450)
+        testScheduler.runCurrent()
+    }
+
     private fun repository() = object : AnimeCatalogRepository {
         private val item = Anime(
             id = "1",
@@ -52,5 +93,34 @@ class HomeSearchPresenterTest {
                 page = 1,
                 canLoadMore = false,
             )
+    }
+
+    private class RetryRepository(
+        private var failSearchAttempts: Int = 0,
+        private var failLoadMoreAttempts: Int = 0,
+    ) : AnimeCatalogRepository {
+        private val items = listOf(
+            Anime("1", "Naruto", "", "", ""),
+            Anime("2", "Boruto", "", "", ""),
+        )
+        val requestedPages = mutableListOf<Int>()
+        override val initialItems: List<Anime> = emptyList()
+
+        override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
+            requestedPages += query.page
+            if (query.page == 1 && failSearchAttempts > 0) {
+                failSearchAttempts--
+                error("search failed")
+            }
+            if (query.page == 2 && failLoadMoreAttempts > 0) {
+                failLoadMoreAttempts--
+                error("load more failed")
+            }
+            return AnimeCatalogPage(
+                items = listOf(items[query.page - 1]),
+                page = query.page,
+                canLoadMore = query.page == 1,
+            )
+        }
     }
 }

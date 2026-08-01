@@ -19,6 +19,7 @@ data class HomeSearchUiState(
     val query: String = "",
     val filters: AnimeSearchFilters = AnimeSearchFilters(),
     val result: SearchUiState = SearchUiState.Idle,
+    val page: Int = 1,
     val filterCatalog: AnimeCatalogFilterCatalog? = null,
     val isFilterCatalogLoading: Boolean = false,
 )
@@ -81,7 +82,6 @@ class HomeSearchPresenter(
         val content = state.value.result as? SearchUiState.Content ?: return
         if (!content.canLoadMore || content.isLoadingMore) return
         val current = state.value
-        val offset = content.items.size
         searchJob?.cancel()
         searchJob = scope.launch {
             _state.update {
@@ -91,7 +91,7 @@ class HomeSearchPresenter(
                 val page = repository.search(
                     AnimeCatalogQuery(
                         text = current.query.trim(),
-                        page = (offset / pageSize.coerceAtLeast(1)) + 1,
+                        page = current.page + 1,
                         pageSize = pageSize,
                         filters = current.filters,
                     ),
@@ -99,6 +99,7 @@ class HomeSearchPresenter(
                 _state.update { state ->
                     val currentContent = state.result as? SearchUiState.Content ?: return@update state
                     state.copy(
+                        page = page.page,
                         result = currentContent.copy(
                             items = (currentContent.items + page.items).distinctBy { it.id },
                             canLoadMore = page.canLoadMore,
@@ -159,6 +160,7 @@ class HomeSearchPresenter(
             )
             _state.update {
                 it.copy(
+                    page = 1,
                     result = if (page.items.isEmpty()) {
                         SearchUiState.Empty
                     } else {
