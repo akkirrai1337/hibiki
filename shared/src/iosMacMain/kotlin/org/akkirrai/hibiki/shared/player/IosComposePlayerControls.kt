@@ -23,6 +23,9 @@ internal fun IosComposePlayerControls(
     onLockClick: () -> Unit = {},
     lockContentDescription: String? = null,
     onControlsVisibilityChanged: (Boolean) -> Unit = {},
+    pictureInPictureEnabled: Boolean = false,
+    onPictureInPictureClick: () -> Unit = {},
+    pictureInPictureContentDescription: String? = null,
 ) {
     AppPlaybackControls(
             transport = session.transport,
@@ -42,6 +45,9 @@ internal fun IosComposePlayerControls(
             settingsContentDescription = settingsContentDescription,
             onLockClick = onLockClick,
             lockContentDescription = lockContentDescription,
+            pictureInPictureEnabled = pictureInPictureEnabled,
+            onPictureInPictureClick = onPictureInPictureClick,
+            pictureInPictureContentDescription = pictureInPictureContentDescription,
             onControlsVisibilityChanged = onControlsVisibilityChanged,
         )
 }
