@@ -933,9 +933,7 @@ fun HibikiAppShell(
                 playerWindowMode(navigationState.currentRoute is AppRoute.Player)
                 AppSystemBackHandler(
                     enabled = appBackHandlerEnabled(
-                        selectedTab = selectedTab,
-                        currentRoute = navigationState.currentRoute,
-                        hasOverlay = navigationState.overlays.isNotEmpty(),
+                        state = navigationState,
                     ),
                     onBack = ::handleSystemBack,
                 ) {

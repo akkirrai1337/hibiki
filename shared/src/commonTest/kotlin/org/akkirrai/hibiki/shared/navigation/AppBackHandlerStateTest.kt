@@ -59,4 +59,17 @@ class AppBackHandlerStateTest {
             ),
         )
     }
+
+    @Test
+    fun navigationStateOverloadUsesTheCommonRouteAndOverlayPolicy() {
+        val details = AppNavigationState()
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
+        val overlay = details.reduce(
+            AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("details")),
+        )
+
+        assertTrue(appBackHandlerEnabled(details))
+        assertTrue(appBackHandlerEnabled(overlay))
+        assertFalse(appBackHandlerEnabled(AppNavigationState()))
+    }
 }
