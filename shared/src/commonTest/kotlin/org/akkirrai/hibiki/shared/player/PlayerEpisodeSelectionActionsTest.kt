@@ -63,4 +63,19 @@ class PlayerEpisodeSelectionActionsTest {
 
         assertEquals(listOf("controls", "progress", "settings"), events)
     }
+
+    @Test
+    fun settingsSelectionDismissesPanelBeforeSharedActionDispatch() {
+        val events = mutableListOf<String>()
+
+        dispatchPlayerSettingsSelection(
+            action = PlaybackSettingsAction.SelectQuality("1080p"),
+            dismissPanel = { events += "dismiss" },
+            setControlsVisible = { events += "controls" },
+            persistProgress = { events += "progress" },
+            onSettingsAction = { events += "settings" },
+        )
+
+        assertEquals(listOf("dismiss", "controls", "progress", "settings"), events)
+    }
 }

@@ -27,7 +27,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerChrome
 import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
-import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistDismiss
@@ -120,15 +120,6 @@ internal fun IosEmbeddedPlaybackHost(
             setControlsVisible = { controlsVisible = true },
             persistProgress = ::savePlaybackProgress,
             onEpisodeSelected = onEpisodeSelected,
-        )
-    }
-
-    fun dispatchSettingsAction(action: PlaybackSettingsAction) {
-        dispatchPlayerSettingsAction(
-            action = action,
-            setControlsVisible = { controlsVisible = true },
-            persistProgress = ::savePlaybackProgress,
-            onSettingsAction = onSettingsAction,
         )
     }
 
@@ -319,16 +310,31 @@ internal fun IosEmbeddedPlaybackHost(
                         settingsStore.save(settingsStore.load().copy(playbackSpeed = speed))
                     },
                     onSelectVoiceover = { source ->
-                        dismissPanel()
-                        dispatchSettingsAction(PlaybackSettingsAction.SelectVoiceover(source))
+                        dispatchPlayerSettingsSelection(
+                            action = PlaybackSettingsAction.SelectVoiceover(source),
+                            dismissPanel = dismissPanel,
+                            setControlsVisible = { controlsVisible = true },
+                            persistProgress = ::savePlaybackProgress,
+                            onSettingsAction = onSettingsAction,
+                        )
                     },
                     onSelectPlayer = { playerName ->
-                        dismissPanel()
-                        dispatchSettingsAction(PlaybackSettingsAction.SelectPlayer(playerName))
+                        dispatchPlayerSettingsSelection(
+                            action = PlaybackSettingsAction.SelectPlayer(playerName),
+                            dismissPanel = dismissPanel,
+                            setControlsVisible = { controlsVisible = true },
+                            persistProgress = ::savePlaybackProgress,
+                            onSettingsAction = onSettingsAction,
+                        )
                     },
                     onSelectQuality = { qualityLabel ->
-                        dismissPanel()
-                        dispatchSettingsAction(PlaybackSettingsAction.SelectQuality(qualityLabel))
+                        dispatchPlayerSettingsSelection(
+                            action = PlaybackSettingsAction.SelectQuality(qualityLabel),
+                            dismissPanel = dismissPanel,
+                            setControlsVisible = { controlsVisible = true },
+                            persistProgress = ::savePlaybackProgress,
+                            onSettingsAction = onSettingsAction,
+                        )
                     },
                     onAutoSkipSegmentsChange = { enabled ->
                         autoSkipSegments = enabled
