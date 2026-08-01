@@ -1,4 +1,5 @@
 import UIKit
+import AVFAudio
 import shared
 
 @main
@@ -86,6 +87,7 @@ private final class PlayerOrientationViewController: UIViewController {
     private func setPlayerActive(_ active: Bool) {
         guard playerIsActive != active else { return }
         playerIsActive = active
+        configurePlayerAudioSession(active: active)
         setNeedsUpdateOfSupportedInterfaceOrientations()
         UIViewController.attemptRotationToDeviceOrientation()
 
@@ -95,6 +97,20 @@ private final class PlayerOrientationViewController: UIViewController {
         )
         windowScene.requestGeometryUpdate(preferences) { error in
             print("Unable to update player orientation: \(error.localizedDescription)")
+        }
+    }
+
+    private func configurePlayerAudioSession(active: Bool) {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            guard active else {
+                try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+                return
+            }
+            try audioSession.setCategory(.playback, mode: .moviePlayback)
+            try audioSession.setActive(true)
+        } catch {
+            print("Unable to configure player audio session: \(error.localizedDescription)")
         }
     }
 
