@@ -34,6 +34,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
+import org.akkirrai.hibiki.shared.player.AppPlayerChrome
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
@@ -211,26 +212,30 @@ internal fun DesktopVlcPlaybackHost(
             },
         ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            SwingPanel(
-                factory = { session.component },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        when (scaleMode) {
-                            VideoScaleMode.FIT -> Unit
-                            VideoScaleMode.CROP -> {
-                                scaleX = scale.scaleX
-                                scaleY = scale.scaleY
-                            }
-                            VideoScaleMode.STRETCH -> {
-                                scaleX = scale.scaleX
-                                scaleY = scale.scaleY
-                            }
-                        }
-                    },
-                update = {},
-            )
-            if (!playerLockState.isLocked) {
+            AppPlayerChrome(
+                surface = {
+                    SwingPanel(
+                        factory = { session.component },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                when (scaleMode) {
+                                    VideoScaleMode.FIT -> Unit
+                                    VideoScaleMode.CROP -> {
+                                        scaleX = scale.scaleX
+                                        scaleY = scale.scaleY
+                                    }
+                                    VideoScaleMode.STRETCH -> {
+                                        scaleX = scale.scaleX
+                                        scaleY = scale.scaleY
+                                    }
+                                }
+                            },
+                        update = {},
+                    )
+                },
+                controlsEnabled = !playerLockState.isLocked,
+            ) {
                 AppPlaybackControls(
                     transport = session.transport,
                     playback = playback,

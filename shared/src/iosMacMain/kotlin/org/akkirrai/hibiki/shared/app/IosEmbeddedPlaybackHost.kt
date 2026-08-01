@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerFrame
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
+import org.akkirrai.hibiki.shared.player.AppPlayerChrome
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
@@ -182,8 +183,12 @@ internal fun IosEmbeddedPlaybackHost(
         }
     }
     AppPlayerFrame {
-        IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
-        if (!playerLockState.isLocked) {
+        AppPlayerChrome(
+            surface = {
+                IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
+            },
+            controlsEnabled = !playerLockState.isLocked,
+        ) {
             IosComposePlayerControls(
                 session = session,
                 playback = playback,

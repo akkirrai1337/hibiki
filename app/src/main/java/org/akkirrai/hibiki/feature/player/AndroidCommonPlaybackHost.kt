@@ -41,6 +41,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
+import org.akkirrai.hibiki.shared.player.AppPlayerChrome
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -333,15 +334,19 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        AndroidPlayerSurface(
+        AppPlayerChrome(
+            surface = {
+                AndroidPlayerSurface(
                 exoPlayer = exoPlayer,
-            isAudioOnly = isAudioOnly,
-            videoScaleMode = videoScaleMode,
-            videoAspectRatio = videoAspectRatio,
-            isClosing = false,
-            onAttached = {},
-        )
-        if (!playerLockState.isLocked) {
+                    isAudioOnly = isAudioOnly,
+                    videoScaleMode = videoScaleMode,
+                    videoAspectRatio = videoAspectRatio,
+                    isClosing = false,
+                    onAttached = {},
+                )
+            },
+            controlsEnabled = !playerLockState.isLocked,
+        ) {
             AppPlaybackControls(
                 transport = transport,
                 playback = playback,
