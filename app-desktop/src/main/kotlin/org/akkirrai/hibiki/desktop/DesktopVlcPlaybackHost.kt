@@ -90,8 +90,7 @@ internal fun DesktopVlcPlaybackHost(
     var completionHandled by remember(session) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(session) { mutableLongStateOf(0L) }
-    var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
-    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
+    var playerSkipState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerSkipState()) }
     val settingsVisible = navigationState.isPlayerSettingsOverlayActive
     var selectedSpeed by remember(session) { mutableFloatStateOf(settingsStore.load().playbackSpeed) }
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
@@ -170,24 +169,24 @@ internal fun DesktopVlcPlaybackHost(
         ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
-        ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
+        ?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }
     LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
         val key = activeSkipSegmentKey ?: run {
-            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            playerSkipState = playerSkipState.resetCountdown()
             return@LaunchedEffect
         }
         val segment = rawActiveSkipSegment
-        if (hiddenSkipSegmentKey == key) return@LaunchedEffect
-        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+        if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
+        playerSkipState = playerSkipState.resetCountdown()
         repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
             delay(1_000L)
-            if (hiddenSkipSegmentKey == key) return@LaunchedEffect
-            skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
+            if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
+            playerSkipState = playerSkipState.tick()
         }
-        if (settingsStore.load().autoSkipSegments && hiddenSkipSegmentKey != key) {
+        if (settingsStore.load().autoSkipSegments && playerSkipState.hiddenSegmentKey != key) {
             session.transport.seekToMs(segment.endMs)
-        } else if (hiddenSkipSegmentKey != key) {
-            hiddenSkipSegmentKey = key
+        } else if (playerSkipState.hiddenSegmentKey != key) {
+            playerSkipState = playerSkipState.hide(key)
         }
     }
     BoxWithConstraints(
@@ -307,13 +306,13 @@ internal fun DesktopVlcPlaybackHost(
                 AppPlayerSkipSegmentLayer(
                     visible = true,
                     controlsVisible = controlsVisible,
-                    countdownSeconds = skipCountdownSeconds,
+                    countdownSeconds = playerSkipState.countdownSeconds,
                     maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
                     autoSkipEnabled = settingsStore.load().autoSkipSegments,
                     skipLabel = appText(AppTextKey.PlayerSkip),
                     watchLabel = appText(AppTextKey.PlayerWatch),
                     onSkipClick = { session.transport.seekToMs(segment.endMs) },
-                    onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
+                    onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
                     modifier = Modifier.align(Alignment.BottomEnd),
                 )
             }

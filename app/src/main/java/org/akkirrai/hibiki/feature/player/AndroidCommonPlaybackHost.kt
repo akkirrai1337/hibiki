@@ -109,8 +109,7 @@ internal fun AndroidCommonPlaybackHost(
     var isPlaying by remember(exoPlayer) { mutableStateOf(true) }
     var lifecycleResumePositionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
     var resumePlaybackAfterLifecyclePause by remember(exoPlayer) { mutableStateOf(false) }
-    var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
-    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
+    var playerSkipState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerSkipState()) }
     val videoScaleMode = preferencesState.videoScaleMode
     val episodeNavigation = resolveEpisodeNavigationAvailability(
         episodes = context.episodes,
@@ -201,25 +200,25 @@ internal fun AndroidCommonPlaybackHost(
         ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
-        ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
+        ?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }
 
     LaunchedEffect(activeSkipSegmentKey, preferencesState.autoSkipSegments) {
         val key = activeSkipSegmentKey ?: run {
-            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            playerSkipState = playerSkipState.resetCountdown()
             return@LaunchedEffect
         }
         val segment = rawActiveSkipSegment
-        if (hiddenSkipSegmentKey == key) return@LaunchedEffect
-        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+        if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
+        playerSkipState = playerSkipState.resetCountdown()
         repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
             delay(1_000L)
-            if (hiddenSkipSegmentKey == key) return@LaunchedEffect
-            skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
+            if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
+            playerSkipState = playerSkipState.tick()
         }
-        if (preferencesState.autoSkipSegments && hiddenSkipSegmentKey != key) {
+        if (preferencesState.autoSkipSegments && playerSkipState.hiddenSegmentKey != key) {
             transport.seekToMs(segment.endMs)
-        } else if (hiddenSkipSegmentKey != key) {
-            hiddenSkipSegmentKey = key
+        } else if (playerSkipState.hiddenSegmentKey != key) {
+            playerSkipState = playerSkipState.hide(key)
         }
     }
 
@@ -439,13 +438,13 @@ internal fun AndroidCommonPlaybackHost(
             AppPlayerSkipSegmentLayer(
                 visible = true,
                 controlsVisible = controlsVisible,
-                countdownSeconds = skipCountdownSeconds,
+                countdownSeconds = playerSkipState.countdownSeconds,
                 maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
                 autoSkipEnabled = preferencesState.autoSkipSegments,
                 skipLabel = appText(AppTextKey.PlayerSkip),
                 watchLabel = appText(AppTextKey.PlayerWatch),
                 onSkipClick = { transport.seekToMs(segment.endMs) },
-                onWatchClick = { activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it } },
+                onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
                 modifier = Modifier.align(Alignment.BottomEnd),
             )
         }
