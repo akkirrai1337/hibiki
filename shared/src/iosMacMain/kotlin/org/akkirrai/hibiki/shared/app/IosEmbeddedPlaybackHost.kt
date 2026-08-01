@@ -24,6 +24,8 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
+import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
@@ -102,14 +104,15 @@ internal fun IosEmbeddedPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
-        controlsVisible = true
-        savePlaybackProgress()
-        resolveAdjacentEpisode(
-            context.episodes,
-            context.episodeId,
-            context.episodeNumber,
-            offset,
-        )?.let(onEpisodeSelected)
+        dispatchAdjacentPlayerEpisodeSelection(
+            episodes = context.episodes,
+            currentEpisodeId = context.episodeId,
+            currentEpisodeNumber = context.episodeNumber,
+            offset = offset,
+            setControlsVisible = { controlsVisible = true },
+            persistProgress = ::savePlaybackProgress,
+            onEpisodeSelected = onEpisodeSelected,
+        )
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
@@ -265,9 +268,12 @@ internal fun IosEmbeddedPlaybackHost(
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                    controlsVisible = true
-                    savePlaybackProgress()
-                    onEpisodeSelected(it)
+                    dispatchPlayerEpisodeSelection(
+                        episode = it,
+                        setControlsVisible = { controlsVisible = true },
+                        persistProgress = ::savePlaybackProgress,
+                        onEpisodeSelected = onEpisodeSelected,
+                    )
                 }
             },
             nowMs = { (NSDate().timeIntervalSince1970 * 1_000.0).toLong() },

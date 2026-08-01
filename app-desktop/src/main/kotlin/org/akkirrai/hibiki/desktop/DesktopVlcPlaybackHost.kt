@@ -35,6 +35,8 @@ import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
+import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
@@ -106,14 +108,15 @@ internal fun DesktopVlcPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
-        controlsVisible = true
-        savePlaybackProgress()
-        resolveAdjacentEpisode(
-            context.episodes,
-            context.episodeId,
-            context.episodeNumber,
-            offset,
-        )?.let(onEpisodeSelected)
+        dispatchAdjacentPlayerEpisodeSelection(
+            episodes = context.episodes,
+            currentEpisodeId = context.episodeId,
+            currentEpisodeNumber = context.episodeNumber,
+            offset = offset,
+            setControlsVisible = { controlsVisible = true },
+            persistProgress = ::savePlaybackProgress,
+            onEpisodeSelected = onEpisodeSelected,
+        )
     }
 
     fun dispatchSettingsAction(action: PlaybackSettingsAction) {
@@ -305,9 +308,12 @@ internal fun DesktopVlcPlaybackHost(
                 },
                 onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                        controlsVisible = true
-                        savePlaybackProgress()
-                        onEpisodeSelected(it)
+                        dispatchPlayerEpisodeSelection(
+                            episode = it,
+                            setControlsVisible = { controlsVisible = true },
+                            persistProgress = ::savePlaybackProgress,
+                            onEpisodeSelected = onEpisodeSelected,
+                        )
                     }
                 },
                 nowMs = { System.currentTimeMillis() },

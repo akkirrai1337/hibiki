@@ -42,6 +42,8 @@ import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
+import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -138,14 +140,15 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
-        controlsVisible = true
-        savePlaybackProgress()
-        resolveAdjacentEpisode(
+        dispatchAdjacentPlayerEpisodeSelection(
             episodes = context.episodes,
             currentEpisodeId = context.episodeId,
             currentEpisodeNumber = context.episodeNumber,
             offset = offset,
-        )?.let(onEpisodeSelected)
+            setControlsVisible = { controlsVisible = true },
+            persistProgress = ::savePlaybackProgress,
+            onEpisodeSelected = onEpisodeSelected,
+        )
     }
 
     LaunchedEffect(exoPlayer, context.episodeId, preferencesState.autoPlayNextEpisode) {
@@ -439,9 +442,12 @@ internal fun AndroidCommonPlaybackHost(
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
-                    controlsVisible = true
-                    savePlaybackProgress()
-                    onEpisodeSelected(it)
+                    dispatchPlayerEpisodeSelection(
+                        episode = it,
+                        setControlsVisible = { controlsVisible = true },
+                        persistProgress = ::savePlaybackProgress,
+                        onEpisodeSelected = onEpisodeSelected,
+                    )
                 }
             },
             nowMs = SystemClock::elapsedRealtime,
