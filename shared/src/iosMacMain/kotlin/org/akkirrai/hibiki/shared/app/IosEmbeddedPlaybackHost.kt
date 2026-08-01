@@ -151,9 +151,12 @@ internal fun IosEmbeddedPlaybackHost(
                 completionHandled = completionState.isHandled,
             )?.let {
                 completionState = completionState.markHandled()
-                controlsVisible = true
-                savePlaybackProgress()
-                onEpisodeSelected(it)
+                dispatchPlayerEpisodeSelection(
+                    episode = it,
+                    setControlsVisible = { controlsVisible = true },
+                    persistProgress = ::savePlaybackProgress,
+                    onEpisodeSelected = onEpisodeSelected,
+                )
             }
             delay(500L)
         }
