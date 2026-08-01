@@ -17,7 +17,7 @@ fun resolveDetailsHeroInfo(
     localizedEpisodeWord: String,
 ): DetailsHeroInfo {
     val parts = anime.subtitle
-        .split(Regex("\\s*[·|]\\s*"))
+        .split(Regex("\\s*[\\u00B7|]\\s*"))
         .map(String::trim)
         .filter(String::isNotEmpty)
 
