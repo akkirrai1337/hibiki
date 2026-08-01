@@ -30,13 +30,12 @@ import org.akkirrai.hibiki.shared.navigation.isPlayerSettingsOverlayActive
 import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
-import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
-import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
+import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
@@ -286,19 +285,24 @@ internal fun DesktopVlcPlaybackHost(
                     .padding(bottom = PlayerUnlockBottomPadding),
                 includeSystemBottomInset = true,
             )
-            AppPlayerPlaylistLayer(
-                visible = playlistVisible,
+            AppPlayerPanelOverlays(
+                playlistVisible = playlistVisible,
+                settingsVisible = settingsVisible,
                 currentEpisodeId = context.episodeId,
                 episodes = context.episodes,
-                headline = { episode ->
+                episodeHeadline = { episode ->
                     appText(AppTextKey.PlayerEpisodeNumber)
                         .replace("%s", org.akkirrai.hibiki.shared.player.formatEpisodeNumber(episode.number))
                 },
-                onDismissRequest = {
+                onDismissPlaylist = {
                     onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     controlsVisible = true
                 },
-            onEpisodeClick = { episodeId ->
+                onDismissSettings = {
+                    onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+                    controlsVisible = true
+                },
+                onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
                         controlsVisible = true
                         savePlaybackProgress()
@@ -309,32 +313,7 @@ internal fun DesktopVlcPlaybackHost(
                 backHandler = { enabled, callback ->
                     AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                 },
-            )
-            activeSkipSegment?.let { segment ->
-                AppPlayerSkipSegmentLayer(
-                    visible = true,
-                    controlsVisible = controlsVisible,
-                    countdownSeconds = playerSkipState.countdownSeconds,
-                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
-                    autoSkipEnabled = settingsStore.load().autoSkipSegments,
-                    skipLabel = appText(AppTextKey.PlayerSkip),
-                    watchLabel = appText(AppTextKey.PlayerWatch),
-                    onSkipClick = { session.transport.seekToMs(segment.endMs) },
-                    onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-                    modifier = Modifier.align(Alignment.BottomEnd),
-                )
-            }
-            if (settingsVisible) {
-                AppPlayerSettingsLayer(
-                    onDismissRequest = {
-                        onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                        controlsVisible = true
-                    },
-                    nowMs = { System.currentTimeMillis() },
-                    backHandler = { enabled, callback ->
-                        AppSystemBackHandler(enabled = enabled, onBack = callback) {}
-                    },
-                ) { dismissPanel ->
+                settingsContent = { dismissPanel ->
                     AppPlayerSettingsContent(
                         destination = navigationState.playerSettingsDestination,
                         selectedSpeed = selectedSpeed,
@@ -382,7 +361,21 @@ internal fun DesktopVlcPlaybackHost(
                             onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
                         },
                     )
-                }
+                },
+            )
+            activeSkipSegment?.let { segment ->
+                AppPlayerSkipSegmentLayer(
+                    visible = true,
+                    controlsVisible = controlsVisible,
+                    countdownSeconds = playerSkipState.countdownSeconds,
+                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                    autoSkipEnabled = settingsStore.load().autoSkipSegments,
+                    skipLabel = appText(AppTextKey.PlayerSkip),
+                    watchLabel = appText(AppTextKey.PlayerWatch),
+                    onSkipClick = { session.transport.seekToMs(segment.endMs) },
+                    onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
             }
         }
         }
