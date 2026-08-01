@@ -361,15 +361,19 @@ fun HibikiAppShell(
 
     fun openDiscordAuthDialog() {
         if (!isDiscordAuthDialogOpen) {
-            navigationState = navigationState.reduce(
-                AppNavigationEvent.PresentOverlay(discordAuthOverlay),
+            navigationState = navigationState.reduceOverlayVisibilityChange(
+                overlay = discordAuthOverlay,
+                visible = true,
             )
         }
     }
 
     fun closeDiscordAuthDialog() {
         if (isDiscordAuthDialogOpen) {
-            navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
+            navigationState = navigationState.reduceOverlayVisibilityChange(
+                overlay = discordAuthOverlay,
+                visible = false,
+            )
         }
     }
     val selectedTab = navigationState.selectedAppDestination()
