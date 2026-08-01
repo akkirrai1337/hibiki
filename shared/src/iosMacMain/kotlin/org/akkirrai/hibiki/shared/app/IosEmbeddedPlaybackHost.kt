@@ -32,7 +32,8 @@ import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistDismiss
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDismiss
-import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
+import org.akkirrai.hibiki.shared.player.dispatchPlayerLock
+import org.akkirrai.hibiki.shared.player.dispatchPlayerUnlock
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsRoot
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -232,9 +233,13 @@ internal fun IosEmbeddedPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onLockClick = {
-                    playerLockState = playerLockState.lock()
-                    controlsVisible = false
-                    dispatchPlayerOverlayDismissalsForLock(playlistVisible, settingsVisible, onOverlayEvent)
+                    dispatchPlayerLock(
+                        setLocked = { playerLockState = playerLockState.lock() },
+                        setControlsHidden = { controlsVisible = false },
+                        playlistVisible = playlistVisible,
+                        settingsVisible = settingsVisible,
+                        onOverlayEvent = onOverlayEvent,
+                    )
                 },
                 lockContentDescription = appText(AppTextKey.PlayerLock),
                 onControlsVisibilityChanged = { controlsVisible = it },
@@ -250,8 +255,10 @@ internal fun IosEmbeddedPlaybackHost(
             lockState = playerLockState,
             unlockLabel = appText(AppTextKey.PlayerUnlock),
             onUnlock = {
-                playerLockState = playerLockState.unlock()
-                controlsVisible = true
+                dispatchPlayerUnlock(
+                    setUnlocked = { playerLockState = playerLockState.unlock() },
+                    setControlsVisible = { controlsVisible = true },
+                )
             },
             unlockModifier = Modifier
                 .align(Alignment.BottomCenter)

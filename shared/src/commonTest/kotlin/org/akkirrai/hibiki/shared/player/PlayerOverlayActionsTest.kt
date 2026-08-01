@@ -40,6 +40,31 @@ class PlayerOverlayActionsTest {
     }
 
     @Test
+    fun lockAndUnlockCallbacksPreservePlayerOrder() {
+        val events = mutableListOf<String>()
+
+        dispatchPlayerLock(
+            setLocked = { events += "locked" },
+            setControlsHidden = { events += "hidden" },
+            playlistVisible = true,
+            settingsVisible = true,
+            onOverlayEvent = { event ->
+                events += when (event) {
+                    AppNavigationEvent.DismissOverlay -> "playlist"
+                    AppNavigationEvent.ClosePlayerSettings -> "settings"
+                    else -> error("Unexpected event: $event")
+                }
+            },
+        )
+        dispatchPlayerUnlock(
+            setUnlocked = { events += "unlocked" },
+            setControlsVisible = { events += "visible" },
+        )
+
+        assertEquals(listOf("locked", "hidden", "playlist", "settings", "unlocked", "visible"), events)
+    }
+
+    @Test
     fun settingsDestinationMakesControlsVisibleBeforeEvent() {
         val events = mutableListOf<String>()
         val navigation = mutableListOf<AppNavigationEvent>()

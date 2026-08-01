@@ -28,6 +28,30 @@ fun dispatchPlayerSettingsDismiss(
     setControlsVisible()
 }
 
+fun dispatchPlayerLock(
+    setLocked: () -> Unit,
+    setControlsHidden: () -> Unit,
+    playlistVisible: Boolean,
+    settingsVisible: Boolean,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    setLocked()
+    setControlsHidden()
+    dispatchPlayerOverlayDismissalsForLock(
+        playlistVisible = playlistVisible,
+        settingsVisible = settingsVisible,
+        onOverlayEvent = onOverlayEvent,
+    )
+}
+
+fun dispatchPlayerUnlock(
+    setUnlocked: () -> Unit,
+    setControlsVisible: () -> Unit,
+) {
+    setUnlocked()
+    setControlsVisible()
+}
+
 fun dispatchPlayerOverlayDismissalsForLock(
     playlistVisible: Boolean,
     settingsVisible: Boolean,
