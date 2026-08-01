@@ -16,15 +16,17 @@ fun AppPlayerControlsOverlay(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier,
-        enter = fadeIn(animationSpec = tween(160)),
-        exit = fadeOut(animationSpec = tween(180)),
-    ) {
-        Box(
+    Box(modifier = modifier) {
+        AnimatedVisibility(
+            visible = visible,
             modifier = Modifier.fillMaxSize(),
-            content = content,
-        )
+            enter = fadeIn(animationSpec = tween(160)),
+            exit = fadeOut(animationSpec = tween(180)),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                content = content,
+            )
+        }
     }
 }
