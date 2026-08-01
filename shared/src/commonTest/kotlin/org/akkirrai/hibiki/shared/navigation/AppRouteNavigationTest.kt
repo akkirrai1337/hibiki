@@ -31,6 +31,11 @@ class AppRouteNavigationTest {
             AppRoute.Player("source-1", "episode-1", 1.0).transitionKey(),
             state.currentTransitionKey,
         )
+        assertEquals(AppTransitionDirection.Forward, state.transitionDirection)
+        assertEquals(
+            AppTransitionDirection.Pop,
+            state.reduce(AppNavigationEvent.Back).transitionDirection,
+        )
     }
 
     @Test

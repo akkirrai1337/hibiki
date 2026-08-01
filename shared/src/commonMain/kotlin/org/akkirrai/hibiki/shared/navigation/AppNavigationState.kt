@@ -5,6 +5,7 @@ data class AppNavigationState(
     val backStack: List<AppRoute> = emptyList(),
     val overlays: List<AppOverlay> = emptyList(),
     val playerSettingsDestination: AppPlayerSettingsDestination = AppPlayerSettingsDestination.Root,
+    val transitionDirection: AppTransitionDirection = AppTransitionDirection.Forward,
 )
 
 val AppNavigationState.currentRoute: AppRoute
@@ -45,14 +46,21 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
         backStack = emptyList(),
         overlays = emptyList(),
         playerSettingsDestination = AppPlayerSettingsDestination.Root,
+        transitionDirection = AppTransitionDirection.Forward,
     )
     is AppNavigationEvent.Navigate -> when (val route = event.route) {
         is AppRoute.TopLevel -> reduce(AppNavigationEvent.SelectTopLevel(route.destination))
-        else -> copy(backStack = backStack + route)
+        else -> copy(
+            backStack = backStack + route,
+            transitionDirection = AppTransitionDirection.Forward,
+        )
     }
     is AppNavigationEvent.Replace -> when (val route = event.route) {
         is AppRoute.TopLevel -> reduce(AppNavigationEvent.SelectTopLevel(route.destination))
-        else -> copy(backStack = backStack.dropLast(1) + route)
+        else -> copy(
+            backStack = backStack.dropLast(1) + route,
+            transitionDirection = AppTransitionDirection.Forward,
+        )
     }
     is AppNavigationEvent.PresentOverlay -> {
         val playbackOverlay = event.overlay is AppOverlay.Playlist ||
@@ -73,6 +81,7 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
     }
     AppNavigationEvent.DismissOverlay -> copy(
         overlays = overlays.dropLast(1),
+        transitionDirection = AppTransitionDirection.Pop,
         playerSettingsDestination = if (overlays.lastOrNull() is AppOverlay.PlayerSettings) {
             AppPlayerSettingsDestination.Root
         } else {
@@ -99,9 +108,13 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
         overlays.lastOrNull() is AppOverlay.PlayerSettings &&
             playerSettingsDestination != AppPlayerSettingsDestination.Root -> copy(
                 playerSettingsDestination = AppPlayerSettingsDestination.Root,
+                transitionDirection = AppTransitionDirection.Pop,
             )
         overlays.isNotEmpty() -> reduce(AppNavigationEvent.DismissOverlay)
-        backStack.isNotEmpty() -> copy(backStack = backStack.dropLast(1))
+        backStack.isNotEmpty() -> copy(
+            backStack = backStack.dropLast(1),
+            transitionDirection = AppTransitionDirection.Pop,
+        )
         else -> this
     }
     is AppNavigationEvent.OpenDetails -> reduce(
