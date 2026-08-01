@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -33,8 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
-import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
-import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.shared.text.appText
 
 val AppBottomBarHeight = 64.dp
@@ -63,17 +59,7 @@ fun AppBottomBar(
     includeNavigationBarPadding: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val navigationBarBottomPadding = if (!includeNavigationBarPadding) {
-        0.dp
-    } else if (layoutEnvironment.isProvided) {
-        when (layoutEnvironment.navigationBarMode) {
-            AppNavigationBarMode.Inset -> layoutEnvironment.bottomSystemInset
-            AppNavigationBarMode.Overlay -> 0.dp
-        }
-    } else {
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    }
+    val navigationBarBottomPadding = appBottomSystemInsetValue(includeNavigationBarPadding)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
