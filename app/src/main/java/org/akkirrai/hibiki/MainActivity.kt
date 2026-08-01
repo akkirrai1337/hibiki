@@ -157,18 +157,17 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        if (preferences.onboardingCompleted) {
-                            if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
-                                AndroidSharedAppShell(
-                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                    onConfigureNotifications = ::configureNotifications,
-                                )
-                            } else {
-                                HibikiApp(
-                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                    onConfigureNotifications = ::configureNotifications,
-                                )
-                            }
+                        if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
+                            AndroidSharedAppShell(
+                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                onConfigureNotifications = ::configureNotifications,
+                                enableOnboarding = true,
+                            )
+                        } else if (preferences.onboardingCompleted) {
+                            HibikiApp(
+                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                onConfigureNotifications = ::configureNotifications,
+                            )
                         } else {
                             SharedAndroidOnboardingScreen(
                                 initialSource = preferences.animeSource

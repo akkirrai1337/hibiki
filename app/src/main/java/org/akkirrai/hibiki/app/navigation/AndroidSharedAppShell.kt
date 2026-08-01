@@ -46,6 +46,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 internal fun AndroidSharedAppShell(
     onCheckForUpdates: () -> Unit,
     onConfigureNotifications: () -> Unit,
+    enableOnboarding: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -129,6 +130,8 @@ internal fun AndroidSharedAppShell(
             },
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
+            enableOnboarding = enableOnboarding,
+            onRequestOnboardingNotificationPermission = onConfigureNotifications,
             onConfigureNotifications = onConfigureNotifications,
             notificationsAvailable = true,
             onCheckForUpdates = onCheckForUpdates,
