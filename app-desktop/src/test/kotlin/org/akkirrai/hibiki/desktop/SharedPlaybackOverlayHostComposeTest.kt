@@ -130,4 +130,40 @@ class SharedPlaybackOverlayHostComposeTest {
         assertEquals(episode, selectedEpisode)
         assertEquals(AppNavigationEvent.DismissOverlay, overlayEvent)
     }
+
+    @Test
+    fun playbackErrorOverlayDeliversRetryCallback() = runComposeUiTest {
+        val context = PlaybackContext(
+            titleId = "title",
+            sourceId = "source",
+            episodeId = "episode",
+            episodeNumber = 1.0,
+            sourceTitle = "Source",
+        )
+        var retryCount = 0
+
+        setContent {
+            AppPlaybackOverlayHost(
+                playback = null,
+                context = context,
+                navigationState = AppNavigationState(),
+                playbackLoading = false,
+                playbackError = "Stream failed",
+                onRetry = { retryCount++ },
+                onDismiss = {},
+                content = { _, _, _, _, _, _, _ -> },
+                onEpisodeSelected = {},
+                onSettingsAction = {},
+                onOverlayEvent = {},
+            )
+        }
+
+        onNodeWithText("Stream failed")
+            .assertIsDisplayed()
+        onNodeWithText("Retry")
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(1, retryCount)
+    }
 }
