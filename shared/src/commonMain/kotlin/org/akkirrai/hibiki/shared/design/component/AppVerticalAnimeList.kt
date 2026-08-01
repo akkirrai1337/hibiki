@@ -32,6 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
@@ -303,7 +305,10 @@ fun AppPosterAnimeCard(
             Text(
                 text = anime.title.preventTrailingOrphanWrap(),
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    lineBreak = LineBreak.Paragraph,
+                    hyphens = Hyphens.None,
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 maxLines = 2,
