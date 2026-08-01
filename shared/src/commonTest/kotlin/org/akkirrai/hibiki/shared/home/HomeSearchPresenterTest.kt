@@ -9,6 +9,9 @@ import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPage
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.model.SearchUiState
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -73,6 +76,26 @@ class HomeSearchPresenterTest {
         presenter.close()
     }
 
+    @Test
+    fun sourceResetReloadsFilterCatalogAndPreservesQuery() = runTest {
+        val repository = RetryRepository()
+        val presenter = HomeSearchPresenter(repository, backgroundScope)
+        presenter.onQueryChange("nar")
+        advanceSearch()
+        presenter.applyFilters(AnimeSearchFilters(sortAlias = "popular"))
+        runCurrent()
+
+        presenter.resetForSource()
+        runCurrent()
+
+        assertEquals("nar", presenter.state.value.query)
+        assertEquals(AnimeSearchFilters(), presenter.state.value.filters)
+        assertEquals(SearchUiState.Idle, presenter.state.value.result)
+        assertEquals("source", presenter.state.value.filterCatalog?.sortOptions?.single()?.id)
+        assertEquals(1, repository.filterCatalogCalls)
+        presenter.close()
+    }
+
     private suspend fun kotlinx.coroutines.test.TestScope.advanceSearch() {
         testScheduler.advanceTimeBy(450)
         testScheduler.runCurrent()
@@ -104,7 +127,15 @@ class HomeSearchPresenterTest {
             Anime("2", "Boruto", "", "", ""),
         )
         val requestedPages = mutableListOf<Int>()
+        var filterCatalogCalls = 0
         override val initialItems: List<Anime> = emptyList()
+
+        override suspend fun filterCatalog(): AnimeCatalogFilterCatalog {
+            filterCatalogCalls++
+            return AnimeCatalogFilterCatalog(
+                sortOptions = listOf(AnimeCatalogFilterOption("source", "Source")),
+            )
+        }
 
         override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
             requestedPages += query.page
