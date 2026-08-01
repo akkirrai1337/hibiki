@@ -103,7 +103,7 @@ internal fun AndroidCommonPlaybackHost(
     val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
     var playerLockState by remember { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerLockState()) }
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
-    var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
+    var completionState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerCompletionState()) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
     var isPlaying by remember(exoPlayer) { mutableStateOf(true) }
@@ -160,10 +160,10 @@ internal fun AndroidCommonPlaybackHost(
                     positionMs = transport.positionMs(),
                     durationMs = transport.durationMs(),
                     autoPlayEnabled = preferencesState.autoPlayNextEpisode,
-                    completionHandled = completionHandled,
+                    completionHandled = completionState.isHandled,
                 ) != null
             ) {
-                completionHandled = true
+                completionState = completionState.markHandled()
                 selectAdjacentEpisode(1)
             }
             delay(500L)

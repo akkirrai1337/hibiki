@@ -87,7 +87,7 @@ internal fun DesktopVlcPlaybackHost(
     var videoHeight by remember(session) { mutableIntStateOf(0) }
     val playlistVisible = navigationState.isPlaylistOverlayActive
     var playerLockState by remember(session) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerLockState()) }
-    var completionHandled by remember(session) { mutableStateOf(false) }
+    var completionState by remember(session) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerCompletionState()) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var playerSkipState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerSkipState()) }
@@ -149,9 +149,9 @@ internal fun DesktopVlcPlaybackHost(
                 positionMs = session.transport.positionMs(),
                 durationMs = session.transport.durationMs(),
                 autoPlayEnabled = settingsStore.load().autoPlayNextEpisode,
-                completionHandled = completionHandled,
+                completionHandled = completionState.isHandled,
             )?.let {
-                completionHandled = true
+                completionState = completionState.markHandled()
                 controlsVisible = true
                 savePlaybackProgress()
                 onEpisodeSelected(it)
