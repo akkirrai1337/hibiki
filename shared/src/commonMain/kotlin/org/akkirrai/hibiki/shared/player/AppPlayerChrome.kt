@@ -11,11 +11,13 @@ fun AppPlayerChrome(
     surface: @Composable () -> Unit,
     controlsEnabled: Boolean,
     controls: @Composable () -> Unit,
+    overlayContent: @Composable () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         surface()
         if (controlsEnabled) {
             controls()
         }
+        overlayContent()
     }
 }

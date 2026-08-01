@@ -346,7 +346,7 @@ internal fun AndroidCommonPlaybackHost(
                 )
             },
             controlsEnabled = !playerLockState.isLocked,
-        ) {
+            controls = {
             AppPlaybackControls(
                 transport = transport,
                 playback = playback,
@@ -406,8 +406,9 @@ internal fun AndroidCommonPlaybackHost(
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
             )
-        }
-        AppPlayerOverlayStack(
+            },
+            overlayContent = {
+                AppPlayerOverlayStack(
             lockState = playerLockState,
             unlockLabel = appText(AppTextKey.PlayerUnlock),
             onUnlock = {
@@ -498,8 +499,10 @@ internal fun AndroidCommonPlaybackHost(
             onSkipClick = { activeSkipSegment?.let { transport.seekToMs(it.endMs) } },
             onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
                 skipModifier = Modifier.align(Alignment.BottomEnd),
-            )
-        }
+                )
+            }
+        },
+        )
     }
 }
 
