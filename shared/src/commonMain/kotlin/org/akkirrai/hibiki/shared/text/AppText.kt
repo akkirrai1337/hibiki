@@ -40,6 +40,7 @@ enum class AppTextKey {
     HomeSearchEmptyTitle,
     HomeSearchEmptyBody,
     HomeSearchLoadMore,
+    HomeErrorTitle,
     HomeRecentlyWatched,
     HomeRecentlyAdded,
     HomeContinueTitle,
@@ -289,6 +290,7 @@ class DefaultAppTextResolver(
             AppTextKey.HomeSearchEmptyTitle -> if (russian) "Ничего не найдено" else "Nothing found"
             AppTextKey.HomeSearchEmptyBody -> if (russian) "Попробуйте изменить запрос" else "Try changing your search"
             AppTextKey.HomeSearchLoadMore -> if (russian) "Загрузить ещё" else "Load more"
+            AppTextKey.HomeErrorTitle -> if (russian) "Не удалось загрузить главную" else "Could not load Home"
             AppTextKey.HomeRecentlyWatched -> if (russian) "Недавно просмотренные" else "Recently watched"
             AppTextKey.HomeRecentlyAdded -> if (russian) "Недавно добавленные" else "Recently added"
             AppTextKey.HomeContinueTitle -> if (russian) "Продолжить просмотр" else "Continue watching"

@@ -119,6 +119,10 @@ import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.HomePresenter
 import org.akkirrai.hibiki.shared.home.HomeSearchPresenter
 import org.akkirrai.hibiki.shared.home.HomeSearchUiState
+import org.akkirrai.hibiki.shared.home.AppHomeLoadingState
+import org.akkirrai.hibiki.shared.home.HomeErrorState
+import org.akkirrai.hibiki.shared.home.hasFeedContent
+import org.akkirrai.hibiki.shared.home.isSearchActive
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
 import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
@@ -2441,6 +2445,22 @@ private fun ColumnScope.HomeScreen(
         isSearchFilterCatalogLoading = homeSearchState.isFilterCatalogLoading,
         searchFilters = homeSearchState.filters,
     )
+    if (homeState.isLoading && !homeState.hasFeedContent && !homeState.isSearchActive) {
+        AppHomeLoadingState(modifier = Modifier.fillMaxSize())
+        return
+    }
+    homeState.errorMessage?.let { errorMessage ->
+        if (!homeState.hasFeedContent && !homeState.isSearchActive) {
+            HomeErrorState(
+                title = appText(AppTextKey.HomeErrorTitle),
+                message = errorMessage,
+                retryLabel = appText(AppTextKey.SearchRetry),
+                onRetry = onHomeRefresh,
+                modifier = Modifier.fillMaxSize(),
+            )
+            return
+        }
+    }
     AppHomeScreen(
         state = homeState,
         listState = listState,
