@@ -2237,7 +2237,7 @@ private fun AppDestinationContent(
                 AppDestination.SOURCES -> AppLocalSourcesScreen(
                     sources = sources,
                     selectedSourceId = selectedSourceId,
-                    bottomContentPadding = 24.dp,
+                    bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
                     emptyText = appText(AppTextKey.SourcesEmptyTitle),
                     languageLabel = { language ->
                         when (language.lowercase()) {
