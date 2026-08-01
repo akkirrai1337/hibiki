@@ -220,6 +220,7 @@ import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
+import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1174,15 +1175,18 @@ fun HibikiAppShell(
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
-                                navigationState = navigationState.reduce(AppNavigationEvent.Back)
-                                if (navigationState.currentRoute is AppRoute.Episodes ||
-                                    navigationState.currentRoute is AppRoute.WatchSources
-                                ) {
-                                    episodesPresenter.setState(EpisodesScreenState())
-                                    resetPlayerState()
-                                    return@AppDestinationContent
+                                val backTransition = navigationState.reduceWatchFlowBack()
+                                navigationState = backTransition.state
+                                when (backTransition.effect) {
+                                    WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                                        episodesPresenter.setState(EpisodesScreenState())
+                                        resetPlayerState()
+                                    }
+                                    WatchFlowBackEffect.ResetPlayer,
+                                    WatchFlowBackEffect.CloseDetails,
+                                    WatchFlowBackEffect.None,
+                                    -> resetPlayerState()
                                 }
-                                resetPlayerState()
                             },
                             watchState = watchState,
                             episodesState = episodesState,

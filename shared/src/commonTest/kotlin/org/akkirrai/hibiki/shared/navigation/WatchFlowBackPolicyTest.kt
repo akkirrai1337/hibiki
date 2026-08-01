@@ -5,6 +5,18 @@ import kotlin.test.assertEquals
 
 class WatchFlowBackPolicyTest {
     @Test
+    fun `watch flow back returns reduced state and matching effect`() {
+        val state = AppNavigationState()
+            .navigateToWatchSources("anime")
+            .navigateToEpisodes(org.akkirrai.hibiki.shared.model.WatchSource("source", "Dub", 12), animeId = "anime")
+
+        val transition = state.reduceWatchFlowBack()
+
+        assertEquals(AppRoute.WatchSources("anime"), transition.state.currentRoute)
+        assertEquals(WatchFlowBackEffect.ResetEpisodesAndPlayer, transition.effect)
+    }
+
+    @Test
     fun playerBackToEpisodesResetsEpisodesAndPlayerState() {
         assertEquals(
             WatchFlowBackEffect.ResetEpisodesAndPlayer,

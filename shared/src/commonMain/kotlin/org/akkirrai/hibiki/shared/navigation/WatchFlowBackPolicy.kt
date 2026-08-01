@@ -8,6 +8,20 @@ enum class WatchFlowBackEffect {
     CloseDetails,
 }
 
+data class WatchFlowBackTransition(
+    val state: AppNavigationState,
+    val effect: WatchFlowBackEffect,
+)
+
+fun AppNavigationState.reduceWatchFlowBack(): WatchFlowBackTransition {
+    val routeBeforeBack = currentRoute
+    val stateAfterBack = reduce(AppNavigationEvent.Back)
+    return WatchFlowBackTransition(
+        state = stateAfterBack,
+        effect = resolveWatchFlowBackEffect(routeBeforeBack, stateAfterBack.currentRoute),
+    )
+}
+
 fun resolveWatchFlowBackEffect(
     routeBeforeBack: AppRoute,
     routeAfterBack: AppRoute,
