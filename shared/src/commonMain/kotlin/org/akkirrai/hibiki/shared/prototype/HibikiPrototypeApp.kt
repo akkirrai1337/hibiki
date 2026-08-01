@@ -1063,6 +1063,7 @@ fun HibikiAppShell(
                         }
                         AppDestinationContent(
                             selectedTab = animatedTab,
+                            currentRoute = navigationState.currentRoute,
                             episodeDownloadRepository = episodeDownloadRepository,
                             offlineWatchDataRepository = offlineWatchDataRepository,
                             offlineTitleMetadataRepository = offlineTitleMetadataRepository,
@@ -1869,7 +1870,12 @@ private fun AppDestinationContent(
     onDetailsTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
     detailsLibrarySheetOpen: Boolean? = null,
     onDetailsLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
+    currentRoute: AppRoute? = null,
 ) {
+    val routeDrivenWatch = currentRoute?.let {
+        it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
+    } ?: (watchAnime != null)
+    val routeDrivenDetails = currentRoute?.let { it is AppRoute.Details } ?: (selectedAnime != null)
     val navigationLockKey = watchNavigationLockKey(
         animeId = watchAnime?.id,
         sourceId = selectedWatchSource?.sourceId,
@@ -1896,7 +1902,7 @@ private fun AppDestinationContent(
             delay(700L)
         }
     }
-    if (watchAnime != null) {
+    if (routeDrivenWatch && watchAnime != null) {
         WatchScreenScaffold(
             onBackClick = {
                 if (!navigationLocked) {
@@ -2063,7 +2069,7 @@ private fun AppDestinationContent(
         }
         return
     }
-    if (selectedAnime != null) {
+    if (routeDrivenDetails && selectedAnime != null) {
         val canWatch = resolveDetailsPlaybackAvailability(
             watchRepositoryAvailable = watchRepositoryAvailable,
             sources = sources,
