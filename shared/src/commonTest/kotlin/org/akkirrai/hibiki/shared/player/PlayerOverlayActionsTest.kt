@@ -24,6 +24,22 @@ class PlayerOverlayActionsTest {
     }
 
     @Test
+    fun dismissCallbacksEmitEventBeforeControlsVisibility() {
+        val events = mutableListOf<String>()
+
+        dispatchPlayerPlaylistDismiss(
+            setControlsVisible = { events += "controls" },
+            onOverlayEvent = { events += "playlist" },
+        )
+        dispatchPlayerSettingsDismiss(
+            setControlsVisible = { events += "controls" },
+            onOverlayEvent = { events += "settings" },
+        )
+
+        assertEquals(listOf("playlist", "controls", "settings", "controls"), events)
+    }
+
+    @Test
     fun settingsDestinationMakesControlsVisibleBeforeEvent() {
         val events = mutableListOf<String>()
         val navigation = mutableListOf<AppNavigationEvent>()

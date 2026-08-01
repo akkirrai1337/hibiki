@@ -12,6 +12,22 @@ fun dispatchPlayerSettingsOpen(onOverlayEvent: (AppNavigationEvent) -> Unit) {
     onOverlayEvent(AppNavigationEvent.OpenPlayerSettings)
 }
 
+fun dispatchPlayerPlaylistDismiss(
+    setControlsVisible: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    onOverlayEvent(AppNavigationEvent.DismissOverlay)
+    setControlsVisible()
+}
+
+fun dispatchPlayerSettingsDismiss(
+    setControlsVisible: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+    setControlsVisible()
+}
+
 fun dispatchPlayerOverlayDismissalsForLock(
     playlistVisible: Boolean,
     settingsVisible: Boolean,

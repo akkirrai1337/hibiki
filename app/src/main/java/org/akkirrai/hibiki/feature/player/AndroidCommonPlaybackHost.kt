@@ -48,10 +48,11 @@ import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistDismiss
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDismiss
 import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsRoot
-import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
@@ -437,12 +438,10 @@ internal fun AndroidCommonPlaybackHost(
                     .replace("%s", formatEpisodeNumber(episode.number))
             },
             onDismissPlaylist = {
-                onOverlayEvent(AppNavigationEvent.DismissOverlay)
-                controlsVisible = true
+                dispatchPlayerPlaylistDismiss({ controlsVisible = true }, onOverlayEvent)
             },
             onDismissSettings = {
-                onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                controlsVisible = true
+                dispatchPlayerSettingsDismiss({ controlsVisible = true }, onOverlayEvent)
             },
             onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {

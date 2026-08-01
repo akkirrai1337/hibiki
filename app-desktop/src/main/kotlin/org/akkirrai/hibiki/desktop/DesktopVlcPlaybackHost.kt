@@ -31,7 +31,6 @@ import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
-import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
@@ -41,6 +40,8 @@ import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
+import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistDismiss
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDismiss
 import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsRoot
@@ -306,12 +307,10 @@ internal fun DesktopVlcPlaybackHost(
                         .replace("%s", org.akkirrai.hibiki.shared.player.formatEpisodeNumber(episode.number))
                 },
                 onDismissPlaylist = {
-                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
-                    controlsVisible = true
+                    dispatchPlayerPlaylistDismiss({ controlsVisible = true }, onOverlayEvent)
                 },
                 onDismissSettings = {
-                    onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                    controlsVisible = true
+                    dispatchPlayerSettingsDismiss({ controlsVisible = true }, onOverlayEvent)
                 },
                 onEpisodeClick = { episodeId ->
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
