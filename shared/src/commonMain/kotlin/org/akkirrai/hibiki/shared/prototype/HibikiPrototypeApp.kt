@@ -219,6 +219,7 @@ import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToDetails
+import org.akkirrai.hibiki.shared.navigation.navigateBackFromDetails
 import org.akkirrai.hibiki.shared.navigation.navigateToSettings
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
@@ -937,9 +938,7 @@ fun HibikiAppShell(
     }
 
     fun closeDetails() {
-        if (navigationState.currentRoute is AppRoute.Details) {
-            navigationState = navigationState.reduce(AppNavigationEvent.Back)
-        }
+        navigationState = navigationState.navigateBackFromDetails()
         presenter.closeDetails()
     }
 

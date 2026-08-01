@@ -23,6 +23,16 @@ class WatchFlowNavigationTest {
     }
 
     @Test
+    fun `details back is a no-op outside details route`() {
+        val state = AppNavigationState()
+            .navigateToDetails("anime-1")
+            .navigateBackFromDetails()
+
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.HOME), state.currentRoute)
+        assertEquals(state, state.navigateBackFromDetails())
+    }
+
+    @Test
     fun `details to sources keeps anime and download mode`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))

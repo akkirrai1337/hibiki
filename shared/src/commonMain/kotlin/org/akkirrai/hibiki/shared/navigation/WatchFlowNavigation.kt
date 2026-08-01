@@ -6,6 +6,12 @@ fun AppNavigationState.navigateToDetails(animeId: String): AppNavigationState = 
     AppNavigationEvent.Navigate(AppRoute.Details(animeId)),
 )
 
+fun AppNavigationState.navigateBackFromDetails(): AppNavigationState = if (currentRoute is AppRoute.Details) {
+    reduce(AppNavigationEvent.Back)
+} else {
+    this
+}
+
 fun AppNavigationState.navigateToSettings(): AppNavigationState = if (currentRoute is AppRoute.Settings) {
     this
 } else {
