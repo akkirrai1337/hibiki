@@ -27,7 +27,7 @@ fun buildEpisodeHeadline(
                 fontSize = MaterialTheme.typography.bodySmall.fontSize,
             ),
         ) {
-            append(" • $trailingLabel")
+            append("\u2022 $trailingLabel")
         }
     }
 }
