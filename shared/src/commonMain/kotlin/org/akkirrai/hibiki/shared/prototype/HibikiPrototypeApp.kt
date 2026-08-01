@@ -2544,7 +2544,7 @@ private fun ColumnScope.LibraryScreen(
             movieLabel = appText(AppTextKey.Type),
             libraryStatusLabel = { category -> categoryLabels.getValue(category) },
         ),
-        bottomContentPadding = 24.dp,
+        bottomContentPadding = AppBottomBarHeight + AppBottomBarContentExtraPadding,
         onAnimeClick = onAnimeClick,
         onSearchQueryChange = onSearchQueryChange,
         onClearSearch = onSearchClear,
