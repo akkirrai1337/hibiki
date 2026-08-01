@@ -37,11 +37,10 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
-import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
@@ -420,16 +419,21 @@ internal fun AndroidCommonPlaybackHost(
                 .padding(bottom = PlayerUnlockBottomPadding),
             includeSystemBottomInset = true,
         )
-        AppPlayerPlaylistLayer(
-            visible = playlistVisible,
+        AppPlayerPanelOverlays(
+            playlistVisible = playlistVisible,
+            settingsVisible = settingsVisible,
             currentEpisodeId = context.episodeId,
             episodes = context.episodes,
-            headline = { episode ->
+            episodeHeadline = { episode ->
                 appText(AppTextKey.PlayerEpisodeNumber)
                     .replace("%s", formatEpisodeNumber(episode.number))
             },
-            onDismissRequest = {
+            onDismissPlaylist = {
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                controlsVisible = true
+            },
+            onDismissSettings = {
+                onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
                 controlsVisible = true
             },
             onEpisodeClick = { episodeId ->
@@ -441,30 +445,7 @@ internal fun AndroidCommonPlaybackHost(
             },
             nowMs = SystemClock::elapsedRealtime,
             backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
-        )
-        activeSkipSegment?.let { segment ->
-            AppPlayerSkipSegmentLayer(
-                visible = true,
-                controlsVisible = controlsVisible,
-                countdownSeconds = playerSkipState.countdownSeconds,
-                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
-                autoSkipEnabled = preferencesState.autoSkipSegments,
-                skipLabel = appText(AppTextKey.PlayerSkip),
-                watchLabel = appText(AppTextKey.PlayerWatch),
-                onSkipClick = { transport.seekToMs(segment.endMs) },
-                onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-                modifier = Modifier.align(Alignment.BottomEnd),
-            )
-        }
-        if (settingsVisible) {
-            AppPlayerSettingsLayer(
-                onDismissRequest = {
-                    onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-                    controlsVisible = true
-                },
-                nowMs = SystemClock::elapsedRealtime,
-                backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
-            ) { dismissPanel ->
+            settingsContent = { dismissPanel ->
                 AppPlayerSettingsContent(
                     destination = navigationState.playerSettingsDestination,
                     selectedSpeed = preferencesState.playbackSpeed,
@@ -507,7 +488,21 @@ internal fun AndroidCommonPlaybackHost(
                         onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(enabled))
                     },
                 )
-            }
+            },
+        )
+        activeSkipSegment?.let { segment ->
+            AppPlayerSkipSegmentLayer(
+                visible = true,
+                controlsVisible = controlsVisible,
+                countdownSeconds = playerSkipState.countdownSeconds,
+                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                autoSkipEnabled = preferencesState.autoSkipSegments,
+                skipLabel = appText(AppTextKey.PlayerSkip),
+                watchLabel = appText(AppTextKey.PlayerWatch),
+                onSkipClick = { transport.seekToMs(segment.endMs) },
+                onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
         }
     }
 }
