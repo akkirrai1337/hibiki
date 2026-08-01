@@ -176,6 +176,7 @@ import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
 import org.akkirrai.hibiki.shared.navigation.currentRoute
+import org.akkirrai.hibiki.shared.navigation.currentTransitionKey
 import org.akkirrai.hibiki.shared.navigation.selectedWatchSource
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
@@ -1037,7 +1038,7 @@ fun HibikiAppShell(
                             detailsId = state.selectedAnime?.id,
                             watchId = watchAnime?.id,
                             sourceId = selectedWatchSource?.sourceId,
-                            routeKey = navigationState.currentRoute.transitionKey(),
+                            routeKey = navigationState.currentTransitionKey,
                         ),
                         modifier = Modifier
                             .fillMaxSize()

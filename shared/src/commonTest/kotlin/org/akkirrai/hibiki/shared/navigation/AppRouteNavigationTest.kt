@@ -27,6 +27,10 @@ class AppRouteNavigationTest {
         )
         assertEquals(AppRoute.Player("source-1", "episode-1", 1.0), state.currentWatchRoute)
         assertEquals(source, state.selectedWatchSource)
+        assertEquals(
+            AppRoute.Player("source-1", "episode-1", 1.0).transitionKey(),
+            state.currentTransitionKey,
+        )
     }
 
     @Test

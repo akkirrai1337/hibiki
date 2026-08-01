@@ -18,6 +18,9 @@ val AppNavigationState.currentWatchRoute: AppRoute?
 val AppNavigationState.activeOverlay: AppOverlay?
     get() = overlays.lastOrNull()
 
+val AppNavigationState.currentTransitionKey: AppTransitionKey
+    get() = currentRoute.transitionKey()
+
 val AppNavigationState.selectedWatchSource: org.akkirrai.hibiki.shared.model.WatchSource?
     get() = backStack.asReversed()
         .mapNotNull { (it as? AppRoute.Episodes)?.source }
