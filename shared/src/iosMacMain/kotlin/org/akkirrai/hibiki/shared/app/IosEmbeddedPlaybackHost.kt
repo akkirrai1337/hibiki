@@ -79,6 +79,10 @@ internal fun IosEmbeddedPlaybackHost(
     progressRepository: PlaybackProgressRepository,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
+    DisposableEffect(Unit) {
+        setIosPlayerLandscape(active = true)
+        onDispose { setIosPlayerLandscape(active = false) }
+    }
     val session = remember(playback.sessionKey()) {
         IosPlayerSession(playback).also {
             it.scaleMode = settingsStore.load().videoScaleMode

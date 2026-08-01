@@ -17,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -50,6 +52,7 @@ fun AppPlaybackControls(
     onSettingsClick: () -> Unit = {},
     settingsContentDescription: String? = null,
     onControlsVisibilityChanged: (Boolean) -> Unit = {},
+    topContentInset: Dp = 0.dp,
 ) {
     var controlsVisible by remember { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
@@ -224,6 +227,7 @@ fun AppPlaybackControls(
             pictureInPictureContentDescription = pictureInPictureContentDescription,
             onSettingsClick = { onSettingsClick(); keepControlsVisible() },
             settingsContentDescription = settingsContentDescription,
+            topContentInset = topContentInset,
             modifier = Modifier.fillMaxSize(),
         )
         AppPlayerSeekOverlay(

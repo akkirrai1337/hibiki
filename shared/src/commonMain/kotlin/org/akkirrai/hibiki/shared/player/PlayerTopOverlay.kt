@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
 @Composable
@@ -25,6 +27,7 @@ fun AppPlayerTopOverlay(
     playlistEnabled: Boolean,
     backContent: @Composable () -> Unit,
     playlistContent: @Composable () -> Unit,
+    topContentInset: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -37,8 +40,10 @@ fun AppPlayerTopOverlay(
                 ),
             )
             .padding(
-                horizontal = PlayerTopOverlayHorizontalPadding,
-                vertical = PlayerTopOverlayVerticalPadding,
+                start = PlayerTopOverlayHorizontalPadding,
+                top = PlayerTopOverlayVerticalPadding + topContentInset,
+                end = PlayerTopOverlayHorizontalPadding,
+                bottom = PlayerTopOverlayVerticalPadding,
             ),
     ) {
         Box(

@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 
@@ -27,6 +29,7 @@ internal fun IosComposePlayerControls(
     onPictureInPictureClick: () -> Unit = {},
     pictureInPictureContentDescription: String? = null,
 ) {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
     AppPlaybackControls(
             transport = session.transport,
             playback = playback,
@@ -49,5 +52,6 @@ internal fun IosComposePlayerControls(
             onPictureInPictureClick = onPictureInPictureClick,
             pictureInPictureContentDescription = pictureInPictureContentDescription,
             onControlsVisibilityChanged = onControlsVisibilityChanged,
+            topContentInset = if (layoutEnvironment.isProvided) layoutEnvironment.topSystemInset else 0.dp,
         )
 }

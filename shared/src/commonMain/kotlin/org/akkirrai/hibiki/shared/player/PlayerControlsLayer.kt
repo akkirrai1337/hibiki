@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.shared.player
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.AppBackButton
 
 /** The shared top, center, and bottom controls of the player. */
@@ -38,6 +40,7 @@ fun AppPlayerControlsLayer(
     pictureInPictureContentDescription: String?,
     onSettingsClick: () -> Unit,
     settingsContentDescription: String?,
+    topContentInset: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
     AppPlayerControlsOverlay(
@@ -60,6 +63,7 @@ fun AppPlayerControlsLayer(
                     contentDescription = null,
                 )
             },
+            topContentInset = topContentInset,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
