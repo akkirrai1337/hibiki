@@ -140,7 +140,6 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
                     sources = IosSourceRegistry.sources,
                     selectedSourceId = selectedSourceId.value,
-                    showSettingsBackButton = true,
                     includeNavigationBarPadding = true,
                     onSourceSelected = { sourceId ->
                         repository.selectSource(sourceId)
