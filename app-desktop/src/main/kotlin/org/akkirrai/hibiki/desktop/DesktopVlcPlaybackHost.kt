@@ -42,6 +42,8 @@ import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerOverlayDismissalsForLock
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDestination
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsRoot
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
@@ -337,12 +339,10 @@ internal fun DesktopVlcPlaybackHost(
                         autoPlayNextEpisode = autoPlayNextEpisode,
                         options = context.settingsOptions,
                         onNavigate = {
-                            controlsVisible = true
-                            onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(it))
+                            dispatchPlayerSettingsDestination(it, { controlsVisible = true }, onOverlayEvent)
                         },
                         onBack = {
-                            controlsVisible = true
-                            onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(PlayerSettingsDestination.Root))
+                            dispatchPlayerSettingsRoot({ controlsVisible = true }, onOverlayEvent)
                         },
                         backHandler = { enabled, callback ->
                             AppSystemBackHandler(enabled = enabled, onBack = callback) {}

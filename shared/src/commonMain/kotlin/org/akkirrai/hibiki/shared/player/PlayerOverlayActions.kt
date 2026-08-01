@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.player
 
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination
 
 fun dispatchPlayerPlaylistOpen(onOverlayEvent: (AppNavigationEvent) -> Unit) {
     onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
@@ -18,4 +19,24 @@ fun dispatchPlayerOverlayDismissalsForLock(
 ) {
     if (playlistVisible) onOverlayEvent(AppNavigationEvent.DismissOverlay)
     if (settingsVisible) onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
+}
+
+fun dispatchPlayerSettingsDestination(
+    destination: AppPlayerSettingsDestination,
+    setControlsVisible: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    setControlsVisible()
+    onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(destination))
+}
+
+fun dispatchPlayerSettingsRoot(
+    setControlsVisible: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    dispatchPlayerSettingsDestination(
+        destination = AppPlayerSettingsDestination.Root,
+        setControlsVisible = setControlsVisible,
+        onOverlayEvent = onOverlayEvent,
+    )
 }
