@@ -19,6 +19,12 @@ val AppNavigationState.currentWatchRoute: AppRoute?
 val AppNavigationState.activeOverlay: AppOverlay?
     get() = overlays.lastOrNull()
 
+val AppNavigationState.isPlaylistOverlayActive: Boolean
+    get() = activeOverlay == AppOverlay.Playlist
+
+val AppNavigationState.isPlayerSettingsOverlayActive: Boolean
+    get() = activeOverlay == AppOverlay.PlayerSettings
+
 val AppNavigationState.currentTransitionKey: AppTransitionKey
     get() = currentRoute.transitionKey()
 

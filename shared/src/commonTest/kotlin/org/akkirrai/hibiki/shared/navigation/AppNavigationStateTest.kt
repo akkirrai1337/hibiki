@@ -83,6 +83,18 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun playerOverlayProjectionsAreMutuallyExclusive() {
+        val playlist = AppNavigationState()
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+        assertEquals(true, playlist.isPlaylistOverlayActive)
+        assertEquals(false, playlist.isPlayerSettingsOverlayActive)
+
+        val settings = playlist.reduce(AppNavigationEvent.OpenPlayerSettings)
+        assertEquals(false, settings.isPlaylistOverlayActive)
+        assertEquals(true, settings.isPlayerSettingsOverlayActive)
+    }
+
+    @Test
     fun playerSettingsDestinationIsSharedAndBackReturnsToRootBeforeDismiss() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
