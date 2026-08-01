@@ -864,8 +864,9 @@ fun HibikiAppShell(
             playbackRequestGeneration++
             activePlaybackRoute = null
             pendingPlaybackContext = null
-            navigationState = navigationState.reduce(AppNavigationEvent.Back)
-            when (resolveWatchFlowBackEffect(routeBeforeBack, navigationState.currentRoute)) {
+            val backTransition = navigationState.reduceWatchFlowBack()
+            navigationState = backTransition.state
+            when (backTransition.effect) {
                 WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
                     episodesPresenter.setState(EpisodesScreenState())
                     resetPlayerState()
