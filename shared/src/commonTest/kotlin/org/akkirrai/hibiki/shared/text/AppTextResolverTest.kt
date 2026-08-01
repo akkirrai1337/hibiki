@@ -62,4 +62,16 @@ class AppTextResolverTest {
         assertEquals("✓ Серия %s", russian.resolve(AppTextKey.WatchEpisodeHeadlineWatched))
         assertEquals("Просмотрено", russian.resolve(AppTextKey.WatchStatusWatched))
     }
+
+    @Test
+    fun homeContinueOpenHintMatchesAndroidReference() {
+        assertEquals(
+            "Tap to open title",
+            DefaultAppTextResolver(LanguageMode.ENGLISH).resolve(AppTextKey.HomeContinueOpenHint),
+        )
+        assertEquals(
+            "Нажмите, чтобы открыть тайтл",
+            DefaultAppTextResolver(LanguageMode.RUSSIAN).resolve(AppTextKey.HomeContinueOpenHint),
+        )
+    }
 }

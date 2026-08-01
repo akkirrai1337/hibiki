@@ -302,7 +302,7 @@ class DefaultAppTextResolver(
             AppTextKey.HomeContinueTitle -> if (russian) "Продолжить просмотр" else "Continue watching"
             AppTextKey.HomeContinueEmptyTitle -> if (russian) "Нет незавершённого просмотра" else "Nothing to continue"
             AppTextKey.HomeContinueEmptyBody -> if (russian) "Начните смотреть тайтл, и он появится здесь" else "Start watching a title and it will appear here"
-            AppTextKey.HomeContinueOpenHint -> if (russian) "Открыть" else "Open"
+            AppTextKey.HomeContinueOpenHint -> if (russian) "Нажмите, чтобы открыть тайтл" else "Tap to open title"
             AppTextKey.HomePersonalEmptyTitle -> if (russian) "Ваша главная пока пуста" else "Your home is empty"
             AppTextKey.HomePersonalEmptyBody -> if (russian) "Начните смотреть или добавьте тайтл в библиотеку" else "Start watching or add a title to your library."
             AppTextKey.HomeBrowseCatalog -> if (russian) "Открыть каталог" else "Browse catalog"

@@ -1863,6 +1863,7 @@ private fun AppDestinationContent(
     onDetailsLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
     currentRoute: AppRoute? = null,
 ) {
+    val homeSourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
     val topLevelBottomContentPadding =
         AppBottomBarHeight + AppBottomBarContentExtraPadding + appBottomSystemInsetValue()
     val routeDrivenWatch = currentRoute?.let {
@@ -2111,6 +2112,7 @@ private fun AppDestinationContent(
                 AppDestination.HOME -> HomeScreen(
                     state = catalogState,
                     listState = catalogListState,
+                    sourcesById = homeSourcesById,
                     libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
                     libraryEntries = libraryEntries,
                     onQueryChange = onHomeQueryChange,
@@ -2411,6 +2413,7 @@ private fun ColumnScope.HomeScreen(
     state: AnimeCatalogUiState,
     baseHomeState: HomeUiState,
     listState: LazyListState,
+    sourcesById: Map<String, AppSourceDescriptor>,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryEntries: List<LibraryEntry>,
     onQueryChange: (String) -> Unit,
@@ -2472,6 +2475,22 @@ private fun ColumnScope.HomeScreen(
         onAnimeClick = onAnimeClick,
         onBrowseCatalog = onBrowseCatalog,
         onOpenLibrary = onOpenLibrary,
+        sourceBadgeContent = { anime ->
+            AnimeKey.parse(anime.id)?.sourceId?.value
+                ?.let(sourcesById::get)
+                ?.let { source ->
+                    AppSourceBadge(
+                        title = source.name,
+                        iconContent = { iconModifier ->
+                            AppSourceIconImage(
+                                url = source.iconUrl,
+                                sourceId = source.id,
+                                modifier = iconModifier,
+                            )
+                        },
+                    )
+                }
+        },
         onItemVisible = onItemVisible,
         modifier = Modifier.fillMaxSize(),
     )
