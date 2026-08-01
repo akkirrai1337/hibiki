@@ -37,7 +37,7 @@ import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerLockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
@@ -406,14 +406,13 @@ internal fun AndroidCommonPlaybackHost(
                 onControlsVisibilityChanged = { controlsVisible = it },
             )
         }
-        AppPlayerUnlockOverlay(
-            visible = playerLockState.isLocked && playerLockState.isUnlockButtonVisible,
+        AppPlayerLockOverlay(
+            state = playerLockState,
             label = appText(AppTextKey.PlayerUnlock),
-            onClick = {
+            onUnlock = {
                 playerLockState = playerLockState.unlock()
                 controlsVisible = true
             },
-            contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = PlayerUnlockBottomPadding),

@@ -32,7 +32,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
-import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerLockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
@@ -272,14 +272,13 @@ internal fun DesktopVlcPlaybackHost(
                     settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 )
             }
-            AppPlayerUnlockOverlay(
-                visible = playerLockState.isLocked && playerLockState.isUnlockButtonVisible,
+            AppPlayerLockOverlay(
+                state = playerLockState,
                 label = appText(AppTextKey.PlayerUnlock),
-                onClick = {
+                onUnlock = {
                     playerLockState = playerLockState.unlock()
                     controlsVisible = true
                 },
-                contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = PlayerUnlockBottomPadding),
