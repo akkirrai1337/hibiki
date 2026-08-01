@@ -6,6 +6,14 @@ import org.akkirrai.hibiki.shared.model.WatchSource
 
 class WatchFlowNavigationTest {
     @Test
+    fun `settings navigation is idempotent when settings is already visible`() {
+        val state = AppNavigationState().navigateToSettings()
+
+        assertEquals(AppRoute.Settings, state.currentRoute)
+        assertEquals(state, state.navigateToSettings())
+    }
+
+    @Test
     fun `details navigation creates a forward route entry`() {
         val state = AppNavigationState().navigateToDetails("anime-1")
 

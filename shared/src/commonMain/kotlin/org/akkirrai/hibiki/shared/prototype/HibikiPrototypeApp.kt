@@ -219,6 +219,7 @@ import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToDetails
+import org.akkirrai.hibiki.shared.navigation.navigateToSettings
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
@@ -1320,11 +1321,7 @@ fun HibikiAppShell(
                                 isEditingProfile = false
                             },
                             onProfileSettingsClick = {
-                                if (navigationState.currentRoute !is AppRoute.Settings) {
-                                    navigationState = navigationState.reduce(
-                                        AppNavigationEvent.Navigate(AppRoute.Settings),
-                                    )
-                                }
+                                navigationState = navigationState.navigateToSettings()
                             },
                             onProfileAvatarEdit = onProfileAvatarEdit,
                             profileAvatarEditAvailable = profileAvatarEditAvailable,

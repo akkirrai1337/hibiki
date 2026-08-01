@@ -6,6 +6,12 @@ fun AppNavigationState.navigateToDetails(animeId: String): AppNavigationState = 
     AppNavigationEvent.Navigate(AppRoute.Details(animeId)),
 )
 
+fun AppNavigationState.navigateToSettings(): AppNavigationState = if (currentRoute is AppRoute.Settings) {
+    this
+} else {
+    reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
+}
+
 fun AppNavigationState.navigateToWatchSources(
     animeId: String,
     downloadMode: Boolean = false,
