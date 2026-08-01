@@ -2846,6 +2846,7 @@ private fun SettingsScreen(
             checkUpdates = appText(AppTextKey.SettingsCheckUpdates),
             support = appText(AppTextKey.SettingsSupport),
             exportLogs = appText(AppTextKey.SettingsExportLogs),
+            about = appText(AppTextKey.SettingsAbout),
             appName = appText(AppTextKey.AppName),
             versionName = versionName,
         ),

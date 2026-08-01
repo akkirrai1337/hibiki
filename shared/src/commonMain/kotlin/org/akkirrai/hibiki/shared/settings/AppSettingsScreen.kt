@@ -37,6 +37,7 @@ data class AppSettingsScreenLabels(
     val checkUpdates: String,
     val support: String,
     val exportLogs: String,
+    val about: String,
     val appName: String,
     val versionName: String,
 )
@@ -169,25 +170,27 @@ fun AppSettingsScreen(
             )
         }
         item(key = SettingsSection.About.key) {
-            AppSettingsAboutCard(
-                appName = labels.appName,
-                versionName = labels.versionName,
-                appIconContent = { iconModifier ->
-                    Image(
-                        painter = painterResource(Res.drawable.hibiki_app_icon),
-                        contentDescription = null,
-                        modifier = iconModifier,
-                    )
-                },
-                githubIconContent = { iconModifier ->
-                    Image(
-                        painter = painterResource(Res.drawable.ic_github),
-                        contentDescription = null,
-                        modifier = iconModifier,
-                    )
-                },
-                onGitHubClick = onGitHubClick,
-            )
+            AppSettingsSection(title = labels.about) {
+                AppSettingsAboutCard(
+                    appName = labels.appName,
+                    versionName = labels.versionName,
+                    appIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.hibiki_app_icon),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    githubIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.ic_github),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    onGitHubClick = onGitHubClick,
+                )
+            }
         }
             },
         )

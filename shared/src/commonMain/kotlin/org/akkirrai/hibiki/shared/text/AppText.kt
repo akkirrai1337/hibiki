@@ -104,6 +104,7 @@ enum class AppTextKey {
     SettingsCheckUpdates,
     SettingsSupport,
     SettingsExportLogs,
+    SettingsAbout,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -362,6 +363,7 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsCheckUpdates -> if (russian) "Проверить обновления" else "Check for updates"
             AppTextKey.SettingsSupport -> if (russian) "Поддержка" else "Support"
             AppTextKey.SettingsExportLogs -> if (russian) "Экспортировать логи" else "Export logs"
+            AppTextKey.SettingsAbout -> if (russian) "О приложении" else "About"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

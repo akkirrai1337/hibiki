@@ -195,6 +195,7 @@ private fun sharedAndroidSettingsLabels(
     checkUpdates = stringResource(R.string.settings_check_updates),
     support = stringResource(R.string.settings_support),
     exportLogs = stringResource(R.string.settings_export_logs),
+    about = stringResource(R.string.settings_about),
     appName = stringResource(R.string.app_name),
     versionName = versionName,
 )
