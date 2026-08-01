@@ -131,6 +131,19 @@ class AppRouteNavigationTest {
     }
 
     @Test
+    fun `profile overlay backs before leaving profile root`() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("profile")))
+
+        val returned = state.reduce(AppNavigationEvent.Back)
+
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.PROFILE), returned.currentRoute)
+        assertTrue(returned.overlays.isEmpty())
+        assertEquals(AppTransitionDirection.Pop, returned.transitionDirection)
+    }
+
+    @Test
     fun `back closes player overlay before player route`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
