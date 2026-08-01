@@ -6,6 +6,15 @@ import org.akkirrai.hibiki.shared.model.WatchSource
 
 class WatchFlowNavigationTest {
     @Test
+    fun `details navigation creates a forward route entry`() {
+        val state = AppNavigationState().navigateToDetails("anime-1")
+
+        assertEquals(AppRoute.Details("anime-1"), state.currentRoute)
+        assertEquals(listOf(AppRoute.Details("anime-1")), state.backStack)
+        assertEquals(AppTransitionDirection.Forward, state.transitionDirection)
+    }
+
+    @Test
     fun `details to sources keeps anime and download mode`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))

@@ -2,6 +2,10 @@ package org.akkirrai.hibiki.shared.navigation
 
 import org.akkirrai.hibiki.shared.model.WatchSource
 
+fun AppNavigationState.navigateToDetails(animeId: String): AppNavigationState = reduce(
+    AppNavigationEvent.Navigate(AppRoute.Details(animeId)),
+)
+
 fun AppNavigationState.navigateToWatchSources(
     animeId: String,
     downloadMode: Boolean = false,

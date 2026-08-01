@@ -218,6 +218,7 @@ import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
+import org.akkirrai.hibiki.shared.navigation.navigateToDetails
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
@@ -924,9 +925,7 @@ fun HibikiAppShell(
         presenter.openDetails(anime)
         val currentRoute = navigationState.currentRoute
         if (currentRoute !is AppRoute.Details || currentRoute.animeId != anime.id) {
-            navigationState = navigationState.reduce(
-                AppNavigationEvent.Navigate(AppRoute.Details(anime.id)),
-            )
+            navigationState = navigationState.navigateToDetails(anime.id)
         }
     }
 
