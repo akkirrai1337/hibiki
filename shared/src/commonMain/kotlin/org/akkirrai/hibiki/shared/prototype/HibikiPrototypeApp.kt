@@ -1032,6 +1032,7 @@ fun HibikiAppShell(
                             currentRoute = navigationState.currentRoute,
                         ),
                         includeNavigationBarPadding = includeNavigationBarPadding,
+                        transitionDirection = navigationState.transitionDirection,
                         contentTransitionKey = appShellTransitionKey(
                             topLevelDestination = topLevelDestination,
                             selectedTab = selectedTab.name,
