@@ -30,13 +30,13 @@ import org.akkirrai.hibiki.shared.navigation.isPlayerSettingsOverlayActive
 import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
-import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
+import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
@@ -185,7 +185,7 @@ internal fun DesktopVlcPlaybackHost(
         val segment = rawActiveSkipSegment
         if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
         playerSkipState = playerSkipState.resetCountdown()
-        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+        repeat(DefaultSkipSegmentCountdownSeconds) {
             delay(1_000L)
             if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
             playerSkipState = playerSkipState.tick()
@@ -362,25 +362,19 @@ internal fun DesktopVlcPlaybackHost(
                         },
                     )
                 },
+                skipVisible = activeSkipSegment != null,
+                controlsVisible = controlsVisible,
+                skipCountdownSeconds = playerSkipState.countdownSeconds,
+                autoSkipEnabled = settingsStore.load().autoSkipSegments,
+                skipLabel = appText(AppTextKey.PlayerSkip),
+                watchLabel = appText(AppTextKey.PlayerWatch),
+                onSkipClick = { activeSkipSegment?.let { session.transport.seekToMs(it.endMs) } },
+                onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
+                skipModifier = Modifier.align(Alignment.BottomEnd),
             )
-            activeSkipSegment?.let { segment ->
-                AppPlayerSkipSegmentLayer(
-                    visible = true,
-                    controlsVisible = controlsVisible,
-                    countdownSeconds = playerSkipState.countdownSeconds,
-                    maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
-                    autoSkipEnabled = settingsStore.load().autoSkipSegments,
-                    skipLabel = appText(AppTextKey.PlayerSkip),
-                    watchLabel = appText(AppTextKey.PlayerWatch),
-                    onSkipClick = { session.transport.seekToMs(segment.endMs) },
-                    onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-                    modifier = Modifier.align(Alignment.BottomEnd),
-                )
-            }
         }
         }
     }
 }
 
 private const val VideoDimensionPollMillis = 500L
-private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10

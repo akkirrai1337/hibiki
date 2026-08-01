@@ -41,10 +41,10 @@ import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
 import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
-import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
+import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
@@ -217,7 +217,7 @@ internal fun AndroidCommonPlaybackHost(
         val segment = rawActiveSkipSegment
         if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
         playerSkipState = playerSkipState.resetCountdown()
-        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+        repeat(DefaultSkipSegmentCountdownSeconds) {
             delay(1_000L)
             if (playerSkipState.hiddenSegmentKey == key) return@LaunchedEffect
             playerSkipState = playerSkipState.tick()
@@ -489,21 +489,16 @@ internal fun AndroidCommonPlaybackHost(
                     },
                 )
             },
+            skipVisible = activeSkipSegment != null,
+            controlsVisible = controlsVisible,
+            skipCountdownSeconds = playerSkipState.countdownSeconds,
+            autoSkipEnabled = preferencesState.autoSkipSegments,
+            skipLabel = appText(AppTextKey.PlayerSkip),
+            watchLabel = appText(AppTextKey.PlayerWatch),
+            onSkipClick = { activeSkipSegment?.let { transport.seekToMs(it.endMs) } },
+            onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
+            skipModifier = Modifier.align(Alignment.BottomEnd),
         )
-        activeSkipSegment?.let { segment ->
-            AppPlayerSkipSegmentLayer(
-                visible = true,
-                controlsVisible = controlsVisible,
-                countdownSeconds = playerSkipState.countdownSeconds,
-                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
-                autoSkipEnabled = preferencesState.autoSkipSegments,
-                skipLabel = appText(AppTextKey.PlayerSkip),
-                watchLabel = appText(AppTextKey.PlayerWatch),
-                onSkipClick = { transport.seekToMs(segment.endMs) },
-                onWatchClick = { activeSkipSegmentKey?.let { playerSkipState = playerSkipState.hide(it) } },
-                modifier = Modifier.align(Alignment.BottomEnd),
-            )
-        }
     }
 }
 
@@ -551,4 +546,3 @@ internal fun AndroidPlayerWindowMode(active: Boolean) {
 }
 
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
-private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
