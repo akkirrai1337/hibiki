@@ -21,7 +21,7 @@ fun WatchSourcesList(
     onSourceClick: (WatchSource) -> Unit,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     episodeSummary: @Composable (WatchSource) -> String? = { source ->
-        source.episodeCount?.let { count -> "· $count" }
+        source.episodeCount?.let { count -> "\u00B7 $count" }
     },
     hasMoreItems: Boolean = false,
     loadMoreLabel: String = "",
