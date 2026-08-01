@@ -11,6 +11,20 @@ class AppNavigationStateTest {
         )
 
         assertEquals(AppTopLevelDestination.LIBRARY, state.currentTopLevel)
+        assertEquals(AppDestination.LIBRARY, state.selectedAppDestination())
+    }
+
+    @Test
+    fun settingsRouteIsPresentedAsProfileSettingsDestination() {
+        val state = AppNavigationState()
+            .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
+            .reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
+
+        assertEquals(AppDestination.SETTINGS, state.selectedAppDestination())
+        assertEquals(
+            AppDestination.PROFILE,
+            state.reduce(AppNavigationEvent.Back).selectedAppDestination(),
+        )
     }
 
     @Test

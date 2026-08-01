@@ -10,6 +10,18 @@ data class AppNavigationState(
 val AppNavigationState.currentRoute: AppRoute
     get() = backStack.lastOrNull() ?: AppRoute.TopLevel(currentTopLevel)
 
+/** Resolves the visible root tab, including Settings nested under Profile. */
+fun AppNavigationState.selectedAppDestination(): AppDestination = when {
+    currentRoute is AppRoute.Settings -> AppDestination.SETTINGS
+    else -> when (currentTopLevel) {
+        AppTopLevelDestination.HOME -> AppDestination.HOME
+        AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
+        AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
+        AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
+        AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
+    }
+}
+
 /** Applies Android's existing push/pop behavior without depending on a platform navigator. */
 fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = when (event) {
     is AppNavigationEvent.SelectTopLevel -> copy(

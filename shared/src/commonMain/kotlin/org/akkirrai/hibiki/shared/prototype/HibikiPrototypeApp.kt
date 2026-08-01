@@ -176,6 +176,7 @@ import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
 import org.akkirrai.hibiki.shared.navigation.currentRoute
 import org.akkirrai.hibiki.shared.navigation.reduce
+import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
 import org.akkirrai.hibiki.shared.navigation.shouldKeepWatchAnimeAfterPlayerBack
 import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
@@ -363,16 +364,7 @@ fun HibikiAppShell(
             navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
         }
     }
-    val selectedTab = when {
-        navigationState.currentRoute is AppRoute.Settings -> AppDestination.SETTINGS
-        else -> when (navigationState.currentTopLevel) {
-            AppTopLevelDestination.HOME -> AppDestination.HOME
-            AppTopLevelDestination.CATALOG -> AppDestination.CATALOG
-            AppTopLevelDestination.LIBRARY -> AppDestination.LIBRARY
-            AppTopLevelDestination.SOURCES -> AppDestination.SOURCES
-            AppTopLevelDestination.PROFILE -> AppDestination.PROFILE
-        }
-    }
+    val selectedTab = navigationState.selectedAppDestination()
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
