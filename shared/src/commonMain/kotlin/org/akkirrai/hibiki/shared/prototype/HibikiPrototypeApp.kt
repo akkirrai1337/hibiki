@@ -1329,15 +1329,7 @@ fun HibikiAppShell(
                             onSourceSearchClear = sourceSearchPresenter::clear,
                             onSourceSearchRetry = sourceSearchPresenter::search,
                             onSourceSearchRetryForSource = sourceSearchPresenter::retry,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(
-                                    bottom = if (state.selectedAnime == null) {
-                                        AppBottomBarHeight + AppBottomBarContentExtraPadding
-                                    } else {
-                                        0.dp
-                                    },
-                                ),
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                     }
