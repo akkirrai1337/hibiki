@@ -251,6 +251,7 @@ import org.akkirrai.hibiki.shared.player.showAllWatchSources
 import org.akkirrai.hibiki.shared.model.WatchSource
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.model.PlaybackContext
+import org.akkirrai.hibiki.shared.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.shared.model.PlaybackRoute
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 
@@ -605,6 +606,11 @@ fun HibikiAppShell(
         val effectiveQuality = effectivePreferences.quality
         val requestEpisodes = episodesOverride
             ?: (episodesState.result as? EpisodesUiState.Content)?.items.orEmpty()
+        val retainedSettingsOptions = activePlaybackRoute
+            ?.takeIf { it.context.sourceId == sourceForPlayback.sourceId }
+            ?.context
+            ?.settingsOptions
+            ?: PlaybackSettingsOptions()
         val requestContext = PlaybackContext(
             titleId = watchAnime?.id.orEmpty(),
             sourceId = sourceForPlayback.sourceId,
@@ -614,6 +620,7 @@ fun HibikiAppShell(
             episodes = requestEpisodes,
             selectedPlayerName = effectivePlayerName,
             selectedQualityLabel = effectiveQuality ?: sourceForPlayback.qualityLabel,
+            settingsOptions = retainedSettingsOptions,
         )
         val playerRoute = AppRoute.Player(
             sourceId = sourceForPlayback.sourceId,
