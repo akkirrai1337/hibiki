@@ -125,6 +125,9 @@ class AppRouteNavigationTest {
             AppRoute.TopLevel(AppTopLevelDestination.PROFILE),
             state.reduce(AppNavigationEvent.Back).currentRoute,
         )
+        val returned = state.reduce(AppNavigationEvent.Back)
+        assertEquals(AppDestination.PROFILE, returned.selectedAppDestination())
+        assertEquals(AppTransitionDirection.Pop, returned.transitionDirection)
     }
 
     @Test
