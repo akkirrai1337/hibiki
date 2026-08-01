@@ -190,6 +190,7 @@ import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.search.AppSearchField
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
+import org.akkirrai.hibiki.shared.source.sourceLanguageSectionLabel
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
@@ -396,7 +397,7 @@ fun HibikiAppShell(
     var onboardingSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
     }
-    var currentSelectedSourceId by remember(settingsStore, selectedSourceId) {
+    var currentSelectedSourceId by remember(settingsStore) {
         mutableStateOf(initialSettings.selectedSourceId ?: selectedSourceId)
     }
     var isEditingProfile by remember { mutableStateOf(false) }
@@ -2253,13 +2254,7 @@ private fun AppDestinationContent(
                     selectedSourceId = selectedSourceId,
                     bottomContentPadding = topLevelBottomContentPadding,
                     emptyText = appText(AppTextKey.SourcesEmptyTitle),
-                    languageLabel = { language ->
-                        when (language.lowercase()) {
-                            "ru", "russian" -> appText(AppTextKey.LanguageRussian)
-                            "en", "english" -> appText(AppTextKey.LanguageEnglish)
-                            else -> language.uppercase()
-                        }
-                    },
+                    languageLabel = { language -> sourceLanguageSectionLabel(language) },
                     onSourceSelected = onSourceSelected,
                     searchQuery = sourceSearchState.query,
                     searchItems = emptyList(),

@@ -9,6 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 
+fun sourceLanguageSectionLabel(language: String): String = when (language.lowercase()) {
+    "ru", "russian" -> "RU"
+    "en", "english" -> "EN"
+    else -> language.uppercase()
+}
+
 @Composable
 fun AppLocalSourcesScreen(
     sources: List<AppSourceDescriptor>,
