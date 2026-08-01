@@ -464,7 +464,7 @@ private fun HibikiNavHost(
                             )
                         }
                     },
-                    modifier = screenModifier
+                    modifier = baseScreenModifier
                 )
             }
         }
@@ -519,7 +519,7 @@ private fun HibikiNavHost(
                             )
                         }
                     },
-                    modifier = screenModifier
+                    modifier = baseScreenModifier
                 )
             }
         }
