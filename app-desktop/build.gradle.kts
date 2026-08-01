@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
@@ -27,6 +29,7 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.vlcj)
     testImplementation(libs.junit)
+    testImplementation(compose.uiTest)
 }
 
 compose.desktop {
