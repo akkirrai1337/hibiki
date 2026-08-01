@@ -32,6 +32,7 @@ import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.shouldShowSkipSegmentPrompt
 import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
 import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
@@ -157,7 +158,16 @@ internal fun IosEmbeddedPlaybackHost(
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
         ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
-    val activeSkipSegment = rawActiveSkipSegment?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }
+    val activeSkipSegment = rawActiveSkipSegment
+        ?.takeIf {
+            shouldShowSkipSegmentPrompt(
+                controlsVisible = controlsVisible,
+                playerLocked = playerLockState.isLocked,
+                playlistVisible = playlistVisible,
+                settingsVisible = settingsVisible,
+            )
+        }
+        ?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }
     LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
         val key = activeSkipSegmentKey ?: run {
             playerSkipState = playerSkipState.resetCountdown()

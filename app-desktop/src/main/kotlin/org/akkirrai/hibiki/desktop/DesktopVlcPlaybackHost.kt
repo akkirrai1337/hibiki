@@ -50,6 +50,7 @@ import org.akkirrai.hibiki.shared.player.resolvePlaybackViewportScale
 import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.shouldShowSkipSegmentPrompt
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
@@ -166,7 +167,14 @@ internal fun DesktopVlcPlaybackHost(
         }
     }
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
+        ?.takeIf {
+            shouldShowSkipSegmentPrompt(
+                controlsVisible = controlsVisible,
+                playerLocked = playerLockState.isLocked,
+                playlistVisible = playlistVisible,
+                settingsVisible = settingsVisible,
+            )
+        }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }

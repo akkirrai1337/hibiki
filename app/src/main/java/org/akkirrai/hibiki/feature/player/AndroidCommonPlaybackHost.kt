@@ -55,6 +55,7 @@ import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
+import org.akkirrai.hibiki.shared.player.shouldShowSkipSegmentPrompt
 import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -197,7 +198,14 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
+        ?.takeIf {
+            shouldShowSkipSegmentPrompt(
+                controlsVisible = controlsVisible,
+                playerLocked = playerLockState.isLocked,
+                playlistVisible = playlistVisible,
+                settingsVisible = settingsVisible,
+            )
+        }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { playerSkipState.hiddenSegmentKey != activeSkipSegmentKey }
