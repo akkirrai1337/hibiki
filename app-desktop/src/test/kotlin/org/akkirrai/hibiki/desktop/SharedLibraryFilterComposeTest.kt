@@ -15,7 +15,9 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.library.AppLibraryScreen
 import org.akkirrai.hibiki.shared.library.AppLibraryScreenLabels
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.library.LibraryUiState
+import org.akkirrai.hibiki.shared.model.Anime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -62,6 +64,43 @@ class SharedLibraryFilterComposeTest {
 
         assertEquals(false, filterVisible.value)
         assertEquals(2, visibilityChanges)
+    }
+
+    @Test
+    fun libraryCategorySelectionUsesCommonStateCallback() = runComposeUiTest {
+        var selectedCategory: LibraryCategory? = null
+        val entries = listOf(
+            LibraryEntry(
+                anime = Anime("watching", "Watching title", "TV", "1", "Ongoing"),
+                category = LibraryCategory.Watching,
+            ),
+            LibraryEntry(
+                anime = Anime("completed", "Completed title", "TV", "1", "Released"),
+                category = LibraryCategory.Completed,
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                AppLibraryScreen(
+                    state = LibraryUiState(entries = entries),
+                    labels = libraryLabels(),
+                    bottomContentPadding = 24.dp,
+                    onAnimeClick = {},
+                    onSearchQueryChange = {},
+                    onClearSearch = {},
+                    onFilterClick = {},
+                    onCategorySelected = { selectedCategory = it },
+                    entryContent = { _, _: Modifier -> },
+                )
+            }
+        }
+
+        onNodeWithText("Completed 1")
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(LibraryCategory.Completed, selectedCategory)
     }
 
     private fun libraryLabels() = AppLibraryScreenLabels(
