@@ -14,7 +14,7 @@ import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 
 data class AnimeCatalogUiState(
     val query: String = "",
-    val filters: AnimeSearchFilters = AnimeSearchFilters(),
+    val filters: AnimeSearchFilters = AnimeSearchFilters(sortAlias = "popular"),
     val items: List<Anime> = emptyList(),
     val page: Int = 1,
     val canLoadMore: Boolean = false,

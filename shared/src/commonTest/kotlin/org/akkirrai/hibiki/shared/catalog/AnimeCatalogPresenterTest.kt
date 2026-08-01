@@ -14,9 +14,11 @@ import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 class AnimeCatalogPresenterTest {
     @Test
     fun presenterLoadsPagesAndMergesDistinctItems() = runTest {
+        var requestedFilters: AnimeSearchFilters? = null
         val repository = object : AnimeCatalogRepository {
             override val initialItems: List<Anime> = emptyList()
             override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
+                requestedFilters = query.filters
                 val all = listOf(
                     Anime("1", "One", "", "1 episode", "Finished"),
                     Anime("2", "Two", "", "1 episode", "Finished"),
@@ -30,6 +32,7 @@ class AnimeCatalogPresenterTest {
 
         presenter.search()
         advanceUntilIdle()
+        assertEquals("popular", requestedFilters?.sortAlias)
         assertEquals(listOf("1", "2"), presenter.state.value.items.map { it.id })
         assertTrue(presenter.state.value.canLoadMore)
 
