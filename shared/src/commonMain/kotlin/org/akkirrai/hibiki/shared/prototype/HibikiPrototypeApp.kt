@@ -217,6 +217,7 @@ import org.akkirrai.hibiki.shared.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.watchNavigationLockKey
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
+import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1241,14 +1242,10 @@ fun HibikiAppShell(
                                 playbackJob = null
                                 playbackRequestGeneration++
                                 resetPlayerState()
-                                navigationState = navigationState.reduce(
-                                    AppNavigationEvent.Navigate(
-                                        AppRoute.Episodes(
-                                            source,
-                                            downloadMode = activeDownloadMode,
-                                            animeId = watchAnime?.id,
-                                        ),
-                                    ),
+                                navigationState = navigationState.navigateToEpisodes(
+                                    source = source,
+                                    downloadMode = activeDownloadMode,
+                                    animeId = watchAnime?.id,
                                 )
                             },
                             onWatchEpisodeClick = ::requestPlayback,
