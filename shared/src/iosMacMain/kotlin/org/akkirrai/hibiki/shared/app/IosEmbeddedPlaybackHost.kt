@@ -129,7 +129,7 @@ internal fun IosEmbeddedPlaybackHost(
     DisposableEffect(session) {
         val backgroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
             name = UIApplicationWillResignActiveNotification,
-            object = null,
+            `object` = null,
             queue = NSOperationQueue.mainQueue,
             usingBlock = { savePlaybackProgress() },
         )
