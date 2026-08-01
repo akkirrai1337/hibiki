@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +45,7 @@ fun AppSettingsItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(shape)
             .clickable(onClick = onClick)
             .background(MaterialTheme.colorScheme.surfaceContainer, shape)
             .padding(SettingsItemPadding),
