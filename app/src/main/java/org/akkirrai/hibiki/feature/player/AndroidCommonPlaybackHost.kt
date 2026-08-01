@@ -523,6 +523,14 @@ internal fun AndroidCommonPlaybackHost(
             }
         },
         )
+
+        BackHandler(enabled = playlistVisible || settingsVisible) {
+            if (settingsVisible && navigationState.playerSettingsDestination != org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination.Root) {
+                onOverlayEvent(AppNavigationEvent.Back)
+            } else {
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            }
+        }
     }
 }
 
