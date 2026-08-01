@@ -89,7 +89,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     repository = repository,
                     watchRepository = watchRepository,
                     onPlaybackReady = { playback, context ->
-                        presentPlayback(hostController, playback, context)
+                        if (!USE_EMBEDDED_IOS_PLAYER) {
+                            presentPlayback(hostController, playback, context)
+                        }
                     },
                     onPlaybackSelectionChanged = { selection ->
                         watchStateRepository.savePlaybackSelection(selection)
