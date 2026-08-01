@@ -171,6 +171,8 @@ import org.akkirrai.hibiki.shared.navigation.activeOverlay
 import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.shared.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
+import org.akkirrai.hibiki.shared.navigation.WatchFlowBackEffect
+import org.akkirrai.hibiki.shared.navigation.resolveWatchFlowBackEffect
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
 import org.akkirrai.hibiki.shared.navigation.appShellTransitionKey
@@ -179,7 +181,6 @@ import org.akkirrai.hibiki.shared.navigation.currentTransitionKey
 import org.akkirrai.hibiki.shared.navigation.selectedWatchSource
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
-import org.akkirrai.hibiki.shared.navigation.shouldKeepWatchAnimeAfterPlayerBack
 import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
@@ -840,6 +841,7 @@ fun HibikiAppShell(
     }
 
     fun handleSystemBack() {
+        val routeBeforeBack = navigationState.currentRoute
         if (navigationState.overlays.isNotEmpty()) {
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
             return
@@ -857,40 +859,55 @@ fun HibikiAppShell(
             activePlaybackRoute = null
             pendingPlaybackContext = null
             navigationState = navigationState.reduce(AppNavigationEvent.Back)
-            if (navigationState.currentRoute is AppRoute.Episodes ||
-                navigationState.currentRoute is AppRoute.WatchSources
-            ) {
-                episodesPresenter.setState(EpisodesScreenState())
-                resetPlayerState()
-                return
+            when (resolveWatchFlowBackEffect(routeBeforeBack, navigationState.currentRoute)) {
+                WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                    episodesPresenter.setState(EpisodesScreenState())
+                    resetPlayerState()
+                }
+                WatchFlowBackEffect.ResetPlayer -> resetPlayerState()
+                WatchFlowBackEffect.CloseDetails,
+                WatchFlowBackEffect.None,
+                -> resetPlayerState()
             }
-            resetPlayerState()
             return
         }
         if (navigationState.backStack.isEmpty()) return
-        val routeBeforeBack = navigationState.currentRoute
         navigationState = navigationState.reduce(AppNavigationEvent.Back)
         when (routeBeforeBack) {
             is AppRoute.Player -> {
                 playbackJob?.cancel()
                 playbackJob = null
                 pendingPlaybackContext = null
-                resetPlayerState()
-                if (!shouldKeepWatchAnimeAfterPlayerBack(navigationState.currentRoute)) {
+                when (resolveWatchFlowBackEffect(routeBeforeBack, navigationState.currentRoute)) {
+                    WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                        episodesPresenter.setState(EpisodesScreenState())
+                        resetPlayerState()
+                    }
+                    WatchFlowBackEffect.ResetPlayer -> resetPlayerState()
+                    WatchFlowBackEffect.CloseDetails,
+                    WatchFlowBackEffect.None,
+                    -> resetPlayerState()
                 }
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
                 playbackJob?.cancel()
                 playbackJob = null
                 playbackRequestGeneration++
-                episodesPresenter.setState(EpisodesScreenState())
-                resetPlayerState()
-                if (navigationState.currentRoute !is AppRoute.Episodes &&
-                    navigationState.currentRoute !is AppRoute.WatchSources
-                ) {
+                when (resolveWatchFlowBackEffect(routeBeforeBack, navigationState.currentRoute)) {
+                    WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+                        episodesPresenter.setState(EpisodesScreenState())
+                        resetPlayerState()
+                    }
+                    WatchFlowBackEffect.ResetPlayer -> resetPlayerState()
+                    WatchFlowBackEffect.CloseDetails,
+                    WatchFlowBackEffect.None,
+                    -> resetPlayerState()
                 }
             }
-            is AppRoute.Details -> presenter.closeDetails()
+            is AppRoute.Details -> when (resolveWatchFlowBackEffect(routeBeforeBack, navigationState.currentRoute)) {
+                WatchFlowBackEffect.CloseDetails -> presenter.closeDetails()
+                else -> Unit
+            }
             else -> Unit
         }
     }
