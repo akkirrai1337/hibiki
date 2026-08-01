@@ -117,6 +117,8 @@ import org.akkirrai.hibiki.shared.home.AppHomeScreenLabels
 import org.akkirrai.hibiki.shared.home.HomeUiState
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.home.HomePresenter
+import org.akkirrai.hibiki.shared.home.HomeSearchPresenter
+import org.akkirrai.hibiki.shared.home.HomeSearchUiState
 import org.akkirrai.hibiki.shared.model.SearchUiState
 import org.akkirrai.hibiki.shared.home.applyDescriptionUpdates as applyHomeDescriptionUpdates
 import org.akkirrai.hibiki.shared.home.preserveLoadedDescriptions as preserveHomeDescriptions
@@ -287,6 +289,8 @@ fun HibikiAppShell(
     }
     val presenter = remember(repository) { AnimeCatalogPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE) }
     val state by presenter.state.collectAsState()
+    val homeSearchPresenter = remember(repository) { HomeSearchPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE) }
+    val homeSearchState by homeSearchPresenter.state.collectAsState()
     val homePresenter = remember(homeRepository) { HomePresenter() }
     val homeState by homePresenter.state.collectAsState()
 
@@ -356,7 +360,6 @@ fun HibikiAppShell(
         }
     }
     var selectedTab by remember { mutableStateOf(AppDestination.HOME) }
-    var homeSearchQuery by remember { mutableStateOf("") }
     val initialSettings = remember(settingsStore) { settingsStore.load() }
     var languageMode by remember(settingsStore) { mutableStateOf(initialSettings.languageMode) }
     var darkTheme by remember(settingsStore) { mutableStateOf(initialSettings.darkTheme) }
@@ -379,11 +382,11 @@ fun HibikiAppShell(
 
     fun handleSourceSelected(sourceId: String) {
         currentSelectedSourceId = sourceId
-        homeSearchQuery = ""
         repository.selectSource(sourceId)
         presenter.clear()
         presenter.loadFilterCatalog()
         presenter.search()
+        homeSearchPresenter.resetForSource()
         sourceSearchPresenter.clear()
         onSourceSelected(sourceId)
         homeRefreshJob?.cancel()
@@ -406,18 +409,13 @@ fun HibikiAppShell(
     DisposableEffect(presenter) {
         presenter.loadFilterCatalog()
         presenter.search()
+        homeSearchPresenter.loadFilterCatalog()
         onDispose {
             presenter.close()
+            homeSearchPresenter.close()
             sourceSearchPresenter.close()
             homeRefreshJob?.cancel()
         }
-    }
-
-    LaunchedEffect(homeSearchQuery) {
-        val query = homeSearchQuery.trim()
-        if (query.length < HOME_SEARCH_MIN_QUERY_LENGTH) return@LaunchedEffect
-        delay(HOME_SEARCH_DEBOUNCE_MS)
-        presenter.onQueryChange(query)
     }
 
     LaunchedEffect(libraryRepository, state.selectedAnime) {
@@ -1095,8 +1093,11 @@ fun HibikiAppShell(
                             catalogListState = catalogListState,
                             query = state.query,
                             onQueryChange = presenter::onQueryChange,
-                            homeQuery = homeSearchQuery,
-                            onHomeQueryChange = { homeSearchQuery = it },
+                            homeSearchState = homeSearchState,
+                            onHomeQueryChange = homeSearchPresenter::onQueryChange,
+                            onHomeSearchClear = homeSearchPresenter::clearSearch,
+                            onHomeFilterApply = homeSearchPresenter::applyFilters,
+                            onHomeSearchLoadMore = homeSearchPresenter::loadMore,
                             items = state.items,
                             filters = state.filters,
                             filterCatalog = state.filterCatalog,
@@ -1825,6 +1826,11 @@ private fun AppDestinationContent(
     onBrowseCatalog: () -> Unit = {},
     onOpenLibrary: () -> Unit = {},
     homeState: HomeUiState = HomeUiState(),
+    homeSearchState: HomeSearchUiState = HomeSearchUiState(),
+    onHomeQueryChange: (String) -> Unit = {},
+    onHomeSearchClear: () -> Unit = {},
+    onHomeFilterApply: (AnimeSearchFilters) -> Unit = {},
+    onHomeSearchLoadMore: () -> Unit = {},
     onHomeItemVisible: (Anime) -> Unit = {},
     onHomeRefresh: () -> Unit = {},
     useSystemColorScheme: Boolean = true,
@@ -1852,8 +1858,6 @@ private fun AppDestinationContent(
     onDiscordClick: () -> Unit = {},
     onDiscordChange: (Boolean) -> Unit = {},
     includeNavigationBarPadding: Boolean = true,
-    homeQuery: String = query,
-    onHomeQueryChange: (String) -> Unit = onQueryChange,
     profileLoading: Boolean = false,
     profileAvatarEditAvailable: Boolean = false,
     onCheckForUpdates: () -> Unit = {},
@@ -2113,12 +2117,11 @@ private fun AppDestinationContent(
                     listState = catalogListState,
                     libraryStatusByAnimeId = libraryEntries.associate { it.anime.id to it.category },
                     libraryEntries = libraryEntries,
-                    query = homeQuery,
                     onQueryChange = onHomeQueryChange,
-                    items = items,
-                    filters = filters,
-                    filterCatalog = filterCatalog,
-                    onFiltersChange = onFiltersChange,
+                    homeSearchState = homeSearchState,
+                    onFilterApply = onHomeFilterApply,
+                    onSearchClear = onHomeSearchClear,
+                    onSearchLoadMore = onHomeSearchLoadMore,
                     onAnimeClick = onAnimeClick,
                     onRetry = onCatalogRetry,
                     onLoadMoreRetry = onCatalogLoadMoreRetry,
@@ -2412,12 +2415,11 @@ private fun ColumnScope.HomeScreen(
     listState: LazyListState,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryEntries: List<LibraryEntry>,
-    query: String,
     onQueryChange: (String) -> Unit,
-    items: List<Anime>,
-    filters: AnimeSearchFilters,
-    filterCatalog: AnimeCatalogFilterCatalog?,
-    onFiltersChange: (AnimeSearchFilters) -> Unit,
+    homeSearchState: HomeSearchUiState,
+    onFilterApply: (AnimeSearchFilters) -> Unit,
+    onSearchClear: () -> Unit,
+    onSearchLoadMore: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
     onRetry: () -> Unit,
     onLoadMoreRetry: () -> Unit,
@@ -2427,23 +2429,17 @@ private fun ColumnScope.HomeScreen(
     onItemVisible: (Anime) -> Unit = {},
     onHomeRefresh: () -> Unit,
 ) {
-    val searchResult = when {
-        query.trim().length < HOME_SEARCH_MIN_QUERY_LENGTH -> SearchUiState.Idle
-        state.query.trim() != query.trim() -> SearchUiState.Loading
-        state.isLoading && items.isEmpty() -> SearchUiState.Loading
-        items.isEmpty() -> SearchUiState.Empty
-        else -> SearchUiState.Content(items = items, canLoadMore = false)
-    }
     val homeState = baseHomeState.copy(
         recentlyAddedToLibrary = if (baseHomeState.recentlyAddedToLibrary.isEmpty()) {
             libraryEntries.filter { it.category != LibraryCategory.Saved }.map { it.anime }
         } else {
             baseHomeState.recentlyAddedToLibrary
         },
-        searchQuery = query,
-        searchResult = searchResult,
-        searchFilterCatalog = filterCatalog,
-        searchFilters = filters,
+        searchQuery = homeSearchState.query,
+        searchResult = homeSearchState.result,
+        searchFilterCatalog = homeSearchState.filterCatalog,
+        isSearchFilterCatalogLoading = homeSearchState.isFilterCatalogLoading,
+        searchFilters = homeSearchState.filters,
     )
     AppHomeScreen(
         state = homeState,
@@ -2453,10 +2449,10 @@ private fun ColumnScope.HomeScreen(
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultHomeScreenLabels(),
         onQueryChange = onQueryChange,
-        onClearSearch = { onQueryChange("") },
-        onFilterApply = onFiltersChange,
+        onClearSearch = onSearchClear,
+        onFilterApply = onFilterApply,
         onRefresh = onHomeRefresh,
-        onLoadMoreSearch = onLoadMoreRetry,
+        onLoadMoreSearch = onSearchLoadMore,
         onAnimeClick = onAnimeClick,
         onBrowseCatalog = onBrowseCatalog,
         onOpenLibrary = onOpenLibrary,
