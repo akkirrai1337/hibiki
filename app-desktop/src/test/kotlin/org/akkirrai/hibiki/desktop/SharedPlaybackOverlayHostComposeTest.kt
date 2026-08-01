@@ -21,13 +21,14 @@ import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.player.AppPlaybackOverlayHost
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalTestApi::class)
 class SharedPlaybackOverlayHostComposeTest {
     @Test
-    fun selectingQualityDismissesCommonPlayerSettingsOverlay() = runComposeUiTest {
+    fun selectingQualityKeepsCommonPlayerSettingsOverlayOpen() = runComposeUiTest {
         val navigationState = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Player("source", "episode")))
             .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
@@ -76,7 +77,7 @@ class SharedPlaybackOverlayHostComposeTest {
             .performClick()
 
         assertEquals(PlaybackSettingsAction.SelectQuality("1080p"), selectedAction)
-        assertEquals(AppNavigationEvent.DismissOverlay, overlayEvent)
+        assertNull(overlayEvent)
         assertTrue(navigationState.isPlayerSettingsOverlayActive)
     }
 

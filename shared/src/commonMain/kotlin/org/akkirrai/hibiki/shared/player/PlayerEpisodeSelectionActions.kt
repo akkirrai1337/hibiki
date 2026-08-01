@@ -59,12 +59,10 @@ fun dispatchPlayerSettingsAction(
 
 fun dispatchPlayerSettingsSelection(
     action: PlaybackSettingsAction,
-    dismissPanel: () -> Unit,
     setControlsVisible: () -> Unit,
     persistProgress: () -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
 ) {
-    dismissPanel()
     dispatchPlayerSettingsAction(
         action = action,
         setControlsVisible = setControlsVisible,

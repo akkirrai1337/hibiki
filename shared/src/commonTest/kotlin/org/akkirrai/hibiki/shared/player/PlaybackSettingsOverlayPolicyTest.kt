@@ -7,10 +7,10 @@ import org.akkirrai.hibiki.shared.model.WatchSource
 
 class PlaybackSettingsOverlayPolicyTest {
     @Test
-    fun selectionActionsDismissSettingsOverlay() {
-        assertTrue(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectVoiceover(WatchSource("source", "Dub", 12))))
-        assertTrue(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectPlayer("Media3")))
-        assertTrue(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectQuality("1080p")))
+    fun allActionsKeepSettingsOverlayOpen() {
+        assertFalse(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectVoiceover(WatchSource("source", "Dub", 12))))
+        assertFalse(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectPlayer("Media3")))
+        assertFalse(shouldDismissPlayerSettingsForAction(PlaybackSettingsAction.SelectQuality("1080p")))
     }
 
     @Test

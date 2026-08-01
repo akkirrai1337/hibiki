@@ -19,15 +19,7 @@ import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 
-fun shouldDismissPlayerSettingsForAction(action: PlaybackSettingsAction): Boolean = when (action) {
-    is PlaybackSettingsAction.SelectVoiceover,
-    is PlaybackSettingsAction.SelectPlayer,
-    is PlaybackSettingsAction.SelectQuality,
-    -> true
-    is PlaybackSettingsAction.SetAutoSkipSegments,
-    is PlaybackSettingsAction.SetAutoPlayNextEpisode,
-    -> false
-}
+fun shouldDismissPlayerSettingsForAction(action: PlaybackSettingsAction): Boolean = false
 
 /** Common full-screen overlay boundary for platform media playback surfaces. */
 @Composable

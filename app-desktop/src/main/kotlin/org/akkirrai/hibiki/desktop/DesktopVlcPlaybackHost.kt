@@ -319,7 +319,7 @@ internal fun DesktopVlcPlaybackHost(
                 backHandler = { enabled, callback ->
                     AppSystemBackHandler(enabled = enabled, onBack = callback) {}
                 },
-                settingsContent = { dismissPanel ->
+                settingsContent = {
                     AppPlayerSettingsContent(
                         destination = navigationState.playerSettingsDestination,
                         selectedSpeed = selectedSpeed,
@@ -347,7 +347,6 @@ internal fun DesktopVlcPlaybackHost(
                         onSelectVoiceover = { source ->
                             dispatchPlayerSettingsSelection(
                                 action = PlaybackSettingsAction.SelectVoiceover(source),
-                                dismissPanel = dismissPanel,
                                 setControlsVisible = { controlsVisible = true },
                                 persistProgress = ::savePlaybackProgress,
                                 onSettingsAction = onSettingsAction,
@@ -356,7 +355,6 @@ internal fun DesktopVlcPlaybackHost(
                         onSelectPlayer = { playerName ->
                             dispatchPlayerSettingsSelection(
                                 action = PlaybackSettingsAction.SelectPlayer(playerName),
-                                dismissPanel = dismissPanel,
                                 setControlsVisible = { controlsVisible = true },
                                 persistProgress = ::savePlaybackProgress,
                                 onSettingsAction = onSettingsAction,
@@ -365,7 +363,6 @@ internal fun DesktopVlcPlaybackHost(
                         onSelectQuality = { qualityLabel ->
                             dispatchPlayerSettingsSelection(
                                 action = PlaybackSettingsAction.SelectQuality(qualityLabel),
-                                dismissPanel = dismissPanel,
                                 setControlsVisible = { controlsVisible = true },
                                 persistProgress = ::savePlaybackProgress,
                                 onSettingsAction = onSettingsAction,
