@@ -46,3 +46,7 @@ fun Modifier.appTopSystemInsetPadding(): Modifier {
     if (!environment.isProvided) return statusBarsPadding()
     return padding(top = environment.topSystemInset)
 }
+
+@Composable
+fun Modifier.appRootTopInsetPadding(enabled: Boolean): Modifier =
+    if (enabled) appTopSystemInsetPadding() else this

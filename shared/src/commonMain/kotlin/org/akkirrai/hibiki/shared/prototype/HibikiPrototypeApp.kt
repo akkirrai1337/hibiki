@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -142,7 +141,7 @@ import org.akkirrai.hibiki.shared.profile.profileActivityDateLabel
 import org.akkirrai.hibiki.shared.profile.profileAddedDateLabel
 import org.akkirrai.hibiki.shared.profile.profileRecentDateLabel
 import org.akkirrai.hibiki.shared.profile.formatDurationHours
-import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.layout.appRootTopInsetPadding
 import org.akkirrai.hibiki.shared.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
@@ -1010,7 +1009,6 @@ fun HibikiAppShell(
                         episodesPresenter.setState(EpisodesScreenState())
                         resetPlayerState()
                     }
-                    val rootLayoutEnvironment = LocalAppLayoutEnvironment.current
                     if (!enableOnboarding || onboardingCompleted) {
                     AppProductionRoot(
                         currentDestination = topLevelDestination,
@@ -1043,15 +1041,7 @@ fun HibikiAppShell(
                         ),
                         modifier = Modifier
                             .fillMaxSize()
-                            .then(
-                                if (!applyStatusBarPadding) {
-                                    Modifier
-                                } else if (rootLayoutEnvironment.isProvided) {
-                                    Modifier.padding(top = rootLayoutEnvironment.topSystemInset)
-                                } else {
-                                    Modifier.statusBarsPadding()
-                                },
-                            ),
+                            .appRootTopInsetPadding(applyStatusBarPadding),
                     ) { animatedDestination ->
                         val animatedTab = when (animatedDestination) {
                             AppTopLevelDestination.HOME -> AppDestination.HOME
