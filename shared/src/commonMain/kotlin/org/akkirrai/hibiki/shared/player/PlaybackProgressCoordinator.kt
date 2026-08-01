@@ -11,4 +11,11 @@ class PlaybackProgressCoordinator(
         persist(snapshot)
         lastPersisted = snapshot
     }
+
+    fun persistCurrentPosition(transport: PlaybackTransport) {
+        resolvePersistablePlaybackProgress(
+            positionMs = transport.positionMs(),
+            durationMs = transport.durationMs(),
+        )?.let(::persistIfChanged)
+    }
 }

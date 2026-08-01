@@ -34,7 +34,6 @@ import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.shouldShowSkipSegmentPrompt
 import org.akkirrai.hibiki.shared.player.textKey
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
-import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.sessionKey
@@ -93,10 +92,7 @@ internal fun IosEmbeddedPlaybackHost(
     val episodeNavigation = resolveEpisodeNavigationAvailability(context.episodes, context.episodeId)
 
     fun savePlaybackProgress() {
-        val position = session.transport.positionMs()
-        resolvePersistablePlaybackProgress(position, session.transport.durationMs())?.let { progress ->
-            progressCoordinator.persistIfChanged(progress)
-        }
+        progressCoordinator.persistCurrentPosition(session.transport)
     }
 
     fun closePlayback() {

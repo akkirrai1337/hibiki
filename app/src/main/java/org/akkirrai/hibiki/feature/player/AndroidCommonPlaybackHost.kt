@@ -49,7 +49,6 @@ import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
-import org.akkirrai.hibiki.shared.player.resolvePersistablePlaybackProgress
 import org.akkirrai.hibiki.shared.player.PlaybackProgressCoordinator
 import org.akkirrai.hibiki.shared.player.sessionKey
 import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
@@ -123,10 +122,7 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun savePlaybackProgress() {
-        val position = transport.positionMs()
-        resolvePersistablePlaybackProgress(position, transport.durationMs())?.let { progress ->
-            progressCoordinator.persistIfChanged(progress)
-        }
+        progressCoordinator.persistCurrentPosition(transport)
     }
 
     fun closePlayback() {
