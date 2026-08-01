@@ -223,6 +223,7 @@ import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
 import org.akkirrai.hibiki.shared.navigation.reduceDetailsOverlayChange
+import org.akkirrai.hibiki.shared.navigation.reduceOverlayVisibilityChange
 import org.akkirrai.hibiki.shared.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.shared.player.errorEpisodesState
 import org.akkirrai.hibiki.shared.player.initialEpisodesState
@@ -1135,13 +1136,17 @@ fun HibikiAppShell(
                             onLibraryFiltersApply = libraryPresenter::applySearchFilters,
                             libraryFilterOverlayOpen = isLibraryFilterOverlayOpen,
                             onLibraryFilterOpen = {
-                                navigationState = navigationState.reduce(
-                                    AppNavigationEvent.PresentOverlay(libraryFilterOverlay),
+                                navigationState = navigationState.reduceOverlayVisibilityChange(
+                                    overlay = libraryFilterOverlay,
+                                    visible = true,
                                 )
                             },
                             onLibraryFilterVisibilityChange = { visible ->
                                 if (!visible && isLibraryFilterOverlayOpen) {
-                                    navigationState = navigationState.reduce(AppNavigationEvent.DismissOverlay)
+                                    navigationState = navigationState.reduceOverlayVisibilityChange(
+                                        overlay = libraryFilterOverlay,
+                                        visible = false,
+                                    )
                                 }
                             },
                             onBrowseCatalog = { selectRootTab(AppDestination.CATALOG) },
