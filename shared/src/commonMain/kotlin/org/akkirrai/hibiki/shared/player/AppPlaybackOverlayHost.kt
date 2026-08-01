@@ -58,7 +58,11 @@ fun AppPlaybackOverlayHost(
         }
         onSettingsAction(action)
     }
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
         if (playback != null) {
             content(playback, context, navigationState, onDismiss, handleEpisodeSelected, handleSettingsAction, onOverlayEvent)
         } else {
