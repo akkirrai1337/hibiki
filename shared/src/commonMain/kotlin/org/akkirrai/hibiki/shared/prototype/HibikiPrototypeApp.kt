@@ -181,6 +181,8 @@ import org.akkirrai.hibiki.shared.navigation.currentTransitionKey
 import org.akkirrai.hibiki.shared.navigation.selectedWatchSource
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.selectedAppDestination
+import org.akkirrai.hibiki.shared.navigation.selectRootDestination
+import org.akkirrai.hibiki.shared.navigation.toTopLevelDestination
 import org.akkirrai.hibiki.shared.navigation.transitionKey
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.shared.search.AppSearchField
@@ -1020,17 +1022,9 @@ fun HibikiAppShell(
                         else -> false
                     }
                     fun selectRootTab(destination: AppDestination) {
-                        val target = when (destination) {
-                            AppDestination.HOME -> AppTopLevelDestination.HOME
-                            AppDestination.CATALOG -> AppTopLevelDestination.CATALOG
-                            AppDestination.LIBRARY -> AppTopLevelDestination.LIBRARY
-                            AppDestination.SOURCES -> AppTopLevelDestination.SOURCES
-                            AppDestination.PROFILE, AppDestination.SETTINGS -> AppTopLevelDestination.PROFILE
-                        }
+                        val target = destination.toTopLevelDestination()
                         if (target == topLevelDestination && selectedTab == destination) return
-                        navigationState = navigationState.reduce(
-                            AppNavigationEvent.SelectTopLevel(target),
-                        )
+                        navigationState = navigationState.selectRootDestination(destination)
                         presenter.clearDetails()
                         detailsAnime = null
                         playbackJob?.cancel()
