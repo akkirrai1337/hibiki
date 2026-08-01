@@ -308,8 +308,8 @@ fun HibikiAppShell(
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
     val watchState by watchPresenter.state.collectAsState()
-    var watchAnime by remember { mutableStateOf<Anime?>(null) }
     var detailsAnime by remember { mutableStateOf<Anime?>(null) }
+    val watchAnime = detailsAnime ?: state.selectedAnime
     var detailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
     var watchLoadGeneration by remember { mutableStateOf(0) }
     var forceWatchSourcesRefresh by remember { mutableStateOf(false) }
@@ -860,7 +860,6 @@ fun HibikiAppShell(
                 return
             }
             resetPlayerState()
-            watchAnime = null
             return
         }
         if (navigationState.backStack.isEmpty()) return
@@ -873,7 +872,6 @@ fun HibikiAppShell(
                 pendingPlaybackContext = null
                 resetPlayerState()
                 if (!shouldKeepWatchAnimeAfterPlayerBack(navigationState.currentRoute)) {
-                    watchAnime = null
                 }
             }
             is AppRoute.Episodes, is AppRoute.WatchSources -> {
@@ -885,7 +883,6 @@ fun HibikiAppShell(
                 if (navigationState.currentRoute !is AppRoute.Episodes &&
                     navigationState.currentRoute !is AppRoute.WatchSources
                 ) {
-                    watchAnime = null
                 }
             }
             is AppRoute.Details -> presenter.closeDetails()
@@ -1003,7 +1000,6 @@ fun HibikiAppShell(
                         )
                         presenter.clearDetails()
                         detailsAnime = null
-                        watchAnime = null
                         playbackJob?.cancel()
                         playbackJob = null
                         playbackRequestGeneration++
@@ -1150,7 +1146,6 @@ fun HibikiAppShell(
                                 playbackJob = null
                                 playbackRequestGeneration++
                                 resetPlayerState()
-                                watchAnime = anime
                                 navigationState = navigationState.reduce(
                                     AppNavigationEvent.Navigate(
                                         AppRoute.WatchSources(anime.id, downloadMode = activeDownloadMode),
@@ -1170,7 +1165,6 @@ fun HibikiAppShell(
                                     return@AppDestinationContent
                                 }
                                 resetPlayerState()
-                                watchAnime = null
                             },
                             watchState = watchState,
                             episodesState = episodesState,
@@ -1245,7 +1239,6 @@ fun HibikiAppShell(
                             },
                             onWatchEpisodeClick = ::requestPlayback,
                             onResumePlayback = { progress ->
-                                watchAnime = state.selectedAnime
                                 requestPlayback(
                                     episode = WatchEpisode(
                                         id = progress.episodeId,
