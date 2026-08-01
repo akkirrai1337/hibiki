@@ -1,10 +1,17 @@
 package org.akkirrai.hibiki.shared.details
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.design.component.AppBackButton
@@ -24,7 +31,13 @@ fun AppDetailsHeroOverlayBackButton(
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     AppBackButton(
         onClick = onClick,
-        contentDescription = contentDescription,
+        iconContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = contentDescription,
+                tint = Color.White,
+            )
+        },
         modifier = modifier
             .then(
                 if (layoutEnvironment.isProvided) {
@@ -36,5 +49,7 @@ fun AppDetailsHeroOverlayBackButton(
                     )
                 },
             )
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.58f)),
     )
 }
