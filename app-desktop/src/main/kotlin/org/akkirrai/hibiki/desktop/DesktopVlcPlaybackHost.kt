@@ -86,8 +86,7 @@ internal fun DesktopVlcPlaybackHost(
     var videoWidth by remember(session) { mutableIntStateOf(0) }
     var videoHeight by remember(session) { mutableIntStateOf(0) }
     val playlistVisible = navigationState.isPlaylistOverlayActive
-    var controlsLocked by remember(session) { mutableStateOf(false) }
-    var unlockButtonVisible by remember(session) { mutableStateOf(false) }
+    var playerLockState by remember(session) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerLockState()) }
     var completionHandled by remember(session) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(session) { mutableLongStateOf(0L) }
@@ -168,7 +167,7 @@ internal fun DesktopVlcPlaybackHost(
         }
     }
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
+        ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
@@ -229,7 +228,7 @@ internal fun DesktopVlcPlaybackHost(
                     },
                 update = {},
             )
-            if (!controlsLocked) {
+            if (!playerLockState.isLocked) {
                 AppPlaybackControls(
                     transport = session.transport,
                     playback = playback,
@@ -250,9 +249,8 @@ internal fun DesktopVlcPlaybackHost(
                 onPreviousEpisode = { selectAdjacentEpisode(-1) },
                 onNextEpisode = { selectAdjacentEpisode(1) },
                     onLockClick = {
-                        controlsLocked = true
+                        playerLockState = playerLockState.lock()
                         controlsVisible = false
-                        unlockButtonVisible = true
                         if (playlistVisible) {
                             onOverlayEvent(AppNavigationEvent.DismissOverlay)
                         }
@@ -269,11 +267,10 @@ internal fun DesktopVlcPlaybackHost(
                 )
             }
             AppPlayerUnlockOverlay(
-                visible = controlsLocked && unlockButtonVisible,
+                visible = playerLockState.isLocked && playerLockState.isUnlockButtonVisible,
                 label = appText(AppTextKey.PlayerUnlock),
                 onClick = {
-                    controlsLocked = false
-                    unlockButtonVisible = false
+                    playerLockState = playerLockState.unlock()
                     controlsVisible = true
                 },
                 contentDescription = null,

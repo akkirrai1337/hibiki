@@ -86,8 +86,7 @@ internal fun IosEmbeddedPlaybackHost(
     var autoSkipSegments by remember(session) { mutableStateOf(settingsStore.load().autoSkipSegments) }
     var autoPlayNextEpisode by remember(session) { mutableStateOf(settingsStore.load().autoPlayNextEpisode) }
     var controlsVisible by remember { mutableStateOf(true) }
-    var controlsLocked by remember { mutableStateOf(false) }
-    var unlockButtonVisible by remember { mutableStateOf(false) }
+    var playerLockState by remember(session) { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerLockState()) }
     var positionMs by remember(session) { mutableLongStateOf(0L) }
     var completionHandled by remember(session) { mutableStateOf(false) }
     var hiddenSkipSegmentKey by remember(context.episodeId) { mutableStateOf<String?>(null) }
@@ -157,7 +156,7 @@ internal fun IosEmbeddedPlaybackHost(
         }
     }
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
+        ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
     LaunchedEffect(activeSkipSegmentKey, settingsStore.load().autoSkipSegments) {
@@ -180,7 +179,7 @@ internal fun IosEmbeddedPlaybackHost(
     }
     AppPlayerFrame {
         IosPlayerSurface(session, session.scaleMode, Modifier.fillMaxSize())
-        if (!controlsLocked) {
+        if (!playerLockState.isLocked) {
             IosComposePlayerControls(
                 session = session,
                 playback = playback,
@@ -208,9 +207,8 @@ internal fun IosEmbeddedPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onLockClick = {
-                    controlsLocked = true
+                    playerLockState = playerLockState.lock()
                     controlsVisible = false
-                    unlockButtonVisible = true
                     if (playlistVisible) {
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     }
@@ -228,11 +226,10 @@ internal fun IosEmbeddedPlaybackHost(
             )
         }
         AppPlayerUnlockOverlay(
-            visible = controlsLocked && unlockButtonVisible,
+            visible = playerLockState.isLocked && playerLockState.isUnlockButtonVisible,
             label = appText(AppTextKey.PlayerUnlock),
             onClick = {
-                controlsLocked = false
-                unlockButtonVisible = false
+                playerLockState = playerLockState.unlock()
                 controlsVisible = true
             },
             contentDescription = null,

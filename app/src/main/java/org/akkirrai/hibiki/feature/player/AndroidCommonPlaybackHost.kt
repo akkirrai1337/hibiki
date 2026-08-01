@@ -101,8 +101,7 @@ internal fun AndroidCommonPlaybackHost(
     }
     var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
     val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
-    var controlsLocked by remember { mutableStateOf(false) }
-    var unlockButtonVisible by remember { mutableStateOf(false) }
+    var playerLockState by remember { mutableStateOf(org.akkirrai.hibiki.shared.player.PlayerLockState()) }
     val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
     var completionHandled by remember(context.episodeId) { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
@@ -199,7 +198,7 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     val rawActiveSkipSegment = resolveActivePlaybackSegment(playback.segments, positionMs)
-        ?.takeIf { controlsVisible && !controlsLocked && !playlistVisible && !settingsVisible }
+        ?.takeIf { controlsVisible && !playerLockState.isLocked && !playlistVisible && !settingsVisible }
     val activeSkipSegmentKey = rawActiveSkipSegment?.let { buildSkipSegmentKey(context.episodeId, it) }
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { hiddenSkipSegmentKey != activeSkipSegmentKey }
@@ -340,7 +339,7 @@ internal fun AndroidCommonPlaybackHost(
             isClosing = false,
             onAttached = {},
         )
-        if (!controlsLocked) {
+        if (!playerLockState.isLocked) {
             AppPlaybackControls(
                 transport = transport,
                 playback = playback,
@@ -362,9 +361,8 @@ internal fun AndroidCommonPlaybackHost(
                     selectAdjacentEpisode(1)
                 },
                 onLockClick = {
-                    controlsLocked = true
+                    playerLockState = playerLockState.lock()
                     controlsVisible = false
-                    unlockButtonVisible = true
                     if (playlistVisible) {
                         onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     }
@@ -403,11 +401,10 @@ internal fun AndroidCommonPlaybackHost(
             )
         }
         AppPlayerUnlockOverlay(
-            visible = controlsLocked && unlockButtonVisible,
+            visible = playerLockState.isLocked && playerLockState.isUnlockButtonVisible,
             label = appText(AppTextKey.PlayerUnlock),
             onClick = {
-                controlsLocked = false
-                unlockButtonVisible = false
+                playerLockState = playerLockState.unlock()
                 controlsVisible = true
             },
             contentDescription = null,
