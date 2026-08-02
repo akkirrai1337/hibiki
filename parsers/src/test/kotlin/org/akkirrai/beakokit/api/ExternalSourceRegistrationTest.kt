@@ -50,6 +50,21 @@ class ExternalSourceRegistrationTest {
         assertEquals(SourceId("external-test"), registration.info.id)
     }
 
+    @Test
+    fun registrationsBuildAnExternalRegistry() {
+        val registry = externalSourceRegistry(
+            listOf(
+                ExternalSourceRegistration(
+                    info = sourceInfo(),
+                    catalogCapabilities = CatalogCapabilities.FULL,
+                    runtimeFactory = { error("Runtime is not expected in this test") },
+                ),
+            ),
+        )
+
+        assertEquals(listOf(SourceId("external-test")), registry.sources.map(SourceInfo::id))
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",

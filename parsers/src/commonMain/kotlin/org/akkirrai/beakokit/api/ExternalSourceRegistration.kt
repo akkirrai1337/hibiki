@@ -26,6 +26,10 @@ fun externalSourceCatalog(
     registrations: Iterable<ExternalSourceRegistration>,
 ): SourceCatalog = SourceCatalog(registrations.map(ExternalSourceRegistration::catalogEntry))
 
+fun externalSourceRegistry(
+    registrations: Iterable<ExternalSourceRegistration>,
+): ExternalSourceRegistry = ExternalSourceRegistry(externalSourceCatalog(registrations))
+
 fun SourceManifest.toExternalSourceRegistration(
     catalogCapabilities: CatalogCapabilities,
     runtimeFactory: (SourceContext) -> ExternalSourceRuntime,
