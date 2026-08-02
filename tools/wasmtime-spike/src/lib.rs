@@ -26,6 +26,23 @@ pub extern "C" fn beakokit_runtime_probe() -> i32 {
     }
 }
 
+/// JNI shim used only by the temporary Android instrumentation harness.
+#[no_mangle]
+pub unsafe extern "system" fn Java_org_akkirrai_hibiki_WasmtimeRuntimeSmokeTest_probe(
+    _env: *mut core::ffi::c_void,
+    _receiver: *mut core::ffi::c_void,
+) -> i32 {
+    beakokit_runtime_probe()
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_probe(
+    _env: *mut core::ffi::c_void,
+    _receiver: *mut core::ffi::c_void,
+) -> i32 {
+    beakokit_runtime_probe()
+}
+
 fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Engine::default();
     let module = Module::new(

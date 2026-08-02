@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+**/.gradle/
 **/build/
 .codex*
 
@@ -8,6 +9,8 @@
 
 # Rust build artifacts
 **/target/
+tools/wasmtime-spike/android-harness/app/src/main/jniLibs/
+app/src/androidTest/jniLibs/
 
 # Android Studio / IntelliJ
 .idea/

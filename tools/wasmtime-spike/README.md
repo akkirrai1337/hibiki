@@ -28,3 +28,8 @@ The Android library is emitted as
 `target/aarch64-linux-android/debug/libwasmtime_spike.so`. The exported ABI
 symbol can be checked with the NDK `llvm-nm` tool before adding a Kotlin/JNI
 or Swift bridge.
+
+An independent Android harness under `android-harness/` packages the x86_64
+library, installs a tiny Java activity on an emulator, and displays
+`Wasmtime JNI probe: OK` when the native probe returns success. It is kept
+outside the main application so the existing production build is untouched.
