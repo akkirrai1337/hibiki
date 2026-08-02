@@ -79,4 +79,30 @@ class ExternalSourceRuntimeProtocolCodecTest {
 
         assertEquals("Native runtime response exceeds 32 bytes", error.message)
     }
+
+    @Test
+    fun nativeBridgeRejectsOversizedRequestBeforeCallingBridge() = runBlocking {
+        var called = false
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { _, _ ->
+                called = true
+                error("Native bridge must not be called")
+            },
+        )
+        val request = ExternalSourceRuntimeRequest(
+            requestId = "bridge-request-too-large",
+            operation = ExternalSourceRuntimeOperation.DETAILS,
+            payload = buildJsonObject { put("id", "title-1") },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            transport.call(
+                request = request,
+                limits = ExternalSourceRuntimeCallLimits(maxRequestBytes = 1),
+            )
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
+        assertEquals(false, called)
+    }
 }

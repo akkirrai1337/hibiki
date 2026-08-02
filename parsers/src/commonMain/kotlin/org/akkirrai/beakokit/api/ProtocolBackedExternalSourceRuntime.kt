@@ -23,10 +23,12 @@ fun interface ExternalSourceRuntimeTransport {
 /** Host-enforced limits for one external runtime call. */
 data class ExternalSourceRuntimeCallLimits(
     val timeoutMillis: Long = SourceHostHttpRequest.DEFAULT_TIMEOUT_MILLIS,
+    val maxRequestBytes: Long = SourceHostHttpRequest.DEFAULT_MAX_RESPONSE_BYTES,
     val maxResponseBytes: Long = SourceHostHttpRequest.DEFAULT_MAX_RESPONSE_BYTES,
 ) {
     init {
         require(timeoutMillis > 0) { "Runtime timeout must be positive" }
+        require(maxRequestBytes > 0) { "Maximum runtime request size must be positive" }
         require(maxResponseBytes > 0) { "Maximum runtime response size must be positive" }
     }
 }
