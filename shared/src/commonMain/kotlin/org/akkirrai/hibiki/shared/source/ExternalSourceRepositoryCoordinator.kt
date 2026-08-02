@@ -2,6 +2,9 @@ package org.akkirrai.hibiki.shared.source
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceClientVersion
 import org.akkirrai.beakokit.api.SourceHostApi
@@ -19,11 +22,13 @@ class ExternalSourceRepositoryCoordinator(
 ) {
     private val refreshMutex = Mutex()
 
-    var snapshot: SourceRepositoryLoadSnapshot = SourceRepositoryLoadSnapshot(
+    private val snapshotState = MutableStateFlow(SourceRepositoryLoadSnapshot(
         loaded = emptyList(),
         failures = emptyList(),
-    )
-        private set
+    ))
+
+    /** Latest repository result; remains separate from the active built-in source registry. */
+    val snapshot: StateFlow<SourceRepositoryLoadSnapshot> = snapshotState.asStateFlow()
 
     suspend fun refresh(
         clientVersion: Int = SourceClientVersion.CURRENT,
@@ -35,7 +40,7 @@ class ExternalSourceRepositoryCoordinator(
                 clientVersion = clientVersion,
                 supportedSourceApiVersion = supportedSourceApiVersion,
                 supportedHostApiVersion = supportedHostApiVersion,
-            ).also { snapshot = it }
+            ).also { snapshotState.value = it }
         }
     }
 }

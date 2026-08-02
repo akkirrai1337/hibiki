@@ -38,10 +38,10 @@ class ExternalSourceRepositoryCoordinatorTest {
             ),
         )
 
-        assertEquals(emptyList(), coordinator.snapshot.loaded)
+        assertEquals(emptyList(), coordinator.snapshot.value.loaded)
         val refreshed = coordinator.refresh(clientVersion = 1)
 
-        assertEquals(refreshed, coordinator.snapshot)
+        assertEquals(refreshed, coordinator.snapshot.value)
         assertEquals(listOf(endpoint), refreshed.loaded.map { it.endpoint })
     }
 
