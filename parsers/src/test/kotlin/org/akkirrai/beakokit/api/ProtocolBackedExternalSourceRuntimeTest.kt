@@ -54,13 +54,7 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     private class FakePayloadCodec : ExternalSourceRuntimePayloadCodec {
-        override fun encodeSearch(request: AnimeSearchRequest): JsonObject = buildJsonObject {
-            put("query", request.query)
-        }
-
         override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = listOf(title("decoded-search"))
-
-        override fun encodeDetails(id: String): JsonObject = buildJsonObject { put("id", id) }
 
         override fun decodeDetails(payload: JsonObject): AnimeTitle = title("decoded-details")
 

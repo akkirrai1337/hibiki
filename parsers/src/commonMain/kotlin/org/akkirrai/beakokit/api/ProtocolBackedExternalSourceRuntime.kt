@@ -11,11 +11,7 @@ fun interface ExternalSourceRuntimeTransport {
 
 /** Converts BeakoKit models to and from operation-specific runtime JSON payloads. */
 interface ExternalSourceRuntimePayloadCodec {
-    fun encodeSearch(request: AnimeSearchRequest): JsonObject
-
     fun decodeSearch(payload: JsonObject): List<AnimeTitle>
-
-    fun encodeDetails(id: String): JsonObject
 
     fun decodeDetails(payload: JsonObject): AnimeTitle
 }
@@ -28,13 +24,13 @@ class ProtocolBackedExternalSourceRuntime(
 ) : ExternalSourceRuntime {
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = call(
         operation = ExternalSourceRuntimeOperation.SEARCH,
-        payload = payloadCodec.encodeSearch(request),
+        payload = ExternalSourceRuntimePayloads.search(request),
         decode = payloadCodec::decodeSearch,
     )
 
     override suspend fun details(id: String): AnimeTitle = call(
         operation = ExternalSourceRuntimeOperation.DETAILS,
-        payload = payloadCodec.encodeDetails(id),
+        payload = ExternalSourceRuntimePayloads.details(id),
         decode = payloadCodec::decodeDetails,
     )
 
