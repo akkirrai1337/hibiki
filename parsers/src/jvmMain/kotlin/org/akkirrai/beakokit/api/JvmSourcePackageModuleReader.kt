@@ -18,15 +18,28 @@ class JvmSourcePackageModuleReader(
         val root = Path.of(packagePath).toAbsolutePath().normalize()
         val module = root.resolve(entrypoint).normalize()
         require(module.startsWith(root)) { "Source package entrypoint escapes package directory" }
+        val realRoot = try {
+            root.toRealPath()
+        } catch (error: Exception) {
+            throw SourcePackageStateException("Installed source package directory is unreadable", error)
+        }
         if (!Files.isRegularFile(module)) {
             throw SourcePackageStateException("Source package entrypoint does not exist: $entrypoint")
         }
-        val size = Files.size(module)
+        val realModule = try {
+            module.toRealPath()
+        } catch (error: Exception) {
+            throw SourcePackageStateException("Source package entrypoint is unreadable: $entrypoint", error)
+        }
+        if (!realModule.startsWith(realRoot)) {
+            throw SourcePackageStateException("Source package entrypoint escapes package directory")
+        }
+        val size = Files.size(realModule)
         if (size > maxModuleBytes) {
             throw SourcePackageStateException("Source package module exceeds the maximum allowed size")
         }
         return try {
-            Files.readAllBytes(module).also { bytes ->
+            Files.readAllBytes(realModule).also { bytes ->
                 if (bytes.size.toLong() > maxModuleBytes) {
                     throw SourcePackageStateException("Source package module exceeds the maximum allowed size")
                 }
