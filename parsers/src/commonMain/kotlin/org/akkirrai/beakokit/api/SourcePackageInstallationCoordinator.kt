@@ -11,6 +11,7 @@ fun interface SourcePackageExtractor {
     suspend fun extract(
         downloaded: DownloadedSourcePackage,
         stagingPath: String,
+        repositoryManifest: SourceManifest,
     ): ExtractedSourcePackage
 }
 
@@ -27,7 +28,11 @@ class SourcePackageInstallationCoordinator(
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
         val verified = downloadService.download(repositoryManifest)
-        val extracted = extractor.extract(verified.downloaded, stagingPath)
+        val extracted = extractor.extract(
+            downloaded = verified.downloaded,
+            stagingPath = stagingPath,
+            repositoryManifest = repositoryManifest,
+        )
         return installer.installAfterInitialization(
             repositoryManifest = repositoryManifest,
             packageManifest = extracted.manifest,

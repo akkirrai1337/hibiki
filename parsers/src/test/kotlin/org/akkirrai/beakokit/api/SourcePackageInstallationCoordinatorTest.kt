@@ -23,8 +23,9 @@ class SourcePackageInstallationCoordinatorTest {
                     sha256 = SourcePackageSha256 { manifest.sha256 },
                 ),
             ),
-            extractor = SourcePackageExtractor { _, stagingPath ->
+            extractor = SourcePackageExtractor { _, stagingPath, extractedRepositoryManifest ->
                 assertEquals(candidate.packagePath, stagingPath)
+                assertEquals(manifest, extractedRepositoryManifest)
                 ExtractedSourcePackage(
                     manifest = manifest,
                     entries = listOf(
