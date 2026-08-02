@@ -25,3 +25,14 @@ data class ExternalSourceRegistration(
 fun externalSourceCatalog(
     registrations: Iterable<ExternalSourceRegistration>,
 ): SourceCatalog = SourceCatalog(registrations.map(ExternalSourceRegistration::catalogEntry))
+
+fun SourceManifest.toExternalSourceRegistration(
+    catalogCapabilities: CatalogCapabilities,
+    runtimeFactory: (SourceContext) -> ExternalSourceRuntime,
+    registrationOrder: Int? = null,
+): ExternalSourceRegistration = ExternalSourceRegistration(
+    info = requireSourceInfo(),
+    catalogCapabilities = catalogCapabilities,
+    runtimeFactory = runtimeFactory,
+    registrationOrder = registrationOrder,
+)

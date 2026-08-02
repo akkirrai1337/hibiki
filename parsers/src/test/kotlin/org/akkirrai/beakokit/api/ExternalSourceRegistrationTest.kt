@@ -39,11 +39,40 @@ class ExternalSourceRegistrationTest {
         assertEquals("title-1", source.getById("title-1").id)
     }
 
+    @Test
+    fun manifestMetadataFeedsRegistrationInfo() {
+        val registration = manifest().toExternalSourceRegistration(
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtimeFactory = { error("Runtime is not expected in this test") },
+        )
+
+        assertEquals("External manifest source", registration.info.name)
+        assertEquals(SourceId("external-test"), registration.info.id)
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",
         languages = setOf(SourceLanguage.ENGLISH),
         primaryLanguage = SourceLanguage.ENGLISH,
+    )
+
+    private fun manifest() = SourceManifest(
+        manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
+        sourceId = SourceId("external-test"),
+        packageVersion = "1.0.0",
+        sourceInfo = SourceManifestInfo(
+            displayName = "External manifest source",
+            languages = setOf(SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.ENGLISH,
+        ),
+        apiVersion = SourceApi.VERSION,
+        runtime = SourceRuntime("wasm", "wasm32-wasi"),
+        entrypoint = "source.wasm",
+        packageUrl = "https://example.com/source.zip",
+        sha256 = "a".repeat(64),
+        artifactSizeBytes = 1,
+        minClientVersion = 1,
     )
 
     private fun title(id: String) = AnimeTitle(
