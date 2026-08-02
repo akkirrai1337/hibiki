@@ -4,6 +4,7 @@ package org.akkirrai.beakokit.api
 data class ExtractedSourcePackage(
     val manifest: SourceManifest,
     val entries: List<SourcePackageEntry>,
+    val discard: () -> Unit = {},
 )
 
 /** Extracts a verified archive without exposing filesystem APIs to common code. */
@@ -36,13 +37,18 @@ class SourcePackageInstallationCoordinator(
             stagingPath = stagingPath,
             repositoryManifest = repositoryManifest,
         )
-        return installer.installAfterInitialization(
-            repositoryManifest = repositoryManifest,
-            packageManifest = extracted.manifest,
-            artifact = verified.artifact,
-            entries = extracted.entries,
-            candidate = candidate,
-            initialize = initialize,
-        )
+        return try {
+            installer.installAfterInitialization(
+                repositoryManifest = repositoryManifest,
+                packageManifest = extracted.manifest,
+                artifact = verified.artifact,
+                entries = extracted.entries,
+                candidate = candidate,
+                initialize = initialize,
+            )
+        } catch (error: Throwable) {
+            extracted.discard()
+            throw error
+        }
     }
 }

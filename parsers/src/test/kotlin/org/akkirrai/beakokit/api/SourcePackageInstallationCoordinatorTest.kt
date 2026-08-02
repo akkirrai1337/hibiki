@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 class SourcePackageInstallationCoordinatorTest {
@@ -79,6 +80,48 @@ class SourcePackageInstallationCoordinatorTest {
         assertFailsWith<IllegalArgumentException> {
             coordinator.install(manifest, candidate, "staging/package") {}
         }
+    }
+
+    @Test
+    fun `coordinator discards extraction when initialization fails`() = runBlocking {
+        val manifest = manifest()
+        val candidate = InstalledSourcePackage(
+            sourceId = manifest.sourceId,
+            packageVersion = manifest.packageVersion,
+            packagePath = "staging/package",
+        )
+        var discarded = false
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(byteArrayOf(1, 2, 3)) },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ ->
+                ExtractedSourcePackage(
+                    manifest = manifest,
+                    entries = listOf(
+                        SourcePackageEntry("manifest.json", 1),
+                        SourcePackageEntry(manifest.entrypoint, 1),
+                    ),
+                    discard = { discarded = true },
+                )
+            },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(manifest.sourceId, RecordingStore()),
+            ),
+        )
+
+        assertFailsWith<IllegalStateException> {
+            coordinator.install(manifest, candidate, candidate.packagePath) {
+                error("initialization failed")
+            }
+        }
+        assertTrue(discarded)
     }
 
     private fun manifest() = SourceManifest(

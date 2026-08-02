@@ -29,6 +29,7 @@ class JvmDownloadedSourcePackageExtractor(
             return ExtractedSourcePackage(
                 manifest = manifestReader.read(stagingPath),
                 entries = entries(stagingDirectory),
+                discard = { deleteRecursively(stagingDirectory) },
             )
         } finally {
             Files.deleteIfExists(archive)
@@ -52,4 +53,11 @@ class JvmDownloadedSourcePackageExtractor(
                 .sorted(Comparator.comparing(SourcePackageEntry::path))
                 .toList()
         }
+
+    private fun deleteRecursively(directory: Path) {
+        if (!Files.exists(directory)) return
+        Files.walk(directory).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+        }
+    }
 }
