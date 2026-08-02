@@ -39,7 +39,7 @@ concurrency:
 jobs:
   release:
     name: Build iOS device IPA
-    if: (github.event_name == 'push' && !contains(github.event.head_commit.message, '[ios-test]')) || (github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests)
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[iOS build]')) || (github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests)
     runs-on: macos-15
     timeout-minutes: 45
     env:
