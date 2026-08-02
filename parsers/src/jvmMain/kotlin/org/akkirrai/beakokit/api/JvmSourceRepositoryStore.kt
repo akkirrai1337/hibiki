@@ -76,5 +76,3 @@ class JvmSourceRepositoryStore(
         return repositories.toList()
     }
 }
-
-class SourceRepositoryStateException(message: String) : IllegalStateException(message)
