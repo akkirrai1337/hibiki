@@ -14,6 +14,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 import org.akkirrai.beakokit.api.ExternalSourceHostErrorCode
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpRequest
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpResponse
@@ -56,18 +57,32 @@ private class AndroidExternalSourceRuntimeBridge(
     private val host = AndroidExternalSourceHost(context.httpClient, requirements)
 
     override suspend fun call(request: ByteArray, maxResponseBytes: Long): ByteArray =
-        withContext(Dispatchers.IO) {
-            ensureActive()
-            val response = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
-                module = module,
-                request = request.decodeToString(),
-                host = NativeSourceRuntimeBridge.Host(host::call),
-            )
-            ensureActive()
-            response.encodeToByteArray().also { responseBytes ->
-                require(responseBytes.size.toLong() <= maxResponseBytes) {
-                    "Native runtime response exceeds $maxResponseBytes bytes"
+        kotlinx.coroutines.coroutineScope {
+            val cancellationScopeId = NativeSourceRuntimeBridge.beginCancellationScope()
+            val cancellationHandle = coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException) {
+                    NativeSourceRuntimeBridge.cancelCancellationScope(cancellationScopeId)
                 }
+            }
+            try {
+                withContext(Dispatchers.IO) {
+                    ensureActive()
+                    val response = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+                        module = module,
+                        request = request.decodeToString(),
+                        host = NativeSourceRuntimeBridge.Host(host::call),
+                        cancellationScopeId = cancellationScopeId,
+                    )
+                    ensureActive()
+                    response.encodeToByteArray().also { responseBytes ->
+                        require(responseBytes.size.toLong() <= maxResponseBytes) {
+                            "Native runtime response exceeds $maxResponseBytes bytes"
+                        }
+                    }
+                }
+            } finally {
+                cancellationHandle?.dispose()
+                NativeSourceRuntimeBridge.finishCancellationScope(cancellationScopeId)
             }
         }
 }

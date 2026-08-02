@@ -16,6 +16,16 @@ class NativeSourceRuntimeBridge private constructor() {
             module: ByteArray,
             request: String,
             host: Host,
+            cancellationScopeId: Long,
         ): String
+
+        @JvmStatic
+        external fun beginCancellationScope(): Long
+
+        @JvmStatic
+        external fun cancelCancellationScope(scopeId: Long)
+
+        @JvmStatic
+        external fun finishCancellationScope(scopeId: Long)
     }
 }

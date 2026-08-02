@@ -1,10 +1,12 @@
 #[cfg(feature = "android-production-jni")]
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::null_mut;
 use std::sync::mpsc;
 #[cfg(feature = "android-production-jni")]
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
+#[cfg(feature = "android-production-jni")]
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -28,6 +30,44 @@ pub const PROTOCOL_MAX_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 pub const PROTOCOL_DEFAULT_TIMEOUT_MILLIS: u64 = 30_000;
 const PROTOCOL_MAX_FUEL: u64 = 50_000_000;
 const WASM_PAGE_SIZE_BYTES: usize = 64 * 1024;
+
+#[cfg(feature = "android-production-jni")]
+struct CancellationScope {
+    engine: Option<Engine>,
+    cancelled: bool,
+}
+
+#[cfg(feature = "android-production-jni")]
+static CANCELLATION_SCOPES: OnceLock<Mutex<HashMap<i64, CancellationScope>>> = OnceLock::new();
+#[cfg(feature = "android-production-jni")]
+static NEXT_CANCELLATION_SCOPE_ID: AtomicI64 = AtomicI64::new(1);
+
+#[cfg(feature = "android-production-jni")]
+fn cancellation_scopes() -> &'static Mutex<HashMap<i64, CancellationScope>> {
+    CANCELLATION_SCOPES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(feature = "android-production-jni")]
+fn bind_cancellation_scope(scope_id: i64, engine: &Engine) -> bool {
+    let mut scopes = match cancellation_scopes().lock() {
+        Ok(scopes) => scopes,
+        Err(_) => return true,
+    };
+    let Some(scope) = scopes.get_mut(&scope_id) else {
+        return true;
+    };
+    scope.engine = Some(engine.clone());
+    scope.cancelled
+}
+
+#[cfg(feature = "android-production-jni")]
+fn cancellation_requested(scope_id: i64) -> bool {
+    cancellation_scopes()
+        .lock()
+        .ok()
+        .and_then(|scopes| scopes.get(&scope_id).map(|scope| scope.cancelled))
+        .unwrap_or(true)
+}
 
 fn runtime_engine() -> Result<Engine, wasmtime::Error> {
     let mut config = Config::new();
@@ -598,9 +638,16 @@ fn run_protocol_host_call_request_with_callback(
     module_bytes: &[u8],
     host_call: HostCall,
     user_data: *mut core::ffi::c_void,
+    #[cfg(feature = "android-production-jni")] cancellation_scope_id: Option<i64>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let user_data = user_data as usize;
     let engine = runtime_engine()?;
+    #[cfg(feature = "android-production-jni")]
+    if let Some(scope_id) = cancellation_scope_id {
+        if bind_cancellation_scope(scope_id, &engine) || cancellation_requested(scope_id) {
+            return Err("external runtime call was cancelled".into());
+        }
+    }
     let module = Module::new(&engine, module_bytes)?;
     let mut linker = Linker::new(&engine);
     linker.func_wrap(
@@ -662,6 +709,12 @@ fn run_protocol_host_call_request_with_callback(
     let mut store = Store::new(&engine, ());
     store.set_fuel(PROTOCOL_MAX_FUEL)?;
     store.set_epoch_deadline(1);
+    #[cfg(feature = "android-production-jni")]
+    if let Some(scope_id) = cancellation_scope_id {
+        if cancellation_requested(scope_id) {
+            return Err("external runtime call was cancelled".into());
+        }
+    }
     let instance = linker.instantiate(&mut store, &module)?;
     let memory = instance
         .get_memory(&mut store, "memory")
@@ -725,6 +778,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
     module: JByteArray,
     request: JString,
     host: JObject,
+    cancellation_scope_id: i64,
 ) -> jni::sys::jstring {
     let request_id = env
         .get_string(&request)
@@ -733,7 +787,13 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
         .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
         .and_then(|value| value.get("requestId")?.as_str().map(str::to_owned))
         .unwrap_or_else(|| "jni-host-runtime-error".to_owned());
-    let response = protocol_response_from_production_jni_with_host(&mut env, module, request, host)
+    let response = protocol_response_from_production_jni_with_host(
+        &mut env,
+        module,
+        request,
+        host,
+        cancellation_scope_id,
+    )
         .unwrap_or_else(|error| {
             serde_json::json!({
                 "requestId": request_id,
@@ -747,6 +807,59 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
     env.new_string(response)
         .map(|value| value.into_raw())
         .unwrap_or(null_mut())
+}
+
+/// Allocates one native cancellation scope for an Android runtime call.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_beginCancellationScope(
+    _env: JNIEnv,
+    _class: JClass,
+) -> i64 {
+    let scope_id = NEXT_CANCELLATION_SCOPE_ID.fetch_add(1, Ordering::Relaxed);
+    if let Ok(mut scopes) = cancellation_scopes().lock() {
+        scopes.insert(
+            scope_id,
+            CancellationScope {
+                engine: None,
+                cancelled: false,
+            },
+        );
+        scope_id
+    } else {
+        0
+    }
+}
+
+/// Requests interruption of one active Android runtime call.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_cancelCancellationScope(
+    _env: JNIEnv,
+    _class: JClass,
+    scope_id: i64,
+) {
+    if let Ok(mut scopes) = cancellation_scopes().lock() {
+        if let Some(scope) = scopes.get_mut(&scope_id) {
+            scope.cancelled = true;
+            if let Some(engine) = &scope.engine {
+                engine.increment_epoch();
+            }
+        }
+    }
+}
+
+/// Releases one Android runtime cancellation scope after the native call returns.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_finishCancellationScope(
+    _env: JNIEnv,
+    _class: JClass,
+    scope_id: i64,
+) {
+    if let Ok(mut scopes) = cancellation_scopes().lock() {
+        scopes.remove(&scope_id);
+    }
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -840,6 +953,7 @@ fn protocol_response_from_production_jni_with_host(
     module: JByteArray,
     request: JString,
     host: JObject,
+    cancellation_scope_id: i64,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let module_len = env.get_array_length(&module)? as usize;
     if module_len > PROTOCOL_MAX_MODULE_BYTES {
@@ -860,6 +974,7 @@ fn protocol_response_from_production_jni_with_host(
         &module_bytes,
         jni_host_callback,
         user_data,
+        Some(cancellation_scope_id),
     )?;
     Ok(String::from_utf8(response)?)
 }
