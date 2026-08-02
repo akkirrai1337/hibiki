@@ -203,6 +203,30 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun activePackageLoaderRestoresManifestFromTheInstalledPath() {
+        val installed = InstalledSourcePackage(
+            sourceId = SourceId("external-test"),
+            packageVersion = "1.0.0",
+            packagePath = "sources/external-test/1.0.0",
+        )
+        val loader = ActiveExternalSourcePackageLoader(
+            activationRepository = SourcePackageActivationRepository(
+                sourceId = installed.sourceId,
+                store = InMemoryActivationStore(SourcePackageActivationState(active = installed)),
+            ),
+            manifestReader = SourcePackageManifestReader { path ->
+                assertEquals(installed.packagePath, path)
+                manifest()
+            },
+        )
+
+        val active = loader.load()
+
+        assertEquals(installed, active?.installed)
+        assertEquals(manifest(), active?.manifest)
+    }
+
+    @Test
     fun activePackageRejectsMismatchedVersion() {
         assertFailsWith<IllegalArgumentException> {
             ActiveExternalSourcePackage(
@@ -255,4 +279,14 @@ class ExternalSourceRegistrationTest {
         status = null,
         description = null,
     )
+
+    private class InMemoryActivationStore(
+        private var state: SourcePackageActivationState,
+    ) : SourcePackageActivationStore {
+        override fun load(sourceId: SourceId): SourcePackageActivationState = state
+
+        override fun persistAtomically(sourceId: SourceId, state: SourcePackageActivationState) {
+            this.state = state
+        }
+    }
 }
