@@ -10,13 +10,13 @@ import platform.posix.memcpy
 /** Reads a validated runtime module from an installed iOS package directory. */
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 class IosSourcePackageModuleReader(
-    private val maxModuleBytes: Long = DEFAULT_MAX_MODULE_BYTES,
-) {
+    private val maxModuleBytes: Long = SourcePackageModuleReader.DEFAULT_MAX_MODULE_BYTES,
+) : SourcePackageModuleReader {
     init {
         require(maxModuleBytes > 0) { "Maximum module size must be positive" }
     }
 
-    fun read(packagePath: String, entrypoint: String): ByteArray {
+    override fun read(packagePath: String, entrypoint: String): ByteArray {
         require(SourcePackageLayoutValidator.isSafeRelativePath(entrypoint)) {
             "Unsafe source package entrypoint: $entrypoint"
         }
@@ -45,6 +45,6 @@ class IosSourcePackageModuleReader(
     }
 
     companion object {
-        const val DEFAULT_MAX_MODULE_BYTES: Long = 16L * 1024L * 1024L
+        const val DEFAULT_MAX_MODULE_BYTES: Long = SourcePackageModuleReader.DEFAULT_MAX_MODULE_BYTES
     }
 }
