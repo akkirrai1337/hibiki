@@ -10,6 +10,6 @@ internal const val IosPlayerOrientationNotification =
 internal fun setIosPlayerLandscape(active: Boolean) {
     NSNotificationCenter.defaultCenter.postNotificationName(
         aName = IosPlayerOrientationNotification,
-        `object` = NSNumber.numberWithBool(active),
+        `object` = active as NSNumber,
     )
 }
