@@ -13,6 +13,7 @@ class SourcePackageDownloadService(
     private val limits: SourcePackageDownloadLimits = SourcePackageDownloadLimits(),
 ) {
     suspend fun download(manifest: SourceManifest): VerifiedSourcePackageDownload {
+        artifactVerifier.requireManifestCompatible(manifest)
         val downloaded = transport.download(manifest.packageUrl, limits)
         val artifact = artifactVerifier.verify(manifest, downloaded)
         return VerifiedSourcePackageDownload(downloaded, artifact)

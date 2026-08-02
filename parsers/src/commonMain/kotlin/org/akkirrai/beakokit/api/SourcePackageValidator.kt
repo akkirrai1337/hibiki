@@ -45,6 +45,11 @@ class SourcePackageValidator(
         if (violations.isNotEmpty()) throw SourcePackageValidationException(violations)
     }
 
+    fun requireManifestCompatible(manifest: SourceManifest) {
+        val violations = manifest.violations(clientVersion, supportedApiVersion, supportedHostApiVersion)
+        if (violations.isNotEmpty()) throw SourcePackageValidationException(violations)
+    }
+
     companion object {
         const val DEFAULT_MAX_ARTIFACT_SIZE_BYTES: Long = 64L * 1024L * 1024L
     }

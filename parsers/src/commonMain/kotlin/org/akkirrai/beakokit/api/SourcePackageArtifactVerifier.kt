@@ -10,6 +10,9 @@ class SourcePackageArtifactVerifier(
     private val validator: SourcePackageValidator,
     private val sha256: SourcePackageSha256,
 ) {
+    fun requireManifestCompatible(manifest: SourceManifest) =
+        validator.requireManifestCompatible(manifest)
+
     fun verify(
         manifest: SourceManifest,
         downloaded: DownloadedSourcePackage,

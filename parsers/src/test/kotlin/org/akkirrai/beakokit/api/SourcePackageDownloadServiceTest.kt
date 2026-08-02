@@ -39,6 +39,26 @@ class SourcePackageDownloadServiceTest {
         }
     }
 
+    @Test
+    fun `service rejects an incompatible manifest before transport`() = runBlocking {
+        var transportCalled = false
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ ->
+                transportCalled = true
+                error("Transport must not be called")
+            },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3),
+                sha256 = SourcePackageSha256 { "a".repeat(64) },
+            ),
+        )
+
+        assertFailsWith<SourcePackageValidationException> {
+            service.download(manifest(size = 3, sha256 = "a".repeat(64)).copy(minClientVersion = 4))
+        }
+        assertEquals(false, transportCalled)
+    }
+
     private fun manifest(size: Long, sha256: String) = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),
