@@ -4,6 +4,10 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import org.akkirrai.beakokit.api.KtorSourceRepositoryTransport
+import org.akkirrai.beakokit.api.ActiveExternalSourcePackageLoader
+import org.akkirrai.beakokit.api.JvmSourcePackageActivationStore
+import org.akkirrai.beakokit.api.JvmSourcePackageManifestReader
+import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.SourceRepositoryCatalog
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryLoader
@@ -13,6 +17,9 @@ fun createAndroidExternalSourceRepositoryPlatform(
     context: Context,
 ): ExternalSourceRepositoryPlatform {
     val client = HttpClient(OkHttp)
+    val activationStore = JvmSourcePackageActivationStore(
+        rootDirectory = context.filesDir.toPath().resolve("beakokit/source-state"),
+    )
     val catalog = SourceRepositoryCatalog(AndroidSourceRepositoryStore(context))
     val loader = SourceRepositoryCatalogLoader(
         catalog = catalog,
@@ -22,6 +29,12 @@ fun createAndroidExternalSourceRepositoryPlatform(
     )
     return ExternalSourceRepositoryPlatform(
         coordinator = ExternalSourceRepositoryCoordinator(loader),
+        activePackageLoaderFactory = { sourceId ->
+            ActiveExternalSourcePackageLoader(
+                activationRepository = SourcePackageActivationRepository(sourceId, activationStore),
+                manifestReader = JvmSourcePackageManifestReader(),
+            )
+        },
         closeResources = client::close,
     )
 }
