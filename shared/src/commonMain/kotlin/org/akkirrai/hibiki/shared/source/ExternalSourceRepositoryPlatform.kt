@@ -24,7 +24,7 @@ class ExternalSourceRepositoryPlatform(
         catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
         runtimeFactory: ExternalSourceRuntimeFactory,
     ): ExternalSourceRegistry = activeExternalSourceRegistry(
-        packages = sourceIds.mapNotNull(::loadActivePackage),
+        packages = sourceIds.distinct().mapNotNull(::loadActivePackage),
         catalogCapabilities = catalogCapabilities,
         runtimeFactory = runtimeFactory,
     )

@@ -65,7 +65,7 @@ class ExternalSourceRepositoryPlatformTest {
         )
 
         val registry = platform.loadActiveRegistry(
-            sourceIds = listOf(packageId, SourceId("not-installed")),
+            sourceIds = listOf(packageId, packageId, SourceId("not-installed")),
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
                 runtimeCreated = true
