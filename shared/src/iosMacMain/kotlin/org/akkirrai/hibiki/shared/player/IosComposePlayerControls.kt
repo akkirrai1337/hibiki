@@ -13,7 +13,7 @@ internal fun IosComposePlayerControls(
     context: PlaybackContext,
     scaleMode: VideoScaleMode,
     onBack: () -> Unit,
-    onScaleClick: () -> Unit = { session.scaleMode = session.scaleMode.next() },
+    onScaleClick: () -> Unit = {},
     scaleContentDescription: String? = null,
     playlistEnabled: Boolean = false,
     onPlaylistClick: () -> Unit = {},
