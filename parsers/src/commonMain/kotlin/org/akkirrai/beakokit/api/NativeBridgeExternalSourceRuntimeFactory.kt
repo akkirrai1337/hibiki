@@ -20,19 +20,32 @@ class NativeBridgeExternalSourceRuntimeFactory(
     override fun create(
         sourcePackage: ActiveExternalSourcePackage,
         context: SourceContext,
-    ): ExternalSourceRuntime = ProtocolBackedExternalSourceRuntime(
-        transport = NativeBridgeExternalSourceRuntimeTransport(
-            bridge = bridgeFactory.create(
-                sourcePackage = sourcePackage,
-                context = context,
-                module = moduleReader.read(
-                    packagePath = sourcePackage.installed.packagePath,
-                    entrypoint = sourcePackage.manifest.entrypoint,
+    ): ExternalSourceRuntime {
+        val runtime = sourcePackage.manifest.runtime
+        if (runtime.id != SUPPORTED_RUNTIME_ID || runtime.abi !in SUPPORTED_RUNTIME_ABIS) {
+            throw SourcePackageValidationException(
+                listOf("Unsupported source runtime: ${runtime.id}/${runtime.abi}"),
+            )
+        }
+        return ProtocolBackedExternalSourceRuntime(
+            transport = NativeBridgeExternalSourceRuntimeTransport(
+                bridge = bridgeFactory.create(
+                    sourcePackage = sourcePackage,
+                    context = context,
+                    module = moduleReader.read(
+                        packagePath = sourcePackage.installed.packagePath,
+                        entrypoint = sourcePackage.manifest.entrypoint,
+                    ),
                 ),
             ),
-        ),
-        payloadCodec = payloadCodec,
-        requestIdFactory = requestIdFactory,
-        callLimits = callLimits,
-    )
+            payloadCodec = payloadCodec,
+            requestIdFactory = requestIdFactory,
+            callLimits = callLimits,
+        )
+    }
+
+    private companion object {
+        const val SUPPORTED_RUNTIME_ID = "wasm"
+        val SUPPORTED_RUNTIME_ABIS = setOf("wasm32-wasi", "wasm32-wasi-preview1")
+    }
 }

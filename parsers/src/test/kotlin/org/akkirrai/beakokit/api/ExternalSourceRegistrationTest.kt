@@ -211,6 +211,35 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun nativeBridgeFactoryRejectsUnsupportedRuntimeBeforeLoadingModule() {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(runtime = SourceRuntime("other-runtime", "abi-1")),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val factory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _ ->
+                error("Unsupported runtime must not create a bridge")
+            },
+            moduleReader = SourcePackageModuleReader { _, _ ->
+                error("Unsupported runtime must not load a module")
+            },
+            requestIdFactory = { "unsupported-runtime" },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+
+        assertFailsWith<SourcePackageValidationException> {
+            factory.create(activePackage, context)
+        }
+    }
+
+    @Test
     fun activePackageLoaderRestoresManifestFromTheInstalledPath() {
         val installed = InstalledSourcePackage(
             sourceId = SourceId("external-test"),
