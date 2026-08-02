@@ -113,6 +113,19 @@ fn escape_wat_string(value: &str) -> String {
 }
 
 fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
+    let request = sample_search_request();
+    let response = run_protocol_host_call_request(&request.to_string())?;
+    let response: protocol::Response = serde_json::from_str(&response)?;
+    if response.request_id != "host-probe-1" {
+        return Err("host response request ID does not match".into());
+    }
+    println!("host ABI: guest request reached host and returned a JSON response");
+    Ok(())
+}
+
+fn run_protocol_host_call_request(
+    request_json: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let engine = Engine::default();
     let module = Module::new(
         &engine,
@@ -188,7 +201,22 @@ fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
     let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
     let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
     reset.call(&mut store, ())?;
-    let request = serde_json::json!({
+    let request: serde_json::Value = serde_json::from_str(request_json)?;
+    let request_bytes = serde_json::to_vec(&request)?;
+    let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    memory.write(&mut store, request_ptr as usize, &request_bytes)?;
+    let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
+    let response_ptr = (packed_response >> 32) as usize;
+    let response_len = (packed_response & u64::from(u32::MAX)) as usize;
+    let mut response_bytes = vec![0; response_len];
+    memory.read(&store, response_ptr, &mut response_bytes)?;
+    let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
+    response.validate()?;
+    Ok(String::from_utf8(response_bytes)?)
+}
+
+fn sample_search_request() -> serde_json::Value {
+    serde_json::json!({
         "requestId": "host-probe-1",
         "operation": "SEARCH",
         "payload": {
@@ -204,23 +232,7 @@ fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
             "yearTo": null
         },
         "protocolVersion": protocol::PROTOCOL_VERSION
-    });
-    let request_bytes = serde_json::to_vec(&request)?;
-    let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
-    memory.write(&mut store, request_ptr as usize, &request_bytes)?;
-    let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
-    let response_ptr = (packed_response >> 32) as usize;
-    let response_len = (packed_response & u64::from(u32::MAX)) as usize;
-    let mut response_bytes = vec![0; response_len];
-    memory.read(&store, response_ptr, &mut response_bytes)?;
-    let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
-    response.validate()?;
-    if response.request_id != "host-probe-1" {
-        return Err("host response request ID does not match".into());
-    }
-    println!("host ABI: guest request reached host and returned {response_len} bytes");
-
-    Ok(())
+    })
 }
 
 /// C ABI smoke entry point for the future Android/iOS bridge.
@@ -277,18 +289,7 @@ fn protocol_response_from_jni(
     request: JString,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let request: String = env.get_string(&request)?.into();
-    let request_value: serde_json::Value = serde_json::from_str(&request)?;
-    let request = protocol::Request::from_value(&request_value)?;
-    let response = serde_json::json!({
-        "requestId": request.request_id,
-        "payload": { "items": [] },
-        "errorCode": null,
-        "errorMessage": null,
-        "protocolVersion": protocol::PROTOCOL_VERSION
-    });
-    let parsed: protocol::Response = serde_json::from_value(response.clone())?;
-    parsed.validate()?;
-    Ok(response.to_string())
+    run_protocol_host_call_request(&request)
 }
 
 fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {
