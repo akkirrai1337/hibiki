@@ -29,6 +29,50 @@ class JvmDownloadedSourcePackageExtractorTest {
         assertEquals(listOf("manifest.json", "source.wasm"), extracted.entries.map { it.path })
     }
 
+    @Test
+    fun `real archive passes download extraction and activation`() = runBlocking {
+        val packageManifest = manifest()
+        val archive = zipOf(
+            "manifest.json" to Json.encodeToString(packageManifest).encodeToByteArray(),
+            "source.wasm" to byteArrayOf(0, 1, 2),
+        )
+        val repositoryManifest = packageManifest.copy(
+            sha256 = JvmSourcePackageSha256.digest(archive),
+            artifactSizeBytes = archive.size.toLong(),
+        )
+        val staging = Files.createTempDirectory("hibiki-source-staging-").resolve("package")
+        val store = RecordingStore()
+        val candidate = InstalledSourcePackage(
+            sourceId = repositoryManifest.sourceId,
+            packageVersion = repositoryManifest.packageVersion,
+            packagePath = staging.toString(),
+        )
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(archive) },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = JvmSourcePackageSha256,
+                ),
+            ),
+            extractor = JvmDownloadedSourcePackageExtractor(),
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(repositoryManifest.sourceId, store),
+            ),
+        )
+
+        val state = coordinator.install(
+            repositoryManifest = repositoryManifest,
+            candidate = candidate,
+            stagingPath = staging.toString(),
+        ) {}
+
+        assertEquals(candidate, state.active)
+        assertEquals(state, store.state)
+    }
+
     private fun zipOf(vararg entries: Pair<String, ByteArray>): ByteArray {
         val output = java.io.ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
@@ -58,4 +102,14 @@ class JvmDownloadedSourcePackageExtractorTest {
         artifactSizeBytes = 1,
         minClientVersion = 1,
     )
+
+    private class RecordingStore : SourcePackageActivationStore {
+        var state = SourcePackageActivationState()
+
+        override fun load(sourceId: SourceId): SourcePackageActivationState = state
+
+        override fun persistAtomically(sourceId: SourceId, state: SourcePackageActivationState) {
+            this.state = state
+        }
+    }
 }
