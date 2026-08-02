@@ -1,9 +1,12 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
+#[cfg(feature = "android-harness")]
 use std::ptr::null_mut;
 use std::thread;
 use std::time::Duration;
 
+#[cfg(feature = "android-harness")]
 use jni::objects::{JByteArray, JClass, JString};
+#[cfg(feature = "android-harness")]
 use jni::JNIEnv;
 use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
 
@@ -415,6 +418,7 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
 }
 
 /// JNI shim used only by the temporary Android instrumentation harness.
+#[cfg(feature = "android-harness")]
 #[no_mangle]
 pub unsafe extern "system" fn Java_org_akkirrai_hibiki_WasmtimeRuntimeSmokeTest_probe(
     _env: *mut core::ffi::c_void,
@@ -423,6 +427,7 @@ pub unsafe extern "system" fn Java_org_akkirrai_hibiki_WasmtimeRuntimeSmokeTest_
     beakokit_runtime_probe()
 }
 
+#[cfg(feature = "android-harness")]
 #[no_mangle]
 pub unsafe extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_probe(
     _env: *mut core::ffi::c_void,
@@ -431,6 +436,7 @@ pub unsafe extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeAct
     beakokit_runtime_probe()
 }
 
+#[cfg(feature = "android-harness")]
 #[no_mangle]
 pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_protocolProbe(
     mut env: JNIEnv,
@@ -453,6 +459,7 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
         .unwrap_or(null_mut())
 }
 
+#[cfg(feature = "android-harness")]
 #[no_mangle]
 pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_protocolModuleProbe(
     mut env: JNIEnv,
@@ -476,6 +483,7 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
         .unwrap_or(null_mut())
 }
 
+#[cfg(feature = "android-harness")]
 fn protocol_response_from_jni(
     env: &mut JNIEnv,
     request: JString,
@@ -484,6 +492,7 @@ fn protocol_response_from_jni(
     run_protocol_host_call_request(&request)
 }
 
+#[cfg(feature = "android-harness")]
 fn protocol_response_from_jni_with_module(
     env: &mut JNIEnv,
     module: JByteArray,

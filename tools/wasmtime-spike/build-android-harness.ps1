@@ -16,7 +16,7 @@ $env:AR_x86_64_linux_android = $archiver
 
 Push-Location $spikeRoot
 try {
-    & cargo build --target x86_64-linux-android
+    & cargo build --target x86_64-linux-android --features android-harness
     if ($LASTEXITCODE -ne 0) { throw "cargo build failed" }
 
     $library = Join-Path $spikeRoot "target\x86_64-linux-android\debug\libwasmtime_spike.so"
