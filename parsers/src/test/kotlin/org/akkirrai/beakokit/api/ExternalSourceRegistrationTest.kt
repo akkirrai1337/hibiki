@@ -92,6 +92,48 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun activePackageRunsSearchAndDetailsThroughTheNewPipeline() = runBlocking {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest(),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val registry = activeExternalSourceRegistry(
+            packages = listOf(activePackage),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                ProtocolBackedExternalSourceRuntime(
+                    transport = ExternalSourceRuntimeTransport { request, _ ->
+                        val payload = when (request.operation) {
+                            ExternalSourceRuntimeOperation.SEARCH ->
+                                AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
+                            ExternalSourceRuntimeOperation.DETAILS ->
+                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                        }
+                        ExternalSourceRuntimeResponse(
+                            requestId = request.requestId,
+                            payload = payload,
+                        )
+                    },
+                    payloadCodec = AnimeTitleRuntimePayloadCodec,
+                    requestIdFactory = { "pipeline-request" },
+                )
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+        val source = registry.create(SourceId("external-test"), context)
+
+        assertEquals("search-result", source.search("frieren").single().id)
+        assertEquals("details-result", source.getById("title-1").id)
+    }
+
+    @Test
     fun activePackagePassesItsPathToRuntimeFactory() {
         var receivedPath: String? = null
         val activePackage = ActiveExternalSourcePackage(
