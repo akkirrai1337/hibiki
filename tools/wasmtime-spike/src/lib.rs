@@ -124,6 +124,26 @@ fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
     if response.request_id != "host-probe-1" {
         return Err("host response request ID does not match".into());
     }
+
+    let details_request = serde_json::json!({
+        "requestId": "host-details-probe-1",
+        "operation": "DETAILS",
+        "payload": { "id": "title-1" },
+        "protocolVersion": protocol::PROTOCOL_VERSION
+    });
+    let details_response = run_protocol_host_call_request(&details_request.to_string())?;
+    let details_response: protocol::Response = serde_json::from_str(&details_response)?;
+    if details_response.request_id != "host-details-probe-1" {
+        return Err("host details response request ID does not match".into());
+    }
+    let details_id = details_response
+        .payload
+        .as_ref()
+        .and_then(|payload| payload.get("id"))
+        .and_then(|id| id.as_str());
+    if details_id != Some("title-1") {
+        return Err("host details response payload does not match".into());
+    }
     println!("host ABI: guest request reached host and returned a JSON response");
     Ok(())
 }
@@ -181,9 +201,13 @@ fn run_protocol_host_call_request(
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
             let request = protocol::Request::from_value(&request_value)
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            let payload = match request.operation {
+                protocol::Operation::Search => serde_json::json!({ "items": [] }),
+                protocol::Operation::Details => sample_title_payload(),
+            };
             let response = serde_json::json!({
                 "requestId": request.request_id,
-                "payload": { "items": [] },
+                "payload": payload,
                 "errorCode": null,
                 "errorMessage": null,
                 "protocolVersion": protocol::PROTOCOL_VERSION
@@ -237,6 +261,39 @@ fn sample_search_request() -> serde_json::Value {
             "yearTo": null
         },
         "protocolVersion": protocol::PROTOCOL_VERSION
+    })
+}
+
+fn sample_title_payload() -> serde_json::Value {
+    serde_json::json!({
+        "id": "title-1",
+        "russianName": null,
+        "englishName": "Title",
+        "originalName": "Title",
+        "japaneseName": null,
+        "synonyms": [],
+        "year": null,
+        "type": null,
+        "episodeCount": null,
+        "posterUrl": null,
+        "status": null,
+        "description": null,
+        "nextEpisodeAt": null,
+        "genres": [],
+        "ratings": [],
+        "ageRating": null,
+        "viewCount": null,
+        "screenshots": [],
+        "trailer": null,
+        "sourceMaterial": null,
+        "studios": [],
+        "mainCharacters": [],
+        "similarAnime": [],
+        "franchiseAnime": [],
+        "relatedAnime": [],
+        "season": null,
+        "availableEpisodeCount": null,
+        "posterFallbackUrl": null
     })
 }
 
