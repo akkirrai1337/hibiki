@@ -6,6 +6,25 @@ class SourcePackageInstaller(
     private val layoutValidator: SourcePackageLayoutValidator,
     private val activationRepository: SourcePackageActivationRepository,
 ) {
+    suspend fun installAfterInitialization(
+        repositoryManifest: SourceManifest,
+        packageManifest: SourceManifest,
+        artifact: SourcePackageArtifact,
+        entries: List<SourcePackageEntry>,
+        candidate: InstalledSourcePackage,
+        initialize: suspend () -> Unit,
+    ): SourcePackageActivationState {
+        validate(
+            repositoryManifest = repositoryManifest,
+            packageManifest = packageManifest,
+            artifact = artifact,
+            entries = entries,
+            candidate = candidate,
+        )
+        initialize()
+        return activationRepository.activate(candidate, initializationSucceeded = true)
+    }
+
     fun install(
         repositoryManifest: SourceManifest,
         packageManifest: SourceManifest,
@@ -14,6 +33,23 @@ class SourcePackageInstaller(
         candidate: InstalledSourcePackage,
         initializationSucceeded: Boolean,
     ): SourcePackageActivationState {
+        validate(
+            repositoryManifest = repositoryManifest,
+            packageManifest = packageManifest,
+            artifact = artifact,
+            entries = entries,
+            candidate = candidate,
+        )
+        return activationRepository.activate(candidate, initializationSucceeded)
+    }
+
+    private fun validate(
+        repositoryManifest: SourceManifest,
+        packageManifest: SourceManifest,
+        artifact: SourcePackageArtifact,
+        entries: List<SourcePackageEntry>,
+        candidate: InstalledSourcePackage,
+    ) {
         require(repositoryManifest == packageManifest) {
             "Package manifest does not match repository manifest"
         }
@@ -25,6 +61,5 @@ class SourcePackageInstaller(
         }
         packageValidator.requireValid(repositoryManifest, artifact)
         layoutValidator.requireValid(packageManifest, entries)
-        return activationRepository.activate(candidate, initializationSucceeded)
     }
 }

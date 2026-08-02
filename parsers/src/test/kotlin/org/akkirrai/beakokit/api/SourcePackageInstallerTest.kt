@@ -3,8 +3,51 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.runBlocking
 
 class SourcePackageInstallerTest {
+    @Test
+    fun `successful initialization callback activates the package`() = runBlocking {
+        val store = RecordingStore()
+        val manifest = manifest()
+        var initialized = false
+
+        val state = installer(store).installAfterInitialization(
+            repositoryManifest = manifest,
+            packageManifest = manifest,
+            artifact = SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+            entries = entries(manifest),
+            candidate = candidate(),
+            initialize = suspend { initialized = true },
+        )
+
+        assertEquals(true, initialized)
+        assertEquals(SourcePackageActivationState(active = candidate()), state)
+        assertEquals(1, store.persistCount)
+    }
+
+    @Test
+    fun `initialization exception prevents activation`() = runBlocking {
+        val store = RecordingStore().apply { state = SourcePackageActivationState(active = oldCandidate()) }
+        val manifest = manifest()
+        val failure = IllegalStateException("runtime failed")
+
+        val thrown = assertFailsWith<IllegalStateException> {
+            installer(store).installAfterInitialization(
+                repositoryManifest = manifest,
+                packageManifest = manifest,
+                artifact = SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+                entries = entries(manifest),
+                candidate = candidate(),
+                initialize = suspend { throw failure },
+            )
+        }
+
+        assertEquals(failure, thrown)
+        assertEquals(SourcePackageActivationState(active = oldCandidate()), store.state)
+        assertEquals(0, store.persistCount)
+    }
+
     @Test
     fun `validated package is activated after successful initialization`() {
         val store = RecordingStore()
