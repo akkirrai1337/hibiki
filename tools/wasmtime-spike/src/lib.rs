@@ -1,17 +1,20 @@
+#[cfg(feature = "android-production-jni")]
+use std::collections::VecDeque;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::null_mut;
-#[cfg(feature = "spike-probes")]
+use std::sync::mpsc;
+#[cfg(feature = "android-production-jni")]
+use std::sync::Mutex;
 use std::thread;
-#[cfg(feature = "spike-probes")]
 use std::time::Duration;
 
 #[cfg(any(feature = "android-production-jni", feature = "android-harness"))]
 use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 #[cfg(any(feature = "android-production-jni", feature = "android-harness"))]
 use jni::{JNIEnv, JavaVM};
-use wasmtime::{Caller, Engine, Linker, Module, Store};
 #[cfg(feature = "spike-probes")]
-use wasmtime::{Config, Instance};
+use wasmtime::Instance;
+use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
 
 pub mod protocol;
 
@@ -21,9 +24,68 @@ pub const PROTOCOL_CALL_BUFFER_TOO_SMALL: i32 = -3;
 pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
 pub const PROTOCOL_MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 pub const PROTOCOL_MAX_MODULE_BYTES: usize = 16 * 1024 * 1024;
+pub const PROTOCOL_MAX_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+pub const PROTOCOL_DEFAULT_TIMEOUT_MILLIS: u64 = 30_000;
+const PROTOCOL_MAX_FUEL: u64 = 50_000_000;
+const WASM_PAGE_SIZE_BYTES: usize = 64 * 1024;
 
-/// Host callback used by the production C ABI. The callback supports a sizing call.
-pub type BeakokitHostCall = unsafe extern "C" fn(
+fn runtime_engine() -> Result<Engine, wasmtime::Error> {
+    let mut config = Config::new();
+    config.consume_fuel(true);
+    config.epoch_interruption(true);
+    Engine::new(&config)
+}
+
+fn write_host_response(
+    mut caller: Caller<'_, ()>,
+    memory: wasmtime::Memory,
+    response: &[u8],
+) -> Result<i64, wasmtime::Error> {
+    if response.len() > PROTOCOL_MAX_RESPONSE_BYTES {
+        return Err(wasmtime::Error::msg(
+            "host response exceeds the native limit",
+        ));
+    }
+    let response_ptr = memory.data_size(&caller);
+    let required_size = response_ptr
+        .checked_add(response.len())
+        .ok_or_else(|| wasmtime::Error::msg("host response address overflows"))?;
+    let required_pages = required_size.div_ceil(WASM_PAGE_SIZE_BYTES) as u64;
+    let current_pages = memory.size(&caller);
+    if required_pages > current_pages {
+        memory
+            .grow(&mut caller, required_pages - current_pages)
+            .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+    }
+    memory
+        .write(&mut caller, response_ptr, response)
+        .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+    let packed = ((response_ptr as u64) << 32) | response.len() as u64;
+    Ok(packed as i64)
+}
+
+fn finish_call_before_timeout(
+    engine: &Engine,
+    timeout_millis: u64,
+    call: impl FnOnce() -> Result<i64, wasmtime::Error>,
+) -> Result<i64, wasmtime::Error> {
+    let (completed_tx, completed_rx) = mpsc::channel();
+    let timeout_engine = engine.clone();
+    let watchdog = thread::spawn(move || {
+        if completed_rx
+            .recv_timeout(Duration::from_millis(timeout_millis))
+            .is_err()
+        {
+            timeout_engine.increment_epoch();
+        }
+    });
+    let result = call();
+    let _ = completed_tx.send(());
+    let _ = watchdog.join();
+    result
+}
+
+type HostCall = unsafe extern "C" fn(
     user_data: *mut core::ffi::c_void,
     request_ptr: *const u8,
     request_len: usize,
@@ -31,6 +93,10 @@ pub type BeakokitHostCall = unsafe extern "C" fn(
     response_capacity: usize,
     response_len: *mut usize,
 ) -> i32;
+
+/// Host callback used only by the spike C ABI tests.
+#[cfg(feature = "spike-probes")]
+pub type BeakokitHostCall = HostCall;
 
 #[cfg(feature = "spike-probes")]
 struct HostState {
@@ -104,9 +170,11 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
         response_bytes.len(),
     );
 
-    let engine = Engine::default();
+    let engine = runtime_engine()?;
     let module = Module::new(&engine, wat::parse_str(guest)?)?;
     let mut store = Store::new(&engine, ());
+    store.set_fuel(PROTOCOL_MAX_FUEL)?;
+    store.set_epoch_deadline(1);
     let instance = Instance::new(&mut store, &module, &[])?;
     let memory = instance
         .get_memory(&mut store, "memory")
@@ -184,7 +252,7 @@ fn run_protocol_host_call_request_with_module(
     request_json: &str,
     module_bytes: &[u8],
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let engine = Engine::default();
+    let engine = runtime_engine()?;
     let module = Module::new(&engine, module_bytes)?;
 
     let mut linker = Linker::new(&engine);
@@ -192,7 +260,7 @@ fn run_protocol_host_call_request_with_module(
         "host",
         "call",
         |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
-            if ptr < 0 || len < 0 {
+            if ptr < 0 || len < 0 || (len as usize) > PROTOCOL_MAX_REQUEST_BYTES {
                 return Err(wasmtime::Error::msg("guest request range is invalid"));
             }
             let memory = caller
@@ -220,14 +288,13 @@ fn run_protocol_host_call_request_with_module(
             });
             let response_bytes = serde_json::to_vec(&response)
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
-            memory
-                .write(&mut caller, 0, &response_bytes)
-                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
-            Ok(response_bytes.len() as i64)
+            write_host_response(caller, memory, &response_bytes)
         },
     )?;
 
     let mut store = Store::new(&engine, ());
+    store.set_fuel(PROTOCOL_MAX_FUEL)?;
+    store.set_epoch_deadline(1);
     let instance = linker.instantiate(&mut store, &module)?;
     let memory = instance
         .get_memory(&mut store, "memory")
@@ -244,6 +311,9 @@ fn run_protocol_host_call_request_with_module(
     let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
     let response_ptr = (packed_response >> 32) as usize;
     let response_len = (packed_response & u64::from(u32::MAX)) as usize;
+    if response_len > PROTOCOL_MAX_RESPONSE_BYTES {
+        return Err("guest response exceeds the native limit".into());
+    }
     let mut response_bytes = vec![0; response_len];
     memory.read(&store, response_ptr, &mut response_bytes)?;
     let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
@@ -318,6 +388,11 @@ pub extern "C" fn beakokit_runtime_probe() -> i32 {
 
 /// C ABI used by Swift/Objective-C and other native hosts for one protocol call.
 /// The caller owns both buffers; `response_len` receives the required/written size.
+///
+/// # Safety
+///
+/// Every non-null pointer must be valid for the supplied byte range, and `response_len` must be
+/// writable for one `usize`.
 #[no_mangle]
 #[cfg(feature = "spike-probes")]
 pub unsafe extern "C" fn beakokit_runtime_protocol_call(
@@ -373,6 +448,11 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call(
 }
 
 /// C ABI for executing one caller-supplied, already verified Wasm module.
+///
+/// # Safety
+///
+/// Every non-null pointer must be valid for the supplied byte range, and `response_len` must be
+/// writable for one `usize`.
 #[no_mangle]
 pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
     module_ptr: *const u8,
@@ -440,13 +520,19 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
 }
 
 /// Executes one verified Wasm module and delegates host calls to the supplied callback.
+///
+/// # Safety
+///
+/// Every non-null pointer must be valid for the supplied byte range, `response_len` must be
+/// writable for one `usize`, and `host_call` must remain valid for the duration of this call.
 #[no_mangle]
+#[cfg(feature = "spike-probes")]
 pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module_and_host(
     module_ptr: *const u8,
     module_len: usize,
     request_ptr: *const u8,
     request_len: usize,
-    host_call: Option<BeakokitHostCall>,
+    host_call: Option<HostCall>,
     user_data: *mut core::ffi::c_void,
     response_ptr: *mut u8,
     response_capacity: usize,
@@ -510,18 +596,18 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module_and_host(
 fn run_protocol_host_call_request_with_callback(
     request_json: &str,
     module_bytes: &[u8],
-    host_call: BeakokitHostCall,
+    host_call: HostCall,
     user_data: *mut core::ffi::c_void,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let user_data = user_data as usize;
-    let engine = Engine::default();
+    let engine = runtime_engine()?;
     let module = Module::new(&engine, module_bytes)?;
     let mut linker = Linker::new(&engine);
     linker.func_wrap(
         "host",
         "call",
         move |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
-            if ptr < 0 || len < 0 {
+            if ptr < 0 || len < 0 || (len as usize) > PROTOCOL_MAX_REQUEST_BYTES {
                 return Err(wasmtime::Error::msg("guest request range is invalid"));
             }
             let memory = caller
@@ -548,7 +634,7 @@ fn run_protocol_host_call_request_with_callback(
                     "host callback sizing failed with status {status}"
                 )));
             }
-            if response_len > PROTOCOL_MAX_REQUEST_BYTES {
+            if response_len > PROTOCOL_MAX_RESPONSE_BYTES {
                 return Err(wasmtime::Error::msg(
                     "host response exceeds the native limit",
                 ));
@@ -570,13 +656,12 @@ fn run_protocol_host_call_request_with_callback(
                 )));
             }
             response_bytes.truncate(response_len);
-            memory
-                .write(&mut caller, 0, &response_bytes)
-                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
-            Ok(response_bytes.len() as i64)
+            write_host_response(caller, memory, &response_bytes)
         },
     )?;
     let mut store = Store::new(&engine, ());
+    store.set_fuel(PROTOCOL_MAX_FUEL)?;
+    store.set_epoch_deadline(1);
     let instance = linker.instantiate(&mut store, &module)?;
     let memory = instance
         .get_memory(&mut store, "memory")
@@ -590,9 +675,15 @@ fn run_protocol_host_call_request_with_callback(
     let request_bytes = serde_json::to_vec(&request)?;
     let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
     memory.write(&mut store, request_ptr as usize, &request_bytes)?;
-    let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
+    let packed_response =
+        finish_call_before_timeout(&engine, PROTOCOL_DEFAULT_TIMEOUT_MILLIS, || {
+            call.call(&mut store, (request_ptr, request_bytes.len() as i32))
+        })? as u64;
     let response_ptr = (packed_response >> 32) as usize;
     let response_len = (packed_response & u64::from(u32::MAX)) as usize;
+    if response_len > PROTOCOL_MAX_RESPONSE_BYTES {
+        return Err("guest response exceeds the native limit".into());
+    }
     let mut response_bytes = vec![0; response_len];
     memory.read(&store, response_ptr, &mut response_bytes)?;
     let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
@@ -635,10 +726,17 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
     request: JString,
     host: JObject,
 ) -> jni::sys::jstring {
+    let request_id = env
+        .get_string(&request)
+        .ok()
+        .map(String::from)
+        .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
+        .and_then(|value| value.get("requestId")?.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "jni-host-runtime-error".to_owned());
     let response = protocol_response_from_production_jni_with_host(&mut env, module, request, host)
         .unwrap_or_else(|error| {
             serde_json::json!({
-                "requestId": "jni-host-runtime-error",
+                "requestId": request_id,
                 "payload": null,
                 "errorCode": "RUNTIME_FAILURE",
                 "errorMessage": error.to_string(),
@@ -655,6 +753,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
 struct JniHostState {
     vm: JavaVM,
     host: jni::objects::GlobalRef,
+    pending_responses: Mutex<VecDeque<(Vec<u8>, Vec<u8>)>>,
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -676,6 +775,24 @@ unsafe extern "C" fn jni_host_callback(
     } else {
         std::slice::from_raw_parts(request_ptr, request_len)
     };
+    if !response_ptr.is_null() {
+        let mut pending = match state.pending_responses.lock() {
+            Ok(pending) => pending,
+            Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+        };
+        let Some((expected_request, response)) = pending.pop_front() else {
+            return PROTOCOL_CALL_RUNTIME_FAILURE;
+        };
+        if expected_request != request {
+            return PROTOCOL_CALL_RUNTIME_FAILURE;
+        }
+        *response_len = response.len();
+        if response_capacity < response.len() {
+            return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+        }
+        std::ptr::copy_nonoverlapping(response.as_ptr(), response_ptr, response.len());
+        return PROTOCOL_CALL_OK;
+    }
     let mut env = match state.vm.attach_current_thread_as_daemon() {
         Ok(env) => env,
         Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
@@ -691,7 +808,10 @@ unsafe extern "C" fn jni_host_callback(
         &[JValue::Object(request_array.as_ref())],
     ) {
         Ok(value) => value,
-        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+        Err(_) => {
+            let _ = env.exception_clear();
+            return PROTOCOL_CALL_RUNTIME_FAILURE;
+        }
     };
     let response_object = match result.l() {
         Ok(value) if !value.is_null() => value,
@@ -702,12 +822,16 @@ unsafe extern "C" fn jni_host_callback(
         Ok(value) => value,
         Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
     };
-    *response_len = response.len();
-    if response_ptr.is_null() || response_capacity < response.len() {
-        return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+    if response.len() > PROTOCOL_MAX_RESPONSE_BYTES {
+        return PROTOCOL_CALL_RUNTIME_FAILURE;
     }
-    std::ptr::copy_nonoverlapping(response.as_ptr(), response_ptr, response.len());
-    PROTOCOL_CALL_OK
+    *response_len = response.len();
+    let mut pending = match state.pending_responses.lock() {
+        Ok(pending) => pending,
+        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    pending.push_back((request.to_vec(), response));
+    PROTOCOL_CALL_BUFFER_TOO_SMALL
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -728,44 +852,15 @@ fn protocol_response_from_production_jni_with_host(
     let host = JniHostState {
         vm: env.get_java_vm()?,
         host: env.new_global_ref(host)?,
+        pending_responses: Mutex::new(VecDeque::new()),
     };
-    let request_bytes = request.as_bytes();
-    let mut response_len = 0usize;
     let user_data = (&host as *const JniHostState).cast_mut().cast();
-    let status = unsafe {
-        beakokit_runtime_protocol_call_with_module_and_host(
-            module_bytes.as_ptr(),
-            module_bytes.len(),
-            request_bytes.as_ptr(),
-            request_bytes.len(),
-            Some(jni_host_callback),
-            user_data,
-            null_mut(),
-            0,
-            &mut response_len,
-        )
-    };
-    if status != PROTOCOL_CALL_BUFFER_TOO_SMALL {
-        return Err(format!("native host runtime sizing call failed with status {status}").into());
-    }
-    let mut response = vec![0u8; response_len];
-    let status = unsafe {
-        beakokit_runtime_protocol_call_with_module_and_host(
-            module_bytes.as_ptr(),
-            module_bytes.len(),
-            request_bytes.as_ptr(),
-            request_bytes.len(),
-            Some(jni_host_callback),
-            user_data,
-            response.as_mut_ptr(),
-            response.len(),
-            &mut response_len,
-        )
-    };
-    if status != PROTOCOL_CALL_OK {
-        return Err(format!("native host runtime call failed with status {status}").into());
-    }
-    response.truncate(response_len);
+    let response = run_protocol_host_call_request_with_callback(
+        &request,
+        &module_bytes,
+        jni_host_callback,
+        user_data,
+    )?;
     Ok(String::from_utf8(response)?)
 }
 
@@ -799,6 +894,9 @@ fn protocol_response_from_production_jni(
     if status != PROTOCOL_CALL_BUFFER_TOO_SMALL {
         return Err(format!("native runtime sizing call failed with status {status}").into());
     }
+    if response_len > PROTOCOL_MAX_RESPONSE_BYTES {
+        return Err("native runtime response exceeds the native limit".into());
+    }
     let mut response = vec![0u8; response_len];
     let status = unsafe {
         beakokit_runtime_protocol_call_with_module(
@@ -821,6 +919,9 @@ fn protocol_response_from_production_jni(
 /// JNI shim used only by the temporary Android instrumentation harness.
 #[cfg(feature = "android-harness")]
 #[no_mangle]
+/// # Safety
+///
+/// JNI provides valid environment and receiver pointers for this entry point.
 pub unsafe extern "system" fn Java_org_akkirrai_hibiki_WasmtimeRuntimeSmokeTest_probe(
     _env: *mut core::ffi::c_void,
     _receiver: *mut core::ffi::c_void,
@@ -830,6 +931,9 @@ pub unsafe extern "system" fn Java_org_akkirrai_hibiki_WasmtimeRuntimeSmokeTest_
 
 #[cfg(feature = "android-harness")]
 #[no_mangle]
+/// # Safety
+///
+/// JNI provides valid environment and receiver pointers for this entry point.
 pub unsafe extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_probe(
     _env: *mut core::ffi::c_void,
     _receiver: *mut core::ffi::c_void,

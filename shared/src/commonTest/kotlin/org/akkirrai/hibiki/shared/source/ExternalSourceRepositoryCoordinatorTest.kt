@@ -124,6 +124,36 @@ class ExternalSourceRepositoryCoordinatorTest {
         assertEquals(emptyList(), coordinator.snapshot.value.loaded)
     }
 
+    @Test
+    fun removingRepositoryInvalidatesOnlyItsLoadedSnapshotEntries() = runTest {
+        val first = SourceRepositoryEndpoint("https://first.example/index.json")
+        val second = SourceRepositoryEndpoint("https://second.example/index.json")
+        val store = FakeStore(listOf(first, second))
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(store),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { url, _ ->
+                        SourceRepositoryResponse(
+                            200,
+                            SourceRepositoryIndexCodec.encode(index().copy(
+                                sources = listOf(index().sources.single().copy(
+                                    sourceId = SourceId(if (url == first.url) "first-source" else "second-source"),
+                                )),
+                            )),
+                        )
+                    },
+                ),
+            ),
+        )
+
+        coordinator.refresh(clientVersion = 1)
+        coordinator.removeRepository(first.url)
+
+        assertEquals(listOf(SourceId("second-source")), coordinator.availableSourceIds())
+        assertEquals(listOf(second), coordinator.repositories())
+    }
+
     private fun index() = org.akkirrai.beakokit.api.SourceRepositoryIndex(
         apiVersion = org.akkirrai.beakokit.api.SourceRepositoryIndex.CURRENT_API_VERSION,
         sources = listOf(

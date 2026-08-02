@@ -13,6 +13,16 @@ class SourceRepositoryStoreTest {
     }
 
     @Test
+    fun endpointRejectsMalformedHttpsUrls() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryEndpoint("https://")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryEndpoint("https-not-a-url")
+        }
+    }
+
+    @Test
     fun addDeduplicatesWithoutPersistingAgain() {
         val store = FakeStore(
             mutableListOf(SourceRepositoryEndpoint("https://one.test/index.json")),

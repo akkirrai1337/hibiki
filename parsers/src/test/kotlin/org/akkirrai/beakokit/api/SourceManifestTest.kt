@@ -46,6 +46,16 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects malformed package url`() {
+        val invalid = manifest().copy(packageUrl = "https://")
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Package URL must be a valid HTTPS URL",
+        )
+    }
+
+    @Test
     fun `package compatibility ignores archive metadata but not source metadata`() {
         val repositoryManifest = manifest()
         val packageManifest = repositoryManifest.copy(

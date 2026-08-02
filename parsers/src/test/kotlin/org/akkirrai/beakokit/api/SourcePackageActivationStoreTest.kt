@@ -45,6 +45,19 @@ class SourcePackageActivationStoreTest {
         }
     }
 
+    @Test
+    fun `first package can be deactivated after incomplete activation`() {
+        val store = RecordingStore()
+        val repository = repository(store)
+        val first = packageVersion("1.0.0")
+        store.state = SourcePackageActivationState(active = first)
+
+        val state = repository.deactivateFirstPackage(first)
+
+        assertEquals(SourcePackageActivationState(), state)
+        assertEquals(SourcePackageActivationState(), store.state)
+    }
+
     private fun repository(store: RecordingStore) = SourcePackageActivationRepository(
         sourceId = SourceId("external-source"),
         store = store,

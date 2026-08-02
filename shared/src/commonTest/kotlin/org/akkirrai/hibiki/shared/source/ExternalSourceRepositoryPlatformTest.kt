@@ -110,6 +110,40 @@ class ExternalSourceRepositoryPlatformTest {
     }
 
     @Test
+    fun activeRegistrySkipsCorruptedPackagesWithoutHidingHealthyOnes() {
+        val healthyId = SourceId("healthy-source")
+        val corruptedId = SourceId("corrupted-source")
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = emptyCoordinator(),
+            activePackageLoaderFactory = { requestedId ->
+                if (requestedId == corruptedId) {
+                    throw SourcePackageStateException("Corrupted package")
+                }
+                ActiveExternalSourcePackageLoader(
+                    activationRepository = SourcePackageActivationRepository(
+                        sourceId = requestedId,
+                        store = InMemoryStore(
+                            SourcePackageActivationState(
+                                active = InstalledSourcePackage(requestedId, "1.0.0", "package/path"),
+                            ),
+                        ),
+                    ),
+                    manifestReader = SourcePackageManifestReader { manifest(healthyId) },
+                )
+            },
+            closeResources = {},
+        )
+
+        val registry = platform.loadActiveRegistry(
+            sourceIds = listOf(corruptedId, healthyId),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ -> error("Runtime must remain lazy") },
+        )
+
+        assertEquals(listOf(healthyId), registry.sources.map { it.id })
+    }
+
+    @Test
     fun availableRegistryUsesTheCoordinatorSnapshot() = runTest {
         val packageId = SourceId("external-source")
         val installed = InstalledSourcePackage(packageId, "1.0.0", "package/path")

@@ -7,10 +7,32 @@ plugins {
 }
 
 val hibikiIconResDir = layout.buildDirectory.dir("generated/res/hibikiIcon").get().asFile
+val wasmtimeRuntimeJniDir = layout.buildDirectory.dir("generated/wasmtimeRuntime/jniLibs")
 val syncHibikiIcon = tasks.register<Copy>("syncHibikiIcon") {
     from(rootProject.file("fastlane/metadata/android/en-US/images/icon.png"))
     into(hibikiIconResDir.resolve("drawable-nodpi"))
     rename { "hibiki_app_icon.png" }
+}
+val buildWasmtimeRuntime = tasks.register<Exec>("buildWasmtimeRuntime") {
+    workingDir(rootProject.file("tools/wasmtime-spike"))
+    commandLine(
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        rootProject.file("tools/wasmtime-spike/build-android-runtime.ps1").absolutePath,
+    )
+}
+val syncWasmtimeRuntime = tasks.register<Copy>("syncWasmtimeRuntime") {
+    dependsOn(buildWasmtimeRuntime)
+    from(rootProject.file("tools/wasmtime-spike/target/aarch64-linux-android/debug/libwasmtime_spike.so")) {
+        into("arm64-v8a")
+    }
+    from(rootProject.file("tools/wasmtime-spike/target/x86_64-linux-android/debug/libwasmtime_spike.so")) {
+        into("x86_64")
+    }
+    into(wasmtimeRuntimeJniDir)
 }
 
 fun releaseSigningValue(name: String): String? =
@@ -31,6 +53,7 @@ val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL").
 
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)
+    sourceSets["main"].jniLibs.srcDir(wasmtimeRuntimeJniDir.get().asFile)
     namespace = "org.akkirrai.hibiki"
     compileSdk {
         version = release(37)
@@ -93,6 +116,7 @@ android {
 
 tasks.named("preBuild") {
     dependsOn(syncHibikiIcon)
+    dependsOn(syncWasmtimeRuntime)
 }
 
 kotlin {

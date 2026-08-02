@@ -41,9 +41,9 @@ class SourceRepositoryLoader(
         supportedSourceApiVersion: Int = SourceApi.VERSION,
         supportedHostApiVersion: Int = SourceHostApi.VERSION,
     ): SourceRepositoryIndex {
-        if (!url.startsWith("https://")) {
+        if (!isValidHttpsUrl(url)) {
             throw SourceRepositoryLoadException(
-                message = "Repository URL must use HTTPS",
+                message = "Repository URL must be a valid HTTPS URL",
                 kind = SourceErrorKind.PARSE,
                 code = SourceErrorCode.INVALID_REQUEST,
             )

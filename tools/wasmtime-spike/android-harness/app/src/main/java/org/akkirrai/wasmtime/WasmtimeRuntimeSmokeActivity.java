@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge;
 
 public final class WasmtimeRuntimeSmokeActivity extends Activity {
@@ -34,15 +35,25 @@ public final class WasmtimeRuntimeSmokeActivity extends Activity {
                 + ")").getBytes(StandardCharsets.UTF_8);
         String moduleResponse = protocolModuleProbe(suppliedModule, "{\"requestId\":\"android-module-probe-1\",\"operation\":\"SEARCH\",\"payload\":{\"query\":\"frieren\",\"limit\":20,\"offset\":0,\"sort\":\"RELEVANCE\",\"typeAliases\":[],\"statusAliases\":[],\"includedGenreAliases\":[],\"excludedGenreAliases\":[],\"yearFrom\":null,\"yearTo\":null},\"protocolVersion\":1}");
         String hostRequest = "{\"requestId\":\"android-host-probe-1\",\"operation\":\"DETAILS\",\"payload\":{\"id\":\"title-1\"},\"protocolVersion\":1}";
+        AtomicInteger hostCallCount = new AtomicInteger();
         String hostResponse = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
                 suppliedModule,
                 hostRequest,
-                request -> ("{\"requestId\":\"android-host-probe-1\",\"payload\":{"
+                request -> {
+                    hostCallCount.incrementAndGet();
+                    return ("{\"requestId\":\"android-host-probe-1\",\"payload\":{"
                         + "\"id\":\"title-1\",\"originalName\":\"Title\",\"synonyms\":[],"
                         + "\"genres\":[],\"screenshots\":[],\"studios\":[],\"ratings\":[],"
                         + "\"mainCharacters\":[],\"similarAnime\":[],\"franchiseAnime\":[],"
                         + "\"relatedAnime\":[]},\"errorCode\":null,\"errorMessage\":null,"
-                        + "\"protocolVersion\":1}").getBytes(StandardCharsets.UTF_8));
+                        + "\"protocolVersion\":1}").getBytes(StandardCharsets.UTF_8);
+                });
+        String hostFailureResponse = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+                suppliedModule,
+                hostRequest,
+                request -> {
+                    throw new IllegalStateException("host failure probe");
+                });
         boolean protocolOk = protocolResponse != null
                 && protocolResponse.contains("\"requestId\":\"android-probe-1\"")
                 && protocolResponse.contains("\"payload\":{\"items\":[]}")
@@ -52,9 +63,13 @@ public final class WasmtimeRuntimeSmokeActivity extends Activity {
                 && moduleResponse.contains("\"errorCode\":null");
         boolean hostBridgeOk = hostResponse != null
                 && hostResponse.contains("\"requestId\":\"android-host-probe-1\"")
-                && hostResponse.contains("\"id\":\"title-1\"");
+                && hostResponse.contains("\"id\":\"title-1\"")
+                && hostCallCount.get() == 1;
+        boolean hostFailureHandled = hostFailureResponse != null
+                && hostFailureResponse.contains("\"requestId\":\"android-host-probe-1\"")
+                && hostFailureResponse.contains("\"errorCode\":\"RUNTIME_FAILURE\"");
         TextView view = new TextView(this);
-        view.setText(result == 0 && protocolOk && moduleProbeOk && hostBridgeOk
+        view.setText(result == 0 && protocolOk && moduleProbeOk && hostBridgeOk && hostFailureHandled
                 ? "Wasmtime JNI probe: OK\nProtocol JNI bridge: OK\nModule JNI bridge: OK\nHost callback bridge: OK"
                 : "Wasmtime JNI probe: FAILED");
         view.setTextSize(20.0f);

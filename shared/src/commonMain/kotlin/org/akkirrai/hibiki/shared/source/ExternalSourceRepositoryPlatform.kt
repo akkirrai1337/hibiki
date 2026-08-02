@@ -10,6 +10,7 @@ import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinator
 import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinatorFactory
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourcePackageActivationRepository
+import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -63,13 +64,41 @@ class ExternalSourceRepositoryPlatform(
             "Source package rollback is not available on this platform"
         }(sourceId).rollback()
 
+    /** Returns the previously active package without changing persisted activation state. */
+    fun loadPreviousActivePackage(sourceId: SourceId): ActiveExternalSourcePackage {
+        val activationRepository = requireNotNull(activationRepositoryFactory) {
+            "Source package rollback is not available on this platform"
+        }(sourceId)
+        val previous = activationRepository.load().previous
+            ?: throw SourcePackageStateException("No previous source package version is available: $sourceId")
+        return activePackageLoaderFactory(sourceId).load(previous)
+    }
+
+    /** Clears a first installation that cannot be made available in the external registry. */
+    fun deactivateFirstPackage(
+        sourceId: SourceId,
+        candidate: org.akkirrai.beakokit.api.InstalledSourcePackage,
+    ): SourcePackageActivationState = requireNotNull(activationRepositoryFactory) {
+        "Source package rollback is not available on this platform"
+    }(sourceId).deactivateFirstPackage(candidate)
+
     /** Builds the inactive external registry without changing the built-in registry. */
     fun loadActiveRegistry(
         sourceIds: Iterable<SourceId>,
         catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
         runtimeFactory: ExternalSourceRuntimeFactory,
+        replacements: Map<SourceId, ActiveExternalSourcePackage?> = emptyMap(),
     ): ExternalSourceRegistry = activeExternalSourceRegistry(
-        packages = sourceIds.distinct().mapNotNull(::loadActivePackage),
+        packages = sourceIds.distinct().mapNotNull { sourceId ->
+            if (sourceId in replacements) {
+                return@mapNotNull replacements.getValue(sourceId)
+            }
+            try {
+                loadActivePackage(sourceId)
+            } catch (_: SourcePackageStateException) {
+                null
+            }
+        },
         catalogCapabilities = catalogCapabilities,
         runtimeFactory = runtimeFactory,
     )
@@ -78,10 +107,12 @@ class ExternalSourceRepositoryPlatform(
     fun loadAvailableActiveRegistry(
         catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
         runtimeFactory: ExternalSourceRuntimeFactory,
+        replacements: Map<SourceId, ActiveExternalSourcePackage?> = emptyMap(),
     ): ExternalSourceRegistry = loadActiveRegistry(
         sourceIds = coordinator.availableSourceIds(),
         catalogCapabilities = catalogCapabilities,
         runtimeFactory = runtimeFactory,
+        replacements = replacements,
     )
 
     fun close() = closeResources()

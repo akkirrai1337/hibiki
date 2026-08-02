@@ -16,6 +16,11 @@ class ActiveExternalSourcePackageLoader(
 ) {
     fun load(): ActiveExternalSourcePackage? {
         val installed = activationRepository.load().active ?: return null
+        return load(installed)
+    }
+
+    /** Reconstructs a specific persisted package version without mutating activation state. */
+    fun load(installed: InstalledSourcePackage): ActiveExternalSourcePackage {
         val manifest = manifestReader.read(installed.packagePath)
         return try {
             ActiveExternalSourcePackage(manifest = manifest, installed = installed)

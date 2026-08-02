@@ -4,6 +4,7 @@ use wasmtime_spike::{
     beakokit_runtime_protocol_call, beakokit_runtime_protocol_call_with_module,
     beakokit_runtime_protocol_call_with_module_and_host, BeakokitHostCall,
     PROTOCOL_CALL_BUFFER_TOO_SMALL, PROTOCOL_CALL_INVALID_REQUEST, PROTOCOL_CALL_OK,
+    PROTOCOL_CALL_RUNTIME_FAILURE,
     PROTOCOL_MAX_MODULE_BYTES, PROTOCOL_MAX_REQUEST_BYTES,
 };
 
@@ -13,6 +14,19 @@ fn request() -> Vec<u8> {
 
 fn details_request() -> Vec<u8> {
     br#"{"requestId":"ffi-details-1","operation":"DETAILS","payload":{"id":"title-1"},"protocolVersion":1}"#.to_vec()
+}
+
+unsafe extern "C" fn counting_host_callback(
+    user_data: *mut core::ffi::c_void,
+    _request_ptr: *const u8,
+    _request_len: usize,
+    _response_ptr: *mut u8,
+    _response_capacity: usize,
+    _response_len: *mut usize,
+) -> i32 {
+    let calls = &*(user_data as *const std::sync::atomic::AtomicUsize);
+    calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    PROTOCOL_CALL_RUNTIME_FAILURE
 }
 
 unsafe extern "C" fn details_host_callback(
@@ -218,6 +232,57 @@ fn c_abi_roundtrips_a_guest_host_callback() {
     let response = String::from_utf8(response[..response_len].to_vec()).unwrap();
     assert!(response.contains("ffi-details-1"));
     assert!(response.contains("\"id\":\"title-1\""));
+}
+
+#[test]
+fn c_abi_rejects_an_oversized_guest_host_request_before_allocating() {
+    let module = wat::parse_str(
+        r#"
+        (module
+            (import "host" "call" (func $host_call (param i32 i32) (result i64)))
+            (memory (export "memory") 1)
+            (global $heap (mut i32) (i32.const 4096))
+            (func (export "beakokit_reset")
+                i32.const 4096
+                global.set $heap)
+            (func (export "beakokit_alloc") (param i32) (result i32)
+                global.get $heap
+                global.get $heap
+                local.get 0
+                i32.add
+                global.set $heap)
+            (func (export "beakokit_call") (param i32 i32) (result i64)
+                i32.const 0
+                i32.const 2147483647
+                call $host_call)
+        )
+        "#,
+    )
+    .unwrap();
+    let request = details_request();
+    let mut response = vec![0; 2048];
+    let mut response_len = 0;
+    let host_calls = std::sync::atomic::AtomicUsize::new(0);
+
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module_and_host(
+            module.as_ptr(),
+            module.len(),
+            request.as_ptr(),
+            request.len(),
+            Some(counting_host_callback as BeakokitHostCall),
+            (&host_calls as *const std::sync::atomic::AtomicUsize)
+                .cast_mut()
+                .cast(),
+            response.as_mut_ptr(),
+            response.len(),
+            &mut response_len,
+        )
+    };
+
+    assert_eq!(status, PROTOCOL_CALL_RUNTIME_FAILURE);
+    assert_eq!(host_calls.load(std::sync::atomic::Ordering::Relaxed), 0);
+    assert_eq!(response_len, 0);
 }
 
 #[test]

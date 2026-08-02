@@ -9,15 +9,15 @@ allocates request memory through `beakokit_alloc(len)`, writes a versioned JSON
 request, and calls `beakokit_call(ptr, len)`. The guest returns a packed
 response pointer and length. `beakokit_reset()` starts the next call arena.
 The probe also runs the reverse direction: the guest imports `host.call`,
-forwards the request to the host, and reads the host-written response from
-guest memory.
+forwards the request to the host, and reads a packed response pointer and
+length from guest memory. The runtime appends host responses after the current
+guest memory instead of overwriting address zero.
 
 The standalone Android harness additionally calls the Rust protocol validator
 through JNI with a real JSON request and checks that a JSON response returns.
 Native Android/iOS hosts use `beakokit_runtime_protocol_call_with_module` from
-the C header for an installed package. It accepts
-the verified module bytes separately and applies the same request/response
-limits and status codes.
+the C header for an installed package. Android host calls are routed through
+the JNI bridge; the two-phase callback ABI is retained only for spike tests.
 
 It is not part of the application build and must not replace the existing
 built-in source path.
@@ -53,8 +53,9 @@ with the real JNI bridge but without WAT/harness features, run:
 
 The script verifies that each library exports
 `beakokit_runtime_protocol_call_with_module` and
-`Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCall`.
-It does not package the result into the application yet.
+`Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCallWithHost`.
+The main Android Gradle build runs this script and packages both ABI libraries
+before merging native libraries into the APK.
 
 To rebuild the x86_64 Android harness and refresh its JNI library in one step
 on Windows, run:

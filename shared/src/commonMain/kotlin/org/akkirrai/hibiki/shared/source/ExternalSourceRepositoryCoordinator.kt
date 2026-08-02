@@ -40,9 +40,15 @@ class ExternalSourceRepositoryCoordinator(
     fun addRepository(endpoint: SourceRepositoryEndpoint): List<SourceRepositoryEndpoint> =
         catalogLoader.addRepository(endpoint)
 
-    /** Removes one repository endpoint without changing the last loaded snapshot. */
-    fun removeRepository(url: String): List<SourceRepositoryEndpoint> =
-        catalogLoader.removeRepository(url)
+    /** Removes one repository endpoint and evicts only its entries from the loaded snapshot. */
+    fun removeRepository(url: String): List<SourceRepositoryEndpoint> {
+        val repositories = catalogLoader.removeRepository(url)
+        snapshotState.value = snapshot.value.copy(
+            loaded = snapshot.value.loaded.filter { it.endpoint.url != url },
+            failures = snapshot.value.failures.filter { it.endpoint.url != url },
+        )
+        return repositories
+    }
 
     /** Source IDs advertised by successfully loaded repositories, without duplicates. */
     fun availableSourceIds(): List<SourceId> = snapshot.value.loaded

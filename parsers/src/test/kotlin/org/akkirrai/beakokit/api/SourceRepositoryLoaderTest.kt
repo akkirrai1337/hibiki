@@ -42,6 +42,24 @@ class SourceRepositoryLoaderTest {
     }
 
     @Test
+    fun `loader rejects malformed https urls without calling transport`() = runBlocking {
+        var called = false
+        val loader = SourceRepositoryLoader(
+            transport = SourceRepositoryTransport { _, _ ->
+                called = true
+                error("Transport must not be called")
+            },
+        )
+
+        val error = assertFailsWith<SourceRepositoryLoadException> {
+            loader.load("https://", clientVersion = 3)
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
+        assertEquals(false, called)
+    }
+
+    @Test
     fun `loader maps bad status and invalid json`() = runBlocking {
         val statusError = assertFailsWith<SourceRepositoryLoadException> {
             SourceRepositoryLoader(

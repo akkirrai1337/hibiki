@@ -63,7 +63,7 @@ data class SourceManifest(
             add("Unsupported source host API version: $hostApiVersion")
         }
         if (entrypoint.isBlank()) add("Entrypoint must not be blank")
-        if (!packageUrl.startsWith("https://")) add("Package URL must use HTTPS")
+        if (!isValidHttpsUrl(packageUrl)) add("Package URL must be a valid HTTPS URL")
         if (hostNetworkPolicy.allowedHosts.isNotEmpty() && SourceHostCapability.NETWORK !in hostCapabilities) {
             add("Network policy requires the NETWORK host capability")
         }

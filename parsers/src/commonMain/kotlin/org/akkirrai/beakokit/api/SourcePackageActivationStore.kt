@@ -36,6 +36,20 @@ class SourcePackageActivationRepository(
         return next
     }
 
+    /** Clears a just-activated first package when its activation cannot be completed. */
+    fun deactivateFirstPackage(candidate: InstalledSourcePackage): SourcePackageActivationState {
+        require(candidate.sourceId == sourceId) {
+            "Package source ID does not match activation repository: ${candidate.sourceId}"
+        }
+        val current = load()
+        require(current.active == candidate && current.previous == null) {
+            "Only an active package without a rollback version can be deactivated"
+        }
+        val next = SourcePackageActivationState()
+        store.persistAtomically(sourceId, next)
+        return next
+    }
+
     private fun checkedState(state: SourcePackageActivationState): SourcePackageActivationState {
         require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
             "Active package source ID does not match activation repository"
@@ -46,4 +60,3 @@ class SourcePackageActivationRepository(
         return state
     }
 }
-

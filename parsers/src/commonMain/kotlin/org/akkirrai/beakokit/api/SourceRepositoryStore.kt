@@ -9,7 +9,7 @@ data class SourceRepositoryEndpoint(
 ) {
     init {
         require(url.isNotBlank()) { "Repository URL must not be blank" }
-        require(url.startsWith("https://")) { "Repository URL must use HTTPS" }
+        requireValidHttpsUrl(url, "Repository URL")
     }
 }
 

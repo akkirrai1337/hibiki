@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
@@ -48,10 +49,16 @@ fun MainViewController(systemLanguage: String): UIViewController {
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
         val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
         LaunchedEffect(externalSourcePlatform) {
-            runCatching { externalSourcePlatform.coordinator.refresh() }
-                .onFailure { error ->
-                    println("BeakoKit external repository refresh failed: ${error.message}")
-                }
+            try {
+                externalSourcePlatform.coordinator.refresh()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                println("BeakoKit external repository refresh failed: ${error.message}")
+            }
+        }
+        DisposableEffect(externalSourcePlatform) {
+            onDispose { externalSourcePlatform.close() }
         }
         val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
         val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
