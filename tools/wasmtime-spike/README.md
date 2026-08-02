@@ -7,6 +7,9 @@ The probe also verifies the guest call ABI: the host resets the guest arena,
 allocates request memory through `beakokit_alloc(len)`, writes a versioned JSON
 request, and calls `beakokit_call(ptr, len)`. The guest returns a packed
 response pointer and length. `beakokit_reset()` starts the next call arena.
+The probe also runs the reverse direction: the guest imports `host.call`,
+forwards the request to the host, and reads the host-written response from
+guest memory.
 
 It is not part of the application build and must not replace the existing
 built-in source path.

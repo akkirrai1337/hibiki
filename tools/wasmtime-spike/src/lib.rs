@@ -2,7 +2,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::thread;
 use std::time::Duration;
 
-use wasmtime::{Config, Engine, Instance, Linker, Module, Store};
+use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
 
 pub mod protocol;
 
@@ -13,6 +13,7 @@ struct HostState {
 pub fn run_probe() -> Result<(), Box<dyn std::error::Error>> {
     protocol::run_roundtrip_probe()?;
     run_protocol_guest_call()?;
+    run_protocol_host_call()?;
     run_host_call()?;
     run_guest_error()?;
     run_cancellation()?;
@@ -106,6 +107,117 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
 
 fn escape_wat_string(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = Engine::default();
+    let module = Module::new(
+        &engine,
+        wat::parse_str(
+            r#"
+                (module
+                    (import "host" "call" (func $host_call (param i32 i32) (result i64)))
+                    (memory (export "memory") 2)
+                    (global $heap (mut i32) (i32.const 4096))
+                    (func (export "beakokit_reset")
+                        i32.const 4096
+                        global.set $heap
+                    )
+                    (func (export "beakokit_alloc") (param i32) (result i32)
+                        global.get $heap
+                        global.get $heap
+                        local.get 0
+                        i32.add
+                        global.set $heap
+                    )
+                    (func (export "beakokit_call") (param i32 i32) (result i64)
+                        local.get 0
+                        local.get 1
+                        call $host_call
+                    )
+                )
+            "#,
+        )?,
+    )?;
+
+    let mut linker = Linker::new(&engine);
+    linker.func_wrap(
+        "host",
+        "call",
+        |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
+            if ptr < 0 || len < 0 {
+                return Err(wasmtime::Error::msg("guest request range is invalid"));
+            }
+            let memory = caller
+                .get_export("memory")
+                .and_then(|export| export.into_memory())
+                .ok_or_else(|| wasmtime::Error::msg("guest memory export is missing"))?;
+            let mut request_bytes = vec![0; len as usize];
+            memory
+                .read(&caller, ptr as usize, &mut request_bytes)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            let request_value: serde_json::Value = serde_json::from_slice(&request_bytes)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            let request = protocol::Request::from_value(&request_value)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            let response = serde_json::json!({
+                "requestId": request.request_id,
+                "payload": { "items": [] },
+                "errorCode": null,
+                "errorMessage": null,
+                "protocolVersion": protocol::PROTOCOL_VERSION
+            });
+            let response_bytes = serde_json::to_vec(&response)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            memory
+                .write(&mut caller, 0, &response_bytes)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            Ok(response_bytes.len() as i64)
+        },
+    )?;
+
+    let mut store = Store::new(&engine, ());
+    let instance = linker.instantiate(&mut store, &module)?;
+    let memory = instance
+        .get_memory(&mut store, "memory")
+        .ok_or("guest memory export is missing")?;
+    let reset = instance.get_typed_func::<(), ()>(&mut store, "beakokit_reset")?;
+    let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
+    let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
+    reset.call(&mut store, ())?;
+    let request = serde_json::json!({
+        "requestId": "host-probe-1",
+        "operation": "SEARCH",
+        "payload": {
+            "query": "frieren",
+            "limit": 20,
+            "offset": 0,
+            "sort": "RELEVANCE",
+            "typeAliases": [],
+            "statusAliases": [],
+            "includedGenreAliases": [],
+            "excludedGenreAliases": [],
+            "yearFrom": null,
+            "yearTo": null
+        },
+        "protocolVersion": protocol::PROTOCOL_VERSION
+    });
+    let request_bytes = serde_json::to_vec(&request)?;
+    let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    memory.write(&mut store, request_ptr as usize, &request_bytes)?;
+    let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
+    let response_ptr = (packed_response >> 32) as usize;
+    let response_len = (packed_response & u64::from(u32::MAX)) as usize;
+    let mut response_bytes = vec![0; response_len];
+    memory.read(&store, response_ptr, &mut response_bytes)?;
+    let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
+    response.validate()?;
+    if response.request_id != "host-probe-1" {
+        return Err("host response request ID does not match".into());
+    }
+    println!("host ABI: guest request reached host and returned {response_len} bytes");
+
+    Ok(())
 }
 
 /// C ABI smoke entry point for the future Android/iOS bridge.
