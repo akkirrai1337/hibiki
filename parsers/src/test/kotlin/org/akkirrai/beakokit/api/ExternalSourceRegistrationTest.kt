@@ -80,8 +80,8 @@ class ExternalSourceRegistrationTest {
 
         activePackage.toExternalSourceRegistration(
             catalogCapabilities = CatalogCapabilities.FULL,
-            runtimeFactory = { packagePath, _ ->
-                receivedPath = packagePath
+            runtimeFactory = ExternalSourceRuntimeFactory { sourcePackage, _ ->
+                receivedPath = sourcePackage.installed.packagePath
                 object : ExternalSourceRuntime {
                     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
 

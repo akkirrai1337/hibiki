@@ -10,6 +10,14 @@ interface ExternalSourceRuntime {
     suspend fun details(id: String): AnimeTitle
 }
 
+/** Platform adapter that creates a runtime for one already active source package. */
+fun interface ExternalSourceRuntimeFactory {
+    fun create(
+        sourcePackage: ActiveExternalSourcePackage,
+        context: SourceContext,
+    ): ExternalSourceRuntime
+}
+
 /** Adapts a runtime-backed external source to the regular BeakoKit source contract. */
 class RuntimeBackedAnimeSource(
     override val info: SourceInfo,

@@ -47,11 +47,11 @@ data class ActiveExternalSourcePackage(
 
     fun toExternalSourceRegistration(
         catalogCapabilities: CatalogCapabilities,
-        runtimeFactory: (packagePath: String, context: SourceContext) -> ExternalSourceRuntime,
+        runtimeFactory: ExternalSourceRuntimeFactory,
         registrationOrder: Int? = null,
     ): ExternalSourceRegistration = manifest.toExternalSourceRegistration(
         catalogCapabilities = catalogCapabilities,
-        runtimeFactory = { context -> runtimeFactory(installed.packagePath, context) },
+        runtimeFactory = { context -> runtimeFactory.create(this, context) },
         registrationOrder = registrationOrder,
     )
 }
