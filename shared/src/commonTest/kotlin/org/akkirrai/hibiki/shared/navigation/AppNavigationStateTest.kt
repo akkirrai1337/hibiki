@@ -39,6 +39,15 @@ class AppNavigationStateTest {
     }
 
     @Test
+    fun openSettingsNavigatesToSettingsRoute() {
+        val state = AppNavigationState(AppTopLevelDestination.PROFILE)
+            .reduce(AppNavigationEvent.OpenSettings)
+
+        assertEquals(AppRoute.Settings, state.currentRoute)
+        assertEquals(AppDestination.SETTINGS, state.selectedAppDestination())
+    }
+
+    @Test
     fun selectingProfileOrLibraryClearsNestedRouteAndOverlays() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))

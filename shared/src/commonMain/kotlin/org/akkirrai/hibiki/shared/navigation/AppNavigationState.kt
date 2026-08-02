@@ -126,4 +126,7 @@ fun AppNavigationState.reduce(event: AppNavigationEvent): AppNavigationState = w
     is AppNavigationEvent.OpenDetails -> reduce(
         AppNavigationEvent.Navigate(AppRoute.Details(event.animeId)),
     )
+    AppNavigationEvent.OpenSettings -> reduce(
+        AppNavigationEvent.Navigate(AppRoute.Settings),
+    )
 }
