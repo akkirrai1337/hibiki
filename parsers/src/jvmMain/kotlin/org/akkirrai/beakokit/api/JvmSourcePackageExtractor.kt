@@ -39,7 +39,7 @@ class JvmSourcePackageExtractor(
             }
             layoutValidator.requireValid(repositoryManifest, entries)
             val packageManifest = readPackageManifest(zip)
-            require(packageManifest == repositoryManifest) {
+            require(repositoryManifest.matchesPackageManifest(packageManifest)) {
                 "Package manifest does not match repository manifest"
             }
 

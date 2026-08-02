@@ -96,6 +96,13 @@ data class SourceManifest(
         if (violations.isNotEmpty()) throw SourceManifestException(violations)
     }
 
+    /** Package manifests repeat source metadata but cannot repeat the ZIP's own checksum/size. */
+    fun matchesPackageManifest(packageManifest: SourceManifest): Boolean =
+        copy(
+            sha256 = packageManifest.sha256,
+            artifactSizeBytes = packageManifest.artifactSizeBytes,
+        ) == packageManifest
+
     companion object {
         const val CURRENT_FORMAT_VERSION: Int = 1
         private val SHA256_PATTERN = Regex("[0-9a-f]{64}")

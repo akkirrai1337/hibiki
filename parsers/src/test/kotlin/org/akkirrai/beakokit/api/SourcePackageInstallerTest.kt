@@ -175,4 +175,25 @@ class SourcePackageInstallerTest {
             persistCount++
         }
     }
+
+    @Test
+    fun `package manifest may carry its own archive metadata`() {
+        val repositoryManifest = manifest()
+        val packageManifest = repositoryManifest.copy(
+            sha256 = "b".repeat(64),
+            artifactSizeBytes = repositoryManifest.artifactSizeBytes + 1,
+        )
+        val store = RecordingStore()
+
+        installer(store).install(
+            repositoryManifest = repositoryManifest,
+            packageManifest = packageManifest,
+            artifact = SourcePackageArtifact(repositoryManifest.artifactSizeBytes, repositoryManifest.sha256),
+            entries = entries(repositoryManifest),
+            candidate = candidate(),
+            initializationSucceeded = true,
+        )
+
+        assertEquals(candidate(), store.state.active)
+    }
 }

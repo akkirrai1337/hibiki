@@ -50,7 +50,7 @@ class SourcePackageInstaller(
         entries: List<SourcePackageEntry>,
         candidate: InstalledSourcePackage,
     ) {
-        require(repositoryManifest == packageManifest) {
+        require(repositoryManifest.matchesPackageManifest(packageManifest)) {
             "Package manifest does not match repository manifest"
         }
         require(repositoryManifest.sourceId == candidate.sourceId) {
