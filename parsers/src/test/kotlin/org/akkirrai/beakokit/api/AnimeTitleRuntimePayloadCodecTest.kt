@@ -2,6 +2,9 @@ package org.akkirrai.beakokit.api
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.CharacterTitle
@@ -76,6 +79,18 @@ class AnimeTitleRuntimePayloadCodecTest {
         )
 
         assertEquals(listOf(title), restored)
+    }
+
+    @Test
+    fun missingCollectionFieldIsRejected() {
+        assertFailsWith<IllegalStateException> {
+            AnimeTitleRuntimePayloadCodec.decodeDetails(
+                buildJsonObject {
+                    put("id", "title-1")
+                    put("originalName", "Title")
+                },
+            )
+        }
     }
 
     private fun related(id: String) = RelatedAnimeTitle(

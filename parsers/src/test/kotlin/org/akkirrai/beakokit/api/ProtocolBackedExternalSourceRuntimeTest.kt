@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -108,7 +109,77 @@ class ProtocolBackedExternalSourceRuntimeTest {
             runtime.details("title-1")
         }
 
-        assertEquals(cancellation, thrown)
+        assertEquals(cancellation.message, thrown.message)
+    }
+
+    @Test
+    fun cancelledProtocolResponseCancelsTheCaller() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    errorCode = ExternalSourceRuntimeErrorCode.CANCELLED,
+                )
+            },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-5" },
+        )
+
+        assertFailsWith<CancellationException> {
+            runtime.details("title-1")
+        }
+    }
+
+    @Test
+    fun transportFailureBecomesRuntimeSourceException() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ -> error("native runtime failed") },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-6" },
+        )
+
+        val exception = assertFailsWith<SourceException> {
+            runtime.details("title-1")
+        }
+
+        assertEquals(SourceErrorKind.UNAVAILABLE, exception.kind)
+        assertEquals(SourceErrorCode.RUNTIME_FAILURE, exception.code)
+    }
+
+    @Test
+    fun runtimeCallTimesOutAtTheCommonBoundary() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ ->
+                delay(100)
+                error("Transport should have timed out")
+            },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-7" },
+            callLimits = ExternalSourceRuntimeCallLimits(timeoutMillis = 10, maxResponseBytes = 1024),
+        )
+
+        assertFailsWith<SourceUnavailableException> {
+            runtime.details("title-1")
+        }
+    }
+
+    @Test
+    fun oversizedRuntimePayloadIsRejectedBeforeDecoding() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("payload", "x".repeat(128)) },
+                )
+            },
+            payloadCodec = FakePayloadCodec(),
+            requestIdFactory = { "request-8" },
+            callLimits = ExternalSourceRuntimeCallLimits(timeoutMillis = 1_000, maxResponseBytes = 32),
+        )
+
+        assertFailsWith<SourceUnavailableException> {
+            runtime.details("title-1")
+        }
     }
 
     private fun wireTitle(id: String) = AnimeTitle(

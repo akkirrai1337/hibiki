@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -63,5 +64,18 @@ class ExternalSourceRuntimeProtocolTest {
         assertEquals(SourceErrorCode.HOST_ACCESS_DENIED, exception.code)
         assertEquals(SourceErrorKind.UNAVAILABLE, exception.kind)
         assertEquals("cookies capability is not granted", exception.message)
+    }
+
+    @Test
+    fun cancelledProtocolResponseCancelsTheCaller() {
+        val exception = assertFailsWith<CancellationException> {
+            ExternalSourceRuntimeResponse(
+                requestId = "request-4",
+                errorCode = ExternalSourceRuntimeErrorCode.CANCELLED,
+                errorMessage = "caller cancelled search",
+            ).requirePayload()
+        }
+
+        assertEquals("caller cancelled search", exception.message)
     }
 }

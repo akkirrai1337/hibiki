@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.coroutines.CancellationException
 
 /** Stable wire operations exposed by an external-source runtime. */
 @Serializable
@@ -65,8 +66,13 @@ data class ExternalSourceRuntimeResponse(
     }
 }
 
-fun ExternalSourceRuntimeResponse.requirePayload(): JsonObject = payload
-    ?: throw toSourceException()
+fun ExternalSourceRuntimeResponse.requirePayload(): JsonObject = when {
+    payload != null -> payload
+    errorCode == ExternalSourceRuntimeErrorCode.CANCELLED -> throw CancellationException(
+        errorMessage?.takeIf(String::isNotBlank) ?: "External source runtime call was cancelled",
+    )
+    else -> throw toSourceException()
+}
 
 fun ExternalSourceRuntimeResponse.toSourceException(): SourceException {
     val protocolError = errorCode

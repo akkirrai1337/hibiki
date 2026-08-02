@@ -86,17 +86,17 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourceRuntimePayloadCodec {
         description = nullableString("description"),
         nextEpisodeAt = nullableLong("nextEpisodeAt"),
         genres = strings("genres"),
-        ratings = optionalArray("ratings").map { it.jsonObject.decodeRating() },
+        ratings = requiredArray("ratings").map { it.jsonObject.decodeRating() },
         ageRating = nullableString("ageRating"),
         viewCount = nullableLong("viewCount"),
         screenshots = strings("screenshots"),
         trailer = get("trailer")?.takeUnless { it is JsonNull }?.jsonObject?.decodeTrailer(),
         sourceMaterial = nullableString("sourceMaterial"),
         studios = strings("studios"),
-        mainCharacters = optionalArray("mainCharacters").map { it.jsonObject.decodeCharacter() },
-        similarAnime = optionalArray("similarAnime").map { it.jsonObject.decodeRelated() },
-        franchiseAnime = optionalArray("franchiseAnime").map { it.jsonObject.decodeRelated() },
-        relatedAnime = optionalArray("relatedAnime").map { it.jsonObject.decodeRelated() },
+        mainCharacters = requiredArray("mainCharacters").map { it.jsonObject.decodeCharacter() },
+        similarAnime = requiredArray("similarAnime").map { it.jsonObject.decodeRelated() },
+        franchiseAnime = requiredArray("franchiseAnime").map { it.jsonObject.decodeRelated() },
+        relatedAnime = requiredArray("relatedAnime").map { it.jsonObject.decodeRelated() },
         season = nullableInt("season"),
         availableEpisodeCount = nullableInt("availableEpisodeCount"),
         posterFallbackUrl = nullableString("posterFallbackUrl"),
@@ -188,9 +188,7 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourceRuntimePayloadCodec {
         ?.jsonArray
         ?: error("Missing required runtime payload array: $key")
 
-    private fun JsonObject.optionalArray(key: String): JsonArray = get(key)?.jsonArray ?: JsonArray(emptyList())
-
-    private fun JsonObject.strings(key: String): List<String> = optionalArray(key)
+    private fun JsonObject.strings(key: String): List<String> = requiredArray(key)
         .map { it.jsonPrimitive.content }
 
     private fun kotlinx.serialization.json.JsonObjectBuilder.putStrings(

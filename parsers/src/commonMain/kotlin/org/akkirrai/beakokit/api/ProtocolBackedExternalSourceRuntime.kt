@@ -1,11 +1,18 @@
 package org.akkirrai.beakokit.api
 
-import kotlinx.serialization.json.JsonObject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 
-/** Platform transport for one request/response exchange with an external runtime. */
+/**
+ * Platform transport for one request/response exchange with an external runtime.
+ *
+ * Implementations must reject an oversized native response before deserializing it. The common
+ * adapter applies the timeout and validates the decoded JSON payload size as a second boundary.
+ */
 fun interface ExternalSourceRuntimeTransport {
     suspend fun call(
         request: ExternalSourceRuntimeRequest,
@@ -60,7 +67,27 @@ class ProtocolBackedExternalSourceRuntime(
             operation = operation,
             payload = payload,
         )
-        val response = transport.call(request, callLimits)
+        val response = try {
+            withTimeout(callLimits.timeoutMillis) {
+                transport.call(request, callLimits)
+            }
+        } catch (error: TimeoutCancellationException) {
+            throw SourceUnavailableException(
+                message = "External source runtime timed out after ${callLimits.timeoutMillis} ms",
+                cause = error,
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Throwable) {
+            throw SourceException(
+                message = "External source runtime transport failed",
+                cause = error,
+                kind = SourceErrorKind.UNAVAILABLE,
+                code = SourceErrorCode.RUNTIME_FAILURE,
+            )
+        }
         if (response.requestId != request.requestId) {
             throw SourceException(
                 message = "Runtime response ID does not match request",
@@ -68,7 +95,9 @@ class ProtocolBackedExternalSourceRuntime(
             )
         }
         return try {
-            decode(response.requirePayload())
+            val responsePayload = response.requirePayload()
+            requireResponseWithinLimit(responsePayload)
+            decode(responsePayload)
         } catch (error: CancellationException) {
             throw error
         } catch (error: SourceException) {
@@ -78,6 +107,15 @@ class ProtocolBackedExternalSourceRuntime(
                 message = "External source runtime returned an invalid payload",
                 cause = error,
                 kind = SourceErrorKind.PARSE,
+            )
+        }
+    }
+
+    private fun requireResponseWithinLimit(payload: JsonObject) {
+        val payloadSizeBytes = payload.toString().encodeToByteArray().size.toLong()
+        if (payloadSizeBytes > callLimits.maxResponseBytes) {
+            throw SourceUnavailableException(
+                message = "External source runtime response exceeds ${callLimits.maxResponseBytes} bytes",
             )
         }
     }
