@@ -53,6 +53,38 @@ class ProtocolBackedExternalSourceRuntimeTest {
         assertEquals(SourceErrorKind.PARSE, exception.kind)
     }
 
+    @Test
+    fun protocolAdapterDecodesTheCanonicalAnimeTitlePayload() = runBlocking {
+        val expected = wireTitle("decoded-from-wire")
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = AnimeTitleRuntimePayloadCodec.encodeDetails(expected),
+                )
+            },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-2" },
+        )
+
+        assertEquals(expected, runtime.details("title-1"))
+    }
+
+    private fun wireTitle(id: String) = AnimeTitle(
+        id = id,
+        russianName = null,
+        englishName = id,
+        originalName = id,
+        japaneseName = null,
+        synonyms = emptyList(),
+        year = null,
+        type = null,
+        episodeCount = null,
+        posterUrl = null,
+        status = null,
+        description = null,
+    )
+
     private class FakePayloadCodec : ExternalSourceRuntimePayloadCodec {
         override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = listOf(title("decoded-search"))
 
