@@ -18,4 +18,12 @@ class TextWrapHelpersTest {
             "Унесенные призраками и ведьма".preventTrailingOrphanWrap(),
         )
     }
+
+    @Test
+    fun preventsBreakingInsideWords() {
+        assertEquals(
+            "У\u2060н\u2060е\u2060с\u2060е\u2060н\u2060н\u2060ы\u2060е п\u2060р\u2060и\u2060з\u2060р\u2060а\u2060к\u2060а\u2060м\u2060и",
+            "Унесенные призраками".preventWordBreaks(),
+        )
+    }
 }

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
+import org.akkirrai.hibiki.shared.text.preventWordBreaks
 
 @Composable
 fun AppVerticalAnimeListItem(
@@ -303,7 +304,7 @@ fun AppPosterAnimeCard(
             verticalArrangement = Arrangement.spacedBy(UiDimens.PosterCardContentGap),
         ) {
             Text(
-                text = anime.title.preventTrailingOrphanWrap(),
+                text = anime.title.preventTrailingOrphanWrap().preventWordBreaks(),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.titleSmall.copy(
                     lineBreak = LineBreak.Paragraph,
