@@ -6,6 +6,7 @@ import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ExternalSourceRuntimeProtocolCodecTest {
     @Test
@@ -56,5 +57,26 @@ class ExternalSourceRuntimeProtocolCodecTest {
             ExternalSourceRuntimeProtocolCodec.encodeRequest(request),
             receivedRequest,
         )
+    }
+
+    @Test
+    fun nativeBridgeRejectsOversizedResponseBeforeDecoding() = runBlocking {
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { _, _ -> ByteArray(33) },
+        )
+        val request = ExternalSourceRuntimeRequest(
+            requestId = "bridge-oversized",
+            operation = ExternalSourceRuntimeOperation.DETAILS,
+            payload = buildJsonObject { put("id", "title-1") },
+        )
+
+        val error = assertFailsWith<SourceUnavailableException> {
+            transport.call(
+                request = request,
+                limits = ExternalSourceRuntimeCallLimits(maxResponseBytes = 32),
+            )
+        }
+
+        assertEquals("Native runtime response exceeds 32 bytes", error.message)
     }
 }

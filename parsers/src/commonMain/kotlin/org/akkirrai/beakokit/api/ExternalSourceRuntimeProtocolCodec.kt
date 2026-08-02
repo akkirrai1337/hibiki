@@ -40,10 +40,16 @@ class NativeBridgeExternalSourceRuntimeTransport(
     override suspend fun call(
         request: ExternalSourceRuntimeRequest,
         limits: ExternalSourceRuntimeCallLimits,
-    ): ExternalSourceRuntimeResponse = ExternalSourceRuntimeProtocolCodec.decodeResponse(
-        bridge.call(
+    ): ExternalSourceRuntimeResponse {
+        val response = bridge.call(
             request = ExternalSourceRuntimeProtocolCodec.encodeRequest(request),
             maxResponseBytes = limits.maxResponseBytes,
-        ),
-    )
+        )
+        if (response.size.toLong() > limits.maxResponseBytes) {
+            throw SourceUnavailableException(
+                message = "Native runtime response exceeds ${limits.maxResponseBytes} bytes",
+            )
+        }
+        return ExternalSourceRuntimeProtocolCodec.decodeResponse(response)
+    }
 }
