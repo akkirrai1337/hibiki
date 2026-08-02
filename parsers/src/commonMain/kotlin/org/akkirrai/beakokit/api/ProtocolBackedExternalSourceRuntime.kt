@@ -28,6 +28,9 @@ data class ExternalSourceRuntimeCallLimits(
 ) {
     init {
         require(timeoutMillis > 0) { "Runtime timeout must be positive" }
+        require(timeoutMillis <= SourceHostHttpRequest.MAX_TIMEOUT_MILLIS) {
+            "Runtime timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
+        }
         require(maxRequestBytes > 0) { "Maximum runtime request size must be positive" }
         require(maxResponseBytes > 0) { "Maximum runtime response size must be positive" }
     }

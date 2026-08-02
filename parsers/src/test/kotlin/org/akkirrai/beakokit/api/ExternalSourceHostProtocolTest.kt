@@ -100,4 +100,32 @@ class ExternalSourceHostProtocolTest {
             response.requirePayload("host-3")
         }
     }
+
+    @Test
+    fun http_request_rejects_invalid_limits_at_the_wire_boundary() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(method = "", url = "https://example.com")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET",
+                url = "https://example.com",
+                timeoutMillis = SourceHostHttpRequest.MAX_TIMEOUT_MILLIS + 1,
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET",
+                url = "https://example.com",
+                maxResponseBytes = 0,
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET",
+                url = "https://example.com",
+                maxResponseBytes = Long.MAX_VALUE,
+            )
+        }
+    }
 }

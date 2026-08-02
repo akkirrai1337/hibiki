@@ -77,7 +77,20 @@ data class ExternalSourceHostHttpRequest(
     val body: String? = null,
     val timeoutMillis: Long = SourceHostHttpRequest.DEFAULT_TIMEOUT_MILLIS,
     val maxResponseBytes: Long = SourceHostHttpRequest.DEFAULT_MAX_RESPONSE_BYTES,
-)
+) {
+    init {
+        require(method.isNotBlank()) { "HTTP method must not be blank" }
+        require(url.isNotBlank()) { "HTTP URL must not be blank" }
+        require(timeoutMillis > 0) { "HTTP timeout must be positive" }
+        require(timeoutMillis <= SourceHostHttpRequest.MAX_TIMEOUT_MILLIS) {
+            "HTTP timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
+        }
+        require(maxResponseBytes > 0) { "Maximum HTTP response size must be positive" }
+        require(maxResponseBytes < Long.MAX_VALUE) {
+            "Maximum HTTP response size must leave room for the limit sentinel"
+        }
+    }
+}
 
 @Serializable
 data class ExternalSourceHostHttpResponse(

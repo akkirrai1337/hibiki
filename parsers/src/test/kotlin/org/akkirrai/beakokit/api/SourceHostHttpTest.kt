@@ -38,7 +38,17 @@ class SourceHostHttpTest {
             SourceHostHttpRequest("GET", "https://example.com", timeoutMillis = 0)
         }
         assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest(
+                "GET",
+                "https://example.com",
+                timeoutMillis = SourceHostHttpRequest.MAX_TIMEOUT_MILLIS + 1,
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
             SourceHostHttpRequest("GET", "https://example.com", maxResponseBytes = 0)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest("GET", "https://example.com", maxResponseBytes = Long.MAX_VALUE)
         }
     }
 

@@ -11,6 +11,9 @@ data class SourceRepositoryLoadLimits(
 ) {
     init {
         require(timeoutMillis > 0) { "Repository timeout must be positive" }
+        require(timeoutMillis <= SourceHostHttpRequest.MAX_TIMEOUT_MILLIS) {
+            "Repository timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
+        }
         require(maxResponseBytes > 0) { "Maximum repository response size must be positive" }
         require(maxResponseBytes < Long.MAX_VALUE) {
             "Maximum repository response size must leave room for the limit sentinel"

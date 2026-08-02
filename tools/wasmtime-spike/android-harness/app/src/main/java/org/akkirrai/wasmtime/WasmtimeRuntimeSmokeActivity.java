@@ -47,13 +47,13 @@ public final class WasmtimeRuntimeSmokeActivity extends Activity {
                         + "\"mainCharacters\":[],\"similarAnime\":[],\"franchiseAnime\":[],"
                         + "\"relatedAnime\":[]},\"errorCode\":null,\"errorMessage\":null,"
                         + "\"protocolVersion\":1}").getBytes(StandardCharsets.UTF_8);
-                });
+                }, 0L);
         String hostFailureResponse = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
                 suppliedModule,
                 hostRequest,
                 request -> {
                     throw new IllegalStateException("host failure probe");
-                });
+                }, 0L);
         boolean protocolOk = protocolResponse != null
                 && protocolResponse.contains("\"requestId\":\"android-probe-1\"")
                 && protocolResponse.contains("\"payload\":{\"items\":[]}")

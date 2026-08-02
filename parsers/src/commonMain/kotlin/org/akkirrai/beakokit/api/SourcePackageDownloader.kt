@@ -14,6 +14,9 @@ data class SourcePackageDownloadLimits(
 ) {
     init {
         require(timeoutMillis > 0) { "Package download timeout must be positive" }
+        require(timeoutMillis <= SourceHostHttpRequest.MAX_TIMEOUT_MILLIS) {
+            "Package download timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
+        }
         require(maxArtifactSizeBytes > 0) { "Maximum artifact size must be positive" }
         require(maxArtifactSizeBytes < Int.MAX_VALUE) {
             "Maximum artifact size must fit in a platform byte array"

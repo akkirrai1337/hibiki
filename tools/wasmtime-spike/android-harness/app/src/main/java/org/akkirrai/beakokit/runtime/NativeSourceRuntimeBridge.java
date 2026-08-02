@@ -10,5 +10,6 @@ public final class NativeSourceRuntimeBridge {
     public static native String protocolModuleCallWithHost(
             byte[] module,
             String request,
-            Host host);
+            Host host,
+            long cancellationScopeId);
 }

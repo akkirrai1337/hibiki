@@ -13,11 +13,18 @@ data class SourceHostHttpRequest(
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
         require(timeoutMillis > 0) { "HTTP timeout must be positive" }
+        require(timeoutMillis <= MAX_TIMEOUT_MILLIS) {
+            "HTTP timeout must not exceed $MAX_TIMEOUT_MILLIS ms"
+        }
         require(maxResponseBytes > 0) { "Maximum HTTP response size must be positive" }
+        require(maxResponseBytes < Long.MAX_VALUE) {
+            "Maximum HTTP response size must leave room for the limit sentinel"
+        }
     }
 
     companion object {
         const val DEFAULT_TIMEOUT_MILLIS: Long = 30_000
+        const val MAX_TIMEOUT_MILLIS: Long = 120_000
         const val DEFAULT_MAX_RESPONSE_BYTES: Long = 8L * 1024L * 1024L
     }
 }
