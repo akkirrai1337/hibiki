@@ -2,6 +2,10 @@ package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.SearchFilterOption
+import org.akkirrai.hibiki.shared.source.formatFilterFallbackLabel
+import org.akkirrai.hibiki.shared.source.localizeYummySortFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyTypeFilterLabel
+import org.akkirrai.hibiki.shared.source.localizeYummyStatusFilterLabel
 
 internal object YummySearchFilterLocalizer {
     fun localize(
@@ -9,10 +13,16 @@ internal object YummySearchFilterLocalizer {
         preferEnglish: Boolean,
     ): AnimeSearchFilterCatalog {
         return AnimeSearchFilterCatalog(
-            sortOptions = catalog.sortOptions.map { it.localize(sortLabels, preferEnglish) },
-            typeOptions = catalog.typeOptions.map { it.localize(typeLabels, preferEnglish) },
+            sortOptions = catalog.sortOptions.map {
+                it.copy(title = localizeYummySortFilterLabel(it.id, it.title, preferEnglish))
+            },
+            typeOptions = catalog.typeOptions.map {
+                it.copy(title = localizeYummyTypeFilterLabel(it.id, it.title, preferEnglish))
+            },
             // Statuses and genres belong to the source and must stay in its language.
-            statusOptions = catalog.statusOptions.map { it.localize(statusLabels, preferEnglish = false) },
+            statusOptions = catalog.statusOptions.map {
+                it.copy(title = localizeYummyStatusFilterLabel(it.id, it.title))
+            },
             genreOptions = catalog.genreOptions.map { it.localize(genreLabels, preferEnglish = false) },
             capabilities = catalog.capabilities,
         )
@@ -24,7 +34,8 @@ internal object YummySearchFilterLocalizer {
     ): SearchFilterOption {
         val labels = dictionary[id]
         val localizedTitle = when {
-            labels == null && title.trim().equals(id.trim(), ignoreCase = true) -> fallbackLabel(id, preferEnglish)
+            labels == null && title.trim().equals(id.trim(), ignoreCase = true) ->
+                formatFilterFallbackLabel(id, preferEnglish)
             labels == null -> title
             preferEnglish -> labels.en
             else -> labels.ru
@@ -32,51 +43,9 @@ internal object YummySearchFilterLocalizer {
         return copy(title = localizedTitle)
     }
 
-    private fun fallbackLabel(alias: String, preferEnglish: Boolean): String {
-        if (!preferEnglish) return alias
-        return alias
-            .replace('-', ' ')
-            .replace('_', ' ')
-            .split(' ')
-            .filter(String::isNotBlank)
-            .joinToString(" ") { part ->
-                part.replaceFirstChar { it.uppercase() }
-            }
-    }
-
     private data class LocalizedLabel(
         val ru: String,
         val en: String,
-    )
-
-    private val sortLabels = mapOf(
-        "relevance" to LocalizedLabel("Релевантности", "Relevance"),
-        "top" to LocalizedLabel("Рейтингу", "Rating"),
-        "title" to LocalizedLabel("Названию", "Title"),
-        "year" to LocalizedLabel("Дате выхода", "Release date"),
-        "rating" to LocalizedLabel("Рейтингу", "Rating"),
-        "rating_counters" to LocalizedLabel("Количеству оценок", "Rating count"),
-        "votes" to LocalizedLabel("Голосам", "Votes"),
-        "views" to LocalizedLabel("Просмотрам", "Views"),
-        "comments" to LocalizedLabel("Комментариям", "Comments"),
-        "random" to LocalizedLabel("Случайно", "Random"),
-        "id" to LocalizedLabel("Сначала новые", "Newest added"),
-    )
-
-    private val typeLabels = mapOf(
-        "tv" to LocalizedLabel("Сериал", "Series"),
-        "movie" to LocalizedLabel("Полнометражный фильм", "Feature film"),
-        "short_movie" to LocalizedLabel("Короткометражный фильм", "Short film"),
-        "ova" to LocalizedLabel("OVA", "OVA"),
-        "special" to LocalizedLabel("Спэшл", "Special"),
-        "short_serial" to LocalizedLabel("Малометражный сериал", "Short series"),
-        "ona" to LocalizedLabel("ONA", "ONA"),
-    )
-
-    private val statusLabels = mapOf(
-        "released" to LocalizedLabel("Вышел", "Released"),
-        "ongoing" to LocalizedLabel("Онгоинг", "Ongoing"),
-        "announcement" to LocalizedLabel("Анонс", "Announcement"),
     )
 
     private val genreLabels = mapOf(

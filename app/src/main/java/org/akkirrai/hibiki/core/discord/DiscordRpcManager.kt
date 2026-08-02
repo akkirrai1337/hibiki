@@ -27,15 +27,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.account.DiscordTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
-
-enum class DiscordRpcConnectionStatus {
-    Disabled,
-    SignedOut,
-    Checking,
-    Connecting,
-    Connected,
-    Error,
-}
+import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
 
 data class DiscordRpcState(
     val status: DiscordRpcConnectionStatus = DiscordRpcConnectionStatus.Disabled,

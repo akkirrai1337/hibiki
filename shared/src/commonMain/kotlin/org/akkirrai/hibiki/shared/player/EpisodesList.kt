@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.source.sourceItemShape
 
@@ -15,12 +14,18 @@ import org.akkirrai.hibiki.shared.source.sourceItemShape
 fun EpisodesList(
     episodes: List<WatchEpisode>,
     episodeContent: @Composable (WatchEpisode, androidx.compose.foundation.shape.RoundedCornerShape) -> Unit,
+    contentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 56.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = contentPadding ?: PaddingValues(
+            start = EpisodesListHorizontalPadding,
+            end = EpisodesListHorizontalPadding,
+            top = EpisodesListTopPadding,
+            bottom = EpisodesListBottomPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(EpisodesListItemGap),
     ) {
         itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
             episodeContent(episode, sourceItemShape(index, episodes.size))

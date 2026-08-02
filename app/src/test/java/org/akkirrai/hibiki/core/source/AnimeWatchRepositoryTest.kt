@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 
 class AnimeWatchRepositoryTest {
     private val repository = AnimeWatchRepository(

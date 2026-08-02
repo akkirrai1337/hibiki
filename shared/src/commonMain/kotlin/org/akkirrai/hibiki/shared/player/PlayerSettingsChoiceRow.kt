@@ -12,11 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun PlayerSettingsChoiceRow(
@@ -27,12 +25,21 @@ fun PlayerSettingsChoiceRow(
     selectedIndicator: (@Composable () -> Unit)? = null,
 ) {
     Surface(
-        modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        modifier = Modifier
+            .padding(horizontal = PlayerSettingsChoiceOuterHorizontalPadding)
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(PlayerSettingsChoiceCornerRadius),
         color = if (selected) Color.White.copy(alpha = 0.10f) else Color.Transparent,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = PlayerSettingsChoiceContentHorizontalPadding,
+                    vertical = PlayerSettingsChoiceContentVerticalPadding,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(PlayerSettingsChoiceGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = if (selected) 1f else 0.86f), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)

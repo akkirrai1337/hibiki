@@ -21,4 +21,18 @@ class CurrentEpisodeTitleResolverTest {
         )
         assertEquals("", resolveCurrentEpisodeTitle(" ", "missing", emptyList()))
     }
+
+    @Test
+    fun resolvesFallbackEpisodeNumberForSelectedEpisode() {
+        val episode = listOf(WatchEpisode("2", 2.5, null))
+
+        assertEquals(
+            "Episode 2.5",
+            resolveCurrentEpisodeTitle(null, "2", episode),
+        )
+        assertEquals(
+            "2.5",
+            resolveCurrentEpisodeNumber("2", episode),
+        )
+    }
 }

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsSectionTitle(
@@ -22,13 +21,13 @@ fun DetailsSectionTitle(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(DetailsSectionTitleGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(width = 4.dp, height = 24.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .size(width = DetailsSectionTitleIndicatorWidth, height = DetailsSectionTitleIndicatorHeight)
+                .clip(RoundedCornerShape(DetailsSectionTitleIndicatorCornerRadius))
                 .background(MaterialTheme.colorScheme.primary),
         )
         Text(

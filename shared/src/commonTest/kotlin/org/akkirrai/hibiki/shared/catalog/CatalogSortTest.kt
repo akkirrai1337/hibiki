@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.catalog
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
 
 class CatalogSortTest {
     @Test
@@ -9,5 +10,17 @@ class CatalogSortTest {
         assertEquals(CatalogSort.Alphabetical, catalogSortFromAlias("title"))
         assertEquals(CatalogSort.Updated, catalogSortFromAlias("latest_releases"))
         assertEquals(CatalogSort.Popular, catalogSortFromAlias("unknown"))
+    }
+
+    @Test
+    fun listsSupportedSortsUsingSourceAliases() {
+        assertEquals(
+            listOf(CatalogSort.Alphabetical, CatalogSort.Popular, CatalogSort.Updated),
+            availableCatalogSorts(
+                AnimeCatalogCapabilities(
+                    supportedSorts = setOf("title", "rating", "latest_releases"),
+                )
+            ),
+        )
     }
 }

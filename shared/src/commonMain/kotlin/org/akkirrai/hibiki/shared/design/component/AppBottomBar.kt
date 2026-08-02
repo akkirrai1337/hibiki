@@ -9,50 +9,58 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
+import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
+import org.akkirrai.hibiki.shared.text.appText
 
-/** Platform-neutral item description for the app's compact navigation shell. */
-data class AppBottomBarItem(
-    val id: String,
-    val label: String,
-    val icon: @Composable () -> androidx.compose.ui.graphics.vector.ImageVector,
-)
+val AppBottomBarHeight = 64.dp
+val AppBottomBarDividerHeight = 1.dp
+val AppBottomBarContentExtraPadding = 12.dp
+val AppBottomBarContentHeight = 64.dp
+val AppBottomBarHorizontalPadding = 14.dp
+val AppBottomBarVerticalPadding = 6.dp
+val AppBottomBarItemGap = 4.dp
+val AppBottomBarActivePillMaxWidth = 68.dp
+val AppBottomBarActivePillMinWidth = 48.dp
+val AppBottomBarIconSize = 22.dp
+val AppBottomBarItemHeight = 48.dp
+val AppBottomBarPillHeight = 30.dp
+val AppBottomBarPillCornerRadius = 18.dp
+val AppBottomBarLabelTopSpacing = 3.dp
+val AppBottomBarLabelFontSize = 11.sp
 
-/**
- * Shared bottom navigation shell.
- *
- * Hosts provide labels and icons because localization and icon packs belong to
- * the platform/application layer. Layout, selected state, insets and motion
- * surface remain identical on every Compose host.
- */
+/** Shared bottom navigation geometry and interaction used by platform hosts. */
 @Composable
 fun AppBottomBar(
-    items: List<AppBottomBarItem>,
-    selectedId: String,
-    onItemClick: (AppBottomBarItem) -> Unit,
+    currentDestination: AppTopLevelDestination,
+    onDestinationClick: (AppTopLevelDestination) -> Unit,
+    iconContent: @Composable (AppTopLevelDestination, Modifier) -> Unit,
+    label: @Composable (AppTopLevelDestination) -> String = { appText(it.labelKey) },
+    destinations: List<AppTopLevelDestination> = AppTopLevelDestination.entries,
+    includeNavigationBarPadding: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationBarBottomPadding = appBottomSystemInsetValue(includeNavigationBarPadding)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -69,33 +77,35 @@ fun AppBottomBar(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(AppBottomBarDividerHeight)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
             )
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(BottomBarHeight)
-                    .padding(horizontal = BottomBarHorizontalPadding, vertical = BottomBarVerticalPadding),
+                    .height(AppBottomBarContentHeight)
+                    .padding(horizontal = AppBottomBarHorizontalPadding, vertical = AppBottomBarVerticalPadding),
             ) {
-                val itemGap = 4.dp
-                val itemWidth = (maxWidth - itemGap * (items.size - 1)).coerceAtLeast(0.dp) / items.size.coerceAtLeast(1)
-                val activePillWidth = if (itemWidth < BottomBarActivePillMaxWidth) {
-                    (itemWidth - 4.dp).coerceAtLeast(48.dp)
+                val itemGap = AppBottomBarItemGap
+                val itemWidth = (maxWidth - itemGap * (destinations.size - 1)) / destinations.size
+                val activePillWidth = if (itemWidth < AppBottomBarActivePillMaxWidth) {
+                    (itemWidth - itemGap).coerceAtLeast(AppBottomBarActivePillMinWidth)
                 } else {
-                    BottomBarActivePillMaxWidth
+                    AppBottomBarActivePillMaxWidth
                 }
                 Row(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(itemGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    items.forEach { item ->
+                    destinations.forEach { destination ->
                         AppBottomBarItem(
-                            item = item,
-                            selected = item.id == selectedId,
-                            onClick = { onItemClick(item) },
+                            destination = destination,
+                            selected = currentDestination == destination,
+                            onClick = { onDestinationClick(destination) },
                             activePillWidth = activePillWidth,
+                            iconContent = { iconContent(destination, Modifier.size(AppBottomBarIconSize)) },
+                            label = label(destination),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -107,10 +117,12 @@ fun AppBottomBar(
 
 @Composable
 private fun AppBottomBarItem(
-    item: AppBottomBarItem,
+    destination: AppTopLevelDestination,
     selected: Boolean,
     onClick: () -> Unit,
     activePillWidth: Dp,
+    iconContent: @Composable () -> Unit,
+    label: String,
     modifier: Modifier = Modifier,
 ) {
     val contentColor = if (selected) {
@@ -119,48 +131,44 @@ private fun AppBottomBarItem(
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
     }
     val interactionSource = remember { MutableInteractionSource() }
-    val pillShape = RoundedCornerShape(18.dp)
+    val pillShape: Shape = RoundedCornerShape(AppBottomBarPillCornerRadius)
 
     Column(
         modifier = modifier
-            .height(BottomBarItemHeight)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+            .height(AppBottomBarItemHeight)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Surface(
             modifier = Modifier
-                .size(width = activePillWidth, height = BottomBarActivePillHeight),
+                .size(width = activePillWidth, height = AppBottomBarPillHeight)
+                .clip(pillShape),
             shape = pillShape,
             color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             contentColor = contentColor,
             tonalElevation = if (selected) 2.dp else 0.dp,
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = item.icon(),
-                    contentDescription = item.label,
-                    modifier = Modifier.size(BottomBarIconSize),
-                )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                iconContent()
             }
         }
-        Spacer(modifier = Modifier.height(3.dp))
-        androidx.compose.material3.Text(
-            text = item.label,
-            fontSize = BottomBarLabelSize,
-            lineHeight = BottomBarLabelSize,
+
+        Spacer(modifier = Modifier.height(AppBottomBarLabelTopSpacing))
+        Text(
+            text = label,
+            fontSize = AppBottomBarLabelFontSize,
+            lineHeight = AppBottomBarLabelFontSize,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = if (selected) MaterialTheme.colorScheme.onSurface else contentColor,
             maxLines = 1,
         )
     }
 }
-
-private val BottomBarHeight = 64.dp
-private val BottomBarHorizontalPadding = 14.dp
-private val BottomBarVerticalPadding = 6.dp
-private val BottomBarItemHeight = 48.dp
-private val BottomBarActivePillMaxWidth = 68.dp
-private val BottomBarActivePillHeight = 30.dp
-private val BottomBarIconSize = 22.dp
-private val BottomBarLabelSize = 11.sp

@@ -1,28 +1,18 @@
 package org.akkirrai.hibiki.shared.settings
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-
-data class AppSettingsScreenState(
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val useSystemColorScheme: Boolean = true,
-    val useAmoledTheme: Boolean = false,
-    val languageMode: LanguageMode = LanguageMode.SYSTEM,
-    val notificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
-    val autoSkipSegments: Boolean = false,
-    val discordRpcEnabled: Boolean = false,
-    val showUpdates: Boolean = false,
-)
+import hibiki.shared.generated.resources.Res
+import hibiki.shared.generated.resources.ic_discord
+import hibiki.shared.generated.resources.ic_github
+import hibiki.shared.generated.resources.hibiki_app_icon
+import org.jetbrains.compose.resources.painterResource
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 
 data class AppSettingsScreenLabels(
     val appearance: String,
@@ -30,23 +20,21 @@ data class AppSettingsScreenLabels(
     val themeSystem: String,
     val themeLight: String,
     val themeDark: String,
-    val useSystemColorScheme: String,
+    val systemColorScheme: String,
     val amoled: String,
     val preferences: String,
     val language: String,
     val languageSystem: String,
-    val languageEnglish: String,
     val languageRussian: String,
+    val languageEnglish: String,
     val notifications: String,
-    val notificationsNotAsked: String,
-    val notificationsEnabled: String,
-    val notificationsDisabled: String,
+    val notificationsStatus: String,
     val player: String,
-    val autoSkipSegments: String,
+    val autoSkip: String,
     val experimental: String,
-    val discordRpc: String,
+    val discord: String,
     val updates: String,
-    val checkForUpdates: String,
+    val checkUpdates: String,
     val support: String,
     val exportLogs: String,
     val about: String,
@@ -54,194 +42,164 @@ data class AppSettingsScreenLabels(
     val versionName: String,
 )
 
-data class AppSettingsScreenIcons(
-    val theme: ImageVector,
-    val systemColorScheme: ImageVector,
-    val amoled: ImageVector,
-    val language: ImageVector,
-    val notifications: ImageVector,
-    val autoSkipSegments: ImageVector,
-    val discordRpc: ImageVector,
-    val update: ImageVector,
-    val exportLogs: ImageVector,
-    val chevron: ImageVector,
-)
-
-/** Stateless production Settings screen. Platform actions are explicit callbacks. */
 @Composable
 fun AppSettingsScreen(
-    state: AppSettingsScreenState,
+    languageMode: LanguageMode,
+    darkTheme: Boolean,
     labels: AppSettingsScreenLabels,
-    icons: AppSettingsScreenIcons,
-    appIconContent: @Composable () -> Unit,
-    githubIconContent: @Composable () -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
-    onSystemColorSchemeChange: (Boolean) -> Unit,
-    onAmoledChange: (Boolean) -> Unit,
-    onLanguageModeChange: (LanguageMode) -> Unit,
-    onConfigureNotifications: () -> Unit,
-    onAutoSkipSegmentsChange: (Boolean) -> Unit,
-    onDiscordClick: () -> Unit,
-    onDiscordEnabledChange: (Boolean) -> Unit,
-    onCheckForUpdates: () -> Unit,
-    onExportLogs: () -> Unit,
-    onGitHubClick: () -> Unit,
+    useSystemColorScheme: Boolean,
+    useAmoledTheme: Boolean,
+    autoSkipSegments: Boolean,
+    themeMode: ThemeMode? = null,
+    discordAvailable: Boolean = true,
+    notificationsAvailable: Boolean = true,
+    discordEnabled: Boolean = false,
+    showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
-    bottomContentPadding: Dp = 24.dp,
+    bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
+    showBackButton: Boolean = false,
+    onBackClick: () -> Unit = {},
+    backContentDescription: String = "Back",
+    onLanguageModeChange: (LanguageMode) -> Unit,
+    onThemeChange: (Boolean) -> Unit,
+    onThemeModeChange: ((ThemeMode) -> Unit)? = null,
+    onSystemColorSchemeChange: (Boolean) -> Unit = {},
+    onAmoledChange: (Boolean) -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
+    onAutoSkipChange: (Boolean) -> Unit = {},
+    onDiscordClick: () -> Unit = {},
+    onDiscordChange: (Boolean) -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
+    onGitHubClick: () -> Unit = {},
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, top = 24.dp, end = 18.dp, bottom = bottomContentPadding),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
+        AppSettingsContentList(
+            bottomContentPadding = bottomContentPadding,
+            topContentPadding = if (showBackButton) {
+                SettingsContentTopPaddingWithBackButton
+            } else {
+                SettingsContentTopPadding
+            },
+            modifier = Modifier.fillMaxSize(),
+            content = {
         item(key = SettingsSection.Appearance.key) {
-            AppSettingsSection(title = labels.appearance) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> AppSettingsIconVerticalItem(
-                            icon = icons.theme,
-                            title = labels.theme,
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = themeModeOptions,
-                                selectedOption = state.themeMode,
-                                label = { mode ->
-                                    when (mode) {
-                                        ThemeMode.SYSTEM -> labels.themeSystem
-                                        ThemeMode.LIGHT -> labels.themeLight
-                                        ThemeMode.DARK -> labels.themeDark
-                                    }
-                                },
-                                onSelect = onThemeModeChange,
-                            )
-                        }
-
-                        1 -> AppSettingsIconSwitchItem(
-                            icon = icons.systemColorScheme,
-                            title = labels.useSystemColorScheme,
-                            checked = state.useSystemColorScheme,
-                            shape = shape,
-                            onCheckedChange = onSystemColorSchemeChange,
-                        )
+            AppSettingsAppearanceSection(
+                sectionTitle = labels.appearance,
+                themeTitle = labels.theme,
+                themeOptions = themeModeOptions,
+                selectedTheme = themeMode ?: if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
+                themeLabel = { mode ->
+                    when (mode) {
+                        ThemeMode.SYSTEM -> labels.themeSystem
+                        ThemeMode.LIGHT -> labels.themeLight
+                        ThemeMode.DARK -> labels.themeDark
                     }
-                }
-            }
+                },
+                onThemeSelected = { mode ->
+                    onThemeModeChange?.invoke(mode) ?: onThemeChange(mode == ThemeMode.DARK)
+                },
+                systemColorSchemeTitle = labels.systemColorScheme,
+                useSystemColorScheme = useSystemColorScheme,
+                onSystemColorSchemeChange = onSystemColorSchemeChange,
+                amoledTitle = labels.amoled,
+                useAmoledTheme = useAmoledTheme,
+                onAmoledChange = onAmoledChange,
+            )
         }
-
         item(key = SettingsSection.Preferences.key) {
-            AppSettingsSection(title = labels.preferences) {
-                AppSettingsItems(count = 2) { index, shape ->
-                    when (index) {
-                        0 -> AppSettingsIconVerticalItem(
-                            icon = icons.language,
-                            title = labels.language,
-                            shape = shape,
-                        ) {
-                            AppSettingsSegmentedControl(
-                                options = languageModeOptions,
-                                selectedOption = state.languageMode,
-                                label = { mode ->
-                                    when (mode) {
-                                        LanguageMode.SYSTEM -> labels.languageSystem
-                                        LanguageMode.ENGLISH -> labels.languageEnglish
-                                        LanguageMode.RUSSIAN -> labels.languageRussian
-                                    }
-                                },
-                                onSelect = onLanguageModeChange,
-                            )
-                        }
-
-                        1 -> AppSettingsIconActionItem(
-                            icon = icons.notifications,
-                            title = labels.notifications,
-                            subtitle = when (state.notificationPermissionState) {
-                                NotificationPermissionState.NOT_ASKED -> labels.notificationsNotAsked
-                                NotificationPermissionState.GRANTED -> labels.notificationsEnabled
-                                NotificationPermissionState.DENIED -> labels.notificationsDisabled
-                            },
-                            shape = shape,
-                            trailing = {
-                                Icon(
-                                    imageVector = icons.chevron,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            onClick = onConfigureNotifications,
-                        )
+            AppSettingsPreferencesSection(
+                sectionTitle = labels.preferences,
+                languageTitle = labels.language,
+                languageOptions = languageModeOptions,
+                selectedLanguage = languageMode,
+                languageLabel = { mode ->
+                    when (mode) {
+                        LanguageMode.SYSTEM -> labels.languageSystem
+                        LanguageMode.RUSSIAN -> labels.languageRussian
+                        LanguageMode.ENGLISH -> labels.languageEnglish
                     }
-                }
-            }
+                },
+                onLanguageSelected = onLanguageModeChange,
+                notificationsTitle = labels.notifications,
+                notificationsSubtitle = labels.notificationsStatus,
+                notificationsAvailable = notificationsAvailable,
+                onNotificationsClick = onNotificationsClick,
+            )
         }
-
         item(key = SettingsSection.Player.key) {
-            AppSettingsSection(title = labels.player) {
-                AppSettingsItems(count = 1) { _, shape ->
-                    AppSettingsIconSwitchItem(
-                        icon = icons.autoSkipSegments,
-                        title = labels.autoSkipSegments,
-                        checked = state.autoSkipSegments,
-                        shape = shape,
-                        onCheckedChange = onAutoSkipSegmentsChange,
-                    )
-                }
-            }
+            AppSettingsPlayerSection(
+                sectionTitle = labels.player,
+                autoSkipTitle = labels.autoSkip,
+                autoSkipEnabled = autoSkipSegments,
+                onAutoSkipChange = onAutoSkipChange,
+            )
         }
-
-        item(key = SettingsSection.Experimental.key) {
-            AppSettingsSection(title = labels.experimental) {
-                AppSettingsItems(count = 1) { _, shape ->
-                    AppSettingsIconToggleItem(
-                        icon = icons.discordRpc,
-                        title = labels.discordRpc,
-                        checked = state.discordRpcEnabled,
-                        shape = shape,
-                        onClick = onDiscordClick,
-                        onCheckedChange = onDiscordEnabledChange,
-                    )
-                }
-            }
-        }
-
-        if (state.showUpdates) {
-            item(key = SettingsSection.Updates.key) {
-                AppSettingsSection(title = labels.updates) {
-                    AppSettingsItems(count = 1) { _, shape ->
-                        AppSettingsIconActionItem(
-                            icon = icons.update,
-                            title = labels.checkForUpdates,
-                            shape = shape,
-                            onClick = onCheckForUpdates,
+        if (discordAvailable) {
+            item(key = SettingsSection.Experimental.key) {
+                AppSettingsExperimentalSection(
+                    sectionTitle = labels.experimental,
+                    discordIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.ic_discord),
+                            contentDescription = null,
+                            modifier = iconModifier,
                         )
-                    }
-                }
+                    },
+                    discordTitle = labels.discord,
+                    discordEnabled = discordEnabled,
+                    onDiscordClick = onDiscordClick,
+                    onDiscordChange = onDiscordChange,
+                )
             }
         }
-
+        if (showUpdates) {
+            item(key = SettingsSection.Updates.key) {
+                AppSettingsUpdatesSection(
+                    sectionTitle = labels.updates,
+                    checkForUpdatesTitle = labels.checkUpdates,
+                    onCheckForUpdates = onCheckForUpdates,
+                )
+            }
+        }
         item(key = SettingsSection.Support.key) {
-            AppSettingsSection(title = labels.support) {
-                AppSettingsItems(count = 1) { _, shape ->
-                    AppSettingsIconActionItem(
-                        icon = icons.exportLogs,
-                        title = labels.exportLogs,
-                        shape = shape,
-                        onClick = onExportLogs,
-                    )
-                }
-            }
+            AppSettingsSupportSection(
+                sectionTitle = labels.support,
+                exportLogsTitle = labels.exportLogs,
+                onExportLogs = onExportLogs,
+            )
         }
-
         item(key = SettingsSection.About.key) {
             AppSettingsSection(title = labels.about) {
                 AppSettingsAboutCard(
                     appName = labels.appName,
                     versionName = labels.versionName,
-                    appIconContent = appIconContent,
-                    githubIconContent = githubIconContent,
+                    appIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.hibiki_app_icon),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    githubIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(Res.drawable.ic_github),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
                     onGitHubClick = onGitHubClick,
                 )
             }
+        }
+            },
+        )
+        if (showBackButton) {
+            AppDetailsHeroOverlayBackButton(
+                onClick = onBackClick,
+                contentDescription = backContentDescription,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
         }
     }
 }

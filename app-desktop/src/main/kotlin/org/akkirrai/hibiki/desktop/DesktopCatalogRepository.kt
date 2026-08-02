@@ -2,11 +2,14 @@ package org.akkirrai.hibiki.desktop
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
-import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
+import org.akkirrai.beakokit.source.BuiltInSources
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPage
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
@@ -19,23 +22,39 @@ import org.akkirrai.hibiki.shared.model.AnimeRating
 import org.akkirrai.hibiki.shared.model.AnimeTrailer
 
 /** JVM host adapter that exposes the existing BeakoKit source through shared CMP models. */
-class DesktopCatalogRepository : AnimeCatalogRepository, AutoCloseable {
-    private val client = HttpClient(CIO)
-    private val source: AnimeSource = AniLibertySource(
-        DefaultSourceContext(
-            httpClient = client,
-            preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
-        ),
-    )
+class DesktopCatalogRepository(initialSourceId: String? = null) : AnimeCatalogRepository, AutoCloseable {
+    private val client = HttpClient(CIO) {
+        installBeakoKitHttpDefaults(BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Desktop"))
+    }
+    private val knownSourceIds = BuiltInSources.catalog.sources.map { it.id }.toSet()
+    private var activeSourceId = initialSourceId
+        ?.let(::SourceId)
+        ?.takeIf { it in knownSourceIds }
+        ?: BuiltInSources.YUMMY_ANIME_ID
+    private val sources = mutableMapOf<SourceId, AnimeSource>()
 
     override val initialItems: List<Anime> = emptyList()
 
+    override fun selectSource(sourceId: String) {
+        SourceId(sourceId).takeIf { it in knownSourceIds }?.let { activeSourceId = it }
+    }
+
+    private fun activeSource(): AnimeSource = sources.getOrPut(activeSourceId) {
+        BuiltInSources.catalog.create(
+            activeSourceId,
+            DefaultSourceContext(
+                httpClient = client,
+                preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            ),
+        )
+    }
+
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
-        source.getById(id).toSharedAnime()
+        activeSource().getById(id).toSharedAnime()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
         val filters = query.filters
-        val titles = source.search(
+        val titles = activeSource().search(
             AnimeSearchRequest(
                 query = query.text,
                 limit = query.pageSize,
@@ -61,7 +80,7 @@ class DesktopCatalogRepository : AnimeCatalogRepository, AutoCloseable {
         )
     }
 
-    override suspend fun filterCatalog(): AnimeCatalogFilterCatalog = source.getSearchFilterCatalog().let { catalog ->
+    override suspend fun filterCatalog(): AnimeCatalogFilterCatalog = activeSource().getSearchFilterCatalog().let { catalog ->
         AnimeCatalogFilterCatalog(
             sortOptions = catalog.sortOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
             typeOptions = catalog.typeOptions.map { AnimeCatalogFilterOption(it.id, it.title) },
@@ -84,6 +103,7 @@ class DesktopCatalogRepository : AnimeCatalogRepository, AutoCloseable {
     }
 
     override fun close() {
+        sources.clear()
         client.close()
     }
 }
@@ -91,7 +111,7 @@ class DesktopCatalogRepository : AnimeCatalogRepository, AutoCloseable {
 private fun org.akkirrai.beakokit.model.AnimeTitle.toSharedAnime(): Anime = Anime(
     id = id,
     title = displayName,
-    subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
+    subtitle = listOfNotNull(type, year?.toString()).joinToString(" \u00B7 "),
     episodesLabel = episodeCount?.let { "$it episodes" } ?: "Episodes unknown",
     status = status ?: "Unknown",
     nextEpisodeAt = nextEpisodeAt,

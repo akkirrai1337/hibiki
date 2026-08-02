@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.model.WatchEpisode
 
 @Composable
@@ -25,8 +24,13 @@ fun PlaylistEpisodesList(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxHeight),
-        contentPadding = PaddingValues(start = horizontalPadding, top = 4.dp, end = horizontalPadding, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(
+            start = horizontalPadding,
+            top = PlaylistEpisodesListTopPadding,
+            end = horizontalPadding,
+            bottom = PlaylistEpisodesListBottomPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(PlaylistEpisodesListItemGap),
     ) {
         items(episodes, key = WatchEpisode::id) { episode ->
             PlaylistEpisodeRow(

@@ -36,7 +36,7 @@ data class LibraryFilterCatalog(
 
 fun Anime.extractLibraryType(): String? {
     return subtitle
-        .split(Regex("\\s*[â€¢Â·|]\\s*"))
+        .split(Regex("\\s*[·|]\\s*"))
         .map(String::trim)
         .firstOrNull { value ->
             value.isNotBlank() && value.any(Char::isLetter) && value.none(Char::isDigit)

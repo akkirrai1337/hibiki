@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.HibikiApp
+import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -43,7 +44,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
-import org.akkirrai.hibiki.feature.onboarding.FirstLaunchOnboarding
+import org.akkirrai.hibiki.feature.onboarding.SharedAndroidOnboardingScreen
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -156,13 +157,19 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        if (preferences.onboardingCompleted) {
+                        if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
+                            AndroidSharedAppShell(
+                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                onConfigureNotifications = ::configureNotifications,
+                                enableOnboarding = true,
+                            )
+                        } else if (preferences.onboardingCompleted) {
                             HibikiApp(
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                 onConfigureNotifications = ::configureNotifications,
                             )
                         } else {
-                            FirstLaunchOnboarding(
+                            SharedAndroidOnboardingScreen(
                                 initialSource = preferences.animeSource
                                     .takeIf { preferences.hasExplicitAnimeSource },
                                 notificationPermissionState = preferences.notificationPermissionState,

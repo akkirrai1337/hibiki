@@ -21,6 +21,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppCenteredLoading(modifier: Modifier = Modifier) {
@@ -42,7 +43,7 @@ fun AppMessageState(
     iconSlot: (@Composable () -> Unit)? = null,
     titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
     messageStyle: TextStyle = MaterialTheme.typography.bodyMedium,
-    messageModifier: Modifier = Modifier.padding(top = 6.dp),
+    messageModifier: Modifier = Modifier.padding(top = UiDimens.MessageStateMessageTopPadding),
     messageMaxLines: Int = Int.MAX_VALUE,
     messageOverflow: TextOverflow = TextOverflow.Clip,
 ) {
@@ -55,10 +56,10 @@ fun AppMessageState(
             iconSlot != null -> iconSlot()
             icon != null -> Icon(icon, iconContentDescription, tint = iconTint)
         }
-        Text(title, modifier = Modifier.padding(top = 12.dp), style = titleStyle, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+        Text(title, modifier = Modifier.padding(top = UiDimens.MessageStateTitleTopPadding), style = titleStyle, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text(message, modifier = messageModifier, style = messageStyle, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = messageMaxLines, overflow = messageOverflow)
         if (actionLabel != null && onActionClick != null) {
-            FilledTonalButton(onClick = onActionClick, modifier = Modifier.padding(top = 16.dp)) { Text(actionLabel) }
+            FilledTonalButton(onClick = onActionClick, modifier = Modifier.padding(top = UiDimens.MessageStateActionTopPadding)) { Text(actionLabel) }
         }
     }
 }
@@ -72,12 +73,12 @@ fun AppLoadMoreBlock(
     errorMessage: String? = null,
     loadingLabel: String? = null,
 ) {
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)) {
         errorMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
         FilledTonalButton(onClick = onClick, enabled = !isLoading) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                loadingLabel?.let { Text(it, modifier = Modifier.padding(start = 10.dp)) }
+                CircularProgressIndicator(modifier = Modifier.size(UiDimens.LoadMoreBlockSpinnerSize), strokeWidth = UiDimens.LoadMoreSpinnerStrokeWidth)
+                loadingLabel?.let { Text(it, modifier = Modifier.padding(start = UiDimens.LoadMoreBlockLabelStartPadding)) }
             } else Text(label)
         }
     }

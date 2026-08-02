@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsFavoriteCircleButton(
@@ -19,8 +18,8 @@ fun DetailsFavoriteCircleButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 41.dp,
-    iconSize: Dp = 18.dp,
+    size: Dp = DetailsFavoriteCircleButtonSize,
+    iconSize: Dp = DetailsFavoriteCircleButtonIconSize,
 ) {
     Box(
         modifier = modifier.size(size).clickable(onClick = onClick),

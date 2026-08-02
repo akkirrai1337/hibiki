@@ -12,6 +12,7 @@ data class PlayerUiState(
     val currentSourceId: String = "",
     val currentEpisodeId: String = "",
     val currentEpisodeNumber: Double? = null,
+    val lastPlaybackRequest: PlaybackRequest? = null,
     val pendingSeekMs: Long = 0L,
     val errorMessage: String? = null,
     val failedStreamUrls: Set<String> = emptySet(),

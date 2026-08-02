@@ -14,7 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 @Composable
 fun DetailsStatusBarScrim(
@@ -22,8 +22,13 @@ fun DetailsStatusBarScrim(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val distanceUntilOpaquePx = with(density) { 168.dp.toPx() }
-    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val distanceUntilOpaquePx = with(density) { DetailsStatusBarScrimOpaqueDistance.toPx() }
+    val statusBarHeight = if (layoutEnvironment.isProvided) {
+        layoutEnvironment.topSystemInset
+    } else {
+        with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    }
     val alpha by remember(listState, distanceUntilOpaquePx) {
         derivedStateOf {
             if (listState.firstVisibleItemIndex > 0) {

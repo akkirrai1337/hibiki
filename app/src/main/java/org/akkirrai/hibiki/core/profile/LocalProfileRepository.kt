@@ -44,13 +44,13 @@ class LocalProfileRepository(
     /** Shared CMP read boundary; profile mutation and Android URI permissions stay host-specific. */
     override suspend fun load(): LocalProfileData = getData()
 
-    fun updateProfileName(name: String): String {
+    override fun updateProfileName(name: String): String {
         val profileName = name.trim().ifBlank { defaultProfileName }
         preferences.edit().putString(PROFILE_NAME_KEY, profileName).apply()
         return profileName
     }
 
-    fun updateProfileAvatar(uri: String) {
+    override fun updateProfileAvatar(uri: String) {
         runCatching {
             appContext.contentResolver.takePersistableUriPermission(
                 Uri.parse(uri),

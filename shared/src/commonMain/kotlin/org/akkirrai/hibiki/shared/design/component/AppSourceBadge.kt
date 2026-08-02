@@ -11,13 +11,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppSourceBadge(
     title: String,
-    iconContent: @Composable () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -31,7 +32,11 @@ fun AppSourceBadge(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            iconContent()
+            iconContent(
+                Modifier
+                    .size(14.dp)
+                    .clip(CircleShape),
+            )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,

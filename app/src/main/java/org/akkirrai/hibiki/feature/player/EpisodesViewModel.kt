@@ -14,8 +14,9 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.EpisodesPresenter
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
-import org.akkirrai.hibiki.shared.player.EpisodesUiState
-import org.akkirrai.hibiki.shared.player.mergeWatchEpisodes
+import org.akkirrai.hibiki.shared.player.errorEpisodesState
+import org.akkirrai.hibiki.shared.player.initialEpisodesState
+import org.akkirrai.hibiki.shared.player.loadedEpisodesState
 
 class EpisodesViewModel(
     private val sourceId: String,
@@ -31,44 +32,25 @@ class EpisodesViewModel(
 
     fun load() {
         val offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(sourceId)
-        presenter.update {
-            it.copy(
-                result = if (offlineEpisodes.isEmpty()) {
-                    EpisodesUiState.Loading
-                } else {
-                    EpisodesUiState.Content(offlineEpisodes)
-                }
-            )
-        }
+        presenter.setState(initialEpisodesState(offlineEpisodes))
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.getEpisodes(sourceId) }
                 .onSuccess { episodes ->
-                    val merged = mergeWatchEpisodes(
-                        primary = episodes,
-                        secondary = offlineDownloadRepository.getOfflineEpisodes(sourceId),
+                    presenter.setState(
+                        loadedEpisodesState(
+                            episodes = episodes,
+                            offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(sourceId),
+                        ),
                     )
-                    presenter.update {
-                        it.copy(
-                            result = if (merged.isEmpty()) {
-                                EpisodesUiState.Empty
-                            } else {
-                                EpisodesUiState.Content(merged)
-                            }
-                        )
-                    }
                 }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) return@onFailure
-                    presenter.update {
-                        val offline = offlineDownloadRepository.getOfflineEpisodes(sourceId)
-                        it.copy(
-                            result = if (offline.isNotEmpty()) {
-                                EpisodesUiState.Content(offline)
-                            } else {
-                                EpisodesUiState.Error(throwable.toUiMessage())
-                            }
-                        )
-                    }
+                    presenter.setState(
+                        errorEpisodesState(
+                            message = throwable.toUiMessage(),
+                            offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(sourceId),
+                        ),
+                    )
                 }
         }
     }

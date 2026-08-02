@@ -1,32 +1,46 @@
 package org.akkirrai.hibiki.shared.profile
 
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlinx.coroutines.test.runTest
 
 class LocalProfilePresenterTest {
     @Test
-    fun updatesProfileFields() {
+    fun loadPublishesSharedDataAndClearsLoadingState() = runTest {
         val presenter = LocalProfilePresenter()
+        val expected = LocalProfileData(profileName = "Vadim")
 
-        presenter.updateProfileName("Demo")
-        presenter.updateProfileAvatar("content://avatar")
+        presenter.load(object : LocalProfileDataRepository {
+            override suspend fun load(): LocalProfileData = expected
+        })
 
-        assertEquals("Demo", presenter.state.value.data.profileName)
-        assertEquals("content://avatar", presenter.state.value.data.profileAvatarUri)
+        assertEquals(expected, presenter.state.value.data)
+        assertFalse(presenter.state.value.isLoading)
     }
 
     @Test
-    fun loadsDataThroughRepository() = runTest {
+    fun failedLoadDoesNotLeavePresenterLoading() = runTest {
         val presenter = LocalProfilePresenter()
-        val repository = object : LocalProfileDataRepository {
-            override suspend fun load(): LocalProfileData = LocalProfileData(profileName = "Loaded")
+
+        runCatching {
+            presenter.load(object : LocalProfileDataRepository {
+                override suspend fun load(): LocalProfileData = error("load failed")
+            })
         }
 
-        presenter.load(repository)
+        assertFalse(presenter.state.value.isLoading)
+    }
 
-        assertEquals("Loaded", presenter.state.value.data.profileName)
+    @Test
+    fun profileMutationsUpdateSharedState() {
+        val presenter = LocalProfilePresenter()
+
+        presenter.updateProfileName("hibiki")
+        presenter.updateProfileAvatar("content://avatar")
+
+        assertEquals("hibiki", presenter.state.value.data.profileName)
+        assertEquals("content://avatar", presenter.state.value.data.profileAvatarUri)
         assertFalse(presenter.state.value.isLoading)
     }
 }

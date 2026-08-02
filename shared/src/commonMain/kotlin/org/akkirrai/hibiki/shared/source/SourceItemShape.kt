@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
 
 /**
  * Returns the shape for an item in a grouped source list.
@@ -10,18 +9,18 @@ import androidx.compose.ui.unit.dp
  * Compose target.
  */
 fun sourceItemShape(index: Int, count: Int): RoundedCornerShape = when {
-    count == 1 -> RoundedCornerShape(20.dp)
+    count == 1 -> RoundedCornerShape(SourceItemOuterCornerRadius)
     index == 0 -> RoundedCornerShape(
-        topStart = 20.dp,
-        topEnd = 20.dp,
-        bottomStart = 6.dp,
-        bottomEnd = 6.dp,
+        topStart = SourceItemOuterCornerRadius,
+        topEnd = SourceItemOuterCornerRadius,
+        bottomStart = SourceItemInnerCornerRadius,
+        bottomEnd = SourceItemInnerCornerRadius,
     )
     index == count - 1 -> RoundedCornerShape(
-        topStart = 6.dp,
-        topEnd = 6.dp,
-        bottomStart = 20.dp,
-        bottomEnd = 20.dp,
+        topStart = SourceItemInnerCornerRadius,
+        topEnd = SourceItemInnerCornerRadius,
+        bottomStart = SourceItemOuterCornerRadius,
+        bottomEnd = SourceItemOuterCornerRadius,
     )
-    else -> RoundedCornerShape(6.dp)
+    else -> RoundedCornerShape(SourceItemInnerCornerRadius)
 }

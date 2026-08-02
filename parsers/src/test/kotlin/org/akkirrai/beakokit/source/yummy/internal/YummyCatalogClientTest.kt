@@ -76,6 +76,10 @@ class YummyCatalogClientTest {
         val result = source.getById("11371")
 
         assertEquals(12, result.episodeCount)
+        assertEquals(
+            "https://static.yani.tv/posters/small/1636760604.jpg",
+            result.posterFallbackUrl,
+        )
         assertEquals("Казалось бы, Момо Аясэ ничем не отличается от обычных старшеклассниц.", result.description?.substringBefore('\n'))
         assertEquals(listOf("Yummy", "MAL", "Shiki", "KP", "WA"), result.ratings.map { it.source })
         assertEquals("R-17+", result.ageRating)
@@ -215,7 +219,7 @@ class YummyCatalogClientTest {
         val client = HttpClient(MockEngine { request ->
             assertEquals("/anime/schedule", request.url.encodedPath)
             respond(
-                content = """{"response":[{"anime_id":42,"title":"Latest","poster":{"big":"//cdn.test/latest.webp"},"episodes":{"aired":2,"count":12,"prev_date":100,"next_date":200}}]}""",
+                content = """{"response":[{"anime_id":42,"title":"Latest","poster":{"big":"//cdn.test/latest.webp","small":"//cdn.test/latest-small.webp"},"episodes":{"aired":2,"count":12,"prev_date":100,"next_date":200}}]}""",
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }) {
@@ -229,6 +233,7 @@ class YummyCatalogClientTest {
         assertEquals(2, title.episodeCount)
         assertEquals("ongoing", title.status)
         assertEquals("https://cdn.test/latest.webp", title.posterUrl)
+        assertEquals("https://cdn.test/latest-small.webp", title.posterFallbackUrl)
         client.close()
     }
 
@@ -260,7 +265,8 @@ class YummyCatalogClientTest {
                   "aired": 12
                 },
                 "poster": {
-                  "fullsize": "//static.yani.tv/posters/full/1636760604.jpg"
+                  "fullsize": "//static.yani.tv/posters/full/1636760604.jpg",
+                  "small": "//static.yani.tv/posters/small/1636760604.jpg"
                 },
                 "rating": {
                   "average": 8.65746893906902,

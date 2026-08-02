@@ -20,4 +20,23 @@ class WatchEpisodesStateResolverTest {
         assertEquals(listOf("one", "two", "three"), merged.map(WatchEpisode::id))
         assertEquals("Offline two", merged[1].title)
     }
+
+    @Test
+    fun usesOfflineEpisodesWhileTheNetworkIsLoading() {
+        val offline = listOf(WatchEpisode(id = "offline", number = 1.0, title = "Offline"))
+
+        assertEquals(EpisodesUiState.Content(offline), initialEpisodesState(offline).result)
+        assertEquals(EpisodesUiState.Loading, initialEpisodesState(emptyList()).result)
+    }
+
+    @Test
+    fun fallsBackToOfflineEpisodesOnErrorAndReportsEmptyFailure() {
+        val offline = listOf(WatchEpisode(id = "offline", number = 1.0, title = "Offline"))
+
+        assertEquals(EpisodesUiState.Content(offline), errorEpisodesState("failure", offline).result)
+        assertEquals(
+            EpisodesUiState.Error("failure"),
+            errorEpisodesState("failure", emptyList()).result,
+        )
+    }
 }

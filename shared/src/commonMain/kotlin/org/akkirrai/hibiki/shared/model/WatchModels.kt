@@ -23,6 +23,31 @@ data class PlaybackStream(
     val videoId: Long? = null,
 )
 
+data class PlaybackContext(
+    val titleId: String,
+    val sourceId: String,
+    val episodeId: String,
+    val episodeNumber: Double,
+    val sourceTitle: String,
+    val episodes: List<WatchEpisode> = emptyList(),
+    val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
+    val selectedPlayerName: String? = null,
+    val selectedQualityLabel: String? = null,
+)
+
+data class PlaybackSelection(
+    val titleId: String,
+    val sourceId: String,
+    val sourceTitle: String,
+    val quality: String?,
+    val playerName: String?,
+)
+
+data class PlaybackRoute(
+    val playback: PlaybackStream,
+    val context: PlaybackContext,
+)
+
 data class PlaybackSegment(val type: PlaybackSegmentType, val startMs: Long, val endMs: Long)
 
 enum class PlaybackSegmentType { Opening, Ending, Unknown }

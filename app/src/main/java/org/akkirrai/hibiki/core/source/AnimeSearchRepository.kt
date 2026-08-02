@@ -24,6 +24,13 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
+import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
+import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles
+import org.akkirrai.hibiki.shared.source.resolveAnimeSubtitle
+import org.akkirrai.hibiki.shared.source.normalizeSourceFilterValue
+import org.akkirrai.hibiki.shared.settings.isEnglishAppLanguage
 import java.util.concurrent.ConcurrentHashMap
 
 class AnimeSearchRepository(
@@ -46,6 +53,10 @@ class AnimeSearchRepository(
     suspend fun search(request: AnimeSearchRequest): List<Anime> {
         return search(selectedSourceId(), request)
     }
+
+    suspend fun latest(limit: Int): List<Anime> = currentSource()
+        .latest(limit.coerceAtLeast(1))
+        .map { title -> title.toAnime(preferEnglish = preferEnglish()) }
 
     suspend fun search(sourceId: org.akkirrai.beakokit.api.SourceId, request: AnimeSearchRequest): List<Anime> {
         val normalizedQuery = request.query.trim()
@@ -72,7 +83,7 @@ class AnimeSearchRepository(
             normalizedRequest.excludedGenreAliases.isNotEmpty()
         ) {
             source.filterCatalog(preferEnglish).genreOptions.associate {
-                normalizeFilterValue(it.title) to normalizeFilterValue(it.id)
+                normalizeSourceFilterValue(it.title) to normalizeSourceFilterValue(it.id)
             }
         } else {
             emptyMap()
@@ -194,11 +205,16 @@ class AnimeSearchRepository(
         return Anime(
             id = canonicalId,
             title = displayName,
-            subtitle = buildSubtitle(fallback?.subtitle),
-            episodesLabel = if (resolvedStatus.isAnnouncementStatus()) {
+            subtitle = resolveAnimeSubtitle(type, year, fallback?.subtitle),
+            episodesLabel = if (isAnnouncementStatus(resolvedStatus)) {
                 if (preferEnglish) "announcement" else "анонс"
             } else {
-                buildEpisodesLabel(fallback?.episodesLabel, preferEnglish)
+                resolveEpisodesLabel(
+                    releasedCount = availableEpisodeCount
+                        ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED },
+                    fallbackLabel = fallback?.episodesLabel,
+                    preferEnglish = preferEnglish,
+                )
             },
             status = resolvedStatus,
             nextEpisodeAt = nextEpisodeAt ?: fallback?.nextEpisodeAt,
@@ -207,7 +223,11 @@ class AnimeSearchRepository(
                 ?.takeIf { it.isNotBlank() && it != posterUrl },
             description = description ?: fallback?.description,
             genres = genres.ifEmpty { fallback?.genres.orEmpty() },
-            alternativeTitles = buildAlternativeTitles(fallback?.alternativeTitles.orEmpty()),
+            alternativeTitles = resolveAlternativeTitles(
+                primaryTitle = displayName,
+                titleCandidates = listOf(russianName, englishName, originalName, japaneseName) + synonyms,
+                fallbackTitles = fallback?.alternativeTitles.orEmpty(),
+            ),
             ratings = ratings.map { rating ->
                 AnimeRating(
                     source = rating.source,
@@ -227,7 +247,7 @@ class AnimeSearchRepository(
                 .ifEmpty { fallback?.franchiseAnime.orEmpty() },
             relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.relatedAnime.orEmpty() },
-            releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
+            releaseDate = formatReleaseDateLabel(year, season, preferEnglish) ?: fallback?.releaseDate,
         )
     }
 
@@ -238,70 +258,6 @@ class AnimeSearchRepository(
             thumbnailUrl = thumbnailUrl,
             sourceUrl = sourceUrl,
         )
-    }
-
-    private fun AnimeTitle.buildAlternativeTitles(fallbackTitles: List<String>): List<String> {
-        val primaryTitle = displayName
-        return buildList {
-            russianName?.let(::add)
-            englishName?.let(::add)
-            originalName.let(::add)
-            japaneseName?.let(::add)
-            addAll(synonyms)
-            addAll(fallbackTitles)
-        }
-            .map(String::trim)
-            .filter(String::isNotBlank)
-            .distinct()
-            .filterNot { it.equals(primaryTitle, ignoreCase = true) }
-    }
-
-    private fun AnimeTitle.buildSubtitle(fallbackSubtitle: String?): String {
-        val parts = listOfNotNull(
-            type?.toDisplayType(),
-            year?.toString(),
-        )
-        return parts.joinToString(" · ").ifBlank { fallbackSubtitle.orEmpty() }
-    }
-
-    private fun AnimeTitle.formatReleaseDate(preferEnglish: Boolean): String? {
-        val releaseYear = year ?: return null
-        val seasonTitle = season?.toSeasonTitle(preferEnglish)
-        return listOfNotNull(seasonTitle, releaseYear.toString()).joinToString(" ")
-    }
-
-    private fun Int.toSeasonTitle(preferEnglish: Boolean): String? {
-        return when (this) {
-            1 -> if (preferEnglish) "Winter" else "Зима"
-            2 -> if (preferEnglish) "Spring" else "Весна"
-            3 -> if (preferEnglish) "Summer" else "Лето"
-            4 -> if (preferEnglish) "Autumn" else "Осень"
-            else -> null
-        }
-    }
-
-    private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
-    }
-
-    private fun AnimeTitle.buildEpisodesLabel(
-        fallbackLabel: String?,
-        preferEnglish: Boolean,
-    ): String {
-        val releasedCount = availableEpisodeCount
-            ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED }
-        val normalizedFallback = fallbackLabel?.trim()?.lowercase().orEmpty()
-        val fallbackIsUnknown = normalizedFallback == "unknown" || normalizedFallback.contains("unknown") ||
-            normalizedFallback == "episode unknown" ||
-            normalizedFallback == "episodes unknown" ||
-            normalizedFallback == "количество серий неизвестно"
-        return when (val count = releasedCount) {
-            null -> fallbackLabel.orEmpty().takeUnless { fallbackIsUnknown || it.isBlank() } ?: run {
-                if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
-            }
-            else -> if (preferEnglish) "$count episodes" else "$count серий"
-        }
     }
 
     private fun List<AnimeTitle>.bestMatchFor(queryTitle: String): AnimeTitle? {
@@ -335,11 +291,10 @@ class AnimeSearchRepository(
     }
 
     private fun preferEnglish(): Boolean {
-        return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-            LanguageMode.ENGLISH -> true
-            LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> appContext?.resources?.configuration?.locales?.get(0)?.language != "ru"
-        }
+        return isEnglishAppLanguage(
+            appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+            appContext?.resources?.configuration?.locales?.get(0)?.language.orEmpty(),
+        )
     }
 
     private fun ensureInternetConnection() {
@@ -401,17 +356,17 @@ class AnimeSearchRepository(
             (titleYear != null &&
                 (yearFrom == null || titleYear >= yearFrom) &&
                 (yearTo == null || titleYear <= yearTo))
-        val requestedTypes = request.typeAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
-        val typeMatches = requestedTypes.isEmpty() || normalizeFilterValue(type).let(requestedTypes::contains)
-        val requestedStatuses = request.statusAliases.map(::normalizeFilterValue).filter(String::isNotBlank)
-        val actualStatuses = listOfNotNull(status?.let(::normalizeFilterValue), releaseStatus.name.lowercase())
+        val requestedTypes = request.typeAliases.map(::normalizeSourceFilterValue).filter(String::isNotBlank)
+        val typeMatches = requestedTypes.isEmpty() || normalizeSourceFilterValue(type).let(requestedTypes::contains)
+        val requestedStatuses = request.statusAliases.map(::normalizeSourceFilterValue).filter(String::isNotBlank)
+        val actualStatuses = listOfNotNull(status?.let(::normalizeSourceFilterValue), releaseStatus.name.lowercase())
         val statusMatches = requestedStatuses.isEmpty() || actualStatuses.any(requestedStatuses::contains)
         val canonicalGenres = genres.map { genre ->
-            normalizeFilterValue(genre).let { genreAliases[it] ?: it }
+            normalizeSourceFilterValue(genre).let { genreAliases[it] ?: it }
         }.toSet()
-        val includedGenres = request.includedGenreAliases.map(::normalizeFilterValue)
+        val includedGenres = request.includedGenreAliases.map(::normalizeSourceFilterValue)
         val excludedGenres = request.excludedGenreAliases.map {
-            normalizeFilterValue(it.removePrefix("!"))
+            normalizeSourceFilterValue(it.removePrefix("!"))
         }
         val genresMatch = (
             (includedGenres.isEmpty() || (canonicalGenres.isNotEmpty() && includedGenres.any(canonicalGenres::contains))) &&
@@ -427,13 +382,6 @@ class AnimeSearchRepository(
         genres = details.genres.ifEmpty { genres },
     )
 
-    private fun normalizeFilterValue(value: String?): String = value.orEmpty()
-        .trim()
-        .lowercase()
-        .replace('_', ' ')
-        .replace('-', ' ')
-        .replace(Regex("\\s+"), " ")
-
     private fun selectedSourceId() = sourceManager?.selectedId
         ?: error("Anime source selection requires an Android context")
 
@@ -448,20 +396,6 @@ class AnimeSearchRepository(
     private fun getCachedDetails(key: String): Anime? {
         val cached = detailsCache[key] ?: return null
         return cached.anime
-    }
-
-    private fun String.toDisplayType(): String {
-        return when (uppercase()) {
-            "TV" -> "TV"
-            "TV_SHORT" -> "TV Short"
-            "OVA" -> "OVA"
-            "ONA" -> "ONA"
-            "MOVIE" -> "Movie"
-            "SHORT_MOVIE", "SHORT-MOVIE" -> "Short Movie"
-            "SPECIAL" -> "Special"
-            else -> replace("_", " ").replace("-", " ")
-                .replaceFirstChar { it.uppercase() }
-        }
     }
 
     private data class CachedSearchResults(

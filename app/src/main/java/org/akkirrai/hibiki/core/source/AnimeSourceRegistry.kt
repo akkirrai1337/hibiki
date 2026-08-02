@@ -71,7 +71,7 @@ object AnimeSourceRegistry {
         Registration(
             sourceId = BuiltInSources.YUMMY_ANIME_ID,
             iconRes = R.drawable.source_yummy_anime,
-            localizeFilters = YummySearchFilterLocalizer::localize,
+            localizeFilters = org.akkirrai.hibiki.shared.source.YummySearchFilterLocalizer::localize,
             normalizeTitleId = YummyIdMigration::normalizeTitleId,
         ),
         Registration(

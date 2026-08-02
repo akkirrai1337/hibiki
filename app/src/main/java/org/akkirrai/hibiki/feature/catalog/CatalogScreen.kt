@@ -1,44 +1,14 @@
 package org.akkirrai.hibiki.feature.catalog
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.graphics.res.animatedVectorResource
-import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
-import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SortByAlpha
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Update
-import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material.icons.outlined.Whatshot
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,26 +16,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -78,37 +40,39 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.AppSearchTopBar
-import org.akkirrai.hibiki.core.design.component.AppTopScrim
-import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.shared.library.icon
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.model.CatalogFeature
-import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
-import org.akkirrai.beakokit.model.CatalogCapabilities
-import org.akkirrai.beakokit.model.AnimeSearchFilter
-import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.CatalogSort
+import org.akkirrai.hibiki.shared.catalog.CatalogSortVerticalGap
+import org.akkirrai.hibiki.shared.catalog.CatalogSortControlHeight
+import org.akkirrai.hibiki.shared.catalog.CatalogContentTopPadding
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuWidth
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuOffsetY
+import org.akkirrai.hibiki.shared.catalog.CatalogSortMenuCornerRadius
+import org.akkirrai.hibiki.shared.catalog.CatalogSortAnimationDurationMs
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortControl
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortOrderIcon
+import org.akkirrai.hibiki.shared.catalog.AppCatalogScreenContent
+import org.akkirrai.hibiki.shared.catalog.AppCatalogTopOverlay
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortMenuContent
+import org.akkirrai.hibiki.shared.catalog.AppCatalogSortVisibilityEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogPaginationEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogQueryEffect
+import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterVisibilityEffect
 import org.akkirrai.hibiki.shared.catalog.catalogSortFromAlias
+import org.akkirrai.hibiki.shared.catalog.fallbackCatalogSort
+import org.akkirrai.hibiki.shared.catalog.icon
 import org.akkirrai.hibiki.shared.catalog.toAlias
+import org.akkirrai.hibiki.shared.catalog.availableCatalogSorts
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogUiState
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter as SharedAnimeCatalogFilter
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
-import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
 
@@ -123,7 +87,6 @@ fun CatalogScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val legacyFilterCatalog = remember(state.filterCatalog) { state.filterCatalog?.toLegacyCatalog() }
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val listState = rememberSaveable(selectedSourceId, saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
@@ -135,188 +98,112 @@ fun CatalogScreen(
     var isSortVisible by remember { mutableStateOf(true) }
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
-    val availableSorts = remember(legacyFilterCatalog?.capabilities) {
-        legacyFilterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+    val availableSorts = remember(state.filterCatalog?.capabilities) {
+        state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
-    val hasCatalogFilters = legacyFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
+    val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
 
-    LaunchedEffect(hasCatalogFilters) {
-        if (!hasCatalogFilters) isFilterSheetOpen = false
-    }
+    AppCatalogFilterVisibilityEffect(
+        hasFilters = hasCatalogFilters,
+        onFiltersUnavailable = { isFilterSheetOpen = false },
+    )
 
     LaunchedEffect(availableSorts, selectedSort) {
         if (selectedSort !in availableSorts) {
-            val capabilities = legacyFilterCatalog?.capabilities
-            val fallback = availableSorts.firstOrNull { it.searchSort == capabilities?.fallbackSort }
-                ?: availableSorts.firstOrNull()
-            fallback?.let(viewModel::selectSort)
+            val capabilities = state.filterCatalog?.capabilities
+            fallbackCatalogSort(
+                supportedSortAlias = capabilities?.supportedSorts?.firstOrNull(),
+                availableSorts = availableSorts,
+            )?.let(viewModel::selectSort)
         }
     }
 
-    LaunchedEffect(state.query) {
-        delay(350)
-        viewModel.load()
-    }
-    CatalogPaginationEffect(
+    AppCatalogQueryEffect(
+        query = state.query,
+        onQuerySettled = viewModel::load,
+    )
+    AppCatalogPaginationEffect(
         listState = listState,
         state = state,
         onLoadMore = viewModel::loadMore,
     )
-    CatalogSortVisibilityEffect(
+    AppCatalogSortVisibilityEffect(
         listState = listState,
         onVisibilityChange = { isSortVisible = it },
     )
 
-    org.akkirrai.hibiki.shared.catalog.AppCatalogScreen(
+    Box(modifier = modifier.fillMaxSize()) {
+        AppCatalogScreenContent(
             state = state,
             listState = listState,
-            onAnimeClick = onAnimeClick,
-            onRetry = viewModel::load,
-            onLoadMore = viewModel::loadMore,
+            topContentPadding = CatalogContentTopPadding,
+            bottomContentPadding = bottomContentPadding,
             errorTitle = stringResource(R.string.catalog_error_title),
             retryLabel = stringResource(R.string.search_retry),
-            errorIcon = Icons.Outlined.WarningAmber,
             announcementLabel = announcementLabel,
             movieLabel = movieLabel,
-            topContentPadding = CATALOG_CONTENT_TOP_PADDING,
-            bottomContentPadding = bottomContentPadding,
-            posterContent = { anime ->
-                PosterImage(
-                    primaryUrl = anime.posterUrl,
-                    fallbackUrl = anime.posterFallbackUrl,
-                    contentDescription = anime.title,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        PosterPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(2f / 3f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Image,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
+            libraryStatusLabel = { category -> stringResource(category.labelResId) },
+            onAnimeClick = onAnimeClick,
+            onItemVisible = viewModel::enrichDescription,
+            onRetry = viewModel::load,
+            onLoadMoreRetry = viewModel::loadMore,
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.Center),
+        )
+
+        val sortOffsetY by animateDpAsState(
+            targetValue = if (isSortVisible) {
+                0.dp
+            } else {
+                -(CatalogSortControlHeight + CatalogSortVerticalGap)
+            },
+            animationSpec = tween(durationMillis = CatalogSortAnimationDurationMs),
+            label = "catalog_sort_offset",
+        )
+        val sortAlpha by animateFloatAsState(
+            targetValue = if (isSortVisible) 1f else 0f,
+            animationSpec = tween(durationMillis = CatalogSortAnimationDurationMs),
+            label = "catalog_sort_alpha",
+        )
+
+        AppCatalogTopOverlay(
+            query = state.query,
+            onQueryChange = viewModel::updateQuery,
+            onClear = { viewModel.updateQuery("") },
+            placeholder = stringResource(R.string.search_placeholder),
+            filterContentDescription = stringResource(R.string.search_filters),
+            clearContentDescription = stringResource(R.string.home_search_clear),
+            onFilterClick = { isFilterSheetOpen = true },
+            showFilterButton = hasCatalogFilters,
+            sortModifier = Modifier.graphicsLayer {
+                translationY = sortOffsetY.toPx()
+                alpha = sortAlpha
+            },
+            sortContent = {
+                CatalogSortControl(
+                    selectedSort = selectedSort,
+                    availableSorts = availableSorts,
+                    expanded = isSortMenuOpen,
+                    onExpandedChange = { isSortMenuOpen = it },
+                    onSortSelected = viewModel::selectSort,
                 )
             },
-            posterFooterContent = { anime ->
-                libraryStatusByAnimeId[anime.id]?.let { category ->
-                    LibraryStatusPosterFooter(category)
-                }
-            },
-            onItemVisible = viewModel::enrichDescription,
-            topScrimContent = {
-                AppTopScrim(modifier = Modifier.align(Alignment.TopStart))
-            },
-            headerContent = {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .fillMaxWidth()
-                        .padding(
-                            top = CATALOG_HEADER_TOP_PADDING,
-                            start = UiDimens.ScreenPadding,
-                            end = UiDimens.ScreenPadding,
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(CATALOG_SORT_VERTICAL_GAP),
-                ) {
-                    AppSearchTopBar(
-                        query = state.query,
-                        onQueryChange = viewModel::updateQuery,
-                        onClear = { viewModel.updateQuery("") },
-                        onFilterClick = { isFilterSheetOpen = true },
-                        showFilterButton = hasCatalogFilters,
-                        modifier = Modifier.zIndex(1f),
-                    )
-                    val sortOffsetY by animateDpAsState(
-                        targetValue = if (isSortVisible) 0.dp else -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP),
-                        animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                        label = "catalog_sort_offset",
-                    )
-                    val sortAlpha by animateFloatAsState(
-                        targetValue = if (isSortVisible) 1f else 0f,
-                        animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                        label = "catalog_sort_alpha",
-                    )
-                    CatalogSortControl(
-                        selectedSort = selectedSort,
-                        availableSorts = availableSorts,
-                        expanded = isSortMenuOpen,
-                        onExpandedChange = { isSortMenuOpen = it },
-                        onSortSelected = viewModel::selectSort,
-                        modifier = Modifier.graphicsLayer {
-                            translationY = sortOffsetY.toPx()
-                            alpha = sortAlpha
-                        },
-                    )
-                }
-            },
-            overlayContent = {
-                if (isFilterSheetOpen) {
-                    AnimeSearchFiltersSheet(
-                        initialFilters = state.filters,
-                        filterCatalog = legacyFilterCatalog,
-                        isFilterCatalogLoading = state.isLoading && legacyFilterCatalog == null,
-                        onApply = viewModel::applyFilters,
-                        onDismissRequest = { isFilterSheetOpen = false },
-                    )
-                }
-            },
-            modifier = modifier,
+            modifier = Modifier.align(Alignment.TopStart),
         )
-}
+    }
 
-@Composable
-private fun CatalogPaginationEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    state: AnimeCatalogUiState,
-    onLoadMore: () -> Unit,
-) {
-    val latestState by rememberUpdatedState(state)
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val isNearEnd = lastVisibleItem >= layoutInfo.totalItemsCount - CATALOG_SCROLL_THRESHOLD
-            isNearEnd &&
-                !latestState.isLoading &&
-                !latestState.isLoadingMore &&
-                latestState.canLoadMore &&
-                latestState.error == null
-        }.collect { shouldLoadMore ->
-            if (shouldLoadMore) onLoadMore()
-        }
+    if (isFilterSheetOpen) {
+        AnimeSearchFiltersSheet(
+            initialFilters = state.filters,
+            filterCatalog = state.filterCatalog,
+            isFilterCatalogLoading = state.isLoading && state.filterCatalog == null,
+            onApply = viewModel::applyFilters,
+            onDismissRequest = { isFilterSheetOpen = false },
+        )
     }
 }
-
-@Composable
-private fun CatalogSortVisibilityEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    onVisibilityChange: (Boolean) -> Unit,
-) {
-    LaunchedEffect(listState) {
-        var previousIndex = listState.firstVisibleItemIndex
-        var previousOffset = listState.firstVisibleItemScrollOffset
-        snapshotFlow {
-            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
-        }.collect { (currentIndex, currentOffset) ->
-            val isScrollingDown = currentIndex > previousIndex ||
-                (currentIndex == previousIndex && currentOffset > previousOffset)
-            val isScrollingUp = currentIndex < previousIndex ||
-                (currentIndex == previousIndex && currentOffset < previousOffset)
-            when {
-                isScrollingDown -> onVisibilityChange(false)
-                isScrollingUp -> onVisibilityChange(true)
-            }
-            previousIndex = currentIndex
-            previousOffset = currentOffset
-        }
-    }
-}
-
 @Composable
 private fun CatalogSortControl(
     selectedSort: CatalogSort,
@@ -342,164 +229,60 @@ private fun CatalogSortControl(
         localizedContext.getString(R.string.catalog_sort_title)
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CATALOG_SORT_CONTROL_HEIGHT),
-    ) {
-        AnimatedContent(
-            targetState = selectedSort,
-            modifier = Modifier.align(Alignment.Center),
-            label = "catalog_sort",
-        ) { sort ->
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.82f),
-                        shape = CircleShape,
-                    )
-                    .clickable { onExpandedChange(!expanded) }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = sort.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
-                Text(
-                    text = sortLabels[sort].orEmpty(),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
-                CatalogSortOrderIcon(
-                    atEnd = expanded,
-                    modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                )
-            }
-        }
-
-        val layoutDirection = LocalLayoutDirection.current
-        val screenWidth = LocalWindowInfo.current.containerSize.width
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val screenWidthDp = with(density) { screenWidth.toDp() }
-        val horizontalInsets = UiDimens.ScreenPadding * 2
-        val menuWidth = 196.dp
-        val offsetX = (screenWidthDp - horizontalInsets - menuWidth) / 2
-
-        CascadeDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-            state = cascadeState,
-            offset = DpOffset(
-                x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
-                y = 4.dp,
-            ),
-            shape = RoundedCornerShape(26.dp),
-        ) {
-            Text(
-                text = sortTitle,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .align(Alignment.CenterHorizontally),
+    AppCatalogSortControl(
+        sortKey = selectedSort.name,
+        icon = selectedSort.icon(),
+        label = sortLabels[selectedSort].orEmpty(),
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        orderContent = { orderModifier ->
+            AppCatalogSortOrderIcon(
+                atEnd = expanded,
+                modifier = orderModifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
             )
-            availableSorts.forEach { sort ->
-                val isSelected = sort == selectedSort
-                val backgroundColor by animateColorAsState(
-                    targetValue = if (isSelected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-                    } else {
-                        Color.Transparent
-                    },
-                    label = "catalog_sort_background",
-                )
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onBackground
-                    },
-                    label = "catalog_sort_text",
-                )
-                val iconSize by animateDpAsState(
-                    targetValue = if (isSelected) 16.dp else 0.dp,
-                    label = "catalog_sort_icon",
-                )
+        },
+        menuContent = {
+            val layoutDirection = LocalLayoutDirection.current
+            val screenWidth = LocalWindowInfo.current.containerSize.width
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val screenWidthDp = with(density) { screenWidth.toDp() }
+            val horizontalInsets = UiDimens.ScreenPadding * 2
+            val menuWidth = CatalogSortMenuWidth
+            val offsetX = (screenWidthDp - horizontalInsets - menuWidth) / 2
 
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = sort.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(iconSize),
-                                )
-                                Text(sortLabels.getValue(sort))
-                            }
-                            if (isSelected) {
-                                CatalogSortOrderIcon(
-                                    atEnd = expanded,
-                                    modifier = Modifier.size(iconSize),
-                                )
-                            }
-                        }
-                    },
-                    colors = MenuDefaults.itemColors(textColor = textColor),
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
-                        onSortSelected(sort)
-                    },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(backgroundColor),
+            CascadeDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) },
+                state = cascadeState,
+                offset = DpOffset(
+                    x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
+                    y = CatalogSortMenuOffsetY,
+                ),
+                shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
+            ) {
+                AppCatalogSortMenuContent(
+                title = sortTitle,
+                sorts = availableSorts,
+                selectedSort = selectedSort,
+                label = sortLabels::getValue,
+                expanded = expanded,
+                onSortSelected = { sort ->
+                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                    onSortSelected(sort)
+                },
+                orderContent = { atEnd, orderModifier ->
+                    AppCatalogSortOrderIcon(
+                        atEnd = atEnd,
+                        modifier = orderModifier,
+                    )
+                },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun CatalogSortOrderIcon(
-    atEnd: Boolean,
-    modifier: Modifier = Modifier,
-    tint: Color = androidx.compose.ui.graphics.Color.Unspecified,
-) {
-    val order = AnimatedImageVector.animatedVectorResource(R.drawable.catalog_sort_order)
-    Icon(
-        painter = rememberAnimatedVectorPainter(
-            animatedImageVector = order,
-            atEnd = atEnd,
-        ),
-        contentDescription = null,
+        },
         modifier = modifier,
-        tint = tint,
     )
 }
-
-private val CatalogSort.icon: ImageVector
-    get() = when (this) {
-        CatalogSort.Alphabetical -> Icons.Outlined.SortByAlpha
-        CatalogSort.Popular -> Icons.Outlined.Whatshot
-        CatalogSort.Updated -> Icons.Outlined.Update
-    }
 
 class CatalogViewModel(
     private val repository: CatalogRepository,
@@ -588,78 +371,9 @@ class CatalogViewModel(
     }
 }
 
-private fun AnimeCatalogFilterCatalog.toLegacyCatalog(): AnimeSearchFilterCatalog {
-    val supportedSorts = capabilities.supportedSorts.mapNotNull { alias ->
-        when (alias.lowercase()) {
-            "relevance" -> AnimeSearchSort.RELEVANCE
-            "popular", "rating" -> AnimeSearchSort.RATING
-            "alphabetical", "title" -> AnimeSearchSort.TITLE
-            "year", "updated" -> AnimeSearchSort.YEAR
-            "votes" -> AnimeSearchSort.VOTES
-            "views" -> AnimeSearchSort.VIEWS
-            "comments" -> AnimeSearchSort.COMMENTS
-            else -> null
-        }
-    }.toSet().ifEmpty { setOf(AnimeSearchSort.RELEVANCE) }
-    val supportsUpdated = capabilities.supportedSorts.any { it.equals("updated", ignoreCase = true) }
-    val fallbackSort = supportedSorts.firstOrNull() ?: AnimeSearchSort.RELEVANCE
-
-    return AnimeSearchFilterCatalog(
-        sortOptions = sortOptions.map { SearchFilterOption(it.id, it.title) },
-        typeOptions = typeOptions.map { SearchFilterOption(it.id, it.title) },
-        statusOptions = statusOptions.map { SearchFilterOption(it.id, it.title) },
-        genreOptions = genreOptions.map { SearchFilterOption(it.id, it.title) },
-        capabilities = CatalogCapabilities(
-            supportedSorts = supportedSorts,
-            supportedFilters = capabilities.supportedFilters.mapNotNull { filter ->
-                when (filter) {
-                    SharedAnimeCatalogFilter.TYPE -> AnimeSearchFilter.TYPE
-                    SharedAnimeCatalogFilter.STATUS -> AnimeSearchFilter.STATUS
-                    SharedAnimeCatalogFilter.INCLUDED_GENRES -> AnimeSearchFilter.INCLUDED_GENRES
-                    SharedAnimeCatalogFilter.EXCLUDED_GENRES -> AnimeSearchFilter.EXCLUDED_GENRES
-                    SharedAnimeCatalogFilter.YEAR_RANGE -> AnimeSearchFilter.YEAR_RANGE
-                }
-            }.toSet(),
-            features = if (supportsUpdated) setOf(CatalogFeature.LATEST_RELEASES) else emptySet(),
-            fallbackSort = fallbackSort,
-        ),
-    )
-}
-
 private val CatalogSort.labelRes: Int
     get() = when (this) {
         CatalogSort.Alphabetical -> R.string.catalog_sort_alphabetical
         CatalogSort.Popular -> R.string.catalog_sort_popular
         CatalogSort.Updated -> R.string.catalog_sort_updated
     }
-
-private val CatalogSort.searchSort: AnimeSearchSort
-    get() = when (this) {
-        CatalogSort.Alphabetical -> AnimeSearchSort.TITLE
-        CatalogSort.Popular -> AnimeSearchSort.RATING
-        CatalogSort.Updated -> AnimeSearchSort.RELEVANCE
-    }
-
-private fun availableCatalogSorts(
-    capabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
-): List<CatalogSort> {
-    return CatalogSort.entries.filter { sort ->
-        when (sort) {
-            CatalogSort.Updated -> CatalogFeature.LATEST_RELEASES in capabilities.features
-            else -> capabilities.supports(sort.searchSort)
-        }
-    }
-}
-
-private val CATALOG_HEADER_TOP_PADDING = UiDimens.SearchBarTopPadding
-private val CATALOG_SEARCH_BAR_HEIGHT = UiDimens.SearchBarHeight
-private val CATALOG_SORT_VERTICAL_GAP = 8.dp
-private val CATALOG_SORT_CONTROL_HEIGHT = 28.dp
-private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
-    CATALOG_SEARCH_BAR_HEIGHT +
-    CATALOG_SORT_VERTICAL_GAP +
-    CATALOG_SORT_VERTICAL_GAP +
-    CATALOG_SORT_CONTROL_HEIGHT +
-    CATALOG_SORT_VERTICAL_GAP
-private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
-private const val CATALOG_SCROLL_THRESHOLD = 3

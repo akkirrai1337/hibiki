@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -62,13 +61,16 @@ fun AppLibraryEntriesContent(
         state = listState,
         modifier = modifier,
         contentPadding = PaddingValues(bottom = bottomContentPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(LibraryEntriesRowGap),
     ) {
         item { headerContent() }
         if (state.isRefreshing && state.entries.isNotEmpty()) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        Modifier.size(LibraryEntriesRefreshIndicatorSize),
+                        strokeWidth = LibraryEntriesRefreshIndicatorStrokeWidth,
+                    )
                 }
             }
         }
@@ -81,8 +83,8 @@ fun AppLibraryEntriesContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = LibraryEntriesHorizontalPadding),
+                    horizontalArrangement = Arrangement.spacedBy(LibraryEntriesItemGap),
                     verticalAlignment = Alignment.Top,
                 ) {
                     row.forEach { entry ->

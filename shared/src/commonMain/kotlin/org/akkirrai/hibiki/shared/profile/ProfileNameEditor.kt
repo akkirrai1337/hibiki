@@ -26,7 +26,7 @@ fun ProfileNameEditor(
     textStyle: TextStyle = MaterialTheme.typography.titleLarge,
 ) {
     val underlineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-    Column(modifier = modifier.widthIn(min = 150.dp, max = 240.dp)) {
+    Column(modifier = modifier.widthIn(min = ProfileNameEditorMinWidth, max = ProfileNameEditorMaxWidth)) {
         Text(label, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
         BasicTextField(
             value = name,
@@ -34,8 +34,16 @@ fun ProfileNameEditor(
             singleLine = true,
             textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp).drawBehind {
-                drawLine(underlineColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+            modifier = Modifier.fillMaxWidth().padding(
+                top = ProfileNameEditorTopPadding,
+                bottom = ProfileNameEditorBottomPadding,
+            ).drawBehind {
+                drawLine(
+                    underlineColor,
+                    Offset(0f, size.height),
+                    Offset(size.width, size.height),
+                    ProfileNameEditorUnderlineStrokeWidth.toPx(),
+                )
             },
         )
     }

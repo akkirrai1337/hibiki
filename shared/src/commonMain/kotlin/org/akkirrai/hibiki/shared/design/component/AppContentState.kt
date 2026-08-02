@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
 fun AppContentState(
@@ -26,7 +26,7 @@ fun AppContentState(
         errorMessage != null && !hasContent -> AppMessageState(
             title = errorTitle,
             message = errorMessage,
-            modifier = modifier.fillMaxSize().padding(16.dp),
+            modifier = modifier.fillMaxSize().padding(UiDimens.ContentStatePadding),
             actionLabel = retryLabel,
             onActionClick = onRetry,
             icon = errorIcon,

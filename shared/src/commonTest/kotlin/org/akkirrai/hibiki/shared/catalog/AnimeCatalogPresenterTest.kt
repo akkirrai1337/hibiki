@@ -8,14 +8,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AnimeCatalogPresenterTest {
     @Test
     fun presenterLoadsPagesAndMergesDistinctItems() = runTest {
+        var requestedFilters: AnimeSearchFilters? = null
         val repository = object : AnimeCatalogRepository {
             override val initialItems: List<Anime> = emptyList()
             override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
+                requestedFilters = query.filters
                 val all = listOf(
                     Anime("1", "One", "", "1 episode", "Finished"),
                     Anime("2", "Two", "", "1 episode", "Finished"),
@@ -29,6 +32,7 @@ class AnimeCatalogPresenterTest {
 
         presenter.search()
         advanceUntilIdle()
+        assertEquals("popular", requestedFilters?.sortAlias)
         assertEquals(listOf("1", "2"), presenter.state.value.items.map { it.id })
         assertTrue(presenter.state.value.canLoadMore)
 
@@ -60,5 +64,72 @@ class AnimeCatalogPresenterTest {
         assertEquals(2, presenter.state.value.page)
         assertTrue(presenter.state.value.canLoadMore)
         assertFalse(presenter.state.value.isLoading)
+    }
+
+    @Test
+    fun presenterReturnsToPreviousDetailsFromRelatedTitle() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+
+            override suspend fun getDetails(id: String, fallback: Anime): Anime =
+                fallback.copy(description = "Loaded $id")
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        val first = Anime("one", "One", "", "", "")
+        val second = Anime("two", "Two", "", "", "")
+
+        presenter.openDetails(first)
+        advanceUntilIdle()
+        presenter.openDetails(second)
+        advanceUntilIdle()
+
+        presenter.closeDetails()
+        advanceUntilIdle()
+        assertEquals(first.id, presenter.state.value.selectedAnime?.id)
+        assertEquals("Loaded one", presenter.state.value.selectedAnime?.description)
+
+        presenter.closeDetails()
+        assertEquals(null, presenter.state.value.selectedAnime)
+    }
+
+    @Test
+    fun clearDetailsDropsAllRelatedDetailsAtOnce() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+
+            override suspend fun getDetails(id: String, fallback: Anime): Anime = fallback
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        presenter.openDetails(Anime("one", "One", "", "", ""))
+        advanceUntilIdle()
+        presenter.openDetails(Anime("two", "Two", "", "", ""))
+        advanceUntilIdle()
+
+        presenter.clearDetails()
+
+        assertEquals(null, presenter.state.value.selectedAnime)
+    }
+
+    @Test
+    fun catalogFiltersSurviveDetailsRoundTrip() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                AnimeCatalogPage(emptyList(), query.page, false)
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+        val filters = AnimeSearchFilters(typeAlias = "tv", yearFrom = 2020, yearTo = 2024)
+
+        presenter.setFilters(filters)
+        presenter.openDetails(Anime("one", "One", "", "", ""))
+        advanceUntilIdle()
+        presenter.closeDetails()
+
+        assertEquals(filters, presenter.state.value.filters)
+        assertEquals(null, presenter.state.value.selectedAnime)
     }
 }

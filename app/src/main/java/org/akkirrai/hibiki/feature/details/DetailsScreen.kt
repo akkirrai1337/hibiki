@@ -3,169 +3,119 @@ package org.akkirrai.hibiki.feature.details
 import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FormatListNumbered
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Text
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
-import coil.imageLoader
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.asDrawable
+import coil3.toBitmap
+import coil3.imageLoader
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
-import org.akkirrai.hibiki.core.design.icon
-import org.akkirrai.hibiki.core.design.iconOrDefault
-import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.AppMotion
-import org.akkirrai.hibiki.core.design.component.AppBackButton
-import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
-import org.akkirrai.hibiki.shared.design.component.AppTonalSurface
+import org.akkirrai.hibiki.shared.design.AppMotion
+import org.akkirrai.hibiki.core.design.component.rememberDeviceScreenTopCornerShape
+import org.akkirrai.hibiki.shared.design.component.AppModalBottomSheet as SharedModalBottomSheet
 import org.akkirrai.hibiki.shared.player.formatPlaybackPosition
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.details.isNullOrZero
 import org.akkirrai.hibiki.shared.details.resolveAnimeDescription
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroRatings
 import org.akkirrai.hibiki.shared.model.toAnime
-import org.akkirrai.hibiki.shared.player.isWatchedToEnd
-import org.akkirrai.hibiki.core.design.component.AnimeTitleText
-import org.akkirrai.hibiki.core.design.component.PosterImage
+import org.akkirrai.hibiki.shared.design.component.AppPosterImage
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeRating
-import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
-import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.core.model.WatchSourceSelection
-import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.labelResId
-import org.akkirrai.hibiki.core.source.LibraryRepository
-import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
-import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import java.io.File
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.shared.details.DetailsUiState
+import org.akkirrai.hibiki.shared.details.hasUserLibraryCategory
+import org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroTextContent
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroPlaybackActions
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroMedia
+import org.akkirrai.hibiki.shared.details.AppDetailsPosterPreviewOverlay
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroContent
+import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
+import org.akkirrai.hibiki.shared.details.AppDetailsImagePlaceholder
+import org.akkirrai.hibiki.shared.library.AppLibraryCategorySheet
+import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetContent
+import org.akkirrai.hibiki.shared.details.AppDetailsTitleSheetDragHandle
+import org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip
+import org.akkirrai.hibiki.shared.details.DetailsInformationIcon
+import org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine
+import org.akkirrai.hibiki.shared.details.AppDetailsContentList
+import org.akkirrai.hibiki.shared.details.DetailsGenresSection
+import org.akkirrai.hibiki.shared.details.DetailsContentBottomPadding
+import org.akkirrai.hibiki.shared.details.DetailsContentHorizontalPadding
+import org.akkirrai.hibiki.shared.details.DetailsInformationHorizontalPadding
 import org.akkirrai.hibiki.shared.details.resolveDetailsHeroInfo
-import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.details.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.shared.details.isOngoingStatus
 import org.akkirrai.hibiki.shared.details.formatRelatedAnimeMetadata
-import org.akkirrai.hibiki.shared.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.shared.details.toAbsoluteImageUrl
+import org.akkirrai.hibiki.shared.details.rememberNextEpisodeEta
+import org.akkirrai.hibiki.shared.details.SourceMaterialLabels
+import org.akkirrai.hibiki.shared.details.resolveSourceMaterialLabel
+import org.akkirrai.hibiki.shared.details.resolveDetailsHeroMediaData
+import org.akkirrai.hibiki.shared.details.appDetailsRelatedSections
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -321,11 +271,21 @@ fun DetailsScreen(
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
         AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
     }
-    val nextEpisodeEta = rememberNextEpisodeEta(currentAnime.nextEpisodeAt)
+    val relatedTitle = stringResource(R.string.details_related)
+    val similarTitle = stringResource(R.string.details_similar)
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val nextEpisodeEta = rememberNextEpisodeEta(
+        nextEpisodeAt = currentAnime.nextEpisodeAt,
+        nowEpochSeconds = { System.currentTimeMillis() / 1_000L },
+        daysHoursLabel = { days, hours -> stringResource(R.string.details_eta_days_hours, days, hours) },
+        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
+            stringResource(R.string.details_eta_hours_minutes_seconds, hours, minutes, seconds)
+        },
+        minutesSecondsLabel = { minutes, seconds ->
+            stringResource(R.string.details_eta_minutes_seconds, minutes, seconds)
+        },
+    )
         ?.takeIf { isOngoingStatus(heroInfo.status) }
-    val nextEpisodeNumber = remember(currentAnime.episodesLabel) {
-        extractNextEpisodeNumber(currentAnime.episodesLabel)
-    }
     val uiModel = remember(
         currentAnime,
         heroInfo,
@@ -339,10 +299,11 @@ fun DetailsScreen(
             contentFeatures = sourceDescriptor.contentFeatures,
         )
     }
-    val canWatch = remember(selectedAnimeSource, currentAnime.episodesLabel, heroInfo.status) {
-        sourceDescriptor.supportsPlayback &&
-            !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
-    }
+    val canWatch = resolveDetailsPlaybackAvailability(
+        supportsPlayback = sourceDescriptor.supportsPlayback,
+        status = heroInfo.status,
+        episodesLabel = currentAnime.episodesLabel,
+    )
     val fallbackColorScheme = MaterialTheme.colorScheme
     val resolvedTitleSeedColor = titleSeedColor
     val titleColorScheme = if (resolvedTitleSeedColor == null) {
@@ -365,10 +326,18 @@ fun DetailsScreen(
         titleColorScheme
     }
     MaterialTheme(colorScheme = detailsColorScheme) {
-        org.akkirrai.hibiki.shared.details.AppDetailsScreen(
-            listState = listState,
-            contentPadding = contentPadding,
-            content = {
+        Surface(
+            modifier = modifier
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AppDetailsContentList(
+                    state = listState,
+                    bottomContentPadding = contentPadding.calculateBottomPadding(),
+                    additionalBottomPadding = DetailsContentBottomPadding,
+                ) {
             item {
                 DetailHeroSection(
                     detailsState = DetailsUiState(
@@ -379,7 +348,7 @@ fun DetailsScreen(
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
                     nextEpisodeEta = nextEpisodeEta,
-                    nextEpisodeNumber = nextEpisodeNumber,
+                    nextEpisodeNumber = heroInfo.nextEpisodeNumber,
                     canWatch = canWatch,
                     resumeFrame = resumeFrame,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
@@ -421,80 +390,110 @@ fun DetailsScreen(
 
             if (uiModel.anime.genres.isNotEmpty()) {
                 item {
-                    GenresSection(genres = uiModel.anime.genres)
+                    DetailsGenresSection(
+                        genres = uiModel.anime.genres,
+                        title = stringResource(R.string.details_genres),
+                        horizontalPadding = DetailsContentHorizontalPadding,
+                    )
                 }
             }
 
-            itemsIndexed(
-                items = uiModel.sections,
-                key = { _, section -> section.key }
-            ) { _, section ->
-                when (section) {
-                    is RelatedSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_related),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
-                    }
-                    is SimilarSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_similar),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
-                    }
+            appDetailsRelatedSections(
+                sections = uiModel.sections,
+                relatedTitle = relatedTitle,
+                similarTitle = similarTitle,
+                announcementLabel = announcementLabel,
+                horizontalPadding = DetailsContentHorizontalPadding,
+                onItemClick = { related -> onRelatedAnimeClick(related.toAnime()) },
+                poster = { related ->
+                    NetworkImage(
+                        imageUrl = related.posterUrl,
+                        fallbackUrl = related.posterFallbackUrl,
+                        contentDescription = related.title,
+                    )
+                },
+            )
                 }
+
+                DetailsStatusBarScrim(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
+
+                HeroOverlayBackButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
             }
-            },
-            statusBarScrimContent = {
-                DetailsStatusBarScrim(listState = listState, modifier = Modifier.align(Alignment.TopStart))
-            },
-            backContent = {
-                HeroOverlayBackButton(onClick = onBackClick, modifier = Modifier.align(Alignment.TopStart))
-            },
-            overlayContent = {
-                if (isPosterPreviewOpen) {
-                    PosterPreviewOverlay(
-                        anime = currentAnime,
-                        onDismiss = { isPosterPreviewOpen = false },
-                    )
-                }
-                if (isTitleDetailsSheetOpen) {
-                    TitleDetailsSheet(
-                        title = currentAnime.title,
-                        description = description,
-                        onDismiss = { isTitleDetailsSheetOpen = false },
-                    )
-                }
-                if (isLibrarySheetOpen) {
-                    LibraryCategorySheet(
-                        selectedCategory = libraryCategory,
-                        onCategoryClick = { category ->
-                            libraryRepository.saveToLibrary(currentAnime, category)
-                            libraryCategory = category
-                            isLibrarySheetOpen = false
+        }
+
+        if (isPosterPreviewOpen) {
+            AppDetailsPosterPreviewOverlay(
+                onDismissRequest = { isPosterPreviewOpen = false },
+                backHandler = { onBack -> BackHandler(onBack = onBack) },
+                posterContent = { posterModifier ->
+                    AppPosterImage(
+                        primaryUrl = currentAnime.posterUrl,
+                        fallbackUrl = currentAnime.posterFallbackUrl,
+                        contentDescription = currentAnime.title,
+                        modifier = posterModifier,
+                        contentScale = ContentScale.Fit,
+                        placeholder = {
+                            AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize())
                         },
-                        onRemoveClick = {
-                            libraryRepository.removeFromLibrary(currentAnime.id)
-                            libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
-                            isLibrarySheetOpen = false
-                        },
-                        onDismiss = { isLibrarySheetOpen = false },
                     )
-                }
-            },
-            modifier = modifier,
-        )
+                },
+                backContent = { onDismiss ->
+                    HeroOverlayBackButton(onClick = onDismiss)
+                },
+            )
+        }
+
+        if (isTitleDetailsSheetOpen) {
+            val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            SharedModalBottomSheet(
+                onDismissRequest = { isTitleDetailsSheetOpen = false },
+                sheetState = titleSheetState,
+                modifier = Modifier.fillMaxHeight(),
+                shape = rememberDeviceScreenTopCornerShape(),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                scrimColor = Color.Black.copy(alpha = 0.5f),
+                dragHandleContent = { expanded ->
+                    AppDetailsTitleSheetDragHandle(expanded = expanded)
+                },
+            ) {
+                AppDetailsTitleSheetContent(
+                    title = currentAnime.title,
+                    description = description,
+                )
+            }
+        }
+
+        if (isLibrarySheetOpen) {
+            val categoryLabels = LibraryCategory.entries.associateWith { category ->
+                stringResource(category.labelResId)
+            }
+            AppLibraryCategorySheet(
+                selectedCategory = libraryCategory,
+                title = stringResource(R.string.library_add_title),
+                subtitle = stringResource(R.string.library_add_subtitle),
+                savedNote = stringResource(R.string.library_saved_note),
+                removeAction = stringResource(R.string.library_remove_action),
+                categoryLabels = categoryLabels,
+                onCategoryClick = { category ->
+                    libraryRepository.saveToLibrary(currentAnime, category)
+                    libraryCategory = category
+                    isLibrarySheetOpen = false
+                },
+                onRemoveClick = {
+                    libraryRepository.removeFromLibrary(currentAnime.id)
+                    libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                    isLibrarySheetOpen = false
+                },
+                onDismiss = { isLibrarySheetOpen = false },
+            )
+        }
     }
-}
-
-@Composable
-private fun DetailsStatusBarScrim(
-    listState: LazyListState,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsStatusBarScrim(listState = listState, modifier = modifier)
 }
 
 @Composable
@@ -517,219 +516,85 @@ private fun DetailHeroSection(
     onTrailerClick: () -> Unit,
 ) {
     val anime = detailsState.anime
-    val libraryCategory = detailsState.libraryCategory
     val resumeState = detailsState.resumeState
-    val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
         }
     }
-    val posterHeightOffset by animateDpAsState(
-        targetValue = if (isAtTop) 0.dp else 28.dp,
-        animationSpec = tween(durationMillis = 750),
-        label = "details_poster_height",
-    )
-    val bannerHeight = 224.dp
-    val posterExpandedHeight = 200.dp
-    val posterTop = 212.dp
-    val detailsTop = 224.dp
-    val detailsHeight = 180.dp
-    val heroHeight = 412.dp
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(heroHeight),
-        ) {
+    AppDetailsHeroContent(
+        posterExpanded = isAtTop,
+        isInLibrary = detailsState.hasUserLibraryCategory(),
+        canWatch = canWatch,
+        libraryLabel = stringResource(R.string.details_favorite),
+        watchLabel = stringResource(R.string.details_watch),
+        onPosterClick = onPosterClick,
+        onLibraryClick = onLibraryClick,
+        onPrimaryClick = onPrimaryClick,
+        posterContent = {
+            NetworkImage(
+                imageUrl = detailsState.anime.posterUrl,
+                fallbackUrl = detailsState.anime.posterFallbackUrl,
+                contentDescription = detailsState.anime.title,
+                onImageSuccess = onPosterLoaded,
+            )
+        },
+        mediaContent = { mediaModifier ->
             DetailHeroMedia(
                 detailsState = detailsState,
                 resumeFrame = resumeFrame,
                 onResumeClick = onResumeClick,
                 onTrailerClick = onTrailerClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(bannerHeight),
+                modifier = mediaModifier,
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .align(Alignment.TopCenter)
-                    .offset(y = bannerHeight - 80.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.background),
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(heroHeight - bannerHeight)
-                    .align(Alignment.BottomCenter)
-                    .background(MaterialTheme.colorScheme.background)
-            )
-            PosterHeroInline(
-                anime = detailsState.anime,
-                height = posterExpandedHeight - posterHeightOffset,
-                onPosterClick = onPosterClick,
-                onPosterLoaded = onPosterLoaded,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(y = posterTop + posterHeightOffset)
-                    .padding(start = 16.dp),
-            )
-            DetailHeroTextContent(
-                anime = detailsState.anime,
+        },
+        textContent = { textModifier ->
+            AppDetailsHeroTextContent(
+                title = detailsState.anime.title,
                 description = description,
-                nextEpisodeEta = nextEpisodeEta,
-                nextEpisodeNumber = nextEpisodeNumber,
-                isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
+                backgroundColor = MaterialTheme.colorScheme.background,
                 onTitleClick = onTitleClick,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .offset(y = detailsTop)
-                    .padding(
-                        start = 172.dp,
-                        end = 16.dp,
+                ratingsContent = if (detailsState.anime.ratings.isNotEmpty() || !detailsState.anime.viewCount.isNullOrZero()) {
+                    {
+                        resolveDetailsHeroRatings(
+                            detailsState.anime.ratings,
+                            detailsState.anime.viewCount,
+                        )?.let { ratings ->
+                            DetailsHeroRatingsLine(
+                                rating = ratings.rating,
+                                viewCount = ratings.viewCount,
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                nextEpisodeContent = nextEpisodeEta?.let { eta ->
+                    {
+                        DetailsNextEpisodeChip(
+                            text = if (nextEpisodeNumber != null) {
+                                stringResource(R.string.details_next_episode_countdown_numbered, nextEpisodeNumber, eta)
+                            } else {
+                                stringResource(R.string.details_next_episode_countdown, eta)
+                            },
+                            icon = ImageVector.vectorResource(R.drawable.hourglass),
+                        )
+                    }
+                },
+                expandIconContent = {
+                    val expandToCollapse = AnimatedImageVector.animatedVectorResource(R.drawable.expand_collapse_anim)
+                    Icon(
+                        painter = rememberAnimatedVectorPainter(
+                            animatedImageVector = expandToCollapse,
+                            atEnd = isTitleDetailsSheetOpen,
+                        ),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    .height(detailsHeight),
+                },
+                modifier = textModifier,
             )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        DetailHeroActions(
-            isInLibrary = isUserLibraryCategorySelected,
-            canWatch = canWatch,
-            onLibraryClick = onLibraryClick,
-            onPrimaryClick = onPrimaryClick,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun DetailHeroTextContent(
-    anime: Anime,
-    description: String,
-    nextEpisodeEta: String?,
-    nextEpisodeNumber: Int?,
-    isTitleDetailsSheetOpen: Boolean,
-    onTitleClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val expandToCollapse = AnimatedImageVector.animatedVectorResource(R.drawable.expand_collapse_anim)
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onTitleClick),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 24.dp),
-        ) {
-            Text(
-                text = anime.title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    lineHeight = 27.sp,
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (anime.ratings.isNotEmpty() || !anime.viewCount.isNullOrZero()) {
-                HeroRatingsLine(ratings = anime.ratings, viewCount = anime.viewCount)
-            }
-            nextEpisodeEta?.let { eta ->
-                NextEpisodeChip(
-                    episode = nextEpisodeNumber,
-                    eta = eta,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-            if (description.isNotBlank()) {
-                NestedScrollableContent(modifier = Modifier.weight(1f)) { contentModifier ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-                        modifier = contentModifier,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-        Icon(
-            painter = rememberAnimatedVectorPainter(
-                animatedImageVector = expandToCollapse,
-                atEnd = isTitleDetailsSheetOpen,
-            ),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 2.dp)
-                .size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun DetailHeroActions(
-    isInLibrary: Boolean,
-    canWatch: Boolean,
-    onLibraryClick: () -> Unit,
-    onPrimaryClick: () -> Unit,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsHeroActions(
-        isInLibrary = isInLibrary,
-        canWatch = canWatch,
-        libraryLabel = stringResource(R.string.details_favorite),
-        watchLabel = stringResource(R.string.details_watch),
-        libraryIcon = if (isInLibrary) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-        primaryIcon = Icons.Filled.PlayArrow,
-        onLibraryClick = onLibraryClick,
-        onPrimaryClick = onPrimaryClick,
-    )
-}
-
-@Composable
-private fun NextEpisodeChip(
-    episode: Int?,
-    eta: String,
-    modifier: Modifier = Modifier,
-) {
-    val text = if (episode != null) {
-        stringResource(R.string.details_next_episode_countdown_numbered, episode, eta)
-    } else {
-        stringResource(R.string.details_next_episode_countdown, eta)
-    }
-    org.akkirrai.hibiki.shared.details.DetailsNextEpisodeChip(
-        text = text,
-        icon = ImageVector.vectorResource(R.drawable.hourglass),
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun NestedScrollableContent(
-    modifier: Modifier = Modifier,
-    gradientSize: Dp = 8.dp,
-    gradientColor: Color = MaterialTheme.colorScheme.background,
-    content: @Composable (Modifier) -> Unit,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsNestedScrollableContent(
-        modifier = modifier,
-        gradientSize = gradientSize,
-        gradientColor = gradientColor,
-        content = content,
+        },
     )
 }
 
@@ -743,100 +608,44 @@ private fun DetailHeroMedia(
 ) {
     val anime = detailsState.anime
     val resumeState = detailsState.resumeState
-    val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        NetworkImage(
-            imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
-            fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
-            contentDescription = null,
-        )
-
-        if (resumeState != null && resumeFrame != null) {
-            ResumeFrameImage(
-                frame = resumeFrame,
-                version = resumeState.updatedAt,
-                modifier = Modifier.fillMaxSize(),
+    val mediaData = resolveDetailsHeroMediaData(anime)
+    AppDetailsHeroMedia(
+        imageContent = {
+            NetworkImage(
+                imageUrl = mediaData.trailer?.thumbnailUrl ?: anime.posterUrl,
+                fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+                contentDescription = null,
             )
-        }
-
-        when {
-            resumeState != null -> {
-                val progress = if (resumeState.durationMs > 0L) {
-                    (resumeState.positionMs.toFloat() / resumeState.durationMs).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-                Surface(
-                    onClick = { onResumeClick(resumeState) },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.58f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
-                    contentColor = Color.White,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.details_watch_continue),
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            )
-                            Text(
-                                text = stringResource(
-                                    R.string.details_continue_episode_position,
-                                    formatEpisodeNumber(resumeState.episodeNumber),
-                                    formatPlaybackPosition(resumeState.positionMs),
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.78f),
-                            )
-                        }
-                    }
-                }
-                if (progress > 0f) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .align(Alignment.BottomCenter),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.White.copy(alpha = 0.24f),
-                    )
-                }
+        },
+        frameContent = if (resumeState != null && resumeFrame != null) {
+            {
+                ResumeFrameImage(
+                    frame = resumeFrame,
+                    version = resumeState.updatedAt,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-
-            trailer != null -> {
-                Surface(
-                    onClick = onTrailerClick,
-                    modifier = Modifier.size(64.dp),
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.38f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)),
-                    contentColor = Color.White,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = stringResource(R.string.details_trailer),
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
+        } else {
+            null
+        },
+        playbackContent = {
+            AppDetailsHeroPlaybackActions(
+            resumeTitle = resumeState?.let { stringResource(R.string.details_watch_continue) },
+            resumeSubtitle = resumeState?.let {
+                stringResource(
+                    R.string.details_continue_episode_position,
+                    formatEpisodeNumber(it.episodeNumber),
+                    formatPlaybackPosition(it.positionMs),
+                )
+            },
+            onResumeClick = resumeState?.let { state -> { onResumeClick(state) } },
+            trailerEnabled = mediaData.trailer != null,
+            onTrailerClick = onTrailerClick,
+            trailerContentDescription = stringResource(R.string.details_trailer),
+            )
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -860,350 +669,38 @@ private fun ResumeFrameImage(
 }
 
 @Composable
-private fun HeroRatingsLine(
-    ratings: List<AnimeRating>,
-    viewCount: Long?,
-    modifier: Modifier = Modifier,
-) {
-    val data = resolveDetailsHeroRatings(ratings, viewCount) ?: return
-    org.akkirrai.hibiki.shared.details.DetailsHeroRatingsLine(
-        rating = data.rating,
-        viewCount = data.viewCount,
-        ratingIcon = Icons.Filled.Star,
-        viewCountIcon = Icons.Outlined.Visibility,
-        modifier = modifier,
-    )
-}
-
-@Composable
 private fun DetailContentCard(
     anime: Anime,
     heroInfo: DetailsHeroInfo,
     modifier: Modifier = Modifier,
 ) {
-    org.akkirrai.hibiki.shared.details.AppDetailsInformationCard(
+    val sourceMaterial = resolveSourceMaterialLabel(
+        sourceMaterial = anime.sourceMaterial,
+        labels = SourceMaterialLabels(
+            manga = stringResource(R.string.details_source_material_manga),
+            manhwa = stringResource(R.string.details_source_material_manhwa),
+            manhua = stringResource(R.string.details_source_material_manhua),
+            lightNovel = stringResource(R.string.details_source_material_light_novel),
+            webNovel = stringResource(R.string.details_source_material_web_novel),
+            visualNovel = stringResource(R.string.details_source_material_visual_novel),
+            game = stringResource(R.string.details_source_material_game),
+            original = stringResource(R.string.details_source_material_original),
+        ),
+    )
+    org.akkirrai.hibiki.shared.details.AppDetailsInformationContent(
         heroInfo = heroInfo,
-        sourceMaterial = localizedSourceMaterial(anime.sourceMaterial),
-        labels = org.akkirrai.hibiki.shared.details.DetailsInformationLabels(
-            title = stringResource(R.string.details_information),
-            status = stringResource(R.string.details_status),
-            episodes = stringResource(R.string.details_episodes_released),
-            type = stringResource(R.string.details_type),
-            releaseDate = stringResource(R.string.details_release_date),
-            sourceMaterial = stringResource(R.string.details_source_material),
-            studio = stringResource(R.string.details_studio),
-            emptyValue = stringResource(R.string.search_filters_not_selected),
-        ),
-        icons = org.akkirrai.hibiki.shared.details.DetailsInformationIcons(
-            status = Icons.Outlined.Check,
-            episodes = Icons.Outlined.FormatListNumbered,
-            type = Icons.Outlined.BookmarkBorder,
-            releaseDate = Icons.Filled.DateRange,
-            sourceMaterial = Icons.AutoMirrored.Filled.MenuBook,
-            studio = Icons.Filled.Business,
-        ),
-        accents = org.akkirrai.hibiki.shared.details.DetailsInformationAccents(
-            status = MaterialTheme.colorScheme.tertiary,
-            episodes = MaterialTheme.colorScheme.primary,
-            type = MaterialTheme.colorScheme.secondary,
-            releaseDate = MaterialTheme.colorScheme.primary,
-            sourceMaterial = MaterialTheme.colorScheme.tertiary,
-            studio = Color(0xFFFF9800),
-        ),
-        horizontalPadding = DETAIL_INFORMATION_HORIZONTAL_PADDING,
+        title = stringResource(R.string.details_information),
+        emptyValue = stringResource(R.string.search_filters_not_selected),
+        statusLabel = stringResource(R.string.details_status),
+        episodesLabel = stringResource(R.string.details_episodes_released),
+        typeLabel = stringResource(R.string.details_type),
+        releaseDateLabel = stringResource(R.string.details_release_date),
+        sourceMaterialLabel = stringResource(R.string.details_source_material),
+        studioLabel = stringResource(R.string.details_studio),
+        sourceMaterial = sourceMaterial,
+        horizontalPadding = DetailsInformationHorizontalPadding,
         modifier = modifier,
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TitleDetailsSheet(
-    title: String,
-    description: String,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-
-    AppModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        modifier = Modifier.fillMaxHeight(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-    ) {
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .fillMaxSize(),
-        ) {
-            Text(
-                text = title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                ),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
-                    .navigationBarsPadding(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PosterHeroInline(
-    anime: Anime,
-    height: Dp,
-    onPosterClick: () -> Unit,
-    onPosterLoaded: (Drawable) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsPosterCard(
-        height = height,
-        onClick = onPosterClick,
-        modifier = modifier,
-        poster = {
-        NetworkImage(
-            imageUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            onImageSuccess = onPosterLoaded,
-        )
-        },
-    )
-}
-
-@Composable
-private fun LibraryCategorySheet(
-    selectedCategory: LibraryCategory?,
-    onCategoryClick: (LibraryCategory) -> Unit,
-    onRemoveClick: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val title = stringResource(R.string.library_add_title)
-    val subtitle = stringResource(R.string.library_add_subtitle)
-    val savedNote = stringResource(R.string.library_saved_note)
-    val removeAction = stringResource(R.string.library_remove_action)
-    val categoryLabels = LibraryCategory.entries.associateWith { category ->
-        stringResource(category.labelResId)
-    }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 560.dp)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(top = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
-                        )
-                    }
-                }
-
-                items(
-                    items = LibraryCategory.entries.filter { it != LibraryCategory.Saved },
-                    key = LibraryCategory::name,
-                ) { category ->
-                    LibraryCategorySheetItem(
-                        category = category,
-                        label = categoryLabels.getValue(category),
-                        selected = category == selectedCategory,
-                        onClick = { onCategoryClick(category) },
-                    )
-                }
-
-                if (selectedCategory == LibraryCategory.Saved) {
-                    item {
-                        Text(
-                            text = savedNote,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-                } else if (selectedCategory != null) {
-                    item {
-                        TextButton(
-                            onClick = onRemoveClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            shape = RoundedCornerShape(16.dp),
-                        ) {
-                            Text(removeAction)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LibraryCategorySheetItem(
-    category: LibraryCategory,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f)
-        },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f)
-            },
-        ),
-        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 58.dp)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = category.icon(),
-                contentDescription = null,
-                modifier = Modifier.size(21.dp),
-                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = label,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PosterPreviewOverlay(
-    anime: Anime,
-    onDismiss: () -> Unit,
-) {
-    var isVisible by remember { mutableStateOf(false) }
-    var isDismissing by remember { mutableStateOf(false) }
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (isVisible) 0.78f else 0f,
-        animationSpec = tween(durationMillis = 180),
-        label = "posterPreviewScrimAlpha"
-    )
-    val posterAlpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
-        label = "posterPreviewPosterAlpha"
-    )
-    val posterScale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.94f,
-        animationSpec = tween(durationMillis = 220),
-        label = "posterPreviewPosterScale"
-    )
-
-    LaunchedEffect(Unit) {
-        isVisible = true
-    }
-
-    fun dismissAnimated() {
-        if (isDismissing) return
-        isDismissing = true
-        isVisible = false
-    }
-
-    LaunchedEffect(isDismissing) {
-        if (isDismissing) {
-            delay(180)
-            onDismiss()
-        }
-    }
-
-    BackHandler(onBack = ::dismissAnimated)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
-            .clickable(onClick = ::dismissAnimated)
-    ) {
-        PosterImage(
-            primaryUrl = anime.posterUrl,
-            fallbackUrl = anime.posterFallbackUrl,
-            contentDescription = anime.title,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    alpha = posterAlpha
-                    scaleX = posterScale
-                    scaleY = posterScale
-                },
-            contentScale = ContentScale.Fit,
-            placeholder = { ImagePlaceholder(Modifier.fillMaxSize()) }
-        )
-
-        HeroOverlayBackButton(
-            onClick = ::dismissAnimated,
-            modifier = Modifier.align(Alignment.TopStart),
-        )
-    }
 }
 
 @Composable
@@ -1211,24 +708,10 @@ private fun HeroOverlayBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppBackButton(
+    AppDetailsHeroOverlayBackButton(
         onClick = onClick,
-        modifier = modifier
-            .statusBarsPadding()
-            .padding(start = UiDimens.ScreenPadding, top = 8.dp),
-    )
-}
-
-@Composable
-private fun GenresSection(
-    genres: List<String>,
-    modifier: Modifier = Modifier,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsGenresSection(
-        genres = genres,
-        title = stringResource(R.string.details_genres),
-        horizontalPadding = DETAIL_CONTENT_START_PADDING,
         modifier = modifier,
+        contentDescription = stringResource(R.string.cd_back),
     )
 }
 
@@ -1239,55 +722,20 @@ private fun RelatedAnimeList(
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    val relatedItems = displayItems.map { related ->
-        org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeItem(
-            id = related.id,
-            title = related.title,
-            metadata = formatRelatedAnimeMetadata(
-                year = related.year,
-                type = related.type,
-                status = related.status,
-                announcementLabel = announcementLabel,
-            ),
-        )
-    }
-    val relatedById = displayItems.associateBy(RelatedAnime::id)
-    org.akkirrai.hibiki.shared.details.DetailsRelatedAnimeSection(
-        items = relatedItems,
+    org.akkirrai.hibiki.shared.details.AppDetailsRelatedAnimeList(
+        items = items,
         title = title,
-        horizontalPadding = DETAIL_CONTENT_START_PADDING,
-        onItemClick = { item -> relatedById[item.id]?.let { onAnimeClick(it.toAnime()) } },
-        poster = { item ->
-            relatedById[item.id]?.let { related ->
-                NetworkImage(
-                    imageUrl = related.posterUrl,
-                    fallbackUrl = related.posterFallbackUrl,
-                    contentDescription = related.title,
-                )
-            }
+        announcementLabel = stringResource(R.string.anime_meta_announcement),
+        horizontalPadding = DetailsContentHorizontalPadding,
+        onItemClick = { related -> onAnimeClick(related.toAnime()) },
+        poster = { related ->
+            NetworkImage(
+                imageUrl = related.posterUrl,
+                fallbackUrl = related.posterFallbackUrl,
+                contentDescription = related.title,
+            )
         },
         modifier = modifier,
-    )
-}
-
-@Composable
-private fun FavoriteCircleButton(
-    libraryCategory: LibraryCategory?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 41.dp,
-    iconSize: androidx.compose.ui.unit.Dp = 18.dp,
-) {
-    org.akkirrai.hibiki.shared.details.DetailsFavoriteCircleButton(
-        icon = libraryCategory.iconOrDefault(),
-        isInLibrary = libraryCategory != null,
-        contentDescription = stringResource(R.string.details_favorite),
-        onClick = onClick,
-        modifier = modifier,
-        size = size,
-        iconSize = iconSize,
     )
 }
 
@@ -1296,79 +744,6 @@ private fun findResumeWatchState(
     titleId: String,
 ): TitleWatchState? {
     return org.akkirrai.hibiki.shared.player.resolveResumeWatchState(repository.getEpisodeProgress(titleId))
-}
-
-@Composable
-private fun buildSourceSelectorLabel(
-    selectedSource: WatchSource?,
-    selection: WatchSourceSelection,
-): String {
-    val title = selectedSource?.title ?: if (selection.autoSelect) stringResource(R.string.watch_source_auto_title) else stringResource(R.string.watch_source_fallback)
-    val qualitySuffix = selectedSource?.qualityLabel?.let { " · $it" }.orEmpty()
-    return "$title$qualitySuffix"
-}
-
-@Composable
-private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
-    val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
-    var nowEpochSeconds by remember(seconds) {
-        mutableLongStateOf(System.currentTimeMillis() / 1_000L)
-    }
-    LaunchedEffect(seconds) {
-        while (nowEpochSeconds < seconds) {
-            nowEpochSeconds = System.currentTimeMillis() / 1_000L
-            if (nowEpochSeconds >= seconds) break
-            delay(1_000L)
-        }
-    }
-    val deltaSeconds = seconds - nowEpochSeconds
-    if (deltaSeconds <= 0L) return null
-    val days = deltaSeconds / 86_400L
-    val hours = deltaSeconds % 86_400L / 3_600L
-    val minutes = deltaSeconds % 3_600L / 60L
-    val remainingSeconds = deltaSeconds % 60L
-    return when {
-        days > 0L -> stringResource(R.string.details_eta_days_hours, days, hours.coerceAtLeast(0L))
-        hours > 0L -> stringResource(
-            R.string.details_eta_hours_minutes_seconds,
-            hours,
-            minutes.coerceAtLeast(0L),
-            remainingSeconds.coerceAtLeast(0L),
-        )
-        else -> stringResource(
-            R.string.details_eta_minutes_seconds,
-            minutes.coerceAtLeast(0L),
-            remainingSeconds.coerceAtLeast(0L),
-        )
-    }
-}
-
-@Composable
-private fun localizedType(type: String): String {
-    return when (type.uppercase()) {
-        "TV" -> stringResource(R.string.details_type_series)
-        "MOVIE" -> stringResource(R.string.details_type_movie)
-        "OVA" -> "OVA"
-        "ONA" -> "ONA"
-        "SPECIAL" -> stringResource(R.string.details_type_special)
-        else -> type
-    }
-}
-
-@Composable
-private fun localizedSourceMaterial(sourceMaterial: String?): String? {
-    val normalized = sourceMaterial?.trim()?.lowercase(Locale.ROOT) ?: return null
-    return when (normalized) {
-        "манга", "manga" -> stringResource(R.string.details_source_material_manga)
-        "манхва", "manhwa" -> stringResource(R.string.details_source_material_manhwa)
-        "маньхуа", "manhua" -> stringResource(R.string.details_source_material_manhua)
-        "ранобэ", "light novel" -> stringResource(R.string.details_source_material_light_novel)
-        "веб-новелла", "web novel" -> stringResource(R.string.details_source_material_web_novel)
-        "визуальная новелла", "visual novel" -> stringResource(R.string.details_source_material_visual_novel)
-        "игра", "game" -> stringResource(R.string.details_source_material_game)
-        "оригинал", "original" -> stringResource(R.string.details_source_material_original)
-        else -> sourceMaterial
-    }
 }
 
 private suspend fun extractTitleSeedColor(
@@ -1388,7 +763,7 @@ private suspend fun extractTitleSeedColor(
         }.getOrNull() as? SuccessResult ?: continue
         val palette = withContext(Dispatchers.Default) {
             val bitmap = runCatching {
-                result.drawable.toBitmap(width = 96, height = 96)
+                result.image.toBitmap(width = 96, height = 96)
             }.getOrNull() ?: return@withContext null
             runCatching {
                 Palette.from(bitmap)
@@ -1452,10 +827,7 @@ private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
-private val DETAIL_CONTENT_START_PADDING = 24.dp
-private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
-private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
 
 @Composable
 private fun NetworkImage(
@@ -1465,26 +837,17 @@ private fun NetworkImage(
     onImageSuccess: ((Drawable) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    PosterImage(
+    val resources = LocalContext.current.resources
+    AppPosterImage(
         primaryUrl = imageUrl,
         fallbackUrl = fallbackUrl,
         contentDescription = contentDescription,
-        onImageSuccess = onImageSuccess,
+        onImageSuccess = { image ->
+            onImageSuccess?.invoke(image.asDrawable(resources))
+        },
         modifier = modifier.fillMaxSize(),
-        placeholder = { ImagePlaceholder() }
+        placeholder = {
+            AppDetailsImagePlaceholder()
+        }
     )
-}
-
-@Composable
-private fun ImagePlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }

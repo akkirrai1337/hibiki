@@ -31,4 +31,15 @@ class LibraryPresenterTest {
 
         assertEquals(LibraryCategory.Saved, presenter.state.value.selectedCategory)
     }
+
+    @Test
+    fun searchQueryCanBeClearedThroughCommonPresenter() {
+        val presenter = LibraryPresenter()
+
+        presenter.onSearchQueryChange("anime")
+        assertEquals("anime", presenter.state.value.searchQuery)
+
+        presenter.clearSearch()
+        assertEquals("", presenter.state.value.searchQuery)
+    }
 }

@@ -1,44 +1,20 @@
 package org.akkirrai.hibiki.feature.home
 
 import android.content.Context
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -50,21 +26,16 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
-import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.mergeAnimePreservingOrder
 import org.akkirrai.hibiki.shared.home.TrendingAnimeUiState
 import org.akkirrai.hibiki.shared.home.TrendingFilter
 import org.akkirrai.hibiki.shared.home.TrendingPresenter
-import org.akkirrai.hibiki.shared.design.component.AppLoadMoreState
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
-import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
-import org.akkirrai.hibiki.core.design.component.AppFloatingPill
-import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.shared.design.component.appVerticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.PosterImage
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.shared.design.component.AppFloatingHeader
+import org.akkirrai.hibiki.shared.home.AppTrendingFilterButton
+import org.akkirrai.hibiki.shared.home.AppTrendingScreenContent
 import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.source.labelResId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.shared.model.buildCardMeta
 
@@ -99,77 +70,24 @@ fun TrendingAnimeScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        org.akkirrai.hibiki.shared.design.component.AppContentState(
-            isLoading = state.isLoading,
-            hasContent = state.items.isNotEmpty(),
-            errorMessage = state.errorMessage,
+        AppTrendingScreenContent(
+            state = state,
+            listState = listState,
             errorTitle = stringResource(R.string.trending_error_title),
             retryLabel = stringResource(R.string.search_retry),
             onRetry = viewModel::load,
-            errorIcon = Icons.Outlined.WarningAmber,
-            errorIconTint = MaterialTheme.colorScheme.error,
-            content = {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = 86.dp,
-                        end = UiDimens.ScreenPadding,
-                        bottom = UiDimens.ScreenPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    content = {
-                    appVerticalAnimeListContent(
-                        items = state.items,
-                        metaText = { anime -> buildTrendingMeta(anime) },
-                        onAnimeClick = onAnimeClick,
-                        posterContent = { anime ->
-                            PosterImage(
-                                primaryUrl = anime.posterUrl,
-                                fallbackUrl = anime.posterFallbackUrl,
-                                contentDescription = anime.title,
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = {
-                                    PosterPlaceholder(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                            )
-                        },
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
-                            }
-                        },
-                    )
-
-                    if (state.isLoadingMore || state.loadMoreError != null) {
-                        item(key = "trending_load_more_state") {
-                            AppLoadMoreState(
-                                isLoading = state.isLoadingMore,
-                                errorMessage = state.loadMoreError,
-                                errorIcon = Icons.Outlined.WarningAmber,
-                                onRetry = viewModel::loadMore,
-                            )
-                        }
-                    }
-                },
-            )
-            },
+            onLoadMoreRetry = viewModel::loadMore,
+            onAnimeClick = onAnimeClick,
+            metaText = { anime -> buildTrendingMeta(anime) },
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
+            libraryStatusLabel = { category -> stringResource(category.labelResId) },
+            modifier = Modifier.fillMaxSize(),
         )
 
         AppFloatingHeader(
             title = stringResource(R.string.home_trending),
             onBackClick = onBackClick,
+            backContentDescription = stringResource(R.string.cd_back),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth(),
@@ -189,70 +107,19 @@ private fun TrendingFilterButton(
     onFilterClick: (TrendingFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val baseContext = LocalContext.current
     val appLanguage = LocalAppLanguage.current
     val localizedContext = remember(baseContext, appLanguage) {
         baseContext.withLanguage(appLanguage)
     }
 
-    Box(modifier = modifier) {
-        AppFloatingPill(
-            modifier = Modifier
-                .clickable { expanded = true },
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = localizedContext.getString(selectedFilter.titleResId),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            TrendingFilter.entries.forEach { filter ->
-                DropdownMenuItem(
-                    text = { Text(text = localizedContext.getString(filter.titleResId)) },
-                    onClick = {
-                        expanded = false
-                        onFilterClick(filter)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrendingErrorState(
-    title: String,
-    message: String,
-    onRetry: () -> Unit,
-) {
-    AppMessageState(
-        title = title,
-        message = message,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(UiDimens.ScreenPadding),
-        actionLabel = stringResource(R.string.search_retry),
-        onActionClick = onRetry,
-        icon = Icons.Outlined.WarningAmber,
-        iconTint = MaterialTheme.colorScheme.error,
+    AppTrendingFilterButton(
+        selectedFilter = selectedFilter,
+        filters = TrendingFilter.entries,
+        selectedLabel = localizedContext.getString(selectedFilter.titleResId),
+        label = { filter -> localizedContext.getString(filter.titleResId) },
+        onFilterSelected = onFilterClick,
+        modifier = modifier,
     )
 }
 
@@ -334,7 +201,7 @@ class TrendingAnimeViewModel(
             }
                 .onSuccess { nextItems ->
                     presenter.update { state ->
-                        val mergedItems = (state.items + nextItems).distinctBy(Anime::id)
+                        val mergedItems = mergeAnimePreservingOrder(state.items, nextItems)
                         state.copy(
                             isLoadingMore = false,
                             items = mergedItems,

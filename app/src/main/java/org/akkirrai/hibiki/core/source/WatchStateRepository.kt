@@ -1,5 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.profile.LocalWatchStateRepository
+import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
+
 import android.content.Context
 import java.time.Instant
 import java.time.LocalDate
@@ -36,7 +40,7 @@ internal fun parseProgressStorageKey(key: String): ProgressStorageKey? {
     )
 }
 
-class WatchStateRepository(context: Context) {
+class WatchStateRepository(context: Context) : LocalWatchStateRepository, PlaybackProgressRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getSelectedSource(titleId: String): WatchSourceSelection {
@@ -258,6 +262,47 @@ class WatchStateRepository(context: Context) {
         )
     }
 
+    override fun saveEpisodeProgress(
+        context: org.akkirrai.hibiki.shared.model.PlaybackContext,
+        playback: org.akkirrai.hibiki.shared.model.PlaybackStream,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        saveEpisodeProgress(
+            titleId = context.titleId,
+            episodeId = context.episodeId,
+            episodeNumber = context.episodeNumber,
+            sourceId = context.sourceId,
+            voiceoverId = context.sourceId,
+            sourceTitle = context.sourceTitle,
+            quality = playback.qualityLabel,
+            positionMs = positionMs.coerceAtLeast(0L),
+            durationMs = durationMs.coerceAtLeast(0L),
+        )
+    }
+
+    override fun getPlaybackProgress(
+        titleId: String,
+        episodeId: String,
+    ): org.akkirrai.hibiki.shared.model.EpisodeWatchProgress? =
+        getEpisodeProgress(titleId, episodeId)?.let { progress ->
+            org.akkirrai.hibiki.shared.model.EpisodeWatchProgress(
+                titleId = progress.titleId,
+                episodeId = progress.episodeId,
+                episodeNumber = progress.episodeNumber,
+                sourceId = progress.sourceId,
+                voiceoverId = progress.voiceoverId,
+                sourceTitle = progress.sourceTitle,
+                quality = progress.quality,
+                positionMs = progress.positionMs,
+                durationMs = progress.durationMs,
+                updatedAt = progress.updatedAt,
+            )
+        }
+
+    override fun getAllPlaybackProgress(): List<org.akkirrai.hibiki.shared.model.EpisodeWatchProgress> =
+        getAllEpisodeProgress()
+
     private fun parseProgress(
         titleId: String,
         episodeId: String,
@@ -372,7 +417,7 @@ class WatchStateRepository(context: Context) {
      * title and episode, so this remains independent of the streaming source used to
      * play an episode.
      */
-    fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
+    override fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
         return prefs.all.entries
             .asSequence()
             .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
@@ -389,7 +434,7 @@ class WatchStateRepository(context: Context) {
     }
 
     /** Daily local playback aggregates used by the profile. Resume state remains separate. */
-    fun getDailyWatchActivity(): List<DailyWatchActivity> {
+    override fun getDailyWatchActivity(): List<DailyWatchActivity> {
         pruneActivityBefore(activityCutoffDate())
         return prefs.all.keys
             .asSequence()

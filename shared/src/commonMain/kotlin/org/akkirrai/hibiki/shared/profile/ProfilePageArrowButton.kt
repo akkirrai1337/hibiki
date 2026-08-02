@@ -18,11 +18,11 @@ fun ProfilePageArrowButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 40.dp,
+    size: Dp = ProfilePageArrowButtonDefaultSize,
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ProfilePageArrowButtonCornerRadius),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.28f else 0.12f),
     ) {
         IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(size)) {

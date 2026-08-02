@@ -2,42 +2,12 @@ package org.akkirrai.hibiki.feature.onboarding
 
 import android.os.LocaleList
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,17 +18,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.R
@@ -67,10 +31,19 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.shared.onboarding.OnboardingStep
-import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
-import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreenIcons
-import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreenLabels
-import org.akkirrai.hibiki.shared.onboarding.OnboardingSourceOption
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceCard
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingFooter
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingWelcome
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingNotifications
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingPermissionStatus
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingSourceStep
+import org.akkirrai.hibiki.shared.onboarding.AppOnboardingStepContent
+import org.akkirrai.hibiki.shared.onboarding.formatOnboardingSourceLanguageSummary
+import org.akkirrai.hibiki.shared.onboarding.filterOnboardingSourcesByLanguage
+import org.akkirrai.hibiki.shared.onboarding.previous
+import org.akkirrai.hibiki.shared.onboarding.next
+import org.akkirrai.hibiki.shared.onboarding.includeSelectedOnboardingSource
+import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 
 @Composable
 fun FirstLaunchOnboarding(
@@ -91,12 +64,12 @@ fun FirstLaunchOnboarding(
     var showSourceList by rememberSaveable { mutableStateOf(false) }
     val selectedSource = selectedSourceValue?.let(::SourceId)
     val displayedSources = remember(localizedSources, selectedSourceValue, allSources) {
-        val selected = allSources.firstOrNull { it.id.value == selectedSourceValue }
-        if (selected != null && selected !in localizedSources) {
-            listOf(selected) + localizedSources
-        } else {
-            localizedSources
-        }
+        includeSelectedOnboardingSource(
+            allSources = allSources,
+            visibleSources = localizedSources,
+            selectedKey = selectedSourceValue,
+            keyOf = { it.id.value },
+        )
     }
     val displayedSourceOptions = displayedSources.map { source ->
         OnboardingSourceOption(
@@ -121,11 +94,7 @@ fun FirstLaunchOnboarding(
         showSourceList = false
     }
     BackHandler(enabled = !showSourceList && step != OnboardingStep.WELCOME) {
-        stepName = when (step) {
-            OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-            OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
-        }
+        stepName = (step.previous() ?: step).name
     }
 
     if (showSourceList) {
@@ -144,38 +113,114 @@ fun FirstLaunchOnboarding(
         return
     }
 
-    AppOnboardingScreen(
-        step = step,
-        sources = displayedSourceOptions,
-        selectedSourceId = selectedSourceValue,
-        notificationPermissionState = notificationPermissionState,
-        labels = AppOnboardingScreenLabels(
-            welcomeTitle = stringResource(R.string.onboarding_welcome_title),
-            welcomeDescription = stringResource(R.string.onboarding_welcome_description),
-            getStarted = stringResource(R.string.onboarding_get_started),
-            sourceTitle = stringResource(R.string.onboarding_source_title),
-            sourceDescription = stringResource(R.string.onboarding_source_description),
-            sourceNoMatch = stringResource(R.string.onboarding_source_no_match),
-            viewAllSources = stringResource(R.string.onboarding_view_all_sources),
-            notificationsTitle = stringResource(R.string.onboarding_notifications_title),
-            notificationsDescription = stringResource(R.string.onboarding_notifications_description),
-            notificationsAllow = stringResource(R.string.onboarding_notifications_allow),
-            notificationsEnabled = stringResource(R.string.onboarding_notifications_enabled),
-            notificationsDenied = stringResource(R.string.onboarding_notifications_denied),
-            back = stringResource(R.string.onboarding_back),
-            next = stringResource(R.string.onboarding_next),
-            done = stringResource(R.string.onboarding_done),
-        ),
-        icons = AppOnboardingScreenIcons(
-            source = Icons.Rounded.VideoLibrary,
-            notifications = Icons.Rounded.NotificationsActive,
-        ),
-        appIconContent = {
-            Image(
-                painter = painterResource(R.drawable.hibiki_app_icon),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding(),
+        ) {
+            AppOnboardingStepContent(
+                step = step,
+                modifier = Modifier.weight(1f),
+                welcomeContent = {
+                    AppOnboardingWelcome(
+                        title = stringResource(R.string.onboarding_welcome_title),
+                        description = stringResource(R.string.onboarding_welcome_description),
+                        buttonLabel = stringResource(R.string.onboarding_get_started),
+                        onStart = { stepName = OnboardingStep.SOURCE.name },
+                        modifier = Modifier.fillMaxSize(),
+                        appIconContent = { iconModifier ->
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(R.drawable.hibiki_app_icon),
+                                contentDescription = stringResource(R.string.app_name),
+                                modifier = iconModifier,
+                                contentScale = ContentScale.Fit,
+                            )
+                        },
+                    )
+                },
+                sourceContent = {
+                    AppOnboardingSourceStep(
+                        title = stringResource(R.string.onboarding_source_title),
+                        description = stringResource(
+                            if (localizedSources.isEmpty()) {
+                                R.string.onboarding_source_no_match
+                            } else {
+                                R.string.onboarding_source_description
+                            },
+                        ),
+                        items = displayedSources,
+                        itemKey = { it.id.value },
+                        modifier = Modifier.fillMaxSize(),
+                        itemContent = { source ->
+                            AppOnboardingSourceCard(
+                                name = source.name,
+                                languageSummary = sourceLanguageSummary(source),
+                                selected = source.id == selectedSource,
+                                onClick = { selectedSourceValue = source.id.value },
+                                iconContent = { iconModifier ->
+                                    AppSourceIconImage(
+                                        url = source.iconUrl,
+                                        placeholder = painterResource(source.iconRes),
+                                        modifier = iconModifier,
+                                    )
+                                },
+                            )
+                        },
+                        footerContent = {
+                            TextButton(onClick = { showSourceList = true }) {
+                                Text(stringResource(R.string.onboarding_view_all_sources))
+                            }
+                        },
+                    )
+                },
+                notificationsContent = {
+                    AppOnboardingNotifications(
+                        title = stringResource(R.string.onboarding_notifications_title),
+                        description = stringResource(R.string.onboarding_notifications_description),
+                        modifier = Modifier.fillMaxSize(),
+                        actionContent = {
+                            when (notificationPermissionState) {
+                                NotificationPermissionState.NOT_ASKED -> {
+                                    Button(onClick = onRequestNotificationPermission) {
+                                        Text(stringResource(R.string.onboarding_notifications_allow))
+                                    }
+                                }
+                                NotificationPermissionState.GRANTED -> AppOnboardingPermissionStatus(
+                                    text = stringResource(R.string.onboarding_notifications_enabled),
+                                )
+                                NotificationPermissionState.DENIED -> AppOnboardingPermissionStatus(
+                                    text = stringResource(R.string.onboarding_notifications_denied),
+                                )
+                            }
+                        },
+                    )
+                },
+            )
+
+            // Keep the footer mounted on every step. Removing it on the welcome
+            // page changes the AnimatedContent height during the first transition
+            // and makes the outgoing page visibly jump upward.
+            AppOnboardingFooter(
+                currentStep = step.ordinal,
+                stepCount = OnboardingStep.entries.size,
+                showNavigation = step != OnboardingStep.WELCOME,
+                nextEnabled = step == OnboardingStep.NOTIFICATIONS || selectedSource != null,
+                backLabel = stringResource(R.string.onboarding_back),
+                nextLabel = stringResource(
+                    if (step == OnboardingStep.NOTIFICATIONS) R.string.onboarding_done else R.string.onboarding_next,
+                ),
+                onBack = {
+                    stepName = (step.previous() ?: step).name
+                },
+                onNext = {
+                    step.next()?.let { stepName = it.name }
+                        ?: selectedSource?.let(onComplete)
+                },
             )
         },
         sourceIconContent = { option ->
@@ -213,332 +258,24 @@ fun FirstLaunchOnboarding(
 }
 
 @Composable
-private fun WelcomeStep(
-    onStart: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Surface(
-            modifier = Modifier.size(156.dp),
-            shape = CircleShape,
-            color = Color.White,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.hibiki_app_icon),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentScale = ContentScale.Fit,
-            )
-        }
-        Spacer(Modifier.height(40.dp))
-        Text(
-            text = stringResource(R.string.onboarding_welcome_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.onboarding_welcome_description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(36.dp))
-        Button(onClick = onStart) {
-            Text(stringResource(R.string.onboarding_get_started))
-        }
-    }
-}
-
-@Composable
-private fun NotificationsStep(
-    permissionState: NotificationPermissionState,
-    onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.NotificationsActive,
-            contentDescription = null,
-            modifier = Modifier.size(112.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(32.dp))
-        Text(
-            text = stringResource(R.string.onboarding_notifications_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.onboarding_notifications_description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(32.dp))
-        when (permissionState) {
-            NotificationPermissionState.NOT_ASKED -> {
-                Button(onClick = onRequestPermission) {
-                    Text(stringResource(R.string.onboarding_notifications_allow))
-                }
-            }
-
-            NotificationPermissionState.GRANTED -> PermissionStatus(
-                text = stringResource(R.string.onboarding_notifications_enabled),
-            )
-
-            NotificationPermissionState.DENIED -> PermissionStatus(
-                text = stringResource(R.string.onboarding_notifications_denied),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionStatus(text: String) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun SourceStep(
-    sources: List<AnimeSourceDescriptor>,
-    selectedSource: SourceId?,
-    localizedSourcesMissing: Boolean,
-    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
-    onShowAllSources: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-    ) {
-        item {
-            Icon(
-                imageVector = Icons.Rounded.VideoLibrary,
-                contentDescription = null,
-                modifier = Modifier.size(88.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = stringResource(R.string.onboarding_source_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(
-                    if (localizedSourcesMissing) {
-                        R.string.onboarding_source_no_match
-                    } else {
-                        R.string.onboarding_source_description
-                    },
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-        items(sources, key = { it.id.value }) { source ->
-            SourceChoiceCard(
-                source = source,
-                selected = source.id == selectedSource,
-                onClick = { onSourceSelected(source) },
-            )
-        }
-        item {
-            TextButton(onClick = onShowAllSources) {
-                Text(stringResource(R.string.onboarding_view_all_sources))
-            }
-        }
-    }
-}
-
-@Composable
-private fun OnboardingFooter(
-    step: OnboardingStep,
-    nextEnabled: Boolean,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // The navigation buttons make non-welcome steps taller. Reserve their
-            // height on every step so the weighted page area never resizes while
-            // AnimatedContent is transitioning.
-            .height(72.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(modifier = Modifier.width(88.dp), contentAlignment = Alignment.CenterStart) {
-            if (step != OnboardingStep.WELCOME) {
-                TextButton(onClick = onBack) {
-                    Text(stringResource(R.string.onboarding_back))
-                }
-            }
-        }
-        StepIndicator(
-            currentStep = step.ordinal,
-            stepCount = OnboardingStep.entries.size,
-            modifier = Modifier.weight(1f),
-        )
-        Box(modifier = Modifier.width(88.dp), contentAlignment = Alignment.CenterEnd) {
-            if (step != OnboardingStep.WELCOME) {
-                TextButton(
-                    onClick = onNext,
-                    enabled = step == OnboardingStep.NOTIFICATIONS || nextEnabled,
-                ) {
-                    Text(
-                        stringResource(
-                            if (step == OnboardingStep.NOTIFICATIONS) {
-                                R.string.onboarding_done
-                            } else {
-                                R.string.onboarding_next
-                            },
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StepIndicator(
-    currentStep: Int,
-    stepCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(stepCount) { index ->
-            val isCurrent = index == currentStep
-            val indicatorWidth by animateDpAsState(
-                targetValue = if (isCurrent) 28.dp else 8.dp,
-                animationSpec = tween(durationMillis = 250),
-                label = "onboarding_indicator_width_$index",
-            )
-            Surface(
-                modifier = Modifier.size(width = indicatorWidth, height = 8.dp),
-                shape = CircleShape,
-                color = if (isCurrent) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                content = {},
-            )
-        }
-    }
-}
-
-@Composable
-private fun SourceChoiceCard(
-    source: AnimeSourceDescriptor,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AsyncImage(
-                model = source.iconUrl,
-                placeholder = painterResource(source.iconRes),
-                error = painterResource(source.iconRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = source.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = sourceLanguageSummary(source),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            RadioButton(selected = selected, onClick = null)
-        }
-    }
-}
-
-@Composable
 private fun sourceLanguageSummary(source: AnimeSourceDescriptor): String {
-    val languages = source.info.languages
-    return when {
-        SourceLanguage.RUSSIAN in languages && SourceLanguage.ENGLISH in languages -> {
-            stringResource(R.string.onboarding_source_languages_ru_en)
-        }
-        SourceLanguage.RUSSIAN in languages -> stringResource(R.string.onboarding_source_language_ru)
-        SourceLanguage.ENGLISH in languages -> stringResource(R.string.onboarding_source_language_en)
-        else -> languages.joinToString { it.tag.uppercase() }
-    }
+    return formatOnboardingSourceLanguageSummary(
+        languageTags = source.info.languages.mapTo(linkedSetOf()) { it.tag },
+        russianTag = SourceLanguage.RUSSIAN.tag,
+        englishTag = SourceLanguage.ENGLISH.tag,
+        russianEnglishLabel = stringResource(R.string.onboarding_source_languages_ru_en),
+        russianLabel = stringResource(R.string.onboarding_source_language_ru),
+        englishLabel = stringResource(R.string.onboarding_source_language_en),
+    )
 }
 
 internal fun onboardingSourcesForSystemLanguage(
     sources: List<AnimeSourceDescriptor>,
     systemLanguage: String,
-): List<AnimeSourceDescriptor> {
-    val preferredLanguage = if (systemLanguage.lowercase() in setOf("ru", "uk", "be")) {
-        SourceLanguage.RUSSIAN
-    } else {
-        SourceLanguage.ENGLISH
-    }
-    return sources.filter { source -> preferredLanguage in source.info.languages }
-}
+): List<AnimeSourceDescriptor> = filterOnboardingSourcesByLanguage(
+    sources = sources,
+    systemLanguage = systemLanguage,
+    russianTag = SourceLanguage.RUSSIAN.tag,
+    englishTag = SourceLanguage.ENGLISH.tag,
+    languageTags = { source -> source.info.languages.mapTo(linkedSetOf()) { it.tag } },
+)

@@ -19,6 +19,7 @@ import org.akkirrai.hibiki.core.source.LibraryEntry
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.library.LibraryPresenter
+import org.akkirrai.hibiki.shared.library.selectLibraryEntriesForDetailsRefresh
 
 class LibraryViewModel(
     context: Context,
@@ -126,10 +127,11 @@ class LibraryViewModel(
 
         val startedAt = SystemClock.elapsedRealtime()
         val activeCategory = presenter.state.value.selectedCategory
-        val activeEntries = saved
-            .filter { it.category == activeCategory }
-            .distinctBy { it.anime.id }
-            .take(LIBRARY_PAGE_SIZE)
+        val activeEntries = selectLibraryEntriesForDetailsRefresh(
+            entries = saved,
+            category = activeCategory,
+            limit = LIBRARY_PAGE_SIZE,
+        )
         if (activeEntries.isEmpty()) {
             PerfLogger.mark("Library details refresh skipped", "reason=empty_active_category, category=$activeCategory")
             return

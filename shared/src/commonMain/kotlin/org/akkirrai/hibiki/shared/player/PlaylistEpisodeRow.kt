@@ -15,13 +15,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun PlaylistEpisodeRow(
     headline: String,
     subtitle: String?,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val titleColor = if (selected) Color.White else Color.White.copy(alpha = 0.92f)
@@ -29,11 +29,16 @@ fun PlaylistEpisodeRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .clip(RoundedCornerShape(18.dp)),
+            .clickable(enabled = enabled, onClick = onClick)
+            .clip(RoundedCornerShape(PlaylistEpisodeRowCornerRadius)),
         color = if (selected) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.03f),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = PlaylistEpisodeRowHorizontalPadding,
+                vertical = PlaylistEpisodeRowVerticalPadding,
+            ),
+        ) {
             Text(
                 text = headline,
                 style = MaterialTheme.typography.bodyLarge,
@@ -45,7 +50,7 @@ fun PlaylistEpisodeRow(
             subtitle?.takeIf(String::isNotBlank)?.let {
                 Text(
                     text = it,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = PlaylistEpisodeRowSubtitleTopPadding),
                     style = MaterialTheme.typography.bodySmall,
                     color = subtitleColor,
                     maxLines = 2,

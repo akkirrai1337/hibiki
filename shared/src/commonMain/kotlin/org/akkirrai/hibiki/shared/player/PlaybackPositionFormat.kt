@@ -5,6 +5,8 @@ fun formatPlaybackPosition(positionMs: Long): String {
     val hours = totalSeconds / 3_600L
     val minutes = totalSeconds % 3_600L / 60L
     val seconds = totalSeconds % 60L
-    return if (hours > 0L) "%d:%02d:%02d".format(hours, minutes, seconds)
-    else "%02d:%02d".format(minutes, seconds)
+    return if (hours > 0L) "$hours:${twoDigit(minutes)}:${twoDigit(seconds)}"
+    else "${twoDigit(minutes)}:${twoDigit(seconds)}"
 }
+
+private fun twoDigit(value: Long): String = value.toString().padStart(2, '0')

@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsPosterCard(
@@ -20,11 +19,11 @@ fun DetailsPosterCard(
 ) {
     Card(
         modifier = modifier
-            .width(140.dp)
+            .width(DetailsPosterCardWidth)
             .height(height)
             .clickable(onClick = onClick),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(DetailsPosterCardCornerRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = DetailsPosterCardElevation),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         poster()

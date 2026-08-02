@@ -14,64 +14,23 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.SystemClock
-import android.view.LayoutInflater
 import android.view.TextureView
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -86,32 +45,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -120,20 +58,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
+import org.akkirrai.hibiki.shared.design.component.AppBackButton as SharedBackButton
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.dash.DashMediaSource
-import androidx.media3.exoplayer.hls.HlsMediaSource
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
@@ -144,21 +75,21 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.net.URI
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.localizationKey
+import org.akkirrai.hibiki.shared.player.playerToggleValueLocalizationKey
+import org.akkirrai.hibiki.shared.player.pictureInPictureAudioModeLocalizationKey
+import org.akkirrai.hibiki.shared.player.pictureInPicturePlaybackLocalizationKey
+import org.akkirrai.hibiki.shared.player.formatHeaderNames
+import org.akkirrai.hibiki.shared.player.formatShortUrl
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
-import org.akkirrai.hibiki.shared.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
-import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
-import org.akkirrai.hibiki.core.model.PlaybackSegmentType
 import org.akkirrai.hibiki.core.model.PlaybackStream
-import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
@@ -166,27 +97,56 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
 import org.akkirrai.hibiki.shared.player.toAppPlayerHostState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
+import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
-import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
 import org.akkirrai.hibiki.shared.player.buildSkipSegmentKey
 import org.akkirrai.hibiki.shared.player.formatSeekDeltaLabel
-import org.akkirrai.hibiki.shared.player.formatPlaybackSpeed
-import org.akkirrai.hibiki.shared.player.playbackSpeedOptions
-import org.akkirrai.hibiki.shared.player.sortQualityLabels
-import org.akkirrai.hibiki.shared.player.uniquePlayerNames
-import org.akkirrai.hibiki.shared.player.fallbackEpisodeNumberFromTitle
-import org.akkirrai.hibiki.shared.player.resolveCurrentEpisodeTitle
-import org.akkirrai.hibiki.shared.player.playerSettingsPageTransition
-import org.akkirrai.hibiki.shared.player.PlaylistEpisodesList
-import org.akkirrai.hibiki.shared.player.PlayerSettingsEntryRow
-import org.akkirrai.hibiki.shared.player.PlayerSettingsHeader as SharedPlayerSettingsHeader
-import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
-import org.akkirrai.hibiki.shared.player.PlayerSettingsChoiceRow as SharedPlayerSettingsChoiceRow
-import org.akkirrai.hibiki.shared.player.PlayerSettingsValue
-import org.akkirrai.hibiki.shared.player.firstSelectedLabelOrDefault
+import org.akkirrai.hibiki.shared.player.resolvePlayerEpisodeSubtitle
+import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
+import org.akkirrai.hibiki.shared.player.resolveCurrentPlaybackPosition
+import org.akkirrai.hibiki.shared.player.resolveActivePlaybackSegment
+import org.akkirrai.hibiki.shared.player.resolvePlaybackDuration
+import org.akkirrai.hibiki.shared.player.buildPlayerSettingsChoices
+import org.akkirrai.hibiki.shared.player.resolveEpisodeNumberTitle
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsEntry
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsChoice
+import org.akkirrai.hibiki.shared.player.AppPlayerSpeedOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerSeekOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerActionControls
+import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
+import org.akkirrai.hibiki.shared.player.appPlayerSettingsItems
+import org.akkirrai.hibiki.shared.player.buildPlayerSettingsRootEntries
 import org.akkirrai.hibiki.shared.player.PlayerSettingsEntry
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.offset
+import org.akkirrai.hibiki.shared.player.AppPlayerUnlockOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerCenterControls
+import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelMaxWidth
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelRestingOffsetY
+import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelMaxWidth
+import org.akkirrai.hibiki.shared.player.PlayerSettingsPanelWidthFraction
+import org.akkirrai.hibiki.shared.player.PlayerPlaylistPanelWidthFraction
+import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentOverlay
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentEndPadding
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentBottomPadding
+import org.akkirrai.hibiki.shared.player.PlayerSkipSegmentControlsBottomPadding
+import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
+import org.akkirrai.hibiki.shared.player.AppPlayerOverlayPanel
+import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
+import org.akkirrai.hibiki.shared.player.AppPlayerControlsOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerControlsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerStatusOverlays
+import org.akkirrai.hibiki.shared.player.AppPlayerSkipSegmentLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsLayer
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
+import org.akkirrai.hibiki.shared.player.AppPlayerFrame
+import org.akkirrai.hibiki.shared.player.AppPlayerSettingsSheet
+import org.akkirrai.hibiki.shared.player.AppPlaylistBottomSheet
+import org.akkirrai.hibiki.shared.player.AppAutoHideVisibilityEffect
+import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
+import org.akkirrai.hibiki.shared.navigation.AppOverlay
 
 @Composable
 fun PlayerScreen(
@@ -194,6 +154,7 @@ fun PlayerScreen(
     episodeId: String,
     episodeNumberHint: Double? = null,
     onBackClick: () -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = viewModel(
         factory = PlayerViewModel.Factory(
@@ -291,9 +252,12 @@ fun PlayerScreen(
     val mediaSession = remember(exoPlayer) {
         MediaSession.Builder(context, exoPlayer).build()
     }
-    val currentEpisodeIndex = hostState.episodeIds.indexOf(hostState.episodeId)
-    val hasNextEpisode = currentEpisodeIndex != -1 && currentEpisodeIndex < hostState.episodeIds.lastIndex
-    val hasPreviousEpisode = currentEpisodeIndex > 0
+    val episodeNavigation = resolveEpisodeNavigationAvailability(
+        episodes = state.episodes,
+        currentEpisodeId = state.currentEpisodeId,
+    )
+    val hasNextEpisode = episodeNavigation.hasNext
+    val hasPreviousEpisode = episodeNavigation.hasPrevious
     fun keepControlsVisible() {
         if (controlsLocked) return
         controlsVisible = true
@@ -319,13 +283,12 @@ fun PlayerScreen(
     fun watchedSecondsSnapshot(): List<Long> = watchedSeconds.sorted()
 
     fun saveCurrentPlaybackProgress() {
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
-        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-        val safePositionMs = when {
-            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
-            positionMs > 0L -> positionMs
-            else -> sliderPositionMs.coerceAtLeast(0L)
-        }
+        val safeDurationMs = resolvePlaybackDuration(exoPlayer.duration, durationMs)
+        val safePositionMs = resolveCurrentPlaybackPosition(
+            playerPositionMs = exoPlayer.currentPosition,
+            trackedPositionMs = positionMs,
+            sliderPositionMs = sliderPositionMs,
+        )
         viewModel.savePlaybackProgress(
             positionMs = safePositionMs,
             durationMs = safeDurationMs,
@@ -358,12 +321,11 @@ fun PlayerScreen(
     }
 
     fun currentPlaybackPositionMs(): Long {
-        val currentPlayerPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-        return when {
-            currentPlayerPositionMs > 0L -> currentPlayerPositionMs
-            positionMs > 0L -> positionMs
-            else -> sliderPositionMs.coerceAtLeast(0L)
-        }
+        return resolveCurrentPlaybackPosition(
+            playerPositionMs = exoPlayer.currentPosition,
+            trackedPositionMs = positionMs,
+            sliderPositionMs = sliderPositionMs,
+        )
     }
 
     fun commitAccumulatedDoubleTapSeek() {
@@ -372,7 +334,7 @@ fun PlayerScreen(
         if (direction == 0 || steps <= 0) return
 
         val deltaMs = SEEK_INCREMENT_MS * steps
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
+        val safeDurationMs = resolvePlaybackDuration(exoPlayer.duration, durationMs)
         val targetPositionMs = if (direction < 0) {
             (accumulatedDoubleTapBasePositionMs - deltaMs).coerceAtLeast(0L)
         } else if (safeDurationMs > 0L) {
@@ -447,11 +409,8 @@ fun PlayerScreen(
                     action = PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY,
                     requestCode = PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE,
                     iconResId = R.drawable.ic_player_headphones_24,
-                    titleResId = if (isAudioOnly) {
-                        R.string.watch_player_show_video
-                    } else {
-                        R.string.watch_player_audio_only
-                    },
+                        titleResId = pictureInPictureAudioModeLocalizationKey(isAudioOnly)
+                            .toPlayerPictureInPictureTitleResId(),
                 )
             )
             add(
@@ -464,11 +423,8 @@ fun PlayerScreen(
                     } else {
                         R.drawable.ic_player_media_play_arrow_24
                     },
-                    titleResId = if (isPlaying) {
-                        R.string.watch_player_pause
-                    } else {
-                        R.string.watch_player_play
-                    },
+                        titleResId = pictureInPicturePlaybackLocalizationKey(isPlaying)
+                            .toPlayerPictureInPictureTitleResId(),
                 )
             )
             if (hasPreviousEpisode) {
@@ -549,11 +505,14 @@ fun PlayerScreen(
             isClosing = true
             resetAccumulatedDoubleTapSeek()
             controlsVisible = false
+            if (playlistVisible || settingsVisible) {
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+            }
             playlistVisible = false
             settingsVisible = false
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.playWhenReady = false
@@ -591,7 +550,7 @@ fun PlayerScreen(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
                 if (playbackState == Player.STATE_READY && pendingSeekMs > 0L) {
                     exoPlayer.seekTo(pendingSeekMs)
                     positionMs = pendingSeekMs
@@ -601,13 +560,15 @@ fun PlayerScreen(
                 }
                 if (playbackState == Player.STATE_ENDED && autoPlayNextEpisode) {
                     val currentEpisodeId = state.currentEpisodeId
-                    val currentIndex = state.episodes.indexOfFirst { it.id == currentEpisodeId }
-                    val hasNextEpisode = currentIndex != -1 && currentIndex < state.episodes.lastIndex
+                    val hasNextEpisode = resolveEpisodeNavigationAvailability(
+                        episodes = state.episodes,
+                        currentEpisodeId = currentEpisodeId,
+                    ).hasNext
                     if (hasNextEpisode && handledEndedEpisodeId != currentEpisodeId) {
                         handledEndedEpisodeId = currentEpisodeId
                         viewModel.savePlaybackProgress(
-                            positionMs = exoPlayer.duration.takeIf { it > 0 } ?: exoPlayer.currentPosition.coerceAtLeast(0L),
-                            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                            positionMs = resolvePlaybackDuration(exoPlayer.duration, exoPlayer.currentPosition.coerceAtLeast(0L)),
+                            durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                             watchedSeconds = watchedSecondsSnapshot(),
                         )
                         viewModel.playNextEpisode()
@@ -626,7 +587,7 @@ fun PlayerScreen(
                         append(" type=")
                         append(state.playback?.streamType)
                         append(" stream=")
-                        append(state.playback?.streamUrl.shortUrl())
+                        append(formatShortUrl(state.playback?.streamUrl))
                         append(" code=")
                         append(error.errorCodeName)
                         append(" message=")
@@ -643,7 +604,7 @@ fun PlayerScreen(
             pendingDoubleTapSeekJob = null
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L),
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.removeListener(listener)
@@ -792,13 +753,13 @@ fun PlayerScreen(
                 append(" streamHost=")
                 append(playback.streamUrl.safeHost())
                 append(" headerNames=")
-                append(playback.headers.safeHeaderNames())
+                append(formatHeaderNames(playback.headers))
             },
         )
         keepControlsVisible()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        exoPlayer.setMediaSource(playback.toMediaSource(context))
+        exoPlayer.setMediaSource(playback.toAndroidMediaSource(context))
         applyPlaybackSpeed(playbackSpeed)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
@@ -815,7 +776,7 @@ fun PlayerScreen(
 
     LaunchedEffect(exoPlayer, isSeeking) {
         while (true) {
-            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            durationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
             bufferedPositionMs = exoPlayer.bufferedPosition.takeIf { it > 0 } ?: 0L
             if (!isSeeking) {
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
@@ -829,7 +790,7 @@ fun PlayerScreen(
         lastTrackedPlaybackPositionMs = -1L
         while (true) {
             val currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-            val currentDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            val currentDurationMs = resolvePlaybackDuration(exoPlayer.duration, 0L)
             val trackingAllowed = exoPlayer.isPlaying &&
                 currentDurationMs > 0L &&
                 !isSeeking
@@ -897,24 +858,28 @@ fun PlayerScreen(
         }
     }
 
-    AutoHideVisibilityEffect(
+    AppAutoHideVisibilityEffect(
         enabled = !controlsLocked,
         visible = controlsVisible,
         interactionTick = controlsInteractionTick,
         blocked = playlistVisible || settingsVisible || state.isLoading || state.errorMessage != null || isSeeking,
+        hideDelayMillis = PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS,
         onHide = { controlsVisible = false },
     )
 
-    AutoHideVisibilityEffect(
+    AppAutoHideVisibilityEffect(
         enabled = controlsLocked,
         visible = unlockButtonVisible,
         interactionTick = unlockButtonInteractionTick,
         blocked = isSeeking,
+        hideDelayMillis = PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS,
         onHide = { unlockButtonVisible = false },
     )
 
-    val rawActiveSkipSegment = state.playback?.segments
-        ?.firstOrNull { segment -> positionMs >= segment.startMs && positionMs < segment.endMs }
+    val rawActiveSkipSegment = resolveActivePlaybackSegment(
+        segments = state.playback?.segments,
+        positionMs = positionMs,
+    )
         ?.takeIf {
             !controlsLocked &&
                 !playlistVisible &&
@@ -953,10 +918,8 @@ fun PlayerScreen(
         }
     }
 
-    Box(
+    AppPlayerFrame(
         modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black)
             .pointerInput(settingsVisible, playlistVisible, controlsLocked, playbackSpeed, durationMs) {
                 if (settingsVisible || playlistVisible) return@pointerInput
                 awaitEachGesture {
@@ -1046,309 +1009,180 @@ fun PlayerScreen(
                 }
             }
     ) {
-        if (!isClosing) AndroidView(
-            factory = { viewContext ->
-                (LayoutInflater.from(viewContext)
-                    .inflate(R.layout.view_media3_player, null, false) as PlayerView)
-                    .apply {
-                    layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    useController = false
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                    player = exoPlayer
-                    applyVideoScale(videoScaleMode, videoAspectRatio)
-                    attachedPlayerView = this
-                }
-            },
-            update = { playerView ->
-                attachedPlayerView = playerView
-                playerView.player = if (isAudioOnly) null else exoPlayer
-                playerView.applyVideoScale(videoScaleMode, videoAspectRatio)
-            },
-            modifier = Modifier.fillMaxSize()
+        AndroidPlayerSurface(
+            exoPlayer = exoPlayer,
+            isAudioOnly = isAudioOnly,
+            videoScaleMode = videoScaleMode,
+            videoAspectRatio = videoAspectRatio,
+            isClosing = isClosing,
+            onAttached = { attachedPlayerView = it },
         )
 
-        AnimatedVisibility(
+        AppPlayerSpeedOverlay(
             visible = holdSpeedOverlayVisible,
+            label = "2×",
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
-            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.Black.copy(alpha = 0.62f),
-            ) {
-                Text(
-                    text = "2×",
-                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 14.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
+        )
 
-        AnimatedVisibility(
+        AppPlayerSeekOverlay(
             visible = doubleTapSeekOverlayVisible && doubleTapSeekOverlayDeltaMs != 0L,
+            label = formatSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
-            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.Black.copy(alpha = 0.62f)
-            ) {
-                Text(
-                    text = formatSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
+        )
 
         activeSkipSegment?.let { skipSegment ->
-            AnimatedVisibility(
+            AppPlayerSkipSegmentLayer(
                 visible = !isPictureInPictureActive,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = 24.dp,
-                        bottom = if (controlsVisible) 140.dp else 32.dp,
-                    ),
-                enter = fadeIn(animationSpec = tween(140)),
-                exit = fadeOut(animationSpec = tween(140)),
-            ) {
-                PlayerSkipSegmentOverlay(
-                    countdownSeconds = skipCountdownSeconds,
-                    autoSkipEnabled = autoSkipSegments,
-                    onSkipClick = {
-                        skipToSegmentEnd(skipSegment)
-                    },
-                    onWatchClick = {
-                        activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it }
-                    },
-                )
-            }
-        }
-
-        AnimatedVisibility(
-            visible = !isPictureInPictureActive &&
-                !controlsLocked &&
-                (controlsVisible || state.isLoading || state.errorMessage != null),
-            modifier = Modifier.fillMaxSize(),
-            enter = fadeIn(animationSpec = tween(160)),
-            exit = fadeOut(animationSpec = tween(180)),
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                PlayerTopOverlay(
-                    title = state.animeTitle,
-                    subtitle = currentEpisodeSubtitle(state),
-                    onBackClick = handleBackClick,
-                    onPlaylistClick = {
-                        keepControlsVisible()
-                        playlistVisible = true
-                    },
-                    playlistEnabled = state.episodes.isNotEmpty(),
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-
-                AnimatedVisibility(
-                    visible = !seekOverlayActive && !state.isLoading && !isBuffering,
-                    modifier = Modifier.align(Alignment.Center),
-                    enter = fadeIn(animationSpec = tween(120)),
-                    exit = fadeOut(animationSpec = tween(90)),
-                ) {
-                    PlayerCenterControls(
-                        isPlaying = isPlaying,
-                        hasPreviousEpisode = hasPreviousEpisode,
-                        hasNextEpisode = hasNextEpisode,
-                        onTogglePlay = {
-                            keepControlsVisible()
-                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                        },
-                        onPreviousEpisode = {
-                            runPlaybackSwitch { viewModel.playPreviousEpisode() }
-                        },
-                        onNextEpisode = {
-                            runPlaybackSwitch { viewModel.playNextEpisode() }
-                        },
-                    )
-                }
-
-                PlayerBottomOverlay(
-                    durationMs = durationMs,
-                    bufferedPositionMs = bufferedPositionMs,
-                    sliderPositionMs = sliderPositionMs,
-                    onSliderValueChange = { newValue ->
-                        keepControlsVisible()
-                        isSeeking = true
-                        sliderPositionMs = newValue
-                    },
-                    onSliderValueChangeFinished = {
-                        keepControlsVisible()
-                        resetAccumulatedDoubleTapSeek()
-                        exoPlayer.seekTo(sliderPositionMs)
-                        positionMs = sliderPositionMs
-                        isSeeking = false
-                    },
-                    videoScaleMode = videoScaleMode,
-                    onVideoScaleModeClick = {
-                        keepControlsVisible()
-                        appPreferences.setVideoScaleMode(videoScaleMode.next())
-                    },
-                    settingsEnabled = true,
-                    onSettingsClick = {
-                        keepControlsVisible()
-                        settingsDestination = PlayerSettingsDestination.Root
-                        settingsVisible = true
-                        viewModel.loadSettingsOptions()
-                    },
-                    pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
-                    onPictureInPictureClick = {
-                        isEnteringPictureInPicture = true
-                        discordRpcManager.setPictureInPictureActive(true)
-                        controlsVisible = false
-                        val entered = runCatching {
-                            activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
-                        }.getOrDefault(false)
-                        isPictureInPictureActive = entered
-                        if (!entered) {
-                            isEnteringPictureInPicture = false
-                            discordRpcManager.setPictureInPictureActive(false)
-                        }
-                    },
-                    onLockClick = {
-                        controlsLocked = true
-                        controlsVisible = false
-                        unlockButtonVisible = true
-                        unlockButtonInteractionTick += 1
-                        playlistVisible = false
-                        settingsVisible = false
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-        }
-
-        AnimatedVisibility(
-            visible = controlsLocked && unlockButtonVisible,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 20.dp),
-            enter = fadeIn(animationSpec = tween(160)),
-            exit = fadeOut(animationSpec = tween(120)),
-        ) {
-            PlayerUnlockButton(
-                onClick = {
-                    controlsLocked = false
-                    unlockButtonVisible = false
-                    keepControlsVisible()
-                }
+                controlsVisible = controlsVisible,
+                countdownSeconds = skipCountdownSeconds,
+                maxCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS,
+                autoSkipEnabled = autoSkipSegments,
+                skipLabel = stringResource(R.string.watch_player_skip),
+                watchLabel = stringResource(R.string.watch_player_watch),
+                modifier = Modifier.align(Alignment.BottomEnd),
+                onSkipClick = { skipToSegmentEnd(skipSegment) },
+                onWatchClick = {
+                    activeSkipSegmentKey?.let { hiddenSkipSegmentKey = it }
+                },
             )
         }
 
-        if (state.isLoading || isBuffering) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.34f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.58f)),
-                    )
-                    CircularProgressIndicator(
-                        modifier = Modifier.matchParentSize(),
-                        color = Color.White,
-                        strokeWidth = 4.dp,
-                    )
+        AppPlayerControlsLayer(
+            visible = !isPictureInPictureActive &&
+                !controlsLocked &&
+                (controlsVisible || state.isLoading || state.errorMessage != null),
+            title = state.animeTitle,
+            subtitle = currentEpisodeSubtitle(state),
+            playlistEnabled = state.episodes.isNotEmpty(),
+            onBackClick = handleBackClick,
+            backContentDescription = stringResource(R.string.cd_back),
+            onPlaylistClick = {
+                keepControlsVisible()
+                playlistVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
+            },
+            hasPreviousEpisode = hasPreviousEpisode,
+            hasNextEpisode = hasNextEpisode,
+            isPlaying = isPlaying,
+            seekOverlayActive = seekOverlayActive || state.isLoading || isBuffering,
+            onTogglePlay = {
+                keepControlsVisible()
+                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+            },
+            onPreviousEpisode = { runPlaybackSwitch { viewModel.playPreviousEpisode() } },
+            onNextEpisode = { runPlaybackSwitch { viewModel.playNextEpisode() } },
+            positionLabel = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
+            durationMs = durationMs,
+            bufferedPositionMs = bufferedPositionMs,
+            sliderPositionMs = sliderPositionMs,
+            onSliderValueChange = { newValue ->
+                keepControlsVisible()
+                isSeeking = true
+                sliderPositionMs = newValue
+            },
+            onSliderValueChangeFinished = {
+                keepControlsVisible()
+                resetAccumulatedDoubleTapSeek()
+                exoPlayer.seekTo(sliderPositionMs)
+                positionMs = sliderPositionMs
+                isSeeking = false
+            },
+            scaleMode = videoScaleMode,
+            scaleContentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
+            onScaleClick = {
+                keepControlsVisible()
+                appPreferences.setVideoScaleMode(videoScaleMode.next())
+            },
+            onLockClick = {
+                controlsLocked = true
+                controlsVisible = false
+                unlockButtonVisible = true
+                unlockButtonInteractionTick += 1
+                playlistVisible = false
+                settingsVisible = false
+            },
+            lockContentDescription = stringResource(R.string.watch_player_lock),
+            pictureInPictureEnabled = pictureInPictureSupported && state.playback != null,
+            onPictureInPictureClick = {
+                isEnteringPictureInPicture = true
+                discordRpcManager.setPictureInPictureActive(true)
+                controlsVisible = false
+                val entered = runCatching {
+                    activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
+                }.getOrDefault(false)
+                isPictureInPictureActive = entered
+                if (!entered) {
+                    isEnteringPictureInPicture = false
+                    discordRpcManager.setPictureInPictureActive(false)
                 }
-            }
-        }
+            },
+            pictureInPictureContentDescription = stringResource(R.string.watch_player_picture_in_picture),
+            onSettingsClick = {
+                keepControlsVisible()
+                settingsDestination = PlayerSettingsDestination.Root
+                settingsVisible = true
+                onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.PlayerSettings))
+                viewModel.loadSettingsOptions()
+            },
+            settingsContentDescription = stringResource(R.string.watch_player_settings),
+        )
 
-        state.errorMessage?.let { message ->
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp)
-                        .widthIn(max = 420.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.Black.copy(alpha = 0.84f),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.watch_player_error_title),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = message,
-                            color = Color.White.copy(alpha = 0.78f),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.watch_player_retry),
-                            modifier = Modifier
-                                .alpha(0.92f)
-                                .clickable { viewModel.load(forceRefresh = true) },
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                }
-            }
-        }
+        AppPlayerStatusOverlays(
+            controlsLocked = controlsLocked,
+            unlockButtonVisible = unlockButtonVisible,
+            unlockLabel = stringResource(R.string.watch_player_unlock),
+            onUnlockClick = {
+                controlsLocked = false
+                unlockButtonVisible = false
+                keepControlsVisible()
+            },
+            unlockContentDescription = null,
+            isLoading = state.isLoading,
+            isBuffering = isBuffering,
+            errorMessage = state.errorMessage,
+            errorTitle = stringResource(R.string.watch_player_error_title),
+            retryLabel = stringResource(R.string.watch_player_retry),
+            onRetry = { viewModel.load(forceRefresh = true) },
+            unlockModifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = PlayerUnlockBottomPadding),
+            includeSystemBottomInset = true,
+        )
 
-        if (playlistVisible) {
-            PlayerOverlayPanel(
-                onDismissRequest = {
-                    playlistVisible = false
-                    keepControlsVisible()
-                },
-                widthFraction = PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION,
-                maxWidth = PLAYER_PLAYLIST_PANEL_MAX_WIDTH,
-                swipeToDismissEnabled = false,
-            ) { dismissPanel ->
-                PlaylistBottomSheet(
-                    currentEpisodeId = state.currentEpisodeId,
-                    episodes = state.episodes,
-                    onEpisodeClick = { episodeId ->
-                        dismissPanel()
-                        runPlaybackSwitch { viewModel.selectEpisode(episodeId) }
-                    }
+        AppPlayerPlaylistLayer(
+            visible = playlistVisible,
+            currentEpisodeId = state.currentEpisodeId,
+            episodes = state.episodes,
+            headline = { episode ->
+                resolveEpisodeNumberTitle(
+                    episodeNumber = episode.number,
+                    episodeLabel = { number -> stringResource(R.string.watch_episode_number, number) },
                 )
-            }
-        }
+            },
+            onDismissRequest = {
+                playlistVisible = false
+                onOverlayEvent(AppNavigationEvent.DismissOverlay)
+                keepControlsVisible()
+            },
+            onEpisodeClick = { episodeId ->
+                runPlaybackSwitch { viewModel.selectEpisode(episodeId) }
+            },
+            nowMs = SystemClock::elapsedRealtime,
+            backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
+        )
 
         if (settingsVisible) {
-            PlayerOverlayPanel(
+            AppPlayerSettingsLayer(
                 onDismissRequest = {
                     settingsVisible = false
                     settingsDestination = PlayerSettingsDestination.Root
+                    onOverlayEvent(AppNavigationEvent.DismissOverlay)
                     keepControlsVisible()
                 },
-                widthFraction = PLAYER_SETTINGS_PANEL_WIDTH_FRACTION,
-                maxWidth = PLAYER_SETTINGS_SHEET_MAX_WIDTH,
-                restingOffsetY = PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y,
-                swipeToDismissEnabled = false,
+                nowMs = SystemClock::elapsedRealtime,
+                backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
             ) { dismissPanel ->
-                PlayerSettingsSheet(
+                AppPlayerSettingsContent(
                     destination = settingsDestination,
                     selectedSpeed = playbackSpeed,
                     selectedSourceId = state.currentSourceId,
@@ -1366,6 +1200,7 @@ fun PlayerScreen(
                         settingsDestination = PlayerSettingsDestination.Root
                         keepControlsVisible()
                     },
+                    backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
                     onSelectSpeed = { speed ->
                         keepControlsVisible()
                         playbackSpeed = speed
@@ -1402,353 +1237,7 @@ fun PlayerScreen(
 }
 
 @Composable
-private fun PlayerOverlayPanel(
-    onDismissRequest: () -> Unit,
-    widthFraction: Float,
-    maxWidth: Dp,
-    restingOffsetY: Dp = 0.dp,
-    swipeToDismissEnabled: Boolean = true,
-    content: @Composable ((() -> Unit)) -> Unit,
-) {
-    val density = LocalDensity.current
-    val openedAtMs = remember { SystemClock.elapsedRealtime() }
-
-    var animatingIn by remember { mutableStateOf(false) }
-    var dismissing by remember { mutableStateOf(false) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    val exitOffsetPx = with(density) { PLAYER_OVERLAY_PANEL_EXIT_OFFSET.toPx() }
-    val dismissThresholdPx = with(density) { PLAYER_PANEL_DISMISS_DRAG_THRESHOLD.toPx() }
-
-    val scrimBaseAlpha by animateFloatAsState(
-        targetValue = if (animatingIn) PLAYER_OVERLAY_SCRIM_ALPHA else 0f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayScrimAlpha"
-    )
-
-    val panelAlpha by animateFloatAsState(
-        targetValue = if (animatingIn) 1f else 0f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelAlpha"
-    )
-
-    val panelScale by animateFloatAsState(
-        targetValue = if (animatingIn) 1f else 0.96f,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelScale"
-    )
-
-    val panelBaseOffsetPx by animateFloatAsState(
-        targetValue = if (animatingIn) 0f else exitOffsetPx,
-        animationSpec = tween(durationMillis = PLAYER_OVERLAY_ANIMATION_MS),
-        label = "playerOverlayPanelBaseOffset"
-    )
-
-    val animatedDragOffsetPx by animateFloatAsState(
-        targetValue = dragOffsetPx,
-        animationSpec = tween(durationMillis = if (isDragging) 0 else 160),
-        label = "playerOverlayDragOffset"
-    )
-
-    val dragProgress = (animatedDragOffsetPx / dismissThresholdPx).coerceIn(0f, 1f)
-    val effectiveScrimAlpha = scrimBaseAlpha * (1f - dragProgress * 0.45f)
-    val effectivePanelScale = panelScale * (1f - dragProgress * 0.02f)
-    val effectivePanelAlpha = panelAlpha * (1f - dragProgress * 0.12f)
-
-    LaunchedEffect(Unit) {
-        animatingIn = true
-    }
-
-    fun dismissPanel() {
-        if (dismissing) return
-        dismissing = true
-        isDragging = false
-        animatingIn = false
-    }
-
-    fun finishPanelDrag() {
-        if (dismissing) return
-
-        isDragging = false
-        if (dragOffsetPx >= dismissThresholdPx) {
-            dismissPanel()
-        } else {
-            dragOffsetPx = 0f
-        }
-    }
-
-    val nestedScrollConnection = remember(dismissing, dismissThresholdPx, swipeToDismissEnabled) {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource,
-            ): Offset {
-                consumed
-                if (
-                    !swipeToDismissEnabled ||
-                    dismissing ||
-                    source != NestedScrollSource.UserInput ||
-                    available.y <= 0f
-                ) {
-                    return Offset.Zero
-                }
-
-                isDragging = true
-                dragOffsetPx = (dragOffsetPx + available.y).coerceAtLeast(0f)
-                return Offset(x = 0f, y = available.y)
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (swipeToDismissEnabled && dragOffsetPx > 0f) {
-                    val shouldDismiss =
-                        dragOffsetPx >= dismissThresholdPx || available.y >= PLAYER_PANEL_DISMISS_FLING_VELOCITY
-                    if (shouldDismiss) {
-                        dismissPanel()
-                    } else {
-                        finishPanelDrag()
-                    }
-                    return Velocity.Zero
-                }
-
-                return Velocity.Zero
-            }
-        }
-    }
-
-    LaunchedEffect(dismissing) {
-        if (dismissing) {
-            delay(PLAYER_OVERLAY_ANIMATION_MS.toLong())
-            onDismissRequest()
-        }
-    }
-
-    BackHandler(enabled = !dismissing, onBack = ::dismissPanel)
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(Color.Black.copy(alpha = effectiveScrimAlpha))
-                .clickable(enabled = !dismissing) {
-                    val canDismiss =
-                        SystemClock.elapsedRealtime() - openedAtMs >= PLAYER_OVERLAY_TAP_GUARD_MS
-                    if (canDismiss) {
-                        dismissPanel()
-                    }
-                }
-        )
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(widthFraction)
-                .widthIn(max = maxWidth)
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .offset(y = restingOffsetY)
-                .then(
-                    if (swipeToDismissEnabled) {
-                        Modifier.nestedScroll(nestedScrollConnection)
-                    } else {
-                        Modifier
-                    }
-                )
-                .graphicsLayer {
-                    alpha = effectivePanelAlpha
-                    scaleX = effectivePanelScale
-                    scaleY = effectivePanelScale
-                    translationY = panelBaseOffsetPx + animatedDragOffsetPx
-                }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    // Consume clicks inside dialog so scrim does not receive them.
-                },
-            shape = RoundedCornerShape(20.dp),
-            color = PLAYER_SHEET_COLOR,
-            contentColor = Color.White,
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (swipeToDismissEnabled) {
-                    PlayerOverlayHandle(
-                        onDragDelta = { deltaY ->
-                            if (dismissing) return@PlayerOverlayHandle
-
-                            isDragging = true
-                            dragOffsetPx = (dragOffsetPx + deltaY).coerceAtLeast(0f)
-                        },
-                        onDragEnd = {
-                            if (dismissing) return@PlayerOverlayHandle
-
-                            finishPanelDrag()
-                        }
-                    )
-                } else {
-                    SpacerBox(12.dp)
-                }
-
-                content(::dismissPanel)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerOverlayHandle(
-    onDragDelta: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDragDelta(dragAmount.y)
-                    },
-                    onDragEnd = onDragEnd,
-                    onDragCancel = onDragEnd,
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.28f))
-        )
-    }
-}
-
-@Composable
-private fun PlayerSkipSegmentOverlay(
-    countdownSeconds: Int,
-    autoSkipEnabled: Boolean,
-    onSkipClick: () -> Unit,
-    onWatchClick: () -> Unit,
-) {
-    val skipLabel = stringResource(R.string.watch_player_skip)
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (autoSkipEnabled) {
-                PlayerSkipSegmentButton(
-                text = stringResource(R.string.watch_player_watch),
-                onClick = onWatchClick,
-                primary = false,
-            )
-        }
-        PlayerSkipSegmentButton(
-            text = "$skipLabel (${countdownSeconds.coerceIn(0, SKIP_SEGMENT_COUNTDOWN_SECONDS)})",
-            onClick = onSkipClick,
-            primary = true,
-        )
-    }
-}
-
-@Composable
-private fun PlayerSkipSegmentButton(
-    text: String,
-    onClick: () -> Unit,
-    primary: Boolean,
-) {
-    Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
-        color = if (primary) Color.White.copy(alpha = 0.92f) else Color.Black.copy(alpha = 0.58f),
-        contentColor = if (primary) Color.Black else Color.White,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun PlayerTopOverlay(
-    title: String,
-    subtitle: String,
-    onBackClick: () -> Unit,
-    onPlaylistClick: () -> Unit,
-    playlistEnabled: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.82f),
-                    1f to Color.Transparent
-                )
-            )
-            .padding(horizontal = 20.dp, vertical = 22.dp)
-    ) {
-        WatchBackButton(
-            onBackClick = onBackClick,
-            modifier = Modifier.align(Alignment.TopStart)
-        )
-
-        if (playlistEnabled) {
-            AppFilledIconButton(
-                onClick = onPlaylistClick,
-                modifier = Modifier.align(Alignment.TopEnd),
-                style = AppFilledIconButtonStyle.DarkOverlay,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.PlaylistPlay,
-                    contentDescription = stringResource(R.string.watch_player_playlist),
-                    tint = Color.White
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 92.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = title.preventTrailingOrphanWrap(),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.72f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlayerSettingsSheet(
+private fun LegacyPlayerSettingsSheet(
     destination: PlayerSettingsDestination,
     selectedSpeed: Float,
     selectedSourceId: String,
@@ -1767,41 +1256,23 @@ private fun PlayerSettingsSheet(
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
 ) {
-    val speedValues = playbackSpeedOptions.map { speed ->
-        PlayerSettingsValue(
-            id = speed.toString(),
-            label = formatPlaybackSpeed(speed),
-            selected = selectedSpeed == speed,
-            onClick = { onSelectSpeed(speed) },
-        )
-    }
-    val voiceoverValues = options.voiceovers.map { source ->
-        PlayerSettingsValue(
-            id = source.sourceId,
-            label = source.title.ifBlank { source.sourceId },
-            description = source.qualityLabel,
-            selected = selectedSourceId == source.sourceId,
-            onClick = { onSelectVoiceover(source) },
-        )
-    }
-    val playerValues = uniquePlayerNames(options.links).map { name ->
-        PlayerSettingsValue(
-            id = name,
-            label = name,
-            selected = selectedPlayerName == name || (selectedPlayerName == null && options.links.firstOrNull()?.playerName == name),
-            onClick = { onSelectPlayer(name) },
-        )
-    }
-    val qualityValues = sortQualityLabels(options.links.mapNotNull { it.qualityLabel } + availableQualityLabels)
-        .map { quality ->
-            PlayerSettingsValue(
-                id = quality,
-                label = quality,
-                selected = selectedQualityLabel == quality,
-                onClick = { onSelectQuality(quality) },
-            )
-        }
-    val rootEntries = playerSettingsRootEntries(
+    val choices = buildPlayerSettingsChoices(
+        selectedSpeed = selectedSpeed,
+        selectedSourceId = selectedSourceId,
+        selectedPlayerName = selectedPlayerName,
+        selectedQualityLabel = selectedQualityLabel,
+        availableQualityLabels = availableQualityLabels,
+        options = options,
+        onSelectSpeed = onSelectSpeed,
+        onSelectVoiceover = onSelectVoiceover,
+        onSelectPlayer = onSelectPlayer,
+        onSelectQuality = onSelectQuality,
+    )
+    val speedValues = choices.speed
+    val voiceoverValues = choices.voiceover
+    val playerValues = choices.player
+    val qualityValues = choices.quality
+    val rootEntries = buildPlayerSettingsRootEntries(
         speedValues = speedValues,
         voiceoverValues = voiceoverValues,
         playerValues = playerValues,
@@ -1811,340 +1282,86 @@ private fun PlayerSettingsSheet(
         onNavigate = onNavigate,
         onAutoSkipSegmentsChange = onAutoSkipSegmentsChange,
         onAutoPlayNextEpisodeChange = onAutoPlayNextEpisodeChange,
+        voiceoverTitle = stringResource(R.string.watch_player_settings_voiceover),
+        qualityTitle = stringResource(R.string.watch_player_settings_quality),
+        speedTitle = stringResource(R.string.watch_player_settings_speed),
+        autoSkipTitle = stringResource(R.string.watch_player_settings_auto_skip),
+        autoSkipValue = stringResource(
+            playerToggleValueLocalizationKey(autoSkipSegments).toPlayerSettingsValueResId()
+        ),
+        autoPlayTitle = stringResource(R.string.watch_player_settings_auto_play_next),
+        autoPlayValue = stringResource(
+            playerToggleValueLocalizationKey(autoPlayNextEpisode).toPlayerSettingsValueResId()
+        ),
+        playerTitle = stringResource(R.string.watch_player_settings_player),
     )
 
     BackHandler(enabled = destination != PlayerSettingsDestination.Root) {
         onBack()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-    ) {
-        AnimatedContent(
-            targetState = destination,
-            transitionSpec = { playerSettingsPageTransition() },
-            label = "PlayerSettingsPage",
-        ) { targetDestination ->
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (targetDestination != PlayerSettingsDestination.Root) {
-                    PlayerSettingsHeader(
-                        title = stringResource(targetDestination.titleResId),
-                        showBack = true,
-                        onBack = onBack,
-                    )
-                }
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = PLAYER_SETTINGS_PANEL_MAX_HEIGHT),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        bottom = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    userScrollEnabled = true,
-                ) {
-                    playerSettingsItems(
-                        destination = targetDestination,
-                        rootEntries = rootEntries,
-                        speedValues = speedValues,
-                        voiceoverValues = voiceoverValues,
-                        playerValues = playerValues,
-                        qualityValues = qualityValues,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerSettingsHeader(
-    title: String,
-    showBack: Boolean,
-    onBack: () -> Unit,
-) {
-    SharedPlayerSettingsHeader(
-        title = title,
-        showBack = showBack,
+    AppPlayerSettingsSheet(
+        destination = destination,
+        title = { targetDestination -> stringResource(targetDestination.titleResId) },
         onBack = onBack,
-        backContent = { WatchBackButton(onBackClick = onBack) },
-    )
-}
-
-@Composable
-private fun PlayerSettingsEntry(
-    title: String,
-    value: String,
-    onClick: () -> Unit,
-) {
-    PlayerSettingsEntryRow(
-        title = title,
-        value = value,
-        onClick = onClick,
-        trailingContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.52f),
+        backContent = {
+            SharedBackButton(
+                onClick = onBack,
+                contentDescription = stringResource(R.string.cd_back),
+            )
+        },
+        content = { targetDestination ->
+            appPlayerSettingsItems(
+                destination = targetDestination,
+                rootEntries = rootEntries,
+                speedValues = speedValues,
+                voiceoverValues = voiceoverValues,
+                playerValues = playerValues,
+                qualityValues = qualityValues,
+                entryContent = { entry ->
+                    AppPlayerSettingsEntry(
+                        title = entry.title,
+                        value = entry.value,
+                        onClick = entry.onClick,
+                    )
+                },
+                choiceContent = { value ->
+                    AppPlayerSettingsChoice(
+                        label = value.label,
+                        description = value.description,
+                        selected = value.selected,
+                        onClick = value.onClick,
+                    )
+                },
             )
         },
     )
 }
-
-@Composable
-private fun PlayerSettingsChoiceRow(
-    value: PlayerSettingsValue,
-) {
-    SharedPlayerSettingsChoiceRow(
-        label = value.label,
-        description = value.description,
-        selected = value.selected,
-        onClick = value.onClick,
-        selectedIndicator = {
-            Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White)
-        },
-    )
-}
-
-@Composable
-private fun SpacerBox(size: Dp) {
-    Box(modifier = Modifier.size(size))
-}
-
-@Composable
-private fun playerSettingsRootEntries(
-    speedValues: List<PlayerSettingsValue>,
-    voiceoverValues: List<PlayerSettingsValue>,
-    playerValues: List<PlayerSettingsValue>,
-    qualityValues: List<PlayerSettingsValue>,
-    autoSkipSegments: Boolean,
-    autoPlayNextEpisode: Boolean,
-    onNavigate: (PlayerSettingsDestination) -> Unit,
-    onAutoSkipSegmentsChange: (Boolean) -> Unit,
-    onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
-): List<PlayerSettingsEntry> = buildList {
-    if (voiceoverValues.size > 1) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Voiceover.name,
-                title = stringResource(R.string.watch_player_settings_voiceover),
-                value = voiceoverValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
-            )
-        )
-    }
-    if (qualityValues.size > 1) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Quality.name,
-                title = stringResource(R.string.watch_player_settings_quality),
-                value = qualityValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Quality) },
-            )
-        )
-    }
-    add(
-        PlayerSettingsEntry(
-            id = PlayerSettingsDestination.Speed.name,
-            title = stringResource(R.string.watch_player_settings_speed),
-            value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
-            onClick = { onNavigate(PlayerSettingsDestination.Speed) },
-        )
-    )
-    add(
-        PlayerSettingsEntry(
-            id = "auto_skip",
-            title = stringResource(R.string.watch_player_settings_auto_skip),
-            value = stringResource(
-                if (autoSkipSegments) R.string.watch_player_settings_on
-                else R.string.watch_player_settings_off,
-            ),
-            onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
-        )
-    )
-    add(
-        PlayerSettingsEntry(
-            id = "auto_play_next",
-            title = stringResource(R.string.watch_player_settings_auto_play_next),
-            value = stringResource(
-                if (autoPlayNextEpisode) R.string.watch_player_settings_on
-                else R.string.watch_player_settings_off,
-            ),
-            onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
-        )
-    )
-    if (playerValues.isNotEmpty()) {
-        add(
-            PlayerSettingsEntry(
-                id = PlayerSettingsDestination.Player.name,
-                title = stringResource(R.string.watch_player_settings_player),
-                value = playerValues.firstSelectedLabelOrDefault(),
-                onClick = { onNavigate(PlayerSettingsDestination.Player) },
-            )
-        )
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
-    destination: PlayerSettingsDestination,
-    rootEntries: List<PlayerSettingsEntry>,
-    speedValues: List<PlayerSettingsValue>,
-    voiceoverValues: List<PlayerSettingsValue>,
-    playerValues: List<PlayerSettingsValue>,
-    qualityValues: List<PlayerSettingsValue>,
-) {
-    when (destination) {
-        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntry::id) { entry ->
-            PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
-        }
-        PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
-        PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
-        PlayerSettingsDestination.Player -> playerSettingsChoices(playerValues)
-        PlayerSettingsDestination.Quality -> playerSettingsChoices(qualityValues)
-    }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices(
-    values: List<PlayerSettingsValue>,
-) {
-    items(values, key = PlayerSettingsValue::id) { value ->
-        PlayerSettingsChoiceRow(value = value)
-    }
-}
-
 private val PlayerSettingsDestination.titleResId: Int
-    get() = when (this) {
-        PlayerSettingsDestination.Root -> R.string.watch_player_settings_root
-        PlayerSettingsDestination.Speed -> R.string.watch_player_settings_speed
-        PlayerSettingsDestination.Voiceover -> R.string.watch_player_settings_voiceover
-        PlayerSettingsDestination.Player -> R.string.watch_player_settings_player
-        PlayerSettingsDestination.Quality -> R.string.watch_player_settings_quality
+    get() = when (localizationKey()) {
+        "watch_player_settings_root" -> R.string.watch_player_settings_root
+        "watch_player_settings_speed" -> R.string.watch_player_settings_speed
+        "watch_player_settings_voiceover" -> R.string.watch_player_settings_voiceover
+        "watch_player_settings_player" -> R.string.watch_player_settings_player
+        "watch_player_settings_quality" -> R.string.watch_player_settings_quality
+        else -> error("Unknown player settings localization key")
     }
 
-@Composable
-private fun PlayerBottomOverlay(
-    durationMs: Long,
-    bufferedPositionMs: Long,
-    sliderPositionMs: Long,
-    onSliderValueChange: (Long) -> Unit,
-    onSliderValueChangeFinished: () -> Unit,
-    videoScaleMode: VideoScaleMode,
-    onVideoScaleModeClick: () -> Unit,
-    settingsEnabled: Boolean,
-    onSettingsClick: () -> Unit,
-    pictureInPictureEnabled: Boolean,
-    onPictureInPictureClick: () -> Unit,
-    onLockClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.92f)
-                )
-            )
-            .navigationBarsPadding()
-            .padding(
-                start = PLAYER_CONTROLS_HORIZONTAL_PADDING,
-                end = PLAYER_CONTROLS_HORIZONTAL_PADDING,
-                top = 8.dp,
-                bottom = 18.dp,
-            ),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            PlayerTimeline(
-                durationMs = durationMs,
-                bufferedPositionMs = bufferedPositionMs,
-                sliderPositionMs = sliderPositionMs,
-                onSeekPreview = onSliderValueChange,
-                onSeekFinished = onSliderValueChangeFinished,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 0.dp)
-                    .offset(y = (-3).dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = 1.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = "${formatEpisodeDuration(sliderPositionMs)} / ${formatEpisodeDuration(durationMs)}",
-                    modifier = Modifier.padding(top = 1.dp),
-                    color = Color.White.copy(alpha = 0.78f),
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AppFilledIconButton(
-                        onClick = onVideoScaleModeClick,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            painter = painterResource(videoScaleMode.iconResId()),
-                            contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onLockClick,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = stringResource(R.string.watch_player_lock),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onPictureInPictureClick,
-                        enabled = pictureInPictureEnabled,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_player_picture_in_picture_24),
-                            contentDescription = stringResource(R.string.watch_player_picture_in_picture),
-                            tint = Color.White,
-                        )
-                    }
-                    AppFilledIconButton(
-                        onClick = onSettingsClick,
-                        enabled = settingsEnabled,
-                        modifier = Modifier.size(46.dp),
-                        style = AppFilledIconButtonStyle.DarkOverlay,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.watch_player_settings),
-                            tint = Color.White,
-                        )
-                    }
-                }
-            }
-        }
-
-    }
+private fun String.toPlayerSettingsValueResId(): Int = when (this) {
+    "watch_player_settings_on" -> R.string.watch_player_settings_on
+    "watch_player_settings_off" -> R.string.watch_player_settings_off
+    else -> error("Unknown player settings value localization key")
 }
 
-private fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
+private fun String.toPlayerPictureInPictureTitleResId(): Int = when (this) {
+    "watch_player_show_video" -> R.string.watch_player_show_video
+    "watch_player_audio_only" -> R.string.watch_player_audio_only
+    "watch_player_pause" -> R.string.watch_player_pause
+    "watch_player_play" -> R.string.watch_player_play
+    else -> error("Unknown player picture-in-picture localization key")
+}
+
+internal fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
     val textureView = videoSurfaceView as? TextureView ?: return
     if (!textureView.isLaidOut || textureView.width == 0 || textureView.height == 0) {
         textureView.doOnLayout { applyVideoScale(mode, videoAspectRatio) }
@@ -2176,289 +1393,20 @@ private data class TextureVideoScale(
     val scaleY: Float,
 )
 
-private fun VideoScaleMode.iconResId(): Int = when (this) {
-    VideoScaleMode.FIT -> R.drawable.ic_player_fit_to_screen_24
-    VideoScaleMode.CROP -> R.drawable.ic_player_settings_overscan_24
-    VideoScaleMode.STRETCH -> R.drawable.ic_player_aspect_ratio_24
-}
-
 @StringRes
-private fun VideoScaleMode.contentDescriptionResId(): Int = when (this) {
-    VideoScaleMode.FIT -> R.string.watch_player_video_scale_fit
-    VideoScaleMode.CROP -> R.string.watch_player_video_scale_crop
-    VideoScaleMode.STRETCH -> R.string.watch_player_video_scale_stretch
-}
-
-@Composable
-private fun AutoHideVisibilityEffect(
-    enabled: Boolean,
-    visible: Boolean,
-    interactionTick: Int,
-    blocked: Boolean,
-    onHide: () -> Unit,
-) {
-    LaunchedEffect(enabled, visible, interactionTick, blocked) {
-        if (!enabled || !visible || blocked) return@LaunchedEffect
-        delay(PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS)
-        onHide()
-    }
-}
-
-@Composable
-private fun PlayerUnlockButton(
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
-        color = Color.Black.copy(alpha = 0.72f),
-        contentColor = Color.White,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.LockOpen,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = stringResource(R.string.watch_player_unlock),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlayerCenterControls(
-    isPlaying: Boolean,
-    hasPreviousEpisode: Boolean,
-    hasNextEpisode: Boolean,
-    onTogglePlay: () -> Unit,
-    onPreviousEpisode: () -> Unit,
-    onNextEpisode: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(28.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PlayerControlButton(
-            painter = painterResource(R.drawable.ic_player_media_skip_previous_24),
-            enabled = hasPreviousEpisode,
-            onClick = onPreviousEpisode,
-        )
-        AppFilledIconButton(
-            onClick = onTogglePlay,
-            modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
-            style = AppFilledIconButtonStyle.DarkOverlay,
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isPlaying) {
-                        R.drawable.ic_player_media_pause_24
-                    } else {
-                        R.drawable.ic_player_media_play_arrow_24
-                    }
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = Color.White,
-            )
-        }
-        PlayerControlButton(
-            painter = painterResource(R.drawable.ic_player_media_skip_next_24),
-            enabled = hasNextEpisode,
-            onClick = onNextEpisode,
-        )
-    }
-}
-
-@Composable
-private fun PlayerTimeline(
-    durationMs: Long,
-    bufferedPositionMs: Long,
-    sliderPositionMs: Long,
-    onSeekPreview: (Long) -> Unit,
-    onSeekFinished: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var trackWidthPx by remember { mutableFloatStateOf(1f) }
-    val safeDuration = durationMs.coerceAtLeast(1L)
-    val playedFraction = (sliderPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-    val bufferedFraction = (bufferedPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-    val playedColor = Color(0xFFE53935)
-    val bufferedColor = playedColor.copy(alpha = 0.34f)
-    val trackColor = Color.White.copy(alpha = 0.18f)
-    val thumbRadiusPx = with(LocalDensity.current) { PLAYER_TIMELINE_THUMB_RADIUS.toPx() }
-
-    fun seekFromX(x: Float) {
-        val fraction = (x / trackWidthPx).coerceIn(0f, 1f)
-        onSeekPreview((safeDuration * fraction).toLong())
-    }
-
-    Box(
-        modifier = modifier
-            .height(18.dp)
-            .pointerInput(safeDuration, trackWidthPx) {
-                detectTapGestures(
-                    onTap = { offset ->
-                        seekFromX(offset.x)
-                        onSeekFinished()
-                    }
-                )
-            }
-            .pointerInput(safeDuration, trackWidthPx) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        seekFromX(offset.x)
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        seekFromX(change.position.x)
-                    },
-                    onDragEnd = onSeekFinished,
-                    onDragCancel = onSeekFinished,
-                )
-            },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(PLAYER_TIMELINE_TRACK_HEIGHT)
-                .clip(RoundedCornerShape(999.dp))
-                .background(trackColor)
-                .onSizeChanged { trackWidthPx = it.width.toFloat() }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(bufferedFraction)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(bufferedColor)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(playedFraction)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(playedColor)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    translationX = (trackWidthPx * playedFraction) - thumbRadiusPx
-                }
-                .size(PLAYER_TIMELINE_THUMB_SIZE)
-                .clip(CircleShape)
-                .background(playedColor)
-        )
-    }
-}
-
-@Composable
-private fun PlayerControlButton(
-    painter: Painter,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    AppFilledIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(52.dp),
-        style = AppFilledIconButtonStyle.DarkOverlay,
-    ) {
-        Icon(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier.size(30.dp),
-            tint = Color.White
-        )
-    }
-}
-
-@Composable
-private fun PlaylistBottomSheet(
-    currentEpisodeId: String,
-    episodes: List<WatchEpisode>,
-    onEpisodeClick: (String) -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        PlaylistEpisodesList(
-            currentEpisodeId = currentEpisodeId,
-            episodes = episodes,
-            maxHeight = PLAYER_PLAYLIST_SHEET_MAX_HEIGHT,
-            horizontalPadding = UiDimens.ScreenPadding,
-            headline = ::buildEpisodeTitle,
-            onEpisodeClick = onEpisodeClick,
-        )
-    }
-}
-
-private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
-    val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
-        context = context,
-        headers = headers,
-    )
-    val mediaItem = MediaItem.Builder()
-        .setUri(streamUrl.toUri())
-        .setMimeType(
-            when (streamType) {
-                PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
-                PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
-                PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
-            }
-        )
-        .build()
-
-    return when (streamType) {
-        PlaybackStreamType.HLS -> HlsMediaSource.Factory(dataSourceFactory)
-            .setAllowChunklessPreparation(true)
-            .createMediaSource(mediaItem)
-        PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-        PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-    }
-}
-
-@Composable
-private fun buildEpisodeTitle(episode: WatchEpisode): String {
-    val number = formatEpisodeNumber(episode.number)
-    return stringResource(R.string.watch_episode_number, number)
+private fun VideoScaleMode.contentDescriptionResId(): Int = when (localizationKey()) {
+    "watch_player_video_scale_fit" -> R.string.watch_player_video_scale_fit
+    "watch_player_video_scale_crop" -> R.string.watch_player_video_scale_crop
+    "watch_player_video_scale_stretch" -> R.string.watch_player_video_scale_stretch
+    else -> error("Unknown video scale localization key")
 }
 
 @Composable
 private fun currentEpisodeSubtitle(state: PlayerUiState): String {
-    return localizedEpisodeTitle(
-        resolveCurrentEpisodeTitle(
-            playbackTitle = state.playback?.episodeTitle,
-            currentEpisodeId = state.currentEpisodeId,
-            episodes = state.episodes,
-        ),
+    return resolvePlayerEpisodeSubtitle(
+        state = state,
+        episodeLabel = { number -> stringResource(R.string.watch_episode_number, number) },
     )
-}
-
-@Composable
-private fun localizedEpisodeTitle(title: String): String {
-    val fallbackEpisodeNumber = fallbackEpisodeNumberFromTitle(title)
-    return if (fallbackEpisodeNumber != null) {
-        stringResource(R.string.watch_episode_number, fallbackEpisodeNumber)
-    } else {
-        title
-    }
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
@@ -2514,32 +1462,8 @@ private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
 private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
 private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
 private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
-private val PLAYER_SHEET_COLOR = Color(0xFF121212)
-private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
-private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
-private val PLAYER_SETTINGS_PANEL_RESTING_OFFSET_Y = 0.dp
-private const val PLAYER_SETTINGS_PANEL_WIDTH_FRACTION = 0.68f
-private val PLAYER_PLAYLIST_PANEL_MAX_WIDTH = 380.dp
-private const val PLAYER_PLAYLIST_PANEL_WIDTH_FRACTION = 0.58f
-private val PLAYER_PLAYLIST_SHEET_MAX_HEIGHT = 360.dp
-private val PLAYER_OVERLAY_PANEL_EXIT_OFFSET = 40.dp
-private val PLAYER_PANEL_DISMISS_DRAG_THRESHOLD = 72.dp
-private const val PLAYER_PANEL_DISMISS_FLING_VELOCITY = 900f
-private const val PLAYER_OVERLAY_ANIMATION_MS = 220
 private const val PLAYER_VIDEO_SCALE_ANIMATION_DURATION_MS = 220L
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
-private const val PLAYER_OVERLAY_TAP_GUARD_MS = 120L
-private const val PLAYER_OVERLAY_SCRIM_ALPHA = 0.48f
-private val PLAYER_CONTROLS_HORIZONTAL_PADDING = 24.dp
-private val PLAYER_CENTER_PRIMARY_BUTTON_SIZE = 72.dp
-private val PLAYER_TIMELINE_TRACK_HEIGHT = 4.dp
-private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
-private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp
-private fun String?.shortUrl(): String {
-    if (this.isNullOrBlank()) return "null"
-    return substringBefore('?').substringAfterLast('/')
-}
-
 private fun String?.safeHost(): String {
     if (this.isNullOrBlank()) return "unknown"
     return runCatching { URI(this).host }
@@ -2548,10 +1472,3 @@ private fun String?.safeHost(): String {
         ?: "unknown"
 }
 
-private fun Map<String, String>.safeHeaderNames(): String {
-    if (isEmpty()) return "[]"
-    return keys
-        .filter(String::isNotBlank)
-        .sorted()
-        .joinToString(prefix = "[", postfix = "]")
-}

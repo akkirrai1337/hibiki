@@ -28,8 +28,8 @@ fun ProfileSegmentDonut(
 ) {
     val trackColor = if (muted) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.58f) else MaterialTheme.colorScheme.surfaceContainerHighest
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize().padding(10.dp)) {
-            val strokeWidth = 18.dp.toPx()
+        Canvas(Modifier.fillMaxSize().padding(ProfileSegmentDonutPadding)) {
+            val strokeWidth = ProfileSegmentDonutStrokeWidth.toPx()
             drawArc(trackColor, -90f, 360f, false, style = Stroke(strokeWidth, cap = StrokeCap.Round))
             var startAngle = -90f
             val safeTotal = segments.sumOf { it.weight.toDouble() }.toFloat().coerceAtLeast(1f)

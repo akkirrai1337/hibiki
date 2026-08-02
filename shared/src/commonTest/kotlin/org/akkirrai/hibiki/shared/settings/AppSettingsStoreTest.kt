@@ -7,7 +7,14 @@ class AppSettingsStoreTest {
     @Test
     fun inMemoryStoreRoundTripsSettings() {
         val store = InMemoryAppSettingsStore()
-        val expected = AppSettingsState(LanguageMode.RUSSIAN, darkTheme = true)
+        val expected = AppSettingsState(
+            languageMode = LanguageMode.RUSSIAN,
+            darkTheme = true,
+            themeMode = ThemeMode.DARK,
+            onboardingCompleted = true,
+            selectedSourceId = "ani-liberty",
+            notificationPermissionState = NotificationPermissionState.GRANTED,
+        )
 
         store.save(expected)
 

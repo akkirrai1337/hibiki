@@ -32,8 +32,8 @@ fun ProfileGenreBars(items: List<ProfileGenreBarItem>) {
             }
         }
         Column(
-            modifier = Modifier.fillMaxHeight().padding(start = 8.dp, end = 24.dp).widthIn(max = 250.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxHeight().padding(start = ProfileGenreBarsLabelBarGap, end = ProfileGenreBarsEndPadding).widthIn(max = ProfileGenreBarsMaxWidth),
+            verticalArrangement = Arrangement.spacedBy(ProfileGenreBarsRowGap),
         ) {
             val highest = items.maxOf { it.count }.coerceAtLeast(1)
             items.forEach { item ->

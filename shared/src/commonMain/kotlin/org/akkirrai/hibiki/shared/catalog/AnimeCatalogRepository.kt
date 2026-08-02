@@ -9,7 +9,13 @@ import org.akkirrai.hibiki.shared.prototype.PrototypeCatalog
 interface AnimeCatalogRepository {
     val initialItems: List<Anime>
 
+    fun selectSource(sourceId: String) = Unit
+
     suspend fun getDetails(id: String, fallback: Anime): Anime = fallback
+
+    suspend fun latest(limit: Int): List<Anime> = search(
+        AnimeCatalogQuery(pageSize = limit.coerceAtLeast(1)),
+    ).items
 
     suspend fun filterCatalog(): AnimeCatalogFilterCatalog = AnimeCatalogFilterCatalog()
 
@@ -17,6 +23,11 @@ interface AnimeCatalogRepository {
 
     suspend fun search(query: String): List<Anime> =
         search(AnimeCatalogQuery(text = query)).items
+}
+
+/** Optional catalog capability for source-separated search results. */
+interface MultiSourceAnimeCatalogRepository : AnimeCatalogRepository {
+    suspend fun searchSource(sourceId: String, query: AnimeCatalogQuery): AnimeCatalogPage
 }
 
 data class AnimeCatalogQuery(

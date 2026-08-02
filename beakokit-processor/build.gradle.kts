@@ -14,5 +14,5 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.2.10-2.0.2")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.3.7")
 }

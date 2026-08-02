@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun SourceScreenHeader(
@@ -19,12 +18,12 @@ fun SourceScreenHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(SourceScreenHeaderHeight),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
             text = title,
-            modifier = Modifier.padding(start = 60.dp),
+            modifier = Modifier.padding(start = SourceScreenHeaderTitleStartPadding),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground,

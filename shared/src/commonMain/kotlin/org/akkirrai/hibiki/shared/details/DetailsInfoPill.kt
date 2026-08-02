@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun DetailsInfoPill(
@@ -30,20 +29,20 @@ fun DetailsInfoPill(
     accent: Color,
 ) {
     Surface(
-        modifier = Modifier.height(56.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.height(DetailsInfoPillHeight),
+        shape = RoundedCornerShape(DetailsInfoPillCornerRadius),
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-                .height(40.dp),
+                .padding(horizontal = DetailsInfoPillHorizontalPadding, vertical = DetailsInfoPillVerticalPadding)
+                .height(DetailsInfoPillContentHeight),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(DetailsInfoPillContentGap),
         ) {
             Surface(
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(DetailsInfoPillIconContainerSize),
                 shape = CircleShape,
                 color = accent.copy(alpha = 0.12f),
                 contentColor = accent,
@@ -52,7 +51,7 @@ fun DetailsInfoPill(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(DetailsInfoPillIconSize),
                     )
                 }
             }

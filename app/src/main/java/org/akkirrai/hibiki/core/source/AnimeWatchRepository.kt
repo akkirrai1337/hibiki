@@ -44,6 +44,20 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
+import org.akkirrai.hibiki.shared.player.matchesPreferredPlayer
+import org.akkirrai.hibiki.shared.player.matchesPreferredQuality
+import org.akkirrai.hibiki.shared.player.PlayerSelectionCandidate
+import org.akkirrai.hibiki.shared.player.prioritizePlayerSelection
+import org.akkirrai.hibiki.shared.player.resolvePlayerAttemptTimeoutMillis
+import org.akkirrai.hibiki.shared.player.formatHeaderNames
+import org.akkirrai.hibiki.shared.player.resolvePlaybackStreamType
+import org.akkirrai.hibiki.shared.player.resolvePlaybackSegmentType
+import org.akkirrai.hibiki.shared.player.selectPlaybackSegments
+import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.buildWatchSourceId
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.shared.player.WatchDataRepository
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
 import org.akkirrai.beakokit.api.PlaybackGroup
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -57,19 +71,10 @@ data class ResolvedPlayerStream(
     val playback: PlaybackStream,
 )
 
-internal const val WATCH_SOURCE_SEPARATOR = "|watch|"
-
-internal fun watchTitleIdFromSourceId(sourceId: String): String =
-    if (WATCH_SOURCE_SEPARATOR in sourceId) {
-        sourceId.substringBefore(WATCH_SOURCE_SEPARATOR)
-    } else {
-        sourceId.substringBefore(':')
-    }
-
 class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
-) {
+) : WatchDataRepository {
     private val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
     private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
     private val sourcePayloadLanguages = ConcurrentHashMap<String, String>()
@@ -104,10 +109,11 @@ class AnimeWatchRepository(
     suspend fun loadSources(
         animeId: String,
         onUpdate: (List<WatchSource>) -> Unit,
+        forceRefresh: Boolean = false,
     ): List<WatchSource> {
         val canonicalId = resolveAnimeId(animeId)
         val cacheKey = languageCacheKey(canonicalId)
-        cachedSources[cacheKey]?.let {
+        if (!forceRefresh) cachedSources[cacheKey]?.let {
             onUpdate(it.sources)
             return it.sources
         }
@@ -146,7 +152,13 @@ class AnimeWatchRepository(
         return result
     }
 
-    suspend fun getEpisodes(sourceId: String): List<WatchEpisode> {
+    override suspend fun loadSources(animeId: String): List<WatchSource> =
+        loadSources(animeId = animeId, onUpdate = {})
+
+    override suspend fun refreshSources(animeId: String): List<WatchSource> =
+        loadSources(animeId = animeId, onUpdate = {}, forceRefresh = true)
+
+    override suspend fun getEpisodes(sourceId: String): List<WatchEpisode> {
         val payload = ensureSourcePayload(sourceId) ?: return emptyList()
         return payload.episodes
             .sortedBy(Episode::number)
@@ -158,6 +170,29 @@ class AnimeWatchRepository(
                 )
             }
     }
+
+    override suspend fun getPlayerLinks(sourceId: String, episodeId: String): List<PlayerLink> {
+        val payload = ensureSourcePayload(sourceId)
+            ?: throw IllegalArgumentException("Source is not registered: $sourceId")
+        val episode = payload.episodes.firstOrNull { it.id == episodeId }
+            ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
+        return getFilteredLinks(payload, episode)
+    }
+
+    override suspend fun resolvePlayback(
+        sourceId: String,
+        episodeId: String,
+        preferredQuality: String?,
+        preferredPlayerName: String?,
+        forceRefresh: Boolean,
+    ): PlaybackStream = resolveStream(
+        sourceId = sourceId,
+        episodeId = episodeId,
+        forceRefresh = forceRefresh,
+        preferredPlayerName = preferredPlayerName,
+        requiredPlayerName = preferredPlayerName,
+        preferredQuality = preferredQuality,
+    )
 
     fun getCachedEpisodes(sourceId: String): List<WatchEpisode>? {
         val payload = sourcePayloads[sourceId] ?: return null
@@ -218,24 +253,24 @@ class AnimeWatchRepository(
             "validated stream: player=${resolved.link.playerName}, type=${resolved.validation.streamType}, " +
                 "quality=${resolved.validation.quality}, status=${resolved.validation.statusCode}, " +
                 "streamHost=${resolved.validation.finalUrl.safeHost()}, " +
-                "headerNames=${resolved.stream.headers.safeHeaderNames()}",
+                "headerNames=${formatHeaderNames(resolved.stream.headers)}",
         )
         val playback = PlaybackStream(
             animeTitle = payload.title.displayName,
             sourceTitle = payload.source.title,
             episodeTitle = episode.title?.takeIf(String::isNotBlank)
-                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
+                ?: appString(R.string.watch_episode_fallback_title, formatEpisodeNumber(episode.number)),
             streamUrl = resolved.validation.finalUrl,
-            streamType = resolved.validation.streamType.toPlaybackType(),
+            streamType = resolvePlaybackStreamType(resolved.validation.streamType.name),
             qualityLabel = resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality,
             availableQualityLabels = (
                 resolved.availableQualityLabels + (resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality)
             ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
             headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
             segments = selectPlaybackSegments(
-                apiSegments = resolved.link.segments,
-                extractedSegments = resolved.stream.segments,
-            ).map { segment -> segment.toPlaybackSegment() },
+                apiSegments = resolved.link.segments.map { it.toPlaybackSegment() },
+                extractedSegments = resolved.stream.segments.map { it.toPlaybackSegment() },
+            ),
             videoId = resolved.link.videoId,
         )
         cachedStreams[cacheKey] = CachedPlaybackStream(stream = playback, cachedAt = System.currentTimeMillis())
@@ -303,7 +338,7 @@ class AnimeWatchRepository(
         return ResolvedPlayerStream(playerName = playerName, playback = playback)
     }
 
-    suspend fun getPlaybackSettingsOptions(
+    override suspend fun getPlaybackSettingsOptions(
         sourceId: String,
         episodeId: String,
     ): PlaybackSettingsOptions {
@@ -343,7 +378,7 @@ class AnimeWatchRepository(
         inFlightLoads.clear()
     }
 
-    fun close() {
+    override fun close() {
         clearCaches()
         client.close()
     }
@@ -374,7 +409,7 @@ class AnimeWatchRepository(
         }
         val sources = groups.mapIndexed { index, group ->
             val source = WatchSource(
-                sourceId = buildSourceId(animeId, group.title, index),
+                sourceId = buildWatchSourceId(animeId, group.title, index),
                 title = group.title,
                 episodeCount = group.episodes.size,
                 qualityLabel = group.qualityLabel,
@@ -430,57 +465,35 @@ class AnimeWatchRepository(
         return watchTitleIdFromSourceId(sourceId)
     }
 
-    private fun buildSourceId(
-        animeId: String,
-        dubbingTitle: String,
-        index: Int,
-    ): String {
-        val slug = dubbingTitle.lowercase()
-            .replace(Regex("""[^\p{L}\p{N}]+"""), "-")
-            .trim('-')
-            .ifBlank { "voiceover-$index" }
-        return "$animeId$WATCH_SOURCE_SEPARATOR$slug-$index"
-    }
-
     internal fun prioritizeLinks(
         links: List<PlayerLink>,
         preferredPlayerName: String?,
         preferredQuality: String?,
     ): List<PlayerLink> {
-        return links.sortedWith(
-            compareBy<PlayerLink> { if (matchesPreferredPlayer(it.playerName, preferredPlayerName)) 0 else 1 }
-                .thenBy { if (matchesPreferredQuality(it.quality, preferredQuality)) 0 else 1 }
-                .thenBy { playerPriority(it.playerName) }
+        val order = prioritizePlayerSelection(
+            candidates = links.mapIndexed { index, link ->
+                PlayerSelectionCandidate(index, link.playerName, link.quality)
+            },
+            preferredPlayerName = preferredPlayerName,
+            preferredQuality = preferredQuality,
         )
+        return order.map(links::get)
     }
 
     internal fun resolveAttemptTimeoutMillis(
         preferredPlayerName: String?,
         candidatePlayerName: String?,
-    ): Long {
-        return if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
-            PREFERRED_RESOLVE_TIMEOUT_MS
-        } else {
-            AUTO_RESOLVE_TIMEOUT_MS
-        }
-    }
+    ): Long = resolvePlayerAttemptTimeoutMillis(
+        preferredPlayerName = preferredPlayerName,
+        candidatePlayerName = candidatePlayerName,
+        preferredTimeoutMs = PREFERRED_RESOLVE_TIMEOUT_MS,
+        automaticTimeoutMs = AUTO_RESOLVE_TIMEOUT_MS,
+    )
 
-    private fun playerPriority(name: String?): Int = when {
-        name.containsPlayerToken("kodik") -> 0
-        name.containsPlayerToken("aksor") -> 1
-        name.containsPlayerToken("alloha") -> 2
-        name.containsPlayerToken("sibnet") -> 3
-        name.containsPlayerToken("cvh") -> 4
-        name.containsPlayerToken("vk") -> 5
-        name.containsPlayerToken("aniboom") -> 6
-        else -> 10
-    }
-
-    private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-        LanguageMode.ENGLISH -> "en"
-        LanguageMode.RUSSIAN -> "ru"
-        LanguageMode.SYSTEM -> if (appContext?.resources?.configuration?.locales?.get(0)?.language == "ru") "ru" else "en"
-    }
+    private fun currentLanguageKey(): String = resolveAppLanguageTag(
+        appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM,
+        appContext?.resources?.configuration?.locales?.get(0)?.language.orEmpty(),
+    )
 
     private fun languageCacheKey(titleId: String): String =
         "$titleId:${sourceLanguageKey(titleId)}"
@@ -488,46 +501,12 @@ class AnimeWatchRepository(
     private fun sourceLanguageKey(titleId: String): String =
         "${sourceForTitle(titleId).descriptor.id.value}:${currentLanguageKey()}"
 
-    private fun matchesPreferredPlayer(
-        candidatePlayerName: String?,
-        preferredPlayerName: String?,
-    ): Boolean {
-        if (preferredPlayerName.isNullOrBlank()) return false
-        val normalizedPreferred = preferredPlayerName.normalizePlayerName()
-        val normalizedCandidate = candidatePlayerName.normalizePlayerName()
-        return normalizedCandidate == normalizedPreferred ||
-            normalizedCandidate.contains(normalizedPreferred) ||
-            normalizedPreferred.contains(normalizedCandidate)
-    }
-
-    private fun matchesPreferredQuality(
-        candidateQuality: String?,
-        preferredQuality: String?,
-    ): Boolean {
-        return !preferredQuality.isNullOrBlank() &&
-            candidateQuality?.trim()?.equals(preferredQuality.trim(), ignoreCase = true) == true
-    }
-
-    private fun String?.containsPlayerToken(token: String): Boolean =
-        this.normalizePlayerName().contains(token)
-
-    private fun String?.normalizePlayerName(): String =
-        this.orEmpty().trim().lowercase()
-
     private fun String?.safeHost(): String {
         if (this.isNullOrBlank()) return "unknown"
         return runCatching { URI(this).host }
             .getOrNull()
             ?.takeIf(String::isNotBlank)
             ?: "unknown"
-    }
-
-    private fun Map<String, String>.safeHeaderNames(): String {
-        if (isEmpty()) return "[]"
-        return keys
-            .filter(String::isNotBlank)
-            .sorted()
-            .joinToString(prefix = "[", postfix = "]")
     }
 
     private fun appString(@androidx.annotation.StringRes resId: Int, vararg formatArgs: Any): String {
@@ -545,44 +524,11 @@ class AnimeWatchRepository(
         }
     }
 
-    private fun StreamType.toPlaybackType(): PlaybackStreamType {
-        return when (this) {
-            StreamType.HLS -> PlaybackStreamType.HLS
-            StreamType.MP4 -> PlaybackStreamType.MP4
-            StreamType.DASH -> PlaybackStreamType.DASH
-        }
-    }
-
-
-    private fun selectPlaybackSegments(
-        apiSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
-        extractedSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
-    ): List<org.akkirrai.beakokit.model.VideoSegment> {
-        val preferred = apiSegments.ifEmpty { extractedSegments }
-        return preferred
-            .filter { segment -> segment.endMs > segment.startMs }
-            .filter { segment -> segment.startMs >= 0L }
-            .filterNot { segment ->
-                segment.startMs == 0L && segment.type != org.akkirrai.beakokit.model.VideoSegmentType.UNKNOWN
-            }
-    }
-
     private fun VideoSegment.toPlaybackSegment(): PlaybackSegment = PlaybackSegment(
-        type = type.toPlaybackSegmentType(),
+        type = resolvePlaybackSegmentType(type.name),
         startMs = startMs,
         endMs = endMs,
     )
-
-    private fun VideoSegmentType.toPlaybackSegmentType(): PlaybackSegmentType = when (this) {
-        VideoSegmentType.OPENING -> PlaybackSegmentType.Opening
-        VideoSegmentType.ENDING -> PlaybackSegmentType.Ending
-        VideoSegmentType.UNKNOWN -> PlaybackSegmentType.Unknown
-    }
-
-    private fun Double.formatEpisodeNumber(): String {
-        val asInt = toInt()
-        return if (this == asInt.toDouble()) asInt.toString() else toString()
-    }
 
     private data class CachedWatchSources(
         val sources: List<WatchSource>,

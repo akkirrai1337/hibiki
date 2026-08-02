@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun WatchSourceRow(
@@ -23,7 +22,7 @@ fun WatchSourceRow(
     episodeSummary: String?,
     enabled: Boolean,
     horizontalPadding: Dp,
-    shape: RoundedCornerShape = RoundedCornerShape(0.dp),
+    shape: RoundedCornerShape = RoundedCornerShape(WatchSourceRowDefaultCornerRadius),
     onClick: () -> Unit,
 ) {
     Surface(
@@ -34,8 +33,8 @@ fun WatchSourceRow(
         shape = shape,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 15.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = WatchSourceRowVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(WatchSourceRowContentGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)

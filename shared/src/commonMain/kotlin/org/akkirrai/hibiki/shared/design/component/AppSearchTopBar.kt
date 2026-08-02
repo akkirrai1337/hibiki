@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
@@ -42,23 +41,23 @@ fun AppSearchTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(UiDimens.SearchBarHeight),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(UiDimens.SearchBarRowGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(UiDimens.SearchBarHeight - 2.dp)
-                .clip(RoundedCornerShape((UiDimens.SearchBarHeight - 2.dp) / 2))
+                .height(UiDimens.SearchBarInnerHeight)
+                .clip(RoundedCornerShape(UiDimens.SearchBarInnerHeight / 2))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(start = 18.dp, end = 6.dp),
+                .padding(start = UiDimens.SearchBarStartPadding, end = UiDimens.SearchBarEndPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(UiDimens.SearchBarContentGap),
         ) {
             Icon(
                 imageVector = searchIcon,
                 contentDescription = null,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(UiDimens.SearchBarIconSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Box(
@@ -88,17 +87,17 @@ fun AppSearchTopBar(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(UiDimens.SearchBarActionGap),
             ) {
                 if (showFilterButton) {
                     IconButton(
                         onClick = onFilterClick,
-                        modifier = Modifier.size(42.dp),
+                        modifier = Modifier.size(UiDimens.SearchBarActionButtonSize),
                     ) {
                         Icon(
                             imageVector = filterIcon,
                             contentDescription = filterContentDescription,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(UiDimens.SearchBarIconSize),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -106,12 +105,12 @@ fun AppSearchTopBar(
                 if (query.isNotEmpty()) {
                     IconButton(
                         onClick = onClear,
-                        modifier = Modifier.size(42.dp),
+                        modifier = Modifier.size(UiDimens.SearchBarActionButtonSize),
                     ) {
                         Icon(
                             imageVector = clearIcon,
                             contentDescription = clearContentDescription,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(UiDimens.SearchBarClearIconSize),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

@@ -20,14 +20,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppSettingsAboutCard(
     appName: String,
     versionName: String,
-    appIconContent: @Composable () -> Unit,
-    githubIconContent: @Composable () -> Unit,
+    appIconContent: @Composable (Modifier) -> Unit,
+    githubIconContent: @Composable (Modifier) -> Unit,
     onGitHubClick: () -> Unit,
 ) {
     val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -37,23 +36,23 @@ fun AppSettingsAboutCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(SettingsAboutCardCornerRadius))
             .background(background)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SettingsAboutCardPadding),
+        horizontalArrangement = Arrangement.spacedBy(SettingsAboutCardContentGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(SettingsAboutCardAppIconSize)
                 .clip(CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            appIconContent()
+            appIconContent(Modifier.size(SettingsAboutCardAppIconSize))
         }
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(SettingsAboutCardTextGap),
         ) {
             Text(
                 text = appName,
@@ -69,13 +68,13 @@ fun AppSettingsAboutCard(
         }
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(SettingsAboutCardActionSize)
                 .clip(CircleShape)
                 .background(Color.White)
                 .clickable(onClick = onGitHubClick),
             contentAlignment = Alignment.Center,
         ) {
-            githubIconContent()
+            githubIconContent(Modifier.size(SettingsAboutCardGithubIconSize))
         }
     }
 }

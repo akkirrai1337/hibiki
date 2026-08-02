@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -39,18 +38,18 @@ fun ProfileActivityBarChart(
     modifier: Modifier = Modifier,
 ) {
     val maxEpisodes = days.maxOfOrNull(ProfileActivityBarItem::episodeCount)?.coerceAtLeast(minScaleEpisodes) ?: minScaleEpisodes
-    LazyRow(state = listState, modifier = modifier.height(142.dp), horizontalArrangement = Arrangement.spacedBy(dayGap), verticalAlignment = Alignment.Bottom) {
+    LazyRow(state = listState, modifier = modifier.height(ProfileActivityBarChartHeight), horizontalArrangement = Arrangement.spacedBy(dayGap), verticalAlignment = Alignment.Bottom) {
         items(days, key = ProfileActivityBarItem::dateLabel) { day ->
-            val barHeight = if (day.episodeCount > 0) (18 + (66 * day.episodeCount / maxEpisodes)).dp else 10.dp
+            val barHeight = if (day.episodeCount > 0) (ProfileActivityBarBaseHeight.value.toInt() + (ProfileActivityBarScaleHeight.value.toInt() * day.episodeCount / maxEpisodes)).dp else ProfileActivityBarMinHeight
             Column(Modifier.width(dayWidth), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.height(114.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                Box(Modifier.height(ProfileActivityBarChartPlotHeight).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(day.episodeCount.toString(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(4.dp))
-                        Box(Modifier.width(18.dp).height(barHeight).clip(RoundedCornerShape(7.dp)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
+                        Spacer(Modifier.height(ProfileActivityBarChartValueBarGap))
+                        Box(Modifier.width(ProfileActivityBarWidth).height(barHeight).clip(RoundedCornerShape(ProfileActivityBarCornerRadius)).background(if (day.episodeCount > 0) activeColor else inactiveColor))
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(ProfileActivityBarChartLabelGap))
                 Text(day.dateLabel, Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f), maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
             }
         }

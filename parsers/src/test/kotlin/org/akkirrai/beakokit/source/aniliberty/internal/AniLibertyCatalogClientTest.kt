@@ -45,6 +45,7 @@ class AniLibertyCatalogClientTest {
         assertEquals("50", latestLimit)
         assertTrue(latest.synonyms.isEmpty())
         assertEquals("https://anilibria.top/optimized.webp", latest.posterUrl)
+        assertEquals("https://anilibria.top/poster.jpg", latest.posterFallbackUrl)
         assertEquals(3, source.weeklySchedule().single().dayOfWeek)
         client.close()
     }

@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun <T> AppLibraryCategoryChips(
@@ -32,8 +31,8 @@ fun <T> AppLibraryCategoryChips(
 ) {
     LazyRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(LibraryCategoryChipsItemGap),
+        contentPadding = PaddingValues(horizontal = LibraryCategoryChipsHorizontalPadding),
     ) {
         items(categories) { category ->
             val isSelected = category == selected
@@ -41,13 +40,13 @@ fun <T> AppLibraryCategoryChips(
             Surface(
                 modifier = Modifier,
                 onClick = { onSelected(category) },
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(LibraryCategoryChipCornerRadius),
                 color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
                 contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)),
+                border = BorderStroke(LibraryCategoryChipBorderWidth, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)),
             ) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon(category), null, Modifier.size(16.dp))
+                Row(Modifier.padding(horizontal = LibraryCategoryChipHorizontalPadding, vertical = LibraryCategoryChipVerticalPadding), horizontalArrangement = Arrangement.spacedBy(LibraryCategoryChipContentGap), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon(category), null, Modifier.size(LibraryCategoryChipIconSize))
                     Text(if (count > 0) "${label(category)} $count" else label(category), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }

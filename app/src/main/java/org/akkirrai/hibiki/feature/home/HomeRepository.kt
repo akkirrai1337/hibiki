@@ -21,7 +21,6 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.core.model.MockAnimeData
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
@@ -37,6 +36,15 @@ import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
+import org.akkirrai.hibiki.shared.home.resolveDisplayTypeLabel
+import org.akkirrai.hibiki.shared.home.formatEpisodesCountLabel
+import org.akkirrai.hibiki.shared.home.formatAnnouncementLabel
+import org.akkirrai.hibiki.shared.home.resolveTrendingOffset
+import org.akkirrai.hibiki.shared.settings.isEnglishAppLanguage
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
+import org.akkirrai.hibiki.shared.home.SearchSortAlias
+import org.akkirrai.hibiki.shared.home.resolveSearchSortAlias
+import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
 
 class HomeRepository(
     context: Context,
@@ -207,7 +215,7 @@ class HomeRepository(
     private suspend fun loadSourceTrending(selectionSeed: Long): List<Anime> {
         val source = currentSource()
         val trendingOffset = if (source.source.catalogCapabilities.supports(AnimeSearchSort.RATING)) {
-            trendingOffsetForSeed(selectionSeed)
+            resolveTrendingOffset(selectionSeed, HOME_TRENDING_MAX_OFFSET_EXCLUSIVE)
         } else {
             0
         }
@@ -277,22 +285,22 @@ class HomeRepository(
 
     private fun toHomeAnime(title: AnimeTitle): Anime {
         val subtitle = buildList {
-            title.type?.toDisplayType()?.let(::add)
+            title.type?.let(::resolveDisplayTypeLabel)?.let(::add)
             title.year?.toString()?.let(::add)
         }.joinToString(" · ")
 
         val status = title.releaseStatus.localizedDisplayName(preferEnglish())
-        val isAnnouncement = status.isAnnouncementStatus()
+        val isAnnouncement = isAnnouncementStatus(status)
         return Anime(
             id = title.id,
             title = displayTitle(title),
             subtitle = subtitle,
             episodesLabel = if (isAnnouncement) {
-                announcementLabel()
+                formatAnnouncementLabel(preferEnglish())
             } else {
                 (title.availableEpisodeCount
                     ?: title.episodeCount.takeIf { title.releaseStatus == AnimeReleaseStatus.RELEASED })
-                    ?.let(::episodesCountLabel)
+                    ?.let { count -> formatEpisodesCountLabel(count, preferEnglish()) }
                     .orEmpty()
             },
             status = status,
@@ -308,71 +316,33 @@ class HomeRepository(
         )
     }
 
-    private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
-    }
-
-    private fun String.toDisplayType(): String {
-        return when (uppercase()) {
-            "TV" -> "TV"
-            "TV_SHORT" -> "TV Short"
-            "OVA" -> "OVA"
-            "ONA" -> "ONA"
-            "MOVIE" -> "Movie"
-            "SHORT_MOVIE", "SHORT-MOVIE" -> "Short Movie"
-            "SPECIAL" -> "Special"
-            else -> replace("_", " ").replace("-", " ")
-                .replaceFirstChar { it.uppercase() }
+    private fun String.toSearchSort(): AnimeSearchSort = when (resolveSearchSortAlias(this)) {
+        SearchSortAlias.RELEVANCE -> AnimeSearchSort.RELEVANCE
+        SearchSortAlias.RATING -> AnimeSearchSort.RATING
+        SearchSortAlias.TITLE -> AnimeSearchSort.TITLE
+        SearchSortAlias.YEAR -> AnimeSearchSort.YEAR
+        SearchSortAlias.VOTES -> AnimeSearchSort.VOTES
+        SearchSortAlias.VIEWS -> AnimeSearchSort.VIEWS
+        SearchSortAlias.COMMENTS -> AnimeSearchSort.COMMENTS
         }
-    }
-
-    private fun String.toSearchSort(): AnimeSearchSort {
-        return when (this) {
-            "top" -> AnimeSearchSort.RATING
-            "title" -> AnimeSearchSort.TITLE
-            "year" -> AnimeSearchSort.YEAR
-            "votes" -> AnimeSearchSort.VOTES
-            "views" -> AnimeSearchSort.VIEWS
-            "comments" -> AnimeSearchSort.COMMENTS
-            else -> AnimeSearchSort.RELEVANCE
-        }
-    }
 
     private fun preferEnglish(): Boolean {
-        return when (appPreferences.state.value.languageMode) {
-            LanguageMode.ENGLISH -> true
-            LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> appContext.resources.configuration.locales[0]?.language != "ru"
-        }
+        return isEnglishAppLanguage(
+            appPreferences.state.value.languageMode,
+            appContext.resources.configuration.locales[0]?.language.orEmpty(),
+        )
     }
 
-    private fun sourceLanguage(): String = if (preferEnglish()) "en" else "ru"
+    private fun sourceLanguage(): String = resolveAppLanguageTag(
+        appPreferences.state.value.languageMode,
+        appContext.resources.configuration.locales[0]?.language.orEmpty(),
+    )
 
     private fun displayTitle(title: AnimeTitle): String = title.displayName
 
     private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 
     private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
-
-    private fun isRussianLocale(): Boolean = !preferEnglish()
-
-    private fun announcementLabel(): String = if (isRussianLocale()) "анонс" else "announcement"
-
-    private fun episodesCountLabel(count: Int): String {
-        return if (isRussianLocale()) {
-            "$count серий"
-        } else {
-            "$count episodes"
-        }
-    }
-
-    private fun trendingOffsetForSeed(selectionSeed: Long): Int {
-        return Random(selectionSeed).nextInt(
-            from = 0,
-            until = HOME_TRENDING_MAX_OFFSET_EXCLUSIVE,
-        )
-    }
 
     private companion object {
         const val TAG = "HomeRepository"

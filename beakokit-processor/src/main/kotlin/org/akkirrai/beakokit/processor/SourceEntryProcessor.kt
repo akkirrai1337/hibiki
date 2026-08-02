@@ -15,6 +15,7 @@ import com.google.devtools.ksp.validate
 internal class SourceEntryProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
+    private val excludeCommonSourceEntries: Boolean,
 ) : SymbolProcessor {
     private var generated = false
 
@@ -24,9 +25,17 @@ internal class SourceEntryProcessor(
         val deferred = symbols.filterNot(KSAnnotated::validate)
         if (deferred.isNotEmpty()) return deferred
 
-        val sources = symbols.filterIsInstance<KSClassDeclaration>()
-        if (sources.size != symbols.size) {
-            symbols.filterNot { it is KSClassDeclaration }
+        val processableSymbols = symbols.filterNot { symbol ->
+            excludeCommonSourceEntries &&
+                (symbol as? KSClassDeclaration)
+                    ?.containingFile
+                    ?.filePath
+                    ?.replace('\\', '/')
+                    ?.contains("/src/commonMain/") == true
+        }
+        val sources = processableSymbols.filterIsInstance<KSClassDeclaration>()
+        if (sources.size != processableSymbols.size) {
+            processableSymbols.filterNot { it is KSClassDeclaration }
                 .forEach { logger.error("@SourceEntry can only annotate classes", it) }
             return emptyList()
         }
@@ -110,6 +119,7 @@ internal class SourceEntryProcessor(
                 writer.appendLine("            org.akkirrai.beakokit.api.SourceCatalogEntry(")
                 writer.appendLine("                info = $type.INFO,")
                 writer.appendLine("                factory = org.akkirrai.beakokit.api.SourceFactory { context -> $type(context) },")
+                writer.appendLine("                registrationOrder = ${source.sourceOrder()},")
                 writer.appendLine("            ),")
             }
             writer.appendLine("        ),")

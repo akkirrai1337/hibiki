@@ -26,20 +26,14 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_MIN_QUERY_LENGTH
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_DEBOUNCE_MS
+import org.akkirrai.hibiki.shared.source.SOURCE_SEARCH_RESULTS_PER_SOURCE
+import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
+import org.akkirrai.hibiki.shared.source.shouldRestrictSourceSearchToRussian
 
-data class SourceSearchSection(
-    val source: AnimeSourceDescriptor,
-    val items: List<Anime> = emptyList(),
-    val error: Throwable? = null,
-    val isLoading: Boolean = false,
-)
-
-data class SourcesSearchUiState(
-    val query: String = "",
-    val sections: List<SourceSearchSection> = emptyList(),
-    val isSearching: Boolean = false,
-    val hasSearched: Boolean = false,
-)
+typealias SourceSearchSection = SourceSearchSectionState<Anime>
 
 class SourcesSearchViewModel(
     context: Context,
@@ -63,11 +57,11 @@ class SourcesSearchViewModel(
                 hasSearched = false,
             )
         }
-        if (query.trim().length < MIN_QUERY_LENGTH) return
+        if (query.trim().length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
 
         val generation = searchGeneration
         searchJob = viewModelScope.launch(Dispatchers.IO) {
-            delay(SEARCH_DEBOUNCE_MS)
+            delay(SOURCE_SEARCH_DEBOUNCE_MS)
             search(query, generation)
         }
     }
@@ -76,7 +70,7 @@ class SourcesSearchViewModel(
 
     fun retry(sourceId: SourceId) {
         val query = _uiState.value.query.trim()
-        if (query.length < MIN_QUERY_LENGTH) return
+        if (query.length < SOURCE_SEARCH_MIN_QUERY_LENGTH) return
         searchJob?.cancel()
         searchGeneration += 1
         val generation = searchGeneration
@@ -90,7 +84,13 @@ class SourcesSearchViewModel(
         if (generation != searchGeneration) return
         _uiState.update {
             it.copy(
-                sections = sources.map { source -> SourceSearchSection(source, isLoading = true) },
+                sections = sources.map { source ->
+                    SourceSearchSection(
+                        sourceId = source.id.value,
+                        sourceName = source.name,
+                        isLoading = true,
+                    )
+                },
                 isSearching = true,
                 hasSearched = true,
             )
@@ -115,10 +115,10 @@ class SourcesSearchViewModel(
                             _uiState.update { state ->
                                 state.copy(
                                     sections = state.sections.map { section ->
-                                        if (section.source.id != source.id) section
+                                        if (section.sourceId != source.id.value) section
                                         else result.fold(
-                                            onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), isLoading = false) },
-                                            onFailure = { error -> section.copy(error = error, isLoading = false) },
+                        onSuccess = { items -> section.copy(items = items.take(SOURCE_SEARCH_RESULTS_PER_SOURCE), isLoading = false) },
+                                            onFailure = { section.copy(hasError = true, isLoading = false) },
                                         )
                                     },
                                 )
@@ -145,7 +145,7 @@ class SourcesSearchViewModel(
         if (generation != searchGeneration) return
         _uiState.update { state ->
             state.copy(sections = state.sections.map { section ->
-                if (section.source.id == sourceId) section.copy(error = null, isLoading = true) else section
+                if (section.sourceId == sourceId.value) section.copy(hasError = false, isLoading = true) else section
             })
         }
         searchSlots.withPermit {
@@ -158,10 +158,10 @@ class SourcesSearchViewModel(
             if (generation != searchGeneration) return@withPermit
             _uiState.update { state ->
                 state.copy(sections = state.sections.map { section ->
-                    if (section.source.id != sourceId) section
+                    if (section.sourceId != sourceId.value) section
                     else result.fold(
-                        onSuccess = { items -> section.copy(items = items.take(RESULTS_PER_SOURCE), error = null, isLoading = false) },
-                        onFailure = { error -> section.copy(error = error, isLoading = false) },
+                        onSuccess = { items -> section.copy(items = items.take(SOURCE_SEARCH_RESULTS_PER_SOURCE), hasError = false, isLoading = false) },
+                        onFailure = { section.copy(hasError = true, isLoading = false) },
                     )
                 })
             }
@@ -176,7 +176,7 @@ class SourcesSearchViewModel(
 
     private fun request(query: String): AnimeSearchRequest = AnimeSearchRequest(
             query = query,
-            limit = RESULTS_PER_SOURCE,
+            limit = SOURCE_SEARCH_RESULTS_PER_SOURCE,
             offset = 0,
         )
 
@@ -186,7 +186,7 @@ class SourcesSearchViewModel(
         }
 
     private fun List<AnimeSourceDescriptor>.filterForQuery(query: String): List<AnimeSourceDescriptor> {
-        if (!query.any { it in '\u0400'..'\u052F' }) return this
+        if (!shouldRestrictSourceSearchToRussian(query)) return this
         return filter { it.language == SourceLanguage.RUSSIAN }
     }
 
@@ -198,8 +198,5 @@ class SourcesSearchViewModel(
 
     private companion object {
         const val TAG = "SourcesSearch"
-        const val MIN_QUERY_LENGTH = 3
-        const val SEARCH_DEBOUNCE_MS = 400L
-        const val RESULTS_PER_SOURCE = 12
     }
 }

@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.shared.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,9 +16,9 @@ import androidx.compose.ui.unit.dp
 fun ProfileRecentPosterFrame(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .width(50.dp)
-            .height(68.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .width(ProfileRecentPosterFrameWidth)
+            .height(ProfileRecentPosterFrameHeight)
+            .clip(RoundedCornerShape(ProfileRecentPosterFrameCornerRadius))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)),
         contentAlignment = Alignment.Center,
     ) {
