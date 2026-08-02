@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -68,6 +69,42 @@ class ProtocolBackedExternalSourceRuntimeTest {
         )
 
         assertEquals(expected, runtime.details("title-1"))
+    }
+
+    @Test
+    fun invalidDecodedPayloadBecomesParseSourceException() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("items", "not-an-array") },
+                )
+            },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-3" },
+        )
+
+        val exception = assertFailsWith<SourceException> {
+            runtime.search(AnimeSearchRequest(query = "broken"))
+        }
+
+        assertEquals(SourceErrorKind.PARSE, exception.kind)
+    }
+
+    @Test
+    fun cancellationIsNotConvertedToParseFailure() = runBlocking {
+        val cancellation = CancellationException("cancelled by caller")
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { throw cancellation },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-4" },
+        )
+
+        val thrown = assertFailsWith<CancellationException> {
+            runtime.details("title-1")
+        }
+
+        assertEquals(cancellation, thrown)
     }
 
     private fun wireTitle(id: String) = AnimeTitle(

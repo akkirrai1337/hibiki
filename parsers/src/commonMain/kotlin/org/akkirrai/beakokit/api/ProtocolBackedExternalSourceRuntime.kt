@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 
@@ -51,6 +52,18 @@ class ProtocolBackedExternalSourceRuntime(
                 kind = SourceErrorKind.PARSE,
             )
         }
-        return decode(response.requirePayload())
+        return try {
+            decode(response.requirePayload())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Throwable) {
+            throw SourceException(
+                message = "External source runtime returned an invalid payload",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+            )
+        }
     }
 }
