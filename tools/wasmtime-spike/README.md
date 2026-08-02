@@ -16,6 +16,9 @@ through JNI with a real JSON request and checks that a JSON response returns.
 Native iOS hosts can use `beakokit_runtime_protocol_call` from the C header:
 the caller provides UTF-8 request and response buffers, and the function
 returns an explicit status plus the required response length.
+For an installed package, `beakokit_runtime_protocol_call_with_module` accepts
+the verified module bytes separately and applies the same request/response
+limits and status codes.
 
 It is not part of the application build and must not replace the existing
 built-in source path.

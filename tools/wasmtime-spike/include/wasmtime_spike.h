@@ -15,8 +15,20 @@ int beakokit_runtime_probe(void);
 #define BEAKOKIT_PROTOCOL_CALL_INVALID_REQUEST -2
 #define BEAKOKIT_PROTOCOL_CALL_BUFFER_TOO_SMALL -3
 #define BEAKOKIT_PROTOCOL_CALL_RUNTIME_FAILURE -4
+#define BEAKOKIT_PROTOCOL_MAX_REQUEST_BYTES (2u * 1024u * 1024u)
+#define BEAKOKIT_PROTOCOL_MAX_MODULE_BYTES (16u * 1024u * 1024u)
 
 int32_t beakokit_runtime_protocol_call(
+    const uint8_t* request_ptr,
+    size_t request_len,
+    uint8_t* response_ptr,
+    size_t response_capacity,
+    size_t* response_len);
+
+// Executes one already verified Wasm module with the same protocol contract.
+int32_t beakokit_runtime_protocol_call_with_module(
+    const uint8_t* module_ptr,
+    size_t module_len,
     const uint8_t* request_ptr,
     size_t request_len,
     uint8_t* response_ptr,
