@@ -7,6 +7,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertNull
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -237,6 +238,126 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun installedPackage_is_available_through_the_external_registry() = runTest {
+        val sourceId = SourceId("external-source")
+        val repositoryManifest = manifest(sourceId).copy(packageVersion = "2.0.0")
+        val store = InMemoryStore(
+            SourcePackageActivationState(
+                active = InstalledSourcePackage(sourceId, "1.0.0", "package/old"),
+            ),
+        )
+        val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
+        val repositoryCoordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(object : SourceRepositoryStore {
+                    override fun load() = listOf(endpoint)
+
+                    override fun persistAtomically(
+                        repositories: List<SourceRepositoryEndpoint>,
+                    ) = Unit
+                }),
+                loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
+                    SourceRepositoryResponse(
+                        statusCode = 200,
+                        body = SourceRepositoryIndexCodec.encode(
+                            SourceRepositoryIndex(
+                                apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                                sources = listOf(repositoryManifest),
+                            ),
+                        ),
+                    )
+                }),
+            ),
+        )
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = repositoryCoordinator,
+            activePackageLoaderFactory = { requestedId ->
+                ActiveExternalSourcePackageLoader(
+                    activationRepository = SourcePackageActivationRepository(requestedId, store),
+                    manifestReader = SourcePackageManifestReader { packagePath ->
+                        repositoryManifest.copy(
+                            packageVersion = if (packagePath == "package/old") "1.0.0" else "2.0.0",
+                        )
+                    },
+                )
+            },
+            packageInstallationFactory = SourcePackageInstallationCoordinatorFactory(
+                downloadService = org.akkirrai.beakokit.api.SourcePackageDownloadService(
+                    transport = SourcePackageTransport { _, _ ->
+                        DownloadedSourcePackage(byteArrayOf(1))
+                    },
+                    artifactVerifier = SourcePackageArtifactVerifier(
+                        validator = SourcePackageValidator(clientVersion = 1),
+                        sha256 = { "a".repeat(64) },
+                    ),
+                ),
+                extractor = SourcePackageExtractor { _, _, manifest ->
+                    ExtractedSourcePackage(
+                        manifest = manifest,
+                        entries = listOf(
+                            SourcePackageEntry("manifest.json", 0),
+                            SourcePackageEntry(manifest.entrypoint, 1),
+                        ),
+                    )
+                },
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationStoreFactory = { store },
+            ),
+            stagingPathFactory = { "package/new" },
+            activationRepositoryFactory = { requestedId ->
+                SourcePackageActivationRepository(requestedId, store)
+            },
+            closeResources = {},
+        )
+        val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
+            platform = platform,
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> =
+                        listOf(title("search-result"))
+
+                    override suspend fun details(id: String): AnimeTitle = title("details-result")
+                }
+            },
+        )
+
+        runtimeCoordinator.refresh()
+        val previousRegistry = assertNotNull(runtimeCoordinator.snapshot.value.registry)
+        val initializationStarted = CompletableDeferred<Unit>()
+        val continueInitialization = CompletableDeferred<Unit>()
+        val installation = async {
+            runtimeCoordinator.installAvailablePackage(sourceId) {
+                initializationStarted.complete(Unit)
+                continueInitialization.await()
+            }
+        }
+        initializationStarted.await()
+        assertSame(previousRegistry, runtimeCoordinator.snapshot.value.registry)
+        continueInitialization.complete(Unit)
+        installation.await()
+
+        val client = HttpClient()
+        try {
+            val source = runtimeCoordinator.snapshot.value.registry!!.create(
+                sourceId,
+                DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                ),
+            )
+
+            assertEquals("2.0.0", store.state.active?.packageVersion)
+            assertEquals("1.0.0", store.state.previous?.packageVersion)
+            assertEquals("search-result", source.search("frieren").single().id)
+            assertEquals("details-result", source.getById("title-1").id)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun failedRegistryRebuildRollsBackAnAlreadyActiveUpdate() = runTest {
         val sourceId = SourceId("external-source")
         val oldPackage = InstalledSourcePackage(sourceId, "1.0.0", "package/old")
@@ -318,10 +439,12 @@ class ExternalSourceRuntimeCoordinatorTest {
         )
 
         runtimeCoordinator.refresh()
+        val previousRegistry = assertNotNull(runtimeCoordinator.snapshot.value.registry)
 
         assertFailsWith<IllegalStateException> {
             runtimeCoordinator.installAvailablePackage(sourceId) {}
         }
+        assertSame(previousRegistry, runtimeCoordinator.snapshot.value.registry)
         assertEquals(oldPackage, store.state.active)
         assertEquals(null, store.state.previous)
     }
