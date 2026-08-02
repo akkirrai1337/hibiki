@@ -31,6 +31,9 @@ class JvmDownloadedSourcePackageExtractor(
                 entries = entries(stagingDirectory),
                 discard = { deleteRecursively(stagingDirectory) },
             )
+        } catch (error: Throwable) {
+            deleteRecursively(stagingDirectory)
+            throw error
         } finally {
             Files.deleteIfExists(archive)
         }
