@@ -51,8 +51,20 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     let guest = format!(
         r#"
             (module
-                (memory (export "memory") 1)
+                (memory (export "memory") 2)
+                (global $heap (mut i32) (i32.const 4096))
                 (data (i32.const 0) "{}")
+                (func (export "beakokit_reset")
+                    i32.const 4096
+                    global.set $heap
+                )
+                (func (export "beakokit_alloc") (param i32) (result i32)
+                    global.get $heap
+                    global.get $heap
+                    local.get 0
+                    i32.add
+                    global.set $heap
+                )
                 (func (export "beakokit_call") (param i32 i32) (result i64)
                     i64.const {}
                 )
@@ -69,10 +81,14 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     let memory = instance
         .get_memory(&mut store, "memory")
         .ok_or("guest memory export is missing")?;
+    let reset = instance.get_typed_func::<(), ()>(&mut store, "beakokit_reset")?;
+    let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
     let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
+    reset.call(&mut store, ())?;
     let request_bytes = serde_json::to_vec(&request)?;
-    memory.write(&mut store, 4096, &request_bytes)?;
-    let packed = call.call(&mut store, (4096, request_bytes.len() as i32))? as u64;
+    let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    memory.write(&mut store, request_ptr as usize, &request_bytes)?;
+    let packed = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
     let response_ptr = (packed >> 32) as usize;
     let response_len = (packed & u64::from(u32::MAX)) as usize;
     let memory_size = memory.data(&store).len();
@@ -83,7 +99,7 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     memory.read(&store, response_ptr, &mut returned)?;
     let decoded: protocol::Response = serde_json::from_slice(&returned)?;
     decoded.validate()?;
-    println!("guest ABI: JSON call returned {response_len} bytes");
+    println!("guest ABI: allocated request at {request_ptr}, returned {response_len} bytes");
 
     Ok(())
 }

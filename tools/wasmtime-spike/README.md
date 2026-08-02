@@ -3,9 +3,10 @@
 This is an isolated Windows-only experiment for the external-source runtime.
 It verifies a host call, guest runtime errors, and epoch-based cancellation.
 The library also exports `beakokit_runtime_probe` as a minimal C ABI entry point.
-The probe also verifies the guest call ABI: the host writes a versioned JSON
-request into linear memory and the guest returns a packed response pointer and
-length from `beakokit_call(ptr, len)`.
+The probe also verifies the guest call ABI: the host resets the guest arena,
+allocates request memory through `beakokit_alloc(len)`, writes a versioned JSON
+request, and calls `beakokit_call(ptr, len)`. The guest returns a packed
+response pointer and length. `beakokit_reset()` starts the next call arena.
 
 It is not part of the application build and must not replace the existing
 built-in source path.
