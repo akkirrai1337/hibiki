@@ -30,6 +30,19 @@ fun externalSourceRegistry(
     registrations: Iterable<ExternalSourceRegistration>,
 ): ExternalSourceRegistry = ExternalSourceRegistry(externalSourceCatalog(registrations))
 
+fun activeExternalSourceRegistry(
+    packages: Iterable<ActiveExternalSourcePackage>,
+    catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
+    runtimeFactory: ExternalSourceRuntimeFactory,
+): ExternalSourceRegistry = externalSourceRegistry(
+    packages.map { sourcePackage ->
+        sourcePackage.toExternalSourceRegistration(
+            catalogCapabilities = catalogCapabilities(sourcePackage.manifest),
+            runtimeFactory = runtimeFactory,
+        )
+    },
+)
+
 /** A validated manifest paired with the package version selected for execution. */
 data class ActiveExternalSourcePackage(
     val manifest: SourceManifest,

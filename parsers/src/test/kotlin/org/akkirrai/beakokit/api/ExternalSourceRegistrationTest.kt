@@ -67,6 +67,31 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun activePackagesBuildARegistryWithoutStartingRuntime() {
+        var runtimeCreated = false
+        val registry = activeExternalSourceRegistry(
+            packages = listOf(
+                ActiveExternalSourcePackage(
+                    manifest = manifest(),
+                    installed = InstalledSourcePackage(
+                        sourceId = SourceId("external-test"),
+                        packageVersion = "1.0.0",
+                        packagePath = "sources/external-test/1.0.0",
+                    ),
+                ),
+            ),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                runtimeCreated = true
+                error("Runtime must be lazy")
+            },
+        )
+
+        assertEquals(listOf(SourceId("external-test")), registry.sources.map(SourceInfo::id))
+        assertEquals(false, runtimeCreated)
+    }
+
+    @Test
     fun activePackagePassesItsPathToRuntimeFactory() {
         var receivedPath: String? = null
         val activePackage = ActiveExternalSourcePackage(
