@@ -3,7 +3,7 @@ use std::ptr::null_mut;
 use std::thread;
 use std::time::Duration;
 
-use jni::objects::{JClass, JString};
+use jni::objects::{JByteArray, JClass, JString};
 use jni::JNIEnv;
 use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
 
@@ -453,12 +453,61 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
         .unwrap_or(null_mut())
 }
 
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_protocolModuleProbe(
+    mut env: JNIEnv,
+    _class: JClass,
+    module: JByteArray,
+    request: JString,
+) -> jni::sys::jstring {
+    let response = match protocol_response_from_jni_with_module(&mut env, module, request) {
+        Ok(response) => response,
+        Err(error) => serde_json::json!({
+            "requestId": "jni-module-error",
+            "payload": null,
+            "errorCode": "RUNTIME_FAILURE",
+            "errorMessage": error.to_string(),
+            "protocolVersion": protocol::PROTOCOL_VERSION
+        })
+        .to_string(),
+    };
+    env.new_string(response)
+        .map(|value| value.into_raw())
+        .unwrap_or(null_mut())
+}
+
 fn protocol_response_from_jni(
     env: &mut JNIEnv,
     request: JString,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let request: String = env.get_string(&request)?.into();
     run_protocol_host_call_request(&request)
+}
+
+fn protocol_response_from_jni_with_module(
+    env: &mut JNIEnv,
+    module: JByteArray,
+    request: JString,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let module_len = env.get_array_length(&module)? as usize;
+    if module_len > PROTOCOL_MAX_MODULE_BYTES {
+        return Err("caller-supplied module exceeds the native limit".into());
+    }
+    let mut signed_bytes = vec![0_i8; module_len];
+    env.get_byte_array_region(&module, 0, &mut signed_bytes)?;
+    let module_bytes: Vec<u8> = signed_bytes.into_iter().map(|byte| byte as u8).collect();
+    let module_bytes = if module_bytes
+        .iter()
+        .copied()
+        .find(|byte| !byte.is_ascii_whitespace())
+        == Some(b'(')
+    {
+        wat::parse_bytes(&module_bytes)?.into_owned()
+    } else {
+        module_bytes
+    };
+    let request: String = env.get_string(&request)?.into();
+    run_protocol_host_call_request_with_module(&request, &module_bytes)
 }
 
 fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {
