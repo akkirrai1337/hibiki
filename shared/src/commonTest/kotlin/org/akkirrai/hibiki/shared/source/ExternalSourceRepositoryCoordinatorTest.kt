@@ -74,6 +74,28 @@ class ExternalSourceRepositoryCoordinatorTest {
         assertFalse(overlapped)
     }
 
+    @Test
+    fun repositoryManagementIsSeparateFromTheLoadedSnapshot() = runTest {
+        val store = FakeStore()
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(store),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { _, _ ->
+                        error("Repository loading is not part of this test")
+                    },
+                ),
+            ),
+        )
+        val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
+
+        assertEquals(emptyList(), coordinator.repositories())
+        assertEquals(listOf(endpoint), coordinator.addRepository(endpoint))
+        assertEquals(listOf(endpoint), coordinator.addRepository(endpoint))
+        assertEquals(emptyList(), coordinator.removeRepository(endpoint.url))
+        assertEquals(emptyList(), coordinator.snapshot.value.loaded)
+    }
+
     private fun index() = org.akkirrai.beakokit.api.SourceRepositoryIndex(
         apiVersion = org.akkirrai.beakokit.api.SourceRepositoryIndex.CURRENT_API_VERSION,
         sources = listOf(
@@ -99,10 +121,12 @@ class ExternalSourceRepositoryCoordinatorTest {
     )
 
     private class FakeStore(
-        private val endpoints: List<SourceRepositoryEndpoint>,
+        private var endpoints: List<SourceRepositoryEndpoint> = emptyList(),
     ) : SourceRepositoryStore {
         override fun load(): List<SourceRepositoryEndpoint> = endpoints
 
-        override fun persistAtomically(repositories: List<SourceRepositoryEndpoint>) = Unit
+        override fun persistAtomically(repositories: List<SourceRepositoryEndpoint>) {
+            endpoints = repositories
+        }
     }
 }

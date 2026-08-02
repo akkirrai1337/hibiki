@@ -22,6 +22,14 @@ class SourceRepositoryCatalogLoader(
     private val catalog: SourceRepositoryCatalog,
     private val loader: SourceRepositoryLoader,
 ) {
+    fun repositories(): List<SourceRepositoryEndpoint> = catalog.load()
+
+    fun addRepository(endpoint: SourceRepositoryEndpoint): List<SourceRepositoryEndpoint> =
+        catalog.add(endpoint)
+
+    fun removeRepository(url: String): List<SourceRepositoryEndpoint> =
+        catalog.remove(url)
+
     suspend fun loadAll(
         clientVersion: Int,
         supportedSourceApiVersion: Int = SourceApi.VERSION,

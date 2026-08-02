@@ -10,6 +10,7 @@ import org.akkirrai.beakokit.api.SourceClientVersion
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
+import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
 
 /**
@@ -30,6 +31,17 @@ class ExternalSourceRepositoryCoordinator(
 
     /** Latest repository result; remains separate from the active built-in source registry. */
     val snapshot: StateFlow<SourceRepositoryLoadSnapshot> = snapshotState.asStateFlow()
+
+    /** Returns the user-configured repository endpoints without loading their indexes. */
+    fun repositories(): List<SourceRepositoryEndpoint> = catalogLoader.repositories()
+
+    /** Adds one repository endpoint; duplicate URLs remain idempotent. */
+    fun addRepository(endpoint: SourceRepositoryEndpoint): List<SourceRepositoryEndpoint> =
+        catalogLoader.addRepository(endpoint)
+
+    /** Removes one repository endpoint without changing the last loaded snapshot. */
+    fun removeRepository(url: String): List<SourceRepositoryEndpoint> =
+        catalogLoader.removeRepository(url)
 
     /** Source IDs advertised by successfully loaded repositories, without duplicates. */
     fun availableSourceIds(): List<SourceId> = snapshot.value.loaded
