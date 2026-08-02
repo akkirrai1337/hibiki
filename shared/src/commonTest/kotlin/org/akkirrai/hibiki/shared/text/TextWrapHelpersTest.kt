@@ -9,8 +9,12 @@ class TextWrapHelpersTest {
         assertEquals("Player\u00A0Settings", "Player Settings".preventTrailingOrphanWrap())
         assertEquals("Необъятный океан\u00A02", "Необъятный океан 2".preventTrailingOrphanWrap())
         assertEquals("Single", "Single".preventTrailingOrphanWrap())
+    }
+
+    @Test
+    fun attachesSingleCharacterWordToTheFollowingWord() {
         assertEquals(
-            "Унесенные призраками\u00A0и\u00A0ведьма",
+            "Унесенные призраками и\u00A0ведьма",
             "Унесенные призраками и ведьма".preventTrailingOrphanWrap(),
         )
     }
