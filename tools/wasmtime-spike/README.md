@@ -42,6 +42,13 @@ The Android library is emitted as
 symbol can be checked with the NDK `llvm-nm` tool before adding a Kotlin/JNI
 or Swift bridge.
 
+To rebuild the x86_64 Android harness and refresh its JNI library in one step
+on Windows, run:
+
+```powershell
+.\build-android-harness.ps1
+```
+
 An independent Android harness under `android-harness/` packages the x86_64
 library, installs a tiny Java activity on an emulator, and displays
 `Wasmtime JNI probe: OK` when the native probe returns success. It is kept
