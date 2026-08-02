@@ -12,6 +12,9 @@ class JvmSourcePackageManifestReader(
 ) : SourcePackageManifestReader {
     init {
         require(maxManifestBytes > 0) { "Maximum manifest size must be positive" }
+        require(maxManifestBytes < Int.MAX_VALUE) {
+            "Maximum manifest size must fit in a platform byte array"
+        }
     }
 
     override fun read(packagePath: String): SourceManifest {
@@ -28,8 +31,17 @@ class JvmSourcePackageManifestReader(
             )
         }
         return try {
-            json.decodeFromString(Files.readString(manifestFile))
+            val bytes = Files.newInputStream(manifestFile).use { input ->
+                input.readNBytes((maxManifestBytes + 1).toInt())
+            }
+            if (bytes.size.toLong() > maxManifestBytes) {
+                throw SourcePackageStateException(
+                    "Installed source package manifest exceeds $maxManifestBytes bytes: $manifestFile",
+                )
+            }
+            json.decodeFromString(bytes.decodeToString())
         } catch (error: Exception) {
+            if (error is SourcePackageStateException) throw error
             throw SourcePackageStateException(
                 "Installed source package manifest is invalid: $manifestFile",
                 error,
