@@ -107,7 +107,8 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     let mut returned = vec![0; response_len];
     memory.read(&store, response_ptr, &mut returned)?;
     let decoded: protocol::Response = serde_json::from_slice(&returned)?;
-    decoded.validate()?;
+    let request = protocol::Request::from_value(&request)?;
+    decoded.validate_for_request(&request)?;
     println!("guest ABI: allocated request at {request_ptr}, returned {response_len} bytes");
 
     Ok(())
@@ -201,7 +202,7 @@ fn run_protocol_host_call_request(
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
             let request = protocol::Request::from_value(&request_value)
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
-            let payload = match request.operation {
+            let payload = match &request.operation {
                 protocol::Operation::Search => serde_json::json!({ "items": [] }),
                 protocol::Operation::Details => sample_title_payload(),
             };
@@ -230,7 +231,8 @@ fn run_protocol_host_call_request(
     let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
     let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
     reset.call(&mut store, ())?;
-    let request: serde_json::Value = serde_json::from_str(request_json)?;
+    let request_value: serde_json::Value = serde_json::from_str(request_json)?;
+    let request = protocol::Request::from_value(&request_value)?;
     let request_bytes = serde_json::to_vec(&request)?;
     let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
     memory.write(&mut store, request_ptr as usize, &request_bytes)?;
@@ -240,7 +242,7 @@ fn run_protocol_host_call_request(
     let mut response_bytes = vec![0; response_len];
     memory.read(&store, response_ptr, &mut response_bytes)?;
     let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
-    response.validate()?;
+    response.validate_for_request(&request)?;
     Ok(String::from_utf8(response_bytes)?)
 }
 

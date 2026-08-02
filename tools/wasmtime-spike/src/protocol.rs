@@ -94,6 +94,20 @@ impl Response {
         }
         Ok(())
     }
+
+    pub fn validate_for_request(&self, request: &Request) -> Result<(), &'static str> {
+        self.validate()?;
+        if self.request_id != request.request_id {
+            return Err("response request ID does not match request");
+        }
+        if let Some(payload) = &self.payload {
+            match &request.operation {
+                Operation::Search => validate_search_response_payload(payload)?,
+                Operation::Details => validate_title_payload(payload)?,
+            }
+        }
+        Ok(())
+    }
 }
 
 pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
@@ -118,6 +132,20 @@ pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
 pub fn validate_details_payload(payload: &Value) -> Result<(), &'static str> {
     let object = payload.as_object().ok_or("payload must be a JSON object")?;
     required_string(object, "id")
+}
+
+pub fn validate_search_response_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload
+        .as_object()
+        .ok_or("search response payload must be a JSON object")?;
+    let items = object
+        .get("items")
+        .and_then(Value::as_array)
+        .ok_or("search response items must be an array")?;
+    for item in items {
+        validate_title_payload(item)?;
+    }
+    Ok(())
 }
 
 pub fn validate_title_payload(payload: &Value) -> Result<(), &'static str> {
@@ -370,6 +398,57 @@ mod tests {
             Ok(())
         );
         assert!(validate_details_payload(&serde_json::json!({ "query": "title-1" })).is_err());
+    }
+
+    #[test]
+    fn validates_response_against_request_operation_and_id() {
+        let request = Request {
+            request_id: "request-1".to_owned(),
+            operation: Operation::Details,
+            payload: serde_json::json!({ "id": "title-1" }),
+            protocol_version: PROTOCOL_VERSION,
+        };
+        let response = Response {
+            request_id: "request-1".to_owned(),
+            payload: Some(serde_json::json!({
+                "id": "title-1",
+                "originalName": "Title",
+                "synonyms": [],
+                "genres": [],
+                "ratings": [],
+                "screenshots": [],
+                "studios": [],
+                "mainCharacters": [],
+                "similarAnime": [],
+                "franchiseAnime": [],
+                "relatedAnime": []
+            })),
+            error_code: None,
+            error_message: None,
+            protocol_version: PROTOCOL_VERSION,
+        };
+
+        assert_eq!(response.validate_for_request(&request), Ok(()));
+        let mismatched_request = Request {
+            request_id: "other-request".to_owned(),
+            operation: Operation::Details,
+            payload: serde_json::json!({ "id": "title-1" }),
+            protocol_version: PROTOCOL_VERSION,
+        };
+        assert_eq!(
+            response.validate_for_request(&mismatched_request),
+            Err("response request ID does not match request")
+        );
+    }
+
+    #[test]
+    fn rejects_search_response_with_incomplete_title() {
+        assert_eq!(
+            validate_search_response_payload(&serde_json::json!({
+                "items": [{ "id": "title-1" }]
+            })),
+            Err("required string field is missing or invalid")
+        );
     }
 
     #[test]
