@@ -8,6 +8,30 @@ import kotlinx.coroutines.runBlocking
 
 class SourcePackageInstallationCoordinatorTest {
     @Test
+    fun `coordinator factory creates a source-specific activation boundary`() {
+        var receivedSourceId: SourceId? = null
+        val factory = SourcePackageInstallationCoordinatorFactory(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> error("Download must not start") },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { "a".repeat(64) },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ -> error("Extraction must not start") },
+            packageValidator = SourcePackageValidator(clientVersion = 1),
+            activationStoreFactory = SourcePackageActivationStoreFactory { sourceId ->
+                receivedSourceId = sourceId
+                RecordingStore()
+            },
+        )
+
+        factory.create(SourceId("external-source"))
+
+        assertEquals(SourceId("external-source"), receivedSourceId)
+    }
+
+    @Test
     fun `coordinator activates only after verified extraction and initialization`() = runBlocking {
         val manifest = manifest()
         val candidate = InstalledSourcePackage(
