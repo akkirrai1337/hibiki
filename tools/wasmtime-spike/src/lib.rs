@@ -1,5 +1,4 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
-#[cfg(any(feature = "android-production-jni", feature = "android-harness"))]
 use std::ptr::null_mut;
 #[cfg(feature = "spike-probes")]
 use std::thread;
@@ -22,6 +21,16 @@ pub const PROTOCOL_CALL_BUFFER_TOO_SMALL: i32 = -3;
 pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
 pub const PROTOCOL_MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 pub const PROTOCOL_MAX_MODULE_BYTES: usize = 16 * 1024 * 1024;
+
+/// Host callback used by the production C ABI. The callback supports a sizing call.
+pub type BeakokitHostCall = unsafe extern "C" fn(
+    user_data: *mut core::ffi::c_void,
+    request_ptr: *const u8,
+    request_len: usize,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32;
 
 #[cfg(feature = "spike-probes")]
 struct HostState {
@@ -428,6 +437,167 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
         PROTOCOL_CALL_OK
     }));
     result.unwrap_or(PROTOCOL_CALL_RUNTIME_FAILURE)
+}
+
+/// Executes one verified Wasm module and delegates host calls to the supplied callback.
+#[no_mangle]
+pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module_and_host(
+    module_ptr: *const u8,
+    module_len: usize,
+    request_ptr: *const u8,
+    request_len: usize,
+    host_call: Option<BeakokitHostCall>,
+    user_data: *mut core::ffi::c_void,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32 {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if response_len.is_null() || host_call.is_none() {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        unsafe { *response_len = 0 };
+        if module_len > PROTOCOL_MAX_MODULE_BYTES
+            || (module_ptr.is_null() && module_len != 0)
+            || request_len > PROTOCOL_MAX_REQUEST_BYTES
+            || (request_ptr.is_null() && request_len != 0)
+        {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        let module_bytes = if module_len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(module_ptr, module_len) }
+        };
+        let request_bytes = if request_len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(request_ptr, request_len) }
+        };
+        let request_json = match std::str::from_utf8(request_bytes) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        let request_value: serde_json::Value = match serde_json::from_str(request_json) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        if protocol::Request::from_value(&request_value).is_err() {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        let callback = host_call.expect("host callback was checked above");
+        let response = match run_protocol_host_call_request_with_callback(
+            request_json,
+            module_bytes,
+            callback,
+            user_data,
+        ) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+        };
+        unsafe { *response_len = response.len() };
+        if response.len() > response_capacity || response_ptr.is_null() {
+            return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+        }
+        unsafe {
+            std::ptr::copy_nonoverlapping(response.as_ptr(), response_ptr, response.len());
+        }
+        PROTOCOL_CALL_OK
+    }));
+    result.unwrap_or(PROTOCOL_CALL_RUNTIME_FAILURE)
+}
+
+fn run_protocol_host_call_request_with_callback(
+    request_json: &str,
+    module_bytes: &[u8],
+    host_call: BeakokitHostCall,
+    user_data: *mut core::ffi::c_void,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let user_data = user_data as usize;
+    let engine = Engine::default();
+    let module = Module::new(&engine, module_bytes)?;
+    let mut linker = Linker::new(&engine);
+    linker.func_wrap(
+        "host",
+        "call",
+        move |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
+            if ptr < 0 || len < 0 {
+                return Err(wasmtime::Error::msg("guest request range is invalid"));
+            }
+            let memory = caller
+                .get_export("memory")
+                .and_then(|export| export.into_memory())
+                .ok_or_else(|| wasmtime::Error::msg("guest memory export is missing"))?;
+            let mut request_bytes = vec![0; len as usize];
+            memory
+                .read(&caller, ptr as usize, &mut request_bytes)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            let mut response_len = 0usize;
+            let status = unsafe {
+                host_call(
+                    user_data as *mut core::ffi::c_void,
+                    request_bytes.as_ptr(),
+                    request_bytes.len(),
+                    null_mut(),
+                    0,
+                    &mut response_len,
+                )
+            };
+            if status != PROTOCOL_CALL_BUFFER_TOO_SMALL && status != PROTOCOL_CALL_OK {
+                return Err(wasmtime::Error::msg(format!(
+                    "host callback sizing failed with status {status}"
+                )));
+            }
+            if response_len > PROTOCOL_MAX_REQUEST_BYTES {
+                return Err(wasmtime::Error::msg(
+                    "host response exceeds the native limit",
+                ));
+            }
+            let mut response_bytes = vec![0; response_len];
+            let status = unsafe {
+                host_call(
+                    user_data as *mut core::ffi::c_void,
+                    request_bytes.as_ptr(),
+                    request_bytes.len(),
+                    response_bytes.as_mut_ptr(),
+                    response_bytes.len(),
+                    &mut response_len,
+                )
+            };
+            if status != PROTOCOL_CALL_OK {
+                return Err(wasmtime::Error::msg(format!(
+                    "host callback failed with status {status}"
+                )));
+            }
+            response_bytes.truncate(response_len);
+            memory
+                .write(&mut caller, 0, &response_bytes)
+                .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+            Ok(response_bytes.len() as i64)
+        },
+    )?;
+    let mut store = Store::new(&engine, ());
+    let instance = linker.instantiate(&mut store, &module)?;
+    let memory = instance
+        .get_memory(&mut store, "memory")
+        .ok_or("guest memory export is missing")?;
+    let reset = instance.get_typed_func::<(), ()>(&mut store, "beakokit_reset")?;
+    let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
+    let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
+    reset.call(&mut store, ())?;
+    let request_value: serde_json::Value = serde_json::from_str(request_json)?;
+    let request = protocol::Request::from_value(&request_value)?;
+    let request_bytes = serde_json::to_vec(&request)?;
+    let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    memory.write(&mut store, request_ptr as usize, &request_bytes)?;
+    let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
+    let response_ptr = (packed_response >> 32) as usize;
+    let response_len = (packed_response & u64::from(u32::MAX)) as usize;
+    let mut response_bytes = vec![0; response_len];
+    memory.read(&store, response_ptr, &mut response_bytes)?;
+    let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
+    response.validate_for_request(&request)?;
+    Ok(response_bytes)
 }
 
 /// Production JNI bridge for one verified binary Wasm module call.

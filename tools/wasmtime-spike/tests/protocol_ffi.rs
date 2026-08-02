@@ -2,6 +2,7 @@
 
 use wasmtime_spike::{
     beakokit_runtime_protocol_call, beakokit_runtime_protocol_call_with_module,
+    beakokit_runtime_protocol_call_with_module_and_host, BeakokitHostCall,
     PROTOCOL_CALL_BUFFER_TOO_SMALL, PROTOCOL_CALL_INVALID_REQUEST, PROTOCOL_CALL_OK,
     PROTOCOL_MAX_MODULE_BYTES, PROTOCOL_MAX_REQUEST_BYTES,
 };
@@ -12,6 +13,35 @@ fn request() -> Vec<u8> {
 
 fn details_request() -> Vec<u8> {
     br#"{"requestId":"ffi-details-1","operation":"DETAILS","payload":{"id":"title-1"},"protocolVersion":1}"#.to_vec()
+}
+
+unsafe extern "C" fn details_host_callback(
+    _user_data: *mut core::ffi::c_void,
+    request_ptr: *const u8,
+    request_len: usize,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32 {
+    if response_len.is_null() || (request_ptr.is_null() && request_len != 0) {
+        return PROTOCOL_CALL_INVALID_REQUEST;
+    }
+    let expected_request = details_request();
+    let request = if request_len == 0 {
+        &[]
+    } else {
+        std::slice::from_raw_parts(request_ptr, request_len)
+    };
+    if request != expected_request {
+        return PROTOCOL_CALL_INVALID_REQUEST;
+    }
+    let response = br#"{"requestId":"ffi-details-1","payload":{"id":"title-1","originalName":"Title","synonyms":[],"genres":[],"screenshots":[],"studios":[],"ratings":[],"mainCharacters":[],"similarAnime":[],"franchiseAnime":[],"relatedAnime":[]},"errorCode":null,"errorMessage":null,"protocolVersion":1}"#;
+    *response_len = response.len();
+    if response_ptr.is_null() || response_capacity < response.len() {
+        return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+    }
+    std::ptr::copy_nonoverlapping(response.as_ptr(), response_ptr, response.len());
+    PROTOCOL_CALL_OK
 }
 
 #[test]
@@ -161,6 +191,33 @@ fn c_abi_executes_caller_supplied_wasm_module() {
     assert_eq!(status, PROTOCOL_CALL_OK);
     let response = String::from_utf8(response[..response_len].to_vec()).unwrap();
     assert!(response.contains("ffi-details-1"));
+}
+
+#[test]
+fn c_abi_roundtrips_a_guest_host_callback() {
+    let module = wat::parse_str(include_str!("../fixtures/minimal-source.wat")).unwrap();
+    let request = details_request();
+    let mut response = vec![0; 2048];
+    let mut response_len = 0;
+
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module_and_host(
+            module.as_ptr(),
+            module.len(),
+            request.as_ptr(),
+            request.len(),
+            Some(details_host_callback as BeakokitHostCall),
+            std::ptr::null_mut(),
+            response.as_mut_ptr(),
+            response.len(),
+            &mut response_len,
+        )
+    };
+
+    assert_eq!(status, PROTOCOL_CALL_OK);
+    let response = String::from_utf8(response[..response_len].to_vec()).unwrap();
+    assert!(response.contains("ffi-details-1"));
+    assert!(response.contains("\"id\":\"title-1\""));
 }
 
 #[test]
