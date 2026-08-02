@@ -4,11 +4,14 @@ use std::time::Duration;
 
 use wasmtime::{Config, Engine, Instance, Linker, Module, Store};
 
+pub mod protocol;
+
 struct HostState {
     host_calls: u32,
 }
 
 pub fn run_probe() -> Result<(), Box<dyn std::error::Error>> {
+    protocol::run_roundtrip_probe()?;
     run_host_call()?;
     run_guest_error()?;
     run_cancellation()?;

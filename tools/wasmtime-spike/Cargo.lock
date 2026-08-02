@@ -1503,6 +1503,8 @@ dependencies = [
 name = "wasmtime-spike"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "wasmtime",
  "wat",
 ]
