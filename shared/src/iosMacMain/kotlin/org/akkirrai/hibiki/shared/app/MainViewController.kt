@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
@@ -25,6 +26,7 @@ import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
+import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
@@ -44,6 +46,13 @@ fun MainViewController(systemLanguage: String): UIViewController {
     val avatarPicker = IosAvatarPicker()
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
+        val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
+        LaunchedEffect(externalSourcePlatform) {
+            runCatching { externalSourcePlatform.coordinator.refresh() }
+                .onFailure { error ->
+                    println("BeakoKit external repository refresh failed: ${error.message}")
+                }
+        }
         val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
         val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
         val repository = remember(systemLanguage, initialSourceId) {
@@ -74,6 +83,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
         }
         DisposableEffect(repository) { onDispose { repository.close() } }
         DisposableEffect(watchRepository) { onDispose { watchRepository.close() } }
+        DisposableEffect(externalSourcePlatform) { onDispose { externalSourcePlatform.close() } }
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             val density = LocalDensity.current
             val safeDrawingInsets = AppLayoutEnvironment(
