@@ -14,6 +14,7 @@ pub const PROTOCOL_CALL_INVALID_REQUEST: i32 = -2;
 pub const PROTOCOL_CALL_BUFFER_TOO_SMALL: i32 = -3;
 pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
 pub const PROTOCOL_MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+pub const PROTOCOL_MAX_MODULE_BYTES: usize = 16 * 1024 * 1024;
 
 struct HostState {
     host_calls: u32,
@@ -153,11 +154,16 @@ fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
 fn run_protocol_host_call_request(
     request_json: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    let module_bytes = wat::parse_str(include_str!("../fixtures/minimal-source.wat"))?;
+    run_protocol_host_call_request_with_module(request_json, &module_bytes)
+}
+
+fn run_protocol_host_call_request_with_module(
+    request_json: &str,
+    module_bytes: &[u8],
+) -> Result<String, Box<dyn std::error::Error>> {
     let engine = Engine::default();
-    let module = Module::new(
-        &engine,
-        wat::parse_str(include_str!("../fixtures/minimal-source.wat"))?,
-    )?;
+    let module = Module::new(&engine, module_bytes)?;
 
     let mut linker = Linker::new(&engine);
     linker.func_wrap(
@@ -321,6 +327,73 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call(
             return PROTOCOL_CALL_INVALID_REQUEST;
         }
         let response = match run_protocol_host_call_request(request_json) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+        };
+        let response_bytes = response.as_bytes();
+        unsafe { *response_len = response_bytes.len() };
+        if response_bytes.len() > response_capacity || response_ptr.is_null() {
+            return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+        }
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                response_bytes.as_ptr(),
+                response_ptr,
+                response_bytes.len(),
+            );
+        }
+        PROTOCOL_CALL_OK
+    }));
+    result.unwrap_or(PROTOCOL_CALL_RUNTIME_FAILURE)
+}
+
+/// C ABI for executing one caller-supplied, already verified Wasm module.
+#[no_mangle]
+pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
+    module_ptr: *const u8,
+    module_len: usize,
+    request_ptr: *const u8,
+    request_len: usize,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32 {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if response_len.is_null() {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        unsafe { *response_len = 0 };
+        if module_len > PROTOCOL_MAX_MODULE_BYTES
+            || (module_ptr.is_null() && module_len != 0)
+            || request_len > PROTOCOL_MAX_REQUEST_BYTES
+            || (request_ptr.is_null() && request_len != 0)
+        {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+
+        let module_bytes = if module_len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(module_ptr, module_len) }
+        };
+        let request_bytes = if request_len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(request_ptr, request_len) }
+        };
+        let request_json = match std::str::from_utf8(request_bytes) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        let request_value: serde_json::Value = match serde_json::from_str(request_json) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        if protocol::Request::from_value(&request_value).is_err() {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        let response = match run_protocol_host_call_request_with_module(request_json, module_bytes)
+        {
             Ok(value) => value,
             Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
         };

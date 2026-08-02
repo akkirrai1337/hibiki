@@ -1,6 +1,7 @@
 use wasmtime_spike::{
-    beakokit_runtime_protocol_call, PROTOCOL_CALL_BUFFER_TOO_SMALL, PROTOCOL_CALL_INVALID_REQUEST,
-    PROTOCOL_CALL_OK, PROTOCOL_MAX_REQUEST_BYTES,
+    beakokit_runtime_protocol_call, beakokit_runtime_protocol_call_with_module,
+    PROTOCOL_CALL_BUFFER_TOO_SMALL, PROTOCOL_CALL_INVALID_REQUEST, PROTOCOL_CALL_OK,
+    PROTOCOL_MAX_MODULE_BYTES, PROTOCOL_MAX_REQUEST_BYTES,
 };
 
 fn request() -> Vec<u8> {
@@ -123,6 +124,54 @@ fn c_abi_rejects_request_over_the_native_limit() {
 
     let status = unsafe {
         beakokit_runtime_protocol_call(
+            request.as_ptr(),
+            request.len(),
+            response.as_mut_ptr(),
+            response.len(),
+            &mut response_len,
+        )
+    };
+
+    assert_eq!(status, PROTOCOL_CALL_INVALID_REQUEST);
+    assert_eq!(response_len, 0);
+    assert_eq!(response, [0xA5; 16]);
+}
+
+#[test]
+fn c_abi_executes_caller_supplied_wasm_module() {
+    let module = wat::parse_str(include_str!("../fixtures/minimal-source.wat")).unwrap();
+    let request = details_request();
+    let mut response = vec![0; 2048];
+    let mut response_len = 0;
+
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module(
+            module.as_ptr(),
+            module.len(),
+            request.as_ptr(),
+            request.len(),
+            response.as_mut_ptr(),
+            response.len(),
+            &mut response_len,
+        )
+    };
+
+    assert_eq!(status, PROTOCOL_CALL_OK);
+    let response = String::from_utf8(response[..response_len].to_vec()).unwrap();
+    assert!(response.contains("ffi-details-1"));
+}
+
+#[test]
+fn c_abi_rejects_module_over_the_native_limit() {
+    let module = vec![0; PROTOCOL_MAX_MODULE_BYTES + 1];
+    let request = request();
+    let mut response = [0xA5; 16];
+    let mut response_len = 123;
+
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module(
+            module.as_ptr(),
+            module.len(),
             request.as_ptr(),
             request.len(),
             response.as_mut_ptr(),
