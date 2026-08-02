@@ -4,11 +4,16 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 data class SourcePackageDownloadLimits(
+    val timeoutMillis: Long = SourceHostHttpRequest.DEFAULT_TIMEOUT_MILLIS,
     val maxArtifactSizeBytes: Long = SourcePackageValidator.DEFAULT_MAX_ARTIFACT_SIZE_BYTES,
 ) {
     init {
+        require(timeoutMillis > 0) { "Package download timeout must be positive" }
         require(maxArtifactSizeBytes > 0) { "Maximum artifact size must be positive" }
         require(maxArtifactSizeBytes < Int.MAX_VALUE) {
             "Maximum artifact size must fit in a platform byte array"
@@ -44,6 +49,33 @@ class KtorSourcePackageTransport(
                 code = SourceErrorCode.INVALID_REQUEST,
             )
         }
+        return try {
+            withTimeout(limits.timeoutMillis) {
+                downloadResponse(url, limits)
+            }
+        } catch (error: TimeoutCancellationException) {
+            throw SourcePackageDownloadException(
+                message = "Package download timed out after ${limits.timeoutMillis} ms",
+                cause = error,
+                kind = SourceErrorKind.UNAVAILABLE,
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourcePackageDownloadException) {
+            throw error
+        } catch (error: Throwable) {
+            throw SourcePackageDownloadException(
+                message = "Package download failed",
+                cause = error,
+                kind = SourceErrorKind.NETWORK,
+            )
+        }
+    }
+
+    private suspend fun downloadResponse(
+        url: String,
+        limits: SourcePackageDownloadLimits,
+    ): DownloadedSourcePackage {
         val response = client.get(url)
         if (response.status.value !in 200..299) {
             throw SourcePackageDownloadException(

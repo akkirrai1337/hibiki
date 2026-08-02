@@ -48,4 +48,31 @@ class KtorSourceRepositoryTransportTest {
 
         assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
     }
+
+    @Test
+    fun `transport returns an error status without reading its body`() = runBlocking {
+        val transport = KtorSourceRepositoryTransport(
+            HttpClient(MockEngine {
+                respond(
+                    content = "large error body that must be ignored",
+                    status = HttpStatusCode.ServiceUnavailable,
+                )
+            }),
+        )
+
+        val response = transport.get(
+            url = "https://example.com/repository.json",
+            limits = SourceRepositoryLoadLimits(maxResponseBytes = 1),
+        )
+
+        assertEquals(HttpStatusCode.ServiceUnavailable.value, response.statusCode)
+        assertEquals("", response.body)
+    }
+
+    @Test
+    fun `repository limits reserve space for the size sentinel`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryLoadLimits(maxResponseBytes = Long.MAX_VALUE)
+        }
+    }
 }

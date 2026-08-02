@@ -15,6 +15,13 @@ class KtorSourceRepositoryTransport(
         limits: SourceRepositoryLoadLimits,
     ): SourceRepositoryResponse {
         val response = client.get(url)
+        if (response.status.value !in 200..299) {
+            response.bodyAsChannel().cancel(null)
+            return SourceRepositoryResponse(
+                statusCode = response.status.value,
+                body = "",
+            )
+        }
         val bytes = response.bodyAsChannel()
             .readRemaining(limits.maxResponseBytes + 1)
         val body = bytes.readText()

@@ -1,0 +1,59 @@
+package org.akkirrai.beakokit.api
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlinx.coroutines.runBlocking
+
+class SourcePackageDownloadServiceTest {
+    @Test
+    fun `service verifies downloaded bytes before returning them`() = runBlocking {
+        val bytes = byteArrayOf(1, 2, 3)
+        val manifest = manifest(size = bytes.size.toLong(), sha256 = "a".repeat(64))
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(bytes) },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3),
+                sha256 = SourcePackageSha256 { "a".repeat(64) },
+            ),
+        )
+
+        val verified = service.download(manifest)
+
+        assertEquals(bytes.size.toLong(), verified.artifact.sizeBytes)
+        assertEquals("a".repeat(64), verified.artifact.sha256)
+    }
+
+    @Test
+    fun `service never returns a package with an invalid checksum`() = runBlocking {
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(byteArrayOf(1, 2, 3)) },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3),
+                sha256 = SourcePackageSha256 { "b".repeat(64) },
+            ),
+        )
+
+        assertFailsWith<SourcePackageValidationException> {
+            service.download(manifest(size = 3, sha256 = "a".repeat(64)))
+        }
+    }
+
+    private fun manifest(size: Long, sha256: String) = SourceManifest(
+        manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
+        sourceId = SourceId("external-source"),
+        packageVersion = "1.0.0",
+        sourceInfo = SourceManifestInfo(
+            displayName = "External source",
+            languages = setOf(SourceLanguage.ENGLISH),
+            primaryLanguage = SourceLanguage.ENGLISH,
+        ),
+        apiVersion = SourceApi.VERSION,
+        runtime = SourceRuntime(id = "wasm", abi = "wasm32-wasi-preview1"),
+        entrypoint = "source.wasm",
+        packageUrl = "https://example.com/source.zip",
+        sha256 = sha256,
+        artifactSizeBytes = size,
+        minClientVersion = 1,
+    )
+}

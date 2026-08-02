@@ -8,7 +8,10 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import java.io.IOException
 
 class SourcePackageDownloaderTest {
     @Test
@@ -78,5 +81,58 @@ class SourcePackageDownloaderTest {
         }
 
         assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
+    }
+
+    @Test
+    fun `Ktor transport maps network failures`() = runBlocking {
+        val transport = KtorSourcePackageTransport(
+            HttpClient(MockEngine { throw IOException("offline") }),
+        )
+
+        val error = assertFailsWith<SourcePackageDownloadException> {
+            transport.download(
+                url = "https://example.com/source.zip",
+                limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 10),
+            )
+        }
+
+        assertEquals(SourceErrorKind.NETWORK, error.kind)
+        assertEquals("offline", error.cause?.message)
+    }
+
+    @Test
+    fun `Ktor transport enforces timeout`() = runBlocking {
+        val transport = KtorSourcePackageTransport(
+            HttpClient(MockEngine {
+                delay(100)
+                respond(byteArrayOf(1, 2, 3))
+            }),
+        )
+
+        val error = assertFailsWith<SourcePackageDownloadException> {
+            transport.download(
+                url = "https://example.com/source.zip",
+                limits = SourcePackageDownloadLimits(timeoutMillis = 1, maxArtifactSizeBytes = 10),
+            )
+        }
+
+        assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
+    }
+
+    @Test
+    fun `Ktor transport preserves cancellation`() = runBlocking {
+        val cancellation = CancellationException("caller stopped downloading")
+        val transport = KtorSourcePackageTransport(
+            HttpClient(MockEngine { throw cancellation }),
+        )
+
+        val error = assertFailsWith<CancellationException> {
+            transport.download(
+                url = "https://example.com/source.zip",
+                limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 10),
+            )
+        }
+
+        assertEquals(cancellation.message, error.message)
     }
 }
