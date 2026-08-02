@@ -3,6 +3,10 @@ package org.akkirrai.beakokit.api
 /** Platform-owned reader for the manifest inside an installed source package. */
 fun interface SourcePackageManifestReader {
     fun read(packagePath: String): SourceManifest
+
+    companion object {
+        const val DEFAULT_MAX_MANIFEST_BYTES: Long = 256L * 1024L
+    }
 }
 
 /** Reconstructs the active runtime package without consulting a remote repository. */

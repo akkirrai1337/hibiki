@@ -29,6 +29,17 @@ class JvmSourcePackageManifestReaderTest {
         }
     }
 
+    @Test
+    fun `reader rejects an oversized manifest before decoding`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        Files.writeString(packageDirectory.resolve("manifest.json"), "{}")
+
+        assertFailsWith<SourcePackageStateException> {
+            JvmSourcePackageManifestReader(maxManifestBytes = 1)
+                .read(packageDirectory.toString())
+        }
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),
