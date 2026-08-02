@@ -83,13 +83,14 @@ class JvmSourcePackageExtractor(
     private fun readPackageManifest(zip: ZipFile): SourceManifest {
         val entry = zip.getEntry("manifest.json")
             ?: throw SourcePackageExtractionException("Package must contain manifest.json")
-        if (entry.size > MAX_MANIFEST_SIZE_BYTES) {
+        val maxManifestSizeBytes = SourcePackageManifestReader.DEFAULT_MAX_MANIFEST_BYTES
+        if (entry.size > maxManifestSizeBytes) {
             throw SourcePackageExtractionException("Package manifest exceeds the maximum allowed size")
         }
         val bytes = zip.getInputStream(entry).use { input ->
-            input.readNBytes((MAX_MANIFEST_SIZE_BYTES + 1).toInt())
+            input.readNBytes((maxManifestSizeBytes + 1).toInt())
         }
-        if (bytes.size > MAX_MANIFEST_SIZE_BYTES) {
+        if (bytes.size.toLong() > maxManifestSizeBytes) {
             throw SourcePackageExtractionException("Package manifest exceeds the maximum allowed size")
         }
         return try {
@@ -132,9 +133,6 @@ class JvmSourcePackageExtractor(
         }
     }
 
-    private companion object {
-        const val MAX_MANIFEST_SIZE_BYTES = 1024 * 1024
-    }
 }
 
 class SourcePackageExtractionException(message: String) : IllegalArgumentException(message)
