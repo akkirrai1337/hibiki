@@ -61,6 +61,18 @@ class SourceManifestTest {
         )
     }
 
+    @Test
+    fun `network policy requires network capability`() {
+        val invalid = manifest().copy(
+            hostNetworkPolicy = SourceHostNetworkPolicy(setOf("example.com")),
+        )
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Network policy requires the NETWORK host capability",
+        )
+    }
+
     private fun manifest(
         manifestFormatVersion: Int = SourceManifest.CURRENT_FORMAT_VERSION,
         apiVersion: Int = SourceApi.VERSION,
