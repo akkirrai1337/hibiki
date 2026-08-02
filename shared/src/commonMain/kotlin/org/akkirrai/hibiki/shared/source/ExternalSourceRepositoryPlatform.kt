@@ -29,5 +29,15 @@ class ExternalSourceRepositoryPlatform(
         runtimeFactory = runtimeFactory,
     )
 
+    /** Builds the inactive registry from the latest successfully loaded repository snapshot. */
+    fun loadAvailableActiveRegistry(
+        catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
+        runtimeFactory: ExternalSourceRuntimeFactory,
+    ): ExternalSourceRegistry = loadActiveRegistry(
+        sourceIds = coordinator.availableSourceIds(),
+        catalogCapabilities = catalogCapabilities,
+        runtimeFactory = runtimeFactory,
+    )
+
     fun close() = closeResources()
 }

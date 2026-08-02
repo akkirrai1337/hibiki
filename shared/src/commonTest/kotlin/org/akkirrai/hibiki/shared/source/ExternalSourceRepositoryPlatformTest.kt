@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.source
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackageLoader
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.InstalledSourcePackage
@@ -18,7 +19,11 @@ import org.akkirrai.beakokit.api.SourcePackageActivationStore
 import org.akkirrai.beakokit.api.SourcePackageManifestReader
 import org.akkirrai.beakokit.api.SourceRepositoryCatalog
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
+import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
+import org.akkirrai.beakokit.api.SourceRepositoryIndex
+import org.akkirrai.beakokit.api.SourceRepositoryIndexCodec
 import org.akkirrai.beakokit.api.SourceRepositoryLoader
+import org.akkirrai.beakokit.api.SourceRepositoryResponse
 import org.akkirrai.beakokit.api.SourceRepositoryStore
 import org.akkirrai.beakokit.api.SourceRepositoryTransport
 import org.akkirrai.beakokit.api.SourceRuntime
@@ -75,6 +80,60 @@ class ExternalSourceRepositoryPlatformTest {
 
         assertEquals(listOf(packageId), registry.sources.map { it.id })
         assertTrue(!runtimeCreated)
+    }
+
+    @Test
+    fun availableRegistryUsesTheCoordinatorSnapshot() = runTest {
+        val packageId = SourceId("external-source")
+        val installed = InstalledSourcePackage(packageId, "1.0.0", "package/path")
+        val coordinator = coordinatorWith(packageId)
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = coordinator,
+            activePackageLoaderFactory = { requestedId ->
+                ActiveExternalSourcePackageLoader(
+                    activationRepository = SourcePackageActivationRepository(
+                        sourceId = requestedId,
+                        store = InMemoryStore(SourcePackageActivationState(active = installed)),
+                    ),
+                    manifestReader = SourcePackageManifestReader { manifest(packageId) },
+                )
+            },
+            closeResources = {},
+        )
+
+        // The coordinator snapshot is populated by the platform-independent test helper below.
+        val registry = platform.loadAvailableActiveRegistry(
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ -> error("Runtime must remain lazy") },
+        )
+
+        assertEquals(listOf(packageId), registry.sources.map { it.id })
+    }
+
+    private suspend fun coordinatorWith(sourceId: SourceId): ExternalSourceRepositoryCoordinator {
+        val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
+        return ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(object : SourceRepositoryStore {
+                    override fun load() = listOf(endpoint)
+
+                    override fun persistAtomically(
+                        repositories: List<SourceRepositoryEndpoint>,
+                    ) = Unit
+                }),
+                loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
+                    SourceRepositoryResponse(
+                        statusCode = 200,
+                        body = SourceRepositoryIndexCodec.encode(
+                            SourceRepositoryIndex(
+                                apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                                sources = listOf(manifest(sourceId)),
+                            ),
+                        ),
+                    )
+                }),
+            ),
+        ).also { it.refresh(clientVersion = 1) }
     }
 
     private fun manifest(sourceId: SourceId) = SourceManifest(
