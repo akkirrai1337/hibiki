@@ -65,6 +65,8 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
+                implementation(libs.ktor.client.okhttp)
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
                 implementation(libs.coil.network.okhttp)
                 implementation(libs.androidx.palette.ktx)
                 implementation(libs.androidx.activity.compose)
