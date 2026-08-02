@@ -1,0 +1,9 @@
+[package]
+name = "wasmtime-spike"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+wasmtime = "47.0.3"
+wat = "1.245.1"

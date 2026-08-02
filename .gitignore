@@ -6,6 +6,9 @@
 # Kotlin
 .kotlin/
 
+# Rust build artifacts
+**/target/
+
 # Android Studio / IntelliJ
 .idea/
 *.iml
