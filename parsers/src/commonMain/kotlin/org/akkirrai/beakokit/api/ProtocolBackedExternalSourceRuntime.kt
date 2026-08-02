@@ -7,7 +7,21 @@ import org.akkirrai.beakokit.model.AnimeTitle
 
 /** Platform transport for one request/response exchange with an external runtime. */
 fun interface ExternalSourceRuntimeTransport {
-    suspend fun call(request: ExternalSourceRuntimeRequest): ExternalSourceRuntimeResponse
+    suspend fun call(
+        request: ExternalSourceRuntimeRequest,
+        limits: ExternalSourceRuntimeCallLimits,
+    ): ExternalSourceRuntimeResponse
+}
+
+/** Host-enforced limits for one external runtime call. */
+data class ExternalSourceRuntimeCallLimits(
+    val timeoutMillis: Long = SourceHostHttpRequest.DEFAULT_TIMEOUT_MILLIS,
+    val maxResponseBytes: Long = SourceHostHttpRequest.DEFAULT_MAX_RESPONSE_BYTES,
+) {
+    init {
+        require(timeoutMillis > 0) { "Runtime timeout must be positive" }
+        require(maxResponseBytes > 0) { "Maximum runtime response size must be positive" }
+    }
 }
 
 /** Converts BeakoKit models to and from operation-specific runtime JSON payloads. */
@@ -22,6 +36,7 @@ class ProtocolBackedExternalSourceRuntime(
     private val transport: ExternalSourceRuntimeTransport,
     private val payloadCodec: ExternalSourceRuntimePayloadCodec,
     private val requestIdFactory: () -> String,
+    private val callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
 ) : ExternalSourceRuntime {
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = call(
         operation = ExternalSourceRuntimeOperation.SEARCH,
@@ -45,7 +60,7 @@ class ProtocolBackedExternalSourceRuntime(
             operation = operation,
             payload = payload,
         )
-        val response = transport.call(request)
+        val response = transport.call(request, callLimits)
         if (response.requestId != request.requestId) {
             throw SourceException(
                 message = "Runtime response ID does not match request",
