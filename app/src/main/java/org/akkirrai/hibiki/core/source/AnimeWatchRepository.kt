@@ -551,8 +551,8 @@ class AnimeWatchRepository(
     private companion object {
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
-        const val AUTO_RESOLVE_TIMEOUT_MS = 8_000L
-        const val PREFERRED_RESOLVE_TIMEOUT_MS = 12_000L
+        const val AUTO_RESOLVE_TIMEOUT_MS = 15_000L
+        const val PREFERRED_RESOLVE_TIMEOUT_MS = 15_000L
     }
 }
 

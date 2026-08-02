@@ -14,5 +14,6 @@ internal class IosAnimeWatchRepository(
             BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 iOS"),
         )
     },
+    playbackAttemptTimeoutMillis = 20_000L,
     preferEnglish = preferEnglish,
 )

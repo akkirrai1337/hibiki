@@ -35,6 +35,7 @@ import kotlin.time.Clock
 class SharedAnimeWatchRepository(
     private val client: HttpClient,
     private val preferEnglish: Boolean = false,
+    private val playbackAttemptTimeoutMillis: Long = DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS,
     private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     private val sourceExecutionPolicy: SourceExecutionPolicy =
         HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
@@ -137,6 +138,7 @@ class SharedAnimeWatchRepository(
         val playback = playbackResolver.resolve(
             links = prioritizedLinks,
             preferredQuality = preferredQuality,
+            attemptTimeoutMillis = { playbackAttemptTimeoutMillis },
         ).toPlaybackStream(
             animeTitle = payload.title.displayName,
             sourceTitle = payload.source.title,
@@ -191,6 +193,7 @@ class SharedAnimeWatchRepository(
 
     private companion object {
         const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
+        const val DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS = 8_000L
         const val PLAYBACK_CACHE_TTL_MILLIS = 5 * 60 * 1_000L
     }
 }
