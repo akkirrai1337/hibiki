@@ -23,8 +23,8 @@ data class SourceHostRequirements(
 
 /** Converts an installed package manifest into the host permissions enforced by its runtime. */
 fun SourceManifest.hostRequirements(): SourceHostRequirements = SourceHostRequirements(
-    capabilities = hostCapabilities,
-    networkPolicy = hostNetworkPolicy,
+    capabilities = hostCapabilities.toSet(),
+    networkPolicy = hostNetworkPolicy.copy(allowedHosts = hostNetworkPolicy.allowedHosts.toSet()),
 )
 
 /** Manifest-declared HTTPS origins to which a source may send host HTTP requests. */

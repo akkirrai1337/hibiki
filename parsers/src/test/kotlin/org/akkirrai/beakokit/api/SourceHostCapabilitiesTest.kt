@@ -17,6 +17,33 @@ class SourceHostCapabilitiesTest {
     }
 
     @Test
+    fun `manifest requirements are copied before entering the runtime`() {
+        val capabilities = mutableSetOf(SourceHostCapability.NETWORK)
+        val hosts = mutableSetOf("example.com")
+        val manifest = SourceManifest(
+            manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
+            sourceId = SourceId("external-source"),
+            packageVersion = "1.0.0",
+            apiVersion = SourceApi.VERSION,
+            runtime = SourceRuntime("wasm", "wasm32-wasi-preview1"),
+            entrypoint = "source.wasm",
+            packageUrl = "https://example.com/source.zip",
+            sha256 = "a".repeat(64),
+            artifactSizeBytes = 1,
+            minClientVersion = 0,
+            hostCapabilities = capabilities,
+            hostNetworkPolicy = SourceHostNetworkPolicy(hosts),
+        )
+
+        val requirements = manifest.hostRequirements()
+        capabilities.clear()
+        hosts.clear()
+
+        assertTrue(requirements.requires(SourceHostCapability.NETWORK))
+        assertTrue(requirements.networkPolicy.allows("https://example.com/path"))
+    }
+
+    @Test
     fun `host access rejects undeclared capabilities`() {
         val access = TestHostAccess(
             SourceHostRequirements(setOf(SourceHostCapability.NETWORK)),
