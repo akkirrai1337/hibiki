@@ -77,6 +77,33 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     @Test
+    fun nativeByteBridgeFeedsTheProtocolBackedRuntime() = runBlocking {
+        val expected = wireTitle("decoded-from-native-bridge")
+        var receivedRequest: ExternalSourceRuntimeRequest? = null
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { request, _ ->
+                receivedRequest = ExternalSourceRuntimeProtocolCodec.decodeRequest(request)
+                ExternalSourceRuntimeProtocolCodec.encodeResponse(
+                    ExternalSourceRuntimeResponse(
+                        requestId = receivedRequest!!.requestId,
+                        payload = AnimeTitleRuntimePayloadCodec.encodeDetails(expected),
+                    ),
+                )
+            },
+        )
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = transport,
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "native-bridge-1" },
+        )
+
+        val result = runtime.details("title-1")
+
+        assertEquals(expected, result)
+        assertEquals(ExternalSourceRuntimeOperation.DETAILS, receivedRequest?.operation)
+    }
+
+    @Test
     fun invalidDecodedPayloadBecomesParseSourceException() = runBlocking {
         val runtime = ProtocolBackedExternalSourceRuntime(
             transport = ExternalSourceRuntimeTransport { request, _ ->
