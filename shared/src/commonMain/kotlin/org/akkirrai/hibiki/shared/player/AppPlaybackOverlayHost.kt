@@ -31,7 +31,7 @@ fun AppPlaybackOverlayHost(
     playbackError: String?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
-    content: @Composable (PlaybackStream, PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit,
+    content: @Composable (PlaybackStream?, PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
@@ -55,7 +55,7 @@ fun AppPlaybackOverlayHost(
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        if (playback != null) {
+        if (playback != null || playbackLoading || playbackError != null) {
             content(playback, context, navigationState, onDismiss, handleEpisodeSelected, handleSettingsAction, onOverlayEvent)
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))

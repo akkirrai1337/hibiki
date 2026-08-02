@@ -194,7 +194,7 @@ internal fun AndroidSharedAppShell(
             watchRepository = watchRepository,
             playbackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                 AndroidCommonPlaybackHost(
-                    playback = playback,
+                    playback = requireNotNull(playback),
                     context = playbackContext,
                     navigationState = navigationState,
                     progressRepository = watchStateRepository,

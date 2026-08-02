@@ -103,7 +103,7 @@ fun main() = application {
                         },
                         playbackHost = { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                             DesktopVlcPlaybackHost(
-                                playback = playback,
+                                playback = requireNotNull(playback),
                                 context = context,
                                 navigationState = navigationState,
                                 settingsStore = settingsStore,

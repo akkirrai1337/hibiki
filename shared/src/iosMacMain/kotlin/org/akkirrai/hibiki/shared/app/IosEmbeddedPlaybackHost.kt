@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.app
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -14,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
 import org.akkirrai.hibiki.shared.model.WatchEpisode
@@ -27,6 +29,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
@@ -57,6 +60,8 @@ import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.shared.player.IosComposePlayerControls
 import org.akkirrai.hibiki.shared.player.IosPlayerSession
 import org.akkirrai.hibiki.shared.player.IosPlayerSurface
+import org.akkirrai.hibiki.shared.player.PlaybackTransport
+import org.akkirrai.hibiki.shared.model.PlaybackStreamType
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
@@ -69,7 +74,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 internal fun IosEmbeddedPlaybackHost(
-    playback: PlaybackStream,
+    playback: PlaybackStream?,
     context: PlaybackContext,
     navigationState: AppNavigationState,
     onBack: () -> Unit,
@@ -83,11 +88,58 @@ internal fun IosEmbeddedPlaybackHost(
         setIosPlayerLandscape(active = true)
         onDispose { setIosPlayerLandscape(active = false) }
     }
-    val session = remember(playback.sessionKey()) {
-        IosPlayerSession(playback).also {
+    val session = remember(playback?.sessionKey()) {
+        playback?.let { stream -> IosPlayerSession(stream).also {
             it.scaleMode = settingsStore.load().videoScaleMode
             it.transport.setRate(settingsStore.load().playbackSpeed)
+        } }
+    }
+    if (session == null || playback == null) {
+        var loadingScaleMode by remember { mutableStateOf(settingsStore.load().videoScaleMode) }
+        val loadingTransport = remember { IosLoadingPlaybackTransport() }
+        val loadingPlayback = remember(context) {
+            PlaybackStream(
+                animeTitle = context.sourceTitle,
+                sourceTitle = context.sourceTitle,
+                episodeTitle = "Episode ${context.episodeNumber}",
+                streamUrl = "",
+                streamType = PlaybackStreamType.HLS,
+            )
         }
+        AppPlayerFrame {
+            AppPlayerChrome(
+                surface = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
+                    )
+                },
+                controlsEnabled = true,
+                controls = {
+                    IosComposePlayerControls(
+                        transport = loadingTransport,
+                        playback = loadingPlayback,
+                        context = context,
+                        scaleMode = loadingScaleMode,
+                        onBack = onBack,
+                        onScaleClick = {
+                            loadingScaleMode = loadingScaleMode.next()
+                            settingsStore.save(settingsStore.load().copy(videoScaleMode = loadingScaleMode))
+                        },
+                        playlistEnabled = context.episodes.isNotEmpty(),
+                        onPlaylistClick = { dispatchPlayerPlaylistOpen(onOverlayEvent) },
+                        hasPreviousEpisode = context.episodes.any { it.number < context.episodeNumber },
+                        hasNextEpisode = context.episodes.any { it.number > context.episodeNumber },
+                        onPreviousEpisode = { selectAdjacentEpisode(context, -1, onEpisodeSelected) },
+                        onNextEpisode = { selectAdjacentEpisode(context, 1, onEpisodeSelected) },
+                        onSettingsClick = { dispatchPlayerSettingsOpen(onOverlayEvent) },
+                        settingsContentDescription = appText(AppTextKey.PlayerSettings),
+                    )
+                },
+            )
+        }
+        return
     }
     val progressCoordinator = remember(session) {
         PlaybackProgressCoordinator { progress ->
@@ -210,9 +262,10 @@ internal fun IosEmbeddedPlaybackHost(
             controlsEnabled = !playerLockState.isLocked,
             controls = {
             IosComposePlayerControls(
-                session = session,
+                transport = session.transport,
                 playback = playback,
                 context = context,
+                scaleMode = session.scaleMode,
                 onBack = ::closePlayback,
                 scaleContentDescription = appText(session.scaleMode.textKey()),
                 onScaleClick = {
@@ -369,4 +422,27 @@ internal fun IosEmbeddedPlaybackHost(
         },
         )
     }
+}
+
+private fun selectAdjacentEpisode(
+    context: PlaybackContext,
+    offset: Int,
+    onEpisodeSelected: (WatchEpisode) -> Unit,
+) {
+    val sortedEpisodes = context.episodes.sortedBy(WatchEpisode::number)
+    val currentIndex = sortedEpisodes.indexOfFirst { it.id == context.episodeId }
+    sortedEpisodes.getOrNull(currentIndex + offset)?.let(onEpisodeSelected)
+}
+
+private class IosLoadingPlaybackTransport : PlaybackTransport {
+    private var speed = 1f
+
+    override fun play() = Unit
+    override fun pause() = Unit
+    override fun setRate(rate: Float) { speed = rate }
+    override fun rate(): Float = speed
+    override fun positionMs(): Long = 0L
+    override fun durationMs(): Long = 0L
+    override fun bufferedPositionMs(): Long = 0L
+    override fun seekToMs(positionMs: Long) = Unit
 }

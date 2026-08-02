@@ -8,9 +8,10 @@ import org.akkirrai.hibiki.shared.model.PlaybackStream
 
 @Composable
 internal fun IosComposePlayerControls(
-    session: IosPlayerSession,
+    transport: PlaybackTransport,
     playback: PlaybackStream,
     context: PlaybackContext,
+    scaleMode: VideoScaleMode,
     onBack: () -> Unit,
     onScaleClick: () -> Unit = { session.scaleMode = session.scaleMode.next() },
     scaleContentDescription: String? = null,
@@ -31,10 +32,10 @@ internal fun IosComposePlayerControls(
 ) {
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     AppPlaybackControls(
-            transport = session.transport,
+            transport = transport,
             playback = playback,
             context = context,
-            scaleMode = session.scaleMode,
+            scaleMode = scaleMode,
             onScaleClick = onScaleClick,
             scaleContentDescription = scaleContentDescription,
             onBack = onBack,

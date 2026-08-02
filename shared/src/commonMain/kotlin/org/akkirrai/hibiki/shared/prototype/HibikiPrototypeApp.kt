@@ -297,7 +297,7 @@ fun HibikiAppShell(
     onPlaybackReady: (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext) -> Unit = { _, _ -> },
     onPlaybackSelectionChanged: (org.akkirrai.hibiki.shared.model.PlaybackSelection) -> Unit = {},
     loadPlaybackSelection: (String) -> org.akkirrai.hibiki.shared.model.PlaybackSelection? = { null },
-    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
+    playbackHost: (@Composable (org.akkirrai.hibiki.shared.model.PlaybackStream?, org.akkirrai.hibiki.shared.model.PlaybackContext, AppNavigationState, () -> Unit, (WatchEpisode) -> Unit, (PlaybackSettingsAction) -> Unit, (AppNavigationEvent) -> Unit) -> Unit)? = null,
     playerWindowMode: @Composable (Boolean) -> Unit = {},
     showSettingsBackButton: Boolean = true,
     includeNavigationBarPadding: Boolean = true,
@@ -2067,7 +2067,7 @@ private fun AppDestinationContent(
                         modifier = Modifier.weight(1f),
                         )
                     }
-                    if (!isPlayerRoute || !playbackHostAvailable) {
+                    if (!playbackHostAvailable) {
                         AppPlayerLoadingOverlay(visible = playbackLoading)
                         playbackError?.let { message ->
                             AppPlayerErrorOverlay(
