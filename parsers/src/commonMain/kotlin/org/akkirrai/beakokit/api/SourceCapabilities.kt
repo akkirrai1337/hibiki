@@ -1,8 +1,10 @@
 package org.akkirrai.beakokit.api
 
 import org.akkirrai.beakokit.model.AnimeTitle
+import kotlinx.serialization.Serializable
 
 /** Stable source-owned capabilities used by a host before executing an operation. */
+@Serializable
 enum class SourceCapability {
     LATEST_RELEASES,
     PLAYBACK,
