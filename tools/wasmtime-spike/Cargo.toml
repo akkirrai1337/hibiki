@@ -10,7 +10,8 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 spike-probes = ["dep:wat"]
-android-harness = ["dep:jni", "spike-probes"]
+android-production-jni = ["dep:jni"]
+android-harness = ["android-production-jni", "spike-probes"]
 
 [[bin]]
 name = "wasmtime-spike-runner"

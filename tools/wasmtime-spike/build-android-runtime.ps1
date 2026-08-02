@@ -30,7 +30,7 @@ try {
         Set-Item -Path "Env:CC_$($target.Name.Replace('-', '_'))" -Value $linker
         Set-Item -Path "Env:AR_$($target.Name.Replace('-', '_'))" -Value (Join-Path $toolchainBin "llvm-ar.exe")
 
-        & $cargo build --target $target.Name --lib
+        & $cargo build --target $target.Name --lib --features android-production-jni
         if ($LASTEXITCODE -ne 0) {
             throw "Production Android runtime build failed for $($target.Name)"
         }
@@ -42,6 +42,10 @@ try {
         $symbol = & $nm -g $library | Select-String "beakokit_runtime_protocol_call_with_module"
         if (-not $symbol) {
             throw "Production runtime export was not found in $library"
+        }
+        $jniSymbol = & $nm -g $library | Select-String "Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCall"
+        if (-not $jniSymbol) {
+            throw "Production JNI export was not found in $library"
         }
         Write-Host "Verified $($target.Abi): $library"
     }
