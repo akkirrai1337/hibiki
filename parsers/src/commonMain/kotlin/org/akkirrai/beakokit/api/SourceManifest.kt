@@ -18,12 +18,23 @@ data class SourceRuntime(
     }
 }
 
+/** User-visible source metadata carried by an external package manifest. */
+@Serializable
+data class SourceManifestInfo(
+    val displayName: String,
+    val languages: Set<SourceLanguage>,
+    val primaryLanguage: SourceLanguage,
+    val website: String? = null,
+    val iconUrl: String? = null,
+)
+
 /** Repository metadata used to validate a package before it can be activated. */
 @Serializable
 data class SourceManifest(
     val manifestFormatVersion: Int,
     val sourceId: SourceId,
     val packageVersion: String,
+    val sourceInfo: SourceManifestInfo? = null,
     val apiVersion: Int,
     val hostApiVersion: Int = SourceHostApi.VERSION,
     val runtime: SourceRuntime,
@@ -63,6 +74,18 @@ data class SourceManifest(
             add("Client version is outside the package compatibility range")
         }
     }
+
+    fun requireSourceInfo(): SourceInfo = sourceInfo?.let { metadata ->
+        SourceInfo(
+            id = sourceId,
+            name = metadata.displayName,
+            languages = metadata.languages,
+            primaryLanguage = metadata.primaryLanguage,
+            website = metadata.website,
+            iconUrl = metadata.iconUrl,
+            capabilities = capabilities,
+        )
+    } ?: throw SourceManifestException(listOf("Source display metadata is required for registration"))
 
     fun requireValid(
         clientVersion: Int,
