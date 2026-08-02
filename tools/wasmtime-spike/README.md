@@ -13,6 +13,9 @@ guest memory.
 
 The standalone Android harness additionally calls the Rust protocol validator
 through JNI with a real JSON request and checks that a JSON response returns.
+Native iOS hosts can use `beakokit_runtime_protocol_call` from the C header:
+the caller provides UTF-8 request and response buffers, and the function
+returns an explicit status plus the required response length.
 
 It is not part of the application build and must not replace the existing
 built-in source path.

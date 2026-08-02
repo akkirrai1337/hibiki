@@ -9,6 +9,11 @@ use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
 
 pub mod protocol;
 
+pub const PROTOCOL_CALL_OK: i32 = 0;
+pub const PROTOCOL_CALL_INVALID_REQUEST: i32 = -2;
+pub const PROTOCOL_CALL_BUFFER_TOO_SMALL: i32 = -3;
+pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
+
 struct HostState {
     host_calls: u32,
 }
@@ -243,6 +248,58 @@ pub extern "C" fn beakokit_runtime_probe() -> i32 {
         Ok(Ok(())) => 0,
         Ok(Err(_)) | Err(_) => -1,
     }
+}
+
+/// C ABI used by Swift/Objective-C and other native hosts for one protocol call.
+/// The caller owns both buffers; `response_len` receives the required/written size.
+#[no_mangle]
+pub unsafe extern "C" fn beakokit_runtime_protocol_call(
+    request_ptr: *const u8,
+    request_len: usize,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32 {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if response_len.is_null() || (request_ptr.is_null() && request_len != 0) {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        unsafe { *response_len = 0 };
+        let request_bytes: &[u8] = if request_len == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(request_ptr, request_len) }
+        };
+        let request_json = match std::str::from_utf8(request_bytes) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        let request_value: serde_json::Value = match serde_json::from_str(request_json) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_INVALID_REQUEST,
+        };
+        if protocol::Request::from_value(&request_value).is_err() {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
+        let response = match run_protocol_host_call_request(request_json) {
+            Ok(value) => value,
+            Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+        };
+        let response_bytes = response.as_bytes();
+        unsafe { *response_len = response_bytes.len() };
+        if response_bytes.len() > response_capacity || response_ptr.is_null() {
+            return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+        }
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                response_bytes.as_ptr(),
+                response_ptr,
+                response_bytes.len(),
+            );
+        }
+        PROTOCOL_CALL_OK
+    }));
+    result.unwrap_or(PROTOCOL_CALL_RUNTIME_FAILURE)
 }
 
 /// JNI shim used only by the temporary Android instrumentation harness.
