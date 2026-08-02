@@ -28,6 +28,12 @@ class SourcePackageInstallationCoordinator(
         stagingPath: String,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
+        require(candidate.sourceId == repositoryManifest.sourceId) {
+            "Installation candidate source ID does not match repository manifest"
+        }
+        require(candidate.packageVersion == repositoryManifest.packageVersion) {
+            "Installation candidate version does not match repository manifest"
+        }
         require(candidate.packagePath == stagingPath) {
             "Installation candidate path must match the extraction staging path"
         }

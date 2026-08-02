@@ -166,6 +166,35 @@ class SourcePackageInstallationCoordinatorTest {
         assertEquals("initialization failed", error.message)
     }
 
+    @Test
+    fun `coordinator rejects a candidate mismatch before downloading`() = runBlocking {
+        val manifest = manifest()
+        val candidate = InstalledSourcePackage(
+            sourceId = SourceId("another-source"),
+            packageVersion = manifest.packageVersion,
+            packagePath = "staging/package",
+        )
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> error("Download must not start") },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ -> error("Extraction must not start") },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(manifest.sourceId, RecordingStore()),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            coordinator.install(manifest, candidate, candidate.packagePath) {}
+        }
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),
