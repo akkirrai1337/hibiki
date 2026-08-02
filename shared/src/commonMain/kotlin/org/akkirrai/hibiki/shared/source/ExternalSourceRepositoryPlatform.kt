@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinator
 import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinatorFactory
+import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -25,6 +26,21 @@ class ExternalSourceRepositoryPlatform(
         requireNotNull(packageInstallationFactory) {
             "Source package installation is not available on this platform"
         }.create(sourceId)
+
+    /** Installs the manifest currently advertised by the loaded repository snapshot. */
+    suspend fun installAvailablePackage(
+        sourceId: SourceId,
+        stagingPath: String,
+        initialize: suspend () -> Unit,
+    ) = coordinator.availableSourceManifest(sourceId)?.let { manifest ->
+        createPackageInstallationCoordinator(sourceId).install(
+            repositoryManifest = manifest,
+            stagingPath = stagingPath,
+            initialize = initialize,
+        )
+    } ?: throw SourcePackageStateException(
+        "Source package is not advertised by a loaded repository: $sourceId",
+    )
 
     /** Builds the inactive external registry without changing the built-in registry. */
     fun loadActiveRegistry(

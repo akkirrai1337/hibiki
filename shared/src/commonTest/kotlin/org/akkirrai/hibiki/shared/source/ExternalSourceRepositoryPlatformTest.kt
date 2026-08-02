@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.source
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackageLoader
@@ -17,6 +18,7 @@ import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.SourcePackageActivationStore
 import org.akkirrai.beakokit.api.SourcePackageManifestReader
+import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceRepositoryCatalog
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
@@ -31,7 +33,7 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 
 class ExternalSourceRepositoryPlatformTest {
     @Test
-    fun activeRegistryUsesOnlyPersistedPackagesAndKeepsRuntimeLazy() {
+    fun activeRegistryUsesOnlyPersistedPackagesAndKeepsRuntimeLazy() = runTest {
         val packageId = SourceId("external-source")
         val installed = InstalledSourcePackage(packageId, "1.0.0", "package/path")
         val manifest = manifest(packageId)
@@ -80,6 +82,10 @@ class ExternalSourceRepositoryPlatformTest {
 
         assertEquals(listOf(packageId), registry.sources.map { it.id })
         assertTrue(!runtimeCreated)
+
+        assertFailsWith<SourcePackageStateException> {
+            platform.installAvailablePackage(packageId, "staging/source") {}
+        }
     }
 
     @Test
