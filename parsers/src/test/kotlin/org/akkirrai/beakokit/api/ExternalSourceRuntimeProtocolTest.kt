@@ -49,4 +49,19 @@ class ExternalSourceRuntimeProtocolTest {
         assertEquals(ExternalSourceRuntimeErrorCode.HOST_ACCESS_DENIED, restored.errorCode)
         assertEquals("network capability is not granted", restored.errorMessage)
     }
+
+    @Test
+    fun protocolErrorMapsToStableSourceException() {
+        val exception = assertFailsWith<SourceException> {
+            ExternalSourceRuntimeResponse(
+                requestId = "request-3",
+                errorCode = ExternalSourceRuntimeErrorCode.HOST_ACCESS_DENIED,
+                errorMessage = "cookies capability is not granted",
+            ).requirePayload()
+        }
+
+        assertEquals(SourceErrorCode.HOST_ACCESS_DENIED, exception.code)
+        assertEquals(SourceErrorKind.UNAVAILABLE, exception.kind)
+        assertEquals("cookies capability is not granted", exception.message)
+    }
 }

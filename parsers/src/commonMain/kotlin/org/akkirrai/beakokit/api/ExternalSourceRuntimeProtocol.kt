@@ -65,6 +65,42 @@ data class ExternalSourceRuntimeResponse(
     }
 }
 
+fun ExternalSourceRuntimeResponse.requirePayload(): JsonObject = payload
+    ?: throw toSourceException()
+
+fun ExternalSourceRuntimeResponse.toSourceException(): SourceException {
+    val protocolError = errorCode
+        ?: return SourceException(
+            message = "Runtime response does not contain a payload",
+            kind = SourceErrorKind.PARSE,
+        )
+    val message = errorMessage?.takeIf(String::isNotBlank)
+        ?: "External source runtime failed with ${protocolError.name}"
+    return SourceException(
+        message = message,
+        kind = protocolError.sourceErrorKind,
+        code = protocolError.sourceErrorCode,
+    )
+}
+
+private val ExternalSourceRuntimeErrorCode.sourceErrorKind: SourceErrorKind
+    get() = when (this) {
+        ExternalSourceRuntimeErrorCode.INVALID_REQUEST -> SourceErrorKind.PARSE
+        ExternalSourceRuntimeErrorCode.HOST_ACCESS_DENIED -> SourceErrorKind.UNAVAILABLE
+        ExternalSourceRuntimeErrorCode.SOURCE_FAILURE -> SourceErrorKind.UNKNOWN
+        ExternalSourceRuntimeErrorCode.RUNTIME_FAILURE -> SourceErrorKind.UNKNOWN
+        ExternalSourceRuntimeErrorCode.CANCELLED -> SourceErrorKind.UNKNOWN
+    }
+
+private val ExternalSourceRuntimeErrorCode.sourceErrorCode: SourceErrorCode
+    get() = when (this) {
+        ExternalSourceRuntimeErrorCode.INVALID_REQUEST -> SourceErrorCode.INVALID_REQUEST
+        ExternalSourceRuntimeErrorCode.HOST_ACCESS_DENIED -> SourceErrorCode.HOST_ACCESS_DENIED
+        ExternalSourceRuntimeErrorCode.SOURCE_FAILURE -> SourceErrorCode.SOURCE_FAILURE
+        ExternalSourceRuntimeErrorCode.RUNTIME_FAILURE -> SourceErrorCode.RUNTIME_FAILURE
+        ExternalSourceRuntimeErrorCode.CANCELLED -> SourceErrorCode.CANCELLED
+    }
+
 const val EXTERNAL_SOURCE_RUNTIME_PROTOCOL_VERSION: Int = 1
 
 private const val PROTOCOL_VERSION: Int = EXTERNAL_SOURCE_RUNTIME_PROTOCOL_VERSION

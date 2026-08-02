@@ -21,6 +21,8 @@ enum class SourceErrorCode(val value: String) {
     INVALID_REQUEST("invalid_request"),
     UNSUPPORTED_OPERATION("unsupported_operation"),
     CONFIGURATION_REQUIRED("configuration_required"),
+    HOST_ACCESS_DENIED("host_access_denied"),
+    SOURCE_FAILURE("source_failure"),
     RUNTIME_FAILURE("runtime_failure"),
     CANCELLED("cancelled"),
     UNKNOWN("unknown"),
