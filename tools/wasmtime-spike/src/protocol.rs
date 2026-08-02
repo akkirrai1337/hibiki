@@ -36,6 +36,16 @@ pub struct Request {
 }
 
 impl Request {
+    pub fn from_value(value: &Value) -> Result<Self, Box<dyn std::error::Error>> {
+        let request: Self = serde_json::from_value(value.clone())?;
+        request.validate()?;
+        match request.operation {
+            Operation::Search => validate_search_payload(&request.payload)?,
+            Operation::Details => validate_details_payload(&request.payload)?,
+        }
+        Ok(request)
+    }
+
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.request_id.trim().is_empty() {
             return Err("request ID must not be blank");
@@ -103,6 +113,11 @@ pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
     optional_integer_or_null(object, "yearFrom")?;
     optional_integer_or_null(object, "yearTo")?;
     Ok(())
+}
+
+pub fn validate_details_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload.as_object().ok_or("payload must be a JSON object")?;
+    required_string(object, "id")
 }
 
 pub fn validate_title_payload(payload: &Value) -> Result<(), &'static str> {
@@ -346,6 +361,15 @@ mod tests {
         });
 
         assert_eq!(validate_search_payload(&payload), Ok(()));
+    }
+
+    #[test]
+    fn validates_the_details_payload_shape() {
+        assert_eq!(
+            validate_details_payload(&serde_json::json!({ "id": "title-1" })),
+            Ok(())
+        );
+        assert!(validate_details_payload(&serde_json::json!({ "query": "title-1" })).is_err());
     }
 
     #[test]

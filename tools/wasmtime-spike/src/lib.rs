@@ -12,11 +12,84 @@ struct HostState {
 
 pub fn run_probe() -> Result<(), Box<dyn std::error::Error>> {
     protocol::run_roundtrip_probe()?;
+    run_protocol_guest_call()?;
     run_host_call()?;
     run_guest_error()?;
     run_cancellation()?;
 
     Ok(())
+}
+
+fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
+    let request = serde_json::json!({
+        "requestId": "guest-probe-1",
+        "operation": "SEARCH",
+        "payload": {
+            "query": "frieren",
+            "limit": 20,
+            "offset": 0,
+            "sort": "RELEVANCE",
+            "typeAliases": [],
+            "statusAliases": [],
+            "includedGenreAliases": [],
+            "excludedGenreAliases": [],
+            "yearFrom": null,
+            "yearTo": null
+        },
+        "protocolVersion": protocol::PROTOCOL_VERSION
+    });
+    protocol::Request::from_value(&request)?;
+
+    let response = serde_json::json!({
+        "requestId": "guest-probe-1",
+        "payload": { "items": [] },
+        "errorCode": null,
+        "errorMessage": null,
+        "protocolVersion": protocol::PROTOCOL_VERSION
+    });
+    let response_bytes = serde_json::to_vec(&response)?;
+    let guest = format!(
+        r#"
+            (module
+                (memory (export "memory") 1)
+                (data (i32.const 0) "{}")
+                (func (export "beakokit_call") (param i32 i32) (result i64)
+                    i64.const {}
+                )
+            )
+        "#,
+        escape_wat_string(&String::from_utf8(response_bytes.clone())?),
+        response_bytes.len(),
+    );
+
+    let engine = Engine::default();
+    let module = Module::new(&engine, wat::parse_str(guest)?)?;
+    let mut store = Store::new(&engine, ());
+    let instance = Instance::new(&mut store, &module, &[])?;
+    let memory = instance
+        .get_memory(&mut store, "memory")
+        .ok_or("guest memory export is missing")?;
+    let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
+    let request_bytes = serde_json::to_vec(&request)?;
+    memory.write(&mut store, 4096, &request_bytes)?;
+    let packed = call.call(&mut store, (4096, request_bytes.len() as i32))? as u64;
+    let response_ptr = (packed >> 32) as usize;
+    let response_len = (packed & u64::from(u32::MAX)) as usize;
+    let memory_size = memory.data(&store).len();
+    if response_ptr > memory_size || response_len > memory_size - response_ptr {
+        return Err("guest response points outside linear memory".into());
+    }
+    let mut returned = vec![0; response_len];
+    memory.read(&store, response_ptr, &mut returned)?;
+    let decoded: protocol::Response = serde_json::from_slice(&returned)?;
+    decoded.validate()?;
+    println!("guest ABI: JSON call returned {response_len} bytes");
+
+    Ok(())
+}
+
+fn escape_wat_string(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 /// C ABI smoke entry point for the future Android/iOS bridge.
