@@ -170,6 +170,7 @@ class ExternalSourceRegistrationTest {
     fun nativeBridgeFactoryConnectsAnActivePackageToTheCommonRuntime() = runBlocking {
         var receivedPath: String? = null
         var receivedModule: ByteArray? = null
+        var receivedRequirements: SourceHostRequirements? = null
         val activePackage = ActiveExternalSourcePackage(
             manifest = manifest(),
             installed = InstalledSourcePackage(
@@ -179,9 +180,10 @@ class ExternalSourceRegistrationTest {
             ),
         )
         val runtimeFactory = NativeBridgeExternalSourceRuntimeFactory(
-            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, _, module ->
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, _, module, hostRequirements ->
                 receivedPath = sourcePackage.installed.packagePath
                 receivedModule = module
+                receivedRequirements = hostRequirements
                 ExternalSourceRuntimeNativeBridge { request, _ ->
                     val decoded = ExternalSourceRuntimeProtocolCodec.decodeRequest(request)
                     ExternalSourceRuntimeProtocolCodec.encodeResponse(
@@ -208,6 +210,7 @@ class ExternalSourceRegistrationTest {
         assertEquals("native-factory", runtime.details("title-1").id)
         assertEquals("sources/external-test/1.0.0", receivedPath)
         assertContentEquals(byteArrayOf(1, 2, 3), receivedModule)
+        assertEquals(activePackage.manifest.hostRequirements(), receivedRequirements)
     }
 
     @Test
@@ -221,7 +224,7 @@ class ExternalSourceRegistrationTest {
             ),
         )
         val factory = NativeBridgeExternalSourceRuntimeFactory(
-            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _ ->
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
                 error("Unsupported runtime must not create a bridge")
             },
             moduleReader = SourcePackageModuleReader { _, _ ->

@@ -6,6 +6,7 @@ fun interface ExternalSourceRuntimeNativeBridgeFactory {
         sourcePackage: ActiveExternalSourcePackage,
         context: SourceContext,
         module: ByteArray,
+        hostRequirements: SourceHostRequirements,
     ): ExternalSourceRuntimeNativeBridge
 }
 
@@ -36,6 +37,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
                         packagePath = sourcePackage.installed.packagePath,
                         entrypoint = sourcePackage.manifest.entrypoint,
                     ),
+                    hostRequirements = sourcePackage.manifest.hostRequirements(),
                 ),
             ),
             payloadCodec = payloadCodec,
