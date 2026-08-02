@@ -50,9 +50,17 @@ object AnimeNavType {
     }
 
     fun createWatchSourcesRoute(anime: Anime, downloadMode: Boolean = false): String {
+        return createWatchSourcesRoute(
+            animeId = anime.id,
+            title = anime.title,
+            downloadMode = downloadMode,
+        )
+    }
+
+    fun createWatchSourcesRoute(animeId: String, title: String = "", downloadMode: Boolean = false): String {
         return buildString {
-            append("$WATCH_SOURCES_ROUTE/${Uri.encode(anime.id)}")
-            append("?$TITLE_ARG=${Uri.encode(anime.title)}")
+            append("$WATCH_SOURCES_ROUTE/${Uri.encode(animeId)}")
+            append("?$TITLE_ARG=${Uri.encode(title)}")
             append("&$DOWNLOAD_MODE_ARG=$downloadMode")
         }
     }

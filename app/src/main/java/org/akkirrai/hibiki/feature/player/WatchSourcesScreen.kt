@@ -30,13 +30,43 @@ fun WatchSourcesScreen(
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
 
-    WatchScreenScaffold(
+    AppWatchSourcesScreen(
+        state = state,
+        labels = AppWatchSourcesScreenLabels(
+            emptyTitle = stringResource(R.string.watch_sources_empty_title),
+            emptyMessage = stringResource(R.string.watch_sources_empty_message),
+            retry = stringResource(R.string.search_retry),
+            loadMore = stringResource(R.string.watch_sources_load_more),
+            episodesShort = stringResource(R.string.watch_episodes_short),
+        ),
+        icons = AppWatchSourcesScreenIcons(
+            back = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.cd_back),
+                    tint = Color.White,
+                    modifier = Modifier.graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                        blendMode = BlendMode.Difference
+                    },
+                )
+            },
+            error = Icons.Outlined.PlayCircleOutline,
+            empty = Icons.Outlined.SubtitlesOff,
+        ),
+        enabled = !navigationLocked,
         onBackClick = {
-            if (navigationLocked) return@WatchScreenScaffold
+            if (navigationLocked) return@AppWatchSourcesScreen
             navigationLockedState.value = true
             onBackClick()
         },
-        navigationLocked = navigationLocked,
+        onRetry = viewModel::retry,
+        onLoadMore = viewModel::loadMore,
+        onSourceClick = { source ->
+            if (navigationLocked) return@AppWatchSourcesScreen
+            navigationLockedState.value = true
+            onSourceClick(source)
+        },
         modifier = modifier,
     ) { listContentPadding ->
         AppWatchSourcesContent(

@@ -21,17 +21,9 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 fun SearchScreen(
     viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsState()
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val movieLabel = stringResource(R.string.anime_meta_movie)
-    val loadMoreLabel = stringResource(R.string.action_more)
-    val idleTitle = stringResource(R.string.search_start_title)
-    val idleMessage = stringResource(R.string.search_idle)
-    val emptyTitle = stringResource(R.string.home_search_empty_title)
-    val emptyMessage = stringResource(R.string.search_empty)
-    val retryLabel = stringResource(R.string.search_retry)
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
     AppSearchScreenContent(

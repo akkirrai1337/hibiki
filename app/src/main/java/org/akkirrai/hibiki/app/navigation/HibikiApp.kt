@@ -187,7 +187,7 @@ private fun HibikiNavHost(
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
-                        navController.navigateTopLevelDestination(TopLevelDestination.Home, destination)
+                        navController.dispatchTopLevelNavigation(TopLevelDestination.Home, destination)
                     }
                 },
             ) {
@@ -195,7 +195,7 @@ private fun HibikiNavHost(
                     viewModel = homeViewModel,
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
                         }
                     },
                     onBrowseCatalog = {
@@ -226,14 +226,14 @@ private fun HibikiNavHost(
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
-                        navController.navigateTopLevelDestination(TopLevelDestination.Profile, destination)
+                        navController.dispatchTopLevelNavigation(TopLevelDestination.Profile, destination)
                     }
                 },
             ) {
                 SharedAndroidLocalProfileScreen(
                     onSettingsClick = {
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.SETTINGS_ROUTE)
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenSettings)
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -247,14 +247,14 @@ private fun HibikiNavHost(
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
-                        navController.navigateTopLevelDestination(TopLevelDestination.Catalog, destination)
+                        navController.dispatchTopLevelNavigation(TopLevelDestination.Catalog, destination)
                     }
                 },
             ) {
                 SharedAndroidCatalogScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -268,14 +268,14 @@ private fun HibikiNavHost(
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
-                        navController.navigateTopLevelDestination(TopLevelDestination.Library, destination)
+                        navController.dispatchTopLevelNavigation(TopLevelDestination.Library, destination)
                     }
                 },
             ) {
                 SharedAndroidLibraryScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
                         }
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
@@ -290,14 +290,14 @@ private fun HibikiNavHost(
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
-                        navController.navigateTopLevelDestination(TopLevelDestination.Sources, destination)
+                        navController.dispatchTopLevelNavigation(TopLevelDestination.Sources, destination)
                     }
                 },
             ) {
                 SharedAndroidSourcesScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -373,7 +373,7 @@ private fun HibikiNavHost(
                     },
                     onRelatedAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
                         }
                     },
                     onOpenSources = { anime ->
@@ -400,7 +400,7 @@ private fun HibikiNavHost(
                                     sourceId = progress.sourceId,
                                     episodeId = progress.episodeId,
                                     episodeNumber = progress.episodeNumber,
-                                )
+                                ),
                             )
                         }
                     },
@@ -515,7 +515,7 @@ private fun HibikiNavHost(
                                     sourceId = sourceId,
                                     episodeId = episode.id,
                                     episodeNumber = episode.number,
-                                )
+                                ),
                             )
                         }
                     },

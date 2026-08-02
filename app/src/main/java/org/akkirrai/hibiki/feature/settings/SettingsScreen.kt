@@ -32,13 +32,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
-import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
-import org.akkirrai.hibiki.app.settings.NotificationPermissionState
-import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
@@ -111,6 +108,12 @@ fun SettingsScreen(
     val versionName = remember(context) {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    }
+    val appIcon = remember(context) {
+        context.packageManager
+            .getApplicationIcon(context.packageName)
+            .toBitmap(config = Bitmap.Config.ARGB_8888)
+            .asImageBitmap()
     }
 
     LaunchedEffect(Unit) {

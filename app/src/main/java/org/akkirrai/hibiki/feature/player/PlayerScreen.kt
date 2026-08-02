@@ -95,6 +95,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.PlayerUiState
+import org.akkirrai.hibiki.shared.player.toAppPlayerHostState
 import org.akkirrai.hibiki.shared.player.PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.localizationKey
 import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
@@ -165,6 +166,7 @@ fun PlayerScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val hostState = state.toAppPlayerHostState()
     val context = LocalContext.current
     val appPreferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
