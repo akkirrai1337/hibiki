@@ -1,7 +1,10 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ptr::null_mut;
 use std::thread;
 use std::time::Duration;
 
+use jni::objects::{JClass, JString};
+use jni::JNIEnv;
 use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
 
 pub mod protocol;
@@ -245,6 +248,47 @@ pub unsafe extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeAct
     _receiver: *mut core::ffi::c_void,
 ) -> i32 {
     beakokit_runtime_probe()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_protocolProbe(
+    mut env: JNIEnv,
+    _class: JClass,
+    request: JString,
+) -> jni::sys::jstring {
+    let response = match protocol_response_from_jni(&mut env, request) {
+        Ok(response) => response,
+        Err(error) => serde_json::json!({
+            "requestId": "jni-error",
+            "payload": null,
+            "errorCode": "INVALID_REQUEST",
+            "errorMessage": error.to_string(),
+            "protocolVersion": protocol::PROTOCOL_VERSION
+        })
+        .to_string(),
+    };
+    env.new_string(response)
+        .map(|value| value.into_raw())
+        .unwrap_or(null_mut())
+}
+
+fn protocol_response_from_jni(
+    env: &mut JNIEnv,
+    request: JString,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let request: String = env.get_string(&request)?.into();
+    let request_value: serde_json::Value = serde_json::from_str(&request)?;
+    let request = protocol::Request::from_value(&request_value)?;
+    let response = serde_json::json!({
+        "requestId": request.request_id,
+        "payload": { "items": [] },
+        "errorCode": null,
+        "errorMessage": null,
+        "protocolVersion": protocol::PROTOCOL_VERSION
+    });
+    let parsed: protocol::Response = serde_json::from_value(response.clone())?;
+    parsed.validate()?;
+    Ok(response.to_string())
 }
 
 fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {

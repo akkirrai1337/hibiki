@@ -11,6 +11,9 @@ The probe also runs the reverse direction: the guest imports `host.call`,
 forwards the request to the host, and reads the host-written response from
 guest memory.
 
+The standalone Android harness additionally calls the Rust protocol validator
+through JNI with a real JSON request and checks that a JSON response returns.
+
 It is not part of the application build and must not replace the existing
 built-in source path.
 
