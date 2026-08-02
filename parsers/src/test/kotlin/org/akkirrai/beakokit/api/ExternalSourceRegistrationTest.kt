@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlinx.coroutines.runBlocking
@@ -168,6 +169,7 @@ class ExternalSourceRegistrationTest {
     @Test
     fun nativeBridgeFactoryConnectsAnActivePackageToTheCommonRuntime() = runBlocking {
         var receivedPath: String? = null
+        var receivedModule: ByteArray? = null
         val activePackage = ActiveExternalSourcePackage(
             manifest = manifest(),
             installed = InstalledSourcePackage(
@@ -177,8 +179,9 @@ class ExternalSourceRegistrationTest {
             ),
         )
         val runtimeFactory = NativeBridgeExternalSourceRuntimeFactory(
-            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, _ ->
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, _, module ->
                 receivedPath = sourcePackage.installed.packagePath
+                receivedModule = module
                 ExternalSourceRuntimeNativeBridge { request, _ ->
                     val decoded = ExternalSourceRuntimeProtocolCodec.decodeRequest(request)
                     ExternalSourceRuntimeProtocolCodec.encodeResponse(
@@ -188,6 +191,10 @@ class ExternalSourceRegistrationTest {
                         ),
                     )
                 }
+            },
+            moduleReader = SourcePackageModuleReader { _, entrypoint ->
+                assertEquals("source.wasm", entrypoint)
+                byteArrayOf(1, 2, 3)
             },
             requestIdFactory = { "native-factory-request" },
         )
@@ -200,6 +207,7 @@ class ExternalSourceRegistrationTest {
 
         assertEquals("native-factory", runtime.details("title-1").id)
         assertEquals("sources/external-test/1.0.0", receivedPath)
+        assertContentEquals(byteArrayOf(1, 2, 3), receivedModule)
     }
 
     @Test
