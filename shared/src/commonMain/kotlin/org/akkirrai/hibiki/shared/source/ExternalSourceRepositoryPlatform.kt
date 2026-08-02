@@ -6,6 +6,8 @@ import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceManifest
+import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinator
+import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinatorFactory
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -13,10 +15,16 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 class ExternalSourceRepositoryPlatform(
     val coordinator: ExternalSourceRepositoryCoordinator,
     private val activePackageLoaderFactory: (SourceId) -> ActiveExternalSourcePackageLoader,
+    private val packageInstallationFactory: SourcePackageInstallationCoordinatorFactory? = null,
     private val closeResources: () -> Unit,
 ) {
     fun loadActivePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
         activePackageLoaderFactory(sourceId).load()
+
+    fun createPackageInstallationCoordinator(sourceId: SourceId): SourcePackageInstallationCoordinator =
+        requireNotNull(packageInstallationFactory) {
+            "Source package installation is not available on this platform"
+        }.create(sourceId)
 
     /** Builds the inactive external registry without changing the built-in registry. */
     fun loadActiveRegistry(
