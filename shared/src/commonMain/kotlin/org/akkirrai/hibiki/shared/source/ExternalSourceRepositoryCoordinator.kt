@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.source
 
 import org.akkirrai.beakokit.api.SourceApi
+import org.akkirrai.beakokit.api.SourceClientVersion
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
@@ -21,7 +22,7 @@ class ExternalSourceRepositoryCoordinator(
         private set
 
     suspend fun refresh(
-        clientVersion: Int,
+        clientVersion: Int = SourceClientVersion.CURRENT,
         supportedSourceApiVersion: Int = SourceApi.VERSION,
         supportedHostApiVersion: Int = SourceHostApi.VERSION,
     ): SourceRepositoryLoadSnapshot {
