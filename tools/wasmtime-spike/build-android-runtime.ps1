@@ -47,6 +47,10 @@ try {
         if (-not $jniSymbol) {
             throw "Production JNI export was not found in $library"
         }
+        $hostJniSymbol = & $nm -g $library | Select-String "Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCallWithHost"
+        if (-not $hostJniSymbol) {
+            throw "Production host callback JNI export was not found in $library"
+        }
         Write-Host "Verified $($target.Abi): $library"
     }
 } finally {

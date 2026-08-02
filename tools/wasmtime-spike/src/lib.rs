@@ -6,9 +6,9 @@ use std::thread;
 use std::time::Duration;
 
 #[cfg(any(feature = "android-production-jni", feature = "android-harness"))]
-use jni::objects::{JByteArray, JClass, JString};
+use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 #[cfg(any(feature = "android-production-jni", feature = "android-harness"))]
-use jni::JNIEnv;
+use jni::{JNIEnv, JavaVM};
 use wasmtime::{Caller, Engine, Linker, Module, Store};
 #[cfg(feature = "spike-probes")]
 use wasmtime::{Config, Instance};
@@ -623,6 +623,150 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
     env.new_string(response)
         .map(|value| value.into_raw())
         .unwrap_or(null_mut())
+}
+
+/// Production JNI bridge that delegates runtime host calls to a Java/Kotlin host object.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCallWithHost(
+    mut env: JNIEnv,
+    _class: JClass,
+    module: JByteArray,
+    request: JString,
+    host: JObject,
+) -> jni::sys::jstring {
+    let response = protocol_response_from_production_jni_with_host(&mut env, module, request, host)
+        .unwrap_or_else(|error| {
+            serde_json::json!({
+                "requestId": "jni-host-runtime-error",
+                "payload": null,
+                "errorCode": "RUNTIME_FAILURE",
+                "errorMessage": error.to_string(),
+                "protocolVersion": protocol::PROTOCOL_VERSION
+            })
+            .to_string()
+        });
+    env.new_string(response)
+        .map(|value| value.into_raw())
+        .unwrap_or(null_mut())
+}
+
+#[cfg(feature = "android-production-jni")]
+struct JniHostState {
+    vm: JavaVM,
+    host: jni::objects::GlobalRef,
+}
+
+#[cfg(feature = "android-production-jni")]
+unsafe extern "C" fn jni_host_callback(
+    user_data: *mut core::ffi::c_void,
+    request_ptr: *const u8,
+    request_len: usize,
+    response_ptr: *mut u8,
+    response_capacity: usize,
+    response_len: *mut usize,
+) -> i32 {
+    if user_data.is_null() || response_len.is_null() || (request_ptr.is_null() && request_len != 0)
+    {
+        return PROTOCOL_CALL_INVALID_REQUEST;
+    }
+    let state = &*(user_data as *const JniHostState);
+    let request = if request_len == 0 {
+        &[]
+    } else {
+        std::slice::from_raw_parts(request_ptr, request_len)
+    };
+    let mut env = match state.vm.attach_current_thread_as_daemon() {
+        Ok(env) => env,
+        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    let request_array = match env.byte_array_from_slice(request) {
+        Ok(value) => value,
+        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    let result = match env.call_method(
+        state.host.as_obj(),
+        "call",
+        "([B)[B",
+        &[JValue::Object(request_array.as_ref())],
+    ) {
+        Ok(value) => value,
+        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    let response_object = match result.l() {
+        Ok(value) if !value.is_null() => value,
+        _ => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    let response_array = JByteArray::from(response_object);
+    let response = match env.convert_byte_array(&response_array) {
+        Ok(value) => value,
+        Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
+    };
+    *response_len = response.len();
+    if response_ptr.is_null() || response_capacity < response.len() {
+        return PROTOCOL_CALL_BUFFER_TOO_SMALL;
+    }
+    std::ptr::copy_nonoverlapping(response.as_ptr(), response_ptr, response.len());
+    PROTOCOL_CALL_OK
+}
+
+#[cfg(feature = "android-production-jni")]
+fn protocol_response_from_production_jni_with_host(
+    env: &mut JNIEnv,
+    module: JByteArray,
+    request: JString,
+    host: JObject,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let module_len = env.get_array_length(&module)? as usize;
+    if module_len > PROTOCOL_MAX_MODULE_BYTES {
+        return Err("caller-supplied module exceeds the native limit".into());
+    }
+    let mut signed_module = vec![0_i8; module_len];
+    env.get_byte_array_region(&module, 0, &mut signed_module)?;
+    let module_bytes: Vec<u8> = signed_module.into_iter().map(|byte| byte as u8).collect();
+    let request: String = env.get_string(&request)?.into();
+    let host = JniHostState {
+        vm: env.get_java_vm()?,
+        host: env.new_global_ref(host)?,
+    };
+    let request_bytes = request.as_bytes();
+    let mut response_len = 0usize;
+    let user_data = (&host as *const JniHostState).cast_mut().cast();
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module_and_host(
+            module_bytes.as_ptr(),
+            module_bytes.len(),
+            request_bytes.as_ptr(),
+            request_bytes.len(),
+            Some(jni_host_callback),
+            user_data,
+            null_mut(),
+            0,
+            &mut response_len,
+        )
+    };
+    if status != PROTOCOL_CALL_BUFFER_TOO_SMALL {
+        return Err(format!("native host runtime sizing call failed with status {status}").into());
+    }
+    let mut response = vec![0u8; response_len];
+    let status = unsafe {
+        beakokit_runtime_protocol_call_with_module_and_host(
+            module_bytes.as_ptr(),
+            module_bytes.len(),
+            request_bytes.as_ptr(),
+            request_bytes.len(),
+            Some(jni_host_callback),
+            user_data,
+            response.as_mut_ptr(),
+            response.len(),
+            &mut response_len,
+        )
+    };
+    if status != PROTOCOL_CALL_OK {
+        return Err(format!("native host runtime call failed with status {status}").into());
+    }
+    response.truncate(response_len);
+    Ok(String::from_utf8(response)?)
 }
 
 #[cfg(feature = "android-production-jni")]
