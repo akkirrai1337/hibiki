@@ -166,6 +166,43 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun nativeBridgeFactoryConnectsAnActivePackageToTheCommonRuntime() = runBlocking {
+        var receivedPath: String? = null
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest(),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val runtimeFactory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, _ ->
+                receivedPath = sourcePackage.installed.packagePath
+                ExternalSourceRuntimeNativeBridge { request, _ ->
+                    val decoded = ExternalSourceRuntimeProtocolCodec.decodeRequest(request)
+                    ExternalSourceRuntimeProtocolCodec.encodeResponse(
+                        ExternalSourceRuntimeResponse(
+                            requestId = decoded.requestId,
+                            payload = AnimeTitleRuntimePayloadCodec.encodeDetails(title("native-factory")),
+                        ),
+                    )
+                }
+            },
+            requestIdFactory = { "native-factory-request" },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+
+        val runtime = runtimeFactory.create(activePackage, context)
+
+        assertEquals("native-factory", runtime.details("title-1").id)
+        assertEquals("sources/external-test/1.0.0", receivedPath)
+    }
+
+    @Test
     fun activePackageRejectsMismatchedVersion() {
         assertFailsWith<IllegalArgumentException> {
             ActiveExternalSourcePackage(
