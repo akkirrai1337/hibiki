@@ -1,7 +1,5 @@
 package org.akkirrai.hibiki.shared.text
 
-private const val WordJoiner = '\u2060'
-
 fun String.preventTrailingOrphanWrap(): String {
     val trimmed = trim()
     val words = trimmed.split(Regex("\\s+"))
@@ -24,23 +22,5 @@ fun String.preventTrailingOrphanWrap(): String {
             }
             append(word)
         }
-    }
-}
-
-fun String.preventWordBreaks(): String = buildString(length) {
-    var insideWord = false
-    var previousWasHighSurrogate = false
-
-    for (character in this@preventWordBreaks) {
-        val isNonBreakingSpace = character == '\u00A0'
-        val isWordCharacter = !character.isWhitespace() && !isNonBreakingSpace
-        if (isWordCharacter) {
-            if (insideWord && !previousWasHighSurrogate) append(WordJoiner)
-            insideWord = true
-        } else {
-            insideWord = false
-        }
-        append(character)
-        previousWasHighSurrogate = character.isHighSurrogate()
     }
 }

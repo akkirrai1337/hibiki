@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,12 +35,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
-import org.akkirrai.hibiki.shared.text.preventWordBreaks
 
 @Composable
 fun AppVerticalAnimeListItem(
@@ -303,18 +309,30 @@ fun AppPosterAnimeCard(
             ),
             verticalArrangement = Arrangement.spacedBy(UiDimens.PosterCardContentGap),
         ) {
-            Text(
-                text = anime.title.preventTrailingOrphanWrap().preventWordBreaks(),
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleSmall.copy(
-                    lineBreak = LineBreak.Paragraph,
-                    hyphens = Hyphens.None,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            val titleStyle = MaterialTheme.typography.titleSmall.copy(
+                lineBreak = LineBreak.Paragraph,
+                hyphens = Hyphens.None,
             )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val density = LocalDensity.current
+                val textMeasurer = rememberTextMeasurer()
+                val title = remember(anime.title, maxWidth, titleStyle, density, textMeasurer) {
+                    wrapTitleAtWords(
+                        text = anime.title.preventTrailingOrphanWrap(),
+                        style = titleStyle,
+                        maxWidth = with(density) { maxWidth.roundToPx() },
+                        textMeasurer = textMeasurer,
+                    )
+                }
+                Text(
+                    text = title,
+                    style = titleStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (metaContent != null) {
                 metaContent()
             } else if (metaText.isNotBlank()) {
@@ -330,6 +348,41 @@ fun AppPosterAnimeCard(
             }
         }
     }
+}
+
+private fun wrapTitleAtWords(
+    text: String,
+    style: TextStyle,
+    maxWidth: Int,
+    textMeasurer: TextMeasurer,
+): String {
+    if (maxWidth <= 0) return text
+
+    val words = text.trim().split(Regex("\\s+"))
+    if (words.size <= 1) return text
+
+    val lines = mutableListOf<String>()
+    var currentLine = ""
+    for (word in words) {
+        val candidate = if (currentLine.isEmpty()) word else "$currentLine $word"
+        val measurement = textMeasurer.measure(
+            text = AnnotatedString(candidate),
+            style = style,
+            overflow = TextOverflow.Clip,
+            softWrap = false,
+            maxLines = 1,
+            constraints = Constraints(maxWidth = maxWidth),
+        )
+        if (currentLine.isNotEmpty() && measurement.didOverflowWidth) {
+            lines += currentLine
+            currentLine = word
+        } else {
+            currentLine = candidate
+        }
+    }
+    if (currentLine.isNotEmpty()) lines += currentLine
+
+    return lines.take(2).joinToString("\n")
 }
 
 private const val FORCE_POSTER_CARD_STYLE = true
