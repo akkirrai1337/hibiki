@@ -13,6 +13,7 @@ pub const PROTOCOL_CALL_OK: i32 = 0;
 pub const PROTOCOL_CALL_INVALID_REQUEST: i32 = -2;
 pub const PROTOCOL_CALL_BUFFER_TOO_SMALL: i32 = -3;
 pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
+pub const PROTOCOL_MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
 struct HostState {
     host_calls: u32,
@@ -296,10 +297,13 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call(
     response_len: *mut usize,
 ) -> i32 {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        if response_len.is_null() || (request_ptr.is_null() && request_len != 0) {
+        if response_len.is_null() {
             return PROTOCOL_CALL_INVALID_REQUEST;
         }
         unsafe { *response_len = 0 };
+        if request_len > PROTOCOL_MAX_REQUEST_BYTES || (request_ptr.is_null() && request_len != 0) {
+            return PROTOCOL_CALL_INVALID_REQUEST;
+        }
         let request_bytes: &[u8] = if request_len == 0 {
             &[]
         } else {
