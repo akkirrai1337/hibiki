@@ -33,6 +33,27 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 
 class ExternalSourceRepositoryPlatformTest {
     @Test
+    fun rollbackActivePackageUsesThePlatformActivationStore() {
+        val sourceId = SourceId("external-source")
+        val active = InstalledSourcePackage(sourceId, "2.0.0", "package/2")
+        val previous = InstalledSourcePackage(sourceId, "1.0.0", "package/1")
+        val store = InMemoryStore(SourcePackageActivationState(active = active, previous = previous))
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = emptyCoordinator(),
+            activePackageLoaderFactory = { error("Active package loading is not used by this test") },
+            activationRepositoryFactory = { requestedId ->
+                SourcePackageActivationRepository(requestedId, store)
+            },
+            closeResources = {},
+        )
+
+        val state = platform.rollbackActivePackage(sourceId)
+
+        assertEquals(previous, state.active)
+        assertEquals(state, store.state)
+    }
+
+    @Test
     fun activeRegistryUsesOnlyPersistedPackagesAndKeepsRuntimeLazy() = runTest {
         val packageId = SourceId("external-source")
         val installed = InstalledSourcePackage(packageId, "1.0.0", "package/path")
@@ -142,6 +163,19 @@ class ExternalSourceRepositoryPlatformTest {
         ).also { it.refresh(clientVersion = 1) }
     }
 
+    private fun emptyCoordinator() = ExternalSourceRepositoryCoordinator(
+        SourceRepositoryCatalogLoader(
+            catalog = SourceRepositoryCatalog(object : SourceRepositoryStore {
+                override fun load() = emptyList<SourceRepositoryEndpoint>()
+
+                override fun persistAtomically(repositories: List<SourceRepositoryEndpoint>) = Unit
+            }),
+            loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
+                error("Repository transport is not used by this test")
+            }),
+        ),
+    )
+
     private fun manifest(sourceId: SourceId) = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = sourceId,
@@ -162,10 +196,12 @@ class ExternalSourceRepositoryPlatformTest {
     )
 
     private class InMemoryStore(
-        private val state: SourcePackageActivationState,
+        var state: SourcePackageActivationState,
     ) : SourcePackageActivationStore {
         override fun load(sourceId: SourceId): SourcePackageActivationState = state
 
-        override fun persistAtomically(sourceId: SourceId, state: SourcePackageActivationState) = Unit
+        override fun persistAtomically(sourceId: SourceId, state: SourcePackageActivationState) {
+            this.state = state
+        }
     }
 }

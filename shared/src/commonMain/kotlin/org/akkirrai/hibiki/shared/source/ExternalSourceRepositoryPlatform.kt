@@ -9,6 +9,7 @@ import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinator
 import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinatorFactory
 import org.akkirrai.beakokit.api.SourcePackageStateException
+import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -18,6 +19,7 @@ class ExternalSourceRepositoryPlatform(
     private val activePackageLoaderFactory: (SourceId) -> ActiveExternalSourcePackageLoader,
     private val packageInstallationFactory: SourcePackageInstallationCoordinatorFactory? = null,
     private val stagingPathFactory: ((SourceId) -> String)? = null,
+    private val activationRepositoryFactory: ((SourceId) -> SourcePackageActivationRepository)? = null,
     private val closeResources: () -> Unit,
 ) {
     fun loadActivePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
@@ -54,6 +56,12 @@ class ExternalSourceRepositoryPlatform(
         }(sourceId),
         initialize = initialize,
     )
+
+    /** Rolls back one source to its previously activated package version. */
+    fun rollbackActivePackage(sourceId: SourceId) =
+        requireNotNull(activationRepositoryFactory) {
+            "Source package rollback is not available on this platform"
+        }(sourceId).rollback()
 
     /** Builds the inactive external registry without changing the built-in registry. */
     fun loadActiveRegistry(

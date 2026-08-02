@@ -66,6 +66,9 @@ fun createAndroidExternalSourceRepositoryPlatform(
             Files.createDirectories(sourceDirectory)
             sourceDirectory.resolve("package-${UUID.randomUUID()}").toString()
         },
+        activationRepositoryFactory = { sourceId ->
+            SourcePackageActivationRepository(sourceId, activationStore)
+        },
         closeResources = client::close,
     )
 }

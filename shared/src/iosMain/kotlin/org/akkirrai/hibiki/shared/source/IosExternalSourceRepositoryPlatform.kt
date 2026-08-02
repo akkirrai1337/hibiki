@@ -31,6 +31,9 @@ fun createIosExternalSourceRepositoryPlatform(): ExternalSourceRepositoryPlatfor
                 manifestReader = IosSourcePackageManifestReader(),
             )
         },
+        activationRepositoryFactory = { sourceId ->
+            SourcePackageActivationRepository(sourceId, activationStore)
+        },
         closeResources = client::close,
     )
 }
