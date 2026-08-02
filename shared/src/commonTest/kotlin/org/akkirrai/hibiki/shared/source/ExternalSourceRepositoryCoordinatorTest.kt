@@ -43,6 +43,7 @@ class ExternalSourceRepositoryCoordinatorTest {
 
         assertEquals(refreshed, coordinator.snapshot.value)
         assertEquals(listOf(endpoint), refreshed.loaded.map { it.endpoint })
+        assertEquals(listOf(SourceId("external-source")), coordinator.availableSourceIds())
     }
 
     @Test
