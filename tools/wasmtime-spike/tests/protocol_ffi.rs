@@ -1,3 +1,5 @@
+#![cfg(feature = "spike-probes")]
+
 use wasmtime_spike::{
     beakokit_runtime_protocol_call, beakokit_runtime_protocol_call_with_module,
     PROTOCOL_CALL_BUFFER_TOO_SMALL, PROTOCOL_CALL_INVALID_REQUEST, PROTOCOL_CALL_OK,

@@ -1,14 +1,18 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 #[cfg(feature = "android-harness")]
 use std::ptr::null_mut;
+#[cfg(feature = "spike-probes")]
 use std::thread;
+#[cfg(feature = "spike-probes")]
 use std::time::Duration;
 
 #[cfg(feature = "android-harness")]
 use jni::objects::{JByteArray, JClass, JString};
 #[cfg(feature = "android-harness")]
 use jni::JNIEnv;
-use wasmtime::{Caller, Config, Engine, Instance, Linker, Module, Store};
+use wasmtime::{Caller, Engine, Linker, Module, Store};
+#[cfg(feature = "spike-probes")]
+use wasmtime::{Config, Instance};
 
 pub mod protocol;
 
@@ -19,10 +23,12 @@ pub const PROTOCOL_CALL_RUNTIME_FAILURE: i32 = -4;
 pub const PROTOCOL_MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 pub const PROTOCOL_MAX_MODULE_BYTES: usize = 16 * 1024 * 1024;
 
+#[cfg(feature = "spike-probes")]
 struct HostState {
     host_calls: u32,
 }
 
+#[cfg(feature = "spike-probes")]
 pub fn run_probe() -> Result<(), Box<dyn std::error::Error>> {
     protocol::run_roundtrip_probe()?;
     run_protocol_guest_call()?;
@@ -34,6 +40,7 @@ pub fn run_probe() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     let request = serde_json::json!({
         "requestId": "guest-probe-1",
@@ -119,10 +126,12 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "spike-probes")]
 fn escape_wat_string(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
     let request = sample_search_request();
     let response = run_protocol_host_call_request(&request.to_string())?;
@@ -154,6 +163,7 @@ fn run_protocol_host_call() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_protocol_host_call_request(
     request_json: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
@@ -232,6 +242,7 @@ fn run_protocol_host_call_request_with_module(
     Ok(String::from_utf8(response_bytes)?)
 }
 
+#[cfg(feature = "spike-probes")]
 fn sample_search_request() -> serde_json::Value {
     serde_json::json!({
         "requestId": "host-probe-1",
@@ -288,6 +299,7 @@ fn sample_title_payload() -> serde_json::Value {
 /// C ABI smoke entry point for the future Android/iOS bridge.
 /// Returns 0 on success and a negative value on failure or panic.
 #[no_mangle]
+#[cfg(feature = "spike-probes")]
 pub extern "C" fn beakokit_runtime_probe() -> i32 {
     match catch_unwind(AssertUnwindSafe(run_probe)) {
         Ok(Ok(())) => 0,
@@ -298,6 +310,7 @@ pub extern "C" fn beakokit_runtime_probe() -> i32 {
 /// C ABI used by Swift/Objective-C and other native hosts for one protocol call.
 /// The caller owns both buffers; `response_len` receives the required/written size.
 #[no_mangle]
+#[cfg(feature = "spike-probes")]
 pub unsafe extern "C" fn beakokit_runtime_protocol_call(
     request_ptr: *const u8,
     request_len: usize,
@@ -484,6 +497,7 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
 }
 
 #[cfg(feature = "android-harness")]
+#[cfg(feature = "android-harness")]
 fn protocol_response_from_jni(
     env: &mut JNIEnv,
     request: JString,
@@ -519,6 +533,7 @@ fn protocol_response_from_jni_with_module(
     run_protocol_host_call_request_with_module(&request, &module_bytes)
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Engine::default();
     let module = Module::new(
@@ -561,6 +576,7 @@ fn run_host_call() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_guest_error() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Engine::default();
     let module = Module::new(
@@ -578,6 +594,7 @@ fn run_guest_error() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "spike-probes")]
 fn run_cancellation() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = Config::new();
     config.epoch_interruption(true);

@@ -2,7 +2,8 @@
 
 This is an isolated Windows-only experiment for the external-source runtime.
 It verifies a host call, guest runtime errors, and epoch-based cancellation.
-The library also exports `beakokit_runtime_probe` as a minimal C ABI entry point.
+The optional `spike-probes` feature exports a temporary
+`beakokit_runtime_probe` entry point.
 The probe also verifies the guest call ABI: the host resets the guest arena,
 allocates request memory through `beakokit_alloc(len)`, writes a versioned JSON
 request, and calls `beakokit_call(ptr, len)`. The guest returns a packed
@@ -13,10 +14,8 @@ guest memory.
 
 The standalone Android harness additionally calls the Rust protocol validator
 through JNI with a real JSON request and checks that a JSON response returns.
-Native iOS hosts can use `beakokit_runtime_protocol_call` from the C header:
-the caller provides UTF-8 request and response buffers, and the function
-returns an explicit status plus the required response length.
-For an installed package, `beakokit_runtime_protocol_call_with_module` accepts
+Native Android/iOS hosts use `beakokit_runtime_protocol_call_with_module` from
+the C header for an installed package. It accepts
 the verified module bytes separately and applies the same request/response
 limits and status codes.
 
@@ -26,7 +25,7 @@ built-in source path.
 Run it from this directory with:
 
 ```powershell
-& "$env:USERPROFILE\.cargo\bin\cargo.exe" run
+& "$env:USERPROFILE\.cargo\bin\cargo.exe" run --features spike-probes
 ```
 
 The Android cross-build was verified with NDK `28.2.13676358`:

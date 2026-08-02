@@ -9,15 +9,17 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-android-harness = ["dep:jni"]
+spike-probes = ["dep:wat"]
+android-harness = ["dep:jni", "spike-probes"]
 
 [[bin]]
 name = "wasmtime-spike-runner"
 path = "src/main.rs"
+required-features = ["spike-probes"]
 
 [dependencies]
 jni = { version = "0.21", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 wasmtime = "47.0.3"
-wat = "1.245.1"
+wat = { version = "1.245.1", optional = true }
