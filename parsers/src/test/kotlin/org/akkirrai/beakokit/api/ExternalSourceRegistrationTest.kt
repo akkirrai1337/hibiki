@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -240,6 +241,38 @@ class ExternalSourceRegistrationTest {
         assertFailsWith<SourcePackageValidationException> {
             factory.create(activePackage, context)
         }
+    }
+
+    @Test
+    fun nativeBridgeFactoryAcceptsAPlatformSuppliedRuntimePolicy() {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(runtime = SourceRuntime("custom", "abi-1")),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        var bridgeCreated = false
+        val factory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                bridgeCreated = true
+                ExternalSourceRuntimeNativeBridge { _, _ -> error("Runtime call is not expected") }
+            },
+            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(1) },
+            requestIdFactory = { "custom-runtime" },
+            runtimeSupportPolicy = SourceRuntimeSupportPolicy { runtime ->
+                runtime == SourceRuntime("custom", "abi-1")
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+
+        factory.create(activePackage, context)
+
+        assertTrue(bridgeCreated)
     }
 
     @Test

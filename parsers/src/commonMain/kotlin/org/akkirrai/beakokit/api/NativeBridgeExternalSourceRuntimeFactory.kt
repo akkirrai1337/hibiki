@@ -15,6 +15,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
     private val bridgeFactory: ExternalSourceRuntimeNativeBridgeFactory,
     private val moduleReader: SourcePackageModuleReader,
     private val requestIdFactory: () -> String,
+    private val runtimeSupportPolicy: SourceRuntimeSupportPolicy = SourceRuntimeSupportPolicy.WASMTIME_WASI,
     private val payloadCodec: ExternalSourceRuntimePayloadCodec = AnimeTitleRuntimePayloadCodec,
     private val callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
 ) : ExternalSourceRuntimeFactory {
@@ -23,7 +24,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
         context: SourceContext,
     ): ExternalSourceRuntime {
         val runtime = sourcePackage.manifest.runtime
-        if (runtime.id != SUPPORTED_RUNTIME_ID || runtime.abi !in SUPPORTED_RUNTIME_ABIS) {
+        if (!runtimeSupportPolicy.supports(runtime)) {
             throw SourcePackageValidationException(
                 listOf("Unsupported source runtime: ${runtime.id}/${runtime.abi}"),
             )
@@ -46,8 +47,4 @@ class NativeBridgeExternalSourceRuntimeFactory(
         )
     }
 
-    private companion object {
-        const val SUPPORTED_RUNTIME_ID = "wasm"
-        val SUPPORTED_RUNTIME_ABIS = setOf("wasm32-wasi", "wasm32-wasi-preview1")
-    }
 }
