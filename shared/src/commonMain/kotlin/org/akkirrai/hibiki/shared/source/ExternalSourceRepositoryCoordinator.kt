@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.source
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceClientVersion
 import org.akkirrai.beakokit.api.SourceHostApi
@@ -15,6 +17,8 @@ import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
 class ExternalSourceRepositoryCoordinator(
     private val catalogLoader: SourceRepositoryCatalogLoader,
 ) {
+    private val refreshMutex = Mutex()
+
     var snapshot: SourceRepositoryLoadSnapshot = SourceRepositoryLoadSnapshot(
         loaded = emptyList(),
         failures = emptyList(),
@@ -26,10 +30,12 @@ class ExternalSourceRepositoryCoordinator(
         supportedSourceApiVersion: Int = SourceApi.VERSION,
         supportedHostApiVersion: Int = SourceHostApi.VERSION,
     ): SourceRepositoryLoadSnapshot {
-        return catalogLoader.loadAll(
-            clientVersion = clientVersion,
-            supportedSourceApiVersion = supportedSourceApiVersion,
-            supportedHostApiVersion = supportedHostApiVersion,
-        ).also { snapshot = it }
+        return refreshMutex.withLock {
+            catalogLoader.loadAll(
+                clientVersion = clientVersion,
+                supportedSourceApiVersion = supportedSourceApiVersion,
+                supportedHostApiVersion = supportedHostApiVersion,
+            ).also { snapshot = it }
+        }
     }
 }

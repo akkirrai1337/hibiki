@@ -1,8 +1,12 @@
 package org.akkirrai.hibiki.shared.source
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import org.akkirrai.beakokit.api.SourceRepositoryCatalog
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
@@ -39,6 +43,34 @@ class ExternalSourceRepositoryCoordinatorTest {
 
         assertEquals(refreshed, coordinator.snapshot)
         assertEquals(listOf(endpoint), refreshed.loaded.map { it.endpoint })
+    }
+
+    @Test
+    fun concurrentRefreshesDoNotOverlap() = runTest {
+        var activeLoads = 0
+        var overlapped = false
+        val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(FakeStore(listOf(endpoint))),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { _, _ ->
+                        activeLoads++
+                        overlapped = overlapped || activeLoads > 1
+                        delay(1)
+                        activeLoads--
+                        SourceRepositoryResponse(200, SourceRepositoryIndexCodec.encode(index()))
+                    },
+                ),
+            ),
+        )
+
+        listOf(
+            async { coordinator.refresh(clientVersion = 1) },
+            async { coordinator.refresh(clientVersion = 1) },
+        ).awaitAll()
+
+        assertFalse(overlapped)
     }
 
     private fun index() = org.akkirrai.beakokit.api.SourceRepositoryIndex(
