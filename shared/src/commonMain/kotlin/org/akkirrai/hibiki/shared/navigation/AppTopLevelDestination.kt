@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.text.AppTextKey
 
 /** Stable top-level destinations shared by every platform host. */
@@ -32,5 +33,8 @@ sealed interface AppNavigationEvent {
     data object ClosePlayerSettings : AppNavigationEvent
     data object DismissOverlay : AppNavigationEvent
     data object Back : AppNavigationEvent
-    data class OpenDetails(val animeId: String) : AppNavigationEvent
+    data class OpenDetails(val animeId: String) : AppNavigationEvent {
+        constructor(anime: Anime) : this(anime.id)
+    }
+    data object OpenSettings : AppNavigationEvent
 }

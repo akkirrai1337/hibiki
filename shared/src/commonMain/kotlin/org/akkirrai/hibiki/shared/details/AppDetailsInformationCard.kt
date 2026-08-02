@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.shared.details
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -19,12 +18,12 @@ data class DetailsInformationLabels(
 )
 
 data class DetailsInformationIcons(
-    val status: ImageVector,
-    val episodes: ImageVector,
-    val type: ImageVector,
-    val releaseDate: ImageVector,
-    val sourceMaterial: ImageVector,
-    val studio: ImageVector,
+    val status: DetailsInformationIcon = DetailsInformationIcon.STATUS,
+    val episodes: DetailsInformationIcon = DetailsInformationIcon.EPISODES,
+    val type: DetailsInformationIcon = DetailsInformationIcon.TYPE,
+    val releaseDate: DetailsInformationIcon = DetailsInformationIcon.RELEASE_DATE,
+    val sourceMaterial: DetailsInformationIcon = DetailsInformationIcon.SOURCE_MATERIAL,
+    val studio: DetailsInformationIcon = DetailsInformationIcon.STUDIO,
 )
 
 data class DetailsInformationAccents(

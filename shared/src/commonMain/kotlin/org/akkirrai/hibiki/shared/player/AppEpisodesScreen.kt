@@ -41,9 +41,9 @@ fun AppEpisodesScreen(
     WatchScreenScaffold(
         onBackClick = onBackClick,
         backEnabled = enabled,
-        backIconContent = icons.back,
+        backContentDescription = null,
         modifier = modifier,
-    ) {
+    ) { contentPadding ->
         downloadToggleContent(
             Modifier.align(Alignment.TopEnd),
             downloadControlsVisible,
@@ -76,6 +76,7 @@ fun AppEpisodesScreen(
             is EpisodesUiState.Content -> EpisodesList(
                 episodes = result.items,
                 episodeContent = episodeContent,
+                contentPadding = contentPadding,
             )
         }
     }

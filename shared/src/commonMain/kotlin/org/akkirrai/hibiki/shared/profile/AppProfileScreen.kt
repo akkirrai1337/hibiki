@@ -108,10 +108,11 @@ fun AppProfileScreen(
                         ProfileAvatar(
                             ratio = ratio,
                             isEditing = isEditing,
-                            editIcon = icons.changeAvatar,
                             editContentDescription = labels.changeAvatar,
                             onEditClick = onAvatarEditClick,
-                            avatarContent = avatarContent,
+                            avatarContent = { avatarModifier ->
+                                Box(avatarModifier) { avatarContent() }
+                            },
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
                     }

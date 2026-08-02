@@ -50,9 +50,9 @@ fun AppWatchSourcesScreen(
     WatchScreenScaffold(
         onBackClick = onBackClick,
         backEnabled = enabled,
-        backIconContent = icons.back,
+        backContentDescription = null,
         modifier = modifier,
-    ) {
+    ) { contentPadding ->
         when {
             state.errorMessage != null -> WatchEmptyState(
                 title = labels.emptyTitle,
@@ -82,22 +82,12 @@ fun AppWatchSourcesScreen(
                 horizontalPadding = horizontalPadding,
                 episodeSummary = episodeSummary,
                 onSourceClick = onSourceClick,
-                loadMoreContent = if (state.hasMoreItems) {
-                    {
-                        Row(
-                            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 18.dp),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            TextButton(onClick = onLoadMore, enabled = !state.isLoadingMore) {
-                                if (state.isLoadingMore) CircularProgressIndicator(strokeWidth = 2.dp)
-                                else Text(labels.loadMore)
-                            }
-                        }
-                    }
-                } else null,
-                loadingContent = if (state.isLoading && state.items.isNotEmpty()) {
-                    { CircularProgressIndicator() }
-                } else null,
+                hasMoreItems = state.hasMoreItems,
+                loadMoreLabel = labels.loadMore,
+                isLoadingMore = state.isLoadingMore,
+                onLoadMore = onLoadMore,
+                isRefreshing = state.isLoading && state.items.isNotEmpty(),
+                contentPadding = contentPadding,
             )
         }
     }
