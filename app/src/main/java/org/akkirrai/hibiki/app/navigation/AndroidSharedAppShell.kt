@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,7 +20,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -44,10 +41,6 @@ import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
 import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
-import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
-import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
-import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
-import org.akkirrai.beakokit.model.CatalogCapabilities
 
 /** Android adapter for the shared shell; disabled until the parity checkpoint is approved. */
 @Composable
@@ -58,28 +51,6 @@ internal fun AndroidSharedAppShell(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val externalSourcePlatform = remember(context) {
-        createAndroidExternalSourceRepositoryPlatform(context)
-    }
-    val externalRuntimeCoordinator = remember(externalSourcePlatform) {
-        ExternalSourceRuntimeCoordinator(
-            platform = externalSourcePlatform,
-            catalogCapabilities = { CatalogCapabilities.FULL },
-            runtimeFactory = createAndroidExternalSourceRuntimeFactory(),
-        )
-    }
-    LaunchedEffect(externalRuntimeCoordinator) {
-        try {
-            externalRuntimeCoordinator.refresh()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Throwable) {
-            println("BeakoKit external repository refresh failed: ${error.message}")
-        }
-    }
-    DisposableEffect(externalRuntimeCoordinator) {
-        onDispose { externalRuntimeCoordinator.close() }
-    }
     val uriHandler = LocalUriHandler.current
     var pendingAvatarCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var pendingDiscordTokenCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }

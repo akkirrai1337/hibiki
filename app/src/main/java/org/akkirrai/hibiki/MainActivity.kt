@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
+import org.akkirrai.hibiki.app.navigation.AndroidExternalSourceBackgroundSync
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -157,6 +158,7 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
+                        AndroidExternalSourceBackgroundSync()
                         if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
                             AndroidSharedAppShell(
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },

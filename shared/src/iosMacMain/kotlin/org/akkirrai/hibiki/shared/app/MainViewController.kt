@@ -90,7 +90,6 @@ fun MainViewController(systemLanguage: String): UIViewController {
         }
         DisposableEffect(repository) { onDispose { repository.close() } }
         DisposableEffect(watchRepository) { onDispose { watchRepository.close() } }
-        DisposableEffect(externalSourcePlatform) { onDispose { externalSourcePlatform.close() } }
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             val density = LocalDensity.current
             val safeDrawingInsets = AppLayoutEnvironment(
