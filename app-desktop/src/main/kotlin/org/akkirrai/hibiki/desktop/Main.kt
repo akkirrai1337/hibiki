@@ -2,11 +2,13 @@ package org.akkirrai.hibiki.desktop
 
 import java.awt.Desktop
 import java.net.URI
+import java.nio.file.Paths
 import java.util.Locale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
@@ -26,6 +28,20 @@ private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"
 
 /** Desktop entry point for the production shared shell. */
 fun main() = application {
+    val externalSourcePlatform = remember {
+        createDesktopExternalSourceRepositoryPlatform(
+            storageDirectory = Paths.get(System.getProperty("user.home"), ".hibiki"),
+        )
+    }
+    LaunchedEffect(externalSourcePlatform) {
+        runCatching { externalSourcePlatform.coordinator.refresh() }
+            .onFailure { error ->
+                println("BeakoKit external repository refresh failed: ${error.message}")
+            }
+    }
+    DisposableEffect(externalSourcePlatform) {
+        onDispose { externalSourcePlatform.close() }
+    }
     val settingsStore = remember { DesktopSettingsStore() }
     val initialSourceId = remember(settingsStore) { settingsStore.load().selectedSourceId }
     val catalogRepository = remember(initialSourceId) { DesktopCatalogRepository(initialSourceId) }
