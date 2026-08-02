@@ -22,6 +22,22 @@ class SourcePackageInstallationCoordinator(
     private val extractor: SourcePackageExtractor,
     private val installer: SourcePackageInstaller,
 ) {
+    /** Installs the manifest version into the supplied staging path. */
+    suspend fun install(
+        repositoryManifest: SourceManifest,
+        stagingPath: String,
+        initialize: suspend () -> Unit,
+    ): SourcePackageActivationState = install(
+        repositoryManifest = repositoryManifest,
+        candidate = InstalledSourcePackage(
+            sourceId = repositoryManifest.sourceId,
+            packageVersion = repositoryManifest.packageVersion,
+            packagePath = stagingPath,
+        ),
+        stagingPath = stagingPath,
+        initialize = initialize,
+    )
+
     suspend fun install(
         repositoryManifest: SourceManifest,
         candidate: InstalledSourcePackage,

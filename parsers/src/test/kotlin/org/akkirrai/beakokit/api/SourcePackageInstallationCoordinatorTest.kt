@@ -75,6 +75,44 @@ class SourcePackageInstallationCoordinatorTest {
     }
 
     @Test
+    fun `manifest overload creates a matching installation candidate`() = runBlocking {
+        val manifest = manifest()
+        val store = RecordingStore()
+        val stagingPath = "staging/source"
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(byteArrayOf(1, 2, 3)) },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, path, repositoryManifest ->
+                assertEquals(stagingPath, path)
+                ExtractedSourcePackage(
+                    manifest = repositoryManifest,
+                    entries = listOf(
+                        SourcePackageEntry("manifest.json", 1),
+                        SourcePackageEntry(repositoryManifest.entrypoint, 1),
+                    ),
+                )
+            },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(manifest.sourceId, store),
+            ),
+        )
+
+        coordinator.install(manifest, stagingPath) {}
+
+        assertEquals(
+            InstalledSourcePackage(manifest.sourceId, manifest.packageVersion, stagingPath),
+            store.state.active,
+        )
+    }
+
+    @Test
     fun `coordinator rejects an activation path different from staging`() = runBlocking {
         val manifest = manifest()
         val candidate = InstalledSourcePackage(
