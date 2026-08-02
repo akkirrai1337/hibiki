@@ -5,6 +5,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSFileSize
+import platform.Foundation.NSNumber
 import platform.posix.memcpy
 
 /** Reads the manifest from an installed package directory on iOS. */
@@ -22,6 +24,14 @@ class IosSourcePackageManifestReader(
         if (!NSFileManager.defaultManager.fileExistsAtPath(manifestPath)) {
             throw SourcePackageStateException(
                 "Installed source package manifest is missing: $manifestPath",
+            )
+        }
+        val fileSize = (NSFileManager.defaultManager
+            .attributesOfItemAtPath(manifestPath, error = null)
+            ?.get(NSFileSize) as? NSNumber)?.longLongValue
+        if (fileSize != null && fileSize > maxManifestBytes) {
+            throw SourcePackageStateException(
+                "Installed source package manifest exceeds $maxManifestBytes bytes: $manifestPath",
             )
         }
         val data = NSFileManager.defaultManager.contentsAtPath(manifestPath)
