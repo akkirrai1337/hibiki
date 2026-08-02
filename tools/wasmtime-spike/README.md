@@ -44,6 +44,17 @@ The Android library is emitted as
 symbol can be checked with the NDK `llvm-nm` tool before adding a Kotlin/JNI
 or Swift bridge.
 
+To build and verify production Android libraries for `arm64-v8a` and `x86_64`
+without harness features, run:
+
+```powershell
+.\build-android-runtime.ps1
+```
+
+The script verifies that each library exports
+`beakokit_runtime_protocol_call_with_module` and does not package the result
+into the application yet.
+
 To rebuild the x86_64 Android harness and refresh its JNI library in one step
 on Windows, run:
 
