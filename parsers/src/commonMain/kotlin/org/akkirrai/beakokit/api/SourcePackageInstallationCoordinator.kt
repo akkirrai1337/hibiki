@@ -47,7 +47,7 @@ class SourcePackageInstallationCoordinator(
                 initialize = initialize,
             )
         } catch (error: Throwable) {
-            extracted.discard()
+            runCatching { extracted.discard() }
             throw error
         }
     }

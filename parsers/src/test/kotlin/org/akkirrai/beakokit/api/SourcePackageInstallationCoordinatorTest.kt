@@ -124,6 +124,48 @@ class SourcePackageInstallationCoordinatorTest {
         assertTrue(discarded)
     }
 
+    @Test
+    fun `cleanup failure does not replace the installation failure`() = runBlocking {
+        val manifest = manifest()
+        val candidate = InstalledSourcePackage(
+            sourceId = manifest.sourceId,
+            packageVersion = manifest.packageVersion,
+            packagePath = "staging/package",
+        )
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(byteArrayOf(1, 2, 3)) },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ ->
+                ExtractedSourcePackage(
+                    manifest = manifest,
+                    entries = listOf(
+                        SourcePackageEntry("manifest.json", 1),
+                        SourcePackageEntry(manifest.entrypoint, 1),
+                    ),
+                    discard = { error("cleanup failed") },
+                )
+            },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(manifest.sourceId, RecordingStore()),
+            ),
+        )
+
+        val error = assertFailsWith<IllegalStateException> {
+            coordinator.install(manifest, candidate, candidate.packagePath) {
+                error("initialization failed")
+            }
+        }
+
+        assertEquals("initialization failed", error.message)
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),
