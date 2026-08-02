@@ -17,6 +17,7 @@ class ExternalSourceRepositoryPlatform(
     val coordinator: ExternalSourceRepositoryCoordinator,
     private val activePackageLoaderFactory: (SourceId) -> ActiveExternalSourcePackageLoader,
     private val packageInstallationFactory: SourcePackageInstallationCoordinatorFactory? = null,
+    private val stagingPathFactory: ((SourceId) -> String)? = null,
     private val closeResources: () -> Unit,
 ) {
     fun loadActivePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
@@ -40,6 +41,18 @@ class ExternalSourceRepositoryPlatform(
         )
     } ?: throw SourcePackageStateException(
         "Source package is not advertised by a loaded repository: $sourceId",
+    )
+
+    /** Installs an advertised package using a platform-owned unique staging path. */
+    suspend fun installAvailablePackage(
+        sourceId: SourceId,
+        initialize: suspend () -> Unit,
+    ) = installAvailablePackage(
+        sourceId = sourceId,
+        stagingPath = requireNotNull(stagingPathFactory) {
+            "Automatic source package staging is not available on this platform"
+        }(sourceId),
+        initialize = initialize,
     )
 
     /** Builds the inactive external registry without changing the built-in registry. */

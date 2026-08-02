@@ -3,6 +3,8 @@ package org.akkirrai.hibiki.shared.source
 import android.content.Context
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import java.nio.file.Files
+import java.util.UUID
 import org.akkirrai.beakokit.api.KtorSourceRepositoryTransport
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackageLoader
 import org.akkirrai.beakokit.api.JvmSourcePackageActivationStore
@@ -37,6 +39,7 @@ fun createAndroidExternalSourceRepositoryPlatform(
         ),
     )
     val packageValidator = SourcePackageValidator(clientVersion = clientVersion)
+    val packageRoot = context.filesDir.toPath().resolve("beakokit/source-packages")
     val packageInstallationFactory = SourcePackageInstallationCoordinatorFactory(
         downloadService = SourcePackageDownloadService(
             transport = KtorSourcePackageTransport(client),
@@ -58,6 +61,11 @@ fun createAndroidExternalSourceRepositoryPlatform(
             )
         },
         packageInstallationFactory = packageInstallationFactory,
+        stagingPathFactory = { sourceId ->
+            val sourceDirectory = packageRoot.resolve(sourceId.value)
+            Files.createDirectories(sourceDirectory)
+            sourceDirectory.resolve("package-${UUID.randomUUID()}").toString()
+        },
         closeResources = client::close,
     )
 }
