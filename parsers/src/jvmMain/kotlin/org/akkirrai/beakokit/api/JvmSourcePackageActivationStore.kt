@@ -76,5 +76,3 @@ class JvmSourcePackageActivationStore(
         }
     }
 }
-
-class SourcePackageStateException(message: String) : IllegalStateException(message)
