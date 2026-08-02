@@ -9,6 +9,7 @@ import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceClientVersion
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
@@ -50,6 +51,16 @@ class ExternalSourceRepositoryCoordinator(
         .map { manifest -> manifest.sourceId }
         .distinct()
         .toList()
+
+    /** Source manifests advertised by loaded repositories; the first repository wins per ID. */
+    fun availableSourceManifests(): List<SourceManifest> = snapshot.value.loaded
+        .asSequence()
+        .flatMap { repository -> repository.index.sources.asSequence() }
+        .distinctBy { manifest -> manifest.sourceId }
+        .toList()
+
+    fun availableSourceManifest(sourceId: SourceId): SourceManifest? =
+        availableSourceManifests().firstOrNull { manifest -> manifest.sourceId == sourceId }
 
     suspend fun refresh(
         clientVersion: Int = SourceClientVersion.CURRENT,

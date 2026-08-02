@@ -44,6 +44,34 @@ class ExternalSourceRepositoryCoordinatorTest {
         assertEquals(refreshed, coordinator.snapshot.value)
         assertEquals(listOf(endpoint), refreshed.loaded.map { it.endpoint })
         assertEquals(listOf(SourceId("external-source")), coordinator.availableSourceIds())
+        assertEquals(index().sources.single(), coordinator.availableSourceManifest(SourceId("external-source")))
+    }
+
+    @Test
+    fun availableManifestsUseTheFirstRepositoryForDuplicateSourceIds() = runTest {
+        val first = SourceRepositoryEndpoint("https://first.example/index.json")
+        val second = SourceRepositoryEndpoint("https://second.example/index.json")
+        val firstManifest = index().sources.single()
+        val secondManifest = firstManifest.copy(packageVersion = "2.0.0")
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(FakeStore(listOf(first, second))),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { url, _ ->
+                        SourceRepositoryResponse(
+                            200,
+                            SourceRepositoryIndexCodec.encode(
+                                index().copy(sources = listOf(if (url == first.url) firstManifest else secondManifest)),
+                            ),
+                        )
+                    },
+                ),
+            ),
+        )
+
+        coordinator.refresh(clientVersion = 1)
+
+        assertEquals(listOf(firstManifest), coordinator.availableSourceManifests())
     }
 
     @Test
