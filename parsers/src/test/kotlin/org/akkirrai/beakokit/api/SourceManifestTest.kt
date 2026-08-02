@@ -3,6 +3,8 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SourceManifestTest {
     @Test
@@ -40,6 +42,22 @@ class SourceManifestTest {
         assertContains(
             invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
             "Unsupported source host API version: ${SourceHostApi.VERSION + 1}",
+        )
+    }
+
+    @Test
+    fun `package compatibility ignores archive metadata but not source metadata`() {
+        val repositoryManifest = manifest()
+        val packageManifest = repositoryManifest.copy(
+            sha256 = "b".repeat(64),
+            artifactSizeBytes = 2048,
+        )
+
+        assertTrue(repositoryManifest.matchesPackageManifest(packageManifest))
+        assertFalse(
+            repositoryManifest.matchesPackageManifest(
+                packageManifest.copy(runtime = SourceRuntime("other-runtime", "abi-1")),
+            ),
         )
     }
 
