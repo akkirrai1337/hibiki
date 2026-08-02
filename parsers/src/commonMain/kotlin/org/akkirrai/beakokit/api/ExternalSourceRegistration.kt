@@ -30,6 +30,32 @@ fun externalSourceRegistry(
     registrations: Iterable<ExternalSourceRegistration>,
 ): ExternalSourceRegistry = ExternalSourceRegistry(externalSourceCatalog(registrations))
 
+/** A validated manifest paired with the package version selected for execution. */
+data class ActiveExternalSourcePackage(
+    val manifest: SourceManifest,
+    val installed: InstalledSourcePackage,
+) {
+    init {
+        require(manifest.sourceId == installed.sourceId) {
+            "Manifest source ID does not match the installed package"
+        }
+        require(manifest.packageVersion == installed.packageVersion) {
+            "Manifest package version does not match the installed package"
+        }
+        require(installed.packagePath.isNotBlank()) { "Installed package path must not be blank" }
+    }
+
+    fun toExternalSourceRegistration(
+        catalogCapabilities: CatalogCapabilities,
+        runtimeFactory: (packagePath: String, context: SourceContext) -> ExternalSourceRuntime,
+        registrationOrder: Int? = null,
+    ): ExternalSourceRegistration = manifest.toExternalSourceRegistration(
+        catalogCapabilities = catalogCapabilities,
+        runtimeFactory = { context -> runtimeFactory(installed.packagePath, context) },
+        registrationOrder = registrationOrder,
+    )
+}
+
 fun SourceManifest.toExternalSourceRegistration(
     catalogCapabilities: CatalogCapabilities,
     runtimeFactory: (SourceContext) -> ExternalSourceRuntime,

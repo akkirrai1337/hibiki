@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -63,6 +64,52 @@ class ExternalSourceRegistrationTest {
         )
 
         assertEquals(listOf(SourceId("external-test")), registry.sources.map(SourceInfo::id))
+    }
+
+    @Test
+    fun activePackagePassesItsPathToRuntimeFactory() {
+        var receivedPath: String? = null
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest(),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+
+        activePackage.toExternalSourceRegistration(
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtimeFactory = { packagePath, _ ->
+                receivedPath = packagePath
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+        ).catalogEntry().factory.create(
+            DefaultSourceContext(
+                httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+                preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            ),
+        )
+
+        assertEquals("sources/external-test/1.0.0", receivedPath)
+    }
+
+    @Test
+    fun activePackageRejectsMismatchedVersion() {
+        assertFailsWith<IllegalArgumentException> {
+            ActiveExternalSourcePackage(
+                manifest = manifest(),
+                installed = InstalledSourcePackage(
+                    sourceId = SourceId("external-test"),
+                    packageVersion = "2.0.0",
+                    packagePath = "sources/external-test/2.0.0",
+                ),
+            )
+        }
     }
 
     private fun sourceInfo() = SourceInfo(
