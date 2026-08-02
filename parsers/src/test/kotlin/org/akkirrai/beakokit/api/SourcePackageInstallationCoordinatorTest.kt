@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
 
 class SourcePackageInstallationCoordinatorTest {
@@ -46,6 +47,38 @@ class SourcePackageInstallationCoordinatorTest {
         assertEquals(true, initialized)
         assertEquals(candidate, state.active)
         assertEquals(state, store.state)
+    }
+
+    @Test
+    fun `coordinator rejects an activation path different from staging`() = runBlocking {
+        val manifest = manifest()
+        val candidate = InstalledSourcePackage(
+            sourceId = manifest.sourceId,
+            packageVersion = manifest.packageVersion,
+            packagePath = "final/package",
+        )
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> error("Download must not start") },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ -> error("Extraction must not start") },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(
+                    manifest.sourceId,
+                    RecordingStore(),
+                ),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            coordinator.install(manifest, candidate, "staging/package") {}
+        }
     }
 
     private fun manifest() = SourceManifest(

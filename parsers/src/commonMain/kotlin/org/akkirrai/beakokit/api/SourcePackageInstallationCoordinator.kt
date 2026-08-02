@@ -27,6 +27,9 @@ class SourcePackageInstallationCoordinator(
         stagingPath: String,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
+        require(candidate.packagePath == stagingPath) {
+            "Installation candidate path must match the extraction staging path"
+        }
         val verified = downloadService.download(repositoryManifest)
         val extracted = extractor.extract(
             downloaded = verified.downloaded,
