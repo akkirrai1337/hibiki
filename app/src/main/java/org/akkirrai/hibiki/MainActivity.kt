@@ -158,35 +158,36 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidExternalSourceBackgroundSync()
-                        if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
-                            AndroidSharedAppShell(
-                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                onConfigureNotifications = ::configureNotifications,
-                                enableOnboarding = true,
-                            )
-                        } else if (preferences.onboardingCompleted) {
-                            HibikiApp(
-                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                onConfigureNotifications = ::configureNotifications,
-                            )
-                        } else {
-                            SharedAndroidOnboardingScreen(
-                                initialSource = preferences.animeSource
-                                    .takeIf { preferences.hasExplicitAnimeSource },
-                                notificationPermissionState = preferences.notificationPermissionState,
-                                onRequestNotificationPermission = ::requestNotificationPermission,
-                                onComplete = appPreferences::completeOnboarding,
-                            )
-                        }
-                        if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
-                            availableUpdate?.let { update ->
-                                AppUpdateDialog(
-                                    update = update,
-                                    downloadProgress = updateDownloadProgress,
-                                    onUpdate = { downloadUpdate(update) },
-                                    onLater = { dismissUpdate(update.version) },
+                        AndroidExternalSourceBackgroundSync {
+                            if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
+                                AndroidSharedAppShell(
+                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                    onConfigureNotifications = ::configureNotifications,
+                                    enableOnboarding = true,
                                 )
+                            } else if (preferences.onboardingCompleted) {
+                                HibikiApp(
+                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                    onConfigureNotifications = ::configureNotifications,
+                                )
+                            } else {
+                                SharedAndroidOnboardingScreen(
+                                    initialSource = preferences.animeSource
+                                        .takeIf { preferences.hasExplicitAnimeSource },
+                                    notificationPermissionState = preferences.notificationPermissionState,
+                                    onRequestNotificationPermission = ::requestNotificationPermission,
+                                    onComplete = appPreferences::completeOnboarding,
+                                )
+                            }
+                            if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
+                                availableUpdate?.let { update ->
+                                    AppUpdateDialog(
+                                        update = update,
+                                        downloadProgress = updateDownloadProgress,
+                                        onUpdate = { downloadUpdate(update) },
+                                        onLater = { dismissUpdate(update.version) },
+                                    )
+                                }
                             }
                         }
                     }
