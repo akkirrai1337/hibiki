@@ -190,7 +190,7 @@ fn finish_call_before_timeout(
     result
 }
 
-type HostCall = unsafe extern "C" fn(
+pub type HostCall = unsafe extern "C" fn(
     user_data: *mut core::ffi::c_void,
     request_ptr: *const u8,
     request_len: usize,
@@ -199,8 +199,7 @@ type HostCall = unsafe extern "C" fn(
     response_len: *mut usize,
 ) -> i32;
 
-/// Host callback used only by the spike C ABI tests.
-#[cfg(feature = "spike-probes")]
+/// Host callback used by native production hosts.
 pub type BeakokitHostCall = HostCall;
 
 #[cfg(feature = "spike-probes")]
@@ -631,7 +630,6 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module(
 /// Every non-null pointer must be valid for the supplied byte range, `response_len` must be
 /// writable for one `usize`, and `host_call` must remain valid for the duration of this call.
 #[no_mangle]
-#[cfg(feature = "spike-probes")]
 pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module_and_host(
     module_ptr: *const u8,
     module_len: usize,

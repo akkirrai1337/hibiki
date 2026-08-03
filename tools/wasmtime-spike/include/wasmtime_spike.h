@@ -25,6 +25,26 @@ int32_t beakokit_runtime_protocol_call_with_module(
     size_t response_capacity,
     size_t* response_len);
 
+typedef int32_t (*beakokit_host_call)(
+    void* user_data,
+    const uint8_t* request_ptr,
+    size_t request_len,
+    uint8_t* response_ptr,
+    size_t response_capacity,
+    size_t* response_len);
+
+// Executes one verified Wasm module and delegates host calls to the callback.
+int32_t beakokit_runtime_protocol_call_with_module_and_host(
+    const uint8_t* module_ptr,
+    size_t module_len,
+    const uint8_t* request_ptr,
+    size_t request_len,
+    beakokit_host_call host_call,
+    void* user_data,
+    uint8_t* response_ptr,
+    size_t response_capacity,
+    size_t* response_len);
+
 #ifdef __cplusplus
 }
 #endif
