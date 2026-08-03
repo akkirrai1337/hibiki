@@ -382,6 +382,8 @@ fn run_protocol_host_call_request_with_module(
             let payload = match &request.operation {
                 protocol::Operation::Search => serde_json::json!({ "items": [] }),
                 protocol::Operation::Details => sample_title_payload(),
+                protocol::Operation::PlaybackGroups => serde_json::json!({ "groups": [] }),
+                protocol::Operation::PlayerLinks => serde_json::json!({ "links": [] }),
             };
             let response = serde_json::json!({
                 "requestId": request.request_id,

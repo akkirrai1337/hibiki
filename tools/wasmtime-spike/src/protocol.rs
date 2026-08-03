@@ -9,6 +9,10 @@ pub enum Operation {
     Search,
     #[serde(rename = "DETAILS")]
     Details,
+    #[serde(rename = "PLAYBACK_GROUPS")]
+    PlaybackGroups,
+    #[serde(rename = "PLAYER_LINKS")]
+    PlayerLinks,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -42,6 +46,8 @@ impl Request {
         match request.operation {
             Operation::Search => validate_search_payload(&request.payload)?,
             Operation::Details => validate_details_payload(&request.payload)?,
+            Operation::PlaybackGroups => validate_playback_groups_payload(&request.payload)?,
+            Operation::PlayerLinks => validate_player_links_payload(&request.payload)?,
         }
         Ok(request)
     }
@@ -104,6 +110,8 @@ impl Response {
             match &request.operation {
                 Operation::Search => validate_search_response_payload(payload)?,
                 Operation::Details => validate_title_payload(payload)?,
+                Operation::PlaybackGroups => validate_playback_groups_response_payload(payload)?,
+                Operation::PlayerLinks => validate_player_links_response_payload(payload)?,
             }
         }
         Ok(())
@@ -132,6 +140,19 @@ pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
 pub fn validate_details_payload(payload: &Value) -> Result<(), &'static str> {
     let object = payload.as_object().ok_or("payload must be a JSON object")?;
     required_string(object, "id")
+}
+
+pub fn validate_playback_groups_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload.as_object().ok_or("payload must be a JSON object")?;
+    required_string(object, "titleId")
+}
+
+pub fn validate_player_links_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload.as_object().ok_or("payload must be a JSON object")?;
+    for field in ["titleId", "groupId", "episodeId"] {
+        required_string(object, field)?;
+    }
+    required_number(object, "episodeNumber")
 }
 
 pub fn validate_search_response_payload(payload: &Value) -> Result<(), &'static str> {
@@ -199,6 +220,65 @@ pub fn validate_title_payload(payload: &Value) -> Result<(), &'static str> {
     Ok(())
 }
 
+pub fn validate_playback_groups_response_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload
+        .as_object()
+        .ok_or("playback groups response payload must be a JSON object")?;
+    let groups = object
+        .get("groups")
+        .and_then(Value::as_array)
+        .ok_or("playback groups must be an array")?;
+    for group in groups {
+        let group = group
+            .as_object()
+            .ok_or("playback group must be an object")?;
+        required_string(group, "id")?;
+        required_string(group, "title")?;
+        optional_string_or_null(group, "qualityLabel")?;
+        let episodes = group
+            .get("episodes")
+            .and_then(Value::as_array)
+            .ok_or("playback group episodes must be an array")?;
+        for episode in episodes {
+            let episode = episode.as_object().ok_or("episode must be an object")?;
+            required_string(episode, "id")?;
+            required_number(episode, "number")?;
+            optional_string_or_null(episode, "title")?;
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_player_links_response_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload
+        .as_object()
+        .ok_or("player links response payload must be a JSON object")?;
+    let links = object
+        .get("links")
+        .and_then(Value::as_array)
+        .ok_or("player links must be an array")?;
+    for link in links {
+        let link = link.as_object().ok_or("player link must be an object")?;
+        required_string(link, "url")?;
+        required_string(link, "type")?;
+        optional_string_or_null(link, "quality")?;
+        optional_string_or_null(link, "playerName")?;
+        optional_string_or_null(link, "translation")?;
+        if let Some(headers) = link.get("headers") {
+            if !headers.is_object() {
+                return Err("player link headers must be an object");
+            }
+        }
+        if let Some(segments) = link.get("segments") {
+            if !segments.is_array() || !segments.as_array().unwrap().iter().all(Value::is_object) {
+                return Err("player link segments must be an object array");
+            }
+        }
+        optional_integer_or_null(link, "videoId")?;
+    }
+    Ok(())
+}
+
 fn required_string(
     object: &serde_json::Map<String, Value>,
     field: &'static str,
@@ -221,6 +301,17 @@ fn required_non_negative_integer(
         .filter(|value| *value >= 0)
         .map(|_| ())
         .ok_or("required non-negative integer field is missing or invalid")
+}
+
+fn required_number(
+    object: &serde_json::Map<String, Value>,
+    field: &'static str,
+) -> Result<(), &'static str> {
+    object
+        .get(field)
+        .filter(|value| value.as_f64().is_some())
+        .map(|_| ())
+        .ok_or("required number field is missing or invalid")
 }
 
 fn optional_integer_or_null(
@@ -398,6 +489,50 @@ mod tests {
             Ok(())
         );
         assert!(validate_details_payload(&serde_json::json!({ "query": "title-1" })).is_err());
+    }
+
+    #[test]
+    fn validates_playback_request_and_response_shapes() {
+        let groups_request = Request {
+            request_id: "request-1".to_owned(),
+            operation: Operation::PlaybackGroups,
+            payload: serde_json::json!({ "titleId": "title-1" }),
+            protocol_version: PROTOCOL_VERSION,
+        };
+        assert!(Request::from_value(&serde_json::to_value(groups_request).unwrap()).is_ok());
+        assert!(
+            validate_playback_groups_response_payload(&serde_json::json!({ "groups": [{
+                "id": "group-1",
+                "title": "Dub",
+                "qualityLabel": null,
+                "episodes": [{ "id": "episode-1", "number": 1.0, "title": "Episode 1" }]
+            }] }))
+            .is_ok()
+        );
+
+        let links_request = Request {
+            request_id: "request-2".to_owned(),
+            operation: Operation::PlayerLinks,
+            payload: serde_json::json!({
+                "titleId": "title-1",
+                "groupId": "group-1",
+                "episodeId": "episode-1",
+                "episodeNumber": 1.0
+            }),
+            protocol_version: PROTOCOL_VERSION,
+        };
+        assert!(Request::from_value(&serde_json::to_value(links_request).unwrap()).is_ok());
+        assert!(
+            validate_player_links_response_payload(&serde_json::json!({ "links": [{
+                "url": "https://video.example/episode-1.m3u8",
+                "type": "DIRECT_HLS",
+                "quality": "1080p",
+                "headers": {},
+                "segments": [],
+                "videoId": null
+            }] }))
+            .is_ok()
+        );
     }
 
     #[test]

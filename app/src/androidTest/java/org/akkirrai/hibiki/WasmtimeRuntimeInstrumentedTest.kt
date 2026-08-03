@@ -38,6 +38,38 @@ class WasmtimeRuntimeInstrumentedTest {
         }
     }
 
+    @Test
+    fun productionBridgeForwardsPlaybackOperations() {
+        val operations = listOf(
+            "PLAYBACK_GROUPS" to "groups",
+            "PLAYER_LINKS" to "links",
+        )
+
+        operations.forEachIndexed { index, (operation, payloadKey) ->
+            val requestId = "playback-$index"
+            val payload = if (operation == "PLAYBACK_GROUPS") {
+                "{\"titleId\":\"title-1\"}"
+            } else {
+                "{\"titleId\":\"title-1\",\"groupId\":\"group-1\",\"episodeId\":\"episode-1\",\"episodeNumber\":1.0}"
+            }
+            val response = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+                module = moduleBytes(),
+                request = """
+                    {"requestId":"$requestId","operation":"$operation","payload":$payload,"protocolVersion":1}
+                """.trimIndent(),
+                host = NativeSourceRuntimeBridge.Host {
+                    """
+                        {"requestId":"$requestId","payload":{"$payloadKey":[]},"errorCode":null,"errorMessage":null,"protocolVersion":1}
+                    """.trimIndent().toByteArray(StandardCharsets.UTF_8)
+                },
+                cancellationScopeId = 0L,
+            )
+
+            assertTrue("Unexpected native response: $response", response.contains("\"requestId\":\"$requestId\""))
+            assertTrue("Unexpected native response: $response", response.contains("\"$payloadKey\":[]"))
+        }
+    }
+
     private fun moduleBytes(): ByteArray = """
         (module
           (import "host" "call" (func ${'$'}host_call (param i32 i32) (result i64)))
