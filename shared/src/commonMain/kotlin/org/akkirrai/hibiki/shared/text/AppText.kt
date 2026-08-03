@@ -115,6 +115,7 @@ enum class AppTextKey {
     SettingsExternalPackageInstall,
     SettingsExternalPackageUpdate,
     SettingsExternalPackageInstalled,
+    SettingsExternalPackageRollback,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -384,6 +385,7 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsExternalPackageInstall -> if (russian) "Установить" else "Install"
             AppTextKey.SettingsExternalPackageUpdate -> if (russian) "Обновить" else "Update"
             AppTextKey.SettingsExternalPackageInstalled -> if (russian) "Установлено" else "Installed"
+            AppTextKey.SettingsExternalPackageRollback -> if (russian) "Откатить" else "Rollback"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

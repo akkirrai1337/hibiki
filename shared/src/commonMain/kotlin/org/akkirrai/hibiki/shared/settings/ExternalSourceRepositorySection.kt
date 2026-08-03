@@ -37,6 +37,7 @@ data class ExternalSourceRepositorySectionLabels(
     val installLabel: String,
     val updateLabel: String,
     val installedLabel: String,
+    val rollbackLabel: String,
 )
 
 /** Settings component for repository endpoints; host decides when to expose it. */
@@ -48,6 +49,7 @@ fun ExternalSourceRepositorySection(
     onRemoveRepository: (String) -> Unit,
     onRefresh: () -> Unit,
     onInstallPackage: (SourceId) -> Unit = {},
+    onRollbackPackage: (SourceId) -> Unit = {},
     modifier: Modifier = Modifier,
     errorMessage: (Throwable) -> String = { it.message.orEmpty() },
 ) {
@@ -149,6 +151,14 @@ fun ExternalSourceRepositorySection(
                                     labels.updateLabel
                                 },
                             )
+                        }
+                    }
+                    if (packageStatus.rollbackAvailable) {
+                        Button(
+                            onClick = { onRollbackPackage(packageStatus.sourceId) },
+                            enabled = !state.isBusy,
+                        ) {
+                            Text(labels.rollbackLabel)
                         }
                     }
                 }

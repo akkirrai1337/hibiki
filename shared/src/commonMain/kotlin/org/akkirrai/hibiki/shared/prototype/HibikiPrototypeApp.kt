@@ -2897,6 +2897,7 @@ private fun SettingsScreen(
                 installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
                 updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
                 installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
+                rollbackLabel = appText(AppTextKey.SettingsExternalPackageRollback),
             )
         },
         onAddExternalRepository = externalSourceRepositoryController?.let { controller ->
@@ -2910,6 +2911,9 @@ private fun SettingsScreen(
         } ?: {},
         onInstallExternalPackage = externalSourceRepositoryController?.let { controller ->
             { sourceId -> controller.installPackage(sourceId) }
+        } ?: {},
+        onRollbackExternalPackage = externalSourceRepositoryController?.let { controller ->
+            { sourceId -> controller.rollbackPackage(sourceId) }
         } ?: {},
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,

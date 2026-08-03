@@ -60,5 +60,7 @@ class ExternalSourceRepositoryControllerTest {
             sourceId: org.akkirrai.beakokit.api.SourceId,
             initialize: suspend () -> Unit,
         ) = Unit
+
+        override suspend fun rollbackPackageFromUi(sourceId: org.akkirrai.beakokit.api.SourceId) = Unit
     }
 }

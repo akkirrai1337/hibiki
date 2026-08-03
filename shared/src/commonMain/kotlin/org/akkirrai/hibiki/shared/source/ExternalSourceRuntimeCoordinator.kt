@@ -90,6 +90,10 @@ class ExternalSourceRuntimeCoordinator(
         installAvailablePackage(sourceId, initialize)
     }
 
+    override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
+        rollbackActivePackage(sourceId)
+    }
+
     override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
         addRepository(endpoint)
     }
@@ -195,6 +199,9 @@ class ExternalSourceRuntimeCoordinator(
                 sourceId = manifest.sourceId,
                 availableManifest = manifest,
                 activePackage = active,
+                rollbackAvailable = active != null && runCatching {
+                    platform.loadPreviousActivePackage(manifest.sourceId)
+                }.isSuccess,
             )
         }
 
@@ -251,6 +258,8 @@ interface ExternalSourceRepositoryActions {
         sourceId: SourceId,
         initialize: suspend () -> Unit,
     )
+
+    suspend fun rollbackPackageFromUi(sourceId: SourceId)
 }
 
 data class ExternalSourceRuntimeSnapshot(
@@ -287,6 +296,7 @@ data class ExternalSourcePackageStatus(
     val sourceId: SourceId,
     val availableManifest: SourceManifest,
     val activePackage: ActiveExternalSourcePackage?,
+    val rollbackAvailable: Boolean = false,
 ) {
     init {
         require(sourceId == availableManifest.sourceId) {

@@ -59,6 +59,13 @@ class ExternalSourceRepositoryController(
         }
     }
 
+    fun rollbackPackage(sourceId: SourceId) {
+        launchOperation {
+            actions.rollbackPackageFromUi(sourceId)
+            loadState()
+        }
+    }
+
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }
