@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +21,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -41,6 +47,12 @@ import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
 import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
+import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
+import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
+import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
+import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 
 /** Android adapter for the shared shell; disabled until the parity checkpoint is approved. */
 @Composable
@@ -71,7 +83,33 @@ internal fun AndroidSharedAppShell(
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = remember(dependencies) { dependencies.appSettingsStore() }
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
-    val catalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
+    val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
+    val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
+    val externalHttpClient = remember { HttpClient(OkHttp) }
+    DisposableEffect(externalHttpClient) {
+        onDispose { externalHttpClient.close() }
+    }
+    val externalCatalogRepository = remember(externalCoordinator, externalHttpClient) {
+        ExternalSourceCatalogRepository(
+            registryProvider = { externalCoordinator?.snapshot?.value?.registry },
+            contextProvider = { sourceId ->
+                DefaultSourceContext(
+                    httpClient = externalHttpClient,
+                    preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                )
+            },
+            statusLabels = ExternalAnimeStatusLabels(
+                unknown = "Unknown",
+                ongoing = "Ongoing",
+                released = "Released",
+                announcement = "Announcement",
+            ),
+        )
+    }
+    val builtInCatalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
+    val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
+        TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
+    }
     val homeRepository = remember(dependencies) { dependencies.homeRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
@@ -86,6 +124,13 @@ internal fun AndroidSharedAppShell(
     }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val preferences = LocalAppPreferencesState.current
+    androidx.compose.runtime.LaunchedEffect(
+        catalogRepository,
+        preferences.animeSource.value,
+        externalSnapshot?.registry,
+    ) {
+        preferences.animeSource.value?.let(catalogRepository::selectSource)
+    }
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = AppLayoutEnvironment(
@@ -95,8 +140,8 @@ internal fun AndroidSharedAppShell(
         navigationBarMode = AppNavigationBarMode.Inset,
         edgePolicy = AppScreenEdgePolicy.ContentSafe,
     )
-    val sources = remember {
-        AnimeSourceRegistry.sources.map { source ->
+    val sources = remember(externalSnapshot?.registry) {
+        val builtInSources = AnimeSourceRegistry.sources.map { source ->
             AppSourceDescriptor(
                 id = source.id.value,
                 name = source.name,
@@ -107,6 +152,10 @@ internal fun AndroidSharedAppShell(
                 supportsSearch = true,
             )
         }
+        mergeAppSourceDescriptors(
+            builtIn = builtInSources,
+            external = externalSnapshot?.registry?.toAppSourceDescriptors().orEmpty(),
+        )
     }
     CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
         SharedHibikiApp(
