@@ -62,12 +62,14 @@ fun createIosExternalSourceRepositoryPlatform(): ExternalSourceRepositoryPlatfor
         packageInstallationFactory = packageInstallationFactory,
         stagingPathFactory = { sourceId ->
             val sourceRoot = "$packageRoot/${sourceId.value}"
-            check(fileManager.createDirectoryAtPath(
-                path = sourceRoot,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )) { "Unable to create iOS source package directory" }
+            if (!fileManager.fileExistsAtPath(sourceRoot)) {
+                check(fileManager.createDirectoryAtPath(
+                    path = sourceRoot,
+                    withIntermediateDirectories = true,
+                    attributes = null,
+                    error = null,
+                )) { "Unable to create iOS source package directory" }
+            }
             "$sourceRoot/package-${NSUUID().UUIDString}"
         },
         activationRepositoryFactory = { sourceId ->

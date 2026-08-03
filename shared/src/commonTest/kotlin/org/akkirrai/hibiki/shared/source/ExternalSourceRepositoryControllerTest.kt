@@ -6,8 +6,16 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
+import org.akkirrai.beakokit.api.InstalledSourcePackage
+import org.akkirrai.beakokit.api.SourceApi
+import org.akkirrai.beakokit.api.SourceHostApi
+import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceManifest
+import org.akkirrai.beakokit.api.SourceManifestInfo
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceRuntime
 
 class ExternalSourceRepositoryControllerTest {
     @Test
@@ -90,12 +98,28 @@ class ExternalSourceRepositoryControllerTest {
         assertEquals(true, initialized)
     }
 
+    @Test
+    fun controllerRefreshesUpdateStateAfterPackageInstallation() = runTest {
+        val actions = FakeActions(withUpdate = true)
+        val controller = ExternalSourceRepositoryController(actions, this)
+        advanceUntilIdle()
+
+        assertEquals(true, controller.state.value.packages.single().updateAvailable)
+        controller.installPackage(SourceId("external-source"))
+        advanceUntilIdle()
+
+        assertEquals(false, controller.state.value.packages.single().updateAvailable)
+        assertEquals(true, controller.state.value.packages.single().rollbackAvailable)
+    }
+
     private class FakeActions(
         private var refreshFailures: Int = 0,
+        private val withUpdate: Boolean = false,
     ) : ExternalSourceRepositoryActions {
         private val items = mutableListOf<SourceRepositoryEndpoint>()
         val installed = mutableListOf<SourceId>()
         val rolledBack = mutableListOf<SourceId>()
+        private var packageInstalled = false
 
         override suspend fun repositories(): List<SourceRepositoryEndpoint> = items.toList()
 
@@ -119,18 +143,62 @@ class ExternalSourceRepositoryControllerTest {
             }
         }
 
-        override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
+        override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> =
+            if (!withUpdate) {
+                emptyList()
+            } else {
+                val available = manifest()
+                val activeManifest = if (packageInstalled) available else available.copy(
+                    packageVersion = "1.0.0",
+                    sha256 = "b".repeat(64),
+                )
+                listOf(
+                    ExternalSourcePackageStatus(
+                        sourceId = available.sourceId,
+                        availableManifest = available,
+                        activePackage = ActiveExternalSourcePackage(
+                            manifest = activeManifest,
+                            installed = InstalledSourcePackage(
+                                sourceId = available.sourceId,
+                                packageVersion = activeManifest.packageVersion,
+                                packagePath = "package/${activeManifest.packageVersion}",
+                            ),
+                        ),
+                        rollbackAvailable = packageInstalled,
+                    ),
+                )
+            }
 
         override suspend fun installAvailablePackageFromUi(
             sourceId: SourceId,
             initialize: suspend () -> Unit,
         ) {
             installed += sourceId
+            packageInstalled = true
             initialize()
         }
 
         override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
             rolledBack += sourceId
         }
+
+        private fun manifest() = SourceManifest(
+            manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
+            sourceId = SourceId("external-source"),
+            packageVersion = "2.0.0",
+            sourceInfo = SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+            ),
+            apiVersion = SourceApi.VERSION,
+            hostApiVersion = SourceHostApi.VERSION,
+            runtime = SourceRuntime("wasm", "wasm32-wasi-preview1"),
+            entrypoint = "source.wasm",
+            packageUrl = "https://example.test/source.zip",
+            sha256 = "a".repeat(64),
+            artifactSizeBytes = 1,
+            minClientVersion = 0,
+        )
     }
 }
