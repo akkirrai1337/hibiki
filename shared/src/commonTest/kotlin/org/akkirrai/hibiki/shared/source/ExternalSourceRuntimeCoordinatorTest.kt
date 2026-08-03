@@ -83,8 +83,24 @@ class ExternalSourceRuntimeCoordinatorTest {
         )
         val secondEndpoint = SourceRepositoryEndpoint("https://second.example.test/index.json")
 
+        assertEquals(
+            listOf("https://example.test/index.json"),
+            coordinator.repositories().map { it.url },
+        )
+        assertEquals(
+            listOf("https://example.test/index.json"),
+            coordinator.snapshot.value.configuredRepositories.map { it.url },
+        )
         coordinator.addRepository(secondEndpoint)
 
+        assertEquals(
+            listOf("https://example.test/index.json", secondEndpoint.url),
+            coordinator.repositories().map { it.url },
+        )
+        assertEquals(
+            listOf("https://example.test/index.json", secondEndpoint.url),
+            coordinator.snapshot.value.configuredRepositories.map { it.url },
+        )
         assertEquals(
             listOf(
                 "https://example.test/index.json",
@@ -96,6 +112,11 @@ class ExternalSourceRuntimeCoordinatorTest {
 
         coordinator.removeRepository("https://example.test/index.json")
 
+        assertEquals(listOf(secondEndpoint.url), coordinator.repositories().map { it.url })
+        assertEquals(
+            listOf(secondEndpoint.url),
+            coordinator.snapshot.value.configuredRepositories.map { it.url },
+        )
         assertEquals(
             listOf(secondEndpoint.url),
             coordinator.snapshot.value.repository.loaded.map { it.endpoint.url },

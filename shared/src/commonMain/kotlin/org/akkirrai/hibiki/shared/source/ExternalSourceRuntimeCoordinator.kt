@@ -26,10 +26,16 @@ class ExternalSourceRuntimeCoordinator(
     private val state = MutableStateFlow(
         ExternalSourceRuntimeSnapshot(
             repository = platform.coordinator.snapshot.value,
+            configuredRepositories = platform.coordinator.repositories(),
         ),
     )
 
     val snapshot: StateFlow<ExternalSourceRuntimeSnapshot> = state.asStateFlow()
+
+    /** Returns the persisted repository endpoints without loading their indexes. */
+    suspend fun repositories(): List<SourceRepositoryEndpoint> = operationMutex.withLock {
+        platform.coordinator.repositories()
+    }
 
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
@@ -39,12 +45,14 @@ class ExternalSourceRuntimeCoordinator(
     /** Adds one repository and refreshes only the inactive external registry. */
     suspend fun addRepository(endpoint: SourceRepositoryEndpoint) = operationMutex.withLock {
         platform.coordinator.addRepository(endpoint)
+        updateConfiguredRepositories()
         refreshLocked()
     }
 
     /** Removes one repository and refreshes only the inactive external registry. */
     suspend fun removeRepository(url: String) = operationMutex.withLock {
         platform.coordinator.removeRepository(url)
+        updateConfiguredRepositories()
         refreshLocked()
     }
 
@@ -59,6 +67,7 @@ class ExternalSourceRuntimeCoordinator(
             }
             state.value = state.value.copy(
                 repository = platform.coordinator.snapshot.value,
+                configuredRepositories = platform.coordinator.repositories(),
                 error = error,
             )
             throw error
@@ -106,6 +115,7 @@ class ExternalSourceRuntimeCoordinator(
             val activation = platform.rollbackActivePackage(sourceId)
             state.value = ExternalSourceRuntimeSnapshot(
                 repository = platform.coordinator.snapshot.value,
+                configuredRepositories = platform.coordinator.repositories(),
                 registry = registry,
             )
             activation
@@ -155,6 +165,12 @@ class ExternalSourceRuntimeCoordinator(
         }
     }
 
+    private fun updateConfiguredRepositories() {
+        state.value = state.value.copy(
+            configuredRepositories = platform.coordinator.repositories(),
+        )
+    }
+
     private fun replaceRegistry(repository: SourceRepositoryLoadSnapshot) {
         val registry = platform.loadAvailableActiveRegistry(
             catalogCapabilities = catalogCapabilities,
@@ -162,6 +178,7 @@ class ExternalSourceRuntimeCoordinator(
         )
         state.value = ExternalSourceRuntimeSnapshot(
             repository = repository,
+            configuredRepositories = platform.coordinator.repositories(),
             registry = registry,
         )
     }
@@ -171,6 +188,7 @@ class ExternalSourceRuntimeCoordinator(
 
 data class ExternalSourceRuntimeSnapshot(
     val repository: SourceRepositoryLoadSnapshot,
+    val configuredRepositories: List<SourceRepositoryEndpoint> = emptyList(),
     val registry: ExternalSourceRegistry? = null,
     val error: Throwable? = null,
 )
