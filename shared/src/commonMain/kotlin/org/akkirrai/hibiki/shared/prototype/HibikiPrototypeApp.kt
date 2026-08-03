@@ -177,6 +177,7 @@ import org.akkirrai.hibiki.shared.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.shared.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.WatchFlowBackEffect
+import org.akkirrai.hibiki.shared.navigation.WatchFlowBackTransition
 import org.akkirrai.hibiki.shared.navigation.resolveWatchFlowBackEffect
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionKey
@@ -352,6 +353,7 @@ fun HibikiAppShell(
     var homeRefreshJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by remember { mutableStateOf<PlaybackRoute?>(null) }
     var pendingPlaybackContext by remember { mutableStateOf<PlaybackContext?>(null) }
+    var playbackReturnRoute by remember { mutableStateOf<AppRoute?>(null) }
     val libraryPresenter = remember(libraryRepository) { LibraryPresenter() }
     val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = remember(profileRepository) { LocalProfilePresenter() }
@@ -647,6 +649,9 @@ fun HibikiAppShell(
             episodeId = episode.id,
             episodeNumber = episode.number,
         )
+        if (!replacePlayerRoute && navigationState.currentRoute !is AppRoute.Player) {
+            playbackReturnRoute = navigationState.currentRoute
+        }
         pendingPlaybackContext = requestContext
         navigationState = navigationState.navigateToPlayer(
             sourceId = playerRoute.sourceId,
@@ -886,6 +891,25 @@ fun HibikiAppShell(
         Unit
     }
 
+    fun reduceBackFromWatch(): WatchFlowBackTransition {
+        val routeBeforeBack = navigationState.currentRoute
+        val transition = navigationState.reduceWatchFlowBack()
+        val returnRoute = playbackReturnRoute
+        val correctedState = if (
+            routeBeforeBack is AppRoute.Player &&
+            returnRoute is AppRoute.Episodes &&
+            transition.state.currentRoute != returnRoute
+        ) {
+            transition.state.copy(backStack = transition.state.backStack + returnRoute)
+        } else {
+            transition.state
+        }
+        return WatchFlowBackTransition(
+            state = correctedState,
+            effect = resolveWatchFlowBackEffect(routeBeforeBack, correctedState.currentRoute),
+        )
+    }
+
     fun handleSystemBack() {
         val routeBeforeBack = navigationState.currentRoute
         if (navigationState.overlays.isNotEmpty()) {
@@ -904,8 +928,9 @@ fun HibikiAppShell(
             playbackRequestGeneration++
             activePlaybackRoute = null
             pendingPlaybackContext = null
-            val backTransition = navigationState.reduceWatchFlowBack()
+            val backTransition = reduceBackFromWatch()
             navigationState = backTransition.state
+            playbackReturnRoute = null
             when (backTransition.effect) {
                 WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
                     episodesLoadGeneration++
@@ -920,8 +945,11 @@ fun HibikiAppShell(
             return
         }
         if (navigationState.backStack.isEmpty()) return
-        val backTransition = navigationState.reduceWatchFlowBack()
+        val backTransition = reduceBackFromWatch()
         navigationState = backTransition.state
+        if (routeBeforeBack is AppRoute.Player) {
+            playbackReturnRoute = null
+        }
         when (routeBeforeBack) {
             is AppRoute.Player -> {
                 playbackJob?.cancel()
@@ -1180,6 +1208,7 @@ fun HibikiAppShell(
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
+                                playbackReturnRoute = null
                                 resetPlayerState()
                                 navigationState = navigationState.navigateToWatchSources(
                                     animeId = anime.id,
@@ -1190,8 +1219,11 @@ fun HibikiAppShell(
                                 playbackJob?.cancel()
                                 playbackJob = null
                                 playbackRequestGeneration++
-                                val backTransition = navigationState.reduceWatchFlowBack()
+                                val backTransition = reduceBackFromWatch()
                                 navigationState = backTransition.state
+                                if (navigationState.currentRoute !is AppRoute.Player) {
+                                    playbackReturnRoute = null
+                                }
                                 when (backTransition.effect) {
                                     WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
                                         episodesPresenter.setState(EpisodesScreenState())
@@ -1393,7 +1425,9 @@ fun HibikiAppShell(
                                 activePlaybackRoute = null
                                 pendingPlaybackContext = null
                                 resetPlayerState()
-                                navigationState = navigationState.reduceWatchFlowBack().state
+                                val backTransition = reduceBackFromWatch()
+                                navigationState = backTransition.state
+                                playbackReturnRoute = null
                             },
                             onEpisodeSelected = { episode ->
                                 requestPlayback(
@@ -1775,6 +1809,9 @@ private fun NavigationItem(tab: AppDestination, selected: Boolean, onClick: () -
     }
 }
 
+internal fun shouldApplyTopSystemInset(destination: AppDestination): Boolean =
+    destination != AppDestination.SETTINGS
+
 @Composable
 private fun AppDestinationContent(
     selectedTab: AppDestination,
@@ -2148,7 +2185,13 @@ private fun AppDestinationContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .then(topInsetModifier),
+            .then(
+                if (shouldApplyTopSystemInset(selectedTab)) {
+                    topInsetModifier
+                } else {
+                    Modifier
+                },
+            ),
     ) {
         when (selectedTab) {
                 AppDestination.HOME -> HomeScreen(

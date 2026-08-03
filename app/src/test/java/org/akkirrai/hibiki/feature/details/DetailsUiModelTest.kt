@@ -2,11 +2,14 @@ package org.akkirrai.hibiki.feature.details
 
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.RelatedAnime
-import org.akkirrai.beakokit.api.SourceCapability
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.DetailsSection
+import org.akkirrai.hibiki.shared.details.RelatedSection
+import org.akkirrai.hibiki.shared.details.SimilarSection
+import org.akkirrai.hibiki.shared.details.buildDetailsUiModel
 
 class DetailsUiModelTest {
     private val hero = DetailsHeroInfo("TV", "2024", "12 episodes", null, "Ongoing", "Studio")
@@ -22,7 +25,8 @@ class DetailsUiModelTest {
             anime = anime,
             hero = hero,
             description = "",
-            contentFeatures = SourceCapability.entries.toSet(),
+            includeRelated = true,
+            includeSimilar = true,
         )
 
         assertEquals(listOf("related", "similar"), model.sections.map(DetailsSection::key))
@@ -41,7 +45,8 @@ class DetailsUiModelTest {
             anime = anime,
             hero = hero,
             description = "",
-            contentFeatures = SourceCapability.entries.toSet(),
+            includeRelated = true,
+            includeSimilar = true,
         )
 
         assertEquals(listOf("related", "similar"), model.sections.map(DetailsSection::key))
@@ -54,7 +59,8 @@ class DetailsUiModelTest {
             anime = anime(),
             hero = hero,
             description = "",
-            contentFeatures = SourceCapability.entries.toSet(),
+            includeRelated = true,
+            includeSimilar = true,
         )
 
         assertTrue(model.sections.isEmpty())
@@ -69,7 +75,8 @@ class DetailsUiModelTest {
             ),
             hero = hero,
             description = "",
-            contentFeatures = emptySet(),
+            includeRelated = false,
+            includeSimilar = false,
         )
 
         assertTrue(model.sections.isEmpty())

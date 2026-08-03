@@ -21,23 +21,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
 import org.akkirrai.hibiki.app.navigation.AndroidExternalSourceBackgroundSync
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.app.settings.LocalThemeMode
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
-import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.update.AppUpdate
 import org.akkirrai.hibiki.core.update.AppUpdateRepository
@@ -45,7 +40,6 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
-import org.akkirrai.hibiki.feature.onboarding.SharedAndroidOnboardingScreen
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -158,29 +152,12 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidExternalSourceBackgroundSync(
-                            skipInitialRefresh = BuildConfig.SHARED_APP_SHELL_ENABLED,
-                        ) {
-                            if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
-                                AndroidSharedAppShell(
-                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                    onConfigureNotifications = ::configureNotifications,
-                                    enableOnboarding = true,
-                                )
-                            } else if (preferences.onboardingCompleted) {
-                                HibikiApp(
-                                    onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                    onConfigureNotifications = ::configureNotifications,
-                                )
-                            } else {
-                                SharedAndroidOnboardingScreen(
-                                    initialSource = preferences.animeSource
-                                        .takeIf { preferences.hasExplicitAnimeSource },
-                                    notificationPermissionState = preferences.notificationPermissionState,
-                                    onRequestNotificationPermission = ::requestNotificationPermission,
-                                    onComplete = appPreferences::completeOnboarding,
-                                )
-                            }
+                        AndroidExternalSourceBackgroundSync(skipInitialRefresh = true) {
+                            AndroidSharedAppShell(
+                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                                onConfigureNotifications = ::configureNotifications,
+                                enableOnboarding = true,
+                            )
                             if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
                                 availableUpdate?.let { update ->
                                     AppUpdateDialog(
@@ -456,15 +433,5 @@ class MainActivity : ComponentActivity() {
         private const val KEY_LAST_SHOWN_UPDATE_VERSION = "last_shown_update_version"
         private const val NO_DOWNLOAD_ID = -1L
         private const val DOWNLOAD_STATUS_MISSING = -1
-    }
-}
-
-@Preview
-@Composable
-fun GreetingPreview() {
-    HibikiTheme(
-        themeMode = ThemeMode.SYSTEM
-    ) {
-        HibikiApp()
     }
 }

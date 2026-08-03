@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 
 val SettingsSegmentGap = 4.dp
 val SettingsSegmentHeight = 48.dp
@@ -13,8 +14,13 @@ val SettingsItemOuterCornerRadius = 24.dp
 val SettingsItemInnerCornerRadius = 4.dp
 val SettingsContentHorizontalPadding = 18.dp
 val SettingsContentTopPadding = 24.dp
-val SettingsContentTopPaddingWithBackButton = 88.dp
-val SettingsBackButtonVerticalOffset = 0.dp
+val SettingsBackButtonTopPadding = 8.dp
+val SettingsBackButtonSize = 48.dp
+val SettingsBackButtonContentGap = 8.dp
+
+fun settingsContentTopPaddingWithBackButton(topSystemInset: Dp): Dp =
+    topSystemInset + SettingsBackButtonTopPadding + SettingsBackButtonSize + SettingsBackButtonContentGap
+
 val SettingsContentSectionGap = 28.dp
 val SettingsItemIconSize = 28.dp
 val SettingsAboutCardCornerRadius = 24.dp

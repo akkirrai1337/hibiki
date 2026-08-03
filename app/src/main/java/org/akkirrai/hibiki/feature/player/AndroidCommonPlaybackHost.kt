@@ -431,7 +431,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
-                topContentInset = layoutEnvironment.topSystemInset / 2,
+                topContentInset = layoutEnvironment.topSystemInset / 3,
             )
             },
             overlayContent = {
@@ -568,7 +568,6 @@ internal fun AndroidPlayerWindowMode(
             onDispose {}
         } else {
             val windowInsetsController = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
-            val previousOrientation = activity.requestedOrientation
             val previousBehavior = windowInsetsController.systemBarsBehavior
             val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 activity.window.attributes.layoutInDisplayCutoutMode
@@ -578,7 +577,7 @@ internal fun AndroidPlayerWindowMode(
             windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             fun requestLandscape() {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
             activity.runOnUiThread(::requestLandscape)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -594,7 +593,7 @@ internal fun AndroidPlayerWindowMode(
                 windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
                 windowInsetsController.systemBarsBehavior = previousBehavior
                 activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                activity.requestedOrientation = previousOrientation
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
                     activity.window.attributes = activity.window.attributes.apply {
                         layoutInDisplayCutoutMode = previousCutoutMode

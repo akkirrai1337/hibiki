@@ -49,13 +49,6 @@ val hasReleaseSigning = listOf(
     releaseKeyAlias,
     releaseKeyPassword
 ).all { !it.isNullOrBlank() }
-// The shared UI is the Android default; the legacy shell remains available for
-// parity fallback with -PHIBIKI_SHARED_APP_SHELL=false.
-val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL")
-    .orNull
-    ?.let { it == "true" }
-    ?: true
-
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)
     sourceSets["main"].jniLibs.srcDir(wasmtimeRuntimeJniDir.get().asFile)
@@ -75,7 +68,6 @@ android {
         versionName = "2.2.0"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
-        buildConfigField("boolean", "SHARED_APP_SHELL_ENABLED", sharedAppShellEnabled.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

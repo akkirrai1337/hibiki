@@ -3,8 +3,10 @@ package org.akkirrai.hibiki.shared.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,6 +16,7 @@ import hibiki.shared.generated.resources.ic_github
 import hibiki.shared.generated.resources.hibiki_app_icon
 import org.jetbrains.compose.resources.painterResource
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 
 data class AppSettingsScreenLabels(
@@ -82,11 +85,17 @@ fun AppSettingsScreen(
     onInstallExternalPackage: (org.akkirrai.beakokit.api.SourceId) -> Unit = {},
     onRollbackExternalPackage: (org.akkirrai.beakokit.api.SourceId) -> Unit = {},
 ) {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val topSystemInset = if (layoutEnvironment.isProvided) {
+        layoutEnvironment.topSystemInset
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
     Box(modifier = modifier.fillMaxSize()) {
         AppSettingsContentList(
             bottomContentPadding = bottomContentPadding,
             topContentPadding = if (showBackButton) {
-                SettingsContentTopPaddingWithBackButton
+                settingsContentTopPaddingWithBackButton(topSystemInset)
             } else {
                 SettingsContentTopPadding
             },
@@ -220,9 +229,7 @@ fun AppSettingsScreen(
             AppDetailsHeroOverlayBackButton(
                 onClick = onBackClick,
                 contentDescription = backContentDescription,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(y = SettingsBackButtonVerticalOffset),
+                modifier = Modifier.align(Alignment.TopStart),
             )
         }
     }
