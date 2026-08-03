@@ -258,7 +258,7 @@ internal fun AndroidSharedAppShell(
             },
             externalSourceRepositoryController = externalRepositoryController,
             sources = sources,
-            sourceConfigContent = { source, onDone ->
+            sourceConfigContent = { source, onSaved, onCancel ->
                 val sourceId = SourceId(source.id)
                 val draft = externalSourceConfigStore.loadDraft(sourceId)
                 AppSourceConfigScreen(
@@ -282,9 +282,9 @@ internal fun AndroidSharedAppShell(
                                 }
                             }
                         }
-                        onDone()
+                        onSaved()
                     },
-                    onCancel = onDone,
+                    onCancel = onCancel,
                 )
             },
             selectedSourceId = preferences.animeSource.value,

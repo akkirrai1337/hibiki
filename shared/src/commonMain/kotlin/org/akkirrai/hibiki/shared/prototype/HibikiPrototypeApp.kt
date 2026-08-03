@@ -196,6 +196,7 @@ import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.sourceLanguageSectionLabel
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
 import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
+import org.akkirrai.hibiki.shared.source.AppSourceConfigContent
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 import org.akkirrai.beakokit.api.AnimeKey
@@ -295,7 +296,7 @@ fun HibikiAppShell(
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     sources: List<AppSourceDescriptor> = emptyList(),
-    sourceConfigContent: (@Composable (AppSourceDescriptor, () -> Unit) -> Unit)? = null,
+    sourceConfigContent: AppSourceConfigContent? = null,
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     onWatchSourceSelected: (String, org.akkirrai.hibiki.shared.model.WatchSource) -> Unit = { _, _ -> },
@@ -2284,9 +2285,14 @@ private fun AppDestinationContent(
                     )
                 }
                 AppDestination.SOURCES -> editingSourceConfig?.let { source ->
-                    sourceConfigContent?.invoke(source) {
-                        editingSourceConfig = null
-                    }
+                    sourceConfigContent?.invoke(
+                        source,
+                        {
+                            onSourceSelected(source.id)
+                            editingSourceConfig = null
+                        },
+                        { editingSourceConfig = null },
+                    )
                 } ?: AppLocalSourcesScreen(
                     sources = sources,
                     selectedSourceId = selectedSourceId,

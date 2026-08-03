@@ -16,6 +16,7 @@ import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.DiscordRpcController
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
+import org.akkirrai.hibiki.shared.source.AppSourceConfigContent
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
@@ -62,7 +63,7 @@ fun HibikiApp(
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     sources: List<AppSourceDescriptor> = emptyList(),
-    sourceConfigContent: (@Composable (AppSourceDescriptor, () -> Unit) -> Unit)? = null,
+    sourceConfigContent: AppSourceConfigContent? = null,
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     onWatchSourceSelected: (String, org.akkirrai.hibiki.shared.model.WatchSource) -> Unit = { _, _ -> },

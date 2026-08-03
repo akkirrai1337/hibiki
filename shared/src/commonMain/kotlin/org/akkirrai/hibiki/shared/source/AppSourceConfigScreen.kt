@@ -33,7 +33,11 @@ data class AppSourceConfigLabels(
     val validationErrorLabel: (String) -> String = { it },
 )
 
-typealias AppSourceConfigContent = @Composable (AppSourceDescriptor, () -> Unit) -> Unit
+typealias AppSourceConfigContent = @Composable (
+    AppSourceDescriptor,
+    onSaved: () -> Unit,
+    onCancel: () -> Unit,
+) -> Unit
 
 val LocalAppSourceConfigContent = staticCompositionLocalOf<AppSourceConfigContent?> { null }
 
