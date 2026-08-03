@@ -74,8 +74,12 @@ class ExternalSourceRuntimeCoordinatorTest {
     @Test
     fun repositoryChangesRefreshTheInactiveRegistryWithoutChangingTheBuiltInPath() = runTest {
         val sourceId = SourceId("external-source")
+        var repositoryLoads = 0
         val coordinator = ExternalSourceRuntimeCoordinator(
-            platform = platformFor(sourceId),
+            platform = platformFor(
+                sourceId = sourceId,
+                beforeRepositoryLoad = { repositoryLoads++ },
+            ),
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
                 error("Runtime creation must remain lazy")
@@ -96,7 +100,15 @@ class ExternalSourceRuntimeCoordinatorTest {
             coordinator.activePackage(SourceId("external-source"))?.installed?.packageVersion,
         )
         assertEquals(null, coordinator.activePackage(SourceId("missing-source")))
+
+        coordinator.refresh()
+        assertEquals(1, repositoryLoads)
+        coordinator.addRepository(SourceRepositoryEndpoint("https://example.test/index.json"))
+        coordinator.removeRepository("https://missing.example/index.json")
+        assertEquals(1, repositoryLoads)
+
         coordinator.addRepository(secondEndpoint)
+        assertEquals(3, repositoryLoads)
 
         assertEquals(
             listOf("https://example.test/index.json", secondEndpoint.url),
@@ -127,6 +139,25 @@ class ExternalSourceRuntimeCoordinatorTest {
             coordinator.snapshot.value.repository.loaded.map { it.endpoint.url },
         )
         assertEquals(listOf(sourceId), coordinator.snapshot.value.registry?.sources?.map { it.id })
+    }
+
+    @Test
+    fun activePackageReadDoesNotMaskUnexpectedStorageErrors() = runTest {
+        val sourceId = SourceId("external-source")
+        val coordinator = ExternalSourceRuntimeCoordinator(
+            platform = platformFor(
+                sourceId = sourceId,
+                beforeLoad = { error("Package storage is corrupted") },
+            ),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                error("Runtime creation must remain lazy")
+            },
+        )
+
+        assertFailsWith<IllegalStateException> {
+            coordinator.activePackage(sourceId)
+        }
     }
 
     @Test

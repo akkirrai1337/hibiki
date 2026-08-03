@@ -56,14 +56,22 @@ class ExternalSourceRuntimeCoordinator(
 
     /** Adds one repository and refreshes only the inactive external registry. */
     suspend fun addRepository(endpoint: SourceRepositoryEndpoint) = operationMutex.withLock {
+        val previous = platform.coordinator.repositories()
         platform.coordinator.addRepository(endpoint)
+        if (platform.coordinator.repositories() == previous) {
+            return@withLock state.value.repository
+        }
         updateConfiguredRepositories()
         refreshLocked()
     }
 
     /** Removes one repository and refreshes only the inactive external registry. */
     suspend fun removeRepository(url: String) = operationMutex.withLock {
+        val previous = platform.coordinator.repositories()
         platform.coordinator.removeRepository(url)
+        if (platform.coordinator.repositories() == previous) {
+            return@withLock state.value.repository
+        }
         updateConfiguredRepositories()
         refreshLocked()
     }
