@@ -17,6 +17,9 @@ class IosSourcePackageManifestReader(
 ) : SourcePackageManifestReader {
     init {
         require(maxManifestBytes > 0) { "Maximum manifest size must be positive" }
+        require(maxManifestBytes < Int.MAX_VALUE) {
+            "Maximum manifest size must fit in a platform byte array"
+        }
     }
 
     override fun read(packagePath: String): SourceManifest {
@@ -44,8 +47,10 @@ class IosSourcePackageManifestReader(
             )
         }
         val bytes = ByteArray(data.length.toInt())
-        bytes.usePinned { pinned ->
-            memcpy(pinned.addressOf(0), data.bytes, data.length)
+        if (bytes.isNotEmpty()) {
+            bytes.usePinned { pinned ->
+                memcpy(pinned.addressOf(0), data.bytes, data.length)
+            }
         }
         return try {
             json.decodeFromString(bytes.decodeToString())

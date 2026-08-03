@@ -14,6 +14,9 @@ class IosSourcePackageModuleReader(
 ) : SourcePackageModuleReader {
     init {
         require(maxModuleBytes > 0) { "Maximum module size must be positive" }
+        require(maxModuleBytes < Int.MAX_VALUE) {
+            "Maximum module size must fit in a platform byte array"
+        }
     }
 
     override fun read(packagePath: String, entrypoint: String): ByteArray {
