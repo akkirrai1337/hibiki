@@ -158,7 +158,9 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidExternalSourceBackgroundSync {
+                        AndroidExternalSourceBackgroundSync(
+                            skipInitialRefresh = BuildConfig.SHARED_APP_SHELL_ENABLED,
+                        ) {
                             if (BuildConfig.SHARED_APP_SHELL_ENABLED) {
                                 AndroidSharedAppShell(
                                     onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },

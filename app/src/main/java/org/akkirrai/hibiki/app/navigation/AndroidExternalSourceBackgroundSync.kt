@@ -4,7 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import androidx.lifecycle.Lifecycle
@@ -22,10 +25,12 @@ import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFacto
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
+import org.akkirrai.hibiki.core.log.AppLogger
 
 /** Refreshes external sources in the background without changing the active built-in path. */
 @Composable
 internal fun AndroidExternalSourceBackgroundSync(
+    skipInitialRefresh: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -61,14 +66,23 @@ internal fun AndroidExternalSourceBackgroundSync(
             reservedSourceIds = AnimeSourceRegistry.sources.mapTo(linkedSetOf()) { it.id },
         )
     }
+    var initialRefreshSkipped by remember { mutableStateOf(false) }
     LaunchedEffect(coordinator, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (skipInitialRefresh && !initialRefreshSkipped) {
+                initialRefreshSkipped = true
+                return@repeatOnLifecycle
+            }
             try {
                 coordinator.refresh()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                println("BeakoKit external repository refresh failed: ${error.message}")
+                AppLogger.w(
+                    tag = "BeakoKitExternal",
+                    message = "External repository refresh failed",
+                    throwable = error,
+                )
             }
         }
     }

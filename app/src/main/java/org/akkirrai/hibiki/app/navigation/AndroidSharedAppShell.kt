@@ -116,7 +116,13 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalHttpClient) {
         onDispose { externalHttpClient.close() }
     }
-    val externalCatalogRepository = remember(externalCoordinator, externalHttpClient) {
+    val externalStatusLabels = ExternalAnimeStatusLabels(
+        unknown = appText(AppTextKey.Unknown),
+        ongoing = appText(AppTextKey.Ongoing),
+        released = appText(AppTextKey.Released),
+        announcement = appText(AppTextKey.Announcement),
+    )
+    val externalCatalogRepository = remember(externalCoordinator, externalHttpClient, externalStatusLabels) {
         ExternalSourceCatalogRepository(
             registryProvider = { externalCoordinator?.snapshot?.value?.registry },
             contextProvider = { sourceId ->
@@ -126,12 +132,7 @@ internal fun AndroidSharedAppShell(
                     config = externalSourceConfigStore.load(sourceId),
                 )
             },
-            statusLabels = ExternalAnimeStatusLabels(
-                unknown = "Unknown",
-                ongoing = "Ongoing",
-                released = "Released",
-                announcement = "Announcement",
-            ),
+            statusLabels = externalStatusLabels,
         )
     }
     val builtInCatalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }

@@ -143,10 +143,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     )
                 },
                 statusLabels = ExternalAnimeStatusLabels(
-                    unknown = "Unknown",
-                    ongoing = "Ongoing",
-                    released = "Released",
-                    announcement = "Announcement",
+                    unknown = appText(AppTextKey.Unknown),
+                    ongoing = appText(AppTextKey.Ongoing),
+                    released = appText(AppTextKey.Released),
+                    announcement = appText(AppTextKey.Announcement),
                 ),
             )
         }
