@@ -26,6 +26,7 @@ data class SourceManifestInfo(
     val primaryLanguage: SourceLanguage,
     val website: String? = null,
     val iconUrl: String? = null,
+    val configSchema: SourceConfigSchema = SourceConfigSchema(),
 )
 
 /** Repository metadata used to validate a package before it can be activated. */
@@ -87,6 +88,7 @@ data class SourceManifest(
             website = metadata.website,
             iconUrl = metadata.iconUrl,
             capabilities = capabilities,
+            configSchema = metadata.configSchema,
         )
     } ?: throw SourceManifestException(listOf("Source display metadata is required for registration"))
 

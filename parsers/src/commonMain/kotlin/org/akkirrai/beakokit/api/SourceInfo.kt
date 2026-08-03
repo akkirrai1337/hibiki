@@ -48,6 +48,7 @@ data class SourceInfo(
     val iconUrl: String? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
     val networkRequirements: SourceNetworkRequirements = SourceNetworkRequirements(),
+    val configSchema: SourceConfigSchema = SourceConfigSchema(),
 ) {
     init {
         require(name.isNotBlank()) { "Source name must not be blank" }

@@ -2,9 +2,13 @@ package org.akkirrai.beakokit.api
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SourceManifestTest {
     @Test
@@ -81,6 +85,36 @@ class SourceManifestTest {
             invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
             "Network policy requires the NETWORK host capability",
         )
+    }
+
+    @Test
+    fun `manifest round trip preserves external config schema`() {
+        val sourceManifest = manifest().copy(
+            sourceInfo = SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                configSchema = SourceConfigSchema(
+                    listOf(
+                        SourceConfigField(
+                            key = "base_url",
+                            kind = SourceConfigValueKind.HTTPS_URL,
+                            required = true,
+                        ),
+                        SourceConfigField(
+                            key = "api_token",
+                            kind = SourceConfigValueKind.SECRET,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val decoded = Json.decodeFromString<SourceManifest>(
+            Json.encodeToString(sourceManifest),
+        )
+
+        assertEquals(sourceManifest, decoded)
     }
 
     private fun manifest(

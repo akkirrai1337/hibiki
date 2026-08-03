@@ -1,7 +1,10 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.serialization.Serializable
+
 internal expect fun isHttpsConfigUrl(value: String): Boolean
 
+@Serializable
 enum class SourceConfigValueKind {
     TEXT,
     HTTPS_URL,
@@ -9,6 +12,7 @@ enum class SourceConfigValueKind {
     SECRET,
 }
 
+@Serializable
 data class SourceConfigField(
     val key: String,
     val kind: SourceConfigValueKind,
@@ -32,8 +36,10 @@ data class SourceConfigField(
     }
 }
 
-class SourceConfigSchema(fields: Iterable<SourceConfigField> = emptyList()) {
-    val fields: List<SourceConfigField> = fields.toList()
+@Serializable
+data class SourceConfigSchema(
+    val fields: List<SourceConfigField> = emptyList(),
+) {
 
     init {
         require(this.fields.map(SourceConfigField::key).distinct().size == this.fields.size) {
