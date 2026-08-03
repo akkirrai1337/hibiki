@@ -31,6 +31,7 @@ import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowMode
@@ -67,6 +68,7 @@ internal fun AndroidSharedAppShell(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val externalSourceConfigStore = remember(context) { AndroidExternalSourceConfigStore(context) }
     val uriHandler = LocalUriHandler.current
     var pendingAvatarCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var pendingDiscordTokenCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
@@ -109,6 +111,7 @@ internal fun AndroidSharedAppShell(
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                    config = externalSourceConfigStore.load(sourceId),
                 )
             },
             statusLabels = ExternalAnimeStatusLabels(

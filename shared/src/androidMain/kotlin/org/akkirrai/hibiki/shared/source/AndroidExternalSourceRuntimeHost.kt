@@ -29,11 +29,14 @@ import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.JvmSourcePackageModuleReader
 import org.akkirrai.beakokit.api.NativeBridgeExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceContext
+import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceHostHttpClient
 import org.akkirrai.beakokit.api.SourceHostHttpRequest
 import org.akkirrai.beakokit.api.SourceHostHttpResponse
 import org.akkirrai.beakokit.api.SourceHostRequirements
 import org.akkirrai.beakokit.api.SourceHostCapabilityException
+import org.akkirrai.beakokit.api.SourceHostConfigAccess
+import org.akkirrai.beakokit.api.SourceHostCapability
 import org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge
 import java.util.UUID
 
@@ -84,6 +87,10 @@ private class AndroidExternalSourceRuntimeBridge(
             sourceId = sourcePackage.manifest.sourceId,
             requirements = requirements,
         ),
+        config = AndroidSourceHostConfig(
+            config = sourceContext.config,
+            requirements = requirements,
+        ),
     )
 
     override suspend fun call(request: ByteArray, maxResponseBytes: Long): ByteArray =
@@ -122,6 +129,7 @@ private class AndroidExternalSourceHost(
     private val requirements: SourceHostRequirements,
     private val storage: AndroidSourceHostStorage,
     private val cookies: AndroidSourceHostCookies,
+    private val config: AndroidSourceHostConfig,
 ) {
     private val dispatcher = ExternalSourceHostDispatcher(
         executeHttpRequest = { wireRequest ->
@@ -146,6 +154,7 @@ private class AndroidExternalSourceHost(
         },
         storage = storage,
         cookies = cookies,
+        config = config,
     )
 
     fun call(bytes: ByteArray): ByteArray {
@@ -188,6 +197,21 @@ private class AndroidExternalSourceHost(
     private fun extractRequestId(bytes: ByteArray): String = runCatching {
         ExternalSourceHostProtocolCodec.decodeRequest(bytes).requestId
     }.getOrDefault("host-invalid-request")
+}
+
+private class AndroidSourceHostConfig(
+    private val config: SourceConfig,
+    override val requirements: SourceHostRequirements,
+) : SourceHostConfigAccess {
+    override fun value(key: String): String? {
+        require(SourceHostCapability.CONFIG)
+        return config.value(key)
+    }
+
+    override fun secret(key: String): String? {
+        require(SourceHostCapability.CONFIG)
+        return config.secret(key)
+    }
 }
 
 private class AndroidSourceHostHttpClient(

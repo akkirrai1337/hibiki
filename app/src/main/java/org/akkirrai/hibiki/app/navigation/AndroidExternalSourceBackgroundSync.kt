@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPl
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 
 /** Refreshes external sources in the background without changing the active built-in path. */
 @Composable
@@ -28,6 +29,7 @@ internal fun AndroidExternalSourceBackgroundSync(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val configStore = remember(context) { AndroidExternalSourceConfigStore(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val platform = remember(context) {
         createAndroidExternalSourceRepositoryPlatform(context)
@@ -36,15 +38,16 @@ internal fun AndroidExternalSourceBackgroundSync(
     DisposableEffect(runtimeHttpClient) {
         onDispose { runtimeHttpClient.close() }
     }
-    val coordinator = remember(platform) {
+    val coordinator = remember(platform, configStore) {
         ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = createAndroidExternalSourceRuntimeFactory(context),
-            sourceContextFactory = {
+            sourceContextFactory = { sourceId ->
                 DefaultSourceContext(
                     httpClient = runtimeHttpClient,
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                    config = configStore.load(sourceId),
                 )
             },
             runtimeInitializer = { sourcePackage, _ ->
