@@ -145,6 +145,7 @@ internal fun AndroidSharedAppShell(
         externalCoordinator?.let { coordinator ->
             SharedAnimeWatchRepository(
                 client = HttpClient(OkHttp),
+                sourceHttpClient = externalHttpClient,
                 externalSourceFactory = { sourceId, sourceContext ->
                     coordinator.snapshot.value.registry?.create(sourceId, sourceContext)
                 },

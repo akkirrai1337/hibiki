@@ -34,6 +34,7 @@ import kotlin.time.Clock
 /** Shared source/runtime adapter used by non-Android hosts. */
 class SharedAnimeWatchRepository(
     private val client: HttpClient,
+    private val sourceHttpClient: HttpClient = client,
     private val preferEnglish: Boolean = false,
     private val externalSourceFactory: ((SourceId, DefaultSourceContext) -> AnimeSource?)? = null,
     private val playbackAttemptTimeoutMillis: Long = DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS,
@@ -161,7 +162,7 @@ class SharedAnimeWatchRepository(
 
     private fun sourceFor(sourceId: SourceId): AnimeSource = sources.getOrPut(sourceId) {
         val context = DefaultSourceContext(
-                httpClient = client,
+                httpClient = sourceHttpClient,
                 preferredLanguages = if (preferEnglish) {
                     listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
                 } else {

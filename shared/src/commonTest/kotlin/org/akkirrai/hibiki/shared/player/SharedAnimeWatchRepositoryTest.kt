@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.player
 import io.ktor.client.HttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.ExternalSourcePlaybackRuntime
 import org.akkirrai.beakokit.api.PlaybackGroup
@@ -21,6 +22,7 @@ class SharedAnimeWatchRepositoryTest {
     @Test
     fun externalSourceFactoryFeedsWatchSourcesAndEpisodes() = runBlocking {
         val client = HttpClient()
+        val sourceClient = HttpClient()
         val sourceId = SourceId("external-source")
         val group = PlaybackGroup(
             id = "group-1",
@@ -40,7 +42,11 @@ class SharedAnimeWatchRepositoryTest {
         )
         val repository = SharedAnimeWatchRepository(
             client = client,
-            externalSourceFactory = { requestedId, _ -> source.takeIf { requestedId == sourceId } },
+            sourceHttpClient = sourceClient,
+            externalSourceFactory = { requestedId, context ->
+                assertSame(sourceClient, context.httpClient)
+                source.takeIf { requestedId == sourceId }
+            },
         )
 
         val watchSources = repository.loadSources("source:external-source:title-1")
@@ -56,6 +62,7 @@ class SharedAnimeWatchRepositoryTest {
         assertEquals("https://example.test/video.mp4", playerLinks.single().url)
         assertEquals(listOf("Dub"), settings.voiceovers.map { it.title })
         repository.close()
+        sourceClient.close()
     }
 
     private class FakePlaybackRuntime(
