@@ -40,7 +40,7 @@ internal fun AndroidExternalSourceBackgroundSync(
         ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
-            runtimeFactory = createAndroidExternalSourceRuntimeFactory(),
+            runtimeFactory = createAndroidExternalSourceRuntimeFactory(context),
             sourceContextFactory = {
                 DefaultSourceContext(
                     httpClient = runtimeHttpClient,

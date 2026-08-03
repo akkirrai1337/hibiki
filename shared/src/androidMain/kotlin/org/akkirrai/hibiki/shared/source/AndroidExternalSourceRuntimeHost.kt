@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
+import android.content.Context
 import io.ktor.client.HttpClient
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
@@ -37,11 +38,13 @@ import org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge
 import java.util.UUID
 
 /** Creates the Android native runtime adapter without changing the built-in source registry. */
-fun createAndroidExternalSourceRuntimeFactory(): ExternalSourceRuntimeFactory =
+fun createAndroidExternalSourceRuntimeFactory(context: Context): ExternalSourceRuntimeFactory =
     NativeBridgeExternalSourceRuntimeFactory(
-        bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, context, module, requirements ->
+        bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, sourceContext, module, requirements ->
             AndroidExternalSourceRuntimeBridge(
-                context = context,
+                appContext = context.applicationContext,
+                sourceContext = sourceContext,
+                sourcePackage = sourcePackage,
                 module = module,
                 requirements = requirements,
             )
@@ -62,11 +65,21 @@ suspend fun validateAndroidExternalSourceRuntime(sourcePackage: ActiveExternalSo
 }
 
 private class AndroidExternalSourceRuntimeBridge(
-    private val context: SourceContext,
+    private val appContext: Context,
+    private val sourceContext: SourceContext,
+    sourcePackage: ActiveExternalSourcePackage,
     private val module: ByteArray,
     requirements: SourceHostRequirements,
 ) : ExternalSourceRuntimeNativeBridge {
-    private val host = AndroidExternalSourceHost(context.httpClient, requirements)
+    private val host = AndroidExternalSourceHost(
+        client = sourceContext.httpClient,
+        requirements = requirements,
+        storage = AndroidSourceHostStorage(
+            context = appContext,
+            sourceId = sourcePackage.manifest.sourceId,
+            requirements = requirements,
+        ),
+    )
 
     override suspend fun call(request: ByteArray, maxResponseBytes: Long): ByteArray =
         kotlinx.coroutines.coroutineScope {
@@ -102,27 +115,31 @@ private class AndroidExternalSourceRuntimeBridge(
 private class AndroidExternalSourceHost(
     private val client: HttpClient,
     private val requirements: SourceHostRequirements,
+    private val storage: AndroidSourceHostStorage,
 ) {
-    private val dispatcher = ExternalSourceHostDispatcher { wireRequest ->
-        withTimeout(wireRequest.timeoutMillis) {
-            AndroidSourceHostHttpClient(client, requirements).execute(
-                SourceHostHttpRequest(
-                    method = wireRequest.method,
-                    url = wireRequest.url,
-                    headers = wireRequest.headers,
-                    body = wireRequest.body,
-                    timeoutMillis = wireRequest.timeoutMillis,
-                    maxResponseBytes = wireRequest.maxResponseBytes,
-                ),
-            )
-        }.let { httpResponse ->
-            ExternalSourceHostHttpResponse(
-                statusCode = httpResponse.statusCode,
-                headers = httpResponse.headers,
-                body = httpResponse.body,
-            )
-        }
-    }
+    private val dispatcher = ExternalSourceHostDispatcher(
+        executeHttpRequest = { wireRequest ->
+            withTimeout(wireRequest.timeoutMillis) {
+                AndroidSourceHostHttpClient(client, requirements).execute(
+                    SourceHostHttpRequest(
+                        method = wireRequest.method,
+                        url = wireRequest.url,
+                        headers = wireRequest.headers,
+                        body = wireRequest.body,
+                        timeoutMillis = wireRequest.timeoutMillis,
+                        maxResponseBytes = wireRequest.maxResponseBytes,
+                    ),
+                )
+            }.let { httpResponse ->
+                ExternalSourceHostHttpResponse(
+                    statusCode = httpResponse.statusCode,
+                    headers = httpResponse.headers,
+                    body = httpResponse.body,
+                )
+            }
+        },
+        storage = storage,
+    )
 
     fun call(bytes: ByteArray): ByteArray {
         val response = try {
