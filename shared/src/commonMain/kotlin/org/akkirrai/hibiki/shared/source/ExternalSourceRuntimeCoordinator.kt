@@ -12,6 +12,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceManifest
+import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -32,9 +33,26 @@ class ExternalSourceRuntimeCoordinator(
 
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
+        refreshLocked()
+    }
+
+    /** Adds one repository and refreshes only the inactive external registry. */
+    suspend fun addRepository(endpoint: SourceRepositoryEndpoint) = operationMutex.withLock {
+        platform.coordinator.addRepository(endpoint)
+        refreshLocked()
+    }
+
+    /** Removes one repository and refreshes only the inactive external registry. */
+    suspend fun removeRepository(url: String) = operationMutex.withLock {
+        platform.coordinator.removeRepository(url)
+        refreshLocked()
+    }
+
+    private suspend fun refreshLocked(): SourceRepositoryLoadSnapshot {
         try {
             val repository = platform.coordinator.refresh()
             replaceRegistry(repository)
+            return repository
         } catch (error: Throwable) {
             if (error is CancellationException) {
                 throw error

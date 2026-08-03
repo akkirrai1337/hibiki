@@ -72,6 +72,38 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun repositoryChangesRefreshTheInactiveRegistryWithoutChangingTheBuiltInPath() = runTest {
+        val sourceId = SourceId("external-source")
+        val coordinator = ExternalSourceRuntimeCoordinator(
+            platform = platformFor(sourceId),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                error("Runtime creation must remain lazy")
+            },
+        )
+        val secondEndpoint = SourceRepositoryEndpoint("https://second.example.test/index.json")
+
+        coordinator.addRepository(secondEndpoint)
+
+        assertEquals(
+            listOf(
+                "https://example.test/index.json",
+                secondEndpoint.url,
+            ),
+            coordinator.snapshot.value.repository.loaded.map { it.endpoint.url },
+        )
+        assertEquals(listOf(sourceId), coordinator.snapshot.value.registry?.sources?.map { it.id })
+
+        coordinator.removeRepository("https://example.test/index.json")
+
+        assertEquals(
+            listOf(secondEndpoint.url),
+            coordinator.snapshot.value.repository.loaded.map { it.endpoint.url },
+        )
+        assertEquals(listOf(sourceId), coordinator.snapshot.value.registry?.sources?.map { it.id })
+    }
+
+    @Test
     fun failedRegistryBuildKeepsTheLastSuccessfulRegistry() = runTest {
         val sourceId = SourceId("external-source")
         var packageLoadFails = false
@@ -486,6 +518,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         installedPackageSha256: String = repositoryPackageSha256,
     ): ExternalSourceRepositoryPlatform {
         val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
+        val repositoryEndpoints = mutableListOf(endpoint)
         val manifest = manifest(sourceId).copy(
             packageVersion = repositoryPackageVersion,
             sha256 = repositoryPackageSha256,
@@ -493,11 +526,14 @@ class ExternalSourceRuntimeCoordinatorTest {
         val coordinator = ExternalSourceRepositoryCoordinator(
             SourceRepositoryCatalogLoader(
                 catalog = SourceRepositoryCatalog(object : SourceRepositoryStore {
-                    override fun load() = listOf(endpoint)
+                    override fun load() = repositoryEndpoints.toList()
 
                     override fun persistAtomically(
                         repositories: List<SourceRepositoryEndpoint>,
-                    ) = Unit
+                    ) {
+                        repositoryEndpoints.clear()
+                        repositoryEndpoints.addAll(repositories)
+                    }
                 }),
                 loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
                     beforeRepositoryLoad()
