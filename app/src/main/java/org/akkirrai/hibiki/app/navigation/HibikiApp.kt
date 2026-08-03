@@ -195,7 +195,7 @@ private fun HibikiNavHost(
                     viewModel = homeViewModel,
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime), anime)
                         }
                     },
                     onBrowseCatalog = {
@@ -254,7 +254,7 @@ private fun HibikiNavHost(
                 SharedAndroidCatalogScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime), anime)
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -275,7 +275,7 @@ private fun HibikiNavHost(
                 SharedAndroidLibraryScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime), anime)
                         }
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
@@ -297,7 +297,7 @@ private fun HibikiNavHost(
                 SharedAndroidSourcesScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime), anime)
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,
@@ -373,7 +373,7 @@ private fun HibikiNavHost(
                     },
                     onRelatedAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime))
+                            navController.dispatchAppNavigation(AppNavigationEvent.OpenDetails(anime), anime)
                         }
                     },
                     onOpenSources = { anime ->
@@ -610,6 +610,27 @@ private fun AppTopLevelDestination.toAndroidDestination(): TopLevelDestination =
 private fun NavHostController.navigateSingleTopTo(route: String) {
     navigate(route) {
         launchSingleTop = true
+    }
+}
+
+private fun NavHostController.dispatchTopLevelNavigation(
+    currentTopLevel: TopLevelDestination,
+    destination: TopLevelDestination,
+) {
+    navigateTopLevelDestination(currentTopLevel, destination)
+}
+
+private fun NavHostController.dispatchAppNavigation(
+    event: AppNavigationEvent,
+    detailsAnime: Anime? = null,
+) {
+    when (event) {
+        is AppNavigationEvent.OpenDetails -> navigateSingleTopTo(
+            detailsAnime?.let(AnimeNavType::createDetailsRoute)
+                ?: AnimeNavType.createDetailsRoute(event.animeId),
+        )
+        AppNavigationEvent.OpenSettings -> navigateSingleTopTo(AnimeNavType.SETTINGS_ROUTE)
+        else -> Unit
     }
 }
 

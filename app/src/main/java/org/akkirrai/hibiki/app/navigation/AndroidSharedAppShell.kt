@@ -58,7 +58,7 @@ import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 
-/** Android adapter for the shared shell; disabled until the parity checkpoint is approved. */
+/** Android adapter for the shared shell with external sources kept behind the built-in path. */
 @Composable
 internal fun AndroidSharedAppShell(
     onCheckForUpdates: () -> Unit,
@@ -127,7 +127,7 @@ internal fun AndroidSharedAppShell(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
-    val externalWatchRepository = remember(externalCoordinator) {
+    val externalWatchRepository = remember(externalCoordinator, externalSnapshot?.registry) {
         externalCoordinator?.let { coordinator ->
             SharedAnimeWatchRepository(
                 client = HttpClient(OkHttp),
@@ -140,7 +140,12 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalWatchRepository) {
         onDispose { externalWatchRepository?.close() }
     }
-    val routedWatchRepository = remember(watchRepository, externalWatchRepository, externalCoordinator) {
+    val routedWatchRepository = remember(
+        watchRepository,
+        externalWatchRepository,
+        externalCoordinator,
+        externalSnapshot?.registry,
+    ) {
         externalWatchRepository?.let { externalRepository ->
             RoutingWatchDataRepository(
                 builtIn = watchRepository,

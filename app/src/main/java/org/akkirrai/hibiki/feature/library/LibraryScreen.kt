@@ -31,6 +31,7 @@ import org.akkirrai.hibiki.shared.model.buildCardMeta
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.AppLibraryEmptyState
 import org.akkirrai.hibiki.shared.library.AppLibraryEntryCard
+import org.akkirrai.hibiki.shared.library.AppLibraryEntriesContent
 import org.akkirrai.hibiki.shared.library.libraryStatusAlias
 import org.akkirrai.hibiki.shared.library.resolveLibraryEmptyStateText
 import org.akkirrai.hibiki.shared.library.buildLibraryFilterCatalog
@@ -74,7 +75,7 @@ fun LibraryScreen(
         }
     }
 
-    org.akkirrai.hibiki.shared.library.AppLibraryScreen(
+    AppLibraryEntriesContent(
         state = state,
         modifier = modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,
@@ -137,21 +138,19 @@ fun LibraryScreen(
                 modifier = entryModifier,
             )
         },
-        filterContent = if (isFilterDialogVisible) {
-            {
-                LibrarySearchFiltersSheet(
-                    catalog = state.filterCatalog,
-                    currentFilters = state.searchFilters,
-                    languageMode = languageMode,
-                    onDismiss = { isFilterDialogVisible = false },
-                    onApply = { filters ->
-                        viewModel.applySearchFilters(filters)
-                        isFilterDialogVisible = false
-                    },
-                )
-            }
-        } else null,
     )
+    if (isFilterDialogVisible) {
+        LibrarySearchFiltersSheet(
+            catalog = state.filterCatalog,
+            currentFilters = state.searchFilters,
+            languageMode = languageMode,
+            onDismiss = { isFilterDialogVisible = false },
+            onApply = { filters ->
+                viewModel.applySearchFilters(filters)
+                isFilterDialogVisible = false
+            },
+        )
+    }
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L

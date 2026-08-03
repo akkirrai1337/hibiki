@@ -49,6 +49,9 @@ object AnimeNavType {
         }
     }
 
+    fun createDetailsRoute(animeId: String): String =
+        "$DETAILS_ROUTE/${Uri.encode(animeId)}"
+
     fun createWatchSourcesRoute(anime: Anime, downloadMode: Boolean = false): String {
         return createWatchSourcesRoute(
             animeId = anime.id,
