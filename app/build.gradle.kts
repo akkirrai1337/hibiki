@@ -54,6 +54,9 @@ val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL").
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)
     sourceSets["main"].jniLibs.srcDir(wasmtimeRuntimeJniDir.get().asFile)
+    // Instrumentation tests must exercise the production runtime from the target APK.
+    // Local harness binaries under app/src/androidTest/jniLibs can otherwise shadow it.
+    sourceSets["androidTest"].jniLibs.directories.clear()
     namespace = "org.akkirrai.hibiki"
     compileSdk {
         version = release(37)

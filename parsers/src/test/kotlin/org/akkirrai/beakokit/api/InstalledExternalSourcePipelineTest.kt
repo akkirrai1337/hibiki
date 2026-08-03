@@ -10,12 +10,15 @@ import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 
 class InstalledExternalSourcePipelineTest {
     @Test
-    fun installed_package_reaches_search_and_details_through_the_external_registry() = runBlocking {
+    fun installed_package_reaches_catalog_and_playback_through_the_external_registry() = runBlocking {
         val manifest = manifest()
         val packageDirectory = Files.createTempDirectory("hibiki-external-source-")
         Files.write(
@@ -45,7 +48,10 @@ class InstalledExternalSourcePipelineTest {
                             AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
                         ExternalSourceRuntimeOperation.DETAILS ->
                             AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
-                        else -> error("Playback operation is not part of this catalog-only fixture")
+                        ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->
+                            AnimeTitleRuntimePayloadCodec.encodePlaybackGroups(listOf(playbackGroup()))
+                        ExternalSourceRuntimeOperation.PLAYER_LINKS ->
+                            AnimeTitleRuntimePayloadCodec.encodePlayerLinks(listOf(playerLink()))
                     }
                     ExternalSourceRuntimeProtocolCodec.encodeResponse(
                         ExternalSourceRuntimeResponse(
@@ -74,6 +80,13 @@ class InstalledExternalSourcePipelineTest {
 
             assertEquals("search-result", source.search(AnimeSearchRequest(query = "frieren")).single().id)
             assertEquals("details-result", source.getById("title-1").id)
+            val playbackSource = source as PlaybackSource
+            val group = playbackSource.getPlaybackGroups(title("details-result")).single()
+            assertEquals("group-1", group.id)
+            val episode = group.episodes.single()
+            assertEquals("episode-1", episode.id)
+            assertEquals("https://video.example/episode-1.m3u8", playbackSource
+                .getPlayerLinks(title("details-result"), group, episode).single().url)
             assertContentEquals(moduleBytes, receivedModule)
         } finally {
             client.close()
@@ -100,6 +113,19 @@ class InstalledExternalSourcePipelineTest {
         sha256 = "a".repeat(64),
         artifactSizeBytes = 4,
         minClientVersion = 0,
+        capabilities = setOf(SourceCapability.PLAYBACK),
+    )
+
+    private fun playbackGroup() = PlaybackGroup(
+        id = "group-1",
+        title = "Dub",
+        episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+    )
+
+    private fun playerLink() = PlayerLink(
+        url = "https://video.example/episode-1.m3u8",
+        type = PlayerType.DIRECT_HLS,
+        quality = "1080p",
     )
 
     private fun title(id: String) = AnimeTitle(

@@ -242,6 +242,44 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun playbackCapabilityRejectsRuntimeWithoutPlaybackContract() = runBlocking {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val registry = activeExternalSourceRegistry(
+            packages = listOf(activePackage),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+        )
+        val client = HttpClient(MockEngine { error("Network is not expected in this test") })
+        try {
+            val error = assertFailsWith<IllegalArgumentException> {
+                registry.create(
+                    id = SourceId("external-test"),
+                    context = DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                    ),
+                )
+            }
+            assertTrue(error.message.orEmpty().contains("does not implement playback"))
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun activePackagePassesItsPathToRuntimeFactory() {
         var receivedPath: String? = null
         val activePackage = ActiveExternalSourcePackage(
