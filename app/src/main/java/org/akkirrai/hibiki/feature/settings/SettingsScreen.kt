@@ -73,6 +73,9 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsExperimentalSection
 import org.akkirrai.hibiki.shared.settings.resolveLanguageModeLabel
 import org.akkirrai.hibiki.shared.settings.resolveThemeModeLabel
 import org.akkirrai.hibiki.shared.settings.resolveNotificationPermissionLabel
+import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.shared.settings.LanguageMode
+import org.akkirrai.hibiki.shared.settings.ThemeMode
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogHeader
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthTokenCard
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialogActions

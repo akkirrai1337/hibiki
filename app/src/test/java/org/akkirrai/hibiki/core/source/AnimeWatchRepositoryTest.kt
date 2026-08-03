@@ -59,10 +59,10 @@ class AnimeWatchRepositoryTest {
     }
 
     @Test
-    fun `preferred player gets longer timeout`() {
-        assertEquals(8_000L, repository.resolveAttemptTimeoutMillis(null, "Kodik"))
-        assertEquals(8_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Aksor"))
-        assertEquals(12_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Kodik"))
+    fun `player resolution uses the current timeout policy`() {
+        assertEquals(15_000L, repository.resolveAttemptTimeoutMillis(null, "Kodik"))
+        assertEquals(15_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Aksor"))
+        assertEquals(15_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Kodik"))
     }
 
     @Test
