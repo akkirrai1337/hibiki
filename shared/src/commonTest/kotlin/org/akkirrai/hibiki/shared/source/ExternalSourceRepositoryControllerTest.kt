@@ -41,6 +41,21 @@ class ExternalSourceRepositoryControllerTest {
     }
 
     @Test
+    fun controllerResolvesGitHubFileLinksBeforeAddingRepository() = runTest {
+        val actions = FakeActions()
+        val controller = ExternalSourceRepositoryController(actions, this)
+        advanceUntilIdle()
+
+        controller.addRepository("https://github.com/vadim/hibiki-sources/blob/main/index.json")
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("https://raw.githubusercontent.com/vadim/hibiki-sources/main/index.json"),
+            controller.state.value.repositories.map { it.url },
+        )
+    }
+
+    @Test
     fun controllerDelegatesInstallationInitializationAndRollback() = runTest {
         val actions = FakeActions()
         val controller = ExternalSourceRepositoryController(actions, this)

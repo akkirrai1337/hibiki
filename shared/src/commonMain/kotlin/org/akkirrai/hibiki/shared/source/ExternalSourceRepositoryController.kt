@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
+import org.akkirrai.beakokit.api.SourceRepositoryUrlResolver
 
 data class ExternalSourceRepositoryUiState(
     val repositories: List<SourceRepositoryEndpoint> = emptyList(),
@@ -21,6 +22,7 @@ data class ExternalSourceRepositoryUiState(
 class ExternalSourceRepositoryController(
     private val actions: ExternalSourceRepositoryActions,
     private val scope: CoroutineScope,
+    private val urlResolver: SourceRepositoryUrlResolver = SourceRepositoryUrlResolver(),
 ) {
     private val _state = MutableStateFlow(ExternalSourceRepositoryUiState())
     val state: StateFlow<ExternalSourceRepositoryUiState> = _state.asStateFlow()
@@ -40,7 +42,7 @@ class ExternalSourceRepositoryController(
 
     fun addRepository(url: String) {
         launchOperation {
-            actions.addRepositoryFromUi(SourceRepositoryEndpoint(url.trim()))
+            actions.addRepositoryFromUi(urlResolver.resolve(url))
             loadState()
         }
     }

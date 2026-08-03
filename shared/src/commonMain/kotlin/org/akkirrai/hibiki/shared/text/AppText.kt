@@ -376,7 +376,7 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsExportLogs -> if (russian) "Экспортировать логи" else "Export logs"
             AppTextKey.SettingsAbout -> if (russian) "О приложении" else "About"
             AppTextKey.SettingsExternalRepositories -> if (russian) "Внешние источники" else "External repositories"
-            AppTextKey.SettingsExternalRepositoryUrl -> if (russian) "HTTPS-ссылка repository" else "Repository HTTPS URL"
+            AppTextKey.SettingsExternalRepositoryUrl -> if (russian) "Ссылка на repository" else "Repository link"
             AppTextKey.SettingsExternalRepositoryAdd -> if (russian) "Добавить" else "Add"
             AppTextKey.SettingsExternalRepositoryRefresh -> if (russian) "Обновить источники" else "Refresh sources"
             AppTextKey.SettingsExternalRepositoryRemove -> if (russian) "Удалить repository" else "Remove repository"
