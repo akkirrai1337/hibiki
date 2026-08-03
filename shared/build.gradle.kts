@@ -40,6 +40,9 @@ kotlin {
                             "-I${project.file("../tools/wasmtime-spike/include").absolutePath}",
                         )
                     }
+                    create("iosKeychain") {
+                        defFile(project.file("src/nativeInterop/cinterop/iosKeychain.def"))
+                    }
                 }
             }
         }

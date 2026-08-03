@@ -37,6 +37,9 @@ import org.akkirrai.hibiki.shared.profile.IosLocalProfileRepository
 import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
+import org.akkirrai.hibiki.shared.source.AppSourceConfigLabels
+import org.akkirrai.hibiki.shared.source.AppSourceConfigScreen
+import org.akkirrai.hibiki.shared.source.IosExternalSourceConfigStore
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
@@ -46,6 +49,8 @@ import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
+import org.akkirrai.hibiki.shared.text.AppTextKey
+import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
@@ -74,15 +79,17 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 followRedirects = false
             }
         }
+        val externalConfigStore = remember { IosExternalSourceConfigStore() }
         val externalRuntimeCoordinator = remember(externalSourcePlatform, externalRuntimeHttpClient) {
             ExternalSourceRuntimeCoordinator(
                 platform = externalSourcePlatform,
                 catalogCapabilities = { CatalogCapabilities.FULL },
                 runtimeFactory = createIosExternalSourceRuntimeFactory(externalRuntimeHttpClient),
-                sourceContextFactory = { _ ->
+                sourceContextFactory = { sourceId ->
                     DefaultSourceContext(
                         httpClient = externalRuntimeHttpClient,
                         preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                        config = externalConfigStore.load(sourceId),
                     )
                 },
                 reservedSourceIds = IosSourceRegistry.sources.mapTo(linkedSetOf()) { SourceId(it.id) },
@@ -166,6 +173,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 },
                 sourceHttpClient = externalRuntimeHttpClient,
                 preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
+                sourceConfigProvider = externalConfigStore::load,
                 externalSourceFactory = { sourceId, sourceContext ->
                     externalRuntimeCoordinator.snapshot.value.registry?.create(sourceId, sourceContext)
                 },
@@ -270,6 +278,45 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
                     onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
                     externalSourceRepositoryController = externalRepositoryController,
+                    sourceConfigContent = { source, onSaved, onCancel ->
+                        val sourceId = SourceId(source.id)
+                        val draft = externalConfigStore.loadDraft(sourceId)
+                        AppSourceConfigScreen(
+                            schema = source.configSchema,
+                            initialValues = draft.values,
+                            initialSecrets = draft.secrets,
+                            labels = AppSourceConfigLabels(
+                                fieldLabel = { field -> field.titleKey },
+                                saveLabel = appText(AppTextKey.Apply),
+                                cancelLabel = appText(AppTextKey.Cancel),
+                            ),
+                            onSave = { values, secrets ->
+                                source.configSchema.fields.forEach { field ->
+                                    if (field.kind == org.akkirrai.beakokit.api.SourceConfigValueKind.SECRET) {
+                                        secrets[field.key]?.let { value ->
+                                            if (value.isBlank()) {
+                                                externalConfigStore.clearSecret(sourceId, field.key)
+                                            } else {
+                                                externalConfigStore.saveSecret(sourceId, field.key, value)
+                                            }
+                                        }
+                                    } else {
+                                        values[field.key]?.let { value ->
+                                            val normalizedValue = value.trim()
+                                            if (normalizedValue.isEmpty()) {
+                                                externalConfigStore.clearValue(sourceId, field.key)
+                                            } else {
+                                                externalConfigStore.saveValue(sourceId, field.key, normalizedValue)
+                                            }
+                                        }
+                                    }
+                                }
+                                externalWatchRepository.invalidateSource(sourceId)
+                                onSaved()
+                            },
+                            onCancel = onCancel,
+                        )
+                    },
                     sources = sources,
                     selectedSourceId = selectedSourceId.value,
                     includeNavigationBarPadding = true,
