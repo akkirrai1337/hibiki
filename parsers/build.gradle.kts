@@ -26,6 +26,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:3.5.0")
                 implementation("io.ktor:ktor-client-content-negotiation:3.5.0")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:3.5.0")
+                implementation("no.synth:kmp-zip:0.9.1")
             }
         }
         val jvmMain by getting {
