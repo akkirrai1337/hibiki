@@ -50,6 +50,7 @@ import org.akkirrai.beakokit.api.SourceRuntime
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.RelatedAnimeTitle
 
 class ExternalSourceRuntimeCoordinatorTest {
     @Test
@@ -83,6 +84,29 @@ class ExternalSourceRuntimeCoordinatorTest {
             external = listOf(descriptor),
         )
         assertEquals(listOf("Built-in source"), merged.map { it.name })
+        val mapped = AnimeTitle(
+            id = "native-1",
+            russianName = null,
+            englishName = "External title",
+            originalName = "Original title",
+            japaneseName = null,
+            synonyms = listOf("Alias"),
+            year = 2024,
+            type = "TV",
+            episodeCount = 12,
+            posterUrl = "https://example.test/poster.jpg",
+            status = "released",
+            description = "Description",
+            genres = listOf("Fantasy"),
+            relatedAnime = listOf(RelatedAnimeTitle("related-1", "Related title")),
+        ).toAppAnime(
+            sourceId = sourceId,
+            preferEnglish = true,
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+        )
+        assertEquals("source:external-source:native-1", mapped.id)
+        assertEquals("Released", mapped.status)
+        assertEquals("source:external-source:related-1", mapped.relatedAnime.single().id)
         assertEquals(emptyList<Throwable>(), listOfNotNull(snapshot.error))
     }
 
