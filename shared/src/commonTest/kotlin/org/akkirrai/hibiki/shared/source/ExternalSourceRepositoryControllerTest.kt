@@ -7,6 +7,7 @@ import kotlin.test.assertNull
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
+import org.akkirrai.beakokit.api.SourceId
 
 class ExternalSourceRepositoryControllerTest {
     @Test
@@ -39,8 +40,28 @@ class ExternalSourceRepositoryControllerTest {
         assertNull(controller.state.value.error)
     }
 
+    @Test
+    fun controllerDelegatesInstallationInitializationAndRollback() = runTest {
+        val actions = FakeActions()
+        val controller = ExternalSourceRepositoryController(actions, this)
+        advanceUntilIdle()
+        var initialized = false
+        val sourceId = SourceId("external-source")
+
+        controller.installPackage(sourceId) { initialized = true }
+        advanceUntilIdle()
+        controller.rollbackPackage(sourceId)
+        advanceUntilIdle()
+
+        assertEquals(listOf(sourceId), actions.installed)
+        assertEquals(listOf(sourceId), actions.rolledBack)
+        assertEquals(true, initialized)
+    }
+
     private class FakeActions : ExternalSourceRepositoryActions {
         private val items = mutableListOf<SourceRepositoryEndpoint>()
+        val installed = mutableListOf<SourceId>()
+        val rolledBack = mutableListOf<SourceId>()
 
         override suspend fun repositories(): List<SourceRepositoryEndpoint> = items.toList()
 
@@ -57,10 +78,15 @@ class ExternalSourceRepositoryControllerTest {
         override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
 
         override suspend fun installAvailablePackageFromUi(
-            sourceId: org.akkirrai.beakokit.api.SourceId,
+            sourceId: SourceId,
             initialize: suspend () -> Unit,
-        ) = Unit
+        ) {
+            installed += sourceId
+            initialize()
+        }
 
-        override suspend fun rollbackPackageFromUi(sourceId: org.akkirrai.beakokit.api.SourceId) = Unit
+        override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
+            rolledBack += sourceId
+        }
     }
 }

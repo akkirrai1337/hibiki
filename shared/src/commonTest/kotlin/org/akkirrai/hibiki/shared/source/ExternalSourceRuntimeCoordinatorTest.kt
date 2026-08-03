@@ -372,6 +372,26 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun packageStatusesExposeRollbackOnlyWhenPreviousPackageCanBeLoaded() = runTest {
+        val sourceId = SourceId("external-source")
+        val coordinator = ExternalSourceRuntimeCoordinator(
+            platform = platformFor(
+                sourceId = sourceId,
+                installedPreviousPackageVersion = "1.0.0",
+                installedPackageVersion = "2.0.0",
+            ),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                error("Runtime creation must remain lazy")
+            },
+        )
+
+        coordinator.refresh()
+
+        assertEquals(true, coordinator.packageStatuses().single().rollbackAvailable)
+    }
+
+    @Test
     fun availablePackageUpdatesReportRebuiltArtifactsWithTheSameVersion() = runTest {
         val sourceId = SourceId("external-source")
         val coordinator = ExternalSourceRuntimeCoordinator(
@@ -638,6 +658,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         beforeRepositoryLoad: suspend () -> Unit = {},
         repositoryPackageVersion: String = "1.0.0",
         installedPackageVersion: String = "1.0.0",
+        installedPreviousPackageVersion: String? = null,
         repositoryPackageSha256: String = "a".repeat(64),
         installedPackageSha256: String = repositoryPackageSha256,
     ): ExternalSourceRepositoryPlatform {
@@ -674,6 +695,14 @@ class ExternalSourceRuntimeCoordinatorTest {
             ),
         )
         val installed = InstalledSourcePackage(sourceId, installedPackageVersion, "package/path")
+        val activationStore = InMemoryStore(
+            SourcePackageActivationState(
+                active = installed,
+                previous = installedPreviousPackageVersion?.let { version ->
+                    InstalledSourcePackage(sourceId, version, "previous/path")
+                },
+            ),
+        )
         return ExternalSourceRepositoryPlatform(
             coordinator = coordinator,
             activePackageLoaderFactory = { requestedId ->
@@ -681,17 +710,23 @@ class ExternalSourceRuntimeCoordinatorTest {
                 ActiveExternalSourcePackageLoader(
                     activationRepository = SourcePackageActivationRepository(
                         sourceId = requestedId,
-                        store = InMemoryStore(
-                            SourcePackageActivationState(active = installed),
-                        ),
+                        store = activationStore,
                     ),
                     manifestReader = SourcePackageManifestReader {
+                        packagePath ->
                         manifest(sourceId).copy(
-                            packageVersion = installedPackageVersion,
+                            packageVersion = if (packagePath == "previous/path") {
+                                installedPreviousPackageVersion ?: installedPackageVersion
+                            } else {
+                                installedPackageVersion
+                            },
                             sha256 = installedPackageSha256,
                         )
                     },
                 )
+            },
+            activationRepositoryFactory = { requestedId ->
+                SourcePackageActivationRepository(requestedId, activationStore)
             },
             closeResources = {},
         )
