@@ -29,6 +29,7 @@ import org.akkirrai.beakokit.api.SourceId
 data class ExternalSourceRepositorySectionLabels(
     val title: String,
     val urlLabel: String,
+    val urlHint: String,
     val addLabel: String,
     val refreshLabel: String,
     val removeLabel: String,
@@ -72,6 +73,7 @@ fun ExternalSourceRepositorySection(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text(labels.urlLabel) },
+                supportingText = { Text(labels.urlHint) },
                 singleLine = true,
                 enabled = !state.isBusy,
                 modifier = Modifier.weight(1f),

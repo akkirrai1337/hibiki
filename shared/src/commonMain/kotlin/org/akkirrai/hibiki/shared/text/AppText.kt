@@ -107,6 +107,7 @@ enum class AppTextKey {
     SettingsAbout,
     SettingsExternalRepositories,
     SettingsExternalRepositoryUrl,
+    SettingsExternalRepositoryUrlHint,
     SettingsExternalRepositoryAdd,
     SettingsExternalRepositoryRefresh,
     SettingsExternalRepositoryRemove,
@@ -377,6 +378,11 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsAbout -> if (russian) "О приложении" else "About"
             AppTextKey.SettingsExternalRepositories -> if (russian) "Внешние источники" else "External repositories"
             AppTextKey.SettingsExternalRepositoryUrl -> if (russian) "Ссылка на repository" else "Repository link"
+            AppTextKey.SettingsExternalRepositoryUrlHint -> if (russian) {
+                "GitHub blob/raw или прямой URL index.json"
+            } else {
+                "GitHub blob/raw link or direct index.json URL"
+            }
             AppTextKey.SettingsExternalRepositoryAdd -> if (russian) "Добавить" else "Add"
             AppTextKey.SettingsExternalRepositoryRefresh -> if (russian) "Обновить источники" else "Refresh sources"
             AppTextKey.SettingsExternalRepositoryRemove -> if (russian) "Удалить repository" else "Remove repository"

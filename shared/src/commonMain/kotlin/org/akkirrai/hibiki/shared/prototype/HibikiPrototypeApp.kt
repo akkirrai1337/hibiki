@@ -2910,6 +2910,7 @@ private fun SettingsScreen(
             ExternalSourceRepositorySectionLabels(
                 title = appText(AppTextKey.SettingsExternalRepositories),
                 urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
+                urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
                 addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
                 refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
                 removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
