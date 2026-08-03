@@ -78,6 +78,7 @@ fun AppSettingsScreen(
     onAddExternalRepository: (String) -> Unit = {},
     onRemoveExternalRepository: (String) -> Unit = {},
     onRefreshExternalRepositories: () -> Unit = {},
+    onInstallExternalPackage: (org.akkirrai.beakokit.api.SourceId) -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         AppSettingsContentList(
@@ -176,6 +177,7 @@ fun AppSettingsScreen(
                     onAddRepository = onAddExternalRepository,
                     onRemoveRepository = onRemoveExternalRepository,
                     onRefresh = onRefreshExternalRepositories,
+                    onInstallPackage = onInstallExternalPackage,
                 )
             }
         }

@@ -2893,6 +2893,10 @@ private fun SettingsScreen(
                 refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
                 removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
                 busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
+                packagesTitle = appText(AppTextKey.SettingsExternalPackages),
+                installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
+                updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
+                installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
             )
         },
         onAddExternalRepository = externalSourceRepositoryController?.let { controller ->
@@ -2903,6 +2907,9 @@ private fun SettingsScreen(
         } ?: {},
         onRefreshExternalRepositories = externalSourceRepositoryController?.let { controller ->
             controller::refreshRepositories
+        } ?: {},
+        onInstallExternalPackage = externalSourceRepositoryController?.let { controller ->
+            { sourceId -> controller.installPackage(sourceId) }
         } ?: {},
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,

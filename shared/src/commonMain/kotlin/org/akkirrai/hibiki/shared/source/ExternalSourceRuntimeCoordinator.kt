@@ -80,6 +80,16 @@ class ExternalSourceRuntimeCoordinator(
         refresh()
     }
 
+    override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> =
+        packageStatuses()
+
+    override suspend fun installAvailablePackageFromUi(
+        sourceId: SourceId,
+        initialize: suspend () -> Unit,
+    ) {
+        installAvailablePackage(sourceId, initialize)
+    }
+
     override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
         addRepository(endpoint)
     }
@@ -233,6 +243,14 @@ interface ExternalSourceRepositoryActions {
     suspend fun removeRepositoryFromUi(url: String)
 
     suspend fun refreshRepositories()
+
+    suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus>
+
+    /** The host supplies initialization because it owns the platform runtime setup. */
+    suspend fun installAvailablePackageFromUi(
+        sourceId: SourceId,
+        initialize: suspend () -> Unit,
+    )
 }
 
 data class ExternalSourceRuntimeSnapshot(

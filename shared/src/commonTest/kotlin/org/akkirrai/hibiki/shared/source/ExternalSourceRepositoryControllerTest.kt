@@ -53,5 +53,12 @@ class ExternalSourceRepositoryControllerTest {
         }
 
         override suspend fun refreshRepositories() = Unit
+
+        override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
+
+        override suspend fun installAvailablePackageFromUi(
+            sourceId: org.akkirrai.beakokit.api.SourceId,
+            initialize: suspend () -> Unit,
+        ) = Unit
     }
 }

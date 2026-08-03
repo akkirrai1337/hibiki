@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
+import org.akkirrai.beakokit.api.SourceId
 
 data class ExternalSourceRepositorySectionLabels(
     val title: String,
@@ -32,6 +33,10 @@ data class ExternalSourceRepositorySectionLabels(
     val refreshLabel: String,
     val removeLabel: String,
     val busyLabel: String,
+    val packagesTitle: String,
+    val installLabel: String,
+    val updateLabel: String,
+    val installedLabel: String,
 )
 
 /** Settings component for repository endpoints; host decides when to expose it. */
@@ -42,6 +47,7 @@ fun ExternalSourceRepositorySection(
     onAddRepository: (String) -> Unit,
     onRemoveRepository: (String) -> Unit,
     onRefresh: () -> Unit,
+    onInstallPackage: (SourceId) -> Unit = {},
     modifier: Modifier = Modifier,
     errorMessage: (Throwable) -> String = { it.message.orEmpty() },
 ) {
@@ -105,6 +111,46 @@ fun ExternalSourceRepositorySection(
                         contentDescription = labels.removeLabel,
                         modifier = Modifier.size(20.dp),
                     )
+                }
+            }
+        }
+        if (state.packages.isNotEmpty()) {
+            Text(text = labels.packagesTitle, style = MaterialTheme.typography.titleSmall)
+            state.packages.forEach { packageStatus ->
+                val title = packageStatus.availableManifest.sourceInfo?.displayName
+                    ?.takeIf { it.isNotBlank() }
+                    ?: packageStatus.sourceId.value
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "$title · ${packageStatus.availableManifest.packageVersion}",
+                        modifier = Modifier.weight(1f).padding(vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = when {
+                            packageStatus.activePackage == null -> labels.installLabel
+                            packageStatus.updateAvailable -> labels.updateLabel
+                            else -> labels.installedLabel
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (packageStatus.activePackage == null || packageStatus.updateAvailable) {
+                        Button(
+                            onClick = { onInstallPackage(packageStatus.sourceId) },
+                            enabled = !state.isBusy,
+                        ) {
+                            Text(
+                                if (packageStatus.activePackage == null) {
+                                    labels.installLabel
+                                } else {
+                                    labels.updateLabel
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }

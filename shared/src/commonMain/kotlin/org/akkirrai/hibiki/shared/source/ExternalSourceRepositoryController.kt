@@ -7,10 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 
 data class ExternalSourceRepositoryUiState(
     val repositories: List<SourceRepositoryEndpoint> = emptyList(),
+    val packages: List<ExternalSourcePackageStatus> = emptyList(),
     val isBusy: Boolean = false,
     val error: Throwable? = null,
 )
@@ -32,21 +34,28 @@ class ExternalSourceRepositoryController(
     fun refreshRepositories() {
         launchOperation {
             actions.refreshRepositories()
-            actions.repositories()
+            loadState()
         }
     }
 
     fun addRepository(url: String) {
         launchOperation {
             actions.addRepositoryFromUi(SourceRepositoryEndpoint(url.trim()))
-            actions.repositories()
+            loadState()
         }
     }
 
     fun removeRepository(url: String) {
         launchOperation {
             actions.removeRepositoryFromUi(url)
-            actions.repositories()
+            loadState()
+        }
+    }
+
+    fun installPackage(sourceId: SourceId, initialize: suspend () -> Unit = {}) {
+        launchOperation {
+            actions.installAvailablePackageFromUi(sourceId, initialize)
+            loadState()
         }
     }
 
@@ -58,13 +67,12 @@ class ExternalSourceRepositoryController(
         operation?.cancel()
     }
 
-    private fun launchOperation(operationBlock: suspend () -> List<SourceRepositoryEndpoint>) {
+    private fun launchOperation(operationBlock: suspend () -> ExternalSourceRepositoryUiState) {
         operation?.cancel()
         operation = scope.launch {
             _state.value = _state.value.copy(isBusy = true, error = null)
             try {
-                val repositories = operationBlock()
-                _state.value = ExternalSourceRepositoryUiState(repositories = repositories)
+                _state.value = operationBlock()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
@@ -72,4 +80,10 @@ class ExternalSourceRepositoryController(
             }
         }
     }
+
+    private suspend fun loadState(): ExternalSourceRepositoryUiState =
+        ExternalSourceRepositoryUiState(
+            repositories = actions.repositories(),
+            packages = actions.packageStatusesForUi(),
+        )
 }
