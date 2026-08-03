@@ -68,6 +68,21 @@ class ExternalSourceRuntimeCoordinatorTest {
 
         val snapshot = coordinator.snapshot.value
         assertEquals(listOf(sourceId), snapshot.registry?.sources?.map { it.id })
+        val descriptor = snapshot.registry!!.toAppSourceDescriptors().single()
+        assertEquals(sourceId.value, descriptor.id)
+        assertEquals("External source", descriptor.name)
+        assertEquals(true, descriptor.supportsSearch)
+        val merged = mergeAppSourceDescriptors(
+            builtIn = listOf(
+                AppSourceDescriptor(
+                    id = sourceId.value,
+                    name = "Built-in source",
+                    language = "en",
+                ),
+            ),
+            external = listOf(descriptor),
+        )
+        assertEquals(listOf("Built-in source"), merged.map { it.name })
         assertEquals(emptyList<Throwable>(), listOfNotNull(snapshot.error))
     }
 
