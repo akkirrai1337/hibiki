@@ -106,6 +106,8 @@ enum class AppTextKey {
     SettingsExportLogs,
     SettingsAbout,
     SettingsExternalRepositories,
+    SettingsExternalSources,
+    SettingsExternalSourcesCount,
     SettingsExternalRepositoryUrl,
     SettingsExternalRepositoryUrlHint,
     SettingsExternalRepositoryInvalidUrl,
@@ -379,6 +381,8 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsExportLogs -> if (russian) "Экспортировать логи" else "Export logs"
             AppTextKey.SettingsAbout -> if (russian) "О приложении" else "About"
             AppTextKey.SettingsExternalRepositories -> if (russian) "Внешние источники" else "External repositories"
+            AppTextKey.SettingsExternalSources -> if (russian) "Внешние источники" else "External sources"
+            AppTextKey.SettingsExternalSourcesCount -> if (russian) "%s репозиториев" else "%s repositories"
             AppTextKey.SettingsExternalRepositoryUrl -> if (russian) "Ссылка на repository" else "Repository link"
             AppTextKey.SettingsExternalRepositoryUrlHint -> if (russian) {
                 "GitHub blob/raw или прямой URL index.json"

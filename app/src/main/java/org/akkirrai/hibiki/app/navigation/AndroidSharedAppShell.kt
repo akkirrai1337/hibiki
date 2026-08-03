@@ -69,6 +69,7 @@ import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 /** Android adapter for the shared shell with external sources kept behind the built-in path. */
 @Composable
 internal fun AndroidSharedAppShell(
+    activity: Activity,
     onCheckForUpdates: () -> Unit,
     onConfigureNotifications: () -> Unit,
     enableOnboarding: Boolean = false,
@@ -362,7 +363,11 @@ internal fun AndroidSharedAppShell(
                 }
             },
             playerWindowMode = { active ->
-                AndroidPlayerWindowMode(active, playerWindowController)
+                AndroidPlayerWindowMode(
+                    active = active,
+                    controller = playerWindowController,
+                    activity = activity,
+                )
             },
         )
     }

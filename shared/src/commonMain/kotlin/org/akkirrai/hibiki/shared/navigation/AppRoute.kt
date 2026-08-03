@@ -8,6 +8,7 @@ sealed interface AppRoute {
     data class TopLevel(val destination: AppTopLevelDestination) : AppRoute
     data class Details(val animeId: String) : AppRoute
     data object Settings : AppRoute
+    data object ExternalSources : AppRoute
     data class WatchSources(val animeId: String, val downloadMode: Boolean = false) : AppRoute
     data class Episodes(
         val source: WatchSource,
@@ -46,6 +47,7 @@ fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
     is AppRoute.TopLevel -> AppTransitionKey("top-level", destination.route)
     is AppRoute.Details -> AppTransitionKey("details", animeId)
     AppRoute.Settings -> AppTransitionKey("settings", "root")
+    AppRoute.ExternalSources -> AppTransitionKey("settings", "external-sources")
     is AppRoute.WatchSources -> AppTransitionKey(
         "watch-sources",
         "$animeId:$downloadMode",

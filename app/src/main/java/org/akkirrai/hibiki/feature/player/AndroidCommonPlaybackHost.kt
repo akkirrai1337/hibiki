@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
@@ -431,7 +432,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
-                topContentInset = layoutEnvironment.topSystemInset / 3,
+                topContentInset = 0.dp,
             )
             },
             overlayContent = {
@@ -558,12 +559,10 @@ internal fun AndroidCommonPlaybackHost(
 internal fun AndroidPlayerWindowMode(
     active: Boolean,
     controller: AndroidPlayerWindowController,
+    activity: android.app.Activity,
 ) {
-    val androidContext = LocalContext.current
-    val activity = remember(androidContext) { androidContext.findHibikiActivity() }
-
     DisposableEffect(activity, active) {
-        if (!active || activity == null) {
+        if (!active) {
             controller.setRestoreAction(null)
             onDispose {}
         } else {
@@ -574,11 +573,17 @@ internal fun AndroidPlayerWindowMode(
             } else {
                 null
             }
-            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            fun requestLandscape() {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            fun hideSystemBars() {
+                windowInsetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
             }
+            fun requestLandscape() {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                hideSystemBars()
+            }
+            hideSystemBars()
             activity.runOnUiThread(::requestLandscape)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 activity.window.attributes = activity.window.attributes.apply {
@@ -609,7 +614,7 @@ internal fun AndroidPlayerWindowMode(
                 if (!restored) {
                     requestLandscape()
                 }
-            }, 300L)
+            }, 500L)
             controller.setRestoreAction(::restoreWindowUi)
             onDispose {
                 restoreWindowUi()

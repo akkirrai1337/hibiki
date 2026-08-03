@@ -161,6 +161,7 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreenLabels
+import org.akkirrai.hibiki.shared.settings.AppExternalSourcesScreen
 import org.akkirrai.hibiki.shared.settings.ExternalSourceRepositorySectionLabels
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
@@ -232,6 +233,7 @@ import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToDetails
 import org.akkirrai.hibiki.shared.navigation.navigateBackFromDetails
 import org.akkirrai.hibiki.shared.navigation.navigateToSettings
+import org.akkirrai.hibiki.shared.navigation.navigateToExternalSources
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceWatchFlowBack
@@ -329,6 +331,8 @@ fun HibikiAppShell(
         homePresenter.setState(state.preserveHomeDescriptions(homePresenter.state.value))
     }
     val catalogListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
+    val settingsListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val externalSourcesListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val externalSourceRepositoryState = externalSourceRepositoryController?.state?.collectAsState()?.value
@@ -917,7 +921,10 @@ fun HibikiAppShell(
             return
         }
         if (selectedTab == AppDestination.SETTINGS) {
-            if (navigationState.currentRoute is AppRoute.Settings) {
+            if (
+                navigationState.currentRoute is AppRoute.Settings ||
+                navigationState.currentRoute is AppRoute.ExternalSources
+            ) {
                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
             }
             return
@@ -1387,6 +1394,11 @@ fun HibikiAppShell(
                             sourceSearchState = sourceSearchState,
                             externalSourceRepositoryState = externalSourceRepositoryState,
                             externalSourceRepositoryController = externalSourceRepositoryController,
+                            settingsListState = settingsListState,
+                            externalSourcesListState = externalSourcesListState,
+                            onExternalSourcesClick = {
+                                navigationState = navigationState.navigateToExternalSources()
+                            },
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,
                             onSourceSearchRetry = sourceSearchPresenter::search,
@@ -1864,6 +1876,9 @@ private fun AppDestinationContent(
     onSourceSearchRetry: () -> Unit,
     externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
     externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
+    settingsListState: LazyListState = LazyListState(),
+    externalSourcesListState: LazyListState = LazyListState(),
+    onExternalSourcesClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     onSourceSearchRetryForSource: (String) -> Unit = {},
     catalogState: AnimeCatalogUiState = AnimeCatalogUiState(),
@@ -2377,37 +2392,58 @@ private fun AppDestinationContent(
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
-                AppDestination.SETTINGS -> SettingsScreen(
-                    profileData = profileData,
-                    languageMode = languageMode,
-                    onLanguageModeChange = onLanguageModeChange,
-                    darkTheme = darkTheme,
-                    onThemeChange = onThemeChange,
-                    themeMode = themeMode,
-                    onThemeModeChange = onThemeModeChange,
-                    versionName = appVersionName,
-                    useSystemColorScheme = useSystemColorScheme,
-                    useAmoledTheme = useAmoledTheme,
-                    autoSkipSegments = autoSkipSegments,
-                    onSystemColorSchemeChange = onSystemColorSchemeChange,
-                    onAmoledChange = onAmoledChange,
-                    onAutoSkipChange = onAutoSkipChange,
-                    onConfigureNotifications = onConfigureNotifications,
-                    notificationPermissionState = notificationPermissionState,
-                    showBackButton = showSettingsBackButton,
-                    onBackClick = onSettingsBack,
-                    onGitHubClick = onGitHubClick,
-                    discordEnabled = discordEnabled,
-                    discordAvailable = discordAvailable,
-                    onDiscordClick = onDiscordClick,
-                    onDiscordChange = onDiscordChange,
-                    onCheckForUpdates = onCheckForUpdates,
-                    onExportLogs = onExportLogs,
-                    notificationsAvailable = notificationsAvailable,
-                    externalSourceRepositoryState = externalSourceRepositoryState,
-                    externalSourceRepositoryController = externalSourceRepositoryController,
-                    bottomContentPadding = topLevelBottomContentPadding,
-                )
+                AppDestination.SETTINGS -> if (currentRoute is AppRoute.ExternalSources) {
+                    AppExternalSourcesScreen(
+                        state = externalSourceRepositoryState ?: ExternalSourceRepositoryUiState(),
+                        labels = externalSourceRepositoryLabels(),
+                        bottomContentPadding = topLevelBottomContentPadding,
+                        listState = externalSourcesListState,
+                        onBackClick = onSettingsBack,
+                        backContentDescription = appText(AppTextKey.Back),
+                        onAddRepository = externalSourceRepositoryController?.let { it::addRepository } ?: {},
+                        onRemoveRepository = externalSourceRepositoryController?.let { it::removeRepository } ?: {},
+                        onRefresh = externalSourceRepositoryController?.let { it::refreshRepositories } ?: {},
+                        onInstallPackage = externalSourceRepositoryController?.let { controller ->
+                            { sourceId -> controller.installPackage(sourceId) }
+                        } ?: {},
+                        onRollbackPackage = externalSourceRepositoryController?.let { controller ->
+                            { sourceId -> controller.rollbackPackage(sourceId) }
+                        } ?: {},
+                    )
+                } else {
+                    SettingsScreen(
+                        profileData = profileData,
+                        languageMode = languageMode,
+                        onLanguageModeChange = onLanguageModeChange,
+                        darkTheme = darkTheme,
+                        onThemeChange = onThemeChange,
+                        themeMode = themeMode,
+                        onThemeModeChange = onThemeModeChange,
+                        versionName = appVersionName,
+                        useSystemColorScheme = useSystemColorScheme,
+                        useAmoledTheme = useAmoledTheme,
+                        autoSkipSegments = autoSkipSegments,
+                        onSystemColorSchemeChange = onSystemColorSchemeChange,
+                        onAmoledChange = onAmoledChange,
+                        onAutoSkipChange = onAutoSkipChange,
+                        onConfigureNotifications = onConfigureNotifications,
+                        notificationPermissionState = notificationPermissionState,
+                        showBackButton = showSettingsBackButton,
+                        onBackClick = onSettingsBack,
+                        onGitHubClick = onGitHubClick,
+                        discordEnabled = discordEnabled,
+                        discordAvailable = discordAvailable,
+                        onDiscordClick = onDiscordClick,
+                        onDiscordChange = onDiscordChange,
+                        onCheckForUpdates = onCheckForUpdates,
+                        onExportLogs = onExportLogs,
+                        notificationsAvailable = notificationsAvailable,
+                        externalSourceRepositoryState = externalSourceRepositoryState,
+                        onExternalSourcesClick = onExternalSourcesClick,
+                        listState = settingsListState,
+                        bottomContentPadding = topLevelBottomContentPadding,
+                    )
+                }
         }
     }
 }
@@ -2896,7 +2932,8 @@ private fun SettingsScreen(
     onExportLogs: () -> Unit = {},
     notificationsAvailable: Boolean = true,
     externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
-    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
+    onExternalSourcesClick: () -> Unit = {},
+    listState: LazyListState,
     bottomContentPadding: Dp,
 ) {
     AppSettingsScreen(
@@ -2923,6 +2960,9 @@ private fun SettingsScreen(
             languageEnglish = appText(AppTextKey.LanguageEnglish),
             notifications = appText(AppTextKey.SettingsNotifications),
             notificationsStatus = appText(notificationPermissionState.textKey()),
+            externalSources = appText(AppTextKey.SettingsExternalSources),
+            externalSourcesSubtitle = appText(AppTextKey.SettingsExternalSourcesCount)
+                .replace("%s", (externalSourceRepositoryState?.repositories?.size ?: 0).toString()),
             player = appText(AppTextKey.SettingsPlayer),
             autoSkip = appText(AppTextKey.SettingsAutoSkip),
             experimental = appText(AppTextKey.SettingsExperimental),
@@ -2948,40 +2988,9 @@ private fun SettingsScreen(
         notificationsAvailable = notificationsAvailable,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
-        externalRepositoryState = externalSourceRepositoryState,
-        externalRepositoryLabels = externalSourceRepositoryController?.let {
-            ExternalSourceRepositorySectionLabels(
-                title = appText(AppTextKey.SettingsExternalRepositories),
-                urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
-                urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
-                invalidUrlError = appText(AppTextKey.SettingsExternalRepositoryInvalidUrl),
-                operationFailedError = appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
-                addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
-                refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
-                removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
-                busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
-                packagesTitle = appText(AppTextKey.SettingsExternalPackages),
-                installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
-                updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
-                installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
-                rollbackLabel = appText(AppTextKey.SettingsExternalPackageRollback),
-            )
-        },
-        onAddExternalRepository = externalSourceRepositoryController?.let { controller ->
-            controller::addRepository
-        } ?: {},
-        onRemoveExternalRepository = externalSourceRepositoryController?.let { controller ->
-            controller::removeRepository
-        } ?: {},
-        onRefreshExternalRepositories = externalSourceRepositoryController?.let { controller ->
-            controller::refreshRepositories
-        } ?: {},
-        onInstallExternalPackage = externalSourceRepositoryController?.let { controller ->
-            { sourceId -> controller.installPackage(sourceId) }
-        } ?: {},
-        onRollbackExternalPackage = externalSourceRepositoryController?.let { controller ->
-            { sourceId -> controller.rollbackPackage(sourceId) }
-        } ?: {},
+        externalSourcesCount = externalSourceRepositoryState?.repositories?.size ?: 0,
+        onExternalSourcesClick = onExternalSourcesClick,
+        listState = listState,
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,
         showBackButton = showBackButton,
@@ -2989,6 +2998,25 @@ private fun SettingsScreen(
         backContentDescription = appText(AppTextKey.Back),
     )
 }
+
+@Composable
+private fun externalSourceRepositoryLabels(): ExternalSourceRepositorySectionLabels =
+    ExternalSourceRepositorySectionLabels(
+        title = appText(AppTextKey.SettingsExternalSources),
+        urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
+        urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
+        invalidUrlError = appText(AppTextKey.SettingsExternalRepositoryInvalidUrl),
+        operationFailedError = appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
+        addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
+        refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
+        removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
+        busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
+        packagesTitle = appText(AppTextKey.SettingsExternalPackages),
+        installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
+        updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
+        installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
+        rollbackLabel = appText(AppTextKey.SettingsExternalPackageRollback),
+    )
 
 private fun NotificationPermissionState.textKey(): AppTextKey = when (this) {
     NotificationPermissionState.NOT_ASKED -> AppTextKey.SettingsNotificationsStatus

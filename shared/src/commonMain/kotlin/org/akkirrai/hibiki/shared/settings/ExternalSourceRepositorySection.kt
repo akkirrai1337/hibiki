@@ -33,6 +33,7 @@ import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceRepositoryUrlException
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
+import org.akkirrai.hibiki.shared.source.repositoryDisplayName
 
 data class ExternalSourceRepositorySectionLabels(
     val title: String,
@@ -145,7 +146,7 @@ fun ExternalSourceRepositorySection(
                     },
                 ) {
                     Text(
-                        text = repository.url,
+                        text = repositoryDisplayName(repository.url),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,

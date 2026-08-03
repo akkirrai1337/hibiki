@@ -18,6 +18,14 @@ fun AppNavigationState.navigateToSettings(): AppNavigationState = if (currentRou
     reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
 }
 
+fun AppNavigationState.navigateToExternalSources(): AppNavigationState = if (
+    currentRoute is AppRoute.ExternalSources
+) {
+    this
+} else {
+    reduce(AppNavigationEvent.Navigate(AppRoute.ExternalSources))
+}
+
 fun AppNavigationState.navigateToWatchSources(
     animeId: String,
     downloadMode: Boolean = false,

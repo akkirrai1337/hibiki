@@ -154,6 +154,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         AndroidExternalSourceBackgroundSync(skipInitialRefresh = true) {
                             AndroidSharedAppShell(
+                                activity = this@MainActivity,
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                 onConfigureNotifications = ::configureNotifications,
                                 enableOnboarding = true,

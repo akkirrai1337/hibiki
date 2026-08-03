@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.shared.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,7 +19,6 @@ import hibiki.shared.generated.resources.hibiki_app_icon
 import org.jetbrains.compose.resources.painterResource
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 
 data class AppSettingsScreenLabels(
     val appearance: String,
@@ -34,6 +35,8 @@ data class AppSettingsScreenLabels(
     val languageEnglish: String,
     val notifications: String,
     val notificationsStatus: String,
+    val externalSources: String,
+    val externalSourcesSubtitle: String,
     val player: String,
     val autoSkip: String,
     val experimental: String,
@@ -62,6 +65,7 @@ fun AppSettingsScreen(
     showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
+    listState: LazyListState = rememberLazyListState(),
     showBackButton: Boolean = false,
     onBackClick: () -> Unit = {},
     backContentDescription: String = "Back",
@@ -77,13 +81,8 @@ fun AppSettingsScreen(
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
-    externalRepositoryState: ExternalSourceRepositoryUiState? = null,
-    externalRepositoryLabels: ExternalSourceRepositorySectionLabels? = null,
-    onAddExternalRepository: (String) -> Unit = {},
-    onRemoveExternalRepository: (String) -> Unit = {},
-    onRefreshExternalRepositories: () -> Unit = {},
-    onInstallExternalPackage: (org.akkirrai.beakokit.api.SourceId) -> Unit = {},
-    onRollbackExternalPackage: (org.akkirrai.beakokit.api.SourceId) -> Unit = {},
+    externalSourcesCount: Int = 0,
+    onExternalSourcesClick: () -> Unit = {},
 ) {
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     val topSystemInset = if (layoutEnvironment.isProvided) {
@@ -94,6 +93,7 @@ fun AppSettingsScreen(
     Box(modifier = modifier.fillMaxSize()) {
         AppSettingsContentList(
             bottomContentPadding = bottomContentPadding,
+            state = listState,
             topContentPadding = if (showBackButton) {
                 settingsContentTopPaddingWithBackButton(topSystemInset)
             } else {
@@ -143,6 +143,10 @@ fun AppSettingsScreen(
                 notificationsSubtitle = labels.notificationsStatus,
                 notificationsAvailable = notificationsAvailable,
                 onNotificationsClick = onNotificationsClick,
+                externalSourcesTitle = labels.externalSources,
+                externalSourcesSubtitle = labels.externalSourcesSubtitle,
+                externalSourcesCount = externalSourcesCount,
+                onExternalSourcesClick = onExternalSourcesClick,
             )
         }
         item(key = SettingsSection.Player.key) {
@@ -177,19 +181,6 @@ fun AppSettingsScreen(
                     sectionTitle = labels.updates,
                     checkForUpdatesTitle = labels.checkUpdates,
                     onCheckForUpdates = onCheckForUpdates,
-                )
-            }
-        }
-        if (externalRepositoryState != null && externalRepositoryLabels != null) {
-            item(key = "external-source-repositories") {
-                ExternalSourceRepositorySection(
-                    state = externalRepositoryState,
-                    labels = externalRepositoryLabels,
-                    onAddRepository = onAddExternalRepository,
-                    onRemoveRepository = onRemoveExternalRepository,
-                    onRefresh = onRefreshExternalRepositories,
-                    onInstallPackage = onInstallExternalPackage,
-                    onRollbackPackage = onRollbackExternalPackage,
                 )
             }
         }
