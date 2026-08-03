@@ -6,13 +6,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
@@ -30,6 +28,8 @@ import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
+import org.akkirrai.hibiki.shared.source.RepositoryManagementActions
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
@@ -52,10 +52,13 @@ fun MainViewController(systemLanguage: String): UIViewController {
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
         val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
-        LaunchedEffect(externalSourcePlatform) {
-            refreshIosExternalRepositories(externalSourcePlatform)
-        }
         val externalRefreshScope = rememberCoroutineScope()
+        val externalRepositoryController = remember(externalSourcePlatform) {
+            ExternalSourceRepositoryController(
+                actions = RepositoryManagementActions(externalSourcePlatform.coordinator),
+                scope = externalRefreshScope,
+            )
+        }
         DisposableEffect(externalSourcePlatform) {
             val activeObserver = NSNotificationCenter.defaultCenter.addObserverForName(
                 name = UIApplicationDidBecomeActiveNotification,
@@ -63,7 +66,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 queue = null,
             ) {
                 externalRefreshScope.launch {
-                    refreshIosExternalRepositories(externalSourcePlatform)
+                    externalRepositoryController.refreshRepositories()
                 }
             }
             onDispose {
@@ -71,7 +74,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
             }
         }
         DisposableEffect(externalSourcePlatform) {
-            onDispose { externalSourcePlatform.close() }
+            onDispose {
+                externalRepositoryController.close()
+                externalSourcePlatform.close()
+            }
         }
         val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
         val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
@@ -170,6 +176,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     profileAvatarEditAvailable = true,
                     onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
                     onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
+                    externalSourceRepositoryController = externalRepositoryController,
                     sources = IosSourceRegistry.sources,
                     selectedSourceId = selectedSourceId.value,
                     includeNavigationBarPadding = true,
@@ -185,18 +192,6 @@ fun MainViewController(systemLanguage: String): UIViewController {
     }
     IosBackBridge.install(hostController)
     return hostController
-}
-
-private suspend fun refreshIosExternalRepositories(
-    platform: org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryPlatform,
-) {
-    try {
-        platform.coordinator.refresh()
-    } catch (error: CancellationException) {
-        throw error
-    } catch (error: Throwable) {
-        println("BeakoKit external repository refresh failed: ${error.message}")
-    }
 }
 
 private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"

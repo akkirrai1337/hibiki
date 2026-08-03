@@ -298,6 +298,42 @@ interface ExternalSourceRepositoryActions {
     suspend fun rollbackPackageFromUi(sourceId: SourceId)
 }
 
+/** Repository-only adapter for platforms that do not yet support package installation. */
+class RepositoryManagementActions(
+    private val coordinator: ExternalSourceRepositoryCoordinator,
+) : ExternalSourceRepositoryActions {
+    override suspend fun repositories(): List<SourceRepositoryEndpoint> = coordinator.repositories()
+
+    override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
+        coordinator.addRepository(endpoint)
+    }
+
+    override suspend fun removeRepositoryFromUi(url: String) {
+        coordinator.removeRepository(url)
+    }
+
+    override suspend fun refreshRepositories() {
+        coordinator.refresh()
+    }
+
+    override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
+
+    override suspend fun installAvailablePackageFromUi(
+        sourceId: SourceId,
+        initialize: suspend () -> Unit,
+    ) {
+        throw SourcePackageStateException(
+            "Source package installation is not available on this platform: $sourceId",
+        )
+    }
+
+    override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
+        throw SourcePackageStateException(
+            "Source package rollback is not available on this platform: $sourceId",
+        )
+    }
+}
+
 data class ExternalSourceRuntimeSnapshot(
     val repository: SourceRepositoryLoadSnapshot,
     val configuredRepositories: List<SourceRepositoryEndpoint> = emptyList(),
