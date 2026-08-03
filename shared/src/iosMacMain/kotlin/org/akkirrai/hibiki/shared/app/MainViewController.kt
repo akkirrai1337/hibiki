@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -156,6 +157,9 @@ fun MainViewController(systemLanguage: String): UIViewController {
             )
         }
         val externalRegistry = externalRuntimeCoordinator.snapshot.collectAsState().value.registry
+        LaunchedEffect(repository, initialSourceId, externalRegistry) {
+            initialSourceId?.let(repository::selectSource)
+        }
         val sources = remember(externalRegistry) {
             mergeAppSourceDescriptors(
                 builtIn = IosSourceRegistry.sources,

@@ -31,7 +31,10 @@ class TransitionalAnimeCatalogRepository(
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
         selectedSourceId
             ?.takeIf(external::hasSource)
-            ?.let { external.search(query) }
+            ?.let { sourceId ->
+                external.selectSource(sourceId)
+                external.search(query)
+            }
             ?: builtIn.search(query)
 
     override suspend fun searchSource(sourceId: String, query: AnimeCatalogQuery): AnimeCatalogPage =

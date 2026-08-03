@@ -181,6 +181,10 @@ class ExternalSourceCatalogRepositoryTest {
         activeRegistry = null
 
         assertEquals("Built-in", transitional.search(AnimeCatalogQuery()).items.single().title)
+
+        activeRegistry = registry(sourceId)
+
+        assertEquals("External title", transitional.search(AnimeCatalogQuery()).items.single().title)
     }
 
     private fun registry(
