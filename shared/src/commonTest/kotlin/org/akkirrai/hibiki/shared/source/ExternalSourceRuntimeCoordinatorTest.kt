@@ -138,7 +138,28 @@ class ExternalSourceRuntimeCoordinatorTest {
             listOf(secondEndpoint.url),
             coordinator.snapshot.value.repository.loaded.map { it.endpoint.url },
         )
+        assertEquals(
+            "1.0.0",
+            coordinator.activePackage(sourceId)?.installed?.packageVersion,
+        )
         assertEquals(listOf(sourceId), coordinator.snapshot.value.registry?.sources?.map { it.id })
+
+        coordinator.removeRepository(secondEndpoint.url)
+
+        assertEquals(emptyList(), coordinator.snapshot.value.repository.loaded)
+        assertEquals(emptyList(), coordinator.snapshot.value.registry?.sources)
+        assertEquals(
+            "1.0.0",
+            coordinator.activePackage(sourceId)?.installed?.packageVersion,
+        )
+
+        coordinator.addRepository(SourceRepositoryEndpoint("https://example.test/index.json"))
+
+        assertEquals(listOf(sourceId), coordinator.snapshot.value.registry?.sources?.map { it.id })
+        assertEquals(
+            "1.0.0",
+            coordinator.activePackage(sourceId)?.installed?.packageVersion,
+        )
     }
 
     @Test
