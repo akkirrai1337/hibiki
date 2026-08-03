@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class WasmtimeRuntimeInstrumentedTest {
@@ -70,6 +71,58 @@ class WasmtimeRuntimeInstrumentedTest {
         }
     }
 
+    @Test
+    fun productionBridgeRejectsMalformedPlaybackResponse() {
+        val response = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+            module = moduleBytes(),
+            request = """
+                {"requestId":"invalid-playback-1","operation":"PLAYBACK_GROUPS","payload":{"titleId":"title-1"},"protocolVersion":1}
+            """.trimIndent(),
+            host = NativeSourceRuntimeBridge.Host {
+                """
+                    {"requestId":"invalid-playback-1","payload":{"groups":[{"id":"group-1"}]},"errorCode":null,"errorMessage":null,"protocolVersion":1}
+                """.trimIndent().toByteArray(StandardCharsets.UTF_8)
+            },
+            cancellationScopeId = 0L,
+        )
+
+        assertTrue("Unexpected malformed response result: $response", response.contains("RUNTIME_FAILURE"))
+    }
+
+    @Test
+    fun productionBridgeCancellationStopsGuestLoop() {
+        val scopeId = NativeSourceRuntimeBridge.beginCancellationScope()
+        val response = AtomicReference<String?>()
+        val worker = Thread {
+            response.set(
+                NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+                    module = loopingModuleBytes(),
+                    request = """
+                        {"requestId":"cancel-1","operation":"DETAILS","payload":{"id":"title-1"},"protocolVersion":1}
+                    """.trimIndent(),
+                    host = NativeSourceRuntimeBridge.Host { error("Host must not be called") },
+                    cancellationScopeId = scopeId,
+                ),
+            )
+        }
+
+        try {
+            worker.start()
+            Thread.sleep(100)
+            NativeSourceRuntimeBridge.cancelCancellationScope(scopeId)
+            worker.join(5_000)
+
+            assertTrue("Guest loop did not stop after cancellation", !worker.isAlive)
+            assertTrue(
+                "Unexpected cancellation response: ${response.get()}",
+                response.get()?.contains("RUNTIME_FAILURE") == true,
+            )
+        } finally {
+            if (worker.isAlive) worker.interrupt()
+            NativeSourceRuntimeBridge.finishCancellationScope(scopeId)
+        }
+    }
+
     private fun moduleBytes(): ByteArray = """
         (module
           (import "host" "call" (func ${'$'}host_call (param i32 i32) (result i64)))
@@ -88,5 +141,16 @@ class WasmtimeRuntimeInstrumentedTest {
             local.get 0
             local.get 1
             call ${'$'}host_call))
+    """.trimIndent().toByteArray(StandardCharsets.UTF_8)
+
+    private fun loopingModuleBytes(): ByteArray = """
+        (module
+          (memory (export "memory") 2)
+          (func (export "beakokit_reset"))
+          (func (export "beakokit_alloc") (param i32) (result i32)
+            i32.const 4096)
+          (func (export "beakokit_call") (param i32 i32) (result i64)
+            (loop br 0))
+        )
     """.trimIndent().toByteArray(StandardCharsets.UTF_8)
 }
