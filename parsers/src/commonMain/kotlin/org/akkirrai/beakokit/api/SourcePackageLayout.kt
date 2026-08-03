@@ -44,6 +44,15 @@ class SourcePackageLayoutValidator(
             if (entry.symbolicLink) add("Symbolic links are not allowed: ${entry.path}")
         }
 
+        val filePaths = entries
+            .filterNot(SourcePackageEntry::directory)
+            .mapTo(mutableSetOf()) { normalizedPath(it.path, directory = false) }
+        filePaths.forEach { filePath ->
+            if (paths.any { it.startsWith("$filePath/") }) {
+                add("Package file path conflicts with a child entry: $filePath")
+            }
+        }
+
         if ("manifest.json" !in paths) add("Package must contain manifest.json")
         if (manifest.entrypoint !in paths) add("Package must contain the manifest entrypoint")
     }

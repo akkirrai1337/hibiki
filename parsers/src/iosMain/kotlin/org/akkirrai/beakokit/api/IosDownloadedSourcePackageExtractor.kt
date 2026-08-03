@@ -38,10 +38,10 @@ class IosDownloadedSourcePackageExtractor(
         layoutValidator.requireValid(repositoryManifest, entries)
 
         val fileManager = NSFileManager.defaultManager
+        check(!fileManager.fileExistsAtPath(stagingPath)) {
+            "Source package staging directory must not already exist: $stagingPath"
+        }
         try {
-            if (fileManager.fileExistsAtPath(stagingPath)) {
-                fileManager.removeItemAtPath(stagingPath, error = null)
-            }
             ensureDirectory(fileManager, stagingPath, "source package staging directory")
             files.filterNot(StoredEntry::directory).forEach { file ->
                 val path = "$stagingPath/${file.path}"

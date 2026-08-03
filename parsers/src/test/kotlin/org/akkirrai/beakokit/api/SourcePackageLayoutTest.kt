@@ -61,6 +61,21 @@ class SourcePackageLayoutTest {
         assertContains(violations, "Package unpacked size exceeds the maximum allowed size")
     }
 
+    @Test
+    fun `file path cannot also be a parent of another entry`() {
+        val violations = SourcePackageLayoutValidator().violations(
+            manifest(),
+            listOf(
+                SourcePackageEntry("manifest.json", 100),
+                SourcePackageEntry("source.wasm", 200),
+                SourcePackageEntry("assets", 10),
+                SourcePackageEntry("assets/icon.png", 20),
+            ),
+        )
+
+        assertContains(violations, "Package file path conflicts with a child entry: assets")
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),
