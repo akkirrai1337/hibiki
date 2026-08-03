@@ -68,6 +68,11 @@ data class SourceManifest(
         if (hostNetworkPolicy.allowedHosts.isNotEmpty() && SourceHostCapability.NETWORK !in hostCapabilities) {
             add("Network policy requires the NETWORK host capability")
         }
+        if (sourceInfo?.configSchema?.fields?.isNotEmpty() == true &&
+            SourceHostCapability.CONFIG !in hostCapabilities
+        ) {
+            add("Source config schema requires the CONFIG host capability")
+        }
         if (!SHA256_PATTERN.matches(sha256)) add("SHA-256 must be 64 lowercase hexadecimal characters")
         if (artifactSizeBytes <= 0) add("Artifact size must be positive")
         if (minClientVersion < 0) add("Minimum client version must not be negative")

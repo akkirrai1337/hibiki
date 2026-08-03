@@ -88,6 +88,25 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `config schema requires config host capability`() {
+        val invalid = manifest().copy(
+            sourceInfo = SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                configSchema = SourceConfigSchema(
+                    listOf(SourceConfigField("api_token", SourceConfigValueKind.SECRET)),
+                ),
+            ),
+        )
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Source config schema requires the CONFIG host capability",
+        )
+    }
+
+    @Test
     fun `manifest round trip preserves external config schema`() {
         val sourceManifest = manifest().copy(
             sourceInfo = SourceManifestInfo(

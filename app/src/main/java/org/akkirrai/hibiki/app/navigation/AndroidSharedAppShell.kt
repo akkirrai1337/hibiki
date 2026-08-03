@@ -51,6 +51,8 @@ import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppSourceConfigLabels
 import org.akkirrai.hibiki.shared.source.AppSourceConfigScreen
+import org.akkirrai.hibiki.shared.text.AppTextKey
+import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
@@ -265,8 +267,8 @@ internal fun AndroidSharedAppShell(
                     initialSecrets = draft.secrets,
                     labels = AppSourceConfigLabels(
                         fieldLabel = { field -> field.titleKey },
-                        saveLabel = "Save",
-                        cancelLabel = "Cancel",
+                        saveLabel = appText(AppTextKey.Apply),
+                        cancelLabel = appText(AppTextKey.Cancel),
                     ),
                     onSave = { values, secrets ->
                         source.configSchema.fields.forEach { field ->
