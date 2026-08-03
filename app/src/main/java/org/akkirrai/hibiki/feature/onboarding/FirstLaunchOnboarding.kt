@@ -71,14 +71,6 @@ fun FirstLaunchOnboarding(
             keyOf = { it.id.value },
         )
     }
-    val displayedSourceOptions = displayedSources.map { source ->
-        OnboardingSourceOption(
-            id = source.id.value,
-            name = source.name,
-            languageSummary = sourceLanguageSummary(source),
-        )
-    }
-
     LaunchedEffect(localizedSources, initialSource) {
         if (selectedSourceValue == null && localizedSources.size == 1) {
             selectedSourceValue = localizedSources.single().id.value
@@ -222,38 +214,8 @@ fun FirstLaunchOnboarding(
                         ?: selectedSource?.let(onComplete)
                 },
             )
-        },
-        sourceIconContent = { option ->
-            displayedSources.firstOrNull { it.id.value == option.id }?.let { source ->
-                AsyncImage(
-                    model = source.iconUrl,
-                    placeholder = painterResource(source.iconRes),
-                    error = painterResource(source.iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp).clip(CircleShape),
-                )
-            }
-        },
-        onStart = { stepName = OnboardingStep.SOURCE.name },
-        onSourceSelected = { selectedSourceValue = it.id },
-        onShowAllSources = { showSourceList = true },
-        onRequestNotificationPermission = onRequestNotificationPermission,
-        onBack = {
-            stepName = when (step) {
-                OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-                OnboardingStep.SOURCE -> OnboardingStep.WELCOME.name
-                OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCE.name
-            }
-        },
-        onNext = {
-            when (step) {
-                OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCE.name
-                OnboardingStep.SOURCE -> stepName = OnboardingStep.NOTIFICATIONS.name
-                OnboardingStep.NOTIFICATIONS -> selectedSource?.let(onComplete)
-            }
-        },
-        modifier = modifier.safeDrawingPadding(),
-    )
+        }
+    }
 
 }
 

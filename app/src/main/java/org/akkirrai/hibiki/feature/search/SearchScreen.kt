@@ -25,6 +25,14 @@ fun SearchScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
+    val announcementLabel = stringResource(R.string.anime_meta_announcement)
+    val movieLabel = stringResource(R.string.anime_meta_movie)
+    val loadMoreLabel = stringResource(R.string.search_load_more)
+    val idleTitle = stringResource(R.string.search_idle)
+    val idleMessage = stringResource(R.string.search_idle)
+    val emptyTitle = stringResource(R.string.home_search_empty_title)
+    val emptyMessage = stringResource(R.string.home_search_empty_message)
+    val retryLabel = stringResource(R.string.search_retry)
 
     AppSearchScreenContent(
         query = state.query,
