@@ -13,6 +13,15 @@ class SourceConfigSchemaTest {
     )
 
     @Test
+    fun `schema keeps accepting arbitrary iterables`() {
+        val fields = setOf(
+            SourceConfigField("base_url", SourceConfigValueKind.HTTPS_URL),
+        )
+
+        assertEquals(fields.toList(), SourceConfigSchema(fields).fields)
+    }
+
+    @Test
     fun `schema reports missing required values and insecure URLs`() {
         val violations = schema.violations(
             MapSourceConfig(values = mapOf("base_url" to "http://example.com")),

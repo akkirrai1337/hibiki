@@ -40,6 +40,8 @@ data class SourceConfigField(
 data class SourceConfigSchema(
     val fields: List<SourceConfigField> = emptyList(),
 ) {
+    constructor(fields: Iterable<SourceConfigField>) : this(fields.toList())
+
 
     init {
         require(this.fields.map(SourceConfigField::key).distinct().size == this.fields.size) {
