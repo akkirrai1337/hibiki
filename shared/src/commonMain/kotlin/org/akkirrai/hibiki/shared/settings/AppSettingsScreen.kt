@@ -13,6 +13,7 @@ import hibiki.shared.generated.resources.ic_github
 import hibiki.shared.generated.resources.hibiki_app_icon
 import org.jetbrains.compose.resources.painterResource
 import org.akkirrai.hibiki.shared.details.AppDetailsHeroOverlayBackButton
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 
 data class AppSettingsScreenLabels(
     val appearance: String,
@@ -72,6 +73,11 @@ fun AppSettingsScreen(
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     onGitHubClick: () -> Unit = {},
+    externalRepositoryState: ExternalSourceRepositoryUiState? = null,
+    externalRepositoryLabels: ExternalSourceRepositorySectionLabels? = null,
+    onAddExternalRepository: (String) -> Unit = {},
+    onRemoveExternalRepository: (String) -> Unit = {},
+    onRefreshExternalRepositories: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         AppSettingsContentList(
@@ -159,6 +165,17 @@ fun AppSettingsScreen(
                     sectionTitle = labels.updates,
                     checkForUpdatesTitle = labels.checkUpdates,
                     onCheckForUpdates = onCheckForUpdates,
+                )
+            }
+        }
+        if (externalRepositoryState != null && externalRepositoryLabels != null) {
+            item(key = "external-source-repositories") {
+                ExternalSourceRepositorySection(
+                    state = externalRepositoryState,
+                    labels = externalRepositoryLabels,
+                    onAddRepository = onAddExternalRepository,
+                    onRemoveRepository = onRemoveExternalRepository,
+                    onRefresh = onRefreshExternalRepositories,
                 )
             }
         }
