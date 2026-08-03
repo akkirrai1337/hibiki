@@ -19,6 +19,8 @@ import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
+import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 /** Refreshes external sources in the background without changing the active built-in path. */
 @Composable
@@ -45,6 +47,10 @@ internal fun AndroidExternalSourceBackgroundSync(
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
                 )
             },
+            runtimeInitializer = { sourcePackage, _ ->
+                validateAndroidExternalSourceRuntime(sourcePackage)
+            },
+            reservedSourceIds = AnimeSourceRegistry.sources.mapTo(linkedSetOf()) { it.id },
         )
     }
     LaunchedEffect(coordinator, lifecycleOwner) {

@@ -16,6 +16,8 @@ use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 use jni::{JNIEnv, JavaVM};
 #[cfg(feature = "spike-probes")]
 use wasmtime::Instance;
+#[cfg(feature = "android-production-jni")]
+use wasmtime::{ExternType, ValType};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
 
 pub mod protocol;
@@ -93,6 +95,50 @@ fn runtime_engine() -> Result<Engine, wasmtime::Error> {
     config.consume_fuel(true);
     config.epoch_interruption(true);
     Engine::new(&config)
+}
+
+#[cfg(feature = "android-production-jni")]
+fn validate_protocol_module(module_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    if module_bytes.len() > PROTOCOL_MAX_MODULE_BYTES {
+        return Err("caller-supplied module exceeds the native limit".into());
+    }
+    let engine = runtime_engine()?;
+    let module = Module::new(&engine, module_bytes)?;
+    match module.get_export("memory") {
+        Some(ExternType::Memory(_)) => (),
+        _ => return Err("guest memory export is missing or invalid".into()),
+    };
+    require_protocol_function(&module, "beakokit_reset", &[], &[])?;
+    require_protocol_function(&module, "beakokit_alloc", &[ValType::I32], &[ValType::I32])?;
+    require_protocol_function(
+        &module,
+        "beakokit_call",
+        &[ValType::I32, ValType::I32],
+        &[ValType::I64],
+    )?;
+    Ok(())
+}
+
+#[cfg(feature = "android-production-jni")]
+fn require_protocol_function(
+    module: &Module,
+    name: &str,
+    expected_params: &[ValType],
+    expected_results: &[ValType],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(ExternType::Func(function)) = module.get_export(name) else {
+        return Err(format!("guest export {name} is missing or invalid").into());
+    };
+    let params = function.params().collect::<Vec<_>>();
+    let results = function.results().collect::<Vec<_>>();
+    let parameters_match = params.len() == expected_params.len()
+        && params.iter().zip(expected_params).all(|(actual, expected)| ValType::eq(actual, expected));
+    let results_match = results.len() == expected_results.len()
+        && results.iter().zip(expected_results).all(|(actual, expected)| ValType::eq(actual, expected));
+    if !parameters_match || !results_match {
+        return Err(format!("guest export {name} has an incompatible signature").into());
+    }
+    Ok(())
 }
 
 fn write_host_response(
@@ -762,6 +808,27 @@ fn run_protocol_host_call_request_with_callback(
     let response: protocol::Response = serde_json::from_slice(&response_bytes)?;
     response.validate_for_request(&request)?;
     Ok(response_bytes)
+}
+
+/// Compiles one candidate Wasm module without executing guest code.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_validateModule(
+    mut env: JNIEnv,
+    _class: JClass,
+    module: JByteArray,
+) {
+    let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+        let module_len = env.get_array_length(&module)? as usize;
+        let mut signed_module = vec![0_i8; module_len];
+        env.get_byte_array_region(&module, 0, &mut signed_module)?;
+        let module_bytes: Vec<u8> = signed_module.into_iter().map(|byte| byte as u8).collect();
+        validate_protocol_module(&module_bytes)?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = env.throw_new("java/lang/IllegalArgumentException", error.to_string());
+    }
 }
 
 /// Production JNI bridge for one verified binary Wasm module call.

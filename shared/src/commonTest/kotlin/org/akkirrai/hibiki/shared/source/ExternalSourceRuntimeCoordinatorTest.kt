@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.source
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertNull
@@ -108,6 +109,24 @@ class ExternalSourceRuntimeCoordinatorTest {
         assertEquals("Released", mapped.status)
         assertEquals("source:external-source:related-1", mapped.relatedAnime.single().id)
         assertEquals(emptyList<Throwable>(), listOfNotNull(snapshot.error))
+    }
+
+    @Test
+    fun reservedBuiltInSourceIdIsExcludedFromTheExternalRegistry() = runTest {
+        val sourceId = SourceId("animego")
+        val coordinator = ExternalSourceRuntimeCoordinator(
+            platform = platformFor(sourceId),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                error("Runtime creation must remain lazy")
+            },
+            reservedSourceIds = setOf(sourceId),
+        )
+
+        coordinator.refresh()
+
+        assertEquals(emptyList<SourceId>(), coordinator.snapshot.value.registry?.sources?.map { it.id })
+        assertNull(coordinator.activePackage(sourceId))
     }
 
     @Test
@@ -305,6 +324,7 @@ class ExternalSourceRuntimeCoordinatorTest {
             closeResources = {},
         )
         val createdVersions = mutableListOf<String>()
+        val client = HttpClient()
         val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
@@ -316,8 +336,13 @@ class ExternalSourceRuntimeCoordinatorTest {
                     override suspend fun details(id: String): AnimeTitle = title(id)
                 }
             },
+            sourceContextFactory = {
+                DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                )
+            },
         )
-        val client = HttpClient()
         runtimeCoordinator.refresh()
         runtimeCoordinator.snapshot.value.registry!!.create(
             sourceId,
@@ -338,7 +363,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         )
 
         assertEquals("1.0.0", rollback.active?.packageVersion)
-        assertEquals(listOf("2.0.0", "1.0.0"), createdVersions)
+        assertEquals(listOf("2.0.0", "1.0.0", "1.0.0"), createdVersions)
     }
 
     @Test
@@ -534,7 +559,7 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
-    fun failedRegistryRebuildRollsBackAnAlreadyActiveUpdate() = runTest {
+    fun failedRuntimeInitializationLeavesThePreviousPackageActive() = runTest {
         val sourceId = SourceId("external-source")
         val oldPackage = InstalledSourcePackage(sourceId, "1.0.0", "package/old")
         val store = InMemoryStore(SourcePackageActivationState(active = oldPackage))
@@ -608,18 +633,23 @@ class ExternalSourceRuntimeCoordinatorTest {
         )
         val runtimeContextClient = HttpClient()
         var activePackageDuringInitialization: InstalledSourcePackage? = null
+        var runtimeFactoryCreated = false
         val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
-                activePackageDuringInitialization = store.state.active
-                error("Runtime initialization failed")
+                runtimeFactoryCreated = true
+                error("Runtime factory must not run after failed initialization")
             },
             sourceContextFactory = {
                 DefaultSourceContext(
                     httpClient = runtimeContextClient,
                     preferredLanguages = listOf(SourceLanguage.ENGLISH),
                 )
+            },
+            runtimeInitializer = { _, _ ->
+                activePackageDuringInitialization = store.state.active
+                error("Runtime initialization failed")
             },
         )
 
@@ -631,6 +661,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         }
         assertSame(previousRegistry, runtimeCoordinator.snapshot.value.registry)
         assertEquals(oldPackage, activePackageDuringInitialization)
+        assertFalse(runtimeFactoryCreated)
         assertEquals(oldPackage, store.state.active)
         assertEquals(null, store.state.previous)
         runtimeContextClient.close()

@@ -93,8 +93,9 @@ class ExternalSourceRepositoryPlatform(
         catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
         runtimeFactory: ExternalSourceRuntimeFactory,
         replacements: Map<SourceId, ActiveExternalSourcePackage?> = emptyMap(),
+        excludedSourceIds: Set<SourceId> = emptySet(),
     ): ExternalSourceRegistry = activeExternalSourceRegistry(
-        packages = sourceIds.distinct().mapNotNull { sourceId ->
+        packages = sourceIds.distinct().filterNot(excludedSourceIds::contains).mapNotNull { sourceId ->
             if (sourceId in replacements) {
                 return@mapNotNull replacements.getValue(sourceId)
             }
@@ -113,11 +114,13 @@ class ExternalSourceRepositoryPlatform(
         catalogCapabilities: (SourceManifest) -> CatalogCapabilities,
         runtimeFactory: ExternalSourceRuntimeFactory,
         replacements: Map<SourceId, ActiveExternalSourcePackage?> = emptyMap(),
+        excludedSourceIds: Set<SourceId> = emptySet(),
     ): ExternalSourceRegistry = loadActiveRegistry(
         sourceIds = coordinator.availableSourceIds(),
         catalogCapabilities = catalogCapabilities,
         runtimeFactory = runtimeFactory,
         replacements = replacements,
+        excludedSourceIds = excludedSourceIds,
     )
 
     fun close() = closeResources()

@@ -30,6 +30,14 @@ data class SourceRepositoryIndex(
             }
             if (manifest.sourceInfo == null) {
                 add("Source metadata is required for repository source: ${manifest.sourceId}")
+            } else {
+                runCatching { manifest.requireSourceInfo() }
+                    .onFailure { error ->
+                        add(
+                            "${manifest.sourceId}: Invalid source metadata: " +
+                                (error.message ?: "unknown metadata error"),
+                        )
+                    }
             }
             manifest.violations(
                 clientVersion = clientVersion,

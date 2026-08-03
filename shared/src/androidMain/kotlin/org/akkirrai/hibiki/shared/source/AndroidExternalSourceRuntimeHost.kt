@@ -24,6 +24,7 @@ import org.akkirrai.beakokit.api.ExternalSourceHostResponse
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridge
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridgeFactory
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
+import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.JvmSourcePackageModuleReader
 import org.akkirrai.beakokit.api.NativeBridgeExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceContext
@@ -48,6 +49,17 @@ fun createAndroidExternalSourceRuntimeFactory(): ExternalSourceRuntimeFactory =
         moduleReader = JvmSourcePackageModuleReader(),
         requestIdFactory = { UUID.randomUUID().toString() },
     )
+
+/** Compiles a staging module in Wasmtime without executing a source operation. */
+suspend fun validateAndroidExternalSourceRuntime(sourcePackage: ActiveExternalSourcePackage) {
+    val module = JvmSourcePackageModuleReader().read(
+        packagePath = sourcePackage.installed.packagePath,
+        entrypoint = sourcePackage.manifest.entrypoint,
+    )
+    withContext(Dispatchers.IO) {
+        NativeSourceRuntimeBridge.validateModule(module)
+    }
+}
 
 private class AndroidExternalSourceRuntimeBridge(
     private val context: SourceContext,

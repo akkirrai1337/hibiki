@@ -24,6 +24,9 @@ class ExternalSourceRuntimeCoordinator(
     private val catalogCapabilities: (org.akkirrai.beakokit.api.SourceManifest) -> CatalogCapabilities,
     private val runtimeFactory: ExternalSourceRuntimeFactory,
     private val sourceContextFactory: ((SourceId) -> SourceContext)? = null,
+    private val runtimeInitializer: suspend (ActiveExternalSourcePackage, SourceContext) -> Unit = { _, _ -> },
+    /** Built-in source IDs retain ownership while external sources run in the background. */
+    private val reservedSourceIds: Set<SourceId> = emptySet(),
 ) : ExternalSourceRepositoryActions {
     private val operationMutex = Mutex()
     private val state = MutableStateFlow(
@@ -43,7 +46,7 @@ class ExternalSourceRuntimeCoordinator(
     /** Returns the active package for a source, or null when it has not been installed. */
     suspend fun activePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
         operationMutex.withLock {
-            loadActivePackageOrNull(sourceId)
+            sourceId.takeUnless(reservedSourceIds::contains)?.let(::loadActivePackageOrNull)
         }
 
     /** Returns advertised packages together with their currently active versions. */
@@ -127,6 +130,9 @@ class ExternalSourceRuntimeCoordinator(
         sourceId: SourceId,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = operationMutex.withLock {
+        require(sourceId !in reservedSourceIds) {
+            "External source ID is reserved by a built-in source: $sourceId"
+        }
         var activation: SourcePackageActivationState? = null
         try {
             activation = platform.installAvailablePackage(
@@ -138,10 +144,13 @@ class ExternalSourceRuntimeCoordinator(
                             ?: throw SourcePackageStateException(
                                 "Source package is no longer advertised by a loaded repository: $sourceId",
                             )
-                        runtimeFactory.create(
-                            ActiveExternalSourcePackage(manifest = manifest, installed = candidate),
-                            contextFactory(sourceId),
+                        val sourcePackage = ActiveExternalSourcePackage(
+                            manifest = manifest,
+                            installed = candidate,
                         )
+                        val context = contextFactory(sourceId)
+                        runtimeInitializer(sourcePackage, context)
+                        runtimeFactory.create(sourcePackage, context)
                     }
                 },
             )
@@ -168,12 +177,21 @@ class ExternalSourceRuntimeCoordinator(
     /** Rolls back one package and refreshes only the inactive registry. */
     suspend fun rollbackActivePackage(sourceId: SourceId): SourcePackageActivationState =
         operationMutex.withLock {
+        require(sourceId !in reservedSourceIds) {
+            "External source ID is reserved by a built-in source: $sourceId"
+        }
         try {
             val previous = platform.loadPreviousActivePackage(sourceId)
+            sourceContextFactory?.let { contextFactory ->
+                val context = contextFactory(sourceId)
+                runtimeInitializer(previous, context)
+                runtimeFactory.create(previous, context)
+            }
             val registry = platform.loadAvailableActiveRegistry(
                 catalogCapabilities = catalogCapabilities,
                 runtimeFactory = runtimeFactory,
                 replacements = mapOf(sourceId to previous),
+                excludedSourceIds = reservedSourceIds,
             )
             val activation = platform.rollbackActivePackage(sourceId)
             state.value = ExternalSourceRuntimeSnapshot(
@@ -210,7 +228,7 @@ class ExternalSourceRuntimeCoordinator(
         }
 
     private fun packageStatusesLocked(): List<ExternalSourcePackageStatus> =
-        platform.coordinator.availableSourceManifests().map { manifest ->
+        platform.coordinator.availableSourceManifests().filterNot { it.sourceId in reservedSourceIds }.map { manifest ->
             val active = loadActivePackageOrNull(manifest.sourceId)
             ExternalSourcePackageStatus(
                 sourceId = manifest.sourceId,
@@ -247,6 +265,7 @@ class ExternalSourceRuntimeCoordinator(
         val registry = platform.loadAvailableActiveRegistry(
             catalogCapabilities = catalogCapabilities,
             runtimeFactory = runtimeFactory,
+            excludedSourceIds = reservedSourceIds,
         )
         state.value = ExternalSourceRuntimeSnapshot(
             repository = repository,

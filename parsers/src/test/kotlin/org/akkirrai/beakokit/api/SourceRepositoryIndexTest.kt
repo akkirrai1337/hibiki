@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class SourceRepositoryIndexTest {
     @Test
@@ -46,6 +47,24 @@ class SourceRepositoryIndexTest {
 
         assertContains(violations, "Unsupported source repository API version: 2")
         assertContains(violations, "Source metadata is required for repository source: external-source")
+    }
+
+    @Test
+    fun `index rejects invalid source metadata before registry creation`() {
+        val index = SourceRepositoryIndex(
+            apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+            sources = listOf(
+                manifest().copy(
+                    sourceInfo = manifest().sourceInfo!!.copy(
+                        iconUrl = "http://example.com/icon.png",
+                    ),
+                ),
+            ),
+        )
+
+        val violations = index.violations(clientVersion = 3)
+
+        assertTrue(violations.any { it.contains("external-source: Invalid source metadata:") })
     }
 
     private fun manifest(sha256: String = "a".repeat(64)) = SourceManifest(
