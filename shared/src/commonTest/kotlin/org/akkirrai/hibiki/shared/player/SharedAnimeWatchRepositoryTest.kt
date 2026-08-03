@@ -70,6 +70,44 @@ class SharedAnimeWatchRepositoryTest {
         sourceClient.close()
     }
 
+    @Test
+    fun invalidatingSourceRecreatesItWithTheLatestConfiguration() = runBlocking {
+        val client = HttpClient()
+        val sourceId = SourceId("external-source")
+        var creations = 0
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = SourceInfo(
+                id = sourceId,
+                name = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                capabilities = setOf(org.akkirrai.beakokit.api.SourceCapability.PLAYBACK),
+            ),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = FakePlaybackRuntime(
+                PlaybackGroup("group-1", "Dub", listOf(Episode("episode-1", 1.0, "Episode 1"))),
+            ),
+        )
+        val repository = SharedAnimeWatchRepository(
+            client = client,
+            externalSourceFactory = { requestedId, _ ->
+                if (requestedId == sourceId) {
+                    creations++
+                    source
+                } else {
+                    null
+                }
+            },
+        )
+
+        repository.loadSources("source:external-source:title-1")
+        repository.invalidateSource(sourceId)
+        repository.loadSources("source:external-source:title-1")
+
+        assertEquals(2, creations)
+        repository.close()
+    }
+
     private class FakePlaybackRuntime(
         private val group: PlaybackGroup,
     ) : ExternalSourcePlaybackRuntime {

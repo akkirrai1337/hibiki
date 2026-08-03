@@ -59,6 +59,7 @@ import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
 import org.akkirrai.beakokit.api.SourceConfigValueKind
+import org.akkirrai.beakokit.api.SourceConfigSchema
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
@@ -210,7 +211,9 @@ internal fun AndroidSharedAppShell(
                 iconUrl = source.iconUrl,
                 supportsPlayback = source.supportsPlayback,
                 supportsSearch = true,
-                configSchema = source.configSchema,
+                // Built-in settings still belong to the legacy source adapters. Do not route
+                // their schema through the external-source config store.
+                configSchema = SourceConfigSchema(),
             )
         }
         mergeAppSourceDescriptors(
@@ -298,6 +301,7 @@ internal fun AndroidSharedAppShell(
                                 }
                             }
                         }
+                        externalWatchRepository?.invalidateSource(sourceId)
                         onSaved()
                     },
                     onCancel = onCancel,

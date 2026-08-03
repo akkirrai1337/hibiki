@@ -152,6 +152,13 @@ class SharedAnimeWatchRepository(
         return playback
     }
 
+    /** Drops cached external source state after its host-provided configuration changes. */
+    fun invalidateSource(sourceId: SourceId) {
+        sources.remove(sourceId)
+        payloads.clear()
+        resolvedPlayback.clear()
+    }
+
     override fun close() {
         payloads.clear()
         resolvedPlayback.clear()
