@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceManifest
+import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -22,6 +23,7 @@ class ExternalSourceRuntimeCoordinator(
     private val platform: ExternalSourceRepositoryPlatform,
     private val catalogCapabilities: (org.akkirrai.beakokit.api.SourceManifest) -> CatalogCapabilities,
     private val runtimeFactory: ExternalSourceRuntimeFactory,
+    private val sourceContextFactory: ((SourceId) -> SourceContext)? = null,
 ) : ExternalSourceRepositoryActions {
     private val operationMutex = Mutex()
     private val state = MutableStateFlow(
@@ -87,7 +89,7 @@ class ExternalSourceRuntimeCoordinator(
         sourceId: SourceId,
         initialize: suspend () -> Unit,
     ) {
-        installAvailablePackage(sourceId, initialize)
+        installAvailablePackage(sourceId, initialize = initialize)
     }
 
     override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
@@ -127,7 +129,22 @@ class ExternalSourceRuntimeCoordinator(
     ): SourcePackageActivationState = operationMutex.withLock {
         var activation: SourcePackageActivationState? = null
         try {
-            activation = platform.installAvailablePackage(sourceId, initialize)
+            activation = platform.installAvailablePackage(
+                sourceId = sourceId,
+                initialize = initialize,
+                initializeCandidate = sourceContextFactory?.let { contextFactory ->
+                    { candidate ->
+                        val manifest = platform.coordinator.availableSourceManifest(sourceId)
+                            ?: throw SourcePackageStateException(
+                                "Source package is no longer advertised by a loaded repository: $sourceId",
+                            )
+                        runtimeFactory.create(
+                            ActiveExternalSourcePackage(manifest = manifest, installed = candidate),
+                            contextFactory(sourceId),
+                        )
+                    }
+                },
+            )
             rebuildActiveRegistry()
             activation
         } catch (error: Throwable) {

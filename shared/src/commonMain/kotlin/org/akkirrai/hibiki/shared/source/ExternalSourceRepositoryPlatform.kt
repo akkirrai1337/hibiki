@@ -11,6 +11,7 @@ import org.akkirrai.beakokit.api.SourcePackageInstallationCoordinatorFactory
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.SourcePackageActivationState
+import org.akkirrai.beakokit.api.InstalledSourcePackage
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -35,12 +36,14 @@ class ExternalSourceRepositoryPlatform(
     suspend fun installAvailablePackage(
         sourceId: SourceId,
         stagingPath: String,
+        initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
         initialize: suspend () -> Unit,
     ) = coordinator.availableSourceManifest(sourceId)?.let { manifest ->
         createPackageInstallationCoordinator(sourceId).install(
             repositoryManifest = manifest,
             stagingPath = stagingPath,
             initialize = initialize,
+            initializeCandidate = initializeCandidate,
         )
     } ?: throw SourcePackageStateException(
         "Source package is not advertised by a loaded repository: $sourceId",
@@ -49,6 +52,7 @@ class ExternalSourceRepositoryPlatform(
     /** Installs an advertised package using a platform-owned unique staging path. */
     suspend fun installAvailablePackage(
         sourceId: SourceId,
+        initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
         initialize: suspend () -> Unit,
     ) = installAvailablePackage(
         sourceId = sourceId,
@@ -56,6 +60,7 @@ class ExternalSourceRepositoryPlatform(
             "Automatic source package staging is not available on this platform"
         }(sourceId),
         initialize = initialize,
+        initializeCandidate = initializeCandidate,
     )
 
     /** Rolls back one source to its previously activated package version. */

@@ -67,9 +67,16 @@ class SourcePackageInstallationCoordinatorTest {
             ),
         )
 
-        val state = coordinator.install(manifest, candidate, candidate.packagePath) { initialized = true }
+        var initializedCandidate: InstalledSourcePackage? = null
+        val state = coordinator.install(
+            repositoryManifest = manifest,
+            candidate = candidate,
+            stagingPath = candidate.packagePath,
+            initializeCandidate = { initializedCandidate = it },
+        ) { initialized = true }
 
-        assertEquals(true, initialized)
+        assertEquals(false, initialized)
+        assertEquals(candidate, initializedCandidate)
         assertEquals(candidate, state.active)
         assertEquals(state, store.state)
     }

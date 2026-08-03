@@ -5,12 +5,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CancellationException
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
@@ -26,11 +30,21 @@ internal fun AndroidExternalSourceBackgroundSync(
     val platform = remember(context) {
         createAndroidExternalSourceRepositoryPlatform(context)
     }
+    val runtimeHttpClient = remember { HttpClient(OkHttp) }
+    DisposableEffect(runtimeHttpClient) {
+        onDispose { runtimeHttpClient.close() }
+    }
     val coordinator = remember(platform) {
         ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = createAndroidExternalSourceRuntimeFactory(),
+            sourceContextFactory = {
+                DefaultSourceContext(
+                    httpClient = runtimeHttpClient,
+                    preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                )
+            },
         )
     }
     LaunchedEffect(coordinator, lifecycleOwner) {

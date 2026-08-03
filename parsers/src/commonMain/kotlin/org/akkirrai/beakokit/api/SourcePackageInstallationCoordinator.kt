@@ -26,6 +26,7 @@ class SourcePackageInstallationCoordinator(
     suspend fun install(
         repositoryManifest: SourceManifest,
         stagingPath: String,
+        initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = install(
         repositoryManifest = repositoryManifest,
@@ -36,12 +37,14 @@ class SourcePackageInstallationCoordinator(
         ),
         stagingPath = stagingPath,
         initialize = initialize,
+        initializeCandidate = initializeCandidate,
     )
 
     suspend fun install(
         repositoryManifest: SourceManifest,
         candidate: InstalledSourcePackage,
         stagingPath: String,
+        initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
         require(candidate.sourceId == repositoryManifest.sourceId) {
@@ -66,7 +69,9 @@ class SourcePackageInstallationCoordinator(
                 artifact = verified.artifact,
                 entries = extracted.entries,
                 candidate = candidate,
-                initialize = initialize,
+                initialize = {
+                    initializeCandidate?.invoke(candidate) ?: initialize()
+                },
             )
         } catch (error: Throwable) {
             runCatching { extracted.discard() }
