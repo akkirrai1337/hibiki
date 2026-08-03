@@ -57,6 +57,7 @@ class SourcePackageInstallationCoordinator(
             "Installation candidate path must match the extraction staging path"
         }
         val verified = downloadService.download(repositoryManifest)
+        val installedCandidate = candidate.copy(artifactSha256 = verified.artifact.sha256)
         val extracted = extractor.extract(
             downloaded = verified.downloaded,
             stagingPath = stagingPath,
@@ -68,9 +69,9 @@ class SourcePackageInstallationCoordinator(
                 packageManifest = extracted.manifest,
                 artifact = verified.artifact,
                 entries = extracted.entries,
-                candidate = candidate,
+                candidate = installedCandidate,
                 initialize = {
-                    initializeCandidate?.invoke(candidate) ?: initialize()
+                    initializeCandidate?.invoke(installedCandidate) ?: initialize()
                 },
             )
         } catch (error: Throwable) {

@@ -8,7 +8,19 @@ data class InstalledSourcePackage(
     val sourceId: SourceId,
     val packageVersion: String,
     val packagePath: String,
-)
+    /** SHA-256 of the downloaded archive; null keeps compatibility with pre-metadata state. */
+    val artifactSha256: String? = null,
+) {
+    init {
+        require(artifactSha256 == null || SHA256_PATTERN.matches(artifactSha256)) {
+            "Installed package artifact SHA-256 must be 64 lowercase hexadecimal characters"
+        }
+    }
+
+    private companion object {
+        val SHA256_PATTERN = Regex("[0-9a-f]{64}")
+    }
+}
 
 /** Persistable activation state; user configuration is intentionally outside this record. */
 @Serializable

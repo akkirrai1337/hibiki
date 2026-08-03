@@ -75,9 +75,10 @@ class SourcePackageInstallationCoordinatorTest {
             initializeCandidate = { initializedCandidate = it },
         ) { initialized = true }
 
+        val installedCandidate = candidate.copy(artifactSha256 = manifest.sha256)
         assertEquals(false, initialized)
-        assertEquals(candidate, initializedCandidate)
-        assertEquals(candidate, state.active)
+        assertEquals(installedCandidate, initializedCandidate)
+        assertEquals(installedCandidate, state.active)
         assertEquals(state, store.state)
     }
 
@@ -114,7 +115,12 @@ class SourcePackageInstallationCoordinatorTest {
         coordinator.install(manifest, stagingPath) {}
 
         assertEquals(
-            InstalledSourcePackage(manifest.sourceId, manifest.packageVersion, stagingPath),
+            InstalledSourcePackage(
+                manifest.sourceId,
+                manifest.packageVersion,
+                stagingPath,
+                artifactSha256 = manifest.sha256,
+            ),
             store.state.active,
         )
     }

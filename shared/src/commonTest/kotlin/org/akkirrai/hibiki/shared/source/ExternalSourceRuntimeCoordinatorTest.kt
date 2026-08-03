@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackageLoader
+import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.DownloadedSourcePackage
 import org.akkirrai.beakokit.api.ExtractedSourcePackage
@@ -439,6 +440,29 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun packageManifestArchiveMetadataDoesNotCreateAFalseUpdate() {
+        val sourceId = SourceId("external-source")
+        val available = manifest(sourceId)
+        val active = ActiveExternalSourcePackage(
+            manifest = available.copy(sha256 = "b".repeat(64), artifactSizeBytes = 999),
+            installed = InstalledSourcePackage(
+                sourceId = sourceId,
+                packageVersion = available.packageVersion,
+                packagePath = "package/path",
+                artifactSha256 = available.sha256,
+            ),
+        )
+
+        assertFalse(
+            ExternalSourcePackageStatus(
+                sourceId = sourceId,
+                availableManifest = available,
+                activePackage = active,
+            ).updateAvailable,
+        )
+    }
+
+    @Test
     fun installedPackage_is_available_through_the_external_registry() = runTest {
         val sourceId = SourceId("external-source")
         val repositoryManifest = manifest(sourceId).copy(packageVersion = "2.0.0")
@@ -736,7 +760,12 @@ class ExternalSourceRuntimeCoordinatorTest {
                 }),
             ),
         )
-        val installed = InstalledSourcePackage(sourceId, installedPackageVersion, "package/path")
+        val installed = InstalledSourcePackage(
+            sourceId,
+            installedPackageVersion,
+            "package/path",
+            artifactSha256 = installedPackageSha256,
+        )
         val activationStore = InMemoryStore(
             SourcePackageActivationState(
                 active = installed,
