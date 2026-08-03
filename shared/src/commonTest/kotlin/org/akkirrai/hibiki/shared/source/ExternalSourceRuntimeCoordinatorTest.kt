@@ -91,6 +91,11 @@ class ExternalSourceRuntimeCoordinatorTest {
             listOf("https://example.test/index.json"),
             coordinator.snapshot.value.configuredRepositories.map { it.url },
         )
+        assertEquals(
+            "1.0.0",
+            coordinator.activePackage(SourceId("external-source"))?.installed?.packageVersion,
+        )
+        assertEquals(null, coordinator.activePackage(SourceId("missing-source")))
         coordinator.addRepository(secondEndpoint)
 
         assertEquals(
@@ -154,6 +159,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         val failed = coordinator.snapshot.value
         assertSame(previousRegistry, failed.registry)
         assertEquals(previous.repository, failed.repository)
+        assertEquals(previous.configuredRepositories, failed.configuredRepositories)
         assertSame(error, failed.error)
 
         packageLoadFails = false

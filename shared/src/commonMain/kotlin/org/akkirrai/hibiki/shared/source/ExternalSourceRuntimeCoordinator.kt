@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceId
@@ -36,6 +37,13 @@ class ExternalSourceRuntimeCoordinator(
     suspend fun repositories(): List<SourceRepositoryEndpoint> = operationMutex.withLock {
         platform.coordinator.repositories()
     }
+
+    /** Returns the active package for a source, or null when it has not been installed. */
+    suspend fun activePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
+        operationMutex.withLock {
+            runCatching { platform.loadActivePackage(sourceId) }
+                .getOrNull()
+        }
 
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
