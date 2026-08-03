@@ -12,6 +12,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.launch
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.darwin.Darwin
+import org.akkirrai.beakokit.api.DefaultSourceContext
+import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
@@ -28,8 +34,9 @@ import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
+import org.akkirrai.hibiki.shared.source.createIosExternalSourceRuntimeFactory
+import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
-import org.akkirrai.hibiki.shared.source.RepositoryManagementActions
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
@@ -52,10 +59,29 @@ fun MainViewController(systemLanguage: String): UIViewController {
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
         val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
+        val externalRuntimeHttpClient = remember {
+            HttpClient(Darwin) {
+                followRedirects = false
+            }
+        }
+        val externalRuntimeCoordinator = remember(externalSourcePlatform, externalRuntimeHttpClient) {
+            ExternalSourceRuntimeCoordinator(
+                platform = externalSourcePlatform,
+                catalogCapabilities = { CatalogCapabilities.FULL },
+                runtimeFactory = createIosExternalSourceRuntimeFactory(externalRuntimeHttpClient),
+                sourceContextFactory = { _ ->
+                    DefaultSourceContext(
+                        httpClient = externalRuntimeHttpClient,
+                        preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                    )
+                },
+                reservedSourceIds = IosSourceRegistry.sources.mapTo(linkedSetOf()) { SourceId(it.id) },
+            )
+        }
         val externalRefreshScope = rememberCoroutineScope()
-        val externalRepositoryController = remember(externalSourcePlatform) {
+        val externalRepositoryController = remember(externalRuntimeCoordinator) {
             ExternalSourceRepositoryController(
-                actions = RepositoryManagementActions(externalSourcePlatform.coordinator),
+                actions = externalRuntimeCoordinator,
                 scope = externalRefreshScope,
             )
         }
@@ -76,7 +102,8 @@ fun MainViewController(systemLanguage: String): UIViewController {
         DisposableEffect(externalSourcePlatform) {
             onDispose {
                 externalRepositoryController.close()
-                externalSourcePlatform.close()
+                externalRuntimeCoordinator.close()
+                externalRuntimeHttpClient.close()
             }
         }
         val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
