@@ -51,6 +51,17 @@ Apple target and linked by the native application. Windows builds therefore
 continue to verify the shared contracts and Android runtime without pretending
 that an iOS native binary exists.
 
+On macOS, install the three Rust Apple targets and build the device and
+simulator static libraries with:
+
+```bash
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+./build-ios-runtime.sh
+```
+
+The script combines both simulator architectures and verifies that the host
+callback ABI is exported before the libraries are linked into the app.
+
 To build and verify production Android libraries for `arm64-v8a` and `x86_64`
 with the real JNI bridge but without WAT/harness features, run:
 
