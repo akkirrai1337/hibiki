@@ -15,6 +15,9 @@ enum class ExternalSourceHostOperation {
     STORAGE_READ,
     STORAGE_WRITE,
     STORAGE_REMOVE,
+    COOKIES_FOR_URL,
+    COOKIES_STORE_RESPONSE,
+    COOKIES_CLEAR,
 }
 
 @Serializable
@@ -128,6 +131,27 @@ data class ExternalSourceHostStorageMutationResponse(
     val success: Boolean = true,
 )
 
+@Serializable
+data class ExternalSourceHostCookiesForUrlRequest(
+    val url: String,
+)
+
+@Serializable
+data class ExternalSourceHostCookiesForUrlResponse(
+    val cookies: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class ExternalSourceHostCookiesStoreResponseRequest(
+    val url: String,
+    val cookies: Map<String, String>,
+)
+
+@Serializable
+data class ExternalSourceHostCookiesClearRequest(
+    val url: String,
+)
+
 object ExternalSourceHostProtocolCodec {
     private val json = Json {
         encodeDefaults = true
@@ -187,6 +211,32 @@ object ExternalSourceHostProtocolCodec {
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeStorageMutationResponse(payload: JsonObject): ExternalSourceHostStorageMutationResponse =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeCookiesForUrlRequest(request: ExternalSourceHostCookiesForUrlRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeCookiesForUrlRequest(payload: JsonObject): ExternalSourceHostCookiesForUrlRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeCookiesForUrlResponse(response: ExternalSourceHostCookiesForUrlResponse): JsonObject =
+        json.encodeToJsonElement(response) as JsonObject
+
+    fun decodeCookiesForUrlResponse(payload: JsonObject): ExternalSourceHostCookiesForUrlResponse =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeCookiesStoreResponseRequest(
+        request: ExternalSourceHostCookiesStoreResponseRequest,
+    ): JsonObject = json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeCookiesStoreResponseRequest(
+        payload: JsonObject,
+    ): ExternalSourceHostCookiesStoreResponseRequest = json.decodeFromJsonElement(payload)
+
+    fun encodeCookiesClearRequest(request: ExternalSourceHostCookiesClearRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeCookiesClearRequest(payload: JsonObject): ExternalSourceHostCookiesClearRequest =
         json.decodeFromJsonElement(payload)
 }
 

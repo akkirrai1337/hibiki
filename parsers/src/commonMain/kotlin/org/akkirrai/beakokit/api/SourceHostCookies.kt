@@ -1,15 +1,15 @@
 package org.akkirrai.beakokit.api
 
 /** Host-owned cookie jar scoped to one source runtime. */
-abstract class SourceHostCookies : SourceHostAccess {
-    suspend fun forUrl(url: String): Map<String, String> {
+abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
+    override suspend fun forUrl(url: String): Map<String, String> {
         requireUrl(url)
         require(SourceHostCapability.COOKIES)
         requirements.networkPolicy.requireAllowed(url)
         return cookiesForUrl(url)
     }
 
-    suspend fun storeFromResponse(url: String, cookies: Map<String, String>) {
+    override suspend fun storeFromResponse(url: String, cookies: Map<String, String>) {
         requireUrl(url)
         require(SourceHostCapability.COOKIES)
         requirements.networkPolicy.requireAllowed(url)
@@ -24,7 +24,7 @@ abstract class SourceHostCookies : SourceHostAccess {
         storeResponseCookies(url, cookies)
     }
 
-    suspend fun clear(url: String) {
+    override suspend fun clear(url: String) {
         requireUrl(url)
         require(SourceHostCapability.COOKIES)
         requirements.networkPolicy.requireAllowed(url)

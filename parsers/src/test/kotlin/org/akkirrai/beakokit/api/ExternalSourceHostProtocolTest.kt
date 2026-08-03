@@ -222,4 +222,66 @@ class ExternalSourceHostProtocolTest {
             )
         }
     }
+
+    @Test
+    fun cookies_operations_round_trip_through_the_dispatcher() = runBlocking {
+        val values = mutableMapOf<String, Map<String, String>>()
+        val cookies = object : SourceHostCookiesAccess {
+            override suspend fun forUrl(url: String): Map<String, String> = values[url].orEmpty()
+
+            override suspend fun storeFromResponse(url: String, cookies: Map<String, String>) {
+                values[url] = cookies
+            }
+
+            override suspend fun clear(url: String) {
+                values.remove(url)
+            }
+        }
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            cookies = cookies,
+        )
+        val url = "https://example.com/anime"
+
+        dispatcher.dispatch(
+            ExternalSourceHostRequest(
+                requestId = "cookies-store",
+                operation = ExternalSourceHostOperation.COOKIES_STORE_RESPONSE,
+                payload = ExternalSourceHostProtocolCodec.encodeCookiesStoreResponseRequest(
+                    ExternalSourceHostCookiesStoreResponseRequest(url, mapOf("session" to "abc")),
+                ),
+            ),
+        )
+        val response = dispatcher.dispatch(
+            ExternalSourceHostRequest(
+                requestId = "cookies-read",
+                operation = ExternalSourceHostOperation.COOKIES_FOR_URL,
+                payload = ExternalSourceHostProtocolCodec.encodeCookiesForUrlRequest(
+                    ExternalSourceHostCookiesForUrlRequest(url),
+                ),
+            ),
+        )
+        assertEquals(
+            ExternalSourceHostCookiesForUrlResponse(mapOf("session" to "abc")),
+            ExternalSourceHostProtocolCodec.decodeCookiesForUrlResponse(
+                response.requirePayload("cookies-read"),
+            ),
+        )
+    }
+
+    @Test
+    fun cookies_operation_requires_a_cookie_host() = runBlocking {
+        assertFailsWith<SourceHostCapabilityException> {
+            ExternalSourceHostDispatcher { error("HTTP must not be called") }.dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "cookies-denied",
+                    operation = ExternalSourceHostOperation.COOKIES_FOR_URL,
+                    payload = ExternalSourceHostProtocolCodec.encodeCookiesForUrlRequest(
+                        ExternalSourceHostCookiesForUrlRequest("https://example.com"),
+                    ),
+                ),
+            )
+        }
+    }
 }

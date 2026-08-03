@@ -9,10 +9,16 @@ package org.akkirrai.beakokit.api
 class ExternalSourceHostDispatcher(
     private val executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
     private val storage: ExternalSourceHostStorageAccess?,
+    private val cookies: SourceHostCookiesAccess?,
 ) {
     constructor(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
     ) : this(executeHttpRequest, null)
+
+    constructor(
+        executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
+        storage: ExternalSourceHostStorageAccess?,
+    ) : this(executeHttpRequest, storage, null)
 
     suspend fun dispatch(request: ExternalSourceHostRequest): ExternalSourceHostResponse {
         val payload = when (request.operation) {
@@ -45,6 +51,28 @@ class ExternalSourceHostDispatcher(
                     ExternalSourceHostStorageMutationResponse(),
                 )
             }
+            ExternalSourceHostOperation.COOKIES_FOR_URL -> {
+                val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesForUrlRequest(request.payload)
+                val cookies = requireCookies().forUrl(cookiesRequest.url)
+                ExternalSourceHostProtocolCodec.encodeCookiesForUrlResponse(
+                    ExternalSourceHostCookiesForUrlResponse(cookies),
+                )
+            }
+            ExternalSourceHostOperation.COOKIES_STORE_RESPONSE -> {
+                val cookiesRequest =
+                    ExternalSourceHostProtocolCodec.decodeCookiesStoreResponseRequest(request.payload)
+                requireCookies().storeFromResponse(cookiesRequest.url, cookiesRequest.cookies)
+                ExternalSourceHostProtocolCodec.encodeStorageMutationResponse(
+                    ExternalSourceHostStorageMutationResponse(),
+                )
+            }
+            ExternalSourceHostOperation.COOKIES_CLEAR -> {
+                val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesClearRequest(request.payload)
+                requireCookies().clear(cookiesRequest.url)
+                ExternalSourceHostProtocolCodec.encodeStorageMutationResponse(
+                    ExternalSourceHostStorageMutationResponse(),
+                )
+            }
         }
         return ExternalSourceHostResponse(
             requestId = request.requestId,
@@ -54,6 +82,9 @@ class ExternalSourceHostDispatcher(
 
     private fun requireStorage(): ExternalSourceHostStorageAccess =
         storage ?: throw SourceHostCapabilityException(SourceHostCapability.STORAGE)
+
+    private fun requireCookies(): SourceHostCookiesAccess =
+        cookies ?: throw SourceHostCapabilityException(SourceHostCapability.COOKIES)
 }
 
 /** Source-scoped storage exposed by the platform host to the protocol dispatcher. */
@@ -63,4 +94,13 @@ interface ExternalSourceHostStorageAccess {
     suspend fun write(key: String, value: String)
 
     suspend fun remove(key: String)
+}
+
+/** Source-scoped cookies exposed by the platform host to the protocol dispatcher. */
+interface SourceHostCookiesAccess {
+    suspend fun forUrl(url: String): Map<String, String>
+
+    suspend fun storeFromResponse(url: String, cookies: Map<String, String>)
+
+    suspend fun clear(url: String)
 }
