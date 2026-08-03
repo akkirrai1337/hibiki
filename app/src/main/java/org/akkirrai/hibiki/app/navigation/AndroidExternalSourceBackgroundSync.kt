@@ -34,7 +34,12 @@ internal fun AndroidExternalSourceBackgroundSync(
     val platform = remember(context) {
         createAndroidExternalSourceRepositoryPlatform(context)
     }
-    val runtimeHttpClient = remember { HttpClient(OkHttp) }
+    // External host requests must not silently follow a redirect outside the manifest policy.
+    val runtimeHttpClient = remember {
+        HttpClient(OkHttp) {
+            followRedirects = false
+        }
+    }
     DisposableEffect(runtimeHttpClient) {
         onDispose { runtimeHttpClient.close() }
     }

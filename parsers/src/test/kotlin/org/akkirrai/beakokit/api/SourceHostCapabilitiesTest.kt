@@ -79,6 +79,13 @@ class SourceHostCapabilitiesTest {
         assertFalse(requirements.networkPolicy.allows("https://other.example.com/catalog"))
     }
 
+    @Test
+    fun `network policy treats host names as case insensitive`() {
+        val policy = SourceHostNetworkPolicy(setOf("api.example.com"))
+
+        assertTrue(policy.allows("https://API.EXAMPLE.COM/catalog"))
+    }
+
     private data class TestHostAccess(
         override val requirements: SourceHostRequirements,
     ) : SourceHostAccess

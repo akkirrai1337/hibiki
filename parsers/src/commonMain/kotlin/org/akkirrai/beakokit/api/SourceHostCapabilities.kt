@@ -41,7 +41,7 @@ data class SourceHostNetworkPolicy(
 
     fun allows(url: String): Boolean = runCatching {
         val parsed = Url(url)
-        parsed.protocol.name == "https" && parsed.host in allowedHosts
+        parsed.protocol.name == "https" && parsed.host.lowercase() in allowedHosts
     }.getOrDefault(false)
 
     fun requireAllowed(url: String) {

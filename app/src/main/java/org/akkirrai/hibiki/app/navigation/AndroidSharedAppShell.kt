@@ -106,7 +106,12 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalRepositoryController) {
         onDispose { externalRepositoryController?.close() }
     }
-    val externalHttpClient = remember { HttpClient(OkHttp) }
+    // External source search/details must keep redirects inside the manifest's host policy.
+    val externalHttpClient = remember {
+        HttpClient(OkHttp) {
+            followRedirects = false
+        }
+    }
     DisposableEffect(externalHttpClient) {
         onDispose { externalHttpClient.close() }
     }
