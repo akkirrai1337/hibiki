@@ -195,6 +195,7 @@ import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.sourceLanguageSectionLabel
 import org.akkirrai.hibiki.shared.source.AppSourceIconImage
+import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 import org.akkirrai.hibiki.shared.onboarding.AppOnboardingScreen
 import org.akkirrai.beakokit.api.AnimeKey
@@ -294,6 +295,7 @@ fun HibikiAppShell(
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     sources: List<AppSourceDescriptor> = emptyList(),
+    sourceConfigContent: (@Composable (AppSourceDescriptor, () -> Unit) -> Unit)? = null,
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     onWatchSourceSelected: (String, org.akkirrai.hibiki.shared.model.WatchSource) -> Unit = { _, _ -> },
@@ -1894,6 +1896,8 @@ private fun AppDestinationContent(
     onDetailsLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
     currentRoute: AppRoute? = null,
 ) {
+    var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
+    val sourceConfigContent = LocalAppSourceConfigContent.current
     val homeSourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
     val bottomSystemInset = appBottomSystemInsetValue(includeNavigationBarPadding)
     val topLevelBottomContentPadding = if (
@@ -2279,13 +2283,24 @@ private fun AppDestinationContent(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                AppDestination.SOURCES -> AppLocalSourcesScreen(
+                AppDestination.SOURCES -> editingSourceConfig?.let { source ->
+                    sourceConfigContent?.invoke(source) {
+                        editingSourceConfig = null
+                    }
+                } ?: AppLocalSourcesScreen(
                     sources = sources,
                     selectedSourceId = selectedSourceId,
                     bottomContentPadding = topLevelBottomContentPadding,
                     emptyText = appText(AppTextKey.SourcesEmptyTitle),
                     languageLabel = { language -> sourceLanguageSectionLabel(language) },
-                    onSourceSelected = onSourceSelected,
+                    onSourceSelected = { sourceId ->
+                        val source = sources.firstOrNull { it.id == sourceId }
+                        if (sourceConfigContent != null && source?.configSchema?.fields?.isNotEmpty() == true) {
+                            editingSourceConfig = source
+                        } else {
+                            onSourceSelected(sourceId)
+                        }
+                    },
                     searchQuery = sourceSearchState.query,
                     searchItems = emptyList(),
                     isSearchLoading = sourceSearchState.isSearching,

@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
@@ -14,6 +15,7 @@ import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.DiscordRpcController
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.home.HomeDataRepository
 import org.akkirrai.hibiki.shared.player.WatchDataRepository
@@ -60,6 +62,7 @@ fun HibikiApp(
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
     externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     sources: List<AppSourceDescriptor> = emptyList(),
+    sourceConfigContent: (@Composable (AppSourceDescriptor, () -> Unit) -> Unit)? = null,
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
     onWatchSourceSelected: (String, org.akkirrai.hibiki.shared.model.WatchSource) -> Unit = { _, _ -> },
@@ -73,7 +76,8 @@ fun HibikiApp(
     includeNavigationBarPadding: Boolean = true,
     applyStatusBarPadding: Boolean = false,
 ) {
-    HibikiAppShell(
+    CompositionLocalProvider(LocalAppSourceConfigContent provides sourceConfigContent) {
+        HibikiAppShell(
         modifier = modifier,
         repository = repository,
         homeRepository = homeRepository,
@@ -102,6 +106,7 @@ fun HibikiApp(
         onDiscordBrowserSignIn = onDiscordBrowserSignIn,
         externalSourceRepositoryController = externalSourceRepositoryController,
         sources = sources,
+        sourceConfigContent = sourceConfigContent,
         selectedSourceId = selectedSourceId,
         onSourceSelected = onSourceSelected,
         onWatchSourceSelected = onWatchSourceSelected,
@@ -114,5 +119,6 @@ fun HibikiApp(
         showSettingsBackButton = showSettingsBackButton,
         includeNavigationBarPadding = includeNavigationBarPadding,
         applyStatusBarPadding = applyStatusBarPadding,
-    )
+        )
+    }
 }

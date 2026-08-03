@@ -49,11 +49,15 @@ import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
 import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
+import org.akkirrai.hibiki.shared.source.AppSourceConfigLabels
+import org.akkirrai.hibiki.shared.source.AppSourceConfigScreen
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
+import org.akkirrai.beakokit.api.SourceConfigValueKind
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
@@ -252,6 +256,35 @@ internal fun AndroidSharedAppShell(
             },
             externalSourceRepositoryController = externalRepositoryController,
             sources = sources,
+            sourceConfigContent = { source, onDone ->
+                val sourceId = SourceId(source.id)
+                val draft = externalSourceConfigStore.loadDraft(sourceId)
+                AppSourceConfigScreen(
+                    schema = source.configSchema,
+                    initialValues = draft.values,
+                    initialSecrets = draft.secrets,
+                    labels = AppSourceConfigLabels(
+                        fieldLabel = { field -> field.titleKey },
+                        saveLabel = "Save",
+                        cancelLabel = "Cancel",
+                    ),
+                    onSave = { values, secrets ->
+                        source.configSchema.fields.forEach { field ->
+                            if (field.kind == SourceConfigValueKind.SECRET) {
+                                secrets[field.key]?.let { value ->
+                                    externalSourceConfigStore.saveSecret(sourceId, field.key, value)
+                                }
+                            } else {
+                                values[field.key]?.let { value ->
+                                    externalSourceConfigStore.saveValue(sourceId, field.key, value)
+                                }
+                            }
+                        }
+                        onDone()
+                    },
+                    onCancel = onDone,
+                )
+            },
             selectedSourceId = preferences.animeSource.value,
             onSourceSelected = { sourceId ->
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))

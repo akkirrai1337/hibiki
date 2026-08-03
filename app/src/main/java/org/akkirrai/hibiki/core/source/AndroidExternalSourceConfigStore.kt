@@ -24,7 +24,12 @@ internal class AndroidExternalSourceConfigStore(
         keyAlias = SECRETS_KEY_ALIAS,
     ),
 ) {
-    fun load(sourceId: SourceId): SourceConfig {
+    data class Draft(
+        val values: Map<String, String>,
+        val secrets: Map<String, String>,
+    )
+
+    fun loadDraft(sourceId: SourceId): Draft {
         val prefix = valuePrefix(sourceId)
         val values = valuesPreferences.all.mapNotNull { (key, value) ->
             key.removePrefix(prefix).takeIf { key.startsWith(prefix) && value is String }
@@ -33,7 +38,12 @@ internal class AndroidExternalSourceConfigStore(
         val secrets = secretKeysPreferences.getStringSet(sourceId.value, emptySet()).orEmpty()
             .mapNotNull { key -> secretStore.get(secretKey(sourceId, key))?.let { key to it } }
             .toMap()
-        return MapSourceConfig(values = values, secrets = secrets)
+        return Draft(values = values, secrets = secrets)
+    }
+
+    fun load(sourceId: SourceId): SourceConfig {
+        val draft = loadDraft(sourceId)
+        return MapSourceConfig(values = draft.values, secrets = draft.secrets)
     }
 
     fun saveValue(sourceId: SourceId, key: String, value: String) {
