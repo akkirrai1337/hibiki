@@ -105,6 +105,12 @@ enum class AppTextKey {
     SettingsSupport,
     SettingsExportLogs,
     SettingsAbout,
+    SettingsExternalRepositories,
+    SettingsExternalRepositoryUrl,
+    SettingsExternalRepositoryAdd,
+    SettingsExternalRepositoryRefresh,
+    SettingsExternalRepositoryRemove,
+    SettingsExternalRepositoryBusy,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -364,6 +370,12 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsSupport -> if (russian) "Поддержка" else "Support"
             AppTextKey.SettingsExportLogs -> if (russian) "Экспортировать логи" else "Export logs"
             AppTextKey.SettingsAbout -> if (russian) "О приложении" else "About"
+            AppTextKey.SettingsExternalRepositories -> if (russian) "Внешние источники" else "External repositories"
+            AppTextKey.SettingsExternalRepositoryUrl -> if (russian) "HTTPS-ссылка repository" else "Repository HTTPS URL"
+            AppTextKey.SettingsExternalRepositoryAdd -> if (russian) "Добавить" else "Add"
+            AppTextKey.SettingsExternalRepositoryRefresh -> if (russian) "Обновить источники" else "Refresh sources"
+            AppTextKey.SettingsExternalRepositoryRemove -> if (russian) "Удалить repository" else "Remove repository"
+            AppTextKey.SettingsExternalRepositoryBusy -> if (russian) "Загрузка…" else "Loading…"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

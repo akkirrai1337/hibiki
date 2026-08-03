@@ -14,6 +14,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
@@ -85,6 +87,15 @@ internal fun AndroidSharedAppShell(
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
     val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
+    val externalRepositoryControllerScope = rememberCoroutineScope()
+    val externalRepositoryController = remember(externalCoordinator) {
+        externalCoordinator?.let {
+            ExternalSourceRepositoryController(it, externalRepositoryControllerScope)
+        }
+    }
+    DisposableEffect(externalRepositoryController) {
+        onDispose { externalRepositoryController?.close() }
+    }
     val externalHttpClient = remember { HttpClient(OkHttp) }
     DisposableEffect(externalHttpClient) {
         onDispose { externalHttpClient.close() }
@@ -202,6 +213,7 @@ internal fun AndroidSharedAppShell(
                 pendingDiscordTokenCallback = onToken
                 discordAuthLauncher.launch(Intent(context, DiscordAuthActivity::class.java))
             },
+            externalSourceRepositoryController = externalRepositoryController,
             sources = sources,
             selectedSourceId = preferences.animeSource.value,
             onSourceSelected = { sourceId ->

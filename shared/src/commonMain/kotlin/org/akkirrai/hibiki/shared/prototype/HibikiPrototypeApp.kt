@@ -161,6 +161,9 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsCard
 import org.akkirrai.hibiki.shared.settings.AppSettingsCardLabels
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreenLabels
+import org.akkirrai.hibiki.shared.settings.ExternalSourceRepositorySectionLabels
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
 import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
 import org.akkirrai.hibiki.shared.text.AppTextKey
@@ -289,6 +292,7 @@ fun HibikiAppShell(
     onGitHubClick: () -> Unit = {},
     discordRpcController: DiscordRpcController? = null,
     onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
+    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     sources: List<AppSourceDescriptor> = emptyList(),
     selectedSourceId: String? = null,
     onSourceSelected: (String) -> Unit = {},
@@ -323,6 +327,7 @@ fun HibikiAppShell(
     val catalogListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
     val sourceSearchPresenter = remember(repository, sources) { SourcesSearchPresenter(repository, sources, scope) }
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
+    val externalSourceRepositoryState = externalSourceRepositoryController?.state?.collectAsState()?.value
     val watchPresenter = remember(watchRepository) { WatchSourcesPresenter() }
     val watchState by watchPresenter.state.collectAsState()
     var detailsAnime by remember { mutableStateOf<Anime?>(null) }
@@ -1345,6 +1350,8 @@ fun HibikiAppShell(
                                 navigationState = navigationState.reduce(AppNavigationEvent.Back)
                             },
                             sourceSearchState = sourceSearchState,
+                            externalSourceRepositoryState = externalSourceRepositoryState,
+                            externalSourceRepositoryController = externalSourceRepositoryController,
                             onSourceSearchQueryChange = sourceSearchPresenter::onQueryChange,
                             onSourceSearchClear = sourceSearchPresenter::clear,
                             onSourceSearchRetry = sourceSearchPresenter::search,
@@ -1524,6 +1531,8 @@ private fun WideAppLayout(
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
+    externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
+    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     onConfigureNotifications: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
@@ -1578,6 +1587,8 @@ private fun WideAppLayout(
             onSourceSearchQueryChange,
             onSourceSearchClear,
             onSourceSearchRetry,
+            externalSourceRepositoryState = externalSourceRepositoryState,
+            externalSourceRepositoryController = externalSourceRepositoryController,
             onConfigureNotifications = onConfigureNotifications,
             modifier = Modifier.weight(1f),
         )
@@ -1635,6 +1646,8 @@ private fun CompactAppLayout(
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
+    externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
+    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     onConfigureNotifications: () -> Unit,
 ) {
     Scaffold(
@@ -1704,6 +1717,8 @@ private fun CompactAppLayout(
             onSourceSearchQueryChange,
             onSourceSearchClear,
             onSourceSearchRetry,
+            externalSourceRepositoryState = externalSourceRepositoryState,
+            externalSourceRepositoryController = externalSourceRepositoryController,
             onConfigureNotifications = onConfigureNotifications,
             modifier = Modifier.padding(padding),
         )
@@ -1807,6 +1822,8 @@ private fun AppDestinationContent(
     onSourceSearchQueryChange: (String) -> Unit,
     onSourceSearchClear: () -> Unit,
     onSourceSearchRetry: () -> Unit,
+    externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
+    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     modifier: Modifier = Modifier,
     onSourceSearchRetryForSource: (String) -> Unit = {},
     catalogState: AnimeCatalogUiState = AnimeCatalogUiState(),
@@ -2323,6 +2340,8 @@ private fun AppDestinationContent(
                     onCheckForUpdates = onCheckForUpdates,
                     onExportLogs = onExportLogs,
                     notificationsAvailable = notificationsAvailable,
+                    externalSourceRepositoryState = externalSourceRepositoryState,
+                    externalSourceRepositoryController = externalSourceRepositoryController,
                     bottomContentPadding = topLevelBottomContentPadding,
                 )
         }
@@ -2812,6 +2831,8 @@ private fun SettingsScreen(
     onCheckForUpdates: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     notificationsAvailable: Boolean = true,
+    externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
+    externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     bottomContentPadding: Dp,
 ) {
     AppSettingsScreen(
@@ -2863,6 +2884,26 @@ private fun SettingsScreen(
         notificationsAvailable = notificationsAvailable,
         onNotificationsClick = onConfigureNotifications,
         onGitHubClick = onGitHubClick,
+        externalRepositoryState = externalSourceRepositoryState,
+        externalRepositoryLabels = externalSourceRepositoryController?.let {
+            ExternalSourceRepositorySectionLabels(
+                title = appText(AppTextKey.SettingsExternalRepositories),
+                urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
+                addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
+                refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
+                removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
+                busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
+            )
+        },
+        onAddExternalRepository = externalSourceRepositoryController?.let { controller ->
+            controller::addRepository
+        } ?: {},
+        onRemoveExternalRepository = externalSourceRepositoryController?.let { controller ->
+            controller::removeRepository
+        } ?: {},
+        onRefreshExternalRepositories = externalSourceRepositoryController?.let { controller ->
+            controller::refreshRepositories
+        } ?: {},
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,
         showBackButton = showBackButton,
