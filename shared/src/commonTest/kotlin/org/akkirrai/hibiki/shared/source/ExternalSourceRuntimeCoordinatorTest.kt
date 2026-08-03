@@ -606,11 +606,20 @@ class ExternalSourceRuntimeCoordinatorTest {
             },
             closeResources = {},
         )
+        val runtimeContextClient = HttpClient()
+        var activePackageDuringInitialization: InstalledSourcePackage? = null
         val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
             platform = platform,
             catalogCapabilities = { CatalogCapabilities.FULL },
             runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
-                error("Runtime creation must remain lazy")
+                activePackageDuringInitialization = store.state.active
+                error("Runtime initialization failed")
+            },
+            sourceContextFactory = {
+                DefaultSourceContext(
+                    httpClient = runtimeContextClient,
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                )
             },
         )
 
@@ -621,8 +630,10 @@ class ExternalSourceRuntimeCoordinatorTest {
             runtimeCoordinator.installAvailablePackage(sourceId) {}
         }
         assertSame(previousRegistry, runtimeCoordinator.snapshot.value.registry)
+        assertEquals(oldPackage, activePackageDuringInitialization)
         assertEquals(oldPackage, store.state.active)
         assertEquals(null, store.state.previous)
+        runtimeContextClient.close()
     }
 
     @Test
