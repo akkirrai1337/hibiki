@@ -13,6 +13,7 @@ data class ExternalSourceRegistration(
         info = info,
         registrationOrder = registrationOrder,
         factory = SourceFactory { context ->
+            info.configSchema.requireValid(context.config)
             val runtime = runtimeFactory(context)
             if (SourceCapability.PLAYBACK in info.capabilities) {
                 require(runtime is ExternalSourcePlaybackRuntime) {

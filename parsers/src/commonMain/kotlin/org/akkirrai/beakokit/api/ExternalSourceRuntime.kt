@@ -36,7 +36,10 @@ open class RuntimeBackedAnimeSource(
     override val info: SourceInfo,
     override val catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     protected val runtime: ExternalSourceRuntime,
-) : AnimeSource {
+) : ConfigurableSource {
+    override val configSchema: SourceConfigSchema
+        get() = info.configSchema
+
     override suspend fun search(query: String): List<AnimeTitle> = search(
         AnimeSearchRequest(query = query),
     )

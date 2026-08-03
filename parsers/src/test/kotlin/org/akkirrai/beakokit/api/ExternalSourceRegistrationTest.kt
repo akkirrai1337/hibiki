@@ -46,6 +46,35 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun external_config_is_validated_before_runtime_creation() {
+        var runtimeCreated = false
+        val registration = ExternalSourceRegistration(
+            info = sourceInfo().copy(
+                configSchema = SourceConfigSchema(
+                    listOf(
+                        SourceConfigField("base_url", SourceConfigValueKind.HTTPS_URL, required = true),
+                    ),
+                ),
+            ),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtimeFactory = {
+                runtimeCreated = true
+                error("Invalid config must prevent runtime creation")
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            config = MapSourceConfig(values = mapOf("base_url" to "http://example.com")),
+        )
+
+        assertFailsWith<SourceConfigException> {
+            externalSourceCatalog(listOf(registration)).create(SourceId("external-test"), context)
+        }
+        assertEquals(false, runtimeCreated)
+    }
+
+    @Test
     fun playbackCapabilityRequiresPlaybackRuntimeAtSourceCreation() {
         val registration = ExternalSourceRegistration(
             info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
