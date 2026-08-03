@@ -55,6 +55,8 @@ import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
+import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 
 /** Android adapter for the shared shell; disabled until the parity checkpoint is approved. */
 @Composable
@@ -125,6 +127,32 @@ internal fun AndroidSharedAppShell(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
+    val externalWatchRepository = remember(externalCoordinator) {
+        externalCoordinator?.let { coordinator ->
+            SharedAnimeWatchRepository(
+                client = HttpClient(OkHttp),
+                externalSourceFactory = { sourceId, sourceContext ->
+                    coordinator.snapshot.value.registry?.create(sourceId, sourceContext)
+                },
+            )
+        }
+    }
+    DisposableEffect(externalWatchRepository) {
+        onDispose { externalWatchRepository?.close() }
+    }
+    val routedWatchRepository = remember(watchRepository, externalWatchRepository, externalCoordinator) {
+        externalWatchRepository?.let { externalRepository ->
+            RoutingWatchDataRepository(
+                builtIn = watchRepository,
+                external = externalRepository,
+                isExternalSource = { sourceId ->
+                    externalCoordinator?.snapshot?.value?.registry?.sources
+                        ?.any { it.id == sourceId }
+                        ?: false
+                },
+            )
+        } ?: watchRepository
+    }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val episodeDownloadRepository = remember(dependencies) {
         AndroidEpisodeDownloadRepository(dependencies.offlineDownloadRepository())
@@ -252,7 +280,7 @@ internal fun AndroidSharedAppShell(
                     }
                 }
             },
-            watchRepository = watchRepository,
+            watchRepository = routedWatchRepository,
             playbackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
                 AndroidCommonPlaybackHost(
                     playback = requireNotNull(playback),
