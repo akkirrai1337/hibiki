@@ -9,6 +9,7 @@ import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceExecutionPolicy
+import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -37,6 +38,7 @@ class SharedAnimeWatchRepository(
     private val sourceHttpClient: HttpClient = client,
     private val preferEnglish: Boolean = false,
     private val externalSourceFactory: ((SourceId, DefaultSourceContext) -> AnimeSource?)? = null,
+    private val sourceConfigProvider: (SourceId) -> SourceConfig = { SourceConfig.EMPTY },
     private val playbackAttemptTimeoutMillis: Long = DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS,
     private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     private val sourceExecutionPolicy: SourceExecutionPolicy =
@@ -172,7 +174,7 @@ class SharedAnimeWatchRepository(
                     BuiltInSources.YUMMY_ANIME_ID -> MapSourceConfig(
                         secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to DEFAULT_YUMMY_APPLICATION_TOKEN),
                     )
-                    else -> MapSourceConfig()
+                    else -> sourceConfigProvider(sourceId)
                 },
                 sourceHealthReporter = sourceHealthReporter,
                 sourceExecutionPolicy = sourceExecutionPolicy,

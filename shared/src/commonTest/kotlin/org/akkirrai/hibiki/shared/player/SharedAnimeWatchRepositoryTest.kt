@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertSame
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.ExternalSourcePlaybackRuntime
+import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.RuntimeBackedPlaybackAnimeSource
 import org.akkirrai.beakokit.api.SourceId
@@ -45,7 +46,11 @@ class SharedAnimeWatchRepositoryTest {
             sourceHttpClient = sourceClient,
             externalSourceFactory = { requestedId, context ->
                 assertSame(sourceClient, context.httpClient)
+                assertEquals("configured", context.config.value("setting"))
                 source.takeIf { requestedId == sourceId }
+            },
+            sourceConfigProvider = {
+                MapSourceConfig(values = mapOf("setting" to "configured"))
             },
         )
 

@@ -149,6 +149,7 @@ internal fun AndroidSharedAppShell(
                 externalSourceFactory = { sourceId, sourceContext ->
                     coordinator.snapshot.value.registry?.create(sourceId, sourceContext)
                 },
+                sourceConfigProvider = externalSourceConfigStore::load,
             )
         }
     }
