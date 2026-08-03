@@ -197,6 +197,7 @@ internal fun AndroidSharedAppShell(
                 iconUrl = source.iconUrl,
                 supportsPlayback = source.supportsPlayback,
                 supportsSearch = true,
+                configSchema = source.configSchema,
             )
         }
         mergeAppSourceDescriptors(

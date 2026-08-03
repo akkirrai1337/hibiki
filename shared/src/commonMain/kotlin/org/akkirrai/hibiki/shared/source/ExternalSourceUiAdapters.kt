@@ -15,6 +15,7 @@ fun ExternalSourceRegistry.toAppSourceDescriptors(): List<AppSourceDescriptor> =
             supportsPlayback = SourceCapability.PLAYBACK in info.capabilities,
             // Search is part of the minimal external runtime contract, not an optional capability.
             supportsSearch = true,
+            configSchema = info.configSchema,
         )
     }
 

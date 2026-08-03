@@ -43,6 +43,9 @@ data class AnimeSourceDescriptor(
     val supportsPlayback: Boolean
         get() = SourceCapability.PLAYBACK in info.capabilities
 
+    val configSchema: org.akkirrai.beakokit.api.SourceConfigSchema
+        get() = info.configSchema
+
     val contentFeatures: Set<SourceCapability>
         get() = info.capabilities.intersect(CONTENT_CAPABILITIES)
 

@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.source
 
+import org.akkirrai.beakokit.api.SourceConfigSchema
+
 /** Platform-neutral source metadata consumed by the shared Sources UI. */
 data class AppSourceDescriptor(
     val id: String,
@@ -9,4 +11,5 @@ data class AppSourceDescriptor(
     val iconUrl: String? = null,
     val supportsPlayback: Boolean = false,
     val supportsSearch: Boolean = false,
+    val configSchema: SourceConfigSchema = SourceConfigSchema(),
 )
