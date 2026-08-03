@@ -11,6 +11,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 
 class ProtocolBackedExternalSourceRuntimeTest {
     @Test
@@ -37,6 +40,37 @@ class ProtocolBackedExternalSourceRuntimeTest {
         assertEquals(SourceHostHttpRequest.DEFAULT_TIMEOUT_MILLIS, receivedLimits?.timeoutMillis)
         assertEquals(SourceHostHttpRequest.DEFAULT_MAX_RESPONSE_BYTES, receivedLimits?.maxResponseBytes)
         assertEquals(listOf("decoded-search"), result.map(AnimeTitle::id))
+    }
+
+    @Test
+    fun playbackRuntimeSendsPlaybackOperationsAndDecodesPayloads() = runBlocking {
+        val requests = mutableListOf<ExternalSourceRuntimeRequest>()
+        val runtime = ProtocolBackedExternalSourcePlaybackRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                requests += request
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("kind", request.operation.name) },
+                )
+            },
+            payloadCodec = FakePlaybackPayloadCodec(),
+            requestIdFactory = { "playback-${requests.size}" },
+        )
+        val title = wireTitle("title-1")
+        val group = PlaybackGroup(
+            id = "group-1",
+            title = "Dub",
+            episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+        )
+
+        assertEquals(listOf(group), runtime.playbackGroups(title))
+        assertEquals(
+            listOf(PlayerLink("https://example.test/video.mp4", PlayerType.DIRECT_MP4, "720p")),
+            runtime.playerLinks(title, group, group.episodes.single()),
+        )
+        assertEquals(ExternalSourceRuntimeOperation.PLAYBACK_GROUPS, requests[0].operation)
+        assertEquals(ExternalSourceRuntimeOperation.PLAYER_LINKS, requests[1].operation)
+        assertEquals("group-1", requests[1].payload["groupId"]?.toString()?.trim('"'))
     }
 
     @Test
@@ -228,6 +262,39 @@ class ProtocolBackedExternalSourceRuntimeTest {
         override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = listOf(title("decoded-search"))
 
         override fun decodeDetails(payload: JsonObject): AnimeTitle = title("decoded-details")
+
+        private fun title(id: String) = AnimeTitle(
+            id = id,
+            russianName = null,
+            englishName = id,
+            originalName = id,
+            japaneseName = null,
+            synonyms = emptyList(),
+            year = null,
+            type = null,
+            episodeCount = null,
+            posterUrl = null,
+            status = null,
+            description = null,
+        )
+    }
+
+    private class FakePlaybackPayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec {
+        override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = emptyList()
+
+        override fun decodeDetails(payload: JsonObject): AnimeTitle = title("decoded-details")
+
+        override fun decodePlaybackGroups(payload: JsonObject): List<PlaybackGroup> = listOf(
+            PlaybackGroup(
+                id = "group-1",
+                title = "Dub",
+                episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+            ),
+        )
+
+        override fun decodePlayerLinks(payload: JsonObject): List<PlayerLink> = listOf(
+            PlayerLink("https://example.test/video.mp4", PlayerType.DIRECT_MP4, "720p"),
+        )
 
         private fun title(id: String) = AnimeTitle(
             id = id,

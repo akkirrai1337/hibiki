@@ -6,6 +6,8 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
 
 /**
  * Platform transport for one request/response exchange with an external runtime.
@@ -43,8 +45,15 @@ interface ExternalSourceRuntimePayloadCodec {
     fun decodeDetails(payload: JsonObject): AnimeTitle
 }
 
+/** Response decoder for the optional playback operations. */
+interface ExternalSourcePlaybackRuntimePayloadCodec : ExternalSourceRuntimePayloadCodec {
+    fun decodePlaybackGroups(payload: JsonObject): List<PlaybackGroup>
+
+    fun decodePlayerLinks(payload: JsonObject): List<PlayerLink>
+}
+
 /** Turns the versioned wire exchange into the common external-source runtime contract. */
-class ProtocolBackedExternalSourceRuntime(
+open class ProtocolBackedExternalSourceRuntime(
     private val transport: ExternalSourceRuntimeTransport,
     private val payloadCodec: ExternalSourceRuntimePayloadCodec,
     private val requestIdFactory: () -> String,
@@ -62,7 +71,7 @@ class ProtocolBackedExternalSourceRuntime(
         decode = payloadCodec::decodeDetails,
     )
 
-    private suspend fun <T> call(
+    protected suspend fun <T> call(
         operation: ExternalSourceRuntimeOperation,
         payload: JsonObject,
         decode: (JsonObject) -> T,
@@ -124,4 +133,33 @@ class ProtocolBackedExternalSourceRuntime(
             )
         }
     }
+}
+
+/** Protocol-backed runtime that exposes the optional playback contract. */
+class ProtocolBackedExternalSourcePlaybackRuntime(
+    transport: ExternalSourceRuntimeTransport,
+    private val payloadCodec: ExternalSourcePlaybackRuntimePayloadCodec,
+    requestIdFactory: () -> String,
+    callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+) : ProtocolBackedExternalSourceRuntime(
+    transport = transport,
+    payloadCodec = payloadCodec,
+    requestIdFactory = requestIdFactory,
+    callLimits = callLimits,
+), ExternalSourcePlaybackRuntime {
+    override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> = call(
+        operation = ExternalSourceRuntimeOperation.PLAYBACK_GROUPS,
+        payload = ExternalSourceRuntimePayloads.playbackGroups(title),
+        decode = payloadCodec::decodePlaybackGroups,
+    )
+
+    override suspend fun playerLinks(
+        title: AnimeTitle,
+        group: PlaybackGroup,
+        episode: Episode,
+    ): List<PlayerLink> = call(
+        operation = ExternalSourceRuntimeOperation.PLAYER_LINKS,
+        payload = ExternalSourceRuntimePayloads.playerLinks(title, group, episode),
+        decode = payloadCodec::decodePlayerLinks,
+    )
 }

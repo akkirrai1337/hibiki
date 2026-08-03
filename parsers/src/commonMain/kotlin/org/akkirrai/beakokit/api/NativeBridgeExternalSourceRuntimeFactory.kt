@@ -29,8 +29,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
                 listOf("Unsupported source runtime: ${runtime.id}/${runtime.abi}"),
             )
         }
-        return ProtocolBackedExternalSourceRuntime(
-            transport = NativeBridgeExternalSourceRuntimeTransport(
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
                 bridge = bridgeFactory.create(
                     sourcePackage = sourcePackage,
                     context = context,
@@ -40,11 +39,22 @@ class NativeBridgeExternalSourceRuntimeFactory(
                     ),
                     hostRequirements = sourcePackage.manifest.hostRequirements(),
                 ),
-            ),
-            payloadCodec = payloadCodec,
-            requestIdFactory = requestIdFactory,
-            callLimits = callLimits,
-        )
+            )
+        return if (payloadCodec is ExternalSourcePlaybackRuntimePayloadCodec) {
+            ProtocolBackedExternalSourcePlaybackRuntime(
+                transport = transport,
+                payloadCodec = payloadCodec,
+                requestIdFactory = requestIdFactory,
+                callLimits = callLimits,
+            )
+        } else {
+            ProtocolBackedExternalSourceRuntime(
+                transport = transport,
+                payloadCodec = payloadCodec,
+                requestIdFactory = requestIdFactory,
+                callLimits = callLimits,
+            )
+        }
     }
 
 }
