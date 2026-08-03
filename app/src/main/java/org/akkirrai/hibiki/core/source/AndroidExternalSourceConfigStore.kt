@@ -48,6 +48,10 @@ internal class AndroidExternalSourceConfigStore(
 
     fun saveValue(sourceId: SourceId, key: String, value: String) {
         requireConfigKey(key)
+        if (value.isBlank()) {
+            clearValue(sourceId, key)
+            return
+        }
         check(valuesPreferences.edit().putString(valueKey(sourceId, key), value).commit()) {
             "Could not persist external source config"
         }
@@ -62,6 +66,10 @@ internal class AndroidExternalSourceConfigStore(
 
     fun saveSecret(sourceId: SourceId, key: String, value: String) {
         requireConfigKey(key)
+        if (value.isBlank()) {
+            clearSecret(sourceId, key)
+            return
+        }
         secretStore.save(secretKey(sourceId, key), value)
         updateSecretKeys(sourceId) { it + key }
     }

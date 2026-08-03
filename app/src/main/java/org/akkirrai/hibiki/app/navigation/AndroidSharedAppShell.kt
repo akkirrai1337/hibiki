@@ -281,11 +281,20 @@ internal fun AndroidSharedAppShell(
                         source.configSchema.fields.forEach { field ->
                             if (field.kind == SourceConfigValueKind.SECRET) {
                                 secrets[field.key]?.let { value ->
-                                    externalSourceConfigStore.saveSecret(sourceId, field.key, value)
+                                    if (value.isBlank()) {
+                                        externalSourceConfigStore.clearSecret(sourceId, field.key)
+                                    } else {
+                                        externalSourceConfigStore.saveSecret(sourceId, field.key, value)
+                                    }
                                 }
                             } else {
                                 values[field.key]?.let { value ->
-                                    externalSourceConfigStore.saveValue(sourceId, field.key, value)
+                                    val normalizedValue = value.trim()
+                                    if (normalizedValue.isEmpty()) {
+                                        externalSourceConfigStore.clearValue(sourceId, field.key)
+                                    } else {
+                                        externalSourceConfigStore.saveValue(sourceId, field.key, normalizedValue)
+                                    }
                                 }
                             }
                         }
