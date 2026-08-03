@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,13 +24,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.akkirrai.beakokit.api.SourceErrorCode
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
 
 data class ExternalSourceRepositorySectionLabels(
     val title: String,
     val urlLabel: String,
     val urlHint: String,
+    val invalidUrlError: String,
+    val operationFailedError: String,
     val addLabel: String,
     val refreshLabel: String,
     val removeLabel: String,
@@ -52,9 +57,15 @@ fun ExternalSourceRepositorySection(
     onInstallPackage: (SourceId) -> Unit = {},
     onRollbackPackage: (SourceId) -> Unit = {},
     modifier: Modifier = Modifier,
-    errorMessage: (Throwable) -> String = { it.message.orEmpty() },
 ) {
     var url by remember { mutableStateOf("") }
+    var submittedUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.isBusy, state.error, state.repositories) {
+        if (submittedUrl != null && !state.isBusy && state.error == null) {
+            url = ""
+            submittedUrl = null
+        }
+    }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -80,8 +91,8 @@ fun ExternalSourceRepositorySection(
             )
             Button(
                 onClick = {
-                    onAddRepository(url.trim())
-                    url = ""
+                    submittedUrl = url.trim()
+                    onAddRepository(submittedUrl.orEmpty())
                 },
                 enabled = !state.isBusy && url.isNotBlank(),
             ) {
@@ -90,7 +101,13 @@ fun ExternalSourceRepositorySection(
         }
         state.error?.let { error ->
             Text(
-                text = errorMessage(error),
+                text = when {
+                    error is IllegalArgumentException ||
+                        (error as? SourceException)?.code == SourceErrorCode.INVALID_REQUEST -> {
+                        labels.invalidUrlError
+                    }
+                    else -> labels.operationFailedError
+                },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )

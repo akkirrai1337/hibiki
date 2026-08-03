@@ -108,6 +108,8 @@ enum class AppTextKey {
     SettingsExternalRepositories,
     SettingsExternalRepositoryUrl,
     SettingsExternalRepositoryUrlHint,
+    SettingsExternalRepositoryInvalidUrl,
+    SettingsExternalRepositoryOperationFailed,
     SettingsExternalRepositoryAdd,
     SettingsExternalRepositoryRefresh,
     SettingsExternalRepositoryRemove,
@@ -382,6 +384,16 @@ class DefaultAppTextResolver(
                 "GitHub blob/raw или прямой URL index.json"
             } else {
                 "GitHub blob/raw link or direct index.json URL"
+            }
+            AppTextKey.SettingsExternalRepositoryInvalidUrl -> if (russian) {
+                "Укажи корректную HTTPS-ссылку на index.json или GitHub-файл"
+            } else {
+                "Enter a valid HTTPS index.json or GitHub file link"
+            }
+            AppTextKey.SettingsExternalRepositoryOperationFailed -> if (russian) {
+                "Не удалось обработать repository"
+            } else {
+                "Could not process repository"
             }
             AppTextKey.SettingsExternalRepositoryAdd -> if (russian) "Добавить" else "Add"
             AppTextKey.SettingsExternalRepositoryRefresh -> if (russian) "Обновить источники" else "Refresh sources"

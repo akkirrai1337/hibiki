@@ -2911,6 +2911,8 @@ private fun SettingsScreen(
                 title = appText(AppTextKey.SettingsExternalRepositories),
                 urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
                 urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
+                invalidUrlError = appText(AppTextKey.SettingsExternalRepositoryInvalidUrl),
+                operationFailedError = appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
                 addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
                 refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
                 removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
