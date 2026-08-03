@@ -11,12 +11,16 @@ class SourceRepositoryUrlResolver {
         val url = input.trim()
         require(url.isNotEmpty()) { "Repository URL must not be blank" }
 
-        return when {
-            url.startsWith("https://github.com/", ignoreCase = true) ->
-                SourceRepositoryEndpoint(resolveGithubUrl(url))
-            url.startsWith("https://raw.githubusercontent.com/", ignoreCase = true) ->
-                SourceRepositoryEndpoint(url)
-            else -> SourceRepositoryEndpoint(url)
+        return try {
+            when {
+                url.startsWith("https://github.com/", ignoreCase = true) ->
+                    SourceRepositoryEndpoint(resolveGithubUrl(url))
+                url.startsWith("https://raw.githubusercontent.com/", ignoreCase = true) ->
+                    SourceRepositoryEndpoint(url)
+                else -> SourceRepositoryEndpoint(url)
+            }
+        } catch (error: IllegalArgumentException) {
+            throw SourceRepositoryUrlException(error.message ?: "Invalid repository URL", error)
         }
     }
 
@@ -44,3 +48,8 @@ class SourceRepositoryUrlResolver {
         return "https://raw.githubusercontent.com/$owner/$repository/$ref/$filePath"
     }
 }
+
+class SourceRepositoryUrlException(
+    message: String,
+    cause: Throwable? = null,
+) : IllegalArgumentException(message, cause)

@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.akkirrai.beakokit.api.SourceErrorCode
+import org.akkirrai.beakokit.api.SourceRepositoryUrlException
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
@@ -102,7 +103,7 @@ fun ExternalSourceRepositorySection(
         state.error?.let { error ->
             Text(
                 text = when {
-                    error is IllegalArgumentException ||
+                    error is SourceRepositoryUrlException ||
                         (error as? SourceException)?.code == SourceErrorCode.INVALID_REQUEST -> {
                         labels.invalidUrlError
                     }

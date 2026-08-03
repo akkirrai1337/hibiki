@@ -41,8 +41,15 @@ class SourceRepositoryUrlResolverTest {
 
     @Test
     fun `rejects GitHub links with query or fragment`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourceRepositoryUrlException> {
             resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/index.json?raw=1")
+        }
+    }
+
+    @Test
+    fun `classifies invalid direct URL as a repository URL error`() {
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("not-https")
         }
     }
 }
