@@ -85,7 +85,17 @@ class ExternalSourceRepositoryController(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                _state.value = _state.value.copy(isBusy = false, error = error)
+                val recoveredState = try {
+                    loadState()
+                } catch (recoveryError: CancellationException) {
+                    throw recoveryError
+                } catch (_: Throwable) {
+                    null
+                }
+                _state.value = (recoveredState ?: _state.value).copy(
+                    isBusy = false,
+                    error = error,
+                )
             }
         }
     }

@@ -56,6 +56,23 @@ class ExternalSourceRepositoryControllerTest {
     }
 
     @Test
+    fun controllerKeepsPersistedRepositoryVisibleWhenRefreshFails() = runTest {
+        val actions = FakeActions(refreshFailures = 2)
+        val controller = ExternalSourceRepositoryController(actions, this)
+        advanceUntilIdle()
+
+        controller.addRepository("https://example.test/index.json")
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("https://example.test/index.json"),
+            controller.state.value.repositories.map { it.url },
+        )
+        assertNotNull(controller.state.value.error)
+        assertEquals(false, controller.state.value.isBusy)
+    }
+
+    @Test
     fun controllerDelegatesInstallationInitializationAndRollback() = runTest {
         val actions = FakeActions()
         val controller = ExternalSourceRepositoryController(actions, this)
@@ -73,7 +90,9 @@ class ExternalSourceRepositoryControllerTest {
         assertEquals(true, initialized)
     }
 
-    private class FakeActions : ExternalSourceRepositoryActions {
+    private class FakeActions(
+        private var refreshFailures: Int = 0,
+    ) : ExternalSourceRepositoryActions {
         private val items = mutableListOf<SourceRepositoryEndpoint>()
         val installed = mutableListOf<SourceId>()
         val rolledBack = mutableListOf<SourceId>()
@@ -82,13 +101,23 @@ class ExternalSourceRepositoryControllerTest {
 
         override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
             if (items.none { it.url == endpoint.url }) items += endpoint
+            failRefreshIfRequested()
         }
 
         override suspend fun removeRepositoryFromUi(url: String) {
             items.removeAll { it.url == url }
         }
 
-        override suspend fun refreshRepositories() = Unit
+        override suspend fun refreshRepositories() {
+            failRefreshIfRequested()
+        }
+
+        private fun failRefreshIfRequested() {
+            if (refreshFailures > 0) {
+                refreshFailures--
+                error("Repository refresh failed")
+            }
+        }
 
         override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
 
