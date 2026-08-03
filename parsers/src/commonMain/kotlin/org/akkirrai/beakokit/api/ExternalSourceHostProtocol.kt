@@ -12,6 +12,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 @Serializable
 enum class ExternalSourceHostOperation {
     HTTP_REQUEST,
+    STORAGE_READ,
+    STORAGE_WRITE,
+    STORAGE_REMOVE,
 }
 
 @Serializable
@@ -99,6 +102,32 @@ data class ExternalSourceHostHttpResponse(
     val body: String,
 )
 
+@Serializable
+data class ExternalSourceHostStorageReadRequest(
+    val key: String,
+)
+
+@Serializable
+data class ExternalSourceHostStorageReadResponse(
+    val value: String?,
+)
+
+@Serializable
+data class ExternalSourceHostStorageWriteRequest(
+    val key: String,
+    val value: String,
+)
+
+@Serializable
+data class ExternalSourceHostStorageRemoveRequest(
+    val key: String,
+)
+
+@Serializable
+data class ExternalSourceHostStorageMutationResponse(
+    val success: Boolean = true,
+)
+
 object ExternalSourceHostProtocolCodec {
     private val json = Json {
         encodeDefaults = true
@@ -128,6 +157,36 @@ object ExternalSourceHostProtocolCodec {
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeHttpResponse(payload: JsonObject): ExternalSourceHostHttpResponse =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeStorageReadRequest(request: ExternalSourceHostStorageReadRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeStorageReadRequest(payload: JsonObject): ExternalSourceHostStorageReadRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeStorageReadResponse(response: ExternalSourceHostStorageReadResponse): JsonObject =
+        json.encodeToJsonElement(response) as JsonObject
+
+    fun decodeStorageReadResponse(payload: JsonObject): ExternalSourceHostStorageReadResponse =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeStorageWriteRequest(request: ExternalSourceHostStorageWriteRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeStorageWriteRequest(payload: JsonObject): ExternalSourceHostStorageWriteRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeStorageRemoveRequest(request: ExternalSourceHostStorageRemoveRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeStorageRemoveRequest(payload: JsonObject): ExternalSourceHostStorageRemoveRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeStorageMutationResponse(response: ExternalSourceHostStorageMutationResponse): JsonObject =
+        json.encodeToJsonElement(response) as JsonObject
+
+    fun decodeStorageMutationResponse(payload: JsonObject): ExternalSourceHostStorageMutationResponse =
         json.decodeFromJsonElement(payload)
 }
 

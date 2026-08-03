@@ -4,19 +4,19 @@ package org.akkirrai.beakokit.api
 abstract class SourceHostStorage(
     private val maxStorageBytes: Long = DEFAULT_MAX_STORAGE_BYTES,
     private val maxEntryCount: Int = DEFAULT_MAX_ENTRY_COUNT,
-) : SourceHostAccess {
+) : SourceHostAccess, ExternalSourceHostStorageAccess {
     init {
         require(maxStorageBytes > 0) { "Maximum source storage size must be positive" }
         require(maxEntryCount > 0) { "Maximum source storage entry count must be positive" }
     }
 
-    suspend fun read(key: String): String? {
+    override suspend fun read(key: String): String? {
         SourceHostStorage.requireKey(key)
         require(SourceHostCapability.STORAGE)
         return readValue(key)
     }
 
-    suspend fun write(key: String, value: String) {
+    override suspend fun write(key: String, value: String) {
         SourceHostStorage.requireKey(key)
         SourceHostStorage.requireValue(value)
         require(SourceHostCapability.STORAGE)
@@ -36,7 +36,7 @@ abstract class SourceHostStorage(
         writeValue(key, value)
     }
 
-    suspend fun remove(key: String) {
+    override suspend fun remove(key: String) {
         SourceHostStorage.requireKey(key)
         require(SourceHostCapability.STORAGE)
         removeValue(key)

@@ -128,4 +128,98 @@ class ExternalSourceHostProtocolTest {
             )
         }
     }
+
+    @Test
+    fun storage_operations_round_trip_through_the_dispatcher() = runBlocking {
+        val values = mutableMapOf<String, String>()
+        val storage = object : ExternalSourceHostStorageAccess {
+            override suspend fun read(key: String): String? = values[key]
+
+            override suspend fun write(key: String, value: String) {
+                values[key] = value
+            }
+
+            override suspend fun remove(key: String) {
+                values.remove(key)
+            }
+        }
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = storage,
+        )
+
+        val writeRequest = ExternalSourceHostRequest(
+            requestId = "storage-write",
+            operation = ExternalSourceHostOperation.STORAGE_WRITE,
+            payload = ExternalSourceHostProtocolCodec.encodeStorageWriteRequest(
+                ExternalSourceHostStorageWriteRequest("token", "abc"),
+            ),
+        )
+        dispatcher.dispatch(writeRequest)
+        assertEquals("abc", values["token"])
+
+        val readResponse = dispatcher.dispatch(
+            ExternalSourceHostRequest(
+                requestId = "storage-read",
+                operation = ExternalSourceHostOperation.STORAGE_READ,
+                payload = ExternalSourceHostProtocolCodec.encodeStorageReadRequest(
+                    ExternalSourceHostStorageReadRequest("token"),
+                ),
+            ),
+        )
+        assertEquals(
+            ExternalSourceHostStorageReadResponse("abc"),
+            ExternalSourceHostProtocolCodec.decodeStorageReadResponse(
+                readResponse.requirePayload("storage-read"),
+            ),
+        )
+
+        dispatcher.dispatch(
+            ExternalSourceHostRequest(
+                requestId = "storage-remove",
+                operation = ExternalSourceHostOperation.STORAGE_REMOVE,
+                payload = ExternalSourceHostProtocolCodec.encodeStorageRemoveRequest(
+                    ExternalSourceHostStorageRemoveRequest("token"),
+                ),
+            ),
+        )
+        assertEquals(null, values["token"])
+    }
+
+    @Test
+    fun storage_operation_requires_a_storage_host() = runBlocking {
+        assertFailsWith<SourceHostCapabilityException> {
+            ExternalSourceHostDispatcher { error("HTTP must not be called") }.dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "storage-denied",
+                    operation = ExternalSourceHostOperation.STORAGE_READ,
+                    payload = ExternalSourceHostProtocolCodec.encodeStorageReadRequest(
+                        ExternalSourceHostStorageReadRequest("token"),
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun storage_operation_rejects_invalid_wire_limits() = runBlocking {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostDispatcher(
+                executeHttpRequest = { error("HTTP must not be called") },
+                storage = object : ExternalSourceHostStorageAccess {
+                    override suspend fun read(key: String): String? = null
+                    override suspend fun write(key: String, value: String) = Unit
+                    override suspend fun remove(key: String) = Unit
+                },
+            ).dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "storage-invalid",
+                    operation = ExternalSourceHostOperation.STORAGE_WRITE,
+                    payload = ExternalSourceHostProtocolCodec.encodeStorageWriteRequest(
+                        ExternalSourceHostStorageWriteRequest("", "value"),
+                    ),
+                ),
+            )
+        }
+    }
 }
