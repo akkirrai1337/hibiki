@@ -121,6 +121,36 @@ class ExternalSourceCatalogRepositoryTest {
         )
     }
 
+    @Test
+    fun transitionalRepositoryFallsBackWhenExternalRegistryDisappears() = runTest {
+        val sourceId = SourceId("external-source")
+        var activeRegistry: ExternalSourceRegistry? = registry(sourceId)
+        val external = ExternalSourceCatalogRepository(
+            registryProvider = { activeRegistry },
+            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+        )
+        val builtInAnime = Anime(
+            id = "built-in",
+            title = "Built-in",
+            subtitle = "",
+            episodesLabel = "",
+            status = "",
+        )
+        val builtIn = object : AnimeCatalogRepository {
+            override val initialItems = listOf(builtInAnime)
+            override suspend fun search(query: AnimeCatalogQuery) = AnimeCatalogPage(initialItems, 1, false)
+        }
+        val transitional = TransitionalAnimeCatalogRepository(builtIn, external)
+
+        transitional.selectSource(sourceId.value)
+        assertEquals("External title", transitional.search(AnimeCatalogQuery()).items.single().title)
+
+        activeRegistry = null
+
+        assertEquals("Built-in", transitional.search(AnimeCatalogQuery()).items.single().title)
+    }
+
     private fun registry(
         sourceId: SourceId,
         onSearch: (AnimeSearchRequest) -> Unit = {},

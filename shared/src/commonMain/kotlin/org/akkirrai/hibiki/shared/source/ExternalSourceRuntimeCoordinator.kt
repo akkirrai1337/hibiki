@@ -22,7 +22,7 @@ class ExternalSourceRuntimeCoordinator(
     private val platform: ExternalSourceRepositoryPlatform,
     private val catalogCapabilities: (org.akkirrai.beakokit.api.SourceManifest) -> CatalogCapabilities,
     private val runtimeFactory: ExternalSourceRuntimeFactory,
-) {
+) : ExternalSourceRepositoryActions {
     private val operationMutex = Mutex()
     private val state = MutableStateFlow(
         ExternalSourceRuntimeSnapshot(
@@ -34,7 +34,7 @@ class ExternalSourceRuntimeCoordinator(
     val snapshot: StateFlow<ExternalSourceRuntimeSnapshot> = state.asStateFlow()
 
     /** Returns the persisted repository endpoints without loading their indexes. */
-    suspend fun repositories(): List<SourceRepositoryEndpoint> = operationMutex.withLock {
+    override suspend fun repositories(): List<SourceRepositoryEndpoint> = operationMutex.withLock {
         platform.coordinator.repositories()
     }
 
@@ -74,6 +74,18 @@ class ExternalSourceRuntimeCoordinator(
         }
         updateConfiguredRepositories()
         refreshLocked()
+    }
+
+    override suspend fun refreshRepositories() {
+        refresh()
+    }
+
+    override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
+        addRepository(endpoint)
+    }
+
+    override suspend fun removeRepositoryFromUi(url: String) {
+        removeRepository(url)
     }
 
     private suspend fun refreshLocked(): SourceRepositoryLoadSnapshot {
@@ -210,6 +222,17 @@ class ExternalSourceRuntimeCoordinator(
     }
 
     fun close() = platform.close()
+}
+
+/** Narrow repository-management boundary for shared settings UI. */
+interface ExternalSourceRepositoryActions {
+    suspend fun repositories(): List<SourceRepositoryEndpoint>
+
+    suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint)
+
+    suspend fun removeRepositoryFromUi(url: String)
+
+    suspend fun refreshRepositories()
 }
 
 data class ExternalSourceRuntimeSnapshot(
