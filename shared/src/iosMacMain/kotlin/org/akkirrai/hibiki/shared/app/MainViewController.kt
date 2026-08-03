@@ -134,10 +134,11 @@ fun MainViewController(systemLanguage: String): UIViewController {
         val externalCatalogRepository = remember(externalRuntimeCoordinator, externalRuntimeHttpClient) {
             ExternalSourceCatalogRepository(
                 registryProvider = { externalRuntimeCoordinator.snapshot.value.registry },
-                contextProvider = { _ ->
+                contextProvider = { sourceId ->
                     DefaultSourceContext(
                         httpClient = externalRuntimeHttpClient,
                         preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                        config = externalConfigStore.load(sourceId),
                     )
                 },
                 statusLabels = ExternalAnimeStatusLabels(

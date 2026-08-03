@@ -11,6 +11,8 @@ import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRegistration
 import org.akkirrai.beakokit.api.ExternalSourceRuntime
 import org.akkirrai.beakokit.api.SourceApi
+import org.akkirrai.beakokit.api.SourceConfig
+import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -48,7 +50,7 @@ class ExternalSourceCatalogRepositoryTest {
         val sourceId = SourceId("external-source")
         var request: AnimeSearchRequest? = null
         val repository = ExternalSourceCatalogRepository(
-            registryProvider = { registry(sourceId) { request = it } },
+            registryProvider = { registry(sourceId, onSearch = { request = it }) },
             contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
             statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
             initialSourceId = sourceId,
@@ -82,6 +84,36 @@ class ExternalSourceCatalogRepositoryTest {
         assertContentEquals(listOf("Horror"), actual.excludedGenreAliases)
         assertEquals(2010, actual.yearFrom)
         assertEquals(2020, actual.yearTo)
+    }
+
+    @Test
+    fun catalogOperationsCreateExternalSourcesWithTheSourceScopedContext() = runTest {
+        val sourceId = SourceId("external-source")
+        var receivedConfig: SourceConfig? = null
+        val repository = ExternalSourceCatalogRepository(
+            registryProvider = { registry(sourceId, onContext = { receivedConfig = it.config }) },
+            contextProvider = {
+                DefaultSourceContext(
+                    httpClient = HttpClient(),
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                    config = MapSourceConfig(
+                        values = mapOf("region" to "jp"),
+                        secrets = mapOf("token" to "secret"),
+                    ),
+                )
+            },
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+            initialSourceId = sourceId,
+        )
+
+        val search = repository.search(AnimeCatalogQuery(text = "query"))
+        repository.getDetails(search.items.single().id, search.items.single())
+
+        assertEquals(
+            "jp",
+            receivedConfig?.value("region"),
+        )
+        assertEquals("secret", receivedConfig?.secret("token"))
     }
 
     @Test
@@ -154,6 +186,7 @@ class ExternalSourceCatalogRepositoryTest {
     private fun registry(
         sourceId: SourceId,
         onSearch: (AnimeSearchRequest) -> Unit = {},
+        onContext: (org.akkirrai.beakokit.api.SourceContext) -> Unit = {},
     ): ExternalSourceRegistry =
         ExternalSourceRegistry(
             org.akkirrai.beakokit.api.SourceCatalog(
@@ -165,7 +198,8 @@ class ExternalSourceCatalogRepositoryTest {
                             languages = setOf(SourceLanguage.ENGLISH),
                             primaryLanguage = SourceLanguage.ENGLISH,
                         ),
-                        factory = org.akkirrai.beakokit.api.SourceFactory { _ ->
+                        factory = org.akkirrai.beakokit.api.SourceFactory { context ->
+                            onContext(context)
                             org.akkirrai.beakokit.api.RuntimeBackedAnimeSource(
                                 info = SourceInfo(
                                     id = sourceId,
