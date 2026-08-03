@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetPadding
 
 @Composable
 fun AppPlayerBottomOverlay(
@@ -37,7 +36,6 @@ fun AppPlayerBottomOverlay(
                     1f to Color.Black.copy(alpha = 0.92f),
                 ),
             )
-            .appBottomSystemInsetPadding()
             .padding(
                 start = PlayerBottomOverlayHorizontalPadding,
                 end = PlayerBottomOverlayHorizontalPadding,

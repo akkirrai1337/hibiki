@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -219,7 +220,9 @@ fun AppSettingsScreen(
             AppDetailsHeroOverlayBackButton(
                 onClick = onBackClick,
                 contentDescription = backContentDescription,
-                modifier = Modifier.align(Alignment.TopStart),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(y = SettingsBackButtonVerticalOffset),
             )
         }
     }

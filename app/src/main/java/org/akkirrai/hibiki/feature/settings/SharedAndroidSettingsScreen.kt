@@ -32,6 +32,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.shared.settings.AppDiscordAuthDialog
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreen
 import org.akkirrai.hibiki.shared.settings.AppSettingsScreenLabels
+import org.akkirrai.hibiki.shared.settings.ExternalSourceRepositorySectionLabels
 import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.resolveDiscordRpcStatusLabel
@@ -39,6 +40,9 @@ import org.akkirrai.hibiki.shared.settings.resolveNotificationPermissionLabel
 import org.akkirrai.hibiki.shared.settings.resolveLanguageModeLabel
 import org.akkirrai.hibiki.shared.settings.resolveThemeModeLabel
 import org.akkirrai.hibiki.shared.settings.isBusy
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
+import org.akkirrai.hibiki.shared.text.AppTextKey
+import org.akkirrai.hibiki.shared.text.appText
 
 @Composable
 fun SharedAndroidSettingsScreen(
@@ -46,6 +50,7 @@ fun SharedAndroidSettingsScreen(
     bottomContentPadding: Dp = 96.dp,
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    externalRepositoryController: ExternalSourceRepositoryController? = null,
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -68,6 +73,25 @@ fun SharedAndroidSettingsScreen(
     val versionName = remember(context) {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    }
+    val externalRepositoryState = externalRepositoryController?.state?.collectAsState()?.value
+    val externalRepositoryLabels = externalRepositoryController?.let {
+        ExternalSourceRepositorySectionLabels(
+            title = appText(AppTextKey.SettingsExternalRepositories),
+            urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
+            urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
+            invalidUrlError = appText(AppTextKey.SettingsExternalRepositoryInvalidUrl),
+            operationFailedError = appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
+            addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
+            refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
+            removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
+            busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
+            packagesTitle = appText(AppTextKey.SettingsExternalPackages),
+            installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
+            updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
+            installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
+            rollbackLabel = appText(AppTextKey.SettingsExternalPackageRollback),
+        )
     }
 
     AppSettingsScreen(
@@ -118,6 +142,13 @@ fun SharedAndroidSettingsScreen(
             }
         },
         onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
+        externalRepositoryState = externalRepositoryState,
+        externalRepositoryLabels = externalRepositoryLabels,
+        onAddExternalRepository = { url -> externalRepositoryController?.addRepository(url) },
+        onRemoveExternalRepository = { url -> externalRepositoryController?.removeRepository(url) },
+        onRefreshExternalRepositories = { externalRepositoryController?.refreshRepositories() },
+        onInstallExternalPackage = { sourceId -> externalRepositoryController?.installPackage(sourceId) },
+        onRollbackExternalPackage = { sourceId -> externalRepositoryController?.rollbackPackage(sourceId) },
         modifier = modifier,
         bottomContentPadding = bottomContentPadding,
     )

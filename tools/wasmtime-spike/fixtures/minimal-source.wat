@@ -1,6 +1,6 @@
 (module
     (import "host" "call" (func $host_call (param i32 i32) (result i64)))
-    (memory (export "memory") 2)
+    (memory (export "memory") 0)
     (global $heap (mut i32) (i32.const 4096))
     (func (export "beakokit_reset")
         i32.const 4096

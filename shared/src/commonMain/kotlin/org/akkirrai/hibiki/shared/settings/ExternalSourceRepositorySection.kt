@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,14 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.akkirrai.beakokit.api.SourceErrorCode
-import org.akkirrai.beakokit.api.SourceRepositoryUrlException
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceRepositoryUrlException
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 
 data class ExternalSourceRepositorySectionLabels(
     val title: String,
@@ -67,28 +71,30 @@ fun ExternalSourceRepositorySection(
             submittedUrl = null
         }
     }
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = labels.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+
+    AppSettingsSection(title = labels.title, modifier = modifier) {
+        AppSettingsVerticalItem(
+            headerContent = {
+                AppSettingsItemHeader(
+                    iconContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(SettingsItemIconSize),
+                        )
+                    },
+                    title = labels.urlLabel,
+                )
+            },
+            shape = RoundedCornerShape(SettingsItemOuterCornerRadius),
         ) {
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text(labels.urlLabel) },
-                supportingText = { Text(labels.urlHint) },
-                singleLine = true,
+                placeholder = { Text(labels.urlHint) },
+                maxLines = 3,
                 enabled = !state.isBusy,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             )
             Button(
                 onClick = {
@@ -96,102 +102,121 @@ fun ExternalSourceRepositorySection(
                     onAddRepository(submittedUrl.orEmpty())
                 },
                 enabled = !state.isBusy && url.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (state.isBusy) labels.busyLabel else labels.addLabel)
             }
-        }
-        state.error?.let { error ->
-            Text(
-                text = when {
-                    error is SourceRepositoryUrlException ||
-                        (error as? SourceException)?.code == SourceErrorCode.INVALID_REQUEST -> {
-                        labels.invalidUrlError
-                    }
-                    else -> labels.operationFailedError
-                },
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        state.repositories.forEach { repository ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            state.error?.let { error ->
                 Text(
-                    text = repository.url,
-                    modifier = Modifier.weight(1f).padding(vertical = 4.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = when {
+                        error is SourceRepositoryUrlException ||
+                            (error as? SourceException)?.code == SourceErrorCode.INVALID_REQUEST -> labels.invalidUrlError
+                        else -> labels.operationFailedError
+                    },
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-                IconButton(
-                    onClick = { onRemoveRepository(repository.url) },
-                    enabled = !state.isBusy,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Delete,
-                        contentDescription = labels.removeLabel,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
             }
         }
-        if (state.packages.isNotEmpty()) {
-            Text(text = labels.packagesTitle, style = MaterialTheme.typography.titleSmall)
-            state.packages.forEach { packageStatus ->
-                val title = packageStatus.availableManifest.sourceInfo?.displayName
-                    ?.takeIf { it.isNotBlank() }
-                    ?: packageStatus.sourceId.value
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "$title · ${packageStatus.availableManifest.packageVersion}",
-                        modifier = Modifier.weight(1f).padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = when {
-                            packageStatus.activePackage == null -> labels.installLabel
-                            packageStatus.updateAvailable -> labels.updateLabel
-                            else -> labels.installedLabel
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    if (packageStatus.activePackage == null || packageStatus.updateAvailable) {
-                        Button(
-                            onClick = { onInstallPackage(packageStatus.sourceId) },
+
+        if (state.repositories.isNotEmpty()) {
+            AppSettingsItems(count = state.repositories.size) { index, shape ->
+                val repository = state.repositories[index]
+                AppSettingsItemRow(
+                    iconContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.Link,
+                            contentDescription = null,
+                            modifier = Modifier.size(SettingsItemIconSize),
+                        )
+                    },
+                    shape = shape,
+                    onClick = {},
+                    trailing = {
+                        IconButton(
+                            onClick = { onRemoveRepository(repository.url) },
                             enabled = !state.isBusy,
                         ) {
-                            Text(
-                                if (packageStatus.activePackage == null) {
-                                    labels.installLabel
-                                } else {
-                                    labels.updateLabel
-                                },
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = labels.removeLabel,
                             )
                         }
+                    },
+                ) {
+                    Text(
+                        text = repository.url,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        if (state.packages.isNotEmpty()) {
+            AppSettingsSection(title = labels.packagesTitle) {
+                AppSettingsItems(count = state.packages.size) { index, shape ->
+                    val packageStatus = state.packages[index]
+                    val title = packageStatus.availableManifest.sourceInfo?.displayName
+                        ?.takeIf { it.isNotBlank() }
+                        ?: packageStatus.sourceId.value
+                    val status = when {
+                        packageStatus.activePackage == null -> labels.installLabel
+                        packageStatus.updateAvailable -> labels.updateLabel
+                        else -> labels.installedLabel
                     }
-                    if (packageStatus.rollbackAvailable) {
-                        Button(
-                            onClick = { onRollbackPackage(packageStatus.sourceId) },
-                            enabled = !state.isBusy,
-                        ) {
-                            Text(labels.rollbackLabel)
+                    AppSettingsVerticalItem(
+                        headerContent = {
+                            AppSettingsItemHeader(
+                                iconContent = {
+                                    Icon(
+                                        imageVector = if (packageStatus.updateAvailable) {
+                                            Icons.Outlined.SystemUpdate
+                                        } else {
+                                            Icons.Outlined.CloudDownload
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SettingsItemIconSize),
+                                    )
+                                },
+                                title = "$title · ${packageStatus.availableManifest.packageVersion}",
+                            )
+                        },
+                        shape = shape,
+                    ) {
+                        Text(text = status, style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (packageStatus.activePackage == null || packageStatus.updateAvailable) {
+                                Button(
+                                    onClick = { onInstallPackage(packageStatus.sourceId) },
+                                    enabled = !state.isBusy,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(if (packageStatus.activePackage == null) labels.installLabel else labels.updateLabel)
+                                }
+                            }
+                            if (packageStatus.rollbackAvailable) {
+                                Button(
+                                    onClick = { onRollbackPackage(packageStatus.sourceId) },
+                                    enabled = !state.isBusy,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(labels.rollbackLabel)
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        IconButton(
-            onClick = onRefresh,
-            enabled = !state.isBusy,
-            modifier = Modifier.align(Alignment.End),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Refresh,
-                contentDescription = labels.refreshLabel,
+
+        AppSettingsItems(count = 1) { _, shape ->
+            AppSettingsIconActionItem(
+                icon = Icons.Outlined.Refresh,
+                title = labels.refreshLabel,
+                shape = shape,
+                onClick = onRefresh,
             )
         }
     }

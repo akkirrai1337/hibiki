@@ -74,6 +74,7 @@ import org.akkirrai.hibiki.shared.model.WatchEpisode
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppOverlay
+import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 /** Coordinates Android window restoration with the shared player route lifecycle. */
 internal class AndroidPlayerWindowController {
@@ -105,6 +106,7 @@ internal fun AndroidCommonPlaybackHost(
     val androidContext = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
     val preferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current
     val exoPlayer = remember(androidContext, playback.sessionKey()) {
@@ -429,6 +431,7 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
+                topContentInset = layoutEnvironment.topSystemInset / 2,
             )
             },
             overlayContent = {
@@ -572,11 +575,12 @@ internal fun AndroidPlayerWindowMode(
             } else {
                 null
             }
-            windowInsetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            fun requestLandscape() {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            }
+            activity.runOnUiThread(::requestLandscape)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 activity.window.attributes = activity.window.attributes.apply {
                     layoutInDisplayCutoutMode =
@@ -597,6 +601,16 @@ internal fun AndroidPlayerWindowMode(
                     }
                 }
             }
+            activity.window.decorView.post {
+                if (!restored) {
+                    requestLandscape()
+                }
+            }
+            activity.window.decorView.postDelayed({
+                if (!restored) {
+                    requestLandscape()
+                }
+            }, 300L)
             controller.setRestoreAction(::restoreWindowUi)
             onDispose {
                 restoreWindowUi()

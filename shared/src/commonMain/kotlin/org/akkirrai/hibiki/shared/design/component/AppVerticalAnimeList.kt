@@ -326,6 +326,7 @@ fun AppPosterAnimeCard(
                 }
                 Text(
                     text = title,
+                    modifier = Modifier.fillMaxWidth(),
                     style = titleStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,

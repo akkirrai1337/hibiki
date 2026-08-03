@@ -99,7 +99,7 @@ fun AppProfileBannerLayout(
             ratio,
             Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = statusBarHeight + ProfileLargePadding * ratio * 0.9f)
+                .padding(top = statusBarHeight + ProfileSmallPadding * ratio)
                 .padding(end = ProfileLargePadding),
         )
     }

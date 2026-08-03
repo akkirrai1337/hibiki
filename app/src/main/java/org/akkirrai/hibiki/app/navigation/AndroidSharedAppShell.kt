@@ -347,17 +347,19 @@ internal fun AndroidSharedAppShell(
             },
             watchRepository = routedWatchRepository,
             playbackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                AndroidCommonPlaybackHost(
-                    playback = requireNotNull(playback),
-                    context = playbackContext,
-                    navigationState = navigationState,
-                    progressRepository = watchStateRepository,
-                    windowController = playerWindowController,
-                    onBack = onBack,
-                    onEpisodeSelected = onEpisodeSelected,
-                    onSettingsAction = onSettingsAction,
-                    onOverlayEvent = onOverlayEvent,
-                )
+                playback?.let { readyPlayback ->
+                    AndroidCommonPlaybackHost(
+                        playback = readyPlayback,
+                        context = playbackContext,
+                        navigationState = navigationState,
+                        progressRepository = watchStateRepository,
+                        windowController = playerWindowController,
+                        onBack = onBack,
+                        onEpisodeSelected = onEpisodeSelected,
+                        onSettingsAction = onSettingsAction,
+                        onOverlayEvent = onOverlayEvent,
+                    )
+                }
             },
             playerWindowMode = { active ->
                 AndroidPlayerWindowMode(active, playerWindowController)

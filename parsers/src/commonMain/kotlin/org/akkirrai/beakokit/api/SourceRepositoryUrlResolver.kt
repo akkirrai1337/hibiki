@@ -3,8 +3,8 @@ package org.akkirrai.beakokit.api
 /**
  * Resolves a user-provided repository link to the HTTPS URL of its index file.
  *
- * A GitHub repository root is intentionally not accepted: the index file location is part of
- * the repository contract and must be supplied explicitly by the caller.
+ * A GitHub repository root is intentionally not accepted: the index file location and ref are
+ * part of the repository contract and must be supplied explicitly by the caller.
  */
 class SourceRepositoryUrlResolver {
     fun resolve(input: String): SourceRepositoryEndpoint {
@@ -37,13 +37,18 @@ class SourceRepositoryUrlResolver {
         val owner = path[0]
         val repository = path[1].removeSuffix(".git")
         val kind = path[2]
-        require(kind == "blob" || kind == "raw") {
-            "GitHub URL must use /blob/ or /raw/ for the repository index file"
+        require(kind == "blob" || kind == "raw" || kind == "tree") {
+            "GitHub URL must use /blob/, /raw/, or /tree/ for the repository index file"
         }
         val ref = path[3]
-        val filePath = path.drop(4).joinToString("/")
-        require(owner.isNotBlank() && repository.isNotBlank() && ref.isNotBlank() && filePath.isNotBlank()) {
+        val pathAfterRef = path.drop(4).joinToString("/")
+        require(owner.isNotBlank() && repository.isNotBlank() && ref.isNotBlank() && pathAfterRef.isNotBlank()) {
             "GitHub URL must include owner, repository, ref, and index file path"
+        }
+        val filePath = if (kind == "tree" && !pathAfterRef.endsWith(".json", ignoreCase = true)) {
+            "$pathAfterRef/index.json"
+        } else {
+            pathAfterRef
         }
         return "https://raw.githubusercontent.com/$owner/$repository/$ref/$filePath"
     }

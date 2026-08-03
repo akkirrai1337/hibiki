@@ -18,6 +18,26 @@ class SourceRepositoryUrlResolverTest {
     }
 
     @Test
+    fun `resolves GitHub tree link with an explicit ref to raw index URL`() {
+        assertEquals(
+            "https://raw.githubusercontent.com/vadim/hibiki-sources/main/repository/index.json",
+            resolver.resolve(
+                "https://github.com/vadim/hibiki-sources/tree/main/repository/index.json",
+            ).url,
+        )
+    }
+
+    @Test
+    fun `resolves GitHub tree directory to its conventional index file`() {
+        assertEquals(
+            "https://raw.githubusercontent.com/vadim/hibiki-sources/main/repository/index.json",
+            resolver.resolve(
+                "https://github.com/vadim/hibiki-sources/tree/main/repository",
+            ).url,
+        )
+    }
+
+    @Test
     fun `preserves raw GitHub link`() {
         val url = "https://raw.githubusercontent.com/vadim/hibiki-sources/main/index.json"
 

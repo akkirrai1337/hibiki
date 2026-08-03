@@ -49,7 +49,12 @@ val hasReleaseSigning = listOf(
     releaseKeyAlias,
     releaseKeyPassword
 ).all { !it.isNullOrBlank() }
-val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL").orNull == "true"
+// The shared UI is the Android default; the legacy shell remains available for
+// parity fallback with -PHIBIKI_SHARED_APP_SHELL=false.
+val sharedAppShellEnabled = providers.gradleProperty("HIBIKI_SHARED_APP_SHELL")
+    .orNull
+    ?.let { it == "true" }
+    ?: true
 
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)

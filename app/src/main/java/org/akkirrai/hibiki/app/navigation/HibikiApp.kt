@@ -24,10 +24,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -85,6 +87,8 @@ import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
 import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
+import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 
 @Composable
 fun HibikiApp(
@@ -104,6 +108,16 @@ fun HibikiApp(
     val navController = rememberNavController()
     val context = LocalContext.current
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
+    val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
+    val externalRepositoryControllerScope = rememberCoroutineScope()
+    val externalRepositoryController = remember(externalCoordinator) {
+        externalCoordinator?.let {
+            ExternalSourceRepositoryController(it, externalRepositoryControllerScope)
+        }
+    }
+    DisposableEffect(externalRepositoryController) {
+        onDispose { externalRepositoryController?.close() }
+    }
     val appLanguage = LocalAppLanguage.current
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
@@ -138,6 +152,7 @@ fun HibikiApp(
                 currentTopLevel = currentTopLevel,
                 onCheckForUpdates = onCheckForUpdates,
                 onConfigureNotifications = onConfigureNotifications,
+                externalRepositoryController = externalRepositoryController,
             )
         }
     }
@@ -152,6 +167,7 @@ private fun HibikiNavHost(
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    externalRepositoryController: ExternalSourceRepositoryController? = null,
 ) {
     var sharedNavigationState by remember { mutableStateOf(AppNavigationState()) }
     val baseScreenModifier = Modifier
@@ -319,6 +335,7 @@ private fun HibikiNavHost(
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
                     },
                     onConfigureNotifications = onConfigureNotifications,
+                    externalRepositoryController = externalRepositoryController,
                 )
             }
         }

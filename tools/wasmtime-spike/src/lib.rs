@@ -19,6 +19,7 @@ use wasmtime::Instance;
 #[cfg(feature = "android-production-jni")]
 use wasmtime::{ExternType, ValType};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
+use wasmtime_wasi::{p1, WasiCtxBuilder};
 
 pub mod protocol;
 
@@ -141,8 +142,8 @@ fn require_protocol_function(
     Ok(())
 }
 
-fn write_host_response(
-    mut caller: Caller<'_, ()>,
+fn write_host_response<T>(
+    mut caller: Caller<'_, T>,
     memory: wasmtime::Memory,
     response: &[u8],
 ) -> Result<i64, wasmtime::Error> {
@@ -167,6 +168,36 @@ fn write_host_response(
         .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
     let packed = ((response_ptr as u64) << 32) | response.len() as u64;
     Ok(packed as i64)
+}
+
+fn new_wasi_context() -> wasmtime_wasi::p1::WasiP1Ctx {
+    WasiCtxBuilder::new().build_p1()
+}
+
+fn ensure_memory_range<T>(
+    store: &mut Store<T>,
+    memory: wasmtime::Memory,
+    offset: usize,
+    length: usize,
+) -> Result<(), wasmtime::Error> {
+    let required_size = offset
+        .checked_add(length)
+        .ok_or_else(|| wasmtime::Error::msg("guest memory address overflows"))?;
+    let required_pages = required_size.div_ceil(WASM_PAGE_SIZE_BYTES) as u64;
+    let current_pages = memory.size(&mut *store);
+    if required_pages > current_pages {
+        memory
+            .grow(&mut *store, required_pages - current_pages)
+            .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
+    }
+    Ok(())
+}
+
+fn ensure_guest_memory<T>(
+    store: &mut Store<T>,
+    memory: wasmtime::Memory,
+) -> Result<(), wasmtime::Error> {
+    ensure_memory_range(store, memory, 0, 1)
 }
 
 fn finish_call_before_timeout(
@@ -283,12 +314,19 @@ fn run_protocol_guest_call() -> Result<(), Box<dyn std::error::Error>> {
     let memory = instance
         .get_memory(&mut store, "memory")
         .ok_or("guest memory export is missing")?;
+    ensure_guest_memory(&mut store, memory)?;
     let reset = instance.get_typed_func::<(), ()>(&mut store, "beakokit_reset")?;
     let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
     let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
     reset.call(&mut store, ())?;
     let request_bytes = serde_json::to_vec(&request)?;
     let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    ensure_memory_range(
+        &mut store,
+        memory,
+        request_ptr as usize,
+        request_bytes.len(),
+    )?;
     memory.write(&mut store, request_ptr as usize, &request_bytes)?;
     let packed = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
     let response_ptr = (packed >> 32) as usize;
@@ -360,10 +398,11 @@ fn run_protocol_host_call_request_with_module(
     let module = Module::new(&engine, module_bytes)?;
 
     let mut linker = Linker::new(&engine);
+    p1::add_to_linker_sync(&mut linker, |wasi| wasi)?;
     linker.func_wrap(
         "host",
         "call",
-        |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
+        |mut caller: Caller<'_, wasmtime_wasi::p1::WasiP1Ctx>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
             if ptr < 0 || len < 0 || (len as usize) > PROTOCOL_MAX_REQUEST_BYTES {
                 return Err(wasmtime::Error::msg("guest request range is invalid"));
             }
@@ -398,13 +437,14 @@ fn run_protocol_host_call_request_with_module(
         },
     )?;
 
-    let mut store = Store::new(&engine, ());
+    let mut store = Store::new(&engine, new_wasi_context());
     store.set_fuel(PROTOCOL_MAX_FUEL)?;
     store.set_epoch_deadline(1);
     let instance = linker.instantiate(&mut store, &module)?;
     let memory = instance
         .get_memory(&mut store, "memory")
         .ok_or("guest memory export is missing")?;
+    ensure_guest_memory(&mut store, memory)?;
     let reset = instance.get_typed_func::<(), ()>(&mut store, "beakokit_reset")?;
     let alloc = instance.get_typed_func::<i32, i32>(&mut store, "beakokit_alloc")?;
     let call = instance.get_typed_func::<(i32, i32), i64>(&mut store, "beakokit_call")?;
@@ -413,6 +453,12 @@ fn run_protocol_host_call_request_with_module(
     let request = protocol::Request::from_value(&request_value)?;
     let request_bytes = serde_json::to_vec(&request)?;
     let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    ensure_memory_range(
+        &mut store,
+        memory,
+        request_ptr as usize,
+        request_bytes.len(),
+    )?;
     memory.write(&mut store, request_ptr as usize, &request_bytes)?;
     let packed_response = call.call(&mut store, (request_ptr, request_bytes.len() as i32))? as u64;
     let response_ptr = (packed_response >> 32) as usize;
@@ -716,10 +762,11 @@ fn run_protocol_host_call_request_with_callback(
     }
     let module = Module::new(&engine, module_bytes)?;
     let mut linker = Linker::new(&engine);
+    p1::add_to_linker_sync(&mut linker, |wasi| wasi)?;
     linker.func_wrap(
         "host",
         "call",
-        move |mut caller: Caller<'_, ()>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
+        move |mut caller: Caller<'_, wasmtime_wasi::p1::WasiP1Ctx>, ptr: i32, len: i32| -> Result<i64, wasmtime::Error> {
             if ptr < 0 || len < 0 || (len as usize) > PROTOCOL_MAX_REQUEST_BYTES {
                 return Err(wasmtime::Error::msg("guest request range is invalid"));
             }
@@ -772,7 +819,7 @@ fn run_protocol_host_call_request_with_callback(
             write_host_response(caller, memory, &response_bytes)
         },
     )?;
-    let mut store = Store::new(&engine, ());
+    let mut store = Store::new(&engine, new_wasi_context());
     store.set_fuel(PROTOCOL_MAX_FUEL)?;
     store.set_epoch_deadline(1);
     #[cfg(feature = "android-production-jni")]
@@ -793,6 +840,12 @@ fn run_protocol_host_call_request_with_callback(
     let request = protocol::Request::from_value(&request_value)?;
     let request_bytes = serde_json::to_vec(&request)?;
     let request_ptr = alloc.call(&mut store, request_bytes.len() as i32)?;
+    ensure_memory_range(
+        &mut store,
+        memory,
+        request_ptr as usize,
+        request_bytes.len(),
+    )?;
     memory.write(&mut store, request_ptr as usize, &request_bytes)?;
     let packed_response =
         finish_call_before_timeout(&engine, PROTOCOL_DEFAULT_TIMEOUT_MILLIS, || {
