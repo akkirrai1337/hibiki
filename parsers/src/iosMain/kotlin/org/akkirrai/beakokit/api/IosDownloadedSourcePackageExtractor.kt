@@ -42,21 +42,11 @@ class IosDownloadedSourcePackageExtractor(
             if (fileManager.fileExistsAtPath(stagingPath)) {
                 fileManager.removeItemAtPath(stagingPath, error = null)
             }
-            require(fileManager.createDirectoryAtPath(
-                path = stagingPath,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )) { "Unable to create source package staging directory" }
+            ensureDirectory(fileManager, stagingPath, "source package staging directory")
             files.filterNot(StoredEntry::directory).forEach { file ->
                 val path = "$stagingPath/${file.path}"
                 val parent = path.substringBeforeLast('/', stagingPath)
-                require(fileManager.createDirectoryAtPath(
-                    path = parent,
-                    withIntermediateDirectories = true,
-                    attributes = null,
-                    error = null,
-                )) { "Unable to create source package entry directory" }
+                ensureDirectory(fileManager, parent, "source package entry directory")
                 writeFile(path, file.bytes)
             }
             return ExtractedSourcePackage(
@@ -85,6 +75,16 @@ class IosDownloadedSourcePackageExtractor(
         } finally {
             close(descriptor)
         }
+    }
+
+    private fun ensureDirectory(fileManager: NSFileManager, path: String, label: String) {
+        if (fileManager.fileExistsAtPath(path)) return
+        require(fileManager.createDirectoryAtPath(
+            path = path,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = null,
+        )) { "Unable to create $label" }
     }
 
     private fun readEntries(bytes: ByteArray): List<StoredEntry> {
