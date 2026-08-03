@@ -12,6 +12,9 @@ import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 
 class ExternalSourceRegistrationTest {
     @Test
@@ -157,6 +160,56 @@ class ExternalSourceRegistrationTest {
 
         assertEquals("search-result", source.search("frieren").single().id)
         assertEquals("details-result", source.getById("title-1").id)
+    }
+
+    @Test
+    fun activePlaybackPackageCreatesPlaybackSourceThroughTheNewPipeline() = runBlocking {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val group = PlaybackGroup(
+            id = "group-1",
+            title = "Dub",
+            episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+        )
+        val link = PlayerLink("https://example.com/video.mp4", PlayerType.DIRECT_MP4, "720p")
+        val registry = activeExternalSourceRegistry(
+            packages = listOf(activePackage),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                ProtocolBackedExternalSourcePlaybackRuntime(
+                    transport = ExternalSourceRuntimeTransport { request, _ ->
+                        val payload = when (request.operation) {
+                            ExternalSourceRuntimeOperation.DETAILS ->
+                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                            ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->
+                                AnimeTitleRuntimePayloadCodec.encodePlaybackGroups(listOf(group))
+                            ExternalSourceRuntimeOperation.PLAYER_LINKS ->
+                                AnimeTitleRuntimePayloadCodec.encodePlayerLinks(listOf(link))
+                            else -> error("Catalog operation is not part of this playback fixture")
+                        }
+                        ExternalSourceRuntimeResponse(requestId = request.requestId, payload = payload)
+                    },
+                    payloadCodec = AnimeTitleRuntimePayloadCodec,
+                    requestIdFactory = { "playback-pipeline-request" },
+                )
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+        val source = registry.create(SourceId("external-test"), context)
+        val playback = source as? PlaybackSource ?: error("Playback capability was not registered")
+        val title = source.getById("title-1")
+
+        assertEquals(listOf(group), playback.getPlaybackGroups(title))
+        assertEquals(listOf(link), playback.getPlayerLinks(title, group, group.episodes.single()))
     }
 
     @Test
