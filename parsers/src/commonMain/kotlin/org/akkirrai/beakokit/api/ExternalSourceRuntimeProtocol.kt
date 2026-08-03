@@ -9,6 +9,8 @@ import kotlinx.coroutines.CancellationException
 enum class ExternalSourceRuntimeOperation {
     SEARCH,
     DETAILS,
+    PLAYBACK_GROUPS,
+    PLAYER_LINKS,
 }
 
 /** Errors that can cross the runtime boundary without exposing platform exceptions. */

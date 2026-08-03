@@ -45,6 +45,7 @@ class InstalledExternalSourcePipelineTest {
                             AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
                         ExternalSourceRuntimeOperation.DETAILS ->
                             AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                        else -> error("Playback operation is not part of this catalog-only fixture")
                     }
                     ExternalSourceRuntimeProtocolCodec.encodeResponse(
                         ExternalSourceRuntimeResponse(

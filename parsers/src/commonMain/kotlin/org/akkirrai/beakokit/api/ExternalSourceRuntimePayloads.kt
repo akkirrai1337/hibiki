@@ -6,6 +6,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
 
 /** Canonical host-to-runtime payloads for the first external-source operations. */
 object ExternalSourceRuntimePayloads {
@@ -28,5 +30,20 @@ object ExternalSourceRuntimePayloads {
 
     fun details(id: String): JsonObject = buildJsonObject {
         put("id", id)
+    }
+
+    fun playbackGroups(title: AnimeTitle): JsonObject = buildJsonObject {
+        put("titleId", title.id)
+    }
+
+    fun playerLinks(
+        title: AnimeTitle,
+        group: PlaybackGroup,
+        episode: Episode,
+    ): JsonObject = buildJsonObject {
+        put("titleId", title.id)
+        put("groupId", group.id)
+        put("episodeId", episode.id)
+        put("episodeNumber", episode.number)
     }
 }

@@ -5,6 +5,8 @@ import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonNull
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.Episode
 
 class ExternalSourceRuntimePayloadsTest {
     @Test
@@ -47,5 +49,36 @@ class ExternalSourceRuntimePayloadsTest {
     @Test
     fun detailsPayloadContainsStableIdField() {
         assertEquals("title-1", ExternalSourceRuntimePayloads.details("title-1")["id"]?.toString()?.trim('"'))
+    }
+
+    @Test
+    fun playbackPayloadsContainStableSourceIdentifiers() {
+        val title = AnimeTitle(
+            id = "title-1",
+            russianName = null,
+            englishName = "Title",
+            originalName = "Title",
+            japaneseName = null,
+            synonyms = emptyList(),
+            year = null,
+            type = null,
+            episodeCount = null,
+            posterUrl = null,
+            status = null,
+            description = null,
+        )
+        val group = PlaybackGroup(
+            id = "group-1",
+            title = "Dub",
+            episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+        )
+        val episode = group.episodes.single()
+
+        assertEquals("title-1", ExternalSourceRuntimePayloads.playbackGroups(title)["titleId"]?.toString()?.trim('"'))
+        val playerLinks = ExternalSourceRuntimePayloads.playerLinks(title, group, episode)
+        assertEquals("title-1", playerLinks["titleId"]?.toString()?.trim('"'))
+        assertEquals("group-1", playerLinks["groupId"]?.toString()?.trim('"'))
+        assertEquals("episode-1", playerLinks["episodeId"]?.toString()?.trim('"'))
+        assertEquals("1.0", playerLinks["episodeNumber"]?.toString())
     }
 }
