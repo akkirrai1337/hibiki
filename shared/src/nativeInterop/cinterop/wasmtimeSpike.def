@@ -1,0 +1,3 @@
+language = C
+headers = ../../../../tools/wasmtime-spike/include/wasmtime_spike.h
+package = org.akkirrai.hibiki.shared.runtime.nativebridge

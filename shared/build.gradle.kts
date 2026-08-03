@@ -34,6 +34,12 @@ kotlin {
                         defFile(project.file("src/nativeInterop/cinterop/iosPlayer.def"))
                         compilerOpts("-I${project.file("src/nativeInterop/cinterop").absolutePath}")
                     }
+                    create("wasmtimeSpike") {
+                        defFile(project.file("src/nativeInterop/cinterop/wasmtimeSpike.def"))
+                        compilerOpts(
+                            "-I${project.file("../tools/wasmtime-spike/include").absolutePath}",
+                        )
+                    }
                 }
             }
         }

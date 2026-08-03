@@ -44,6 +44,13 @@ The Android library is emitted as
 symbol can be checked with the NDK `llvm-nm` tool before adding a Kotlin/JNI
 or Swift bridge.
 
+The same C ABI is declared for the iOS Kotlin/Native cinterop in
+`shared/src/nativeInterop/cinterop/wasmtimeSpike.def`. The iOS build only
+registers that interop on macOS, where the Rust library must be built for the
+Apple target and linked by the native application. Windows builds therefore
+continue to verify the shared contracts and Android runtime without pretending
+that an iOS native binary exists.
+
 To build and verify production Android libraries for `arm64-v8a` and `x86_64`
 with the real JNI bridge but without WAT/harness features, run:
 
