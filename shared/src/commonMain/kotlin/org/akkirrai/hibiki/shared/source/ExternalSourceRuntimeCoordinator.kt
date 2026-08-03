@@ -305,11 +305,15 @@ class RepositoryManagementActions(
     override suspend fun repositories(): List<SourceRepositoryEndpoint> = coordinator.repositories()
 
     override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
+        val previous = coordinator.repositories()
         coordinator.addRepository(endpoint)
+        if (coordinator.repositories() != previous) coordinator.refresh()
     }
 
     override suspend fun removeRepositoryFromUi(url: String) {
+        val previous = coordinator.repositories()
         coordinator.removeRepository(url)
+        if (coordinator.repositories() != previous) coordinator.refresh()
     }
 
     override suspend fun refreshRepositories() {
