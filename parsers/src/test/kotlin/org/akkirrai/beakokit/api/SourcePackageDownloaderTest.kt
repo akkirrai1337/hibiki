@@ -68,6 +68,27 @@ class SourcePackageDownloaderTest {
     }
 
     @Test
+    fun `Ktor transport rejects malformed https urls before making a request`() = runBlocking {
+        var called = false
+        val transport = KtorSourcePackageTransport(
+            HttpClient(MockEngine {
+                called = true
+                respond("unexpected")
+            }),
+        )
+
+        val error = assertFailsWith<SourcePackageDownloadException> {
+            transport.download(
+                url = "https:///source.zip",
+                limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 10),
+            )
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
+        assertEquals(false, called)
+    }
+
+    @Test
     fun `Ktor transport rejects an oversized package`() = runBlocking {
         val transport = KtorSourcePackageTransport(
             HttpClient(MockEngine { respond(byteArrayOf(1, 2, 3, 4, 5)) }),

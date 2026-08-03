@@ -101,6 +101,35 @@ class ExternalSourceRepositoryCoordinatorTest {
     }
 
     @Test
+    fun refreshKeepsLastKnownGoodIndexWhenRepositoryTemporarilyFails() = runTest {
+        val endpoint = SourceRepositoryEndpoint("https://unstable.example/index.json")
+        var available = true
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(FakeStore(listOf(endpoint))),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { _, _ ->
+                        if (!available) {
+                            SourceRepositoryResponse(503, "unavailable")
+                        } else {
+                            SourceRepositoryResponse(200, SourceRepositoryIndexCodec.encode(index()))
+                        }
+                    },
+                ),
+            ),
+        )
+
+        coordinator.refresh(clientVersion = 1)
+        available = false
+
+        val snapshot = coordinator.refresh(clientVersion = 1)
+
+        assertEquals(listOf(endpoint), snapshot.loaded.map { it.endpoint })
+        assertEquals(listOf(endpoint), snapshot.failures.map { it.endpoint })
+        assertEquals(listOf(SourceId("external-source")), coordinator.availableSourceIds())
+    }
+
+    @Test
     fun concurrentRefreshesDoNotOverlap() = runTest {
         var activeLoads = 0
         var overlapped = false

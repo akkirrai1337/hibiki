@@ -45,7 +45,7 @@ class KtorSourcePackageTransport(
         url: String,
         limits: SourcePackageDownloadLimits,
     ): DownloadedSourcePackage {
-        if (!url.startsWith("https://")) {
+        if (!isValidHttpsUrl(url)) {
             throw SourcePackageDownloadException(
                 message = "Package URL must use HTTPS",
                 kind = SourceErrorKind.PARSE,
@@ -87,7 +87,6 @@ class KtorSourcePackageTransport(
                 kind = SourceErrorKind.UNAVAILABLE,
             )
         }
-
         val maxBytes = limits.maxArtifactSizeBytes.toInt()
         val bytes = ByteArray(maxBytes)
         var size = 0

@@ -74,11 +74,20 @@ class ExternalSourceRepositoryCoordinator(
         supportedHostApiVersion: Int = SourceHostApi.VERSION,
     ): SourceRepositoryLoadSnapshot {
         return refreshMutex.withLock {
-            catalogLoader.loadAll(
+            val previous = snapshot.value
+            val refreshed = catalogLoader.loadAll(
                 clientVersion = clientVersion,
                 supportedSourceApiVersion = supportedSourceApiVersion,
                 supportedHostApiVersion = supportedHostApiVersion,
-            ).also { snapshotState.value = it }
+            )
+            val freshByUrl = refreshed.loaded.associateBy { it.endpoint.url }
+            val previousByUrl = previous.loaded.associateBy { it.endpoint.url }
+            val failedUrls = refreshed.failures.mapTo(mutableSetOf()) { it.endpoint.url }
+            val mergedLoaded = catalogLoader.repositories().mapNotNull { endpoint ->
+                freshByUrl[endpoint.url]
+                    ?: previousByUrl[endpoint.url].takeIf { endpoint.url in failedUrls }
+            }
+            refreshed.copy(loaded = mergedLoaded).also { snapshotState.value = it }
         }
     }
 }
