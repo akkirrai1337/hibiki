@@ -4,6 +4,8 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
+import kotlin.test.assertSame
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRegistration
@@ -18,6 +20,8 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 
 class ExternalSourceCatalogRepositoryTest {
@@ -39,7 +43,88 @@ class ExternalSourceCatalogRepositoryTest {
         assertEquals("Details", details.description)
     }
 
-    private fun registry(sourceId: SourceId): ExternalSourceRegistry =
+    @Test
+    fun searchForwardsAndAdaptsTheSharedFilters() = runTest {
+        val sourceId = SourceId("external-source")
+        var request: AnimeSearchRequest? = null
+        val repository = ExternalSourceCatalogRepository(
+            registryProvider = { registry(sourceId) { request = it } },
+            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+            initialSourceId = sourceId,
+        )
+
+        repository.search(
+            AnimeCatalogQuery(
+                text = "query",
+                page = 3,
+                pageSize = 7,
+                filters = org.akkirrai.hibiki.shared.model.AnimeSearchFilters(
+                    sortAlias = "popular",
+                    typeAlias = "tv",
+                    statusAlias = "released",
+                    includedGenreAliases = setOf("Drama", "Action"),
+                    excludedGenreAliases = setOf("Horror"),
+                    yearFrom = 2010,
+                    yearTo = 2020,
+                ),
+            ),
+        )
+
+        val actual = requireNotNull(request)
+        assertEquals("query", actual.query)
+        assertEquals(7, actual.limit)
+        assertEquals(14, actual.offset)
+        assertEquals(AnimeSearchSort.RATING, actual.sort)
+        assertContentEquals(listOf("tv"), actual.typeAliases)
+        assertContentEquals(listOf("released"), actual.statusAliases)
+        assertContentEquals(listOf("Action", "Drama"), actual.includedGenreAliases)
+        assertContentEquals(listOf("Horror"), actual.excludedGenreAliases)
+        assertEquals(2010, actual.yearFrom)
+        assertEquals(2020, actual.yearTo)
+    }
+
+    @Test
+    fun transitionalRepositoryKeepsBuiltInDefaultAndRoutesExternalIds() = runTest {
+        val sourceId = SourceId("external-source")
+        val external = ExternalSourceCatalogRepository(
+            registryProvider = { registry(sourceId) },
+            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+            initialSourceId = sourceId,
+        )
+        val builtIn = object : AnimeCatalogRepository {
+            override val initialItems = listOf(
+                Anime(
+                    id = "built-in",
+                    title = "Built-in",
+                    subtitle = "",
+                    episodesLabel = "",
+                    status = "",
+                ),
+            )
+            override suspend fun search(query: AnimeCatalogQuery) = AnimeCatalogPage(initialItems, 1, false)
+            override suspend fun getDetails(id: String, fallback: Anime) = fallback
+        }
+        val transitional = TransitionalAnimeCatalogRepository(builtIn, external)
+
+        assertSame(builtIn.initialItems, transitional.initialItems)
+        assertEquals("Built-in", transitional.search(AnimeCatalogQuery()).items.single().title)
+        transitional.selectSource(sourceId.value)
+        assertEquals(
+            "External title",
+            transitional.search(AnimeCatalogQuery(text = "query")).items.single().title,
+        )
+        assertEquals(
+            "External title",
+            transitional.searchSource(sourceId.value, AnimeCatalogQuery(text = "query")).items.single().title,
+        )
+    }
+
+    private fun registry(
+        sourceId: SourceId,
+        onSearch: (AnimeSearchRequest) -> Unit = {},
+    ): ExternalSourceRegistry =
         ExternalSourceRegistry(
             org.akkirrai.beakokit.api.SourceCatalog(
                 listOf(
@@ -60,8 +145,10 @@ class ExternalSourceCatalogRepositoryTest {
                                 ),
                                 catalogCapabilities = CatalogCapabilities.FULL,
                                 runtime = object : ExternalSourceRuntime {
-                                    override suspend fun search(request: AnimeSearchRequest) =
-                                        listOf(title("native-1", "Search"))
+                                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
+                                        onSearch(request)
+                                        return listOf(title("native-1", "Search"))
+                                    }
 
                                     override suspend fun details(id: String) =
                                         title(id, "Details")

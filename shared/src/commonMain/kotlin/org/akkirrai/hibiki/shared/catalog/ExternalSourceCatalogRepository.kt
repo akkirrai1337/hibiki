@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.hibiki.shared.model.Anime
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.toAppAnime
@@ -20,6 +21,10 @@ class ExternalSourceCatalogRepository(
     private var selectedSourceId: SourceId? = initialSourceId
 
     override val initialItems: List<Anime> = emptyList()
+
+    fun hasSource(sourceId: String): Boolean = registryProvider()?.sources
+        ?.any { it.id.value == sourceId }
+        ?: false
 
     override fun selectSource(sourceId: String) {
         selectedSourceId = SourceId(sourceId)
@@ -38,10 +43,20 @@ class ExternalSourceCatalogRepository(
         query: AnimeCatalogQuery,
     ): AnimeCatalogPage {
         val source = source(sourceId)
-        val request = AnimeSearchRequest(
-            query = query.text,
-            limit = query.pageSize.coerceAtLeast(1),
-            offset = query.offset,
+        val filters = query.filters
+        val request = source.catalogCapabilities.adapt(
+            AnimeSearchRequest(
+                query = query.text,
+                limit = query.pageSize.coerceAtLeast(1),
+                offset = query.offset,
+                sort = filters.sortAlias.toExternalSort(),
+                typeAliases = listOfNotNull(filters.typeAlias),
+                statusAliases = listOfNotNull(filters.statusAlias),
+                includedGenreAliases = filters.includedGenreAliases.sorted(),
+                excludedGenreAliases = filters.excludedGenreAliases.sorted(),
+                yearFrom = filters.yearFrom,
+                yearTo = filters.yearTo,
+            ),
         )
         val items = source.search(request).map { title ->
             title.toAppAnime(
@@ -74,4 +89,14 @@ class ExternalSourceCatalogRepository(
     private fun source(sourceId: SourceId) =
         registryProvider()?.create(sourceId, contextProvider(sourceId))
             ?: error("External source is not installed: $sourceId")
+
+    private fun String.toExternalSort(): AnimeSearchSort = when (lowercase()) {
+        "popular", "rating" -> AnimeSearchSort.RATING
+        "alphabetical", "title" -> AnimeSearchSort.TITLE
+        "year" -> AnimeSearchSort.YEAR
+        "votes" -> AnimeSearchSort.VOTES
+        "views" -> AnimeSearchSort.VIEWS
+        "comments" -> AnimeSearchSort.COMMENTS
+        else -> AnimeSearchSort.RELEVANCE
+    }
 }
