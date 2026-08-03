@@ -8,8 +8,13 @@ import kotlinx.serialization.json.put
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.CharacterTitle
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.TitleRating
+import org.akkirrai.beakokit.model.VideoSegment
+import org.akkirrai.beakokit.model.VideoSegmentType
 
 class AnimeTitleRuntimePayloadCodecTest {
     @Test
@@ -79,6 +84,37 @@ class AnimeTitleRuntimePayloadCodecTest {
         )
 
         assertEquals(listOf(title), restored)
+    }
+
+    @Test
+    fun playbackPayloadsRoundTripEpisodesLinksAndHeaders() {
+        val groups = listOf(
+            PlaybackGroup(
+                id = "group-1",
+                title = "Dub",
+                qualityLabel = "Original",
+                episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+            ),
+        )
+        val links = listOf(
+            PlayerLink(
+                url = "https://example.com/video.m3u8",
+                type = PlayerType.DIRECT_HLS,
+                quality = "1080p",
+                headers = mapOf("Referer" to "https://example.com/"),
+                playerName = "Player",
+                translation = "Dub",
+                segments = listOf(VideoSegment(VideoSegmentType.OPENING, 0, 30_000)),
+                videoId = 42,
+            ),
+        )
+
+        assertEquals(groups, AnimeTitleRuntimePayloadCodec.decodePlaybackGroups(
+            AnimeTitleRuntimePayloadCodec.encodePlaybackGroups(groups),
+        ))
+        assertEquals(links, AnimeTitleRuntimePayloadCodec.decodePlayerLinks(
+            AnimeTitleRuntimePayloadCodec.encodePlayerLinks(links),
+        ))
     }
 
     @Test

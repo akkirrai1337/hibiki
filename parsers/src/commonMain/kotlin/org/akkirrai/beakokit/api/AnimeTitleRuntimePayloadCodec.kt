@@ -17,13 +17,67 @@ import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.CharacterTitle
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.TitleRating
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.VideoSegment
+import org.akkirrai.beakokit.model.VideoSegmentType
 
 /** Canonical JSON codec for the first external-source response payloads. */
-object AnimeTitleRuntimePayloadCodec : ExternalSourceRuntimePayloadCodec {
+object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec {
     override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = payload.requiredArray("items")
         .map { it.jsonObject.decodeTitle() }
 
     override fun decodeDetails(payload: JsonObject): AnimeTitle = payload.decodeTitle()
+
+    override fun decodePlaybackGroups(payload: JsonObject): List<PlaybackGroup> =
+        payload.requiredArray("groups").map { group ->
+            val value = group.jsonObject
+            PlaybackGroup(
+                id = value.requiredString("id"),
+                title = value.requiredString("title"),
+                qualityLabel = value.nullableString("qualityLabel"),
+                episodes = value.requiredArray("episodes").map { episode ->
+                    val item = episode.jsonObject
+                    Episode(
+                        id = item.requiredString("id"),
+                        number = item.requiredPrimitive("number").content.toDouble(),
+                        title = item.nullableString("title"),
+                    )
+                },
+            )
+        }
+
+    override fun decodePlayerLinks(payload: JsonObject): List<PlayerLink> =
+        payload.requiredArray("links").map { link ->
+            val value = link.jsonObject
+            PlayerLink(
+                url = value.requiredString("url"),
+                type = PlayerType.valueOf(value.requiredString("type")),
+                quality = value.nullableString("quality"),
+                headers = value.get("headers")?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
+                    ?: emptyMap(),
+                playerName = value.nullableString("playerName"),
+                translation = value.nullableString("translation"),
+                segments = value.get("segments")?.jsonArray?.map { segment ->
+                    val item = segment.jsonObject
+                    VideoSegment(
+                        type = VideoSegmentType.valueOf(item.requiredString("type")),
+                        startMs = item.requiredPrimitive("startMs").content.toLong(),
+                        endMs = item.requiredPrimitive("endMs").content.toLong(),
+                    )
+                } ?: emptyList(),
+                videoId = value.nullableLong("videoId"),
+            )
+        }
+
+    fun encodePlaybackGroups(groups: List<PlaybackGroup>): JsonObject = buildJsonObject {
+        putJsonArray("groups") { groups.forEach { add(it.encodePlaybackGroup()) } }
+    }
+
+    fun encodePlayerLinks(links: List<PlayerLink>): JsonObject = buildJsonObject {
+        putJsonArray("links") { links.forEach { add(it.encodePlayerLink()) } }
+    }
 
     fun encodeSearch(items: List<AnimeTitle>): JsonObject = buildJsonObject {
         putJsonArray("items") { items.forEach { add(it.encodeTitle()) } }
@@ -69,6 +123,40 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourceRuntimePayloadCodec {
         putNullable("season", season)
         putNullable("availableEpisodeCount", availableEpisodeCount)
         putNullable("posterFallbackUrl", posterFallbackUrl)
+    }
+
+    private fun PlaybackGroup.encodePlaybackGroup(): JsonObject = buildJsonObject {
+        put("id", id)
+        put("title", title)
+        putNullable("qualityLabel", qualityLabel)
+        putJsonArray("episodes") {
+            episodes.forEach { episode ->
+                add(buildJsonObject {
+                    put("id", episode.id)
+                    put("number", episode.number)
+                    putNullable("title", episode.title)
+                })
+            }
+        }
+    }
+
+    private fun PlayerLink.encodePlayerLink(): JsonObject = buildJsonObject {
+        put("url", url)
+        put("type", type.name)
+        putNullable("quality", quality)
+        putJsonObject("headers") { headers.forEach { (key, value) -> put(key, value) } }
+        putNullable("playerName", playerName)
+        putNullable("translation", translation)
+        putJsonArray("segments") {
+            segments.forEach { segment ->
+                add(buildJsonObject {
+                    put("type", segment.type.name)
+                    put("startMs", segment.startMs)
+                    put("endMs", segment.endMs)
+                })
+            }
+        }
+        putNullable("videoId", videoId)
     }
 
     private fun JsonObject.decodeTitle(): AnimeTitle = AnimeTitle(
