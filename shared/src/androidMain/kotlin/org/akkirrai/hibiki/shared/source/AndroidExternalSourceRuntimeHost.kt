@@ -79,6 +79,11 @@ private class AndroidExternalSourceRuntimeBridge(
             sourceId = sourcePackage.manifest.sourceId,
             requirements = requirements,
         ),
+        cookies = AndroidSourceHostCookies(
+            context = appContext,
+            sourceId = sourcePackage.manifest.sourceId,
+            requirements = requirements,
+        ),
     )
 
     override suspend fun call(request: ByteArray, maxResponseBytes: Long): ByteArray =
@@ -116,6 +121,7 @@ private class AndroidExternalSourceHost(
     private val client: HttpClient,
     private val requirements: SourceHostRequirements,
     private val storage: AndroidSourceHostStorage,
+    private val cookies: AndroidSourceHostCookies,
 ) {
     private val dispatcher = ExternalSourceHostDispatcher(
         executeHttpRequest = { wireRequest ->
@@ -139,6 +145,7 @@ private class AndroidExternalSourceHost(
             }
         },
         storage = storage,
+        cookies = cookies,
     )
 
     fun call(bytes: ByteArray): ByteArray {

@@ -18,6 +18,8 @@ enum class ExternalSourceHostOperation {
     COOKIES_FOR_URL,
     COOKIES_STORE_RESPONSE,
     COOKIES_CLEAR,
+    CONFIG_VALUE,
+    CONFIG_SECRET,
 }
 
 @Serializable
@@ -152,6 +154,16 @@ data class ExternalSourceHostCookiesClearRequest(
     val url: String,
 )
 
+@Serializable
+data class ExternalSourceHostConfigRequest(
+    val key: String,
+)
+
+@Serializable
+data class ExternalSourceHostConfigResponse(
+    val value: String?,
+)
+
 object ExternalSourceHostProtocolCodec {
     private val json = Json {
         encodeDefaults = true
@@ -237,6 +249,18 @@ object ExternalSourceHostProtocolCodec {
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeCookiesClearRequest(payload: JsonObject): ExternalSourceHostCookiesClearRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeConfigRequest(request: ExternalSourceHostConfigRequest): JsonObject =
+        json.encodeToJsonElement(request) as JsonObject
+
+    fun decodeConfigRequest(payload: JsonObject): ExternalSourceHostConfigRequest =
+        json.decodeFromJsonElement(payload)
+
+    fun encodeConfigResponse(response: ExternalSourceHostConfigResponse): JsonObject =
+        json.encodeToJsonElement(response) as JsonObject
+
+    fun decodeConfigResponse(payload: JsonObject): ExternalSourceHostConfigResponse =
         json.decodeFromJsonElement(payload)
 }
 

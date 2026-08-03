@@ -9,6 +9,7 @@ enum class SourceHostCapability {
     NETWORK,
     COOKIES,
     STORAGE,
+    CONFIG,
     CHALLENGE,
     LOGGING,
 }

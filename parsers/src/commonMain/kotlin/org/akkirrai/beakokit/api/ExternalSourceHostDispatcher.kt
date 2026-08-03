@@ -10,6 +10,7 @@ class ExternalSourceHostDispatcher(
     private val executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
     private val storage: ExternalSourceHostStorageAccess?,
     private val cookies: SourceHostCookiesAccess?,
+    private val config: SourceHostConfigAccess?,
 ) {
     constructor(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
@@ -19,6 +20,12 @@ class ExternalSourceHostDispatcher(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
         storage: ExternalSourceHostStorageAccess?,
     ) : this(executeHttpRequest, storage, null)
+
+    constructor(
+        executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
+        storage: ExternalSourceHostStorageAccess?,
+        cookies: SourceHostCookiesAccess?,
+    ) : this(executeHttpRequest, storage, cookies, null)
 
     suspend fun dispatch(request: ExternalSourceHostRequest): ExternalSourceHostResponse {
         val payload = when (request.operation) {
@@ -73,6 +80,20 @@ class ExternalSourceHostDispatcher(
                     ExternalSourceHostStorageMutationResponse(),
                 )
             }
+            ExternalSourceHostOperation.CONFIG_VALUE -> {
+                val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
+                val configAccess = requireConfig()
+                ExternalSourceHostProtocolCodec.encodeConfigResponse(
+                    ExternalSourceHostConfigResponse(configAccess.value(configRequest.key)),
+                )
+            }
+            ExternalSourceHostOperation.CONFIG_SECRET -> {
+                val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
+                val configAccess = requireConfig()
+                ExternalSourceHostProtocolCodec.encodeConfigResponse(
+                    ExternalSourceHostConfigResponse(configAccess.secret(configRequest.key)),
+                )
+            }
         }
         return ExternalSourceHostResponse(
             requestId = request.requestId,
@@ -85,6 +106,9 @@ class ExternalSourceHostDispatcher(
 
     private fun requireCookies(): SourceHostCookiesAccess =
         cookies ?: throw SourceHostCapabilityException(SourceHostCapability.COOKIES)
+
+    private fun requireConfig(): SourceHostConfigAccess =
+        config ?: throw SourceHostCapabilityException(SourceHostCapability.CONFIG)
 }
 
 /** Source-scoped storage exposed by the platform host to the protocol dispatcher. */
@@ -103,4 +127,11 @@ interface SourceHostCookiesAccess {
     suspend fun storeFromResponse(url: String, cookies: Map<String, String>)
 
     suspend fun clear(url: String)
+}
+
+/** Source configuration exposed by the platform host to the protocol dispatcher. */
+interface SourceHostConfigAccess : SourceHostAccess {
+    fun value(key: String): String?
+
+    fun secret(key: String): String?
 }

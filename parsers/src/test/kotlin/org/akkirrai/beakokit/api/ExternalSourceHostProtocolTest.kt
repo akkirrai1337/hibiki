@@ -284,4 +284,73 @@ class ExternalSourceHostProtocolTest {
             )
         }
     }
+
+    @Test
+    fun config_operations_keep_values_and_secrets_separate() = runBlocking {
+        val config = object : SourceHostConfigAccess {
+            override val requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.CONFIG),
+            )
+
+            override fun value(key: String): String? = if (key == "base-url") "https://example.com" else null
+
+            override fun secret(key: String): String? = if (key == "token") "secret" else null
+        }
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            cookies = null,
+            config = config,
+        )
+        val request = ExternalSourceHostRequest(
+            requestId = "config-value",
+            operation = ExternalSourceHostOperation.CONFIG_VALUE,
+            payload = ExternalSourceHostProtocolCodec.encodeConfigRequest(
+                ExternalSourceHostConfigRequest("base-url"),
+            ),
+        )
+        val response = dispatcher.dispatch(request)
+        assertEquals(
+            ExternalSourceHostConfigResponse("https://example.com"),
+            ExternalSourceHostProtocolCodec.decodeConfigResponse(response.requirePayload(request.requestId)),
+        )
+        val secretRequest = request.copy(
+            requestId = "config-secret",
+            operation = ExternalSourceHostOperation.CONFIG_SECRET,
+            payload = ExternalSourceHostProtocolCodec.encodeConfigRequest(
+                ExternalSourceHostConfigRequest("token"),
+            ),
+        )
+        assertEquals(
+            ExternalSourceHostConfigResponse("secret"),
+            ExternalSourceHostProtocolCodec.decodeConfigResponse(
+                dispatcher.dispatch(secretRequest).requirePayload(secretRequest.requestId),
+            ),
+        )
+    }
+
+    @Test
+    fun config_operation_requires_config_capability() = runBlocking {
+        val config = object : SourceHostConfigAccess {
+            override val requirements = SourceHostRequirements()
+            override fun value(key: String): String? = "value"
+            override fun secret(key: String): String? = "secret"
+        }
+        assertFailsWith<SourceHostCapabilityException> {
+            ExternalSourceHostDispatcher(
+                executeHttpRequest = { error("HTTP must not be called") },
+                storage = null,
+                cookies = null,
+                config = config,
+            ).dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "config-denied",
+                    operation = ExternalSourceHostOperation.CONFIG_SECRET,
+                    payload = ExternalSourceHostProtocolCodec.encodeConfigRequest(
+                        ExternalSourceHostConfigRequest("token"),
+                    ),
+                ),
+            )
+        }
+    }
 }
