@@ -41,9 +41,13 @@ class ExternalSourceRuntimeCoordinator(
     /** Returns the active package for a source, or null when it has not been installed. */
     suspend fun activePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
         operationMutex.withLock {
-            runCatching { platform.loadActivePackage(sourceId) }
-                .getOrNull()
+            loadActivePackageOrNull(sourceId)
         }
+
+    /** Returns advertised packages together with their currently active versions. */
+    suspend fun packageStatuses(): List<ExternalSourcePackageStatus> = operationMutex.withLock {
+        packageStatusesLocked()
+    }
 
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
@@ -142,27 +146,33 @@ class ExternalSourceRuntimeCoordinator(
      */
     suspend fun availablePackageUpdates(): List<SourcePackageUpdateCandidate> =
         operationMutex.withLock {
-            platform.coordinator.availableSourceManifests().mapNotNull { manifest ->
-                val active = try {
-                    platform.loadActivePackage(manifest.sourceId)
-                } catch (_: SourcePackageStateException) {
-                    null
-                } ?: return@mapNotNull null
-                if (
-                    active.manifest.packageVersion == manifest.packageVersion &&
-                    active.manifest.sha256 == manifest.sha256
-                ) {
-                    null
-                } else {
-                    SourcePackageUpdateCandidate(
-                        sourceId = manifest.sourceId,
-                        installedVersion = active.installed.packageVersion,
-                        installedSha256 = active.manifest.sha256,
-                        availableManifest = manifest,
-                    )
-                }
+            packageStatusesLocked().mapNotNull { status ->
+                val active = status.activePackage ?: return@mapNotNull null
+                if (!status.updateAvailable) return@mapNotNull null
+                SourcePackageUpdateCandidate(
+                    sourceId = status.sourceId,
+                    installedVersion = active.installed.packageVersion,
+                    installedSha256 = active.manifest.sha256,
+                    availableManifest = status.availableManifest,
+                )
             }
         }
+
+    private fun packageStatusesLocked(): List<ExternalSourcePackageStatus> =
+        platform.coordinator.availableSourceManifests().map { manifest ->
+            val active = loadActivePackageOrNull(manifest.sourceId)
+            ExternalSourcePackageStatus(
+                sourceId = manifest.sourceId,
+                availableManifest = manifest,
+                activePackage = active,
+            )
+        }
+
+    private fun loadActivePackageOrNull(sourceId: SourceId): ActiveExternalSourcePackage? = try {
+        platform.loadActivePackage(sourceId)
+    } catch (_: SourcePackageStateException) {
+        null
+    }
 
     private fun rebuildActiveRegistry() {
         try {
@@ -222,4 +232,22 @@ data class SourcePackageUpdateCandidate(
             "Update candidate must contain a different package version or artifact"
         }
     }
+}
+
+data class ExternalSourcePackageStatus(
+    val sourceId: SourceId,
+    val availableManifest: SourceManifest,
+    val activePackage: ActiveExternalSourcePackage?,
+) {
+    init {
+        require(sourceId == availableManifest.sourceId) {
+            "Package status source ID does not match its manifest"
+        }
+    }
+
+    val updateAvailable: Boolean
+        get() = activePackage != null && (
+            activePackage.manifest.packageVersion != availableManifest.packageVersion ||
+                activePackage.manifest.sha256 != availableManifest.sha256
+            )
 }

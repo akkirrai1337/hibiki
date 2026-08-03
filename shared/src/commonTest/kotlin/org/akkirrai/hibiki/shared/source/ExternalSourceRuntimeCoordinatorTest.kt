@@ -267,6 +267,12 @@ class ExternalSourceRuntimeCoordinatorTest {
 
         coordinator.refresh()
 
+        val status = coordinator.packageStatuses().single()
+        assertEquals(sourceId, status.sourceId)
+        assertEquals("2", status.activePackage?.installed?.packageVersion)
+        assertEquals("10", status.availableManifest.packageVersion)
+        assertEquals(true, status.updateAvailable)
+
         val update = coordinator.availablePackageUpdates().single()
         assertEquals(sourceId, update.sourceId)
         assertEquals("2", update.installedVersion)
@@ -637,7 +643,12 @@ class ExternalSourceRuntimeCoordinatorTest {
     private class InMemoryStore(
         var state: SourcePackageActivationState,
     ) : SourcePackageActivationStore {
-        override fun load(sourceId: SourceId): SourcePackageActivationState = state
+        override fun load(sourceId: SourceId): SourcePackageActivationState {
+            if (state.active?.sourceId != null && state.active?.sourceId != sourceId) {
+                return SourcePackageActivationState()
+            }
+            return state
+        }
 
         override fun persistAtomically(
             sourceId: SourceId,
