@@ -45,9 +45,16 @@ class SharedAnimeWatchRepositoryTest {
 
         val watchSources = repository.loadSources("source:external-source:title-1")
         val episodes = repository.getEpisodes(watchSources.single().sourceId)
+        val playerLinks = repository.getPlayerLinks(watchSources.single().sourceId, episodes.single().id)
+        val settings = repository.getPlaybackSettingsOptions(
+            watchSources.single().sourceId,
+            episodes.single().id,
+        )
 
         assertEquals("Dub", watchSources.single().title)
         assertEquals(listOf("episode-1"), episodes.map { it.id })
+        assertEquals("https://example.test/video.mp4", playerLinks.single().url)
+        assertEquals(listOf("Dub"), settings.voiceovers.map { it.title })
         repository.close()
     }
 
