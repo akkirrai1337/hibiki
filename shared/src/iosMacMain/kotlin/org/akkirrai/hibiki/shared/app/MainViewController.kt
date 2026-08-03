@@ -15,6 +15,8 @@ import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.launch
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
+import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -45,6 +47,8 @@ import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
+import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
+import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
 import org.akkirrai.hibiki.shared.model.PlaybackContext
 import org.akkirrai.hibiki.shared.model.PlaybackStream
@@ -153,6 +157,31 @@ fun MainViewController(systemLanguage: String): UIViewController {
         val watchRepository = remember(systemLanguage) {
             IosAnimeWatchRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
         }
+        val externalWatchRepository = remember(externalRuntimeCoordinator, externalRegistry) {
+            SharedAnimeWatchRepository(
+                client = HttpClient(Darwin) {
+                    installBeakoKitHttpDefaults(
+                        BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 iOS external-source"),
+                    )
+                },
+                sourceHttpClient = externalRuntimeHttpClient,
+                preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
+                externalSourceFactory = { sourceId, sourceContext ->
+                    externalRuntimeCoordinator.snapshot.value.registry?.create(sourceId, sourceContext)
+                },
+            )
+        }
+        val routedWatchRepository = remember(watchRepository, externalWatchRepository, externalRegistry) {
+            RoutingWatchDataRepository(
+                builtIn = watchRepository,
+                external = externalWatchRepository,
+                isExternalSource = { sourceId ->
+                    externalRuntimeCoordinator.snapshot.value.registry?.sources
+                        ?.any { it.id == sourceId }
+                        ?: false
+                },
+            )
+        }
         val libraryRepository = remember { IosLibraryRepository() }
         val watchStateRepository = remember { IosWatchStateRepository() }
         val homeRepository = remember(repository, libraryRepository) {
@@ -172,6 +201,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
         }
         DisposableEffect(builtInRepository) { onDispose { builtInRepository.close() } }
         DisposableEffect(watchRepository) { onDispose { watchRepository.close() } }
+        DisposableEffect(externalWatchRepository) { onDispose { externalWatchRepository.close() } }
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             val density = LocalDensity.current
             val safeDrawingInsets = AppLayoutEnvironment(
@@ -185,7 +215,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 Surface {
                     HibikiApp(
                     repository = repository,
-                    watchRepository = watchRepository,
+                    watchRepository = routedWatchRepository,
                     onPlaybackReady = { playback, context ->
                         if (!USE_EMBEDDED_IOS_PLAYER) {
                             presentPlayback(hostController, playback, context)
