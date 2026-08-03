@@ -35,6 +35,7 @@ import kotlin.time.Clock
 class SharedAnimeWatchRepository(
     private val client: HttpClient,
     private val preferEnglish: Boolean = false,
+    private val externalSourceFactory: ((SourceId, DefaultSourceContext) -> AnimeSource?)? = null,
     private val playbackAttemptTimeoutMillis: Long = DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS,
     private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     private val sourceExecutionPolicy: SourceExecutionPolicy =
@@ -159,9 +160,7 @@ class SharedAnimeWatchRepository(
         ?: error("Watch source is not loaded: $sourceId")
 
     private fun sourceFor(sourceId: SourceId): AnimeSource = sources.getOrPut(sourceId) {
-        BuiltInSources.catalog.create(
-            sourceId,
-            DefaultSourceContext(
+        val context = DefaultSourceContext(
                 httpClient = client,
                 preferredLanguages = if (preferEnglish) {
                     listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
@@ -180,8 +179,9 @@ class SharedAnimeWatchRepository(
                     val suffix = throwable?.message?.takeIf(String::isNotBlank)?.let { " ($it)" }.orEmpty()
                     println("BeakoKit/${sourceId.value} [$level] $message$suffix")
                 },
-            ),
-        )
+            )
+        externalSourceFactory?.invoke(sourceId, context)
+            ?: BuiltInSources.catalog.create(sourceId, context)
     }
 
     private data class WatchPayload(
