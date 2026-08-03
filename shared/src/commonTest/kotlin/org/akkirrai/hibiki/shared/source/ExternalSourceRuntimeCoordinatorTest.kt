@@ -463,6 +463,28 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun legacyActivationWithoutArtifactHashDoesNotInventSameVersionUpdate() {
+        val sourceId = SourceId("external-source")
+        val available = manifest(sourceId).copy(sha256 = "b".repeat(64))
+        val active = ActiveExternalSourcePackage(
+            manifest = available.copy(sha256 = "a".repeat(64), artifactSizeBytes = 999),
+            installed = InstalledSourcePackage(
+                sourceId = sourceId,
+                packageVersion = available.packageVersion,
+                packagePath = "package/path",
+            ),
+        )
+
+        assertFalse(
+            ExternalSourcePackageStatus(
+                sourceId = sourceId,
+                availableManifest = available,
+                activePackage = active,
+            ).updateAvailable,
+        )
+    }
+
+    @Test
     fun installedPackage_is_available_through_the_external_registry() = runTest {
         val sourceId = SourceId("external-source")
         val repositoryManifest = manifest(sourceId).copy(packageVersion = "2.0.0")

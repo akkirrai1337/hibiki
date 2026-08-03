@@ -46,6 +46,7 @@ class JvmDownloadedSourcePackageExtractorTest {
             sourceId = repositoryManifest.sourceId,
             packageVersion = repositoryManifest.packageVersion,
             packagePath = staging.toString(),
+            artifactSha256 = repositoryManifest.sha256,
         )
         val coordinator = SourcePackageInstallationCoordinator(
             downloadService = SourcePackageDownloadService(

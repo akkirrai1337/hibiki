@@ -37,7 +37,12 @@ class SourcePackageEndToEndTest {
             }
 
             assertEquals(
-                InstalledSourcePackage(repositoryManifest.sourceId, repositoryManifest.packageVersion, staging),
+                InstalledSourcePackage(
+                    sourceId = repositoryManifest.sourceId,
+                    packageVersion = repositoryManifest.packageVersion,
+                    packagePath = staging,
+                    artifactSha256 = repositoryManifest.sha256,
+                ),
                 active.active,
             )
             assertEquals(active, store.state)
