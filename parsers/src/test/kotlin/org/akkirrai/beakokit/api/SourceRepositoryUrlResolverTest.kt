@@ -34,7 +34,7 @@ class SourceRepositoryUrlResolverTest {
 
     @Test
     fun `rejects GitHub repository root without an index path`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourceRepositoryUrlException> {
             resolver.resolve("https://github.com/vadim/hibiki-sources")
         }
     }
@@ -50,6 +50,13 @@ class SourceRepositoryUrlResolverTest {
     fun `classifies invalid direct URL as a repository URL error`() {
         assertFailsWith<SourceRepositoryUrlException> {
             resolver.resolve("not-https")
+        }
+    }
+
+    @Test
+    fun `rejects direct http links before they reach repository storage`() {
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("http://example.test/index.json")
         }
     }
 }

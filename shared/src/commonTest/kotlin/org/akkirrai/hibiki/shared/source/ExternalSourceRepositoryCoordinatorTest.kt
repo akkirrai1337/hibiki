@@ -75,6 +75,32 @@ class ExternalSourceRepositoryCoordinatorTest {
     }
 
     @Test
+    fun oneFailedRepositoryDoesNotHideAnotherLoadedRepository() = runTest {
+        val failed = SourceRepositoryEndpoint("https://failed.example/index.json")
+        val working = SourceRepositoryEndpoint("https://working.example/index.json")
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(FakeStore(listOf(failed, working))),
+                loader = SourceRepositoryLoader(
+                    SourceRepositoryTransport { url, _ ->
+                        if (url == failed.url) {
+                            SourceRepositoryResponse(503, "unavailable")
+                        } else {
+                            SourceRepositoryResponse(200, SourceRepositoryIndexCodec.encode(index()))
+                        }
+                    },
+                ),
+            ),
+        )
+
+        val snapshot = coordinator.refresh(clientVersion = 1)
+
+        assertEquals(listOf(working), snapshot.loaded.map { it.endpoint })
+        assertEquals(listOf(failed), snapshot.failures.map { it.endpoint })
+        assertEquals(listOf(SourceId("external-source")), coordinator.availableSourceIds())
+    }
+
+    @Test
     fun concurrentRefreshesDoNotOverlap() = runTest {
         var activeLoads = 0
         var overlapped = false
