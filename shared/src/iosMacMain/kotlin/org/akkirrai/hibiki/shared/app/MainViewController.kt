@@ -8,10 +8,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
@@ -38,8 +40,10 @@ import platform.AVFoundation.AVPlayerItem
 import platform.AVFoundation.AVURLAsset
 import platform.AVKit.AVPlayerViewController
 import platform.Foundation.NSBundle
+import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIViewController
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -49,12 +53,21 @@ fun MainViewController(systemLanguage: String): UIViewController {
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
         val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
         LaunchedEffect(externalSourcePlatform) {
-            try {
-                externalSourcePlatform.coordinator.refresh()
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                println("BeakoKit external repository refresh failed: ${error.message}")
+            refreshIosExternalRepositories(externalSourcePlatform)
+        }
+        val externalRefreshScope = rememberCoroutineScope()
+        DisposableEffect(externalSourcePlatform) {
+            val activeObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationDidBecomeActiveNotification,
+                `object` = null,
+                queue = null,
+            ) {
+                externalRefreshScope.launch {
+                    refreshIosExternalRepositories(externalSourcePlatform)
+                }
+            }
+            onDispose {
+                NSNotificationCenter.defaultCenter.removeObserver(activeObserver)
             }
         }
         DisposableEffect(externalSourcePlatform) {
@@ -172,6 +185,18 @@ fun MainViewController(systemLanguage: String): UIViewController {
     }
     IosBackBridge.install(hostController)
     return hostController
+}
+
+private suspend fun refreshIosExternalRepositories(
+    platform: org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryPlatform,
+) {
+    try {
+        platform.coordinator.refresh()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        println("BeakoKit external repository refresh failed: ${error.message}")
+    }
 }
 
 private const val HIBIKI_GITHUB_URL = "https://github.com/akkirrai1337/hibiki"

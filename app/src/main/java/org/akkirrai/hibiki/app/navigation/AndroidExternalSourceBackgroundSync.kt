@@ -5,6 +5,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CancellationException
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -19,6 +22,7 @@ internal fun AndroidExternalSourceBackgroundSync(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val platform = remember(context) {
         createAndroidExternalSourceRepositoryPlatform(context)
     }
@@ -29,13 +33,15 @@ internal fun AndroidExternalSourceBackgroundSync(
             runtimeFactory = createAndroidExternalSourceRuntimeFactory(),
         )
     }
-    LaunchedEffect(coordinator) {
-        try {
-            coordinator.refresh()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Throwable) {
-            println("BeakoKit external repository refresh failed: ${error.message}")
+    LaunchedEffect(coordinator, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            try {
+                coordinator.refresh()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                println("BeakoKit external repository refresh failed: ${error.message}")
+            }
         }
     }
     DisposableEffect(coordinator) {
