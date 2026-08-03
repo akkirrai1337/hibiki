@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -18,7 +19,9 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
@@ -33,11 +36,14 @@ import org.akkirrai.hibiki.shared.profile.IosWatchStateRepository
 import org.akkirrai.hibiki.shared.settings.IosAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.requestIosNotificationPermission
 import org.akkirrai.hibiki.shared.source.IosSourceRegistry
+import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRuntimeFactory
 import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
+import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
+import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
 import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
 import org.akkirrai.hibiki.shared.model.PlaybackContext
@@ -108,10 +114,40 @@ fun MainViewController(systemLanguage: String): UIViewController {
         }
         val sourceSelectionRepository = remember { IosSourceSelectionRepository() }
         val initialSourceId = remember { sourceSelectionRepository.loadSelectedSourceId() }
-        val repository = remember(systemLanguage, initialSourceId) {
+        val builtInRepository = remember(systemLanguage, initialSourceId) {
             IosMultiSourceAnimeCatalogRepository(
                 preferEnglish = !systemLanguage.lowercase().startsWith("ru"),
                 initialSourceId = initialSourceId,
+            )
+        }
+        val externalCatalogRepository = remember(externalRuntimeCoordinator, externalRuntimeHttpClient) {
+            ExternalSourceCatalogRepository(
+                registryProvider = { externalRuntimeCoordinator.snapshot.value.registry },
+                contextProvider = { _ ->
+                    DefaultSourceContext(
+                        httpClient = externalRuntimeHttpClient,
+                        preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                    )
+                },
+                statusLabels = ExternalAnimeStatusLabels(
+                    unknown = "Unknown",
+                    ongoing = "Ongoing",
+                    released = "Released",
+                    announcement = "Announcement",
+                ),
+            )
+        }
+        val repository = remember(builtInRepository, externalCatalogRepository) {
+            TransitionalAnimeCatalogRepository(
+                builtIn = builtInRepository,
+                external = externalCatalogRepository,
+            )
+        }
+        val externalRegistry = externalRuntimeCoordinator.snapshot.collectAsState().value.registry
+        val sources = remember(externalRegistry) {
+            mergeAppSourceDescriptors(
+                builtIn = IosSourceRegistry.sources,
+                external = externalRegistry?.toAppSourceDescriptors().orEmpty(),
             )
         }
         val watchRepository = remember(systemLanguage) {
@@ -134,7 +170,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 settingsStore.save(settingsStore.load().copy(notificationPermissionState = state))
             }
         }
-        DisposableEffect(repository) { onDispose { repository.close() } }
+        DisposableEffect(builtInRepository) { onDispose { builtInRepository.close() } }
         DisposableEffect(watchRepository) { onDispose { watchRepository.close() } }
         MaterialTheme(colorScheme = HibikiLightColorScheme, typography = HibikiTypography) {
             val density = LocalDensity.current
@@ -204,7 +240,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
                     onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
                     externalSourceRepositoryController = externalRepositoryController,
-                    sources = IosSourceRegistry.sources,
+                    sources = sources,
                     selectedSourceId = selectedSourceId.value,
                     includeNavigationBarPadding = true,
                     onSourceSelected = { sourceId ->
