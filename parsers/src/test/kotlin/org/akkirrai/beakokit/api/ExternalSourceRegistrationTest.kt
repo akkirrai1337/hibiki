@@ -43,6 +43,29 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun playbackCapabilityRequiresPlaybackRuntimeAtSourceCreation() {
+        val registration = ExternalSourceRegistration(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtimeFactory = {
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            externalSourceCatalog(listOf(registration)).create(SourceId("external-test"), context)
+        }
+    }
+
+    @Test
     fun manifestMetadataFeedsRegistrationInfo() {
         val registration = manifest().toExternalSourceRegistration(
             catalogCapabilities = CatalogCapabilities.FULL,

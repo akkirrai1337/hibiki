@@ -6,6 +6,9 @@ import kotlin.test.assertEquals
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.Episode
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 
 class ExternalSourceRuntimeTest {
     @Test
@@ -24,6 +27,22 @@ class ExternalSourceRuntimeTest {
         assertEquals("title-1", runtime.lastDetailsId)
     }
 
+    @Test
+    fun playbackRuntimeDelegatesGroupsAndPlayerLinks() = runBlocking {
+        val runtime = FakePlaybackRuntime()
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+        val title = runtime.detailsResult
+        val group = runtime.playbackGroup
+        val episode = group.episodes.single()
+
+        assertEquals(listOf(group), source.getPlaybackGroups(title))
+        assertEquals(runtime.playerLinksResult, source.getPlayerLinks(title, group, episode))
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",
@@ -31,7 +50,7 @@ class ExternalSourceRuntimeTest {
         primaryLanguage = SourceLanguage.ENGLISH,
     )
 
-    private class FakeRuntime : ExternalSourceRuntime {
+    private open class FakeRuntime : ExternalSourceRuntime {
         val searchResult = emptyList<AnimeTitle>()
         val detailsResult = AnimeTitle(
             id = "title-1",
@@ -59,5 +78,29 @@ class ExternalSourceRuntimeTest {
             lastDetailsId = id
             return detailsResult
         }
+    }
+
+    private class FakePlaybackRuntime : FakeRuntime(), ExternalSourcePlaybackRuntime {
+        val playbackGroup = PlaybackGroup(
+            id = "group-1",
+            title = "Subtitles",
+            episodes = listOf(Episode(id = "episode-1", number = 1.0, title = "Episode 1")),
+        )
+        val playerLinksResult = listOf(
+            PlayerLink(
+                url = "https://example.test/video.mp4",
+                type = PlayerType.DIRECT_MP4,
+                quality = "720p",
+            ),
+        )
+
+        override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> =
+            listOf(playbackGroup)
+
+        override suspend fun playerLinks(
+            title: AnimeTitle,
+            group: PlaybackGroup,
+            episode: Episode,
+        ): List<PlayerLink> = playerLinksResult
     }
 }

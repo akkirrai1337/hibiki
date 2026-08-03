@@ -13,11 +13,23 @@ data class ExternalSourceRegistration(
         info = info,
         registrationOrder = registrationOrder,
         factory = SourceFactory { context ->
-            RuntimeBackedAnimeSource(
-                info = info,
-                catalogCapabilities = catalogCapabilities,
-                runtime = runtimeFactory(context),
-            )
+            val runtime = runtimeFactory(context)
+            if (SourceCapability.PLAYBACK in info.capabilities) {
+                require(runtime is ExternalSourcePlaybackRuntime) {
+                    "Source ${info.id} declares PLAYBACK but its runtime does not implement playback"
+                }
+                RuntimeBackedPlaybackAnimeSource(
+                    info = info,
+                    catalogCapabilities = catalogCapabilities,
+                    runtime = runtime,
+                )
+            } else {
+                RuntimeBackedAnimeSource(
+                    info = info,
+                    catalogCapabilities = catalogCapabilities,
+                    runtime = runtime,
+                )
+            }
         },
     )
 }
