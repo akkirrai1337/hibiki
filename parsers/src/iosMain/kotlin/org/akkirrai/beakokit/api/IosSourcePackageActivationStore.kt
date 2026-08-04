@@ -16,14 +16,17 @@ class IosSourcePackageActivationStore(
     }
 
     override fun load(sourceId: SourceId): SourcePackageActivationState {
-        val raw = defaults.stringForKey(key(sourceId)) ?: return SourcePackageActivationState()
+        val stored = defaults.objectForKey(key(sourceId)) ?: return SourcePackageActivationState()
+        val raw = stored as? String ?: throw SourcePackageStateException(
+            "Source package activation state is corrupted: expected a string value",
+        )
         return try {
             if (raw.encodeToByteArray().size.toLong() > maxStateBytes) {
                 throw SourcePackageStateException(
                     "Source package activation state exceeds $maxStateBytes bytes: ${sourceId.value}",
                 )
             }
-            json.decodeFromString(raw)
+            checkedState(sourceId, json.decodeFromString(raw))
         } catch (error: SourcePackageStateException) {
             throw error
         } catch (error: Exception) {
@@ -38,12 +41,7 @@ class IosSourcePackageActivationStore(
         sourceId: SourceId,
         state: SourcePackageActivationState,
     ) {
-        require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
-            "Active package source ID does not match activation store"
-        }
-        require(state.previous?.sourceId == null || state.previous.sourceId == sourceId) {
-            "Previous package source ID does not match activation store"
-        }
+        checkedState(sourceId, state)
         val raw = json.encodeToString(state)
         require(raw.encodeToByteArray().size.toLong() <= maxStateBytes) {
             "Source package activation state exceeds $maxStateBytes bytes: ${sourceId.value}"
@@ -52,6 +50,20 @@ class IosSourcePackageActivationStore(
     }
 
     private fun key(sourceId: SourceId): String = "beakokit.source_package.${sourceId.value}"
+
+    private fun checkedState(sourceId: SourceId, state: SourcePackageActivationState): SourcePackageActivationState {
+        if (state.active?.sourceId != null && state.active.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Active package source ID does not match activation store: ${state.active.sourceId}",
+            )
+        }
+        if (state.previous?.sourceId != null && state.previous.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Previous package source ID does not match activation store: ${state.previous.sourceId}",
+            )
+        }
+        return state
+    }
 
     private companion object {
         const val DEFAULT_MAX_STATE_BYTES: Long = 2L * 1024L * 1024L

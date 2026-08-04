@@ -60,6 +60,26 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects line breaks in package and display metadata`() {
+        val invalid = manifest().copy(
+            packageVersion = "1.0.0\nnext",
+            sourceInfo = SourceManifestInfo(
+                displayName = "Source\rname",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+            ),
+        )
+
+        val violations = invalid.violations(
+            clientVersion = 3,
+            supportedApiVersion = SourceApi.VERSION,
+        )
+
+        assertContains(violations, "Package version must not contain CR or LF")
+        assertContains(violations, "Source display name must not contain CR or LF")
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 

@@ -16,7 +16,10 @@ class IosSourceRepositoryStore(
     }
 
     override fun load(): List<SourceRepositoryEndpoint> {
-        val raw = defaults.stringForKey(KEY) ?: return emptyList()
+        val stored = defaults.objectForKey(KEY) ?: return emptyList()
+        val raw = stored as? String ?: throw SourceRepositoryStateException(
+            "Source repository list is corrupted: expected a string value",
+        )
         return try {
             if (raw.encodeToByteArray().size.toLong() > maxRepositoryBytes) {
                 throw SourceRepositoryStateException(

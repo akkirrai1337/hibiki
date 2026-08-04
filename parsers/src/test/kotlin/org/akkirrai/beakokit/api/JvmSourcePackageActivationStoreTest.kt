@@ -115,11 +115,24 @@ class JvmSourcePackageActivationStoreTest {
             active = InstalledSourcePackage(SourceId("other-source"), "1.0.0", "active"),
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourcePackageStateException> {
             JvmSourcePackageActivationStore(root).persistAtomically(
                 SourceId("external-source"),
                 state,
             )
+        }
+    }
+
+    @Test
+    fun `state source IDs must match the loaded source`() {
+        val root = Files.createTempDirectory("hibiki-source-state-")
+        Files.writeString(
+            root.resolve("external-source.json"),
+            """{"active":{"sourceId":"other-source","packageVersion":"1.0.0","packagePath":"active"}}""",
+        )
+
+        assertFailsWith<SourcePackageStateException> {
+            JvmSourcePackageActivationStore(root).load(SourceId("external-source"))
         }
     }
 

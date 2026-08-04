@@ -58,7 +58,11 @@ data class SourceManifest(
         if (manifestFormatVersion != CURRENT_FORMAT_VERSION) {
             add("Unsupported manifest format version: $manifestFormatVersion")
         }
-        if (packageVersion.isBlank()) add("Package version must not be blank")
+        if (packageVersion.isBlank()) {
+            add("Package version must not be blank")
+        } else if ('\r' in packageVersion || '\n' in packageVersion) {
+            add("Package version must not contain CR or LF")
+        }
         if (apiVersion != supportedApiVersion) add("Unsupported source API version: $apiVersion")
         if (hostApiVersion != supportedHostApiVersion) {
             add("Unsupported source host API version: $hostApiVersion")
@@ -72,7 +76,11 @@ data class SourceManifest(
         }
         if (!isValidHttpsUrl(packageUrl)) add("Package URL must be a valid HTTPS URL")
         sourceInfo?.let { metadata ->
-            if (metadata.displayName.isBlank()) add("Source display name must not be blank")
+            if (metadata.displayName.isBlank()) {
+                add("Source display name must not be blank")
+            } else if ('\r' in metadata.displayName || '\n' in metadata.displayName) {
+                add("Source display name must not contain CR or LF")
+            }
             if (metadata.languages.isEmpty()) add("Source must declare at least one language")
             if (metadata.primaryLanguage !in metadata.languages) {
                 add("Primary source language must be included in supported languages")

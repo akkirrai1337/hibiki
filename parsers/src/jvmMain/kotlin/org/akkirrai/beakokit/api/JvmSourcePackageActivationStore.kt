@@ -29,10 +29,10 @@ class JvmSourcePackageActivationStore(
 
     override fun load(sourceId: SourceId): SourcePackageActivationState {
         val stateFile = stateFile(sourceId)
-        readState(stateFile)?.let { return it }
+        readState(stateFile)?.let { return checkedState(sourceId, it) }
         readState(backupFile(sourceId))?.let { backup ->
             writeStateAtomically(stateFile, backup)
-            return backup
+            return checkedState(sourceId, backup)
         }
         if (!Files.exists(stateFile)) return SourcePackageActivationState()
         throw SourcePackageStateException("Source package activation state is corrupted: $stateFile")
@@ -42,12 +42,7 @@ class JvmSourcePackageActivationStore(
         sourceId: SourceId,
         state: SourcePackageActivationState,
     ) {
-        require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
-            "Active package source ID does not match activation store"
-        }
-        require(state.previous?.sourceId == null || state.previous.sourceId == sourceId) {
-            "Previous package source ID does not match activation store"
-        }
+        checkedState(sourceId, state)
         Files.createDirectories(rootDirectory)
         val stateFile = stateFile(sourceId)
         val previous = readState(stateFile)
@@ -60,6 +55,20 @@ class JvmSourcePackageActivationStore(
     private fun stateFile(sourceId: SourceId): Path = rootDirectory.resolve("${sourceId.value}.json")
 
     private fun backupFile(sourceId: SourceId): Path = rootDirectory.resolve("${sourceId.value}.json.bak")
+
+    private fun checkedState(sourceId: SourceId, state: SourcePackageActivationState): SourcePackageActivationState {
+        if (state.active?.sourceId != null && state.active.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Active package source ID does not match activation store: ${state.active.sourceId}",
+            )
+        }
+        if (state.previous?.sourceId != null && state.previous.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Previous package source ID does not match activation store: ${state.previous.sourceId}",
+            )
+        }
+        return state
+    }
 
     private fun readState(path: Path): SourcePackageActivationState? = try {
         if (Files.isSymbolicLink(path)) {

@@ -52,6 +52,7 @@ data class SourceInfo(
 ) {
     init {
         require(name.isNotBlank()) { "Source name must not be blank" }
+        require('\r' !in name && '\n' !in name) { "Source name must not contain CR or LF" }
         require(languages.isNotEmpty()) { "Source must declare at least one language" }
         require(primaryLanguage in languages) {
             "Primary source language must be included in supported languages: $primaryLanguage"
