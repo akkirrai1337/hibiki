@@ -22,13 +22,19 @@ class ExternalSourceHostDispatcher(
     constructor(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
         storage: ExternalSourceHostStorageAccess?,
-    ) : this(executeHttpRequest, storage, null)
+        requirements: SourceHostRequirements = SourceHostRequirements(
+            capabilities = setOf(SourceHostCapability.NETWORK),
+        ),
+    ) : this(executeHttpRequest, storage, null, null, requirements)
 
     constructor(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
         storage: ExternalSourceHostStorageAccess?,
         cookies: SourceHostCookiesAccess?,
-    ) : this(executeHttpRequest, storage, cookies, null)
+        requirements: SourceHostRequirements = SourceHostRequirements(
+            capabilities = setOf(SourceHostCapability.NETWORK),
+        ),
+    ) : this(executeHttpRequest, storage, cookies, null, requirements)
 
     suspend fun dispatch(request: ExternalSourceHostRequest): ExternalSourceHostResponse {
         val payload = when (request.operation) {
@@ -111,14 +117,26 @@ class ExternalSourceHostDispatcher(
         )
     }
 
-    private fun requireStorage(): ExternalSourceHostStorageAccess =
-        storage ?: throw SourceHostCapabilityException(SourceHostCapability.STORAGE)
+    private fun requireStorage(): ExternalSourceHostStorageAccess {
+        requireDeclared(SourceHostCapability.STORAGE)
+        return storage ?: throw SourceHostCapabilityException(SourceHostCapability.STORAGE)
+    }
 
-    private fun requireCookies(): SourceHostCookiesAccess =
-        cookies ?: throw SourceHostCapabilityException(SourceHostCapability.COOKIES)
+    private fun requireCookies(): SourceHostCookiesAccess {
+        requireDeclared(SourceHostCapability.COOKIES)
+        return cookies ?: throw SourceHostCapabilityException(SourceHostCapability.COOKIES)
+    }
 
-    private fun requireConfig(): SourceHostConfigAccess =
-        config ?: throw SourceHostCapabilityException(SourceHostCapability.CONFIG)
+    private fun requireConfig(): SourceHostConfigAccess {
+        requireDeclared(SourceHostCapability.CONFIG)
+        return config ?: throw SourceHostCapabilityException(SourceHostCapability.CONFIG)
+    }
+
+    private fun requireDeclared(capability: SourceHostCapability) {
+        if (!requirements.requires(capability)) {
+            throw SourceHostCapabilityException(capability)
+        }
+    }
 }
 
 /** Source-scoped storage exposed by the platform host to the protocol dispatcher. */

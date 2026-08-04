@@ -93,6 +93,30 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_storage_when_capability_is_not_declared() = runBlocking {
+        val request = ExternalSourceHostRequest(
+            requestId = "host-storage-denied",
+            operation = ExternalSourceHostOperation.STORAGE_READ,
+            payload = ExternalSourceHostProtocolCodec.encodeStorageReadRequest(
+                ExternalSourceHostStorageReadRequest("token"),
+            ),
+        )
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = object : ExternalSourceHostStorageAccess {
+                override suspend fun read(key: String): String? = "secret"
+                override suspend fun write(key: String, value: String) = Unit
+                override suspend fun remove(key: String) = Unit
+            },
+            requirements = SourceHostRequirements(),
+        )
+
+        assertFailsWith<SourceHostCapabilityException> {
+            dispatcher.dispatch(request)
+        }
+    }
+
+    @Test
     fun http_request_and_response_round_trip_with_explicit_nulls() {
         val request = ExternalSourceHostRequest(
             requestId = "host-1",
@@ -208,6 +232,9 @@ class ExternalSourceHostProtocolTest {
         val dispatcher = ExternalSourceHostDispatcher(
             executeHttpRequest = { error("HTTP must not be called") },
             storage = storage,
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.STORAGE),
+            ),
         )
 
         val writeRequest = ExternalSourceHostRequest(
@@ -303,6 +330,9 @@ class ExternalSourceHostProtocolTest {
             executeHttpRequest = { error("HTTP must not be called") },
             storage = null,
             cookies = cookies,
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.COOKIES),
+            ),
         )
         val url = "https://example.com/anime"
 
@@ -363,6 +393,9 @@ class ExternalSourceHostProtocolTest {
             storage = null,
             cookies = null,
             config = config,
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.CONFIG),
+            ),
         )
         val request = ExternalSourceHostRequest(
             requestId = "config-value",
