@@ -69,6 +69,9 @@ data class ExternalSourceHostResponse(
         require((payload == null) != (errorCode == null)) {
             "Host response must contain either payload or error"
         }
+        require(errorMessage == null || errorMessage.length <= MAX_ERROR_MESSAGE_LENGTH) {
+            "Host error message must be at most $MAX_ERROR_MESSAGE_LENGTH characters"
+        }
         if (errorCode == null) require(errorMessage == null) {
             "Successful host response must not contain an error message"
         }
@@ -84,6 +87,10 @@ data class ExternalSourceHostResponse(
                 ?: "Host request failed with ${errorCode?.name}",
         )
     }
+
+    companion object {
+        const val MAX_ERROR_MESSAGE_LENGTH: Int = 4 * 1024
+    }
 }
 
 @Serializable
@@ -98,7 +105,7 @@ data class ExternalSourceHostHttpRequest(
     init {
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
-        requireSafeHttpField(method, "HTTP method")
+        requireHttpToken(method, "HTTP method")
         requireSafeHttpField(url, "HTTP URL")
         requireSafeHttpHeaders(headers)
         require(timeoutMillis > 0) { "HTTP timeout must be positive" }
@@ -127,23 +134,34 @@ data class ExternalSourceHostHttpResponse(
 @Serializable
 data class ExternalSourceHostStorageReadRequest(
     val key: String,
-)
+) {
+    init { SourceHostStorage.requireKey(key) }
+}
 
 @Serializable
 data class ExternalSourceHostStorageReadResponse(
     val value: String?,
-)
+) {
+    init { SourceHostStorage.requireValue(value ?: "") }
+}
 
 @Serializable
 data class ExternalSourceHostStorageWriteRequest(
     val key: String,
     val value: String,
-)
+) {
+    init {
+        SourceHostStorage.requireKey(key)
+        SourceHostStorage.requireValue(value)
+    }
+}
 
 @Serializable
 data class ExternalSourceHostStorageRemoveRequest(
     val key: String,
-)
+) {
+    init { SourceHostStorage.requireKey(key) }
+}
 
 @Serializable
 data class ExternalSourceHostStorageMutationResponse(
@@ -153,33 +171,48 @@ data class ExternalSourceHostStorageMutationResponse(
 @Serializable
 data class ExternalSourceHostCookiesForUrlRequest(
     val url: String,
-)
+) {
+    init { SourceHostCookies.requireUrl(url) }
+}
 
 @Serializable
 data class ExternalSourceHostCookiesForUrlResponse(
     val cookies: Map<String, String> = emptyMap(),
-)
+) {
+    init { SourceHostCookies.requireCookies(cookies) }
+}
 
 @Serializable
 data class ExternalSourceHostCookiesStoreResponseRequest(
     val url: String,
     val cookies: Map<String, String>,
-)
+) {
+    init {
+        SourceHostCookies.requireUrl(url)
+        SourceHostCookies.requireCookies(cookies)
+    }
+}
 
 @Serializable
 data class ExternalSourceHostCookiesClearRequest(
     val url: String,
-)
+) {
+    init { SourceHostCookies.requireUrl(url) }
+}
 
 @Serializable
 data class ExternalSourceHostConfigRequest(
     val key: String,
-)
+) {
+    init { SourceHostConfigLimits.requireKey(key) }
+}
 
 @Serializable
 data class ExternalSourceHostConfigResponse(
     val value: String?,
-)
+) {
+    init { SourceHostConfigLimits.requireValue(value) }
+}
 
 object ExternalSourceHostProtocolCodec {
     private val json = Json {

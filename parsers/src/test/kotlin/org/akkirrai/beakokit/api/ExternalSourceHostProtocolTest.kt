@@ -206,6 +206,17 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun error_response_rejects_oversized_messages() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostResponse(
+                requestId = "host-oversized-error",
+                errorCode = ExternalSourceHostErrorCode.HOST_FAILURE,
+                errorMessage = "x".repeat(ExternalSourceHostResponse.MAX_ERROR_MESSAGE_LENGTH + 1),
+            )
+        }
+    }
+
+    @Test
     fun http_request_rejects_invalid_limits_at_the_wire_boundary() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceHostHttpRequest(method = "", url = "https://example.com")
@@ -242,6 +253,19 @@ class ExternalSourceHostProtocolTest {
                 headers = mapOf("X-Test" to "ok\nX-Injected: true"),
             )
         }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET /",
+                url = "https://example.com",
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET",
+                url = "https://example.com",
+                headers = mapOf("X-Test:Injected" to "ok"),
+            )
+        }
     }
 
     @Test
@@ -262,6 +286,30 @@ class ExternalSourceHostProtocolTest {
     fun config_requests_reject_control_characters_in_keys() {
         assertFailsWith<IllegalArgumentException> {
             SourceHostConfigLimits.requireKey("token\rsecret")
+        }
+    }
+
+    @Test
+    fun host_wire_models_validate_storage_cookies_and_config_fields() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostStorageReadRequest("bad\nkey")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostStorageWriteRequest("token", "x".repeat(SourceHostStorage.MAX_VALUE_LENGTH + 1))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostCookiesForUrlRequest("http://example.com")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostCookiesForUrlResponse(
+                mapOf("session" to "x".repeat(SourceHostCookies.MAX_COOKIE_VALUE_LENGTH + 1)),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostConfigRequest("bad\nkey")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostConfigResponse("x".repeat(SourceHostConfigLimits.MAX_VALUE_LENGTH + 1))
         }
     }
 

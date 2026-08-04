@@ -38,7 +38,7 @@ internal fun requireSafeHttpField(value: String, label: String) {
     }
 }
 
-private fun requireHttpToken(value: String, label: String) {
+internal fun requireHttpToken(value: String, label: String) {
     require(value.isNotEmpty() && value.all {
         character -> character.isLetterOrDigit() || character in "!#$%&'*+-.^_`|~"
     }) {
