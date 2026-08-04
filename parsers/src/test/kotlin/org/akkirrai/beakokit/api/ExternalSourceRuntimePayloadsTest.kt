@@ -48,6 +48,26 @@ class ExternalSourceRuntimePayloadsTest {
     }
 
     @Test
+    fun searchPayloadRejectsInvalidBounds() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.search(AnimeSearchRequest(limit = 0))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.search(AnimeSearchRequest(offset = -1))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.search(AnimeSearchRequest(yearFrom = 2025, yearTo = 2024))
+        }
+    }
+
+    @Test
+    fun latestPayloadRejectsNonPositiveLimit() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.latest(0)
+        }
+    }
+
+    @Test
     fun detailsPayloadContainsStableIdField() {
         assertEquals("title-1", ExternalSourceRuntimePayloads.details("title-1")["id"]?.toString()?.trim('"'))
     }
@@ -120,6 +140,13 @@ class ExternalSourceRuntimePayloadsTest {
                 title,
                 group,
                 group.episodes.single().copy(id = ""),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.playerLinks(
+                title,
+                group,
+                group.episodes.single().copy(number = Double.NaN),
             )
         }
     }
