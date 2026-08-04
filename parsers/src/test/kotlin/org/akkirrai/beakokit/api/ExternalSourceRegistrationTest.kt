@@ -172,6 +172,19 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun `catalog cannot advertise unsupported schedule feature`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRegistration(
+                info = sourceInfo(),
+                catalogCapabilities = CatalogCapabilities.FULL.copy(
+                    features = setOf(CatalogFeature.SCHEDULE),
+                ),
+                runtimeFactory = { error("Runtime must not be created") },
+            )
+        }
+    }
+
+    @Test
     fun manifestMetadataFeedsRegistrationInfo() {
         val registration = manifest().toExternalSourceRegistration(
             catalogCapabilities = CatalogCapabilities.FULL,

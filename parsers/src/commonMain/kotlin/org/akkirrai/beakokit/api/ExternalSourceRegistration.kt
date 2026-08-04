@@ -17,6 +17,9 @@ data class ExternalSourceRegistration(
         ) {
             "Source ${info.id} advertises LATEST_RELEASES without the source capability"
         }
+        require(CatalogFeature.SCHEDULE !in catalogCapabilities.features) {
+            "Source ${info.id} advertises unsupported SCHEDULE feature"
+        }
     }
 
     fun catalogEntry(): SourceCatalogEntry = SourceCatalogEntry(
