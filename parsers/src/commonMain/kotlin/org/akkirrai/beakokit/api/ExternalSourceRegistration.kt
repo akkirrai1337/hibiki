@@ -15,17 +15,40 @@ data class ExternalSourceRegistration(
         factory = SourceFactory { context ->
             info.configSchema.requireValid(context.config)
             val runtime = runtimeFactory(context)
-            if (SourceCapability.PLAYBACK in info.capabilities) {
-                require(runtime is ExternalSourcePlaybackRuntime) {
-                    "Source ${info.id} declares PLAYBACK but its runtime does not implement playback"
+            val declaresPlayback = SourceCapability.PLAYBACK in info.capabilities
+            val declaresLatest = SourceCapability.LATEST_RELEASES in info.capabilities
+            when {
+                declaresPlayback && declaresLatest -> {
+                    require(runtime is ExternalSourceLatestPlaybackRuntime) {
+                        "Source ${info.id} declares PLAYBACK and LATEST_RELEASES but its runtime does not implement both"
+                    }
+                    RuntimeBackedLatestPlaybackAnimeSource(
+                        info = info,
+                        catalogCapabilities = catalogCapabilities,
+                        runtime = runtime,
+                    )
                 }
-                RuntimeBackedPlaybackAnimeSource(
-                    info = info,
-                    catalogCapabilities = catalogCapabilities,
-                    runtime = runtime,
-                )
-            } else {
-                RuntimeBackedAnimeSource(
+                declaresPlayback -> {
+                    require(runtime is ExternalSourcePlaybackRuntime) {
+                        "Source ${info.id} declares PLAYBACK but its runtime does not implement playback"
+                    }
+                    RuntimeBackedPlaybackAnimeSource(
+                        info = info,
+                        catalogCapabilities = catalogCapabilities,
+                        runtime = runtime,
+                    )
+                }
+                declaresLatest -> {
+                    require(runtime is ExternalSourceLatestRuntime) {
+                        "Source ${info.id} declares LATEST_RELEASES but its runtime does not implement latest"
+                    }
+                    RuntimeBackedLatestAnimeSource(
+                        info = info,
+                        catalogCapabilities = catalogCapabilities,
+                        runtime = runtime,
+                    )
+                }
+                else -> RuntimeBackedAnimeSource(
                     info = info,
                     catalogCapabilities = catalogCapabilities,
                     runtime = runtime,

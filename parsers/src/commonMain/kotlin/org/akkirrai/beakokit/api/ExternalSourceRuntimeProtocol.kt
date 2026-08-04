@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 enum class ExternalSourceRuntimeOperation {
     SEARCH,
     DETAILS,
+    LATEST,
     PLAYBACK_GROUPS,
     PLAYER_LINKS,
 }

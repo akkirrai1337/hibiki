@@ -48,6 +48,8 @@ class InstalledExternalSourcePipelineTest {
                             AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
                         ExternalSourceRuntimeOperation.DETAILS ->
                             AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                        ExternalSourceRuntimeOperation.LATEST ->
+                            AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                         ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->
                             AnimeTitleRuntimePayloadCodec.encodePlaybackGroups(listOf(playbackGroup()))
                         ExternalSourceRuntimeOperation.PLAYER_LINKS ->

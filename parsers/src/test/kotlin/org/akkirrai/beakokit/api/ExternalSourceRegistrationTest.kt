@@ -11,6 +11,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
@@ -79,6 +80,66 @@ class ExternalSourceRegistrationTest {
         val registration = ExternalSourceRegistration(
             info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
             catalogCapabilities = CatalogCapabilities.FULL,
+            runtimeFactory = {
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+        )
+        val context = DefaultSourceContext(
+            httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            externalSourceCatalog(listOf(registration)).create(SourceId("external-test"), context)
+        }
+    }
+
+    @Test
+    fun latestCapabilityCreatesLatestSourceThroughTheNewPipeline() = runBlocking {
+        val registration = ExternalSourceRegistration(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.LATEST_RELEASES)),
+            catalogCapabilities = CatalogCapabilities.FULL.copy(
+                features = setOf(CatalogFeature.LATEST_RELEASES),
+            ),
+            runtimeFactory = {
+                object : ExternalSourceLatestRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+
+                    override suspend fun latest(limit: Int): List<AnimeTitle> =
+                        listOf(title("latest-result")).take(limit)
+                }
+            },
+        )
+        val client = HttpClient(MockEngine { error("Network is not expected in this test") })
+        try {
+            val source = externalSourceCatalog(listOf(registration)).create(
+                SourceId("external-test"),
+                DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                ),
+            )
+
+            val latest = source as? LatestSource ?: error("Latest capability was not registered")
+            assertEquals(listOf("latest-result"), latest.latest(10).map(AnimeTitle::id))
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun latestCapabilityRequiresLatestRuntimeAtSourceCreation() {
+        val registration = ExternalSourceRegistration(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.LATEST_RELEASES)),
+            catalogCapabilities = CatalogCapabilities.FULL.copy(
+                features = setOf(CatalogFeature.LATEST_RELEASES),
+            ),
             runtimeFactory = {
                 object : ExternalSourceRuntime {
                     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
@@ -169,6 +230,8 @@ class ExternalSourceRegistrationTest {
                                 AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
                             ExternalSourceRuntimeOperation.DETAILS ->
                                 AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                            ExternalSourceRuntimeOperation.LATEST ->
+                                AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                             else -> error("Playback operation is not part of this catalog-only fixture")
                         }
                         ExternalSourceRuntimeResponse(
@@ -216,6 +279,8 @@ class ExternalSourceRegistrationTest {
                         val payload = when (request.operation) {
                             ExternalSourceRuntimeOperation.DETAILS ->
                                 AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                            ExternalSourceRuntimeOperation.LATEST ->
+                                AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                             ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->
                                 AnimeTitleRuntimePayloadCodec.encodePlaybackGroups(listOf(group))
                             ExternalSourceRuntimeOperation.PLAYER_LINKS ->

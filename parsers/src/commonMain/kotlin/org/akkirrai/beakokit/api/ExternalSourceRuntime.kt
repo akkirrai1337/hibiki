@@ -12,6 +12,11 @@ interface ExternalSourceRuntime {
     suspend fun details(id: String): AnimeTitle
 }
 
+/** Optional runtime contract for sources that expose their latest updated titles. */
+interface ExternalSourceLatestRuntime : ExternalSourceRuntime {
+    suspend fun latest(limit: Int): List<AnimeTitle>
+}
+
 /** Optional runtime contract for sources that expose episodes and playable links. */
 interface ExternalSourcePlaybackRuntime : ExternalSourceRuntime {
     suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup>
@@ -22,6 +27,9 @@ interface ExternalSourcePlaybackRuntime : ExternalSourceRuntime {
         episode: Episode,
     ): List<PlayerLink>
 }
+
+/** Combined optional runtime contract for latest titles and playback. */
+interface ExternalSourceLatestPlaybackRuntime : ExternalSourcePlaybackRuntime, ExternalSourceLatestRuntime
 
 /** Platform adapter that creates a runtime for one already active source package. */
 fun interface ExternalSourceRuntimeFactory {
@@ -55,8 +63,26 @@ open class RuntimeBackedAnimeSource(
     }
 }
 
+/** Adapts the optional latest operation from an external runtime. */
+class RuntimeBackedLatestAnimeSource(
+    info: SourceInfo,
+    catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
+    runtime: ExternalSourceLatestRuntime,
+) : RuntimeBackedAnimeSource(
+    info = info,
+    catalogCapabilities = catalogCapabilities,
+    runtime = runtime,
+), LatestSource {
+    private val latestRuntime = runtime
+
+    override suspend fun latest(limit: Int): List<AnimeTitle> {
+        SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
+        return latestRuntime.latest(limit)
+    }
+}
+
 /** BeakoKit adapter for an external runtime with the optional playback contract. */
-class RuntimeBackedPlaybackAnimeSource(
+open class RuntimeBackedPlaybackAnimeSource(
     info: SourceInfo,
     catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     runtime: ExternalSourcePlaybackRuntime,
@@ -79,5 +105,23 @@ class RuntimeBackedPlaybackAnimeSource(
     ): List<PlayerLink> {
         SourceOperationGate.requireSupported(this, SourceOperation.PLAYER_LINKS)
         return playbackRuntime.playerLinks(title, group, episode)
+    }
+}
+
+/** Adapts an external runtime that exposes both latest titles and playback. */
+class RuntimeBackedLatestPlaybackAnimeSource(
+    info: SourceInfo,
+    catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
+    runtime: ExternalSourceLatestPlaybackRuntime,
+) : RuntimeBackedPlaybackAnimeSource(
+    info = info,
+    catalogCapabilities = catalogCapabilities,
+    runtime = runtime,
+), LatestSource {
+    private val latestRuntime = runtime
+
+    override suspend fun latest(limit: Int): List<AnimeTitle> {
+        SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
+        return latestRuntime.latest(limit)
     }
 }

@@ -74,6 +74,26 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     @Test
+    fun latestRuntimeSendsLatestOperationAndLimit() = runBlocking {
+        var received: ExternalSourceRuntimeRequest? = null
+        val runtime = ProtocolBackedExternalSourceLatestRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                received = request
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("items", "ignored") },
+                )
+            },
+            payloadCodec = FakePayloadCodec(),
+            requestIdFactory = { "latest-1" },
+        )
+
+        assertEquals(listOf("decoded-search"), runtime.latest(12).map(AnimeTitle::id))
+        assertEquals(ExternalSourceRuntimeOperation.LATEST, received?.operation)
+        assertEquals("12", received?.payload?.get("limit")?.toString())
+    }
+
+    @Test
     fun mismatchedResponseIdIsRejected() = runBlocking {
         val runtime = ProtocolBackedExternalSourceRuntime(
             transport = ExternalSourceRuntimeTransport { request, _ ->

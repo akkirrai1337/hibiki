@@ -43,6 +43,8 @@ interface ExternalSourceRuntimePayloadCodec {
     fun decodeSearch(payload: JsonObject): List<AnimeTitle>
 
     fun decodeDetails(payload: JsonObject): AnimeTitle
+
+    fun decodeLatest(payload: JsonObject): List<AnimeTitle> = decodeSearch(payload)
 }
 
 /** Response decoder for the optional playback operations. */
@@ -135,6 +137,27 @@ open class ProtocolBackedExternalSourceRuntime(
     }
 }
 
+/** Protocol-backed runtime that exposes the optional latest operation. */
+open class ProtocolBackedExternalSourceLatestRuntime(
+    transport: ExternalSourceRuntimeTransport,
+    payloadCodec: ExternalSourceRuntimePayloadCodec,
+    requestIdFactory: () -> String,
+    callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+) : ProtocolBackedExternalSourceRuntime(
+    transport = transport,
+    payloadCodec = payloadCodec,
+    requestIdFactory = requestIdFactory,
+    callLimits = callLimits,
+), ExternalSourceLatestRuntime {
+    private val latestPayloadCodec = payloadCodec
+
+    override suspend fun latest(limit: Int): List<AnimeTitle> = call(
+        operation = ExternalSourceRuntimeOperation.LATEST,
+        payload = ExternalSourceRuntimePayloads.latest(limit),
+        decode = latestPayloadCodec::decodeLatest,
+    )
+}
+
 /** Protocol-backed runtime that exposes the optional playback contract. */
 class ProtocolBackedExternalSourcePlaybackRuntime(
     transport: ExternalSourceRuntimeTransport,
@@ -161,5 +184,36 @@ class ProtocolBackedExternalSourcePlaybackRuntime(
         operation = ExternalSourceRuntimeOperation.PLAYER_LINKS,
         payload = ExternalSourceRuntimePayloads.playerLinks(title, group, episode),
         decode = payloadCodec::decodePlayerLinks,
+    )
+}
+
+/** Protocol-backed runtime exposing latest titles and playback operations. */
+class ProtocolBackedExternalSourceLatestPlaybackRuntime(
+    transport: ExternalSourceRuntimeTransport,
+    payloadCodec: ExternalSourcePlaybackRuntimePayloadCodec,
+    requestIdFactory: () -> String,
+    callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+) : ProtocolBackedExternalSourceLatestRuntime(
+    transport = transport,
+    payloadCodec = payloadCodec,
+    requestIdFactory = requestIdFactory,
+    callLimits = callLimits,
+), ExternalSourceLatestPlaybackRuntime {
+    private val playbackPayloadCodec = payloadCodec
+
+    override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> = call(
+        operation = ExternalSourceRuntimeOperation.PLAYBACK_GROUPS,
+        payload = ExternalSourceRuntimePayloads.playbackGroups(title),
+        decode = playbackPayloadCodec::decodePlaybackGroups,
+    )
+
+    override suspend fun playerLinks(
+        title: AnimeTitle,
+        group: PlaybackGroup,
+        episode: Episode,
+    ): List<PlayerLink> = call(
+        operation = ExternalSourceRuntimeOperation.PLAYER_LINKS,
+        payload = ExternalSourceRuntimePayloads.playerLinks(title, group, episode),
+        decode = playbackPayloadCodec::decodePlayerLinks,
     )
 }

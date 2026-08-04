@@ -32,6 +32,10 @@ object ExternalSourceRuntimePayloads {
         put("id", id)
     }
 
+    fun latest(limit: Int): JsonObject = buildJsonObject {
+        put("limit", limit)
+    }
+
     fun playbackGroups(title: AnimeTitle): JsonObject = buildJsonObject {
         put("titleId", title.id)
     }
