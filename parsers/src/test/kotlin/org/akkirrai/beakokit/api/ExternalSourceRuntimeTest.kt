@@ -10,6 +10,8 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.VideoSegment
+import org.akkirrai.beakokit.model.VideoSegmentType
 
 class ExternalSourceRuntimeTest {
     @Test
@@ -81,6 +83,52 @@ class ExternalSourceRuntimeTest {
                 runtime.playbackGroup,
                 runtime.playbackGroup.episodes.single(),
             )
+        }
+    }
+
+    @Test
+    fun playbackRuntimeRejectsInvalidPlayerLinkSegments() = runBlocking {
+        val runtime = FakePlaybackRuntime().apply {
+            playerLinksResult = listOf(
+                PlayerLink(
+                    url = "https://example.test/video.mp4",
+                    type = PlayerType.DIRECT_MP4,
+                    quality = "720p",
+                    segments = listOf(VideoSegment(VideoSegmentType.OPENING, 30_000, 30_000)),
+                ),
+            )
+        }
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlayerLinks(
+                runtime.detailsResult,
+                runtime.playbackGroup,
+                runtime.playbackGroup.episodes.single(),
+            )
+        }
+    }
+
+    @Test
+    fun playbackRuntimeRejectsInvalidPlaybackArgumentsBeforeCallingRuntime() = runBlocking {
+        val runtime = FakePlaybackRuntime()
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+        val invalidTitle = runtime.detailsResult.copy(id = "title\n-1")
+        val invalidEpisode = runtime.playbackGroup.episodes.single().copy(number = Double.NaN)
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlaybackGroups(invalidTitle)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlayerLinks(runtime.detailsResult, runtime.playbackGroup, invalidEpisode)
         }
     }
 

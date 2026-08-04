@@ -105,6 +105,7 @@ open class RuntimeBackedPlaybackAnimeSource(
 
     override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
         SourceOperationGate.requireSupported(this, SourceOperation.PLAYBACK_GROUPS)
+        requireValidExternalRuntimeId(title.id, "title")
         return playbackRuntime.playbackGroups(title).also {
             requireValidExternalPlaybackGroups(it)
         }
@@ -116,6 +117,12 @@ open class RuntimeBackedPlaybackAnimeSource(
         episode: Episode,
     ): List<PlayerLink> {
         SourceOperationGate.requireSupported(this, SourceOperation.PLAYER_LINKS)
+        requireValidExternalRuntimeId(title.id, "title")
+        requireValidExternalRuntimeId(group.id, "playback group")
+        requireValidExternalRuntimeId(episode.id, "episode")
+        require(episode.number.isFinite()) {
+            "External playback episode number must be finite"
+        }
         return playbackRuntime.playerLinks(title, group, episode).also {
             requireValidExternalPlayerLinks(info, it)
         }
@@ -136,6 +143,9 @@ private fun requireValidExternalPlayerLinks(info: SourceInfo, links: List<Player
             }
         }
         requireSafeHttpHeaders(link.headers)
+        require(link.segments.all { it.startMs >= 0L && it.endMs > it.startMs }) {
+            "External player link segments must have a positive ordered range"
+        }
     }
 }
 
