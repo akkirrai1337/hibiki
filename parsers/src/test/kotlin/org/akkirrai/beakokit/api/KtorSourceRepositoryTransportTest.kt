@@ -50,6 +50,22 @@ class KtorSourceRepositoryTransportTest {
     }
 
     @Test
+    fun `transport enforces response limit on raw bytes`() = runBlocking {
+        val transport = KtorSourceRepositoryTransport(
+            HttpClient(MockEngine { respond(byteArrayOf(0xC3.toByte(), 0xA9.toByte(), 0xC3.toByte())) }),
+        )
+
+        val error = assertFailsWith<SourceRepositoryLoadException> {
+            transport.get(
+                url = "https://example.com/repository.json",
+                limits = SourceRepositoryLoadLimits(maxResponseBytes = 2),
+            )
+        }
+
+        assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
+    }
+
+    @Test
     fun `transport returns an error status without reading its body`() = runBlocking {
         val transport = KtorSourceRepositoryTransport(
             HttpClient(MockEngine {

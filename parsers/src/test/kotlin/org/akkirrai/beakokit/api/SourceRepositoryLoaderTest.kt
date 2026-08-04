@@ -88,6 +88,20 @@ class SourceRepositoryLoaderTest {
     }
 
     @Test
+    fun `loader preserves internal errors`() = runBlocking {
+        val internalError = AssertionError("internal failure")
+        val loader = SourceRepositoryLoader(
+            transport = SourceRepositoryTransport { _, _ -> throw internalError },
+        )
+
+        val error = assertFailsWith<AssertionError> {
+            loader.load("https://example.com/repository.json", clientVersion = 3)
+        }
+
+        assertEquals(internalError.message, error.message)
+    }
+
+    @Test
     fun `loader preserves cancellation`() = runBlocking {
         val cancellation = CancellationException("caller stopped loading")
         val loader = SourceRepositoryLoader(

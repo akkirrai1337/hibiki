@@ -70,7 +70,7 @@ class SourceRepositoryLoader(
             throw error
         } catch (error: SourceRepositoryLoadException) {
             throw error
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             throw SourceRepositoryLoadException(
                 message = "Repository request failed",
                 cause = error,

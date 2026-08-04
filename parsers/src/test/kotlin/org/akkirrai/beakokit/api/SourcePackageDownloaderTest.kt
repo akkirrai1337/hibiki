@@ -122,6 +122,23 @@ class SourcePackageDownloaderTest {
     }
 
     @Test
+    fun `Ktor transport preserves internal errors`() = runBlocking {
+        val internalError = AssertionError("internal failure")
+        val transport = KtorSourcePackageTransport(
+            HttpClient(MockEngine { throw internalError }),
+        )
+
+        val error = assertFailsWith<AssertionError> {
+            transport.download(
+                url = "https://example.com/source.zip",
+                limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 10),
+            )
+        }
+
+        assertEquals(internalError.message, error.message)
+    }
+
+    @Test
     fun `Ktor transport enforces timeout`() = runBlocking {
         val transport = KtorSourcePackageTransport(
             HttpClient(MockEngine {

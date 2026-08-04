@@ -66,7 +66,7 @@ class KtorSourcePackageTransport(
             throw error
         } catch (error: SourcePackageDownloadException) {
             throw error
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             throw SourcePackageDownloadException(
                 message = "Package download failed",
                 cause = error,
