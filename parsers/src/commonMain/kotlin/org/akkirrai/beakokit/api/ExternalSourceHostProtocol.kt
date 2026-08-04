@@ -113,8 +113,8 @@ data class ExternalSourceHostHttpRequest(
             "HTTP timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
         }
         require(maxResponseBytes > 0) { "Maximum HTTP response size must be positive" }
-        require(maxResponseBytes < Long.MAX_VALUE) {
-            "Maximum HTTP response size must leave room for the limit sentinel"
+        require(maxResponseBytes <= SourceHostHttpRequest.MAX_MAX_RESPONSE_BYTES) {
+            "Maximum HTTP response size must not exceed ${SourceHostHttpRequest.MAX_MAX_RESPONSE_BYTES} bytes"
         }
     }
 }

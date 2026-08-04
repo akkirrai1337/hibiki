@@ -58,7 +58,11 @@ class SourceHostHttpTest {
             SourceHostHttpRequest("GET", "https://example.com", maxResponseBytes = 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            SourceHostHttpRequest("GET", "https://example.com", maxResponseBytes = Long.MAX_VALUE)
+            SourceHostHttpRequest(
+                "GET",
+                "https://example.com",
+                maxResponseBytes = SourceHostHttpRequest.MAX_MAX_RESPONSE_BYTES + 1,
+            )
         }
     }
 

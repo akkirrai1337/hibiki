@@ -209,7 +209,10 @@ private class AndroidExternalSourceHost(
         ExternalSourceHostResponse(
             requestId = requestId,
             errorCode = code,
-            errorMessage = message,
+            errorMessage = message
+                .replace('\r', ' ')
+                .replace('\n', ' ')
+                .take(ExternalSourceHostResponse.MAX_ERROR_MESSAGE_LENGTH),
         ),
     )
 

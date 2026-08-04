@@ -112,7 +112,10 @@ internal class IosExternalSourceHost(
             ExternalSourceHostProtocolCodec.decodeRequest(bytes).requestId
         }.getOrDefault("host-invalid-request"),
         errorCode = code,
-        errorMessage = message,
+        errorMessage = message
+            .replace('\r', ' ')
+            .replace('\n', ' ')
+            .take(ExternalSourceHostResponse.MAX_ERROR_MESSAGE_LENGTH),
     )
 }
 

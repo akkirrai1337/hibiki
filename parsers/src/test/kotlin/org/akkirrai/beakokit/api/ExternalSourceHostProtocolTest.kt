@@ -239,7 +239,7 @@ class ExternalSourceHostProtocolTest {
             ExternalSourceHostHttpRequest(
                 method = "GET",
                 url = "https://example.com",
-                maxResponseBytes = Long.MAX_VALUE,
+                maxResponseBytes = SourceHostHttpRequest.MAX_MAX_RESPONSE_BYTES + 1,
             )
         }
     }
