@@ -20,6 +20,9 @@ class SourceRepositoryStoreTest {
         assertFailsWith<IllegalArgumentException> {
             SourceRepositoryEndpoint("https-not-a-url")
         }
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryEndpoint("https://user:password@example.test/index.json")
+        }
     }
 
     @Test

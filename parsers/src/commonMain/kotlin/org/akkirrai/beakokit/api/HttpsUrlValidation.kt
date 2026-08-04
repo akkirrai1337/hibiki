@@ -8,7 +8,8 @@ internal fun isValidHttpsUrl(value: String): Boolean {
         .takeWhile { character -> character !in "/?#" }
     return parsed?.protocol?.name == "https" &&
         parsed.host.isNotBlank() &&
-        authority.isNotBlank()
+        authority.isNotBlank() &&
+        '@' !in authority
 }
 
 internal fun requireValidHttpsUrl(value: String, label: String) {

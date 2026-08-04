@@ -35,7 +35,11 @@ class IosSourceRepositoryStore(
     }
 
     override fun persistAtomically(repositories: List<SourceRepositoryEndpoint>) {
-        defaults.setObject(json.encodeToString(checked(repositories)), forKey = KEY)
+        val bytes = json.encodeToString(checked(repositories)).encodeToByteArray()
+        require(bytes.size.toLong() <= maxRepositoryBytes) {
+            "Source repository state exceeds $maxRepositoryBytes bytes"
+        }
+        defaults.setObject(bytes.decodeToString(), forKey = KEY)
     }
 
     private fun checked(repositories: List<SourceRepositoryEndpoint>): List<SourceRepositoryEndpoint> {

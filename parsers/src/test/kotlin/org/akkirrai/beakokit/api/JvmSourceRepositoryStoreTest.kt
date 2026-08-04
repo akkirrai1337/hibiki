@@ -74,4 +74,16 @@ class JvmSourceRepositoryStoreTest {
             JvmSourceRepositoryStore(file, maxRepositoryBytes = 1).load()
         }
     }
+
+    @Test
+    fun rejectsOversizedStateBeforeWriting() {
+        val directory = Files.createTempDirectory("beakokit-repositories")
+        val file = directory.resolve("repositories.json")
+        val endpoint = SourceRepositoryEndpoint("https://one.test/index.json")
+
+        assertFailsWith<IllegalArgumentException> {
+            JvmSourceRepositoryStore(file, maxRepositoryBytes = 1).persistAtomically(listOf(endpoint))
+        }
+        assertTrue(!Files.exists(file))
+    }
 }

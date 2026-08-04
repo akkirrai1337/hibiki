@@ -73,10 +73,13 @@ class JvmSourceRepositoryStore(
 
     private fun writeAtomically(path: Path, repositories: List<SourceRepositoryEndpoint>) {
         val parent = path.parent ?: error("Repository store file must have a parent directory")
+        val bytes = json.encodeToString(repositories).encodeToByteArray()
+        require(bytes.size.toLong() <= maxRepositoryBytes) {
+            "Source repository state exceeds $maxRepositoryBytes bytes"
+        }
         Files.createDirectories(parent)
         val temporaryFile = Files.createTempFile(parent, path.fileName.toString(), ".tmp")
         try {
-            val bytes = json.encodeToString(repositories).encodeToByteArray()
             FileChannel.open(temporaryFile, StandardOpenOption.WRITE).use { channel ->
                 channel.write(ByteBuffer.wrap(bytes))
                 channel.force(true)
