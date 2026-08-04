@@ -53,6 +53,30 @@ class SourceHostHttpTest {
     }
 
     @Test
+    fun `request rejects header and request line injection`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest("GET\r\nX-Injected: true", "https://example.com")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest("GET", "https://example.com\nX-Injected: true")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest(
+                "GET",
+                "https://example.com",
+                headers = mapOf("X-Test" to "ok\r\nX-Injected: true"),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest(
+                "GET",
+                "https://example.com",
+                headers = mapOf("X-Test\nInjected" to "ok"),
+            )
+        }
+    }
+
+    @Test
     fun `http client rejects origins outside manifest policy`() = runBlocking {
         val client = FakeHttpClient(requirements(SourceHostCapability.NETWORK))
 
@@ -61,14 +85,33 @@ class SourceHostHttpTest {
         }
     }
 
+    @Test
+    fun `http client enforces response size limit`() = runBlocking {
+        val client = FakeHttpClient(
+            requirements(SourceHostCapability.NETWORK),
+            responseBody = "12345",
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            client.execute(
+                SourceHostHttpRequest(
+                    method = "GET",
+                    url = "https://example.com",
+                    maxResponseBytes = 4,
+                ),
+            )
+        }
+    }
+
     private class FakeHttpClient(
         override val requirements: SourceHostRequirements,
+        private val responseBody: String = "ok",
     ) : SourceHostHttpClient() {
         var lastRequest: SourceHostHttpRequest? = null
 
         protected override suspend fun executeNetwork(request: SourceHostHttpRequest): SourceHostHttpResponse {
             lastRequest = request
-            return SourceHostHttpResponse(statusCode = 200, body = "ok")
+            return SourceHostHttpResponse(statusCode = 200, body = responseBody)
         }
     }
 

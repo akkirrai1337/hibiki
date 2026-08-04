@@ -206,6 +206,17 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun http_request_rejects_header_injection_at_the_wire_boundary() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpRequest(
+                method = "GET",
+                url = "https://example.com",
+                headers = mapOf("X-Test" to "ok\nX-Injected: true"),
+            )
+        }
+    }
+
+    @Test
     fun http_response_rejects_invalid_status_codes() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceHostHttpResponse(statusCode = 99, body = "")

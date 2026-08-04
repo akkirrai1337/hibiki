@@ -89,6 +89,9 @@ data class ExternalSourceHostHttpRequest(
     init {
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
+        requireSafeHttpField(method, "HTTP method")
+        requireSafeHttpField(url, "HTTP URL")
+        requireSafeHttpHeaders(headers)
         require(timeoutMillis > 0) { "HTTP timeout must be positive" }
         require(timeoutMillis <= SourceHostHttpRequest.MAX_TIMEOUT_MILLIS) {
             "HTTP timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"

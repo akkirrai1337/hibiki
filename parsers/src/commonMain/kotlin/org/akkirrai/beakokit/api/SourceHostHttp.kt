@@ -12,6 +12,9 @@ data class SourceHostHttpRequest(
     init {
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
+        requireSafeHttpField(method, "HTTP method")
+        requireSafeHttpField(url, "HTTP URL")
+        requireSafeHttpHeaders(headers)
         require(timeoutMillis > 0) { "HTTP timeout must be positive" }
         require(timeoutMillis <= MAX_TIMEOUT_MILLIS) {
             "HTTP timeout must not exceed $MAX_TIMEOUT_MILLIS ms"
@@ -26,6 +29,20 @@ data class SourceHostHttpRequest(
         const val DEFAULT_TIMEOUT_MILLIS: Long = 30_000
         const val MAX_TIMEOUT_MILLIS: Long = 120_000
         const val DEFAULT_MAX_RESPONSE_BYTES: Long = 8L * 1024L * 1024L
+    }
+}
+
+internal fun requireSafeHttpField(value: String, label: String) {
+    require('\r' !in value && '\n' !in value) {
+        "$label must not contain CR or LF"
+    }
+}
+
+internal fun requireSafeHttpHeaders(headers: Map<String, String>) {
+    headers.forEach { (name, value) ->
+        require(name.isNotBlank()) { "HTTP header name must not be blank" }
+        requireSafeHttpField(name, "HTTP header name")
+        requireSafeHttpField(value, "HTTP header value")
     }
 }
 
@@ -45,7 +62,11 @@ abstract class SourceHostHttpClient : SourceHostAccess {
     suspend fun execute(request: SourceHostHttpRequest): SourceHostHttpResponse {
         require(SourceHostCapability.NETWORK)
         requirements.networkPolicy.requireAllowed(request.url)
-        return executeNetwork(request)
+        val response = executeNetwork(request)
+        require(response.body.encodeToByteArray().size.toLong() <= request.maxResponseBytes) {
+            "Host HTTP response exceeds ${request.maxResponseBytes} bytes"
+        }
+        return response
     }
 
     protected abstract suspend fun executeNetwork(request: SourceHostHttpRequest): SourceHostHttpResponse
