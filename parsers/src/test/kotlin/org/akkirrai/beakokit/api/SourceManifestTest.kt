@@ -87,6 +87,16 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects line breaks in package signature`() {
+        val invalid = manifest().copy(signature = "signature\r\nvalue")
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Package signature must not contain CR or LF",
+        )
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 

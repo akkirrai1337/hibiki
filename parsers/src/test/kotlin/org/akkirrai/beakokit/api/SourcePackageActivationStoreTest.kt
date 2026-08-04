@@ -59,6 +59,23 @@ class SourcePackageActivationStoreTest {
     }
 
     @Test
+    fun `repository rejects persisted state belonging to another source`() {
+        val store = RecordingStore().apply {
+            state = SourcePackageActivationState(
+                active = InstalledSourcePackage(
+                    sourceId = SourceId("another-source"),
+                    packageVersion = "1.0.0",
+                    packagePath = "other",
+                ),
+            )
+        }
+
+        assertFailsWith<SourcePackageStateException> {
+            repository(store).load()
+        }
+    }
+
+    @Test
     fun `first package can be deactivated after incomplete activation`() {
         val store = RecordingStore()
         val repository = repository(store)

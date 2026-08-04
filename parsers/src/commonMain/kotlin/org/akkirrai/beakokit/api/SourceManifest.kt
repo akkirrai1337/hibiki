@@ -102,6 +102,9 @@ data class SourceManifest(
             add("Source config schema requires the CONFIG host capability")
         }
         if (!SHA256_PATTERN.matches(sha256)) add("SHA-256 must be 64 lowercase hexadecimal characters")
+        if (signature != null && ('\r' in signature || '\n' in signature)) {
+            add("Package signature must not contain CR or LF")
+        }
         if (artifactSizeBytes <= 0) add("Artifact size must be positive")
         if (minClientVersion < 0) add("Minimum client version must not be negative")
         if (maxClientVersion != null && maxClientVersion < minClientVersion) {

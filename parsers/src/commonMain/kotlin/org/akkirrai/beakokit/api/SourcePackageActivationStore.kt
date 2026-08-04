@@ -51,11 +51,15 @@ class SourcePackageActivationRepository(
     }
 
     private fun checkedState(state: SourcePackageActivationState): SourcePackageActivationState {
-        require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
-            "Active package source ID does not match activation repository"
+        if (state.active?.sourceId != null && state.active.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Active package source ID does not match activation repository: ${state.active.sourceId}",
+            )
         }
-        require(state.previous?.sourceId == null || state.previous.sourceId == sourceId) {
-            "Previous package source ID does not match activation repository"
+        if (state.previous?.sourceId != null && state.previous.sourceId != sourceId) {
+            throw SourcePackageStateException(
+                "Previous package source ID does not match activation repository: ${state.previous.sourceId}",
+            )
         }
         return state
     }
