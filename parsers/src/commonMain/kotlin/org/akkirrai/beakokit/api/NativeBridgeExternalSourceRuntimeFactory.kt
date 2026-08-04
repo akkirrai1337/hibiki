@@ -72,5 +72,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
 
     private fun requirePlaybackCodec(): ExternalSourcePlaybackRuntimePayloadCodec =
         payloadCodec as? ExternalSourcePlaybackRuntimePayloadCodec
-            ?: error("Playback source requires a playback-capable runtime payload codec")
+            ?: throw SourcePackageValidationException(
+                listOf("Playback source requires a playback-capable runtime payload codec"),
+            )
 }

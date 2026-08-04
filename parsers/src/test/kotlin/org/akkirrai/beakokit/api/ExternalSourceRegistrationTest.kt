@@ -607,7 +607,7 @@ class ExternalSourceRegistrationTest {
             payloadCodec = catalogOnlyCodec,
         )
 
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<SourcePackageValidationException> {
             factory.create(
                 activePackage,
                 DefaultSourceContext(

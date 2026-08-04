@@ -278,7 +278,7 @@ class AnimeTitleRuntimePayloadCodecTest {
 
     @Test
     fun missingCollectionFieldIsRejected() {
-        assertFailsWith<IllegalStateException> {
+        val error = assertFailsWith<SourceRuntimePayloadException> {
             AnimeTitleRuntimePayloadCodec.decodeDetails(
                 buildJsonObject {
                     put("id", "title-1")
@@ -286,6 +286,7 @@ class AnimeTitleRuntimePayloadCodecTest {
                 },
             )
         }
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
     }
 
     private fun related(id: String) = RelatedAnimeTitle(

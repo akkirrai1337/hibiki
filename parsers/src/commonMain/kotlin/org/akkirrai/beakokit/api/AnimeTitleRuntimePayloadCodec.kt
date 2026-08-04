@@ -325,11 +325,11 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
     private fun JsonObject.requiredPrimitive(key: String): JsonPrimitive = get(key)
         ?.takeUnless { it is JsonNull }
         ?.jsonPrimitive
-        ?: error("Missing required runtime payload field: $key")
+        ?: throw SourceRuntimePayloadException("Missing required runtime payload field: $key")
 
     private fun JsonObject.requiredArray(key: String): JsonArray = get(key)
         ?.jsonArray
-        ?: error("Missing required runtime payload array: $key")
+        ?: throw SourceRuntimePayloadException("Missing required runtime payload array: $key")
 
     private fun JsonObject.strings(key: String): List<String> = requiredArray(key)
         .map { it.jsonPrimitive.content }
@@ -357,3 +357,9 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         put(key, value)
     }
 }
+
+class SourceRuntimePayloadException(message: String) : SourceException(
+    message = message,
+    kind = SourceErrorKind.PARSE,
+    code = SourceErrorCode.INVALID_RESPONSE,
+)
