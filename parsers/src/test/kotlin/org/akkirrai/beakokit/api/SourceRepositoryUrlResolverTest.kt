@@ -45,6 +45,16 @@ class SourceRepositoryUrlResolverTest {
     }
 
     @Test
+    fun `rejects unsafe raw GitHub links`() {
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://raw.githubusercontent.com/vadim/hibiki-sources/main/../index.json")
+        }
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://raw.githubusercontent.com/vadim/hibiki-sources/main/index.json?raw=1")
+        }
+    }
+
+    @Test
     fun `accepts GitHub host casing variations`() {
         assertEquals(
             "https://raw.githubusercontent.com/vadim/hibiki-sources/main/index.json",
@@ -63,6 +73,16 @@ class SourceRepositoryUrlResolverTest {
     fun `rejects GitHub links with query or fragment`() {
         assertFailsWith<SourceRepositoryUrlException> {
             resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/index.json?raw=1")
+        }
+    }
+
+    @Test
+    fun `rejects GitHub links with unsafe path segments`() {
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/../index.json")
+        }
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/nested\\index.json")
         }
     }
 

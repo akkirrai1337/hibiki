@@ -18,8 +18,10 @@ class SourceRepositoryUrlResolver {
             when {
                 url.startsWith("https://github.com/", ignoreCase = true) ->
                     SourceRepositoryEndpoint(resolveGithubUrl(url))
-                url.startsWith("https://raw.githubusercontent.com/", ignoreCase = true) ->
+                url.startsWith("https://raw.githubusercontent.com/", ignoreCase = true) -> {
+                    validateRawGithubUrl(url)
                     SourceRepositoryEndpoint(url)
+                }
                 else -> SourceRepositoryEndpoint(url)
             }
         } catch (error: IllegalArgumentException) {
@@ -36,6 +38,9 @@ class SourceRepositoryUrlResolver {
             .filter(String::isNotEmpty)
         require(path.size >= 4) {
             "GitHub URL must point to a repository index file"
+        }
+        require(path.all(::isSafeGithubPathSegment)) {
+            "GitHub URL contains an unsafe path segment"
         }
         val owner = path[0]
         val repository = path[1].removeSuffix(".git")
@@ -55,6 +60,22 @@ class SourceRepositoryUrlResolver {
         }
         return "https://raw.githubusercontent.com/$owner/$repository/$ref/$filePath"
     }
+
+    private fun validateRawGithubUrl(url: String) {
+        require('?' !in url && '#' !in url) {
+            "Raw GitHub URL must not contain a query or fragment"
+        }
+        val path = url.substring("https://raw.githubusercontent.com/".length)
+            .split('/')
+            .filter(String::isNotEmpty)
+        require(path.size >= 4 && path.all(::isSafeGithubPathSegment)) {
+            "Raw GitHub URL contains an unsafe or incomplete path"
+        }
+    }
+
+    private fun isSafeGithubPathSegment(segment: String): Boolean =
+        segment != "." && segment != ".." && '\\' !in segment &&
+            segment.all { character -> character.code >= 0x20 && character != '\u007f' }
 }
 
 class SourceRepositoryUrlException(
