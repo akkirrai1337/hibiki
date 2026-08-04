@@ -43,6 +43,18 @@ class SourceCatalogTest {
     }
 
     @Test
+    fun `catalog rejects partially specified registration orders`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceCatalog(
+                listOf(
+                    sourceEntry(sourceInfo("first")).copy(registrationOrder = 1),
+                    sourceEntry(sourceInfo("second")),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `catalog creates and validates source from context`() {
         val info = sourceInfo("ani-liberty")
         val catalog = SourceCatalog(

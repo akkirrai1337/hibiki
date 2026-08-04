@@ -33,7 +33,11 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
                 .keys
             "Duplicate source IDs: ${duplicates.joinToString()}"
         }
-        if (entries.all { it.registrationOrder != null }) {
+        val hasRegistrationOrders = entries.any { it.registrationOrder != null }
+        if (hasRegistrationOrders) {
+            require(entries.all { it.registrationOrder != null }) {
+                "Source registration orders must be provided for every catalog entry or none"
+            }
             val orders = entries.mapNotNull(SourceCatalogEntry::registrationOrder)
             require(orders.distinct().size == orders.size) {
                 "Duplicate source registration orders: ${orders.groupingBy { it }.eachCount()
