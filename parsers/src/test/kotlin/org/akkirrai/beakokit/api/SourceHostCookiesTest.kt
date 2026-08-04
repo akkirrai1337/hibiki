@@ -31,6 +31,9 @@ class SourceHostCookiesTest {
         val cookies = FakeCookies(requirements())
 
         assertFailsWith<IllegalArgumentException> { cookies.forUrl("") }
+        assertFailsWith<IllegalArgumentException> { cookies.forUrl("http://example.com") }
+        assertFailsWith<IllegalArgumentException> { cookies.forUrl("file:///tmp/cookies") }
+        assertFailsWith<IllegalArgumentException> { cookies.forUrl("https://") }
         assertFailsWith<IllegalArgumentException> {
             cookies.storeFromResponse(
                 "https://example.com",
@@ -42,6 +45,24 @@ class SourceHostCookiesTest {
                 "https://example.com",
                 mapOf("session" to "x".repeat(SourceHostCookies.MAX_COOKIE_VALUE_LENGTH + 1)),
             )
+        }
+    }
+
+    @Test
+    fun `host cookie reads reject oversized values`() = runBlocking {
+        val cookies = object : SourceHostCookies() {
+            override val requirements = requirements()
+
+            override suspend fun cookiesForUrl(url: String): Map<String, String> =
+                mapOf("session" to "x".repeat(SourceHostCookies.MAX_COOKIE_VALUE_LENGTH + 1))
+
+            override suspend fun storeResponseCookies(url: String, cookies: Map<String, String>) = Unit
+
+            override suspend fun clearCookies(url: String) = Unit
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            cookies.forUrl("https://example.com")
         }
     }
 
@@ -62,7 +83,7 @@ class SourceHostCookiesTest {
     }
 
     private fun requirements() = SourceHostRequirements(
-        capabilities = setOf(SourceHostCapability.COOKIES),
+        capabilities = setOf(SourceHostCapability.COOKIES, SourceHostCapability.NETWORK),
         networkPolicy = SourceHostNetworkPolicy(setOf("example.com")),
     )
 }

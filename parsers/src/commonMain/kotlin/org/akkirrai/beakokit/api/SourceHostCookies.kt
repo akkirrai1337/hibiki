@@ -6,7 +6,7 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
         requireUrl(url)
         require(SourceHostCapability.COOKIES)
         requirements.networkPolicy.requireAllowed(url)
-        return cookiesForUrl(url)
+        return cookiesForUrl(url).also(::requireCookies)
     }
 
     override suspend fun storeFromResponse(url: String, cookies: Map<String, String>) {
@@ -36,7 +36,7 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
         const val MAX_COOKIE_VALUE_LENGTH: Int = 8192
 
         fun requireUrl(url: String) {
-            require(url.isNotBlank()) { "Cookie URL must not be blank" }
+            require(isValidHttpsUrl(url)) { "Cookie URL must be a valid HTTPS URL" }
         }
 
         fun requireCookies(cookies: Map<String, String>) {
