@@ -17,6 +17,7 @@ import org.akkirrai.beakokit.api.ExternalSourceHostErrorCode
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpResponse
 import org.akkirrai.beakokit.api.ExternalSourceHostProtocolCodec
 import org.akkirrai.beakokit.api.ExternalSourceHostResponse
+import org.akkirrai.beakokit.api.EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceHostCapability
 import org.akkirrai.beakokit.api.SourceHostCapabilityException
@@ -62,6 +63,15 @@ internal class IosExternalSourceHost(
     )
 
     fun call(bytes: ByteArray): ByteArray {
+        if (bytes.size.toLong() > EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES) {
+            return ExternalSourceHostProtocolCodec.encodeResponse(
+                ExternalSourceHostResponse(
+                    requestId = "host-invalid-request",
+                    errorCode = ExternalSourceHostErrorCode.INVALID_REQUEST,
+                    errorMessage = "Host request exceeds $EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES bytes",
+                ),
+            )
+        }
         val response = try {
             runBlocking { dispatcher.dispatch(ExternalSourceHostProtocolCodec.decodeRequest(bytes)) }
         } catch (_: CancellationException) {

@@ -20,6 +20,7 @@ import org.akkirrai.beakokit.api.ExternalSourceHostErrorCode
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpRequest
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpResponse
 import org.akkirrai.beakokit.api.ExternalSourceHostDispatcher
+import org.akkirrai.beakokit.api.EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES
 import org.akkirrai.beakokit.api.ExternalSourceHostProtocolCodec
 import org.akkirrai.beakokit.api.ExternalSourceHostResponse
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridge
@@ -159,6 +160,13 @@ private class AndroidExternalSourceHost(
     )
 
     fun call(bytes: ByteArray): ByteArray {
+        if (bytes.size.toLong() > EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES) {
+            return errorResponse(
+                requestId = "host-invalid-request",
+                code = ExternalSourceHostErrorCode.INVALID_REQUEST,
+                message = "Host request exceeds $EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES bytes",
+            )
+        }
         val response = try {
             val request = ExternalSourceHostProtocolCodec.decodeRequest(bytes)
             runBlocking { dispatcher.dispatch(request) }

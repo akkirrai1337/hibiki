@@ -269,3 +269,4 @@ object ExternalSourceHostProtocolCodec {
 }
 
 const val EXTERNAL_SOURCE_HOST_PROTOCOL_VERSION: Int = 1
+const val EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES: Long = 8L * 1024L * 1024L
