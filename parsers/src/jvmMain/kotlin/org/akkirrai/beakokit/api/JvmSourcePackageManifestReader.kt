@@ -20,6 +20,11 @@ class JvmSourcePackageManifestReader(
     override fun read(packagePath: String): SourceManifest {
         val directory = Path.of(packagePath)
         val manifestFile = directory.resolve(MANIFEST_FILE_NAME)
+        if (Files.isSymbolicLink(manifestFile)) {
+            throw SourcePackageStateException(
+                "Installed source package manifest must not be a symbolic link: $manifestFile",
+            )
+        }
         if (!Files.isRegularFile(manifestFile)) {
             throw SourcePackageStateException(
                 "Installed source package manifest is missing: $manifestFile",

@@ -40,6 +40,25 @@ class JvmSourcePackageManifestReaderTest {
         }
     }
 
+    @Test
+    fun `reader rejects a symbolic link manifest`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        val target = Files.createTempFile("hibiki-source-manifest-", ".json")
+        Files.writeString(target, Json.encodeToString(manifest()))
+        val link = runCatching {
+            Files.createSymbolicLink(packageDirectory.resolve("manifest.json"), target)
+        }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageManifestReader().read(packageDirectory.toString())
+            }
+        } finally {
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(target)
+        }
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),

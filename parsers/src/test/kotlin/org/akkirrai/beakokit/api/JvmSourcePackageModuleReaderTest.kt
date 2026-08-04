@@ -34,4 +34,23 @@ class JvmSourcePackageModuleReaderTest {
                 .read(packageDirectory.toString(), "source.wasm")
         }
     }
+
+    @Test
+    fun `reader rejects a symbolic link entrypoint`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        val target = Files.createTempFile("hibiki-source-module-", ".wasm")
+        Files.write(target, byteArrayOf(0, 1, 2))
+        val link = runCatching {
+            Files.createSymbolicLink(packageDirectory.resolve("source.wasm"), target)
+        }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageModuleReader().read(packageDirectory.toString(), "source.wasm")
+            }
+        } finally {
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(target)
+        }
+    }
 }

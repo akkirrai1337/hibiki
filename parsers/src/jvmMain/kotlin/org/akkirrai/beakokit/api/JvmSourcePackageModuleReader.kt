@@ -23,6 +23,11 @@ class JvmSourcePackageModuleReader(
         } catch (error: Exception) {
             throw SourcePackageStateException("Installed source package directory is unreadable", error)
         }
+        if (Files.isSymbolicLink(module)) {
+            throw SourcePackageStateException(
+                "Source package entrypoint must not be a symbolic link: $entrypoint",
+            )
+        }
         if (!Files.isRegularFile(module)) {
             throw SourcePackageStateException("Source package entrypoint does not exist: $entrypoint")
         }
