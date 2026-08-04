@@ -23,7 +23,21 @@ class ActiveExternalSourcePackageLoader(
     fun load(installed: InstalledSourcePackage): ActiveExternalSourcePackage {
         val manifest = manifestReader.read(installed.packagePath)
         return try {
+            if (!SourcePackageLayoutValidator.isSafeRelativePath(manifest.entrypoint) ||
+                manifest.entrypoint == "manifest.json"
+            ) {
+                throw SourcePackageStateException(
+                    "Active source package manifest contains an unsafe entrypoint",
+                )
+            }
+            if (installed.artifactSha256 != null && installed.artifactSha256 != manifest.sha256) {
+                throw SourcePackageStateException(
+                    "Active source package checksum does not match persisted state",
+                )
+            }
             ActiveExternalSourcePackage(manifest = manifest, installed = installed)
+        } catch (error: SourcePackageStateException) {
+            throw error
         } catch (error: IllegalArgumentException) {
             throw SourcePackageStateException(
                 message = "Active source package manifest does not match persisted state",

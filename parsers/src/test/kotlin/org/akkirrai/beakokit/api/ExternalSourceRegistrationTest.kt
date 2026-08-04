@@ -557,6 +557,45 @@ class ExternalSourceRegistrationTest {
         }
     }
 
+    @Test
+    fun activePackageLoaderRejectsMismatchedPersistedChecksum() {
+        val installed = InstalledSourcePackage(
+            sourceId = SourceId("external-test"),
+            packageVersion = "1.0.0",
+            packagePath = "sources/external-test/1.0.0",
+            artifactSha256 = "b".repeat(64),
+        )
+        val loader = ActiveExternalSourcePackageLoader(
+            activationRepository = SourcePackageActivationRepository(
+                sourceId = installed.sourceId,
+                store = InMemoryActivationStore(SourcePackageActivationState(active = installed)),
+            ),
+            manifestReader = SourcePackageManifestReader { manifest() },
+        )
+
+        assertFailsWith<SourcePackageStateException> { loader.load() }
+    }
+
+    @Test
+    fun activePackageLoaderRejectsUnsafeManifestEntrypoint() {
+        val installed = InstalledSourcePackage(
+            sourceId = SourceId("external-test"),
+            packageVersion = "1.0.0",
+            packagePath = "sources/external-test/1.0.0",
+        )
+        val loader = ActiveExternalSourcePackageLoader(
+            activationRepository = SourcePackageActivationRepository(
+                sourceId = installed.sourceId,
+                store = InMemoryActivationStore(SourcePackageActivationState(active = installed)),
+            ),
+            manifestReader = SourcePackageManifestReader {
+                manifest().copy(entrypoint = "../source.wasm")
+            },
+        )
+
+        assertFailsWith<SourcePackageStateException> { loader.load() }
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",
