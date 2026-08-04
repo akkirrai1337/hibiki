@@ -15,14 +15,34 @@ object ExternalSourceRuntimeProtocolCodec {
     fun encodeRequest(request: ExternalSourceRuntimeRequest): ByteArray =
         json.encodeToString(request).encodeToByteArray()
 
-    fun decodeRequest(bytes: ByteArray): ExternalSourceRuntimeRequest =
+    fun decodeRequest(bytes: ByteArray): ExternalSourceRuntimeRequest = try {
         json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+    } catch (error: SourceException) {
+        throw error
+    } catch (error: Exception) {
+        throw SourceException(
+            message = "Native runtime request is invalid",
+            cause = error,
+            kind = SourceErrorKind.PARSE,
+            code = SourceErrorCode.INVALID_REQUEST,
+        )
+    }
 
     fun encodeResponse(response: ExternalSourceRuntimeResponse): ByteArray =
         json.encodeToString(response).encodeToByteArray()
 
-    fun decodeResponse(bytes: ByteArray): ExternalSourceRuntimeResponse =
+    fun decodeResponse(bytes: ByteArray): ExternalSourceRuntimeResponse = try {
         json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+    } catch (error: SourceException) {
+        throw error
+    } catch (error: Exception) {
+        throw SourceException(
+            message = "Native runtime response is invalid",
+            cause = error,
+            kind = SourceErrorKind.PARSE,
+            code = SourceErrorCode.INVALID_RESPONSE,
+        )
+    }
 }
 
 /** Lowest-level platform bridge for one already serialized runtime request. */
@@ -58,6 +78,17 @@ class NativeBridgeExternalSourceRuntimeTransport(
                 message = "Native runtime response exceeds ${limits.maxResponseBytes} bytes",
             )
         }
-        return ExternalSourceRuntimeProtocolCodec.decodeResponse(response)
+        return try {
+            ExternalSourceRuntimeProtocolCodec.decodeResponse(response)
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "Native runtime response is invalid",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_RESPONSE,
+            )
+        }
     }
 }

@@ -228,7 +228,18 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeRequest(bytes: ByteArray): ExternalSourceHostRequest {
         requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES, "request")
-        return json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+        return try {
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "External source host request is invalid",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_REQUEST,
+            )
+        }
     }
 
     fun encodeResponse(response: ExternalSourceHostResponse): ByteArray =
@@ -238,7 +249,18 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeResponse(bytes: ByteArray): ExternalSourceHostResponse {
         requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES, "response")
-        return json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+        return try {
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "External source host response is invalid",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_RESPONSE,
+            )
+        }
     }
 
     fun encodeHttpRequest(request: ExternalSourceHostHttpRequest): JsonObject =

@@ -37,12 +37,14 @@ class ExternalSourceHostProtocolTest {
 
     @Test
     fun `host wire codec rejects malformed utf8`() {
-        assertFailsWith<Exception> {
+        val requestError = assertFailsWith<SourceException> {
             ExternalSourceHostProtocolCodec.decodeRequest(byteArrayOf(0x7B, 0xC3.toByte(), 0x28, 0x7D))
         }
-        assertFailsWith<Exception> {
+        assertEquals(SourceErrorCode.INVALID_REQUEST, requestError.code)
+        val responseError = assertFailsWith<SourceException> {
             ExternalSourceHostProtocolCodec.decodeResponse(byteArrayOf(0x7B, 0xE2.toByte(), 0x28, 0xA1.toByte(), 0x7D))
         }
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, responseError.code)
     }
     @Test
     fun dispatcher_routes_http_requests_and_wraps_the_response() = runBlocking {

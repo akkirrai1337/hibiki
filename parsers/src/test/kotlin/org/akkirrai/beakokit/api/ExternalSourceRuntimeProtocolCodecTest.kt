@@ -81,6 +81,25 @@ class ExternalSourceRuntimeProtocolCodecTest {
     }
 
     @Test
+    fun nativeBridgeNormalizesMalformedResponse() = runBlocking {
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { _, _ -> "not-json".encodeToByteArray() },
+        )
+        val request = ExternalSourceRuntimeRequest(
+            requestId = "bridge-malformed",
+            operation = ExternalSourceRuntimeOperation.DETAILS,
+            payload = buildJsonObject { put("id", "title-1") },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            transport.call(request, ExternalSourceRuntimeCallLimits())
+        }
+
+        assertEquals(SourceErrorKind.PARSE, error.kind)
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
+    }
+
+    @Test
     fun nativeBridgeRejectsOversizedRequestBeforeCallingBridge() = runBlocking {
         var called = false
         val transport = NativeBridgeExternalSourceRuntimeTransport(
@@ -108,12 +127,14 @@ class ExternalSourceRuntimeProtocolCodecTest {
 
     @Test
     fun wireCodecRejectsMalformedUtf8() {
-        assertFailsWith<Exception> {
+        val requestError = assertFailsWith<SourceException> {
             ExternalSourceRuntimeProtocolCodec.decodeRequest(byteArrayOf(0x7B, 0xC3.toByte(), 0x28, 0x7D))
         }
-        assertFailsWith<Exception> {
+        assertEquals(SourceErrorCode.INVALID_REQUEST, requestError.code)
+        val responseError = assertFailsWith<SourceException> {
             ExternalSourceRuntimeProtocolCodec.decodeResponse(byteArrayOf(0x7B, 0xE2.toByte(), 0x28, 0xA1.toByte(), 0x7D))
         }
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, responseError.code)
     }
 
     @Test
