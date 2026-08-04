@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -250,8 +251,30 @@ class ExternalSourceHostProtocolTest {
             errorMessage = "network capability is missing",
         )
 
-        assertFailsWith<IllegalStateException> {
+        val error = assertFailsWith<SourceHostResponseException> {
             response.requirePayload("host-3")
+        }
+        assertEquals(SourceErrorCode.HOST_ACCESS_DENIED, error.code)
+    }
+
+    @Test
+    fun host_failure_and_cancellation_keep_their_error_semantics() {
+        val failure = ExternalSourceHostResponse(
+            requestId = "host-failure",
+            errorCode = ExternalSourceHostErrorCode.HOST_FAILURE,
+            errorMessage = "host failed",
+        )
+        val failureError = assertFailsWith<SourceHostResponseException> {
+            failure.requirePayload("host-failure")
+        }
+        assertEquals(SourceErrorCode.UNKNOWN, failureError.code)
+
+        val cancelled = ExternalSourceHostResponse(
+            requestId = "host-cancelled",
+            errorCode = ExternalSourceHostErrorCode.CANCELLED,
+        )
+        assertFailsWith<CancellationException> {
+            cancelled.requirePayload("host-cancelled")
         }
     }
 

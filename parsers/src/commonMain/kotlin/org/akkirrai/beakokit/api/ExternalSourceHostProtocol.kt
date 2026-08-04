@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.coroutines.CancellationException
 
 /** Versioned operations that an external source may request from the application host. */
 @Serializable
@@ -82,16 +83,39 @@ data class ExternalSourceHostResponse(
 
     fun requirePayload(expectedRequestId: String): JsonObject {
         require(requestId == expectedRequestId) { "Host response request ID does not match" }
-        return payload ?: error(
-            errorMessage?.takeIf(String::isNotBlank)
-                ?: "Host request failed with ${errorCode?.name}",
-        )
+        return payload ?: when (errorCode) {
+            ExternalSourceHostErrorCode.CANCELLED -> throw CancellationException(
+                errorMessage?.takeIf(String::isNotBlank) ?: "Host request was cancelled",
+            )
+            else -> throw SourceHostResponseException(
+                errorCode = errorCode,
+                message = errorMessage?.takeIf(String::isNotBlank)
+                    ?: "Host request failed with ${errorCode?.name}",
+            )
+        }
     }
 
     companion object {
         const val MAX_ERROR_MESSAGE_LENGTH: Int = 4 * 1024
     }
 }
+
+class SourceHostResponseException(
+    val errorCode: ExternalSourceHostErrorCode?,
+    message: String,
+) : SourceException(
+    message = message,
+    kind = if (errorCode == ExternalSourceHostErrorCode.HOST_ACCESS_DENIED) {
+        SourceErrorKind.UNAVAILABLE
+    } else {
+        SourceErrorKind.UNKNOWN
+    },
+    code = if (errorCode == ExternalSourceHostErrorCode.HOST_ACCESS_DENIED) {
+        SourceErrorCode.HOST_ACCESS_DENIED
+    } else {
+        SourceErrorCode.UNKNOWN
+    },
+)
 
 @Serializable
 data class ExternalSourceHostHttpRequest(
