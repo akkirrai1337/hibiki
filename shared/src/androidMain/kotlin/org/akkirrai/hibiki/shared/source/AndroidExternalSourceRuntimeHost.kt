@@ -21,6 +21,7 @@ import org.akkirrai.beakokit.api.ExternalSourceHostHttpRequest
 import org.akkirrai.beakokit.api.ExternalSourceHostHttpResponse
 import org.akkirrai.beakokit.api.ExternalSourceHostDispatcher
 import org.akkirrai.beakokit.api.EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES
+import org.akkirrai.beakokit.api.EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES
 import org.akkirrai.beakokit.api.ExternalSourceHostProtocolCodec
 import org.akkirrai.beakokit.api.ExternalSourceHostResponse
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridge
@@ -188,7 +189,17 @@ private class AndroidExternalSourceHost(
                 message = error.message ?: "Host request failed",
             )
         }
-        return ExternalSourceHostProtocolCodec.encodeResponse(response)
+        return ExternalSourceHostProtocolCodec.encodeResponse(response).let { encoded ->
+            if (encoded.size.toLong() <= EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES) {
+                encoded
+            } else {
+                errorResponse(
+                    requestId = response.requestId,
+                    code = ExternalSourceHostErrorCode.HOST_FAILURE,
+                    message = "Host response exceeds $EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES bytes",
+                )
+            }
+        }
     }
 
     private fun errorResponse(
