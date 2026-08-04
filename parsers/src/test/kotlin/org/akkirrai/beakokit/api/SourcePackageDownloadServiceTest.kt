@@ -40,6 +40,23 @@ class SourcePackageDownloadServiceTest {
     }
 
     @Test
+    fun `service rejects transport output above the configured limit`() = runBlocking {
+        val manifest = manifest(size = 4, sha256 = "a".repeat(64))
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ ->
+                DownloadedSourcePackage(byteArrayOf(1, 2, 3, 4))
+            },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3, maxArtifactSizeBytes = 4),
+                sha256 = SourcePackageSha256 { manifest.sha256 },
+            ),
+            limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 3),
+        )
+
+        assertFailsWith<IllegalArgumentException> { service.download(manifest) }
+    }
+
+    @Test
     fun `service rejects an incompatible manifest before transport`() = runBlocking {
         var transportCalled = false
         val service = SourcePackageDownloadService(

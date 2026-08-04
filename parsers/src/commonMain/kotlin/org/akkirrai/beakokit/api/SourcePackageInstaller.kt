@@ -59,6 +59,9 @@ class SourcePackageInstaller(
         require(repositoryManifest.packageVersion == candidate.packageVersion) {
             "Manifest package version does not match the installation candidate"
         }
+        require(candidate.artifactSha256 == null || candidate.artifactSha256 == artifact.sha256) {
+            "Installation candidate checksum does not match the downloaded artifact"
+        }
         packageValidator.requireValid(repositoryManifest, artifact)
         layoutValidator.requireValid(packageManifest, entries)
     }

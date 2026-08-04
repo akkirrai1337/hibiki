@@ -10,9 +10,11 @@ class SourcePackageTrustPolicy private constructor(
         if (signature == null) {
             return if (requiresSignature) "Package signature is required for this repository" else null
         }
-        val trusted = runCatching {
+        val trusted = try {
             signatureVerifier?.verify(manifest, artifact) == true
-        }.getOrDefault(false)
+        } catch (_: Exception) {
+            false
+        }
         return if (trusted) null else "Package signature is not trusted"
     }
 

@@ -88,6 +88,25 @@ class SourcePackageInstallerTest {
     }
 
     @Test
+    fun `candidate checksum mismatch never reaches activation`() {
+        val store = RecordingStore()
+        val manifest = manifest()
+
+        assertFailsWith<IllegalArgumentException> {
+            installer(store).install(
+                repositoryManifest = manifest,
+                packageManifest = manifest,
+                artifact = SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+                entries = entries(manifest),
+                candidate = candidate().copy(artifactSha256 = "b".repeat(64)),
+                initializationSucceeded = true,
+            )
+        }
+
+        assertEquals(0, store.persistCount)
+    }
+
+    @Test
     fun `package manifest mismatch never reaches activation`() {
         val store = RecordingStore()
         val repositoryManifest = manifest()

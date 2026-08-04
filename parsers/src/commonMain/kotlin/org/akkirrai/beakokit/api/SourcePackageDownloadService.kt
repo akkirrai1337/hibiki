@@ -15,6 +15,9 @@ class SourcePackageDownloadService(
     suspend fun download(manifest: SourceManifest): VerifiedSourcePackageDownload {
         artifactVerifier.requireManifestCompatible(manifest)
         val downloaded = transport.download(manifest.packageUrl, limits)
+        require(downloaded.sizeBytes <= limits.maxArtifactSizeBytes) {
+            "Downloaded package exceeds ${limits.maxArtifactSizeBytes} bytes"
+        }
         val artifact = artifactVerifier.verify(manifest, downloaded)
         return VerifiedSourcePackageDownload(downloaded, artifact)
     }
