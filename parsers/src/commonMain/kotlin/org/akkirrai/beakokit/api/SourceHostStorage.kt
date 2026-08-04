@@ -21,11 +21,15 @@ abstract class SourceHostStorage(
         SourceHostStorage.requireValue(value)
         require(SourceHostCapability.STORAGE)
         val previous = readValue(key)
+        val currentEntryCount = storedEntryCount()
+        require(currentEntryCount >= 0) { "Source storage entry count must not be negative" }
         if (previous == null) {
-            require(storedEntryCount() < maxEntryCount) { "Source storage entry limit exceeded" }
+            require(currentEntryCount < maxEntryCount) { "Source storage entry limit exceeded" }
         }
         val previousSizeBytes = previous?.encodeToByteArray()?.size?.toLong() ?: 0L
-        val retainedSizeBytes = storedSizeBytes() - previousSizeBytes
+        val currentSizeBytes = storedSizeBytes()
+        require(currentSizeBytes >= 0) { "Source storage size must not be negative" }
+        val retainedSizeBytes = currentSizeBytes - previousSizeBytes
         require(retainedSizeBytes >= 0 && retainedSizeBytes <= maxStorageBytes) {
             "Source storage quota exceeded"
         }

@@ -51,6 +51,18 @@ class SourceHostStorageTest {
         assertFailsWith<IllegalArgumentException> { storage.write("one", "12345") }
     }
 
+    @Test
+    fun `storage rejects corrupted size and count metrics`() = runBlocking {
+        val requirements = SourceHostRequirements(setOf(SourceHostCapability.STORAGE))
+
+        assertFailsWith<IllegalArgumentException> {
+            CorruptMetricsStorage(requirements, size = -1, count = 0).write("key", "value")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            CorruptMetricsStorage(requirements, size = 0, count = -1).write("key", "value")
+        }
+    }
+
     private class FakeStorage(
         override val requirements: SourceHostRequirements,
         maxStorageBytes: Long = SourceHostStorage.DEFAULT_MAX_STORAGE_BYTES,
@@ -75,5 +87,21 @@ class SourceHostStorageTest {
         fun seed(key: String, value: String) {
             values[key] = value
         }
+    }
+
+    private class CorruptMetricsStorage(
+        override val requirements: SourceHostRequirements,
+        private val size: Long,
+        private val count: Int,
+    ) : SourceHostStorage() {
+        override suspend fun readValue(key: String): String? = null
+
+        override suspend fun writeValue(key: String, value: String) = Unit
+
+        override suspend fun removeValue(key: String) = Unit
+
+        override suspend fun storedSizeBytes(): Long = size
+
+        override suspend fun storedEntryCount(): Int = count
     }
 }
