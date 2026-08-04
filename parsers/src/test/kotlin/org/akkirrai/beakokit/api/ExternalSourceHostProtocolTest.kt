@@ -71,6 +71,28 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_http_response_over_declared_limit() = runBlocking {
+        val request = ExternalSourceHostRequest(
+            requestId = "host-response-too-large",
+            operation = ExternalSourceHostOperation.HTTP_REQUEST,
+            payload = ExternalSourceHostProtocolCodec.encodeHttpRequest(
+                ExternalSourceHostHttpRequest(
+                    method = "GET",
+                    url = "https://example.com/anime",
+                    maxResponseBytes = 4,
+                ),
+            ),
+        )
+        val dispatcher = ExternalSourceHostDispatcher {
+            ExternalSourceHostHttpResponse(statusCode = 200, body = "12345")
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            dispatcher.dispatch(request)
+        }
+    }
+
+    @Test
     fun http_request_and_response_round_trip_with_explicit_nulls() {
         val request = ExternalSourceHostRequest(
             requestId = "host-1",
@@ -156,6 +178,16 @@ class ExternalSourceHostProtocolTest {
                 url = "https://example.com",
                 maxResponseBytes = Long.MAX_VALUE,
             )
+        }
+    }
+
+    @Test
+    fun http_response_rejects_invalid_status_codes() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpResponse(statusCode = 99, body = "")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpResponse(statusCode = 600, body = "")
         }
     }
 

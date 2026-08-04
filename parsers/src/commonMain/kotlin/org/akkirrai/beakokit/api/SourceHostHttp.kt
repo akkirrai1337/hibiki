@@ -34,7 +34,11 @@ data class SourceHostHttpResponse(
     val statusCode: Int,
     val headers: Map<String, String> = emptyMap(),
     val body: String,
-)
+) {
+    init {
+        require(statusCode in 100..599) { "HTTP status code must be between 100 and 599" }
+    }
+}
 
 /** Host HTTP boundary available to external source runtimes. */
 abstract class SourceHostHttpClient : SourceHostAccess {

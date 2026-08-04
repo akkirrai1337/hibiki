@@ -37,7 +37,11 @@ class ExternalSourceHostDispatcher(
                     throw SourceHostCapabilityException(SourceHostCapability.NETWORK)
                 }
                 val httpRequest = ExternalSourceHostProtocolCodec.decodeHttpRequest(request.payload)
-                ExternalSourceHostProtocolCodec.encodeHttpResponse(executeHttpRequest(httpRequest))
+                val response = executeHttpRequest(httpRequest)
+                require(response.body.encodeToByteArray().size.toLong() <= httpRequest.maxResponseBytes) {
+                    "Host HTTP response exceeds ${httpRequest.maxResponseBytes} bytes"
+                }
+                ExternalSourceHostProtocolCodec.encodeHttpResponse(response)
             }
             ExternalSourceHostOperation.STORAGE_READ -> {
                 val storageRequest = ExternalSourceHostProtocolCodec.decodeStorageReadRequest(request.payload)
