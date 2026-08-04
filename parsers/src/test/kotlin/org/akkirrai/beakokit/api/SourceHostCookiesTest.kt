@@ -46,6 +46,18 @@ class SourceHostCookiesTest {
                 mapOf("session" to "x".repeat(SourceHostCookies.MAX_COOKIE_VALUE_LENGTH + 1)),
             )
         }
+        assertFailsWith<IllegalArgumentException> {
+            cookies.storeFromResponse(
+                "https://example.com",
+                mapOf("session\nInjected" to "value"),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            cookies.storeFromResponse(
+                "https://example.com",
+                mapOf("session" to "value\r\nInjected: true"),
+            )
+        }
     }
 
     @Test

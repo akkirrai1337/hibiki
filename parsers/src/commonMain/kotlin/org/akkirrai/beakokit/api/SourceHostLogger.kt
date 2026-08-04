@@ -7,6 +7,9 @@ abstract class SourceHostLogger : SourceHostAccess {
         require(message.length <= MAX_MESSAGE_LENGTH) {
             "Source log message must be at most $MAX_MESSAGE_LENGTH characters"
         }
+        require('\r' !in message && '\n' !in message) {
+            "Source log message must not contain CR or LF"
+        }
         require(SourceHostCapability.LOGGING)
         emit(level, message)
     }

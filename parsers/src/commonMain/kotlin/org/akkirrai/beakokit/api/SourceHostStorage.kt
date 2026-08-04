@@ -13,7 +13,7 @@ abstract class SourceHostStorage(
     override suspend fun read(key: String): String? {
         SourceHostStorage.requireKey(key)
         require(SourceHostCapability.STORAGE)
-        return readValue(key)
+        return readValue(key)?.also(SourceHostStorage::requireValue)
     }
 
     override suspend fun write(key: String, value: String) {

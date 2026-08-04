@@ -33,6 +33,9 @@ class SourceHostLoggerTest {
         assertFailsWith<IllegalArgumentException> {
             logger.log(SourceLogLevel.DEBUG, "x".repeat(SourceHostLogger.MAX_MESSAGE_LENGTH + 1))
         }
+        assertFailsWith<IllegalArgumentException> {
+            logger.log(SourceLogLevel.DEBUG, "warning\nforged-entry")
+        }
     }
 
     private class FakeLogger(

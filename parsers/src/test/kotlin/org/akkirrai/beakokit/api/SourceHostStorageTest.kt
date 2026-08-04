@@ -36,6 +36,8 @@ class SourceHostStorageTest {
         assertFailsWith<IllegalArgumentException> {
             storage.write("large", "x".repeat(SourceHostStorage.MAX_VALUE_LENGTH + 1))
         }
+        storage.seed("oversized", "x".repeat(SourceHostStorage.MAX_VALUE_LENGTH + 1))
+        assertFailsWith<IllegalArgumentException> { storage.read("oversized") }
     }
 
     @Test
@@ -68,5 +70,9 @@ class SourceHostStorageTest {
         protected override suspend fun storedSizeBytes(): Long = values.values.sumOf { it.encodeToByteArray().size.toLong() }
 
         protected override suspend fun storedEntryCount(): Int = values.size
+
+        fun seed(key: String, value: String) {
+            values[key] = value
+        }
     }
 }
