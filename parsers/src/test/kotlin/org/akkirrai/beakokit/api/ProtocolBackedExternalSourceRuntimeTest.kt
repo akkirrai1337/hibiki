@@ -280,6 +280,48 @@ class ProtocolBackedExternalSourceRuntimeTest {
         }
     }
 
+    @Test
+    fun oversizedRuntimeRequestIsRejectedBeforeTransport() = runBlocking {
+        var transportCalled = false
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ ->
+                transportCalled = true
+                error("Transport must not be called")
+            },
+            payloadCodec = FakePayloadCodec(),
+            requestIdFactory = { "request-9" },
+            callLimits = ExternalSourceRuntimeCallLimits(timeoutMillis = 1_000, maxRequestBytes = 32),
+        )
+
+        val exception = assertFailsWith<SourceException> {
+            runtime.search(AnimeSearchRequest(query = "x".repeat(128)))
+        }
+
+        assertEquals(SourceErrorKind.PARSE, exception.kind)
+        assertEquals(SourceErrorCode.INVALID_REQUEST, exception.code)
+        assertEquals(false, transportCalled)
+    }
+
+    @Test
+    fun oversizedRuntimeErrorEnvelopeIsRejectedBeforeErrorMapping() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    errorCode = ExternalSourceRuntimeErrorCode.SOURCE_FAILURE,
+                    errorMessage = "x".repeat(128),
+                )
+            },
+            payloadCodec = FakePayloadCodec(),
+            requestIdFactory = { "request-10" },
+            callLimits = ExternalSourceRuntimeCallLimits(timeoutMillis = 1_000, maxResponseBytes = 32),
+        )
+
+        assertFailsWith<SourceUnavailableException> {
+            runtime.details("title-1")
+        }
+    }
+
     private fun wireTitle(id: String) = AnimeTitle(
         id = id,
         russianName = null,

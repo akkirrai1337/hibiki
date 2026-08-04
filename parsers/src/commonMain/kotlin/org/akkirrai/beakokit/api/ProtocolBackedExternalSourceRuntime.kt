@@ -89,6 +89,7 @@ open class ProtocolBackedExternalSourceRuntime(
             operation = operation,
             payload = payload,
         )
+        requireRequestWithinLimit(request)
         val response = try {
             withTimeout(callLimits.timeoutMillis) {
                 transport.call(request, callLimits)
@@ -110,6 +111,7 @@ open class ProtocolBackedExternalSourceRuntime(
                 code = SourceErrorCode.RUNTIME_FAILURE,
             )
         }
+        requireResponseWithinLimit(response)
         if (response.requestId != request.requestId) {
             throw SourceException(
                 message = "Runtime response ID does not match request",
@@ -118,7 +120,6 @@ open class ProtocolBackedExternalSourceRuntime(
         }
         return try {
             val responsePayload = response.requirePayload()
-            requireResponseWithinLimit(responsePayload)
             decode(responsePayload)
         } catch (error: CancellationException) {
             throw error
@@ -133,11 +134,22 @@ open class ProtocolBackedExternalSourceRuntime(
         }
     }
 
-    private fun requireResponseWithinLimit(payload: JsonObject) {
-        val payloadSizeBytes = payload.toString().encodeToByteArray().size.toLong()
-        if (payloadSizeBytes > callLimits.maxResponseBytes) {
+    private fun requireResponseWithinLimit(response: ExternalSourceRuntimeResponse) {
+        val responseSizeBytes = ExternalSourceRuntimeProtocolCodec.encodeResponse(response).size.toLong()
+        if (responseSizeBytes > callLimits.maxResponseBytes) {
             throw SourceUnavailableException(
                 message = "External source runtime response exceeds ${callLimits.maxResponseBytes} bytes",
+            )
+        }
+    }
+
+    private fun requireRequestWithinLimit(request: ExternalSourceRuntimeRequest) {
+        val requestSizeBytes = ExternalSourceRuntimeProtocolCodec.encodeRequest(request).size.toLong()
+        if (requestSizeBytes > callLimits.maxRequestBytes) {
+            throw SourceException(
+                message = "External source runtime request exceeds ${callLimits.maxRequestBytes} bytes",
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_REQUEST,
             )
         }
     }
