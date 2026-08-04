@@ -123,6 +123,7 @@ open class RuntimeBackedPlaybackAnimeSource(
 }
 
 private fun requireValidExternalPlayerLinks(info: SourceInfo, links: List<PlayerLink>) {
+    require(links.isNotEmpty()) { "External playback runtime returned no player links" }
     links.forEach { link ->
         require(link.url.isNotBlank()) { "External player link URL must not be blank" }
         val parsed = runCatching { Url(link.url) }.getOrNull()
@@ -144,11 +145,23 @@ private fun requireValidExternalPlaybackGroups(groups: List<PlaybackGroup>) {
         "External playback group ids must be unique"
     }
     groups.forEach { group ->
+        require(group.id.isNotBlank()) {
+            "External playback group ids must not be blank"
+        }
+        require('\r' !in group.id && '\n' !in group.id) {
+            "External playback group ids must not contain CR or LF"
+        }
+        require(group.title.isNotBlank()) {
+            "External playback group titles must not be blank"
+        }
         require(group.episodes.isNotEmpty()) {
             "External playback group ${group.id} returned no episodes"
         }
         require(group.episodes.all { it.id.isNotBlank() }) {
             "External playback episode ids must not be blank"
+        }
+        require(group.episodes.all { '\r' !in it.id && '\n' !in it.id }) {
+            "External playback episode ids must not contain CR or LF"
         }
         require(group.episodes.map { it.id }.distinct().size == group.episodes.size) {
             "External playback episode ids must be unique in group ${group.id}"
@@ -196,6 +209,24 @@ private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
     }
     require(title.displayName.isNotBlank()) {
         "External source returned a blank display name for ${title.id} in $operation"
+    }
+    require(title.description == null || title.description.isNotBlank()) {
+        "External source returned a blank description for ${title.id} in $operation"
+    }
+    require(title.posterUrl == null || title.posterUrl.isNotBlank()) {
+        "External source returned a blank poster URL for ${title.id} in $operation"
+    }
+    require(title.posterFallbackUrl == null || title.posterFallbackUrl.isNotBlank()) {
+        "External source returned a blank poster fallback URL for ${title.id} in $operation"
+    }
+    title.posterFallbackUrl?.let { fallbackUrl ->
+        val parsed = runCatching { Url(fallbackUrl) }.getOrNull()
+        require(parsed != null && parsed.host.isNotBlank() && parsed.protocol.name in setOf("http", "https")) {
+            "External source returned an invalid poster fallback URL for ${title.id} in $operation"
+        }
+        require(fallbackUrl != title.posterUrl) {
+            "External source returned a duplicate poster fallback URL for ${title.id} in $operation"
+        }
     }
 }
 

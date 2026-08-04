@@ -67,16 +67,55 @@ class ExternalSourceRuntimeTest {
     }
 
     @Test
+    fun playbackRuntimeRejectsEmptyPlayerLinks() = runBlocking {
+        val runtime = FakePlaybackRuntime().apply { playerLinksResult = emptyList() }
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlayerLinks(
+                runtime.detailsResult,
+                runtime.playbackGroup,
+                runtime.playbackGroup.episodes.single(),
+            )
+        }
+    }
+
+    @Test
     fun playbackRuntimeRejectsInvalidGroups() = runBlocking {
         val runtime = FakePlaybackRuntime().apply {
             playbackGroupsResult = listOf(
                 PlaybackGroup(
-                    id = "group-1",
-                    title = "Subtitles",
+                    id = "",
+                    title = "",
                     episodes = listOf(
                         Episode("episode-1", 1.0, "Episode 1"),
                         Episode("episode-1", 2.0, "Episode 2"),
                     ),
+                ),
+            )
+        }
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlaybackGroups(runtime.detailsResult)
+        }
+    }
+
+    @Test
+    fun playbackRuntimeRejectsControlCharactersInGroupAndEpisodeIds() = runBlocking {
+        val runtime = FakePlaybackRuntime().apply {
+            playbackGroupsResult = listOf(
+                playbackGroup.copy(
+                    id = "group\n-1",
+                    episodes = listOf(Episode("episode-1\r", 1.0, "Episode 1")),
                 ),
             )
         }
@@ -151,6 +190,27 @@ class ExternalSourceRuntimeTest {
         assertFailsWith<IllegalArgumentException> {
             source.search(AnimeSearchRequest(yearFrom = 2025, yearTo = 2024))
         }
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(limit = 1))
+        }
+    }
+
+    @Test
+    fun catalogRuntimeRejectsInvalidTitleMetadata() = runBlocking {
+        val runtime = FakeRuntime().apply {
+            searchResult = listOf(
+                detailsResult.copy(
+                    description = "",
+                    posterFallbackUrl = "ftp://cdn.example.com/poster.jpg",
+                ),
+            )
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
         assertFailsWith<IllegalArgumentException> {
             source.search(AnimeSearchRequest(limit = 1))
         }
