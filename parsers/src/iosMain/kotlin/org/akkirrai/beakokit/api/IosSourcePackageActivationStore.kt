@@ -9,11 +9,23 @@ import platform.Foundation.NSUserDefaults
 class IosSourcePackageActivationStore(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
     private val json: Json = Json { ignoreUnknownKeys = true },
+    private val maxStateBytes: Long = DEFAULT_MAX_STATE_BYTES,
 ) : SourcePackageActivationStore {
+    init {
+        require(maxStateBytes > 0) { "Maximum activation state size must be positive" }
+    }
+
     override fun load(sourceId: SourceId): SourcePackageActivationState {
         val raw = defaults.stringForKey(key(sourceId)) ?: return SourcePackageActivationState()
         return try {
+            if (raw.encodeToByteArray().size.toLong() > maxStateBytes) {
+                throw SourcePackageStateException(
+                    "Source package activation state exceeds $maxStateBytes bytes: ${sourceId.value}",
+                )
+            }
             json.decodeFromString(raw)
+        } catch (error: SourcePackageStateException) {
+            throw error
         } catch (error: Exception) {
             throw SourcePackageStateException(
                 message = "Source package activation state is corrupted: ${sourceId.value}",
@@ -30,4 +42,8 @@ class IosSourcePackageActivationStore(
     }
 
     private fun key(sourceId: SourceId): String = "beakokit.source_package.${sourceId.value}"
+
+    private companion object {
+        const val DEFAULT_MAX_STATE_BYTES: Long = 2L * 1024L * 1024L
+    }
 }

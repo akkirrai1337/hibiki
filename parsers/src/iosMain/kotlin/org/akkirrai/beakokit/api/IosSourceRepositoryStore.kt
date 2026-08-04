@@ -9,11 +9,23 @@ import platform.Foundation.NSUserDefaults
 class IosSourceRepositoryStore(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
     private val json: Json = Json { ignoreUnknownKeys = false },
+    private val maxRepositoryBytes: Long = DEFAULT_MAX_REPOSITORY_BYTES,
 ) : SourceRepositoryStore {
+    init {
+        require(maxRepositoryBytes > 0) { "Maximum repository state size must be positive" }
+    }
+
     override fun load(): List<SourceRepositoryEndpoint> {
         val raw = defaults.stringForKey(KEY) ?: return emptyList()
         return try {
+            if (raw.encodeToByteArray().size.toLong() > maxRepositoryBytes) {
+                throw SourceRepositoryStateException(
+                    "Source repository state exceeds $maxRepositoryBytes bytes",
+                )
+            }
             checked(json.decodeFromString(raw))
+        } catch (error: SourceRepositoryStateException) {
+            throw error
         } catch (error: Exception) {
             throw SourceRepositoryStateException(
                 message = "Source repository list is corrupted",
@@ -38,5 +50,6 @@ class IosSourceRepositoryStore(
 
     private companion object {
         const val KEY = "beakokit.source_repositories"
+        const val DEFAULT_MAX_REPOSITORY_BYTES: Long = 2L * 1024L * 1024L
     }
 }

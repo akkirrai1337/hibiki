@@ -24,6 +24,11 @@ class IosSourcePackageManifestReader(
 
     override fun read(packagePath: String): SourceManifest {
         val manifestPath = packagePath.trimEnd('/') + "/manifest.json"
+        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(manifestPath, error = null) != null) {
+            throw SourcePackageStateException(
+                "Installed source package manifest must not be a symbolic link: $manifestPath",
+            )
+        }
         if (!NSFileManager.defaultManager.fileExistsAtPath(manifestPath)) {
             throw SourcePackageStateException(
                 "Installed source package manifest is missing: $manifestPath",

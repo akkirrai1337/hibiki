@@ -24,6 +24,11 @@ class IosSourcePackageModuleReader(
             "Unsafe source package entrypoint: $entrypoint"
         }
         val modulePath = packagePath.trimEnd('/') + "/" + entrypoint
+        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(modulePath, error = null) != null) {
+            throw SourcePackageStateException(
+                "Source package entrypoint must not be a symbolic link: $entrypoint",
+            )
+        }
         if (!NSFileManager.defaultManager.fileExistsAtPath(modulePath)) {
             throw SourcePackageStateException("Source package entrypoint does not exist: $entrypoint")
         }
