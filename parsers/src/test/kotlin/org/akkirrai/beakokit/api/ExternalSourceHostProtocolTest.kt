@@ -313,6 +313,35 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_oversized_storage_read_values() = runBlocking {
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = object : ExternalSourceHostStorageAccess {
+                override suspend fun read(key: String): String =
+                    "value".repeat(SourceHostStorage.MAX_VALUE_LENGTH)
+
+                override suspend fun write(key: String, value: String) = Unit
+                override suspend fun remove(key: String) = Unit
+            },
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.STORAGE),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            dispatcher.dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "storage-too-large",
+                    operation = ExternalSourceHostOperation.STORAGE_READ,
+                    payload = ExternalSourceHostProtocolCodec.encodeStorageReadRequest(
+                        ExternalSourceHostStorageReadRequest("token"),
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun cookies_operations_round_trip_through_the_dispatcher() = runBlocking {
         val values = mutableMapOf<String, Map<String, String>>()
         val cookies = object : SourceHostCookiesAccess {

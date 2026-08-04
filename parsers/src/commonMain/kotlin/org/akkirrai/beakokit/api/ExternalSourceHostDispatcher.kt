@@ -53,6 +53,7 @@ class ExternalSourceHostDispatcher(
                 val storageRequest = ExternalSourceHostProtocolCodec.decodeStorageReadRequest(request.payload)
                 SourceHostStorage.requireKey(storageRequest.key)
                 val value = requireStorage().read(storageRequest.key)
+                value?.let(SourceHostStorage::requireValue)
                 ExternalSourceHostProtocolCodec.encodeStorageReadResponse(
                     ExternalSourceHostStorageReadResponse(value),
                 )
