@@ -33,6 +33,13 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
                 .keys
             "Duplicate source IDs: ${duplicates.joinToString()}"
         }
+        if (entries.all { it.registrationOrder != null }) {
+            val orders = entries.mapNotNull(SourceCatalogEntry::registrationOrder)
+            require(orders.distinct().size == orders.size) {
+                "Duplicate source registration orders: ${orders.groupingBy { it }.eachCount()
+                    .filterValues { count -> count > 1 }.keys.joinToString()}"
+            }
+        }
     }
 
     operator fun get(id: SourceId): SourceInfo? = sourcesById[id]
