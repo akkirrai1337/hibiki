@@ -118,6 +118,37 @@ class AnimeTitleRuntimePayloadCodecTest {
     }
 
     @Test
+    fun `player link decoder rejects unsafe URL and headers`() {
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodePlayerLinks(
+                AnimeTitleRuntimePayloadCodec.encodePlayerLinks(
+                    listOf(
+                        PlayerLink(
+                            url = "video\n.m3u8",
+                            type = PlayerType.DIRECT_HLS,
+                            quality = null,
+                        ),
+                    ),
+                ),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodePlayerLinks(
+                AnimeTitleRuntimePayloadCodec.encodePlayerLinks(
+                    listOf(
+                        PlayerLink(
+                            url = "https://example.com/video.m3u8",
+                            type = PlayerType.DIRECT_HLS,
+                            quality = null,
+                            headers = mapOf("X-Test" to "value\r\nInjected: yes"),
+                        ),
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun missingCollectionFieldIsRejected() {
         assertFailsWith<IllegalStateException> {
             AnimeTitleRuntimePayloadCodec.decodeDetails(

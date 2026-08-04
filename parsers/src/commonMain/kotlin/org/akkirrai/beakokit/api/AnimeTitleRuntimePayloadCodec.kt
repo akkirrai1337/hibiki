@@ -48,28 +48,36 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
             )
         }
 
-    override fun decodePlayerLinks(payload: JsonObject): List<PlayerLink> =
-        payload.requiredArray("links").map { link ->
-            val value = link.jsonObject
-            PlayerLink(
-                url = value.requiredString("url"),
-                type = PlayerType.valueOf(value.requiredString("type")),
-                quality = value.nullableString("quality"),
-                headers = value.get("headers")?.jsonObject?.mapValues { it.value.jsonPrimitive.content }
-                    ?: emptyMap(),
-                playerName = value.nullableString("playerName"),
-                translation = value.nullableString("translation"),
-                segments = value.get("segments")?.jsonArray?.map { segment ->
-                    val item = segment.jsonObject
-                    VideoSegment(
-                        type = VideoSegmentType.valueOf(item.requiredString("type")),
-                        startMs = item.requiredPrimitive("startMs").content.toLong(),
-                        endMs = item.requiredPrimitive("endMs").content.toLong(),
-                    )
-                } ?: emptyList(),
-                videoId = value.nullableLong("videoId"),
-            )
-        }
+        override fun decodePlayerLinks(payload: JsonObject): List<PlayerLink> =
+            payload.requiredArray("links").map { link ->
+                val value = link.jsonObject
+                val url = value.requiredString("url")
+                require(url.isNotBlank()) { "Runtime player link URL must not be blank" }
+                require('\r' !in url && '\n' !in url) {
+                    "Runtime player link URL must not contain CR or LF"
+                }
+                val headers = value.get("headers")?.jsonObject
+                    ?.mapValues { it.value.jsonPrimitive.content }
+                    ?: emptyMap()
+                requireSafeHttpHeaders(headers)
+                PlayerLink(
+                    url = url,
+                    type = PlayerType.valueOf(value.requiredString("type")),
+                    quality = value.nullableString("quality"),
+                    headers = headers,
+                    playerName = value.nullableString("playerName"),
+                    translation = value.nullableString("translation"),
+                    segments = value.get("segments")?.jsonArray?.map { segment ->
+                        val item = segment.jsonObject
+                        VideoSegment(
+                            type = VideoSegmentType.valueOf(item.requiredString("type")),
+                            startMs = item.requiredPrimitive("startMs").content.toLong(),
+                            endMs = item.requiredPrimitive("endMs").content.toLong(),
+                        )
+                    } ?: emptyList(),
+                    videoId = value.nullableLong("videoId"),
+                )
+            }
 
     fun encodePlaybackGroups(groups: List<PlaybackGroup>): JsonObject = buildJsonObject {
         putJsonArray("groups") { groups.forEach { add(it.encodePlaybackGroup()) } }
