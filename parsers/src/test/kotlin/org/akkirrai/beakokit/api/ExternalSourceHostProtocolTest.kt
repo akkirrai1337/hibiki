@@ -8,6 +8,16 @@ import kotlinx.serialization.json.buildJsonObject
 
 class ExternalSourceHostProtocolTest {
     @Test
+    fun `wire http responses reject line breaks in headers`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostHttpResponse(
+                statusCode = 200,
+                headers = mapOf("X-Source" to "ok\nInjected: yes"),
+                body = "body",
+            )
+        }
+    }
+    @Test
     fun `host request and response strings reject line breaks`() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceHostRequest(

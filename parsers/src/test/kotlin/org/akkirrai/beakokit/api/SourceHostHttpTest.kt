@@ -7,6 +7,16 @@ import kotlin.test.assertFailsWith
 
 class SourceHostHttpTest {
     @Test
+    fun `http responses reject line breaks in headers`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpResponse(
+                statusCode = 200,
+                headers = mapOf("X-Source" to "ok\r\nInjected: yes"),
+                body = "body",
+            )
+        }
+    }
+    @Test
     fun `http client requires network capability`() = runBlocking {
         val client = FakeHttpClient(SourceHostRequirements())
 

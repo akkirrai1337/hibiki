@@ -54,6 +54,7 @@ data class SourceHostHttpResponse(
 ) {
     init {
         require(statusCode in 100..599) { "HTTP status code must be between 100 and 599" }
+        requireSafeHttpHeaders(headers)
     }
 }
 
