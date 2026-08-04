@@ -31,7 +31,7 @@ class KtorSourceRepositoryTransport(
                 kind = SourceErrorKind.UNAVAILABLE,
             )
         }
-        val body = rawBody.decodeToString()
+        val body = rawBody.decodeToString(throwOnInvalidSequence = true)
         return SourceRepositoryResponse(
             statusCode = response.status.value,
             body = body,

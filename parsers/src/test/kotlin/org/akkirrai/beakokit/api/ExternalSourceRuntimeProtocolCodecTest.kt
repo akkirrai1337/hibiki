@@ -107,6 +107,16 @@ class ExternalSourceRuntimeProtocolCodecTest {
     }
 
     @Test
+    fun wireCodecRejectsMalformedUtf8() {
+        assertFailsWith<Exception> {
+            ExternalSourceRuntimeProtocolCodec.decodeRequest(byteArrayOf(0x7B, 0xC3.toByte(), 0x28, 0x7D))
+        }
+        assertFailsWith<Exception> {
+            ExternalSourceRuntimeProtocolCodec.decodeResponse(byteArrayOf(0x7B, 0xE2.toByte(), 0x28, 0xA1.toByte(), 0x7D))
+        }
+    }
+
+    @Test
     fun runtimeLimits_reserve_space_for_size_sentinels() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceRuntimeCallLimits(maxRequestBytes = Long.MAX_VALUE)

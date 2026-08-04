@@ -228,7 +228,7 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeRequest(bytes: ByteArray): ExternalSourceHostRequest {
         requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES, "request")
-        return json.decodeFromString(bytes.decodeToString())
+        return json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
     }
 
     fun encodeResponse(response: ExternalSourceHostResponse): ByteArray =
@@ -238,7 +238,7 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeResponse(bytes: ByteArray): ExternalSourceHostResponse {
         requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES, "response")
-        return json.decodeFromString(bytes.decodeToString())
+        return json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
     }
 
     fun encodeHttpRequest(request: ExternalSourceHostHttpRequest): JsonObject =

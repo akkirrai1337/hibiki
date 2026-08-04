@@ -66,6 +66,22 @@ class KtorSourceRepositoryTransportTest {
     }
 
     @Test
+    fun `transport rejects malformed utf8 before repository decoding`() = runBlocking {
+        val transport = KtorSourceRepositoryTransport(
+            HttpClient(MockEngine {
+                respond(byteArrayOf(0xC3.toByte()))
+            }),
+        )
+
+        assertFailsWith<Exception> {
+            transport.get(
+                url = "https://example.com/repository.json",
+                limits = SourceRepositoryLoadLimits(),
+            )
+        }
+    }
+
+    @Test
     fun `transport returns an error status without reading its body`() = runBlocking {
         val transport = KtorSourceRepositoryTransport(
             HttpClient(MockEngine {

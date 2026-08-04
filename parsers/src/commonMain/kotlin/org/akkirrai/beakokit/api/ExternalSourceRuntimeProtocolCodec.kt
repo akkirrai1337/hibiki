@@ -16,13 +16,13 @@ object ExternalSourceRuntimeProtocolCodec {
         json.encodeToString(request).encodeToByteArray()
 
     fun decodeRequest(bytes: ByteArray): ExternalSourceRuntimeRequest =
-        json.decodeFromString(bytes.decodeToString())
+        json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
 
     fun encodeResponse(response: ExternalSourceRuntimeResponse): ByteArray =
         json.encodeToString(response).encodeToByteArray()
 
     fun decodeResponse(bytes: ByteArray): ExternalSourceRuntimeResponse =
-        json.decodeFromString(bytes.decodeToString())
+        json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
 }
 
 /** Lowest-level platform bridge for one already serialized runtime request. */
