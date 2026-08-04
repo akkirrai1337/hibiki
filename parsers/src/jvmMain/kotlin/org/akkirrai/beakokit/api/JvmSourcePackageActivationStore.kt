@@ -18,7 +18,15 @@ class JvmSourcePackageActivationStore(
         ignoreUnknownKeys = true
         prettyPrint = false
     },
+    private val maxStateBytes: Long = DEFAULT_MAX_STATE_BYTES,
 ) : SourcePackageActivationStore {
+    init {
+        require(maxStateBytes > 0) { "Maximum activation state size must be positive" }
+        require(maxStateBytes < Int.MAX_VALUE) {
+            "Maximum activation state size must fit in a platform byte array"
+        }
+    }
+
     override fun load(sourceId: SourceId): SourcePackageActivationState {
         val stateFile = stateFile(sourceId)
         readState(stateFile)?.let { return it }
@@ -51,7 +59,24 @@ class JvmSourcePackageActivationStore(
         if (Files.isSymbolicLink(path)) {
             throw SourcePackageStateException("Source package activation state must not be a symbolic link: $path")
         }
-        if (Files.exists(path)) json.decodeFromString(Files.readString(path)) else null
+        if (Files.exists(path)) {
+            if (Files.size(path) > maxStateBytes) {
+                throw SourcePackageStateException(
+                    "Source package activation state exceeds $maxStateBytes bytes: $path",
+                )
+            }
+            val bytes = Files.newInputStream(path).use { input ->
+                input.readNBytes((maxStateBytes + 1).toInt())
+            }
+            if (bytes.size.toLong() > maxStateBytes) {
+                throw SourcePackageStateException(
+                    "Source package activation state exceeds $maxStateBytes bytes: $path",
+                )
+            }
+            json.decodeFromString(bytes.decodeToString())
+        } else {
+            null
+        }
     } catch (error: SourcePackageStateException) {
         throw error
     } catch (_: Exception) {
@@ -79,5 +104,9 @@ class JvmSourcePackageActivationStore(
         } finally {
             Files.deleteIfExists(temporaryFile)
         }
+    }
+
+    private companion object {
+        const val DEFAULT_MAX_STATE_BYTES: Long = 2L * 1024L * 1024L
     }
 }

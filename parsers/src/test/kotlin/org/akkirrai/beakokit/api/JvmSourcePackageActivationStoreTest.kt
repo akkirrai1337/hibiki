@@ -82,6 +82,18 @@ class JvmSourcePackageActivationStoreTest {
         }
     }
 
+    @Test
+    fun `oversized state is rejected before decoding`() {
+        val root = Files.createTempDirectory("hibiki-source-state-")
+        val file = root.resolve("external-source.json")
+        Files.writeString(file, "{}")
+
+        assertFailsWith<SourcePackageStateException> {
+            JvmSourcePackageActivationStore(root, maxStateBytes = 1)
+                .load(SourceId("external-source"))
+        }
+    }
+
     private fun packageVersion(version: String) = InstalledSourcePackage(
         sourceId = SourceId("external-source"),
         packageVersion = version,

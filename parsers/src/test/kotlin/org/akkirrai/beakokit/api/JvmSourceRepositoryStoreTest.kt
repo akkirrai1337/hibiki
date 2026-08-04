@@ -45,4 +45,33 @@ class JvmSourceRepositoryStoreTest {
             JvmSourceRepositoryStore(file).persistAtomically(listOf(endpoint, endpoint))
         }
     }
+
+    @Test
+    fun rejectsSymbolicLinkState() {
+        val directory = Files.createTempDirectory("beakokit-repositories")
+        val file = directory.resolve("repositories.json")
+        val target = Files.createTempFile("beakokit-repositories-", ".json")
+        Files.writeString(target, "[]")
+        val link = runCatching { Files.createSymbolicLink(file, target) }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourceRepositoryStateException> {
+                JvmSourceRepositoryStore(file).load()
+            }
+        } finally {
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(target)
+        }
+    }
+
+    @Test
+    fun rejectsOversizedStateBeforeDecoding() {
+        val directory = Files.createTempDirectory("beakokit-repositories")
+        val file = directory.resolve("repositories.json")
+        Files.writeString(file, "[]")
+
+        assertFailsWith<SourceRepositoryStateException> {
+            JvmSourceRepositoryStore(file, maxRepositoryBytes = 1).load()
+        }
+    }
 }

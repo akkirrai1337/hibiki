@@ -15,7 +15,15 @@ import java.nio.file.StandardOpenOption
 class JvmSourceRepositoryStore(
     private val file: Path,
     private val json: Json = Json { ignoreUnknownKeys = false },
+    private val maxRepositoryBytes: Long = DEFAULT_MAX_REPOSITORY_BYTES,
 ) : SourceRepositoryStore {
+    init {
+        require(maxRepositoryBytes > 0) { "Maximum repository state size must be positive" }
+        require(maxRepositoryBytes < Int.MAX_VALUE) {
+            "Maximum repository state size must fit in a platform byte array"
+        }
+    }
+
     override fun load(): List<SourceRepositoryEndpoint> {
         read(file)?.let { return checked(it) }
         read(backupFile())?.let { backup ->
@@ -36,7 +44,29 @@ class JvmSourceRepositoryStore(
     private fun backupFile(): Path = file.resolveSibling("${file.fileName}.bak")
 
     private fun read(path: Path): List<SourceRepositoryEndpoint>? = try {
-        if (Files.exists(path)) json.decodeFromString(Files.readString(path)) else null
+        if (Files.isSymbolicLink(path)) {
+            throw SourceRepositoryStateException("Source repository state must not be a symbolic link: $path")
+        }
+        if (Files.exists(path)) {
+            if (Files.size(path) > maxRepositoryBytes) {
+                throw SourceRepositoryStateException(
+                    "Source repository state exceeds $maxRepositoryBytes bytes: $path",
+                )
+            }
+            val bytes = Files.newInputStream(path).use { input ->
+                input.readNBytes((maxRepositoryBytes + 1).toInt())
+            }
+            if (bytes.size.toLong() > maxRepositoryBytes) {
+                throw SourceRepositoryStateException(
+                    "Source repository state exceeds $maxRepositoryBytes bytes: $path",
+                )
+            }
+            json.decodeFromString(bytes.decodeToString())
+        } else {
+            null
+        }
+    } catch (error: SourceRepositoryStateException) {
+        throw error
     } catch (_: Exception) {
         null
     }
@@ -74,5 +104,9 @@ class JvmSourceRepositoryStore(
             }
         }
         return repositories.toList()
+    }
+
+    private companion object {
+        const val DEFAULT_MAX_REPOSITORY_BYTES: Long = 2L * 1024L * 1024L
     }
 }
