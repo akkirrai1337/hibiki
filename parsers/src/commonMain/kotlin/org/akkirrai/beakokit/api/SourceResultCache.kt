@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 
 private data class SourceResultCacheKey(
     val sourceId: SourceId,
@@ -22,6 +23,8 @@ class SourceResultCache(
 ) {
     private val entries = MutableStateFlow<Map<SourceResultCacheKey, CachedSourceResult>>(emptyMap())
     private val inFlight = MutableStateFlow<Map<SourceResultCacheKey, CompletableDeferred<Any?>>>(emptyMap())
+    private val clearEpoch = MutableStateFlow(0L)
+    private val sourceInvalidationEpochs = MutableStateFlow<Map<SourceId, Long>>(emptyMap())
 
     suspend fun <T> getOrLoad(
         sourceId: SourceId,
@@ -49,9 +52,15 @@ class SourceResultCache(
             if (inFlight.compareAndSet(current, current + (cacheKey to deferred))) break
         }
 
+        val capturedClearEpoch = clearEpoch.value
+        val capturedSourceEpoch = sourceInvalidationEpochs.value[sourceId] ?: 0L
         try {
             val value = loader()
-            write(cacheKey, value, ttlMillis)
+            if (capturedClearEpoch == clearEpoch.value &&
+                capturedSourceEpoch == (sourceInvalidationEpochs.value[sourceId] ?: 0L)
+            ) {
+                write(cacheKey, value, ttlMillis)
+            }
             deferred.complete(value)
             return value
         } catch (error: Throwable) {
@@ -67,6 +76,9 @@ class SourceResultCache(
     }
 
     fun invalidate(sourceId: SourceId) {
+        sourceInvalidationEpochs.update { epochs ->
+            epochs + (sourceId to ((epochs[sourceId] ?: 0L) + 1L))
+        }
         while (true) {
             val current = entries.value
             val updated = current.filterKeys { it.sourceId != sourceId }
@@ -75,6 +87,7 @@ class SourceResultCache(
     }
 
     fun clear() {
+        clearEpoch.update { it + 1L }
         entries.value = emptyMap()
     }
 
@@ -89,6 +102,11 @@ class SourceResultCache(
 
     private fun write(key: SourceResultCacheKey, value: Any?, ttlMillis: Long) {
         val now = nowMillis()
+        val expiresAt = if (ttlMillis > Long.MAX_VALUE - now) {
+            Long.MAX_VALUE
+        } else {
+            now + ttlMillis
+        }
         while (true) {
             val current = entries.value
             val valid = current.filterValues { it.expiresAtMillis > now }
@@ -97,7 +115,7 @@ class SourceResultCache(
             } else {
                 valid
             }
-            val updated = bounded + (key to CachedSourceResult(value, now + ttlMillis, now))
+            val updated = bounded + (key to CachedSourceResult(value, expiresAt, now))
             if (entries.compareAndSet(current, updated)) return
         }
     }

@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -61,6 +62,51 @@ class SourceResultCacheTest {
             }
         }
 
+        assertEquals(2, loads)
+    }
+
+    @Test
+    fun `cache saturates expiry instead of overflowing`() = runBlocking {
+        val cache = SourceResultCache(nowMillis = { Long.MAX_VALUE - 1 })
+        var loads = 0
+
+        suspend fun load() = cache.getOrLoad(sourceId, SourceOperation.DETAILS, "overflow", 10) {
+            ++loads
+            "value"
+        }
+
+        assertEquals("value", load())
+        assertEquals("value", load())
+        assertEquals(1, loads)
+    }
+
+    @Test
+    fun `source invalidation prevents an in-flight result from being cached`() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val cache = SourceResultCache()
+        var loads = 0
+
+        val first = async {
+            cache.getOrLoad(sourceId, SourceOperation.DETAILS, "stale", 1_000) {
+                loads += 1
+                started.complete(Unit)
+                release.await()
+                "stale"
+            }
+        }
+        started.await()
+        cache.invalidate(sourceId)
+        release.complete(Unit)
+        assertEquals("stale", first.await())
+
+        assertEquals(
+            "fresh",
+            cache.getOrLoad(sourceId, SourceOperation.DETAILS, "stale", 1_000) {
+                loads += 1
+                "fresh"
+            },
+        )
         assertEquals(2, loads)
     }
 }

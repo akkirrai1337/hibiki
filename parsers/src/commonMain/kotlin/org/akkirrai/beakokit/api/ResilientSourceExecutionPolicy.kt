@@ -112,7 +112,12 @@ class ResilientSourceExecutionPolicy(
             val waitMillis = if (lastStartedAt == Long.MIN_VALUE) {
                 0L
             } else {
-                (lastStartedAt + policy.minimumIntervalMillis - beforeWait).coerceAtLeast(0)
+                val nextAllowedAt = if (policy.minimumIntervalMillis > Long.MAX_VALUE - lastStartedAt) {
+                    Long.MAX_VALUE
+                } else {
+                    lastStartedAt + policy.minimumIntervalMillis
+                }
+                (nextAllowedAt - beforeWait).coerceAtLeast(0)
             }
             if (waitMillis > 0) wait(waitMillis)
             lastStartedAt = nowMillis()
@@ -132,7 +137,12 @@ class ResilientSourceExecutionPolicy(
             }
             consecutiveFailures += 1
             if (consecutiveFailures >= policy.failureThreshold) {
-                openUntil = nowMillis() + policy.cooldownMillis
+                val now = nowMillis()
+                openUntil = if (policy.cooldownMillis > Long.MAX_VALUE - now) {
+                    Long.MAX_VALUE
+                } else {
+                    now + policy.cooldownMillis
+                }
             }
         }
 

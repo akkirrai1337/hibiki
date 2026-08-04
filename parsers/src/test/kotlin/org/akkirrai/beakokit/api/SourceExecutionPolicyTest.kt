@@ -135,4 +135,21 @@ class SourceExecutionPolicyTest {
 
         assertEquals(emptyList(), waits)
     }
+
+    @Test
+    fun `circuit cooldown saturates instead of overflowing`() = runBlocking {
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            policy = SourceResiliencePolicy(failureThreshold = 1, cooldownMillis = 10),
+            nowMillis = { Long.MAX_VALUE - 1 },
+        )
+
+        assertFailsWith<SourceException> {
+            policy.execute(sourceId, SourceOperation.SEARCH) {
+                throw SourceException("temporary", kind = SourceErrorKind.NETWORK)
+            }
+        }
+
+        assertEquals(SourceCircuitState.OPEN, policy.circuit(sourceId).state)
+    }
 }
