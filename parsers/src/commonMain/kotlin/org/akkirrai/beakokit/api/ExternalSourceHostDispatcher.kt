@@ -44,9 +44,7 @@ class ExternalSourceHostDispatcher(
                 }
                 val httpRequest = ExternalSourceHostProtocolCodec.decodeHttpRequest(request.payload)
                 val response = executeHttpRequest(httpRequest)
-                require(response.body.encodeToByteArray().size.toLong() <= httpRequest.maxResponseBytes) {
-                    "Host HTTP response exceeds ${httpRequest.maxResponseBytes} bytes"
-                }
+                requireHttpResponseWithinLimit(response.body, httpRequest.maxResponseBytes)
                 ExternalSourceHostProtocolCodec.encodeHttpResponse(response)
             }
             ExternalSourceHostOperation.STORAGE_READ -> {

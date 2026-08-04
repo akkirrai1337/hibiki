@@ -125,7 +125,7 @@ class ExternalSourceHostProtocolTest {
             ExternalSourceHostHttpResponse(statusCode = 200, body = "12345")
         }
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourceHostHttpResponseException> {
             dispatcher.dispatch(request)
         }
     }

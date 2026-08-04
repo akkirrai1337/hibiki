@@ -54,6 +54,14 @@ internal fun requireSafeHttpHeaders(headers: Map<String, String>) {
     }
 }
 
+internal fun requireHttpResponseWithinLimit(body: String, maxResponseBytes: Long) {
+    if (body.encodeToByteArray().size.toLong() > maxResponseBytes) {
+        throw SourceHostHttpResponseException(
+            "Host HTTP response exceeds $maxResponseBytes bytes",
+        )
+    }
+}
+
 /** Runtime-neutral HTTP response returned by a host implementation. */
 data class SourceHostHttpResponse(
     val statusCode: Int,
@@ -72,11 +80,15 @@ abstract class SourceHostHttpClient : SourceHostAccess {
         require(SourceHostCapability.NETWORK)
         requirements.networkPolicy.requireAllowed(request.url)
         val response = executeNetwork(request)
-        require(response.body.encodeToByteArray().size.toLong() <= request.maxResponseBytes) {
-            "Host HTTP response exceeds ${request.maxResponseBytes} bytes"
-        }
+        requireHttpResponseWithinLimit(response.body, request.maxResponseBytes)
         return response
     }
 
     protected abstract suspend fun executeNetwork(request: SourceHostHttpRequest): SourceHostHttpResponse
 }
+
+class SourceHostHttpResponseException(message: String) : SourceException(
+    message = message,
+    kind = SourceErrorKind.PARSE,
+    code = SourceErrorCode.INVALID_RESPONSE,
+)

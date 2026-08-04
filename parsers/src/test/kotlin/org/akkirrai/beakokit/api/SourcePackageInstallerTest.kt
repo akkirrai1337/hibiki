@@ -92,7 +92,7 @@ class SourcePackageInstallerTest {
         val store = RecordingStore()
         val manifest = manifest()
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourcePackageValidationException> {
             installer(store).install(
                 repositoryManifest = manifest,
                 packageManifest = manifest,
@@ -112,7 +112,7 @@ class SourcePackageInstallerTest {
         val repositoryManifest = manifest()
         val packageManifest = repositoryManifest.copy(packageVersion = "3.0.0")
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourcePackageValidationException> {
             installer(store).install(
                 repositoryManifest = repositoryManifest,
                 packageManifest = packageManifest,

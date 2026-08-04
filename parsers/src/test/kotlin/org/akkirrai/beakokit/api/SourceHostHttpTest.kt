@@ -116,7 +116,7 @@ class SourceHostHttpTest {
             responseBody = "12345",
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourceHostHttpResponseException> {
             client.execute(
                 SourceHostHttpRequest(
                     method = "GET",
