@@ -5,6 +5,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.runBlocking
@@ -72,6 +73,32 @@ class JvmDownloadedSourcePackageExtractorTest {
 
         assertEquals(candidate, state.active)
         assertEquals(state, store.state)
+    }
+
+    @Test
+    fun `adapter rejects a symbolic link in the staging parent path`() = runBlocking {
+        val root = Files.createTempDirectory("hibiki-source-staging-")
+        val target = Files.createTempDirectory("hibiki-source-target-")
+        val link = root.resolve("link")
+        val created = runCatching { Files.createSymbolicLink(link, target) }.getOrNull() ?: return@runBlocking
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmDownloadedSourcePackageExtractor().extract(
+                    downloaded = DownloadedSourcePackage(zipOf(
+                        "manifest.json" to Json.encodeToString(manifest()).encodeToByteArray(),
+                        "source.wasm" to byteArrayOf(0, 1, 2),
+                    )),
+                    stagingPath = link.resolve("package").toString(),
+                    repositoryManifest = manifest(),
+                )
+            }
+        } finally {
+            Files.deleteIfExists(created)
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(target)
+            Files.deleteIfExists(root)
+        }
     }
 
     private fun zipOf(vararg entries: Pair<String, ByteArray>): ByteArray {

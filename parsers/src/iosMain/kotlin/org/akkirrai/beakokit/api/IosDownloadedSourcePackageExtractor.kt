@@ -78,9 +78,7 @@ class IosDownloadedSourcePackageExtractor(
     }
 
     private fun ensureDirectory(fileManager: NSFileManager, path: String, label: String) {
-        require(fileManager.destinationOfSymbolicLinkAtPath(path, error = null) == null) {
-            "$label must not be a symbolic link: $path"
-        }
+        requireNoSymbolicLinkInParents(fileManager, path, label)
         if (fileManager.fileExistsAtPath(path)) return
         require(fileManager.createDirectoryAtPath(
             path = path,
@@ -88,6 +86,22 @@ class IosDownloadedSourcePackageExtractor(
             attributes = null,
             error = null,
         )) { "Unable to create $label" }
+    }
+
+    private fun requireNoSymbolicLinkInParents(
+        fileManager: NSFileManager,
+        path: String,
+        label: String,
+    ) {
+        var currentPath = path
+        while (currentPath.isNotEmpty()) {
+            require(fileManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) == null) {
+                "$label must not be a symbolic link: $currentPath"
+            }
+            val parent = currentPath.substringBeforeLast('/', missingDelimiterValue = "")
+            if (parent == currentPath || parent.isEmpty()) break
+            currentPath = parent
+        }
     }
 
     private fun readEntries(bytes: ByteArray): List<StoredEntry> {

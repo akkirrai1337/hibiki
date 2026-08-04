@@ -17,6 +17,7 @@ class JvmDownloadedSourcePackageExtractor(
     ): ExtractedSourcePackage {
         val stagingDirectory = Path.of(stagingPath)
         val parentDirectory = stagingDirectory.parent ?: Path.of(".")
+        requireNoSymbolicLinkInParents(parentDirectory)
         Files.createDirectories(parentDirectory)
         val archive = Files.createTempFile(parentDirectory, "source-package-", ".zip")
         try {
@@ -56,6 +57,18 @@ class JvmDownloadedSourcePackageExtractor(
                 .sorted(Comparator.comparing(SourcePackageEntry::path))
                 .toList()
         }
+
+    private fun requireNoSymbolicLinkInParents(directory: Path) {
+        var current: Path? = directory
+        while (current != null) {
+            if (Files.isSymbolicLink(current)) {
+                throw SourcePackageStateException(
+                    "Source package staging parent must not be a symbolic link: $current",
+                )
+            }
+            current = current.parent
+        }
+    }
 
     private fun deleteRecursively(directory: Path) {
         if (!Files.exists(directory)) return
