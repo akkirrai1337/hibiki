@@ -123,6 +123,16 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects a package URL fragment`() {
+        val invalid = manifest().copy(packageUrl = "https://example.com/source.zip#archive")
+
+        assertContains(
+            invalid.violations(clientVersion = 1, supportedApiVersion = SourceApi.VERSION),
+            "Package URL must be a valid HTTPS URL",
+        )
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 

@@ -9,6 +9,7 @@ data class SourceRepositoryEndpoint(
 ) {
     init {
         require(url.isNotBlank()) { "Repository URL must not be blank" }
+        require('#' !in url) { "Repository URL must not contain a fragment" }
         requireValidHttpsUrl(url, "Repository URL")
     }
 }

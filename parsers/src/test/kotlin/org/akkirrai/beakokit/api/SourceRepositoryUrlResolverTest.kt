@@ -101,6 +101,13 @@ class SourceRepositoryUrlResolverTest {
     }
 
     @Test
+    fun `rejects direct repository fragments`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryEndpoint("https://example.test/index.json#fragment")
+        }
+    }
+
+    @Test
     fun `rejects repository links containing line breaks before trimming`() {
         assertFailsWith<IllegalArgumentException> {
             resolver.resolve("\nhttps://example.test/index.json")

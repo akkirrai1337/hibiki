@@ -76,7 +76,9 @@ data class SourceManifest(
         } else if (entrypoint == "manifest.json") {
             add("Entrypoint must not point to manifest.json")
         }
-        if (!isValidHttpsUrl(packageUrl)) add("Package URL must be a valid HTTPS URL")
+        if (!isValidHttpsUrl(packageUrl) || '#' in packageUrl) {
+            add("Package URL must be a valid HTTPS URL")
+        }
         sourceInfo?.let { metadata ->
             if (metadata.displayName.isBlank()) {
                 add("Source display name must not be blank")
