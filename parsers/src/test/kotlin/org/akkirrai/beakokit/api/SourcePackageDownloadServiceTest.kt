@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
 class SourcePackageDownloadServiceTest {
@@ -53,7 +54,8 @@ class SourcePackageDownloadServiceTest {
             limits = SourcePackageDownloadLimits(maxArtifactSizeBytes = 3),
         )
 
-        assertFailsWith<IllegalArgumentException> { service.download(manifest) }
+        val error = assertFailsWith<SourcePackageDownloadException> { service.download(manifest) }
+        assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
     }
 
     @Test
@@ -74,6 +76,44 @@ class SourcePackageDownloadServiceTest {
             service.download(manifest(size = 3, sha256 = "a".repeat(64)).copy(minClientVersion = 4))
         }
         assertEquals(false, transportCalled)
+    }
+
+    @Test
+    fun `service maps transport failures to download errors`() = runBlocking {
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ -> error("network unavailable") },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3),
+                sha256 = SourcePackageSha256 { "a".repeat(64) },
+            ),
+        )
+
+        val error = assertFailsWith<SourcePackageDownloadException> {
+            service.download(manifest(size = 3, sha256 = "a".repeat(64)))
+        }
+
+        assertEquals(SourceErrorKind.NETWORK, error.kind)
+    }
+
+    @Test
+    fun `service maps transport timeouts to unavailable download errors`() = runBlocking {
+        val service = SourcePackageDownloadService(
+            transport = SourcePackageTransport { _, _ ->
+                delay(100)
+                DownloadedSourcePackage(byteArrayOf(1, 2, 3))
+            },
+            artifactVerifier = SourcePackageArtifactVerifier(
+                validator = SourcePackageValidator(clientVersion = 3),
+                sha256 = SourcePackageSha256 { "a".repeat(64) },
+            ),
+            limits = SourcePackageDownloadLimits(timeoutMillis = 1),
+        )
+
+        val error = assertFailsWith<SourcePackageDownloadException> {
+            service.download(manifest(size = 3, sha256 = "a".repeat(64)))
+        }
+
+        assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
     }
 
     private fun manifest(size: Long, sha256: String) = SourceManifest(
