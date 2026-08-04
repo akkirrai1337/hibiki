@@ -28,4 +28,26 @@ class SourceInfoTest {
             )
         }
     }
+
+    @Test
+    fun `metadata links must be complete HTTPS URLs`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceInfo(
+                id = SourceId("test"),
+                name = "Test",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                website = "https://",
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceInfo(
+                id = SourceId("test"),
+                name = "Test",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                iconUrl = "https://",
+            )
+        }
+    }
 }

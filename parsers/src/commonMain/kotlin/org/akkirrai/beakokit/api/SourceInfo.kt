@@ -56,10 +56,10 @@ data class SourceInfo(
         require(primaryLanguage in languages) {
             "Primary source language must be included in supported languages: $primaryLanguage"
         }
-        require(website == null || website.startsWith("https://")) {
+        require(website == null || isValidHttpsUrl(website)) {
             "Source website must use HTTPS: $website"
         }
-        require(iconUrl == null || iconUrl.startsWith("https://")) {
+        require(iconUrl == null || isValidHttpsUrl(iconUrl)) {
             "Source icon URL must use HTTPS: $iconUrl"
         }
     }
