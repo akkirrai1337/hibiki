@@ -217,6 +217,20 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun protocol_codec_rejects_oversized_envelopes_before_decoding() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostProtocolCodec.decodeRequest(
+                ByteArray((EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES + 1).toInt()),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostProtocolCodec.decodeResponse(
+                ByteArray((EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES + 1).toInt()),
+            )
+        }
+    }
+
+    @Test
     fun http_response_rejects_invalid_status_codes() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceHostHttpResponse(statusCode = 99, body = "")

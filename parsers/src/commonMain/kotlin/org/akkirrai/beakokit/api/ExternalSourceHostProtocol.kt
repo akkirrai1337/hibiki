@@ -179,16 +179,24 @@ object ExternalSourceHostProtocolCodec {
     }
 
     fun encodeRequest(request: ExternalSourceHostRequest): ByteArray =
-        json.encodeToString(request).encodeToByteArray()
+        json.encodeToString(request).encodeToByteArray().also {
+            requireProtocolPayloadSize(it, EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES, "request")
+        }
 
-    fun decodeRequest(bytes: ByteArray): ExternalSourceHostRequest =
-        json.decodeFromString(bytes.decodeToString())
+    fun decodeRequest(bytes: ByteArray): ExternalSourceHostRequest {
+        requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES, "request")
+        return json.decodeFromString(bytes.decodeToString())
+    }
 
     fun encodeResponse(response: ExternalSourceHostResponse): ByteArray =
-        json.encodeToString(response).encodeToByteArray()
+        json.encodeToString(response).encodeToByteArray().also {
+            requireProtocolPayloadSize(it, EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES, "response")
+        }
 
-    fun decodeResponse(bytes: ByteArray): ExternalSourceHostResponse =
-        json.decodeFromString(bytes.decodeToString())
+    fun decodeResponse(bytes: ByteArray): ExternalSourceHostResponse {
+        requireProtocolPayloadSize(bytes, EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES, "response")
+        return json.decodeFromString(bytes.decodeToString())
+    }
 
     fun encodeHttpRequest(request: ExternalSourceHostHttpRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
@@ -269,6 +277,12 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeConfigResponse(payload: JsonObject): ExternalSourceHostConfigResponse =
         json.decodeFromJsonElement(payload)
+}
+
+private fun requireProtocolPayloadSize(bytes: ByteArray, limit: Long, label: String) {
+    require(bytes.size.toLong() <= limit) {
+        "External source host $label exceeds $limit bytes"
+    }
 }
 
 const val EXTERNAL_SOURCE_HOST_PROTOCOL_VERSION: Int = 1

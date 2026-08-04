@@ -194,6 +194,23 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     @Test
+    fun internalTransportErrorsAreNotConvertedToSourceFailures() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ ->
+                throw AssertionError("internal runtime failure")
+            },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "request-internal-error" },
+        )
+
+        val thrown = assertFailsWith<AssertionError> {
+            runtime.details("title-1")
+        }
+
+        assertEquals("internal runtime failure", thrown.message)
+    }
+
+    @Test
     fun cancelledProtocolResponseCancelsTheCaller() = runBlocking {
         val runtime = ProtocolBackedExternalSourceRuntime(
             transport = ExternalSourceRuntimeTransport { request, _ ->

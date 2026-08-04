@@ -34,7 +34,13 @@ data class ExternalSourceRuntimeCallLimits(
             "Runtime timeout must not exceed ${SourceHostHttpRequest.MAX_TIMEOUT_MILLIS} ms"
         }
         require(maxRequestBytes > 0) { "Maximum runtime request size must be positive" }
+        require(maxRequestBytes < Long.MAX_VALUE) {
+            "Maximum runtime request size must leave room for the limit sentinel"
+        }
         require(maxResponseBytes > 0) { "Maximum runtime response size must be positive" }
+        require(maxResponseBytes < Long.MAX_VALUE) {
+            "Maximum runtime response size must leave room for the limit sentinel"
+        }
     }
 }
 
@@ -96,7 +102,7 @@ open class ProtocolBackedExternalSourceRuntime(
             throw error
         } catch (error: SourceException) {
             throw error
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             throw SourceException(
                 message = "External source runtime transport failed",
                 cause = error,
@@ -118,7 +124,7 @@ open class ProtocolBackedExternalSourceRuntime(
             throw error
         } catch (error: SourceException) {
             throw error
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             throw SourceException(
                 message = "External source runtime returned an invalid payload",
                 cause = error,

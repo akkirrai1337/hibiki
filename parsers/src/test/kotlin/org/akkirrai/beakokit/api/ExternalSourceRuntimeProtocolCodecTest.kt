@@ -105,4 +105,14 @@ class ExternalSourceRuntimeProtocolCodecTest {
         assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
         assertEquals(false, called)
     }
+
+    @Test
+    fun runtimeLimits_reserve_space_for_size_sentinels() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimeCallLimits(maxRequestBytes = Long.MAX_VALUE)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimeCallLimits(maxResponseBytes = Long.MAX_VALUE)
+        }
+    }
 }
