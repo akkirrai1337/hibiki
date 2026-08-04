@@ -123,4 +123,11 @@ class ExternalSourceRuntimePayloadsTest {
             )
         }
     }
+
+    @Test
+    fun `runtime payload identifiers reject line breaks`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.details("title\n1")
+        }
+    }
 }

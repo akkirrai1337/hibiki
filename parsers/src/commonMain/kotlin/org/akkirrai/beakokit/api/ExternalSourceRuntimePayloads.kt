@@ -53,6 +53,9 @@ object ExternalSourceRuntimePayloads {
 
     private fun requireRuntimeId(id: String, label: String): String {
         require(id.isNotBlank()) { "External source $label ID must not be blank" }
+        require('\r' !in id && '\n' !in id) {
+            "External source $label ID must not contain CR or LF"
+        }
         return id
     }
 }
