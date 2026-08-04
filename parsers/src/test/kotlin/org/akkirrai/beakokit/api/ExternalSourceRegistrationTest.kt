@@ -756,6 +756,26 @@ class ExternalSourceRegistrationTest {
         assertFailsWith<SourcePackageStateException> { loader.load() }
     }
 
+    @Test
+    fun activePackageLoaderNormalizesManifestReaderFailures() {
+        val installed = InstalledSourcePackage(
+            sourceId = SourceId("external-test"),
+            packageVersion = "1.0.0",
+            packagePath = "sources/external-test/1.0.0",
+        )
+        val loader = ActiveExternalSourcePackageLoader(
+            activationRepository = SourcePackageActivationRepository(
+                sourceId = installed.sourceId,
+                store = InMemoryActivationStore(SourcePackageActivationState(active = installed)),
+            ),
+            manifestReader = SourcePackageManifestReader {
+                throw IllegalStateException("manifest reader failed")
+            },
+        )
+
+        assertFailsWith<SourcePackageStateException> { loader.load() }
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",

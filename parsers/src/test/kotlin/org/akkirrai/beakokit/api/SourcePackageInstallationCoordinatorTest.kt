@@ -152,7 +152,7 @@ class SourcePackageInstallationCoordinatorTest {
             ),
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourcePackageValidationException> {
             coordinator.install(manifest, candidate, "staging/package") {}
         }
     }
@@ -265,7 +265,7 @@ class SourcePackageInstallationCoordinatorTest {
             ),
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourcePackageValidationException> {
             coordinator.install(manifest, candidate, candidate.packagePath) {}
         }
     }

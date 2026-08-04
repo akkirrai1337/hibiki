@@ -47,15 +47,17 @@ class SourcePackageInstallationCoordinator(
         initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
-        require(candidate.sourceId == repositoryManifest.sourceId) {
-            "Installation candidate source ID does not match repository manifest"
-        }
-        require(candidate.packageVersion == repositoryManifest.packageVersion) {
-            "Installation candidate version does not match repository manifest"
-        }
-        require(candidate.packagePath == stagingPath) {
-            "Installation candidate path must match the extraction staging path"
-        }
+        buildList {
+            if (candidate.sourceId != repositoryManifest.sourceId) {
+                add("Installation candidate source ID does not match repository manifest")
+            }
+            if (candidate.packageVersion != repositoryManifest.packageVersion) {
+                add("Installation candidate version does not match repository manifest")
+            }
+            if (candidate.packagePath != stagingPath) {
+                add("Installation candidate path must match the extraction staging path")
+            }
+        }.takeIf { it.isNotEmpty() }?.let(::SourcePackageValidationException)?.let { throw it }
         val verified = downloadService.download(repositoryManifest)
         val installedCandidate = candidate.copy(artifactSha256 = verified.artifact.sha256)
         val extracted = extractor.extract(

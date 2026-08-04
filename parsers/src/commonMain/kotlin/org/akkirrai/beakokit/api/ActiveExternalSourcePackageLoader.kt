@@ -21,8 +21,8 @@ class ActiveExternalSourcePackageLoader(
 
     /** Reconstructs a specific persisted package version without mutating activation state. */
     fun load(installed: InstalledSourcePackage): ActiveExternalSourcePackage {
-        val manifest = manifestReader.read(installed.packagePath)
         return try {
+            val manifest = manifestReader.read(installed.packagePath)
             if (!SourcePackageLayoutValidator.isSafeRelativePath(manifest.entrypoint) ||
                 manifest.entrypoint == "manifest.json"
             ) {
@@ -38,7 +38,7 @@ class ActiveExternalSourcePackageLoader(
             ActiveExternalSourcePackage(manifest = manifest, installed = installed)
         } catch (error: SourcePackageStateException) {
             throw error
-        } catch (error: IllegalArgumentException) {
+        } catch (error: Exception) {
             throw SourcePackageStateException(
                 message = "Active source package manifest does not match persisted state",
                 cause = error,
