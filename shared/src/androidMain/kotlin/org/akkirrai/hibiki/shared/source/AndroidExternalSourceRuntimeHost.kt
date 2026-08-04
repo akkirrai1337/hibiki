@@ -181,9 +181,8 @@ private class AndroidExternalSourceHost(
             return errorResponse(
                 requestId = extractRequestId(bytes),
                 code = when (error) {
-                    is SourceHostCapabilityException,
-                    is IllegalArgumentException,
-                    -> ExternalSourceHostErrorCode.HOST_ACCESS_DENIED
+                    is SourceHostCapabilityException -> ExternalSourceHostErrorCode.HOST_ACCESS_DENIED
+                    is IllegalArgumentException -> ExternalSourceHostErrorCode.INVALID_REQUEST
                     else -> ExternalSourceHostErrorCode.HOST_FAILURE
                 },
                 message = error.message ?: "Host request failed",
