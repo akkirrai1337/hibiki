@@ -11,7 +11,11 @@ data class SourceCatalogEntry(
 ) {
     fun create(context: SourceContext): AnimeSource {
         val source = factory.create(context)
-        check(source.info == info) { "Factory metadata does not match catalog entry: ${info.id}" }
+        if (source.info != info) {
+            throw SourceContractException(
+                listOf("Factory metadata does not match catalog entry: ${info.id}"),
+            )
+        }
         (source as? ConfigurableSource)?.configSchema?.requireValid(context.config)
         SourceContractValidator.requireValid(source)
         return source
@@ -49,10 +53,10 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
     operator fun get(id: SourceId): SourceInfo? = sourcesById[id]
 
     fun require(id: SourceId): SourceInfo = sourcesById[id]
-        ?: error("Source is not registered: $id")
+        ?: throw SourceNotRegisteredException(id)
 
     fun create(id: SourceId, context: SourceContext): AnimeSource =
-        entriesById[id]?.create(context) ?: error("Source is not registered: $id")
+        entriesById[id]?.create(context) ?: throw SourceNotRegisteredException(id)
 
     fun mergedWith(other: SourceCatalog): SourceCatalog {
         val combined = entries + other.entries
@@ -65,3 +69,11 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
         )
     }
 }
+
+class SourceNotRegisteredException(
+    val sourceId: SourceId,
+) : SourceException(
+    message = "Source is not registered: $sourceId",
+    kind = SourceErrorKind.NOT_FOUND,
+    code = SourceErrorCode.NOT_FOUND,
+)

@@ -11,6 +11,36 @@ import kotlin.test.assertFailsWith
 
 class SourceCatalogTest {
     @Test
+    fun `unknown source lookup uses not found error`() {
+        val catalog = SourceCatalog(emptyList())
+
+        val error = assertFailsWith<SourceNotRegisteredException> {
+            catalog.require(SourceId("missing"))
+        }
+
+        assertEquals(SourceErrorCode.NOT_FOUND, error.code)
+    }
+
+    @Test
+    fun `unknown source creation uses not found error`() {
+        val catalog = SourceCatalog(emptyList())
+        val client = HttpClient(MockEngine { error("Network must not be called") })
+
+        try {
+            val error = assertFailsWith<SourceNotRegisteredException> {
+                catalog.create(
+                    SourceId("missing"),
+                    DefaultSourceContext(client, listOf(SourceLanguage.RUSSIAN)),
+                )
+            }
+
+            assertEquals(SourceErrorCode.NOT_FOUND, error.code)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `catalog resolves source by stable id`() {
         val info = sourceInfo("ani-liberty")
         val catalog = SourceCatalog(listOf(sourceEntry(info)))
@@ -88,7 +118,7 @@ class SourceCatalogTest {
         val client = HttpClient(MockEngine { error("Network must not be called") })
 
         try {
-            assertFailsWith<IllegalStateException> {
+            assertFailsWith<SourceContractException> {
                 catalog.create(
                     catalogInfo.id,
                     DefaultSourceContext(client, listOf(SourceLanguage.RUSSIAN)),
