@@ -159,6 +159,19 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun `catalog cannot advertise latest without source capability`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRegistration(
+                info = sourceInfo(),
+                catalogCapabilities = CatalogCapabilities.FULL.copy(
+                    features = setOf(CatalogFeature.LATEST_RELEASES),
+                ),
+                runtimeFactory = { error("Runtime must not be created") },
+            )
+        }
+    }
+
+    @Test
     fun manifestMetadataFeedsRegistrationInfo() {
         val registration = manifest().toExternalSourceRegistration(
             catalogCapabilities = CatalogCapabilities.FULL,

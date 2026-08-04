@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.CatalogFeature
 
 /** Metadata and runtime factory for one installed external source. */
 data class ExternalSourceRegistration(
@@ -9,6 +10,15 @@ data class ExternalSourceRegistration(
     val runtimeFactory: (SourceContext) -> ExternalSourceRuntime,
     val registrationOrder: Int? = null,
 ) {
+    init {
+        require(
+            CatalogFeature.LATEST_RELEASES !in catalogCapabilities.features ||
+                SourceCapability.LATEST_RELEASES in info.capabilities,
+        ) {
+            "Source ${info.id} advertises LATEST_RELEASES without the source capability"
+        }
+    }
+
     fun catalogEntry(): SourceCatalogEntry = SourceCatalogEntry(
         info = info,
         registrationOrder = registrationOrder,
