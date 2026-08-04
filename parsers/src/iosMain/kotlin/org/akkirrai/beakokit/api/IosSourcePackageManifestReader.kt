@@ -23,8 +23,9 @@ class IosSourcePackageManifestReader(
     }
 
     override fun read(packagePath: String): SourceManifest {
-        val manifestPath = packagePath.trimEnd('/') + "/manifest.json"
-        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(manifestPath, error = null) != null) {
+        val rootPath = packagePath.trimEnd('/')
+        val manifestPath = "$rootPath/manifest.json"
+        if (containsSymbolicLink(rootPath, "manifest.json")) {
             throw SourcePackageStateException(
                 "Installed source package manifest must not be a symbolic link: $manifestPath",
             )
@@ -65,5 +66,19 @@ class IosSourcePackageManifestReader(
                 error,
             )
         }
+    }
+
+    private fun containsSymbolicLink(rootPath: String, relativePath: String): Boolean {
+        var currentPath = rootPath
+        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
+            return true
+        }
+        relativePath.split('/').forEach { component ->
+            currentPath += "/$component"
+            if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
+                return true
+            }
+        }
+        return false
     }
 }

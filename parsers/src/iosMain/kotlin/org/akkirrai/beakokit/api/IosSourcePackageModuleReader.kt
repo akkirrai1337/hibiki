@@ -23,8 +23,9 @@ class IosSourcePackageModuleReader(
         require(SourcePackageLayoutValidator.isSafeRelativePath(entrypoint)) {
             "Unsafe source package entrypoint: $entrypoint"
         }
-        val modulePath = packagePath.trimEnd('/') + "/" + entrypoint
-        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(modulePath, error = null) != null) {
+        val rootPath = packagePath.trimEnd('/')
+        val modulePath = "$rootPath/$entrypoint"
+        if (containsSymbolicLink(rootPath, entrypoint)) {
             throw SourcePackageStateException(
                 "Source package entrypoint must not be a symbolic link: $entrypoint",
             )
@@ -50,6 +51,20 @@ class IosSourcePackageModuleReader(
             }
         }
         return bytes
+    }
+
+    private fun containsSymbolicLink(rootPath: String, entrypoint: String): Boolean {
+        var currentPath = rootPath
+        if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
+            return true
+        }
+        entrypoint.split('/').forEach { component ->
+            currentPath += "/$component"
+            if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
+                return true
+            }
+        }
+        return false
     }
 
     companion object {

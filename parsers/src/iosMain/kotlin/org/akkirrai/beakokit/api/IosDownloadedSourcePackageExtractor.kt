@@ -78,6 +78,9 @@ class IosDownloadedSourcePackageExtractor(
     }
 
     private fun ensureDirectory(fileManager: NSFileManager, path: String, label: String) {
+        require(fileManager.destinationOfSymbolicLinkAtPath(path, error = null) == null) {
+            "$label must not be a symbolic link: $path"
+        }
         if (fileManager.fileExistsAtPath(path)) return
         require(fileManager.createDirectoryAtPath(
             path = path,
