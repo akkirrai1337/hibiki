@@ -41,6 +41,16 @@ class JvmSourcePackageManifestReaderTest {
     }
 
     @Test
+    fun `reader rejects malformed utf8`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        Files.write(packageDirectory.resolve("manifest.json"), byteArrayOf(0xC3.toByte()))
+
+        assertFailsWith<SourcePackageStateException> {
+            JvmSourcePackageManifestReader().read(packageDirectory.toString())
+        }
+    }
+
+    @Test
     fun `reader rejects a symbolic link manifest`() {
         val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
         val target = Files.createTempFile("hibiki-source-manifest-", ".json")

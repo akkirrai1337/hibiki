@@ -44,7 +44,7 @@ class JvmSourcePackageManifestReader(
                     "Installed source package manifest exceeds $maxManifestBytes bytes: $manifestFile",
                 )
             }
-            json.decodeFromString(bytes.decodeToString())
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
         } catch (error: Exception) {
             if (error is SourcePackageStateException) throw error
             throw SourcePackageStateException(

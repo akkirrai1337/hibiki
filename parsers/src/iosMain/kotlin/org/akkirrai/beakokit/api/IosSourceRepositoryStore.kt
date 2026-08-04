@@ -42,7 +42,7 @@ class IosSourceRepositoryStore(
         require(bytes.size.toLong() <= maxRepositoryBytes) {
             "Source repository state exceeds $maxRepositoryBytes bytes"
         }
-        defaults.setObject(bytes.decodeToString(), forKey = KEY)
+        defaults.setObject(bytes.decodeToString(throwOnInvalidSequence = true), forKey = KEY)
     }
 
     private fun checked(repositories: List<SourceRepositoryEndpoint>): List<SourceRepositoryEndpoint> {

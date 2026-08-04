@@ -94,7 +94,7 @@ class JvmSourcePackageExtractor(
             throw SourcePackageExtractionException("Package manifest exceeds the maximum allowed size")
         }
         return try {
-            json.decodeFromString(bytes.decodeToString())
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
         } catch (error: Exception) {
             throw SourcePackageExtractionException("Package manifest is invalid: ${error.message}")
         }

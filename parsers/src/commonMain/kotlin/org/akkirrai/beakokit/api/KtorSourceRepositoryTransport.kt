@@ -31,7 +31,16 @@ class KtorSourceRepositoryTransport(
                 kind = SourceErrorKind.UNAVAILABLE,
             )
         }
-        val body = rawBody.decodeToString(throwOnInvalidSequence = true)
+        val body = try {
+            rawBody.decodeToString(throwOnInvalidSequence = true)
+        } catch (error: Exception) {
+            throw SourceRepositoryLoadException(
+                message = "Repository response is not valid UTF-8",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_RESPONSE,
+            )
+        }
         return SourceRepositoryResponse(
             statusCode = response.status.value,
             body = body,

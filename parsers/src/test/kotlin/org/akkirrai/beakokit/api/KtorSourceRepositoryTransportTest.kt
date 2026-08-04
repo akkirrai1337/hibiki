@@ -73,12 +73,15 @@ class KtorSourceRepositoryTransportTest {
             }),
         )
 
-        assertFailsWith<Exception> {
+        val error = assertFailsWith<SourceRepositoryLoadException> {
             transport.get(
                 url = "https://example.com/repository.json",
                 limits = SourceRepositoryLoadLimits(),
             )
         }
+
+        assertEquals(SourceErrorKind.PARSE, error.kind)
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
     }
 
     @Test

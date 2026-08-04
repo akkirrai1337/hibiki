@@ -58,7 +58,7 @@ class IosSourcePackageManifestReader(
             }
         }
         return try {
-            json.decodeFromString(bytes.decodeToString())
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
         } catch (error: Exception) {
             throw SourcePackageStateException(
                 "Installed source package manifest is invalid: $manifestPath",

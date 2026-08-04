@@ -61,7 +61,7 @@ class JvmSourceRepositoryStore(
                     "Source repository state exceeds $maxRepositoryBytes bytes: $path",
                 )
             }
-            json.decodeFromString(bytes.decodeToString())
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
         } else {
             null
         }

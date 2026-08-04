@@ -88,7 +88,7 @@ class JvmSourcePackageActivationStore(
                     "Source package activation state exceeds $maxStateBytes bytes: $path",
                 )
             }
-            json.decodeFromString(bytes.decodeToString())
+            json.decodeFromString(bytes.decodeToString(throwOnInvalidSequence = true))
         } else {
             null
         }
