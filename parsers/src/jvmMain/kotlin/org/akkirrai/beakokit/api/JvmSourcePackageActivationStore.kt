@@ -43,6 +43,7 @@ class JvmSourcePackageActivationStore(
         state: SourcePackageActivationState,
     ) {
         checkedState(sourceId, state)
+        requireNoSymbolicLinkInParents(rootDirectory)
         Files.createDirectories(rootDirectory)
         val stateFile = stateFile(sourceId)
         val previous = readState(stateFile)
@@ -71,6 +72,7 @@ class JvmSourcePackageActivationStore(
     }
 
     private fun readState(path: Path): SourcePackageActivationState? = try {
+        path.parent?.let(::requireNoSymbolicLinkInParents)
         if (Files.isSymbolicLink(path)) {
             throw SourcePackageStateException("Source package activation state must not be a symbolic link: $path")
         }
@@ -121,6 +123,18 @@ class JvmSourcePackageActivationStore(
             }
         } finally {
             Files.deleteIfExists(temporaryFile)
+        }
+    }
+
+    private fun requireNoSymbolicLinkInParents(directory: Path) {
+        var current: Path? = directory
+        while (current != null) {
+            if (Files.isSymbolicLink(current)) {
+                throw SourcePackageStateException(
+                    "Source package state parent must not be a symbolic link: $current",
+                )
+            }
+            current = current.parent
         }
     }
 

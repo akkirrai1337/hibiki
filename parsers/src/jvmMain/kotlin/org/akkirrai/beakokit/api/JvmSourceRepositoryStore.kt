@@ -36,7 +36,10 @@ class JvmSourceRepositoryStore(
 
     override fun persistAtomically(repositories: List<SourceRepositoryEndpoint>) {
         val checkedRepositories = checked(repositories)
-        file.parent?.let(Files::createDirectories)
+        file.parent?.let { parent ->
+            requireNoSymbolicLinkInParents(parent)
+            Files.createDirectories(parent)
+        }
         read(file)?.let { writeAtomically(backupFile(), it) }
         writeAtomically(file, checkedRepositories)
     }
@@ -44,6 +47,7 @@ class JvmSourceRepositoryStore(
     private fun backupFile(): Path = file.resolveSibling("${file.fileName}.bak")
 
     private fun read(path: Path): List<SourceRepositoryEndpoint>? = try {
+        path.parent?.let(::requireNoSymbolicLinkInParents)
         if (Files.isSymbolicLink(path)) {
             throw SourceRepositoryStateException("Source repository state must not be a symbolic link: $path")
         }
@@ -77,6 +81,7 @@ class JvmSourceRepositoryStore(
         require(bytes.size.toLong() <= maxRepositoryBytes) {
             "Source repository state exceeds $maxRepositoryBytes bytes"
         }
+        requireNoSymbolicLinkInParents(parent)
         Files.createDirectories(parent)
         val temporaryFile = Files.createTempFile(parent, path.fileName.toString(), ".tmp")
         try {
@@ -107,6 +112,18 @@ class JvmSourceRepositoryStore(
             }
         }
         return repositories.toList()
+    }
+
+    private fun requireNoSymbolicLinkInParents(directory: Path) {
+        var current: Path? = directory
+        while (current != null) {
+            if (Files.isSymbolicLink(current)) {
+                throw SourceRepositoryStateException(
+                    "Source repository state parent must not be a symbolic link: $current",
+                )
+            }
+            current = current.parent
+        }
     }
 
     private companion object {
