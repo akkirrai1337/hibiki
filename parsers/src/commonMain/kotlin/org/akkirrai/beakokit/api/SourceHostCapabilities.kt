@@ -19,6 +19,12 @@ data class SourceHostRequirements(
     val capabilities: Set<SourceHostCapability> = emptySet(),
     val networkPolicy: SourceHostNetworkPolicy = SourceHostNetworkPolicy.EMPTY,
 ) {
+    init {
+        require(networkPolicy.allowedHosts.isEmpty() || SourceHostCapability.NETWORK in capabilities) {
+            "Network policy requires the NETWORK host capability"
+        }
+    }
+
     fun requires(capability: SourceHostCapability): Boolean = capability in capabilities
 }
 

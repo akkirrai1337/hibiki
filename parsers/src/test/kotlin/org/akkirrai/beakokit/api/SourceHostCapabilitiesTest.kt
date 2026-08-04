@@ -56,6 +56,16 @@ class SourceHostCapabilitiesTest {
     }
 
     @Test
+    fun `network policy requires the network capability`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.STORAGE),
+                networkPolicy = SourceHostNetworkPolicy(setOf("api.example.com")),
+            )
+        }
+    }
+
+    @Test
     fun `manifest host permissions preserve declared network origins`() {
         val manifest = SourceManifest(
             manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
