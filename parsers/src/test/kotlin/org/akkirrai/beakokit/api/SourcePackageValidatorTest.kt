@@ -67,6 +67,25 @@ class SourcePackageValidatorTest {
         )
     }
 
+    @Test
+    fun `signature verifier failure is treated as an untrusted package`() {
+        val manifest = manifest(signature = "signature")
+        val validator = SourcePackageValidator(
+            clientVersion = 3,
+            trustPolicy = SourcePackageTrustPolicy.untrusted(
+                SourcePackageSignatureVerifier { _, _ -> error("verifier unavailable") },
+            ),
+        )
+
+        assertContains(
+            validator.violations(
+                manifest,
+                SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+            ),
+            "Package signature is not trusted",
+        )
+    }
+
     private fun manifest(
         sizeBytes: Long = 1024,
         signature: String? = null,

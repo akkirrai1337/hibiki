@@ -55,6 +55,12 @@ class SourceHostCookiesTest {
         assertFailsWith<IllegalArgumentException> {
             cookies.storeFromResponse(
                 "https://example.com",
+                mapOf("session=name" to "value"),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            cookies.storeFromResponse(
+                "https://example.com",
                 mapOf("session" to "value\r\nInjected: true"),
             )
         }

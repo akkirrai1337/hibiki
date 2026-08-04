@@ -97,6 +97,19 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects blank package signature`() {
+        val invalid = manifest().copy(signature = "   ")
+
+        assertEquals(
+            true,
+            invalid.violations(
+                clientVersion = 1,
+                supportedApiVersion = SourceApi.VERSION,
+            ).any { it == "Package signature must not be blank" },
+        )
+    }
+
+    @Test
     fun `manifest rejects line breaks in package URL`() {
         val invalid = manifest().copy(packageUrl = "https://example.com/source.zip\r\nX-Injected: yes")
 

@@ -44,11 +44,8 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
                 "Source cookie response contains too many cookies"
             }
             cookies.forEach { (name, value) ->
-                require(name.isNotBlank()) { "Cookie name must not be blank" }
+                requireHttpToken(name, "Cookie name")
                 require(name.length <= MAX_COOKIE_NAME_LENGTH) { "Cookie name is too long" }
-                require('\r' !in name && '\n' !in name) {
-                    "Cookie name must not contain CR or LF"
-                }
                 require(value.length <= MAX_COOKIE_VALUE_LENGTH) { "Cookie value is too long" }
                 require('\r' !in value && '\n' !in value) {
                     "Cookie value must not contain CR or LF"
