@@ -67,12 +67,17 @@ class RuntimeBackedPlaybackAnimeSource(
 ), PlaybackSource {
     private val playbackRuntime = runtime
 
-    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> =
-        playbackRuntime.playbackGroups(title)
+    override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
+        SourceOperationGate.requireSupported(this, SourceOperation.PLAYBACK_GROUPS)
+        return playbackRuntime.playbackGroups(title)
+    }
 
     override suspend fun getPlayerLinks(
         title: AnimeTitle,
         group: PlaybackGroup,
         episode: Episode,
-    ): List<PlayerLink> = playbackRuntime.playerLinks(title, group, episode)
+    ): List<PlayerLink> {
+        SourceOperationGate.requireSupported(this, SourceOperation.PLAYER_LINKS)
+        return playbackRuntime.playerLinks(title, group, episode)
+    }
 }

@@ -242,6 +242,41 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
+    fun playbackAdapterRejectsOperationsWhenManifestOmitsPlaybackCapability() = runBlocking {
+        var runtimeCalled = false
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = emptySet()),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = object : ExternalSourcePlaybackRuntime {
+                override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                override suspend fun details(id: String): AnimeTitle = title(id)
+
+                override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> {
+                    runtimeCalled = true
+                    return emptyList()
+                }
+
+                override suspend fun playerLinks(
+                    title: AnimeTitle,
+                    group: PlaybackGroup,
+                    episode: Episode,
+                ): List<PlayerLink> {
+                    runtimeCalled = true
+                    return emptyList()
+                }
+            },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            source.getPlaybackGroups(title("title-1"))
+        }
+
+        assertEquals(SourceErrorCode.UNSUPPORTED_OPERATION, error.code)
+        assertEquals(false, runtimeCalled)
+    }
+
+    @Test
     fun playbackCapabilityRejectsRuntimeWithoutPlaybackContract() = runBlocking {
         val activePackage = ActiveExternalSourcePackage(
             manifest = manifest().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
