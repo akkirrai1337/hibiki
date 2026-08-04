@@ -1,5 +1,6 @@
 package org.akkirrai.beakokit.api
 
+import io.ktor.http.Url
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
@@ -96,7 +97,9 @@ open class RuntimeBackedPlaybackAnimeSource(
 
     override suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> {
         SourceOperationGate.requireSupported(this, SourceOperation.PLAYBACK_GROUPS)
-        return playbackRuntime.playbackGroups(title)
+        return playbackRuntime.playbackGroups(title).also {
+            requireValidExternalPlaybackGroups(it)
+        }
     }
 
     override suspend fun getPlayerLinks(
@@ -105,7 +108,46 @@ open class RuntimeBackedPlaybackAnimeSource(
         episode: Episode,
     ): List<PlayerLink> {
         SourceOperationGate.requireSupported(this, SourceOperation.PLAYER_LINKS)
-        return playbackRuntime.playerLinks(title, group, episode)
+        return playbackRuntime.playerLinks(title, group, episode).also {
+            requireValidExternalPlayerLinks(info, it)
+        }
+    }
+}
+
+private fun requireValidExternalPlayerLinks(info: SourceInfo, links: List<PlayerLink>) {
+    links.forEach { link ->
+        require(link.url.isNotBlank()) { "External player link URL must not be blank" }
+        val parsed = runCatching { Url(link.url) }.getOrNull()
+        require(parsed != null && parsed.host.isNotBlank() && parsed.protocol.name in setOf("http", "https")) {
+            "External player link must be an absolute HTTP(S) URL"
+        }
+        if (parsed.protocol.name == "http") {
+            require(parsed.host.lowercase() in info.networkRequirements.cleartextPlaybackHosts) {
+                "External source ${info.id} returned an undeclared cleartext playback host"
+            }
+        }
+        requireSafeHttpHeaders(link.headers)
+    }
+}
+
+private fun requireValidExternalPlaybackGroups(groups: List<PlaybackGroup>) {
+    require(groups.isNotEmpty()) { "External playback runtime returned no groups" }
+    require(groups.map(PlaybackGroup::id).distinct().size == groups.size) {
+        "External playback group ids must be unique"
+    }
+    groups.forEach { group ->
+        require(group.episodes.isNotEmpty()) {
+            "External playback group ${group.id} returned no episodes"
+        }
+        require(group.episodes.all { it.id.isNotBlank() }) {
+            "External playback episode ids must not be blank"
+        }
+        require(group.episodes.map { it.id }.distinct().size == group.episodes.size) {
+            "External playback episode ids must be unique in group ${group.id}"
+        }
+        require(group.episodes.all { it.number.isFinite() }) {
+            "External playback episode numbers must be finite in group ${group.id}"
+        }
     }
 }
 

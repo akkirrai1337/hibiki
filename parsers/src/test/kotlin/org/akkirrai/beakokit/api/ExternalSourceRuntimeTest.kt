@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -41,6 +42,53 @@ class ExternalSourceRuntimeTest {
 
         assertEquals(listOf(group), source.getPlaybackGroups(title))
         assertEquals(runtime.playerLinksResult, source.getPlayerLinks(title, group, episode))
+    }
+
+    @Test
+    fun playbackRuntimeRejectsUndeclaredCleartextHosts() = runBlocking {
+        val runtime = FakePlaybackRuntime().apply {
+            playerLinksResult = listOf(
+                PlayerLink(
+                    url = "http://video.example.com/video.mp4",
+                    type = PlayerType.DIRECT_MP4,
+                    quality = "720p",
+                ),
+            )
+        }
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlayerLinks(runtime.detailsResult, runtime.playbackGroup, runtime.playbackGroup.episodes.single())
+        }
+    }
+
+    @Test
+    fun playbackRuntimeRejectsInvalidGroups() = runBlocking {
+        val runtime = FakePlaybackRuntime().apply {
+            playbackGroupsResult = listOf(
+                PlaybackGroup(
+                    id = "group-1",
+                    title = "Subtitles",
+                    episodes = listOf(
+                        Episode("episode-1", 1.0, "Episode 1"),
+                        Episode("episode-1", 2.0, "Episode 2"),
+                    ),
+                ),
+            )
+        }
+        val source = RuntimeBackedPlaybackAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.getPlaybackGroups(runtime.detailsResult)
+        }
     }
 
     private fun sourceInfo() = SourceInfo(
@@ -86,16 +134,17 @@ class ExternalSourceRuntimeTest {
             title = "Subtitles",
             episodes = listOf(Episode(id = "episode-1", number = 1.0, title = "Episode 1")),
         )
-        val playerLinksResult = listOf(
+        var playerLinksResult = listOf(
             PlayerLink(
                 url = "https://example.test/video.mp4",
                 type = PlayerType.DIRECT_MP4,
                 quality = "720p",
             ),
         )
+        var playbackGroupsResult = listOf(playbackGroup)
 
         override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> =
-            listOf(playbackGroup)
+            playbackGroupsResult
 
         override suspend fun playerLinks(
             title: AnimeTitle,

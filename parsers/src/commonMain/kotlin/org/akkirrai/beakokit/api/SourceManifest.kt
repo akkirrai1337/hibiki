@@ -47,6 +47,7 @@ data class SourceManifest(
     val minClientVersion: Int,
     val maxClientVersion: Int? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
+    val networkRequirements: SourceNetworkRequirements = SourceNetworkRequirements(),
     val hostCapabilities: Set<SourceHostCapability> = emptySet(),
     val hostNetworkPolicy: SourceHostNetworkPolicy = SourceHostNetworkPolicy.EMPTY,
     val signature: String? = null,
@@ -128,6 +129,7 @@ data class SourceManifest(
             website = metadata.website,
             iconUrl = metadata.iconUrl,
             capabilities = capabilities,
+            networkRequirements = networkRequirements,
             configSchema = metadata.configSchema,
         )
     } ?: throw SourceManifestException(listOf("Source display metadata is required for registration"))

@@ -22,6 +22,7 @@ value class SourceLanguage(val tag: String) {
 }
 
 /** Platform-neutral network requirements that a host must explicitly approve. */
+@Serializable
 data class SourceNetworkRequirements(
     /** Hosts from which this source may intentionally return cleartext HTTP playback URLs. */
     val cleartextPlaybackHosts: Set<String> = emptySet(),

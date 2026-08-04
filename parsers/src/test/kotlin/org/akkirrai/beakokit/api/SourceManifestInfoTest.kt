@@ -22,6 +22,26 @@ class SourceManifestInfoTest {
     }
 
     @Test
+    fun manifestCarriesPlaybackNetworkRequirementsIntoSourceInfo() {
+        val manifest = manifest(
+            SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+            ),
+        ).copy(
+            networkRequirements = SourceNetworkRequirements(
+                cleartextPlaybackHosts = setOf("video.example.com"),
+            ),
+        )
+
+        assertEquals(
+            setOf("video.example.com"),
+            manifest.requireSourceInfo().networkRequirements.cleartextPlaybackHosts,
+        )
+    }
+
+    @Test
     fun manifestWithoutMetadataCannotBeRegistered() {
         assertFailsWith<SourceManifestException> {
             manifest(null).requireSourceInfo()
