@@ -40,15 +40,28 @@ class NativeBridgeExternalSourceRuntimeFactory(
                     hostRequirements = sourcePackage.manifest.hostRequirements(),
                 ),
             )
-        return if (payloadCodec is ExternalSourcePlaybackRuntimePayloadCodec) {
-            ProtocolBackedExternalSourcePlaybackRuntime(
+        val declaresLatest = SourceCapability.LATEST_RELEASES in sourcePackage.manifest.capabilities
+        val declaresPlayback = SourceCapability.PLAYBACK in sourcePackage.manifest.capabilities
+        return when {
+            declaresLatest && declaresPlayback -> ProtocolBackedExternalSourceLatestPlaybackRuntime(
+                transport = transport,
+                payloadCodec = requirePlaybackCodec(),
+                requestIdFactory = requestIdFactory,
+                callLimits = callLimits,
+            )
+            declaresLatest -> ProtocolBackedExternalSourceLatestRuntime(
                 transport = transport,
                 payloadCodec = payloadCodec,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
             )
-        } else {
-            ProtocolBackedExternalSourceRuntime(
+            declaresPlayback -> ProtocolBackedExternalSourcePlaybackRuntime(
+                transport = transport,
+                payloadCodec = requirePlaybackCodec(),
+                requestIdFactory = requestIdFactory,
+                callLimits = callLimits,
+            )
+            else -> ProtocolBackedExternalSourceRuntime(
                 transport = transport,
                 payloadCodec = payloadCodec,
                 requestIdFactory = requestIdFactory,
@@ -57,4 +70,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
         }
     }
 
+    private fun requirePlaybackCodec(): ExternalSourcePlaybackRuntimePayloadCodec =
+        payloadCodec as? ExternalSourcePlaybackRuntimePayloadCodec
+            ?: error("Playback source requires a playback-capable runtime payload codec")
 }

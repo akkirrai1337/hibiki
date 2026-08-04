@@ -9,6 +9,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogFeature
@@ -482,6 +483,110 @@ class ExternalSourceRegistrationTest {
         assertEquals("sources/external-test/1.0.0", receivedPath)
         assertContentEquals(byteArrayOf(1, 2, 3), receivedModule)
         assertEquals(activePackage.manifest.hostRequirements(), receivedRequirements)
+    }
+
+    @Test
+    fun nativeBridgeFactoryPreservesLatestCapabilityInRuntimeType() = runBlocking {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(capabilities = setOf(SourceCapability.LATEST_RELEASES)),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val factory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                ExternalSourceRuntimeNativeBridge { request, _ ->
+                    val decoded = ExternalSourceRuntimeProtocolCodec.decodeRequest(request)
+                    ExternalSourceRuntimeProtocolCodec.encodeResponse(
+                        ExternalSourceRuntimeResponse(
+                            requestId = decoded.requestId,
+                            payload = AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("latest"))),
+                        ),
+                    )
+                }
+            },
+            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(1) },
+            requestIdFactory = { "latest-runtime" },
+        )
+
+        val runtime = factory.create(
+            activePackage,
+            DefaultSourceContext(
+                httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+                preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            ),
+        )
+
+        assertTrue(runtime is ExternalSourceLatestRuntime)
+        assertEquals(listOf("latest"), runtime.latest(1).map(AnimeTitle::id))
+    }
+
+    @Test
+    fun nativeBridgeFactoryPreservesCombinedLatestAndPlaybackCapabilities() {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(
+                capabilities = setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
+            ),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val factory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                ExternalSourceRuntimeNativeBridge { _, _ -> error("Runtime call is not expected") }
+            },
+            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(1) },
+            requestIdFactory = { "combined-runtime" },
+        )
+
+        val runtime = factory.create(
+            activePackage,
+            DefaultSourceContext(
+                httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+                preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            ),
+        )
+
+        assertTrue(runtime is ExternalSourceLatestPlaybackRuntime)
+    }
+
+    @Test
+    fun nativeBridgeFactoryRejectsPlaybackCapabilityWithCatalogOnlyCodec() {
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest().copy(capabilities = setOf(SourceCapability.PLAYBACK)),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+            ),
+        )
+        val catalogOnlyCodec = object : ExternalSourceRuntimePayloadCodec {
+            override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = emptyList()
+
+            override fun decodeDetails(payload: JsonObject): AnimeTitle = title("details")
+        }
+        val factory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                ExternalSourceRuntimeNativeBridge { _, _ -> error("Runtime call is not expected") }
+            },
+            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(1) },
+            requestIdFactory = { "catalog-only-runtime" },
+            payloadCodec = catalogOnlyCodec,
+        )
+
+        assertFailsWith<IllegalStateException> {
+            factory.create(
+                activePackage,
+                DefaultSourceContext(
+                    httpClient = HttpClient(MockEngine { error("Network is not expected in this test") }),
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                ),
+            )
+        }
     }
 
     @Test
