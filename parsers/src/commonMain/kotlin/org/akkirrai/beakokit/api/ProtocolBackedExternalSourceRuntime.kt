@@ -169,11 +169,14 @@ open class ProtocolBackedExternalSourceLatestRuntime(
 ), ExternalSourceLatestRuntime {
     private val latestPayloadCodec = payloadCodec
 
-    override suspend fun latest(limit: Int): List<AnimeTitle> = call(
-        operation = ExternalSourceRuntimeOperation.LATEST,
-        payload = ExternalSourceRuntimePayloads.latest(limit),
-        decode = latestPayloadCodec::decodeLatest,
-    )
+    override suspend fun latest(limit: Int): List<AnimeTitle> {
+        require(limit > 0) { "Latest source limit must be positive" }
+        return call(
+            operation = ExternalSourceRuntimeOperation.LATEST,
+            payload = ExternalSourceRuntimePayloads.latest(limit),
+            decode = latestPayloadCodec::decodeLatest,
+        )
+    }
 }
 
 /** Protocol-backed runtime that exposes the optional playback contract. */

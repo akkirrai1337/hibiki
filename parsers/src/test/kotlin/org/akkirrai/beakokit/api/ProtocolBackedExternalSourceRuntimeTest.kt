@@ -94,6 +94,22 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     @Test
+    fun latestRuntimeRejectsNonPositiveLimitBeforeTransport() = runBlocking {
+        var transportCalled = false
+        val runtime = ProtocolBackedExternalSourceLatestRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ ->
+                transportCalled = true
+                error("Transport must not be called")
+            },
+            payloadCodec = FakePayloadCodec(),
+            requestIdFactory = { "latest-invalid" },
+        )
+
+        assertFailsWith<IllegalArgumentException> { runtime.latest(0) }
+        assertEquals(false, transportCalled)
+    }
+
+    @Test
     fun mismatchedResponseIdIsRejected() = runBlocking {
         val runtime = ProtocolBackedExternalSourceRuntime(
             transport = ExternalSourceRuntimeTransport { request, _ ->

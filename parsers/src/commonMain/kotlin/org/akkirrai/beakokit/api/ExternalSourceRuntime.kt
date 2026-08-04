@@ -76,6 +76,7 @@ class RuntimeBackedLatestAnimeSource(
     private val latestRuntime = runtime
 
     override suspend fun latest(limit: Int): List<AnimeTitle> {
+        require(limit > 0) { "Latest source limit must be positive" }
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
         return latestRuntime.latest(limit)
     }
@@ -121,6 +122,7 @@ class RuntimeBackedLatestPlaybackAnimeSource(
     private val latestRuntime = runtime
 
     override suspend fun latest(limit: Int): List<AnimeTitle> {
+        require(limit > 0) { "Latest source limit must be positive" }
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
         return latestRuntime.latest(limit)
     }
