@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.CharacterTitle
@@ -144,6 +145,100 @@ class AnimeTitleRuntimePayloadCodecTest {
                         ),
                     ),
                 ),
+            )
+        }
+    }
+
+    @Test
+    fun decoderRejectsInvalidPlaybackNumbersAndSegments() {
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodePlaybackGroups(
+                buildJsonObject {
+                    putJsonArray("groups") {
+                        add(buildJsonObject {
+                            put("id", "group-1")
+                            put("title", "Dub")
+                            putJsonArray("episodes") {
+                                add(buildJsonObject {
+                                    put("id", "episode-1")
+                                    put("number", "NaN")
+                                })
+                            }
+                        })
+                    }
+                },
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodePlayerLinks(
+                buildJsonObject {
+                    putJsonArray("links") {
+                        add(buildJsonObject {
+                            put("url", "https://example.com/video.m3u8")
+                            put("type", PlayerType.DIRECT_HLS.name)
+                            putJsonArray("segments") {
+                                add(buildJsonObject {
+                                    put("type", VideoSegmentType.OPENING.name)
+                                    put("startMs", 30_000)
+                                    put("endMs", 30_000)
+                                })
+                            }
+                        })
+                    }
+                },
+            )
+        }
+    }
+
+    @Test
+    fun playerLinkDecoderRejectsNonHttpUrls() {
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodePlayerLinks(
+                buildJsonObject {
+                    putJsonArray("links") {
+                        add(buildJsonObject {
+                            put("url", "ftp://example.com/video.m3u8")
+                            put("type", PlayerType.DIRECT_HLS.name)
+                        })
+                    }
+                },
+            )
+        }
+    }
+
+    @Test
+    fun titleDecoderRejectsInvalidIdentityAndDisplayName() {
+        val encoded = AnimeTitleRuntimePayloadCodec.encodeDetails(
+            AnimeTitle(
+                id = "title-1",
+                russianName = null,
+                englishName = "Title",
+                originalName = "Title",
+                japaneseName = null,
+                synonyms = emptyList(),
+                year = null,
+                type = null,
+                episodeCount = null,
+                posterUrl = null,
+                status = null,
+                description = null,
+            ),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodeDetails(
+                buildJsonObject {
+                    encoded.forEach { (key, value) -> put(key, value) }
+                    put("id", "title\n-1")
+                },
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodeDetails(
+                buildJsonObject {
+                    encoded.forEach { (key, value) -> put(key, value) }
+                    put("englishName", "")
+                    put("originalName", "")
+                },
             )
         }
     }

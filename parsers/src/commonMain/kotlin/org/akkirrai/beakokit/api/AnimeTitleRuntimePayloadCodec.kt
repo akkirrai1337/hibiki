@@ -1,5 +1,6 @@
 package org.akkirrai.beakokit.api
 
+import io.ktor.http.Url
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -33,15 +34,17 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
     override fun decodePlaybackGroups(payload: JsonObject): List<PlaybackGroup> =
         payload.requiredArray("groups").map { group ->
             val value = group.jsonObject
-            PlaybackGroup(
+                PlaybackGroup(
                 id = value.requiredString("id"),
                 title = value.requiredString("title"),
                 qualityLabel = value.nullableString("qualityLabel"),
                 episodes = value.requiredArray("episodes").map { episode ->
                     val item = episode.jsonObject
+                    val number = item.requiredPrimitive("number").content.toDouble()
+                    require(number.isFinite()) { "Runtime episode number must be finite" }
                     Episode(
                         id = item.requiredString("id"),
-                        number = item.requiredPrimitive("number").content.toDouble(),
+                        number = number,
                         title = item.nullableString("title"),
                     )
                 },
@@ -56,6 +59,10 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
                 require('\r' !in url && '\n' !in url) {
                     "Runtime player link URL must not contain CR or LF"
                 }
+                val parsedUrl = runCatching { Url(url) }.getOrNull()
+                require(parsedUrl != null && parsedUrl.host.isNotBlank() && parsedUrl.protocol.name in setOf("http", "https")) {
+                    "Runtime player link must be an absolute HTTP(S) URL"
+                }
                 val headers = value.get("headers")?.jsonObject
                     ?.mapValues { it.value.jsonPrimitive.content }
                     ?: emptyMap()
@@ -69,10 +76,15 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
                     translation = value.nullableString("translation"),
                     segments = value.get("segments")?.jsonArray?.map { segment ->
                         val item = segment.jsonObject
+                        val startMs = item.requiredPrimitive("startMs").content.toLong()
+                        val endMs = item.requiredPrimitive("endMs").content.toLong()
+                        require(startMs >= 0L && endMs > startMs) {
+                            "Runtime player link segments must have a positive ordered range"
+                        }
                         VideoSegment(
                             type = VideoSegmentType.valueOf(item.requiredString("type")),
-                            startMs = item.requiredPrimitive("startMs").content.toLong(),
-                            endMs = item.requiredPrimitive("endMs").content.toLong(),
+                            startMs = startMs,
+                            endMs = endMs,
                         )
                     } ?: emptyList(),
                     videoId = value.nullableLong("videoId"),
@@ -167,7 +179,8 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putNullable("videoId", videoId)
     }
 
-    private fun JsonObject.decodeTitle(): AnimeTitle = AnimeTitle(
+    private fun JsonObject.decodeTitle(): AnimeTitle {
+        val title = AnimeTitle(
         id = requiredString("id"),
         russianName = nullableString("russianName"),
         englishName = nullableString("englishName"),
@@ -196,7 +209,14 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         season = nullableInt("season"),
         availableEpisodeCount = nullableInt("availableEpisodeCount"),
         posterFallbackUrl = nullableString("posterFallbackUrl"),
-    )
+        )
+        require(title.id.isNotBlank()) { "Runtime title ID must not be blank" }
+        require('\r' !in title.id && '\n' !in title.id) {
+            "Runtime title ID must not contain CR or LF"
+        }
+        require(title.displayName.isNotBlank()) { "Runtime title display name must not be blank" }
+        return title
+    }
 
     private fun TitleRating.encodeRating(): JsonObject = buildJsonObject {
         put("source", source)
