@@ -28,6 +28,29 @@ class SourceManifestInfoTest {
         }
     }
 
+    @Test
+    fun manifestMetadataRejectsInvalidIdentityAndLinks() {
+        val invalid = manifest(
+            SourceManifestInfo(
+                displayName = "",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.RUSSIAN,
+                website = "http://example.com",
+                iconUrl = "http://example.com/icon.png",
+            ),
+        )
+
+        val violations = invalid.violations(
+            clientVersion = 1,
+            supportedApiVersion = SourceApi.VERSION,
+        )
+
+        assertEquals(true, violations.any { it.contains("display name") })
+        assertEquals(true, violations.any { it.contains("Primary source language") })
+        assertEquals(true, violations.any { it.contains("website") })
+        assertEquals(true, violations.any { it.contains("icon URL") })
+    }
+
     private fun manifest(info: SourceManifestInfo?) = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-test"),

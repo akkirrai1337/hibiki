@@ -24,7 +24,11 @@ data class SourceRepositoryLoadLimits(
 data class SourceRepositoryResponse(
     val statusCode: Int,
     val body: String,
-)
+) {
+    init {
+        require(statusCode in 100..599) { "Repository HTTP status code must be between 100 and 599" }
+    }
+}
 
 /** Host-owned transport used to fetch repository metadata before package installation. */
 fun interface SourceRepositoryTransport {

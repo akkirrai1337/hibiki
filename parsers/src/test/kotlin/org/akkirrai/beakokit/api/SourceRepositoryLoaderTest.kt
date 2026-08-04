@@ -9,6 +9,16 @@ import kotlinx.coroutines.runBlocking
 
 class SourceRepositoryLoaderTest {
     @Test
+    fun repository_response_rejects_invalid_status_codes() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryResponse(statusCode = 99, body = "")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryResponse(statusCode = 600, body = "")
+        }
+    }
+
+    @Test
     fun `loader fetches and validates repository index`() = runBlocking {
         var requestedUrl: String? = null
         val expected = index()

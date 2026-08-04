@@ -65,6 +65,19 @@ data class SourceManifest(
         }
         if (entrypoint.isBlank()) add("Entrypoint must not be blank")
         if (!isValidHttpsUrl(packageUrl)) add("Package URL must be a valid HTTPS URL")
+        sourceInfo?.let { metadata ->
+            if (metadata.displayName.isBlank()) add("Source display name must not be blank")
+            if (metadata.languages.isEmpty()) add("Source must declare at least one language")
+            if (metadata.primaryLanguage !in metadata.languages) {
+                add("Primary source language must be included in supported languages")
+            }
+            if (metadata.website != null && !metadata.website.startsWith("https://")) {
+                add("Source website must use HTTPS")
+            }
+            if (metadata.iconUrl != null && !metadata.iconUrl.startsWith("https://")) {
+                add("Source icon URL must use HTTPS")
+            }
+        }
         if (hostNetworkPolicy.allowedHosts.isNotEmpty() && SourceHostCapability.NETWORK !in hostCapabilities) {
             add("Network policy requires the NETWORK host capability")
         }
