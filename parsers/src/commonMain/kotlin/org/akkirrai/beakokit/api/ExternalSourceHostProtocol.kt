@@ -40,6 +40,9 @@ data class ExternalSourceHostRequest(
 ) {
     init {
         require(requestId.isNotBlank()) { "Host request ID must not be blank" }
+        require('\r' !in requestId && '\n' !in requestId) {
+            "Host request ID must not contain CR or LF"
+        }
         require(protocolVersion == EXTERNAL_SOURCE_HOST_PROTOCOL_VERSION) {
             "Unsupported host protocol version: $protocolVersion"
         }
@@ -57,6 +60,9 @@ data class ExternalSourceHostResponse(
 ) {
     init {
         require(requestId.isNotBlank()) { "Host response ID must not be blank" }
+        require('\r' !in requestId && '\n' !in requestId) {
+            "Host response ID must not contain CR or LF"
+        }
         require(protocolVersion == EXTERNAL_SOURCE_HOST_PROTOCOL_VERSION) {
             "Unsupported host protocol version: $protocolVersion"
         }
@@ -65,6 +71,9 @@ data class ExternalSourceHostResponse(
         }
         if (errorCode == null) require(errorMessage == null) {
             "Successful host response must not contain an error message"
+        }
+        require(errorMessage == null || ('\r' !in errorMessage && '\n' !in errorMessage)) {
+            "Host error message must not contain CR or LF"
         }
     }
 

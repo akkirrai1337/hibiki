@@ -10,6 +10,23 @@ import kotlinx.serialization.json.put
 
 class ExternalSourceRuntimeProtocolTest {
     @Test
+    fun `runtime request and response strings reject line breaks`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimeRequest(
+                requestId = "request\n1",
+                operation = ExternalSourceRuntimeOperation.SEARCH,
+                payload = buildJsonObject {},
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimeResponse(
+                requestId = "request-1",
+                errorCode = ExternalSourceRuntimeErrorCode.RUNTIME_FAILURE,
+                errorMessage = "runtime\rerror",
+            )
+        }
+    }
+    @Test
     fun requestRoundTripsAsVersionedJson() {
         val request = ExternalSourceRuntimeRequest(
             requestId = "request-1",

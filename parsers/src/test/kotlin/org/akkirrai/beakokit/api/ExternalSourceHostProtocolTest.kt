@@ -4,8 +4,26 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.buildJsonObject
 
 class ExternalSourceHostProtocolTest {
+    @Test
+    fun `host request and response strings reject line breaks`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostRequest(
+                requestId = "host\n1",
+                operation = ExternalSourceHostOperation.STORAGE_READ,
+                payload = buildJsonObject {},
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceHostResponse(
+                requestId = "host-1",
+                errorCode = ExternalSourceHostErrorCode.HOST_FAILURE,
+                errorMessage = "host\rerror",
+            )
+        }
+    }
     @Test
     fun dispatcher_routes_http_requests_and_wraps_the_response() = runBlocking {
         val request = ExternalSourceHostRequest(

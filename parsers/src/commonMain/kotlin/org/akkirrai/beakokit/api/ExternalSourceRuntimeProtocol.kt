@@ -40,6 +40,9 @@ data class ExternalSourceRuntimeRequest(
 ) {
     init {
         require(requestId.isNotBlank()) { "Runtime request ID must not be blank" }
+        require('\r' !in requestId && '\n' !in requestId) {
+            "Runtime request ID must not contain CR or LF"
+        }
         require(protocolVersion == PROTOCOL_VERSION) {
             "Unsupported runtime protocol version: $protocolVersion"
         }
@@ -57,6 +60,9 @@ data class ExternalSourceRuntimeResponse(
 ) {
     init {
         require(requestId.isNotBlank()) { "Runtime response ID must not be blank" }
+        require('\r' !in requestId && '\n' !in requestId) {
+            "Runtime response ID must not contain CR or LF"
+        }
         require(protocolVersion == PROTOCOL_VERSION) {
             "Unsupported runtime protocol version: $protocolVersion"
         }
@@ -65,6 +71,9 @@ data class ExternalSourceRuntimeResponse(
         }
         if (errorCode == null) require(errorMessage == null) {
             "Successful runtime response must not contain an error message"
+        }
+        require(errorMessage == null || ('\r' !in errorMessage && '\n' !in errorMessage)) {
+            "Runtime error message must not contain CR or LF"
         }
     }
 }
