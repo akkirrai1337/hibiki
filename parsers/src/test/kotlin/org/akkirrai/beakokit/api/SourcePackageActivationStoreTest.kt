@@ -34,6 +34,19 @@ class SourcePackageActivationStoreTest {
     }
 
     @Test
+    fun `reinstalling the active package does not persist a new activation state`() {
+        val store = RecordingStore()
+        val repository = repository(store)
+        val active = packageVersion("1.0.0")
+        store.state = SourcePackageActivationState(active = active)
+
+        repository.activate(active, initializationSucceeded = true)
+
+        assertEquals(0, store.persistCount)
+        assertEquals(SourcePackageActivationState(active = active), store.state)
+    }
+
+    @Test
     fun `repository rejects packages belonging to another source`() {
         val repository = repository(RecordingStore())
 

@@ -6,6 +6,16 @@ import kotlin.test.assertFailsWith
 
 class SourcePackageActivationTest {
     @Test
+    fun `activation state rejects packages from different sources`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourcePackageActivationState(
+                active = InstalledSourcePackage(SourceId("source-a"), "1.0.0", "active"),
+                previous = InstalledSourcePackage(SourceId("source-b"), "1.0.0", "previous"),
+            )
+        }
+    }
+
+    @Test
     fun `failed initialization keeps the currently active package`() {
         val old = packageVersion("1.0.0")
         val controller = SourcePackageActivationController(
@@ -29,6 +39,17 @@ class SourcePackageActivationTest {
 
         assertEquals(SourcePackageActivationState(active = next, previous = old), controller.state)
         assertEquals(SourcePackageActivationState(active = old), controller.rollback())
+    }
+
+    @Test
+    fun `reinstalling the active package does not create a fake rollback version`() {
+        val active = InstalledSourcePackage(SourceId("source"), "1.0.0", "active")
+        val controller = SourcePackageActivationController(SourcePackageActivationState(active = active))
+
+        assertEquals(
+            SourcePackageActivationState(active = active),
+            controller.activate(active, initializationSucceeded = true),
+        )
     }
 
     @Test

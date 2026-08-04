@@ -27,7 +27,13 @@ data class InstalledSourcePackage(
 data class SourcePackageActivationState(
     val active: InstalledSourcePackage? = null,
     val previous: InstalledSourcePackage? = null,
-)
+) {
+    init {
+        require(active?.sourceId == null || previous?.sourceId == null || active.sourceId == previous.sourceId) {
+            "Active and previous packages must belong to the same source"
+        }
+    }
+}
 
 /**
  * Pure activation policy used by platform storage adapters.
@@ -48,6 +54,7 @@ class SourcePackageActivationController(
         require(candidate.packageVersion.isNotBlank()) { "Package version must not be blank" }
         require(candidate.packagePath.isNotBlank()) { "Package path must not be blank" }
         if (!initializationSucceeded) return state
+        if (state.active == candidate) return state
 
         state = state.copy(
             active = candidate,
