@@ -20,6 +20,35 @@ import org.akkirrai.beakokit.model.PlayerType
 
 class ExternalSourceRegistrationTest {
     @Test
+    fun activePackageRejectsMismatchedPersistedChecksum() {
+        assertFailsWith<IllegalArgumentException> {
+            ActiveExternalSourcePackage(
+                manifest = manifest(),
+                installed = InstalledSourcePackage(
+                    sourceId = SourceId("external-test"),
+                    packageVersion = "1.0.0",
+                    packagePath = "sources/external-test/1.0.0",
+                    artifactSha256 = "b".repeat(64),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun activePackageRejectsUnsafeEntrypoint() {
+        assertFailsWith<IllegalArgumentException> {
+            ActiveExternalSourcePackage(
+                manifest = manifest().copy(entrypoint = "../source.wasm"),
+                installed = InstalledSourcePackage(
+                    sourceId = SourceId("external-test"),
+                    packageVersion = "1.0.0",
+                    packagePath = "sources/external-test/1.0.0",
+                ),
+            )
+        }
+    }
+
+    @Test
     fun registrationCreatesRuntimeBackedSourceThroughCatalog() = runBlocking {
         val runtime = object : ExternalSourceRuntime {
             override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
