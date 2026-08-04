@@ -72,6 +72,9 @@ data class ExternalSourceRuntimeResponse(
         if (errorCode == null) require(errorMessage == null) {
             "Successful runtime response must not contain an error message"
         }
+        require(errorMessage == null || errorMessage.length <= MAX_ERROR_MESSAGE_LENGTH) {
+            "Runtime error message must be at most $MAX_ERROR_MESSAGE_LENGTH characters"
+        }
         require(errorMessage == null || ('\r' !in errorMessage && '\n' !in errorMessage)) {
             "Runtime error message must not contain CR or LF"
         }
@@ -85,6 +88,8 @@ fun ExternalSourceRuntimeResponse.requirePayload(): JsonObject = when {
     )
     else -> throw toSourceException()
 }
+
+private const val MAX_ERROR_MESSAGE_LENGTH: Int = 4 * 1024
 
 fun ExternalSourceRuntimeResponse.toSourceException(): SourceException {
     val protocolError = errorCode

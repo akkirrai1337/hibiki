@@ -181,34 +181,34 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
 
     private fun JsonObject.decodeTitle(): AnimeTitle {
         val title = AnimeTitle(
-        id = requiredString("id"),
-        russianName = nullableString("russianName"),
-        englishName = nullableString("englishName"),
-        originalName = requiredString("originalName"),
-        japaneseName = nullableString("japaneseName"),
-        synonyms = strings("synonyms"),
-        year = nullableInt("year"),
-        type = nullableString("type"),
-        episodeCount = nullableInt("episodeCount"),
-        posterUrl = nullableString("posterUrl"),
-        status = nullableString("status"),
-        description = nullableString("description"),
-        nextEpisodeAt = nullableLong("nextEpisodeAt"),
-        genres = strings("genres"),
-        ratings = requiredArray("ratings").map { it.jsonObject.decodeRating() },
-        ageRating = nullableString("ageRating"),
-        viewCount = nullableLong("viewCount"),
-        screenshots = strings("screenshots"),
-        trailer = get("trailer")?.takeUnless { it is JsonNull }?.jsonObject?.decodeTrailer(),
-        sourceMaterial = nullableString("sourceMaterial"),
-        studios = strings("studios"),
-        mainCharacters = requiredArray("mainCharacters").map { it.jsonObject.decodeCharacter() },
-        similarAnime = requiredArray("similarAnime").map { it.jsonObject.decodeRelated() },
-        franchiseAnime = requiredArray("franchiseAnime").map { it.jsonObject.decodeRelated() },
-        relatedAnime = requiredArray("relatedAnime").map { it.jsonObject.decodeRelated() },
-        season = nullableInt("season"),
-        availableEpisodeCount = nullableInt("availableEpisodeCount"),
-        posterFallbackUrl = nullableString("posterFallbackUrl"),
+            id = requiredString("id"),
+            russianName = nullableString("russianName"),
+            englishName = nullableString("englishName"),
+            originalName = requiredString("originalName"),
+            japaneseName = nullableString("japaneseName"),
+            synonyms = strings("synonyms"),
+            year = nullableInt("year"),
+            type = nullableString("type"),
+            episodeCount = nullableInt("episodeCount"),
+            posterUrl = nullableString("posterUrl"),
+            status = nullableString("status"),
+            description = nullableString("description"),
+            nextEpisodeAt = nullableLong("nextEpisodeAt"),
+            genres = strings("genres"),
+            ratings = requiredArray("ratings").map { it.jsonObject.decodeRating() },
+            ageRating = nullableString("ageRating"),
+            viewCount = nullableLong("viewCount"),
+            screenshots = strings("screenshots"),
+            trailer = get("trailer")?.takeUnless { it is JsonNull }?.jsonObject?.decodeTrailer(),
+            sourceMaterial = nullableString("sourceMaterial"),
+            studios = strings("studios"),
+            mainCharacters = requiredArray("mainCharacters").map { it.jsonObject.decodeCharacter() },
+            similarAnime = requiredArray("similarAnime").map { it.jsonObject.decodeRelated() },
+            franchiseAnime = requiredArray("franchiseAnime").map { it.jsonObject.decodeRelated() },
+            relatedAnime = requiredArray("relatedAnime").map { it.jsonObject.decodeRelated() },
+            season = nullableInt("season"),
+            availableEpisodeCount = nullableInt("availableEpisodeCount"),
+            posterFallbackUrl = nullableString("posterFallbackUrl"),
         )
         require(title.id.isNotBlank()) { "Runtime title ID must not be blank" }
         require('\r' !in title.id && '\n' !in title.id) {
@@ -224,11 +224,16 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putNullable("votes", votes)
     }
 
-    private fun JsonObject.decodeRating() = TitleRating(
-        source = requiredString("source"),
-        value = requiredPrimitive("value").content.toDouble(),
-        votes = nullableInt("votes"),
-    )
+    private fun JsonObject.decodeRating(): TitleRating {
+        val rating = TitleRating(
+            source = requiredString("source"),
+            value = requiredPrimitive("value").content.toDouble(),
+            votes = nullableInt("votes"),
+        )
+        requireSafeRuntimeText(rating.source, "rating source")
+        require(rating.value.isFinite()) { "Runtime rating value must be finite" }
+        return rating
+    }
 
     private fun AnimeTrailerTitle.encodeTrailer(): JsonObject = buildJsonObject {
         put("id", id)
@@ -237,12 +242,17 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putNullable("sourceUrl", sourceUrl)
     }
 
-    private fun JsonObject.decodeTrailer() = AnimeTrailerTitle(
-        id = requiredString("id"),
-        site = requiredString("site"),
-        thumbnailUrl = nullableString("thumbnailUrl"),
-        sourceUrl = nullableString("sourceUrl"),
-    )
+    private fun JsonObject.decodeTrailer(): AnimeTrailerTitle {
+        val trailer = AnimeTrailerTitle(
+            id = requiredString("id"),
+            site = requiredString("site"),
+            thumbnailUrl = nullableString("thumbnailUrl"),
+            sourceUrl = nullableString("sourceUrl"),
+        )
+        requireSafeRuntimeText(trailer.id, "trailer id")
+        requireSafeRuntimeText(trailer.site, "trailer site")
+        return trailer
+    }
 
     private fun CharacterTitle.encodeCharacter(): JsonObject = buildJsonObject {
         put("id", id)
@@ -250,11 +260,16 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putNullable("posterUrl", posterUrl)
     }
 
-    private fun JsonObject.decodeCharacter() = CharacterTitle(
-        id = requiredString("id"),
-        title = requiredString("title"),
-        posterUrl = nullableString("posterUrl"),
-    )
+    private fun JsonObject.decodeCharacter(): CharacterTitle {
+        val character = CharacterTitle(
+            id = requiredString("id"),
+            title = requiredString("title"),
+            posterUrl = nullableString("posterUrl"),
+        )
+        requireSafeRuntimeText(character.id, "character id")
+        requireSafeRuntimeText(character.title, "character title")
+        return character
+    }
 
     private fun RelatedAnimeTitle.encodeRelated(): JsonObject = buildJsonObject {
         put("id", id)
@@ -266,15 +281,27 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putNullable("status", status)
     }
 
-    private fun JsonObject.decodeRelated() = RelatedAnimeTitle(
-        id = requiredString("id"),
-        title = requiredString("title"),
-        posterUrl = nullableString("posterUrl"),
-        type = nullableString("type"),
-        year = nullableInt("year"),
-        episodeCount = nullableInt("episodeCount"),
-        status = nullableString("status"),
-    )
+    private fun JsonObject.decodeRelated(): RelatedAnimeTitle {
+        val related = RelatedAnimeTitle(
+            id = requiredString("id"),
+            title = requiredString("title"),
+            posterUrl = nullableString("posterUrl"),
+            type = nullableString("type"),
+            year = nullableInt("year"),
+            episodeCount = nullableInt("episodeCount"),
+            status = nullableString("status"),
+        )
+        requireSafeRuntimeText(related.id, "related title id")
+        requireSafeRuntimeText(related.title, "related title")
+        return related
+    }
+
+    private fun requireSafeRuntimeText(value: String, label: String) {
+        require(value.isNotBlank()) { "Runtime $label must not be blank" }
+        require('\r' !in value && '\n' !in value) {
+            "Runtime $label must not contain CR or LF"
+        }
+    }
 
     private fun JsonObject.requiredString(key: String): String = requiredPrimitive(key).content
 

@@ -244,6 +244,39 @@ class AnimeTitleRuntimePayloadCodecTest {
     }
 
     @Test
+    fun titleDecoderRejectsInvalidNestedMetadata() {
+        val title = AnimeTitleRuntimePayloadCodec.encodeDetails(
+            AnimeTitle(
+                id = "title-1",
+                russianName = null,
+                englishName = "Title",
+                originalName = "Title",
+                japaneseName = null,
+                synonyms = emptyList(),
+                year = null,
+                type = null,
+                episodeCount = null,
+                posterUrl = null,
+                status = null,
+                description = null,
+            ),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            AnimeTitleRuntimePayloadCodec.decodeDetails(
+                buildJsonObject {
+                    title.forEach { (key, value) -> put(key, value) }
+                    putJsonArray("ratings") {
+                        add(buildJsonObject {
+                            put("source", "test")
+                            put("value", "NaN")
+                        })
+                    }
+                },
+            )
+        }
+    }
+
+    @Test
     fun missingCollectionFieldIsRejected() {
         assertFailsWith<IllegalStateException> {
             AnimeTitleRuntimePayloadCodec.decodeDetails(

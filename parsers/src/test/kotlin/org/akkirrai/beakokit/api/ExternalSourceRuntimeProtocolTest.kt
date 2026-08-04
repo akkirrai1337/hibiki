@@ -69,6 +69,17 @@ class ExternalSourceRuntimeProtocolTest {
     }
 
     @Test
+    fun runtimeErrorMessageRejectsOversizedPayload() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimeResponse(
+                requestId = "request-1",
+                errorCode = ExternalSourceRuntimeErrorCode.SOURCE_FAILURE,
+                errorMessage = "x".repeat(4 * 1024 + 1),
+            )
+        }
+    }
+
+    @Test
     fun protocolErrorMapsToStableSourceException() {
         val exception = assertFailsWith<SourceException> {
             ExternalSourceRuntimeResponse(

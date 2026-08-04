@@ -71,7 +71,11 @@ open class ProtocolBackedExternalSourceRuntime(
         operation = ExternalSourceRuntimeOperation.SEARCH,
         payload = ExternalSourceRuntimePayloads.search(request),
         decode = payloadCodec::decodeSearch,
-    )
+    ).also { results ->
+        require(results.size <= request.limit) {
+            "External source returned ${results.size} titles for search limit ${request.limit}"
+        }
+    }
 
     override suspend fun details(id: String): AnimeTitle = call(
         operation = ExternalSourceRuntimeOperation.DETAILS,
@@ -175,7 +179,11 @@ open class ProtocolBackedExternalSourceLatestRuntime(
             operation = ExternalSourceRuntimeOperation.LATEST,
             payload = ExternalSourceRuntimePayloads.latest(limit),
             decode = latestPayloadCodec::decodeLatest,
-        )
+        ).also { results ->
+            require(results.size <= limit) {
+                "External source returned ${results.size} titles for latest limit $limit"
+            }
+        }
     }
 }
 

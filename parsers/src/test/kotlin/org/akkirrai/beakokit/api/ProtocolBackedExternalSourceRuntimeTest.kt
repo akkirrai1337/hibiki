@@ -110,6 +110,46 @@ class ProtocolBackedExternalSourceRuntimeTest {
     }
 
     @Test
+    fun protocolRuntimeRejectsSearchResultsBeyondRequestedLimit() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("count", 2) },
+                )
+            },
+            payloadCodec = object : FakePayloadCodec() {
+                override fun decodeSearch(payload: JsonObject): List<AnimeTitle> =
+                    listOf(title("one"), title("two"))
+            },
+            requestIdFactory = { "search-limit" },
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            runtime.search(AnimeSearchRequest(limit = 1))
+        }
+    }
+
+    @Test
+    fun protocolLatestRuntimeRejectsResultsBeyondRequestedLimit() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceLatestRuntime(
+            transport = ExternalSourceRuntimeTransport { request, _ ->
+                ExternalSourceRuntimeResponse(
+                    requestId = request.requestId,
+                    payload = buildJsonObject { put("items", "ignored") },
+                )
+            },
+            payloadCodec = object : FakePayloadCodec() {
+                override fun decodeLatest(payload: JsonObject): List<AnimeTitle> =
+                    listOf(title("one"), title("two"))
+            },
+            requestIdFactory = { "latest-limit" },
+        )
+
+        assertFailsWith<IllegalArgumentException> { runtime.latest(1) }
+    }
+
+    @Test
     fun mismatchedResponseIdIsRejected() = runBlocking {
         val runtime = ProtocolBackedExternalSourceRuntime(
             transport = ExternalSourceRuntimeTransport { request, _ ->
@@ -353,12 +393,12 @@ class ProtocolBackedExternalSourceRuntimeTest {
         description = null,
     )
 
-    private class FakePayloadCodec : ExternalSourceRuntimePayloadCodec {
+    private open class FakePayloadCodec : ExternalSourceRuntimePayloadCodec {
         override fun decodeSearch(payload: JsonObject): List<AnimeTitle> = listOf(title("decoded-search"))
 
         override fun decodeDetails(payload: JsonObject): AnimeTitle = title("decoded-details")
 
-        private fun title(id: String) = AnimeTitle(
+        protected fun title(id: String) = AnimeTitle(
             id = id,
             russianName = null,
             englishName = id,
