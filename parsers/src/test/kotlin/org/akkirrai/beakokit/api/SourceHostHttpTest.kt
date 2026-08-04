@@ -104,7 +104,7 @@ class SourceHostHttpTest {
     fun `http client rejects origins outside manifest policy`() = runBlocking {
         val client = FakeHttpClient(requirements(SourceHostCapability.NETWORK))
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<SourceHostNetworkPolicyException> {
             client.execute(SourceHostHttpRequest(method = "GET", url = "https://other.example.com"))
         }
     }

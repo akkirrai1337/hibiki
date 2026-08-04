@@ -1,6 +1,7 @@
 package org.akkirrai.beakokit.api
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -50,9 +51,10 @@ class SourceHostCapabilitiesTest {
         )
 
         access.require(SourceHostCapability.NETWORK)
-        assertFailsWith<SourceHostCapabilityException> {
+        val error = assertFailsWith<SourceHostCapabilityException> {
             access.require(SourceHostCapability.COOKIES)
         }
+        assertEquals(SourceErrorCode.HOST_ACCESS_DENIED, error.code)
     }
 
     @Test
@@ -107,7 +109,7 @@ class SourceHostCapabilitiesTest {
     fun `network policy errors do not echo the rejected URL`() {
         val policy = SourceHostNetworkPolicy(setOf("api.example.com"))
 
-        val error = assertFailsWith<IllegalArgumentException> {
+        val error = assertFailsWith<SourceHostNetworkPolicyException> {
             policy.requireAllowed("https://user:secret@api.example.com/catalog")
         }
 

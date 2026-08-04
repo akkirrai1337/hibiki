@@ -51,7 +51,7 @@ data class SourceHostNetworkPolicy(
     }.getOrDefault(false)
 
     fun requireAllowed(url: String) {
-        require(allows(url)) { "Source network URL is not allowed" }
+        if (!allows(url)) throw SourceHostNetworkPolicyException()
     }
 
     companion object {
@@ -78,4 +78,14 @@ interface SourceHostAccess {
 
 class SourceHostCapabilityException(
     val capability: SourceHostCapability,
-) : IllegalStateException("Source host capability is not declared: ${capability.name}")
+) : SourceException(
+    message = "Source host capability is not declared: ${capability.name}",
+    kind = SourceErrorKind.UNAVAILABLE,
+    code = SourceErrorCode.HOST_ACCESS_DENIED,
+)
+
+class SourceHostNetworkPolicyException : SourceException(
+    message = "Source network URL is not allowed",
+    kind = SourceErrorKind.UNAVAILABLE,
+    code = SourceErrorCode.HOST_ACCESS_DENIED,
+)
