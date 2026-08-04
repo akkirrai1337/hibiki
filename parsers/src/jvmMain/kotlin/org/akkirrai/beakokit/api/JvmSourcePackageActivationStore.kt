@@ -42,6 +42,12 @@ class JvmSourcePackageActivationStore(
         sourceId: SourceId,
         state: SourcePackageActivationState,
     ) {
+        require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
+            "Active package source ID does not match activation store"
+        }
+        require(state.previous?.sourceId == null || state.previous.sourceId == sourceId) {
+            "Previous package source ID does not match activation store"
+        }
         Files.createDirectories(rootDirectory)
         val stateFile = stateFile(sourceId)
         val previous = readState(stateFile)
@@ -84,9 +90,12 @@ class JvmSourcePackageActivationStore(
     }
 
     private fun writeStateAtomically(path: Path, state: SourcePackageActivationState) {
+        val bytes = json.encodeToString(state).encodeToByteArray()
+        require(bytes.size.toLong() <= maxStateBytes) {
+            "Source package activation state exceeds $maxStateBytes bytes"
+        }
         val temporaryFile = Files.createTempFile(rootDirectory, path.fileName.toString(), ".tmp")
         try {
-            val bytes = json.encodeToString(state).encodeToByteArray()
             FileChannel.open(temporaryFile, StandardOpenOption.WRITE).use { channel ->
                 channel.write(ByteBuffer.wrap(bytes))
                 channel.force(true)

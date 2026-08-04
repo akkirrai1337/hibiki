@@ -12,6 +12,14 @@ data class InstalledSourcePackage(
     val artifactSha256: String? = null,
 ) {
     init {
+        require(packageVersion.isNotBlank()) { "Installed package version must not be blank" }
+        require(packagePath.isNotBlank()) { "Installed package path must not be blank" }
+        require('\r' !in packageVersion && '\n' !in packageVersion) {
+            "Installed package version must not contain CR or LF"
+        }
+        require('\r' !in packagePath && '\n' !in packagePath) {
+            "Installed package path must not contain CR or LF"
+        }
         require(artifactSha256 == null || SHA256_PATTERN.matches(artifactSha256)) {
             "Installed package artifact SHA-256 must be 64 lowercase hexadecimal characters"
         }
@@ -31,6 +39,9 @@ data class SourcePackageActivationState(
     init {
         require(active?.sourceId == null || previous?.sourceId == null || active.sourceId == previous.sourceId) {
             "Active and previous packages must belong to the same source"
+        }
+        require(active == null || previous == null || active != previous) {
+            "Active and previous packages must be different versions"
         }
     }
 }

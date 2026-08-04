@@ -94,6 +94,35 @@ class JvmSourcePackageActivationStoreTest {
         }
     }
 
+    @Test
+    fun `oversized state is rejected before writing`() {
+        val root = Files.createTempDirectory("hibiki-source-state-")
+        val sourceId = SourceId("external-source")
+
+        assertFailsWith<IllegalArgumentException> {
+            JvmSourcePackageActivationStore(root, maxStateBytes = 1)
+                .persistAtomically(sourceId, SourcePackageActivationState(active = packageVersion("1.0.0")))
+        }
+        assertEquals(emptyList<String>(), Files.list(root).use { stream ->
+            stream.map { it.fileName.toString() }.toList()
+        })
+    }
+
+    @Test
+    fun `state source IDs must match the persisted source`() {
+        val root = Files.createTempDirectory("hibiki-source-state-")
+        val state = SourcePackageActivationState(
+            active = InstalledSourcePackage(SourceId("other-source"), "1.0.0", "active"),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            JvmSourcePackageActivationStore(root).persistAtomically(
+                SourceId("external-source"),
+                state,
+            )
+        }
+    }
+
     private fun packageVersion(version: String) = InstalledSourcePackage(
         sourceId = SourceId("external-source"),
         packageVersion = version,

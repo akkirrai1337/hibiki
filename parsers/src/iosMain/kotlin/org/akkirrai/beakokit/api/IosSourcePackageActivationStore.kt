@@ -38,7 +38,17 @@ class IosSourcePackageActivationStore(
         sourceId: SourceId,
         state: SourcePackageActivationState,
     ) {
-        defaults.setObject(json.encodeToString(state), forKey = key(sourceId))
+        require(state.active?.sourceId == null || state.active.sourceId == sourceId) {
+            "Active package source ID does not match activation store"
+        }
+        require(state.previous?.sourceId == null || state.previous.sourceId == sourceId) {
+            "Previous package source ID does not match activation store"
+        }
+        val raw = json.encodeToString(state)
+        require(raw.encodeToByteArray().size.toLong() <= maxStateBytes) {
+            "Source package activation state exceeds $maxStateBytes bytes: ${sourceId.value}"
+        }
+        defaults.setObject(raw, forKey = key(sourceId))
     }
 
     private fun key(sourceId: SourceId): String = "beakokit.source_package.${sourceId.value}"
