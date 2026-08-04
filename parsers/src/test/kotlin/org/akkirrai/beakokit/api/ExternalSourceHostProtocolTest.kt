@@ -463,6 +463,40 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_oversized_config_values() = runBlocking {
+        val config = object : SourceHostConfigAccess {
+            override val requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.CONFIG),
+            )
+
+            override fun value(key: String): String = "value".repeat(SourceHostConfigLimits.MAX_VALUE_LENGTH)
+
+            override fun secret(key: String): String = "secret"
+        }
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            cookies = null,
+            config = config,
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.CONFIG),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            dispatcher.dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "config-too-large",
+                    operation = ExternalSourceHostOperation.CONFIG_VALUE,
+                    payload = ExternalSourceHostProtocolCodec.encodeConfigRequest(
+                        ExternalSourceHostConfigRequest("base-url"),
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun config_operation_requires_config_capability() = runBlocking {
         val config = object : SourceHostConfigAccess {
             override val requirements = SourceHostRequirements()

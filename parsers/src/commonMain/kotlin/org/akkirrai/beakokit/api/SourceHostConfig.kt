@@ -10,6 +10,24 @@ interface SourceConfig {
     }
 }
 
+/** Size limits enforced before configuration values cross the runtime host boundary. */
+object SourceHostConfigLimits {
+    const val MAX_KEY_LENGTH: Int = 128
+    const val MAX_VALUE_LENGTH: Int = 64 * 1024
+
+    fun requireKey(key: String) {
+        require(key.isNotBlank() && key.length <= MAX_KEY_LENGTH) {
+            "Source config key must be non-blank and at most $MAX_KEY_LENGTH characters"
+        }
+    }
+
+    fun requireValue(value: String?) {
+        require(value == null || value.length <= MAX_VALUE_LENGTH) {
+            "Source config value must be at most $MAX_VALUE_LENGTH characters"
+        }
+    }
+}
+
 class MapSourceConfig(
     values: Map<String, String> = emptyMap(),
     secrets: Map<String, String> = emptyMap(),

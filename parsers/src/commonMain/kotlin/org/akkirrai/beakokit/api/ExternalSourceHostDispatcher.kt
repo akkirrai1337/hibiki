@@ -103,16 +103,22 @@ class ExternalSourceHostDispatcher(
             }
             ExternalSourceHostOperation.CONFIG_VALUE -> {
                 val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
+                SourceHostConfigLimits.requireKey(configRequest.key)
                 val configAccess = requireConfig()
+                val value = configAccess.value(configRequest.key)
+                SourceHostConfigLimits.requireValue(value)
                 ExternalSourceHostProtocolCodec.encodeConfigResponse(
-                    ExternalSourceHostConfigResponse(configAccess.value(configRequest.key)),
+                    ExternalSourceHostConfigResponse(value),
                 )
             }
             ExternalSourceHostOperation.CONFIG_SECRET -> {
                 val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
+                SourceHostConfigLimits.requireKey(configRequest.key)
                 val configAccess = requireConfig()
+                val secret = configAccess.secret(configRequest.key)
+                SourceHostConfigLimits.requireValue(secret)
                 ExternalSourceHostProtocolCodec.encodeConfigResponse(
-                    ExternalSourceHostConfigResponse(configAccess.secret(configRequest.key)),
+                    ExternalSourceHostConfigResponse(secret),
                 )
             }
         }
