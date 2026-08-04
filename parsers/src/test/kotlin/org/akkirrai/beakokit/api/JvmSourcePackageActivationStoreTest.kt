@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class JvmSourcePackageActivationStoreTest {
     @Test
@@ -59,6 +60,25 @@ class JvmSourcePackageActivationStoreTest {
             Files.walk(root).use { stream ->
                 stream.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
             }
+        }
+    }
+
+    @Test
+    fun `symbolic link state is rejected`() {
+        val root = Files.createTempDirectory("hibiki-source-state-")
+        val target = Files.createTempFile("hibiki-source-state-", ".json")
+        Files.writeString(target, "{}")
+        val link = runCatching {
+            Files.createSymbolicLink(root.resolve("external-source.json"), target)
+        }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageActivationStore(root).load(SourceId("external-source"))
+            }
+        } finally {
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(target)
         }
     }
 

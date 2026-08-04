@@ -102,6 +102,20 @@ class SourcePackageLayoutTest {
         assertContains(violations, "Package manifest must be a file: manifest.json")
     }
 
+    @Test
+    fun `package paths cannot collide by case`() {
+        val violations = SourcePackageLayoutValidator().violations(
+            manifest(),
+            listOf(
+                SourcePackageEntry("manifest.json", 100),
+                SourcePackageEntry("MANIFEST.JSON", 100),
+                SourcePackageEntry("source.wasm", 200),
+            ),
+        )
+
+        assertContains(violations, "Package entry path collides case-insensitively: MANIFEST.JSON")
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),

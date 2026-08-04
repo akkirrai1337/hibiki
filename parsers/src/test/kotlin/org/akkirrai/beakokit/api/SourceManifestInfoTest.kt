@@ -51,6 +51,25 @@ class SourceManifestInfoTest {
         assertEquals(true, violations.any { it.contains("icon URL") })
     }
 
+    @Test
+    fun manifestMetadataRejectsEmptyHttpsLinks() {
+        val violations = manifest(
+            SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                website = "https://",
+                iconUrl = "https://",
+            ),
+        ).violations(
+            clientVersion = 1,
+            supportedApiVersion = SourceApi.VERSION,
+        )
+
+        assertEquals(true, violations.any { it.contains("website") })
+        assertEquals(true, violations.any { it.contains("icon URL") })
+    }
+
     private fun manifest(info: SourceManifestInfo?) = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-test"),

@@ -48,7 +48,12 @@ class JvmSourcePackageActivationStore(
     private fun backupFile(sourceId: SourceId): Path = rootDirectory.resolve("${sourceId.value}.json.bak")
 
     private fun readState(path: Path): SourcePackageActivationState? = try {
+        if (Files.isSymbolicLink(path)) {
+            throw SourcePackageStateException("Source package activation state must not be a symbolic link: $path")
+        }
         if (Files.exists(path)) json.decodeFromString(Files.readString(path)) else null
+    } catch (error: SourcePackageStateException) {
+        throw error
     } catch (_: Exception) {
         null
     }

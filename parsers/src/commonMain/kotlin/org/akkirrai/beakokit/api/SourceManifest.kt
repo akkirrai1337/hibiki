@@ -77,10 +77,10 @@ data class SourceManifest(
             if (metadata.primaryLanguage !in metadata.languages) {
                 add("Primary source language must be included in supported languages")
             }
-            if (metadata.website != null && !metadata.website.startsWith("https://")) {
+            if (metadata.website != null && !isValidHttpsUrl(metadata.website)) {
                 add("Source website must use HTTPS")
             }
-            if (metadata.iconUrl != null && !metadata.iconUrl.startsWith("https://")) {
+            if (metadata.iconUrl != null && !isValidHttpsUrl(metadata.iconUrl)) {
                 add("Source icon URL must use HTTPS")
             }
         }

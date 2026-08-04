@@ -34,12 +34,16 @@ class SourcePackageLayoutValidator(
         }
 
         val paths = mutableSetOf<String>()
+        val caseInsensitivePaths = mutableSetOf<String>()
         entries.forEach { entry ->
             val path = normalizedPath(entry.path, entry.directory)
             if (!isSafeRelativePath(entry.path, entry.directory)) {
                 add("Unsafe package entry path: ${entry.path}")
             }
             if (!paths.add(path)) add("Duplicate package entry path: ${entry.path}")
+            if (!caseInsensitivePaths.add(path.lowercase())) {
+                add("Package entry path collides case-insensitively: ${entry.path}")
+            }
             if (entry.sizeBytes < 0) add("Package entry size must not be negative: ${entry.path}")
             if (entry.symbolicLink) add("Symbolic links are not allowed: ${entry.path}")
         }
