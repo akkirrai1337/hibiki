@@ -36,6 +36,11 @@ data class SourceHealthError(
     val message: String,
     val statusCode: Int? = null,
 )
+{
+    companion object {
+        const val MAX_MESSAGE_LENGTH: Int = 4 * 1024
+    }
+}
 
 /** Immutable latest health snapshot for one source. Times are monotonic durations, not wall-clock timestamps. */
 data class SourceHealth(
@@ -146,9 +151,13 @@ private fun Throwable.toHealthError(): SourceHealthError {
     }
     return SourceHealthError(
         reason = reason,
-        message = message?.takeIf(String::isNotBlank) ?: errorMessage(),
+        message = (message?.takeIf(String::isNotBlank) ?: errorMessage()).toHealthMessage(),
         statusCode = sourceError?.statusCode,
     )
 }
 
 private fun Throwable.errorMessage(): String = this::class.simpleName ?: "Unknown source error"
+
+private fun String.toHealthMessage(): String = replace('\r', ' ')
+    .replace('\n', ' ')
+    .take(SourceHealthError.MAX_MESSAGE_LENGTH)

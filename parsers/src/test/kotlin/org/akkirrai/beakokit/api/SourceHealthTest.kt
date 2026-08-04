@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -58,6 +59,22 @@ class SourceHealthTest {
         assertEquals(SourceAvailability.UNKNOWN, health.availability)
         assertEquals(SourceHealthCheckState.NOT_CHECKED, health.checkState)
         assertNull(health.lastError)
+    }
+
+    @Test
+    fun `health errors normalize unsafe and oversized messages`() = runBlocking {
+        val reporter = InMemorySourceHealthReporter()
+
+        assertFailsWith<IllegalStateException> {
+            reporter.track(sourceId) {
+                error("first\nsecond\r${"x".repeat(SourceHealthError.MAX_MESSAGE_LENGTH)}")
+            }
+        }
+
+        val message = reporter.health(sourceId).lastError!!.message
+        assertFalse(message.contains('\n'))
+        assertFalse(message.contains('\r'))
+        assertEquals(SourceHealthError.MAX_MESSAGE_LENGTH, message.length)
     }
 
     @Test
