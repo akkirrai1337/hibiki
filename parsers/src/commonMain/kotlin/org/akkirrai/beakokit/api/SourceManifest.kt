@@ -11,6 +11,7 @@ data class SourceRuntime(
     init {
         require(ID_PATTERN.matches(id)) { "Invalid source runtime id: $id" }
         require(abi.isNotBlank()) { "Source runtime ABI must not be blank" }
+        require('\r' !in abi && '\n' !in abi) { "Source runtime ABI must not contain CR or LF" }
     }
 
     companion object {

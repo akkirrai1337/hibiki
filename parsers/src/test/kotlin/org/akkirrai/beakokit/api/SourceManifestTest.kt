@@ -80,6 +80,13 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `runtime ABI rejects line breaks`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceRuntime(id = "wasm", abi = "wasm32\npreview1")
+        }
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 

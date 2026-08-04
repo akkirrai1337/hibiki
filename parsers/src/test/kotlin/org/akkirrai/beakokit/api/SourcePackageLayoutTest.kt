@@ -45,6 +45,20 @@ class SourcePackageLayoutTest {
     }
 
     @Test
+    fun `control characters are rejected from entry paths`() {
+        val violations = SourcePackageLayoutValidator().violations(
+            manifest(),
+            listOf(
+                SourcePackageEntry("manifest.json", 100),
+                SourcePackageEntry("source\n.wasm", 200),
+            ),
+        )
+
+        assertContains(violations, "Unsafe package entry path: source\n.wasm")
+        assertContains(violations, "Package must contain the manifest entrypoint")
+    }
+
+    @Test
     fun `entry count and unpacked size limits are enforced`() {
         val manifest = manifest()
         val validator = SourcePackageLayoutValidator(maxEntryCount = 2, maxUnpackedSizeBytes = 100)
