@@ -76,6 +76,19 @@ class SourcePackageLayoutTest {
         assertContains(violations, "Package file path conflicts with a child entry: assets")
     }
 
+    @Test
+    fun `manifest entrypoint cannot be a directory`() {
+        val violations = SourcePackageLayoutValidator().violations(
+            manifest(),
+            listOf(
+                SourcePackageEntry("manifest.json", 100),
+                SourcePackageEntry("source.wasm/", 0, directory = true),
+            ),
+        )
+
+        assertContains(violations, "Manifest entrypoint must be a file: source.wasm")
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),

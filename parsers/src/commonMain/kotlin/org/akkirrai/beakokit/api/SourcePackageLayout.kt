@@ -55,6 +55,9 @@ class SourcePackageLayoutValidator(
 
         if ("manifest.json" !in paths) add("Package must contain manifest.json")
         if (manifest.entrypoint !in paths) add("Package must contain the manifest entrypoint")
+        if (entries.any { it.directory && normalizedPath(it.path, directory = true) == manifest.entrypoint }) {
+            add("Manifest entrypoint must be a file: ${manifest.entrypoint}")
+        }
     }
 
     fun requireValid(manifest: SourceManifest, entries: List<SourcePackageEntry>) {

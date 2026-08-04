@@ -63,7 +63,13 @@ data class SourceManifest(
         if (hostApiVersion != supportedHostApiVersion) {
             add("Unsupported source host API version: $hostApiVersion")
         }
-        if (entrypoint.isBlank()) add("Entrypoint must not be blank")
+        if (entrypoint.isBlank()) {
+            add("Entrypoint must not be blank")
+        } else if (!SourcePackageLayoutValidator.isSafeRelativePath(entrypoint)) {
+            add("Entrypoint must be a safe relative package path")
+        } else if (entrypoint == "manifest.json") {
+            add("Entrypoint must not point to manifest.json")
+        }
         if (!isValidHttpsUrl(packageUrl)) add("Package URL must be a valid HTTPS URL")
         sourceInfo?.let { metadata ->
             if (metadata.displayName.isBlank()) add("Source display name must not be blank")

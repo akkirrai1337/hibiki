@@ -60,6 +60,26 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects unsafe package entrypoint before download`() {
+        val invalid = manifest().copy(entrypoint = "../source.wasm")
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Entrypoint must be a safe relative package path",
+        )
+    }
+
+    @Test
+    fun `manifest rejects manifest json as runtime entrypoint`() {
+        val invalid = manifest().copy(entrypoint = "manifest.json")
+
+        assertContains(
+            invalid.violations(clientVersion = 3, supportedApiVersion = SourceApi.VERSION),
+            "Entrypoint must not point to manifest.json",
+        )
+    }
+
+    @Test
     fun `package compatibility ignores archive metadata but not source metadata`() {
         val repositoryManifest = manifest()
         val packageManifest = repositoryManifest.copy(
