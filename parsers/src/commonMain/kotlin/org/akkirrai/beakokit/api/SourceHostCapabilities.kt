@@ -47,11 +47,11 @@ data class SourceHostNetworkPolicy(
 
     fun allows(url: String): Boolean = runCatching {
         val parsed = Url(url)
-        parsed.protocol.name == "https" && parsed.host.lowercase() in allowedHosts
+        isValidHttpsUrl(url) && parsed.host.lowercase() in allowedHosts
     }.getOrDefault(false)
 
     fun requireAllowed(url: String) {
-        require(allows(url)) { "Source network URL is not allowed: $url" }
+        require(allows(url)) { "Source network URL is not allowed" }
     }
 
     companion object {

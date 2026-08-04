@@ -96,6 +96,24 @@ class SourceHostCapabilitiesTest {
         assertTrue(policy.allows("https://API.EXAMPLE.COM/catalog"))
     }
 
+    @Test
+    fun `network policy rejects embedded credentials`() {
+        val policy = SourceHostNetworkPolicy(setOf("api.example.com"))
+
+        assertFalse(policy.allows("https://user:secret@api.example.com/catalog"))
+    }
+
+    @Test
+    fun `network policy errors do not echo the rejected URL`() {
+        val policy = SourceHostNetworkPolicy(setOf("api.example.com"))
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            policy.requireAllowed("https://user:secret@api.example.com/catalog")
+        }
+
+        assertFalse(error.message.orEmpty().contains("secret"))
+    }
+
     private data class TestHostAccess(
         override val requirements: SourceHostRequirements,
     ) : SourceHostAccess
