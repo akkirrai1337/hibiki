@@ -65,6 +65,28 @@ class SourceConfigSchemaTest {
     }
 
     @Test
+    fun `schema rejects control characters in title keys`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceConfigField(
+                key = "base_url",
+                kind = SourceConfigValueKind.TEXT,
+                titleKey = "settings\nbase-url",
+            )
+        }
+    }
+
+    @Test
+    fun `schema rejects control characters in allowed values`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceConfigField(
+                key = "api_mode",
+                kind = SourceConfigValueKind.TEXT,
+                allowedValues = setOf("stable\nmode"),
+            )
+        }
+    }
+
+    @Test
     fun `schema validates comma separated HTTPS URL lists`() {
         val schema = SourceConfigSchema(
             listOf(SourceConfigField("mirrors", SourceConfigValueKind.HTTPS_URL_LIST)),

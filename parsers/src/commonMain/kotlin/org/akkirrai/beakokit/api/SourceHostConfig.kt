@@ -19,6 +19,9 @@ object SourceHostConfigLimits {
         require(key.isNotBlank() && key.length <= MAX_KEY_LENGTH) {
             "Source config key must be non-blank and at most $MAX_KEY_LENGTH characters"
         }
+        require('\r' !in key && '\n' !in key) {
+            "Source config key must not contain CR or LF"
+        }
     }
 
     fun requireValue(value: String?) {

@@ -231,6 +231,13 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun config_requests_reject_control_characters_in_keys() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostConfigLimits.requireKey("token\rsecret")
+        }
+    }
+
+    @Test
     fun http_response_rejects_invalid_status_codes() {
         assertFailsWith<IllegalArgumentException> {
             ExternalSourceHostHttpResponse(statusCode = 99, body = "")

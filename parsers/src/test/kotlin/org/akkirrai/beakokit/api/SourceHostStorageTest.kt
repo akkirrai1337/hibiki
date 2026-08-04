@@ -30,6 +30,7 @@ class SourceHostStorageTest {
         val storage = FakeStorage(SourceHostRequirements(setOf(SourceHostCapability.STORAGE)))
 
         assertFailsWith<IllegalArgumentException> { storage.read("") }
+        assertFailsWith<IllegalArgumentException> { storage.read("bad\nkey") }
         assertFailsWith<IllegalArgumentException> {
             storage.write("x".repeat(SourceHostStorage.MAX_KEY_LENGTH + 1), "value")
         }

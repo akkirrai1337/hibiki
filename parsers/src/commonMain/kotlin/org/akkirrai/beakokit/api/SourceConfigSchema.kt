@@ -25,10 +25,16 @@ data class SourceConfigField(
     init {
         require(KEY_PATTERN.matches(key)) { "Invalid source config key: $key" }
         require(titleKey.isNotBlank()) { "Source config title key must not be blank" }
+        require('\r' !in titleKey && '\n' !in titleKey) {
+            "Source config title key must not contain CR or LF"
+        }
         require(kind != SourceConfigValueKind.SECRET || allowedValues.isEmpty()) {
             "Secret config fields cannot declare allowed values"
         }
         require(allowedValues.none(String::isBlank)) { "Source config allowed values must not be blank" }
+        require(allowedValues.none { value -> '\r' in value || '\n' in value }) {
+            "Source config allowed values must not contain CR or LF"
+        }
     }
 
     private companion object {
