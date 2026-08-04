@@ -267,55 +267,55 @@ object ExternalSourceHostProtocolCodec {
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeHttpRequest(payload: JsonObject): ExternalSourceHostHttpRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeHttpResponse(response: ExternalSourceHostHttpResponse): JsonObject =
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeHttpResponse(payload: JsonObject): ExternalSourceHostHttpResponse =
-        json.decodeFromJsonElement(payload)
+        decodeResponsePayload(payload)
 
     fun encodeStorageReadRequest(request: ExternalSourceHostStorageReadRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeStorageReadRequest(payload: JsonObject): ExternalSourceHostStorageReadRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeStorageReadResponse(response: ExternalSourceHostStorageReadResponse): JsonObject =
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeStorageReadResponse(payload: JsonObject): ExternalSourceHostStorageReadResponse =
-        json.decodeFromJsonElement(payload)
+        decodeResponsePayload(payload)
 
     fun encodeStorageWriteRequest(request: ExternalSourceHostStorageWriteRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeStorageWriteRequest(payload: JsonObject): ExternalSourceHostStorageWriteRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeStorageRemoveRequest(request: ExternalSourceHostStorageRemoveRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeStorageRemoveRequest(payload: JsonObject): ExternalSourceHostStorageRemoveRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeStorageMutationResponse(response: ExternalSourceHostStorageMutationResponse): JsonObject =
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeStorageMutationResponse(payload: JsonObject): ExternalSourceHostStorageMutationResponse =
-        json.decodeFromJsonElement(payload)
+        decodeResponsePayload(payload)
 
     fun encodeCookiesForUrlRequest(request: ExternalSourceHostCookiesForUrlRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeCookiesForUrlRequest(payload: JsonObject): ExternalSourceHostCookiesForUrlRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeCookiesForUrlResponse(response: ExternalSourceHostCookiesForUrlResponse): JsonObject =
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeCookiesForUrlResponse(payload: JsonObject): ExternalSourceHostCookiesForUrlResponse =
-        json.decodeFromJsonElement(payload)
+        decodeResponsePayload(payload)
 
     fun encodeCookiesStoreResponseRequest(
         request: ExternalSourceHostCookiesStoreResponseRequest,
@@ -323,25 +323,51 @@ object ExternalSourceHostProtocolCodec {
 
     fun decodeCookiesStoreResponseRequest(
         payload: JsonObject,
-    ): ExternalSourceHostCookiesStoreResponseRequest = json.decodeFromJsonElement(payload)
+    ): ExternalSourceHostCookiesStoreResponseRequest = decodeRequestPayload(payload)
 
     fun encodeCookiesClearRequest(request: ExternalSourceHostCookiesClearRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeCookiesClearRequest(payload: JsonObject): ExternalSourceHostCookiesClearRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeConfigRequest(request: ExternalSourceHostConfigRequest): JsonObject =
         json.encodeToJsonElement(request) as JsonObject
 
     fun decodeConfigRequest(payload: JsonObject): ExternalSourceHostConfigRequest =
-        json.decodeFromJsonElement(payload)
+        decodeRequestPayload(payload)
 
     fun encodeConfigResponse(response: ExternalSourceHostConfigResponse): JsonObject =
         json.encodeToJsonElement(response) as JsonObject
 
     fun decodeConfigResponse(payload: JsonObject): ExternalSourceHostConfigResponse =
+        decodeResponsePayload(payload)
+
+    private inline fun <reified T> decodeRequestPayload(payload: JsonObject): T = try {
         json.decodeFromJsonElement(payload)
+    } catch (error: SourceException) {
+        throw error
+    } catch (error: Exception) {
+        throw SourceException(
+            message = "External source host request payload is invalid",
+            cause = error,
+            kind = SourceErrorKind.PARSE,
+            code = SourceErrorCode.INVALID_REQUEST,
+        )
+    }
+
+    private inline fun <reified T> decodeResponsePayload(payload: JsonObject): T = try {
+        json.decodeFromJsonElement(payload)
+    } catch (error: SourceException) {
+        throw error
+    } catch (error: Exception) {
+        throw SourceException(
+            message = "External source host response payload is invalid",
+            cause = error,
+            kind = SourceErrorKind.PARSE,
+            code = SourceErrorCode.INVALID_RESPONSE,
+        )
+    }
 }
 
 private fun requireProtocolPayloadSize(bytes: ByteArray, limit: Long, label: String) {

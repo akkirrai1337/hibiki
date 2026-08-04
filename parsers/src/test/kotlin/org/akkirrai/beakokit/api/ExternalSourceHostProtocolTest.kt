@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class ExternalSourceHostProtocolTest {
     @Test
@@ -33,6 +34,43 @@ class ExternalSourceHostProtocolTest {
                 errorMessage = "host\rerror",
             )
         }
+    }
+
+    @Test
+    fun `malformed operation payloads use invalid request code`() {
+        val error = assertFailsWith<SourceException> {
+            ExternalSourceHostProtocolCodec.decodeConfigRequest(
+                buildJsonObject { put("unexpected", "value") },
+            )
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
+    }
+
+    @Test
+    fun `malformed operation responses use invalid response code`() {
+        val error = assertFailsWith<SourceException> {
+            ExternalSourceHostProtocolCodec.decodeConfigResponse(
+                buildJsonObject { put("value", 42) },
+            )
+        }
+
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
+    }
+
+    @Test
+    fun `dispatcher normalizes malformed operation request`() = runBlocking {
+        val request = ExternalSourceHostRequest(
+            requestId = "host-malformed-payload",
+            operation = ExternalSourceHostOperation.CONFIG_VALUE,
+            payload = buildJsonObject { put("unexpected", "value") },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            ExternalSourceHostDispatcher { error("HTTP must not be called") }.dispatch(request)
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
     }
 
     @Test
