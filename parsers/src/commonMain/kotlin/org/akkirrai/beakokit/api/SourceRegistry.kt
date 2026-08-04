@@ -27,5 +27,12 @@ class ExternalSourceRegistry(catalog: SourceCatalog) : CatalogSourceRegistry(cat
 class CombinedSourceRegistry(
     builtIn: SourceRegistry,
     external: SourceRegistry,
-) : CatalogSourceRegistry(builtIn.catalog.mergedWith(external.catalog))
-
+) : CatalogSourceRegistry(
+    builtIn.catalog.mergedWith(
+        SourceCatalog(
+            external.catalog.entries.filterNot { externalEntry ->
+                builtIn.catalog[externalEntry.info.id] != null
+            },
+        ),
+    ),
+)
