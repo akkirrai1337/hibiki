@@ -29,7 +29,7 @@ object ExternalSourceRuntimePayloads {
     }
 
     fun details(id: String): JsonObject = buildJsonObject {
-        put("id", id)
+        put("id", requireRuntimeId(id, "title"))
     }
 
     fun latest(limit: Int): JsonObject = buildJsonObject {
@@ -37,7 +37,7 @@ object ExternalSourceRuntimePayloads {
     }
 
     fun playbackGroups(title: AnimeTitle): JsonObject = buildJsonObject {
-        put("titleId", title.id)
+        put("titleId", requireRuntimeId(title.id, "title"))
     }
 
     fun playerLinks(
@@ -45,9 +45,14 @@ object ExternalSourceRuntimePayloads {
         group: PlaybackGroup,
         episode: Episode,
     ): JsonObject = buildJsonObject {
-        put("titleId", title.id)
-        put("groupId", group.id)
-        put("episodeId", episode.id)
+        put("titleId", requireRuntimeId(title.id, "title"))
+        put("groupId", requireRuntimeId(group.id, "playback group"))
+        put("episodeId", requireRuntimeId(episode.id, "episode"))
         put("episodeNumber", episode.number)
+    }
+
+    private fun requireRuntimeId(id: String, label: String): String {
+        require(id.isNotBlank()) { "External source $label ID must not be blank" }
+        return id
     }
 }

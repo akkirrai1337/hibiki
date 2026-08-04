@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.JsonNull
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
@@ -80,5 +81,46 @@ class ExternalSourceRuntimePayloadsTest {
         assertEquals("group-1", playerLinks["groupId"]?.toString()?.trim('"'))
         assertEquals("episode-1", playerLinks["episodeId"]?.toString()?.trim('"'))
         assertEquals("1.0", playerLinks["episodeNumber"]?.toString())
+    }
+
+    @Test
+    fun `details and playback payloads reject blank identifiers`() {
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.details(" ")
+        }
+
+        val title = AnimeTitle(
+            id = "title-1",
+            russianName = null,
+            englishName = "Title",
+            originalName = "Title",
+            japaneseName = null,
+            synonyms = emptyList(),
+            year = null,
+            type = null,
+            episodeCount = null,
+            posterUrl = null,
+            status = null,
+            description = null,
+        )
+        val group = PlaybackGroup(
+            id = "group-1",
+            title = "Dub",
+            episodes = listOf(Episode("episode-1", 1.0, "Episode 1")),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.playbackGroups(title.copy(id = ""))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.playerLinks(title, group.copy(id = ""), group.episodes.single())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ExternalSourceRuntimePayloads.playerLinks(
+                title,
+                group,
+                group.episodes.single().copy(id = ""),
+            )
+        }
     }
 }
