@@ -97,6 +97,19 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects line breaks in package URL`() {
+        val invalid = manifest().copy(packageUrl = "https://example.com/source.zip\r\nX-Injected: yes")
+
+        assertEquals(
+            true,
+            invalid.violations(
+                clientVersion = 1,
+                supportedApiVersion = SourceApi.VERSION,
+            ).any { it == "Package URL must be a valid HTTPS URL" },
+        )
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 

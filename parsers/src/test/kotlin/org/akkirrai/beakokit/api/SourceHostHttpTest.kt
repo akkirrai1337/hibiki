@@ -84,6 +84,16 @@ class SourceHostHttpTest {
                 headers = mapOf("X-Test\nInjected" to "ok"),
             )
         }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest("GET /", "https://example.com")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest(
+                "GET",
+                "https://example.com",
+                headers = mapOf("X-Test:Injected" to "ok"),
+            )
+        }
     }
 
     @Test

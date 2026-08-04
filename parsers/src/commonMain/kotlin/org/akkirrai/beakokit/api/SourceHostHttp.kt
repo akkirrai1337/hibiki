@@ -12,7 +12,7 @@ data class SourceHostHttpRequest(
     init {
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
-        requireSafeHttpField(method, "HTTP method")
+        requireHttpToken(method, "HTTP method")
         requireSafeHttpField(url, "HTTP URL")
         requireSafeHttpHeaders(headers)
         require(timeoutMillis > 0) { "HTTP timeout must be positive" }
@@ -38,10 +38,17 @@ internal fun requireSafeHttpField(value: String, label: String) {
     }
 }
 
+private fun requireHttpToken(value: String, label: String) {
+    require(value.isNotEmpty() && value.all {
+        character -> character.isLetterOrDigit() || character in "!#$%&'*+-.^_`|~"
+    }) {
+        "$label must be a valid HTTP token"
+    }
+}
+
 internal fun requireSafeHttpHeaders(headers: Map<String, String>) {
     headers.forEach { (name, value) ->
-        require(name.isNotBlank()) { "HTTP header name must not be blank" }
-        requireSafeHttpField(name, "HTTP header name")
+        requireHttpToken(name, "HTTP header name")
         requireSafeHttpField(value, "HTTP header value")
     }
 }

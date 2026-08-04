@@ -79,4 +79,11 @@ class SourceRepositoryUrlResolverTest {
             resolver.resolve("http://example.test/index.json")
         }
     }
+
+    @Test
+    fun `rejects repository links containing line breaks before trimming`() {
+        assertFailsWith<IllegalArgumentException> {
+            resolver.resolve("\nhttps://example.test/index.json")
+        }
+    }
 }

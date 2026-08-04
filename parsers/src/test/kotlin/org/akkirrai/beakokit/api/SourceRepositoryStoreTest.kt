@@ -23,6 +23,9 @@ class SourceRepositoryStoreTest {
         assertFailsWith<IllegalArgumentException> {
             SourceRepositoryEndpoint("https://user:password@example.test/index.json")
         }
+        assertFailsWith<IllegalArgumentException> {
+            SourceRepositoryEndpoint("https://example.test/index.json\nX-Injected: yes")
+        }
     }
 
     @Test

@@ -8,6 +8,9 @@ package org.akkirrai.beakokit.api
  */
 class SourceRepositoryUrlResolver {
     fun resolve(input: String): SourceRepositoryEndpoint {
+        require('\r' !in input && '\n' !in input) {
+            "Repository URL must not contain CR or LF"
+        }
         val url = input.trim()
         require(url.isNotEmpty()) { "Repository URL must not be blank" }
 
