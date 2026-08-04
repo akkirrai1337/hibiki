@@ -13,14 +13,7 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
         requireUrl(url)
         require(SourceHostCapability.COOKIES)
         requirements.networkPolicy.requireAllowed(url)
-        require(cookies.size <= MAX_COOKIE_COUNT) {
-            "Source cookie response contains too many cookies"
-        }
-        cookies.forEach { (name, value) ->
-            require(name.isNotBlank()) { "Cookie name must not be blank" }
-            require(name.length <= MAX_COOKIE_NAME_LENGTH) { "Cookie name is too long" }
-            require(value.length <= MAX_COOKIE_VALUE_LENGTH) { "Cookie value is too long" }
-        }
+        requireCookies(cookies)
         storeResponseCookies(url, cookies)
     }
 
@@ -44,6 +37,17 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
 
         fun requireUrl(url: String) {
             require(url.isNotBlank()) { "Cookie URL must not be blank" }
+        }
+
+        fun requireCookies(cookies: Map<String, String>) {
+            require(cookies.size <= MAX_COOKIE_COUNT) {
+                "Source cookie response contains too many cookies"
+            }
+            cookies.forEach { (name, value) ->
+                require(name.isNotBlank()) { "Cookie name must not be blank" }
+                require(name.length <= MAX_COOKIE_NAME_LENGTH) { "Cookie name is too long" }
+                require(value.length <= MAX_COOKIE_VALUE_LENGTH) { "Cookie value is too long" }
+            }
         }
     }
 }

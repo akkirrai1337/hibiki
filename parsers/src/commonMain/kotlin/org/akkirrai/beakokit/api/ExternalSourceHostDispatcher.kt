@@ -76,7 +76,9 @@ class ExternalSourceHostDispatcher(
             }
             ExternalSourceHostOperation.COOKIES_FOR_URL -> {
                 val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesForUrlRequest(request.payload)
+                SourceHostCookies.requireUrl(cookiesRequest.url)
                 val cookies = requireCookies().forUrl(cookiesRequest.url)
+                SourceHostCookies.requireCookies(cookies)
                 ExternalSourceHostProtocolCodec.encodeCookiesForUrlResponse(
                     ExternalSourceHostCookiesForUrlResponse(cookies),
                 )
@@ -84,6 +86,8 @@ class ExternalSourceHostDispatcher(
             ExternalSourceHostOperation.COOKIES_STORE_RESPONSE -> {
                 val cookiesRequest =
                     ExternalSourceHostProtocolCodec.decodeCookiesStoreResponseRequest(request.payload)
+                SourceHostCookies.requireUrl(cookiesRequest.url)
+                SourceHostCookies.requireCookies(cookiesRequest.cookies)
                 requireCookies().storeFromResponse(cookiesRequest.url, cookiesRequest.cookies)
                 ExternalSourceHostProtocolCodec.encodeStorageMutationResponse(
                     ExternalSourceHostStorageMutationResponse(),
@@ -91,6 +95,7 @@ class ExternalSourceHostDispatcher(
             }
             ExternalSourceHostOperation.COOKIES_CLEAR -> {
                 val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesClearRequest(request.payload)
+                SourceHostCookies.requireUrl(cookiesRequest.url)
                 requireCookies().clear(cookiesRequest.url)
                 ExternalSourceHostProtocolCodec.encodeStorageMutationResponse(
                     ExternalSourceHostStorageMutationResponse(),

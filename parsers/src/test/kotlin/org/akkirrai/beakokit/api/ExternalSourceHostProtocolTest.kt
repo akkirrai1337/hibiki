@@ -363,6 +363,44 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_oversized_cookie_maps_before_host_access() = runBlocking {
+        var hostCalled = false
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            cookies = object : SourceHostCookiesAccess {
+                override suspend fun forUrl(url: String): Map<String, String> = emptyMap()
+
+                override suspend fun storeFromResponse(url: String, cookies: Map<String, String>) {
+                    hostCalled = true
+                }
+
+                override suspend fun clear(url: String) = Unit
+            },
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.COOKIES),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            dispatcher.dispatch(
+                ExternalSourceHostRequest(
+                    requestId = "cookies-too-many",
+                    operation = ExternalSourceHostOperation.COOKIES_STORE_RESPONSE,
+                    payload = ExternalSourceHostProtocolCodec.encodeCookiesStoreResponseRequest(
+                        ExternalSourceHostCookiesStoreResponseRequest(
+                            url = "https://example.com",
+                            cookies = (0..SourceHostCookies.MAX_COOKIE_COUNT)
+                                .associate { index -> "cookie-$index" to "value" },
+                        ),
+                    ),
+                ),
+            )
+        }
+        assertEquals(false, hostCalled)
+    }
+
+    @Test
     fun cookies_operation_requires_a_cookie_host() = runBlocking {
         assertFailsWith<SourceHostCapabilityException> {
             ExternalSourceHostDispatcher { error("HTTP must not be called") }.dispatch(
