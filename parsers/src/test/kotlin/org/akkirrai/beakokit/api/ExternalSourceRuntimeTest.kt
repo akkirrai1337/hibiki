@@ -91,6 +91,71 @@ class ExternalSourceRuntimeTest {
         }
     }
 
+    @Test
+    fun catalogRuntimeRejectsInvalidTitleResults() = runBlocking {
+        val runtime = FakeRuntime().apply {
+            searchResult = listOf(detailsResult.copy(id = "title\n-1"))
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(query = "broken"))
+        }
+
+        val latestRuntime = FakeLatestRuntime().apply {
+            latestResult = listOf(detailsResult.copy(englishName = "", originalName = ""))
+        }
+        val latest = RuntimeBackedLatestAnimeSource(
+            info = sourceInfo().copy(capabilities = setOf(SourceCapability.LATEST_RELEASES)),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = latestRuntime,
+        )
+
+        assertFailsWith<IllegalArgumentException> { latest.latest(1) }
+    }
+
+    @Test
+    fun catalogRuntimeRejectsInvalidDetailsIdBeforeCallingRuntime() = runBlocking {
+        val runtime = FakeRuntime()
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> { source.getById("title\n-1") }
+        assertEquals(null, runtime.lastDetailsId)
+    }
+
+    @Test
+    fun catalogRuntimeRejectsInvalidSearchBoundsAndOversizedResults() = runBlocking {
+        val runtime = FakeRuntime().apply {
+            searchResult = listOf(detailsResult, detailsResult.copy(id = "title-2"))
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(limit = 0))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(offset = -1))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(yearFrom = 2025, yearTo = 2024))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(limit = 1))
+        }
+    }
+
     private fun sourceInfo() = SourceInfo(
         id = SourceId("external-test"),
         name = "External test source",
@@ -99,7 +164,7 @@ class ExternalSourceRuntimeTest {
     )
 
     private open class FakeRuntime : ExternalSourceRuntime {
-        val searchResult = emptyList<AnimeTitle>()
+        var searchResult = emptyList<AnimeTitle>()
         val detailsResult = AnimeTitle(
             id = "title-1",
             russianName = null,
@@ -126,6 +191,12 @@ class ExternalSourceRuntimeTest {
             lastDetailsId = id
             return detailsResult
         }
+    }
+
+    private class FakeLatestRuntime : FakeRuntime(), ExternalSourceLatestRuntime {
+        var latestResult = listOf(detailsResult)
+
+        override suspend fun latest(limit: Int): List<AnimeTitle> = latestResult
     }
 
     private class FakePlaybackRuntime : FakeRuntime(), ExternalSourcePlaybackRuntime {

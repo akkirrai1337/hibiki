@@ -55,12 +55,17 @@ open class RuntimeBackedAnimeSource(
 
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> {
         SourceOperationGate.requireSupported(this, SourceOperation.SEARCH)
-        return runtime.search(request)
+        requireValidExternalSearchRequest(request)
+        return runtime.search(request).also {
+            requireValidExternalResultCount(it.size, request.limit, "search")
+            requireValidExternalTitles(it, "search")
+        }
     }
 
     override suspend fun getById(id: String): AnimeTitle {
         SourceOperationGate.requireSupported(this, SourceOperation.DETAILS)
-        return runtime.details(id)
+        requireValidExternalRuntimeId(id, "title")
+        return runtime.details(id).also { requireValidExternalTitle(it, "details") }
     }
 }
 
@@ -79,7 +84,10 @@ class RuntimeBackedLatestAnimeSource(
     override suspend fun latest(limit: Int): List<AnimeTitle> {
         require(limit > 0) { "Latest source limit must be positive" }
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
-        return latestRuntime.latest(limit)
+        return latestRuntime.latest(limit).also {
+            requireValidExternalResultCount(it.size, limit, "latest")
+            requireValidExternalTitles(it, "latest")
+        }
     }
 }
 
@@ -151,6 +159,46 @@ private fun requireValidExternalPlaybackGroups(groups: List<PlaybackGroup>) {
     }
 }
 
+private fun requireValidExternalTitles(titles: List<AnimeTitle>, operation: String) {
+    require(titles.map(AnimeTitle::id).distinct().size == titles.size) {
+        "External source returned duplicate title ids in $operation"
+    }
+    titles.forEach { requireValidExternalTitle(it, operation) }
+}
+
+private fun requireValidExternalSearchRequest(request: AnimeSearchRequest) {
+    require(request.limit > 0) { "External source search limit must be positive" }
+    require(request.offset >= 0) { "External source search offset must not be negative" }
+    require(request.yearFrom == null || request.yearTo == null || request.yearFrom <= request.yearTo) {
+        "External source search yearFrom must not be greater than yearTo"
+    }
+}
+
+private fun requireValidExternalResultCount(actual: Int, requested: Int, operation: String) {
+    require(actual <= requested) {
+        "External source returned $actual titles for $operation limit $requested"
+    }
+}
+
+private fun requireValidExternalRuntimeId(id: String, label: String) {
+    require(id.isNotBlank()) { "External source $label ID must not be blank" }
+    require('\r' !in id && '\n' !in id) {
+        "External source $label ID must not contain CR or LF"
+    }
+}
+
+private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
+    require(title.id.isNotBlank()) {
+        "External source returned a blank title id in $operation"
+    }
+    require('\r' !in title.id && '\n' !in title.id) {
+        "External source returned a title id containing CR or LF in $operation"
+    }
+    require(title.displayName.isNotBlank()) {
+        "External source returned a blank display name for ${title.id} in $operation"
+    }
+}
+
 /** Adapts an external runtime that exposes both latest titles and playback. */
 class RuntimeBackedLatestPlaybackAnimeSource(
     info: SourceInfo,
@@ -166,6 +214,9 @@ class RuntimeBackedLatestPlaybackAnimeSource(
     override suspend fun latest(limit: Int): List<AnimeTitle> {
         require(limit > 0) { "Latest source limit must be positive" }
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
-        return latestRuntime.latest(limit)
+        return latestRuntime.latest(limit).also {
+            requireValidExternalResultCount(it.size, limit, "latest")
+            requireValidExternalTitles(it, "latest")
+        }
     }
 }
