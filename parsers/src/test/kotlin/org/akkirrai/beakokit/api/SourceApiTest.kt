@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SourceApiTest {
@@ -39,5 +40,12 @@ class SourceApiTest {
 
         assertEquals(SourceErrorKind.UNKNOWN, exception.kind)
         assertEquals(SourceErrorCode.CANCELLED, exception.code)
+    }
+
+    @Test
+    fun `source exception rejects invalid HTTP status codes`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceException(message = "invalid", statusCode = 700)
+        }
     }
 }

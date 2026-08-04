@@ -46,6 +46,13 @@ open class SourceException(
     val kind: SourceErrorKind = SourceErrorKind.UNKNOWN,
     val code: SourceErrorCode = kind.defaultCode,
 ) : RuntimeException(message, cause)
+{
+    init {
+        require(statusCode == null || statusCode in 100..599) {
+            "Source error HTTP status code must be between 100 and 599"
+        }
+    }
+}
 
 open class SourceUnavailableException(
     message: String,
