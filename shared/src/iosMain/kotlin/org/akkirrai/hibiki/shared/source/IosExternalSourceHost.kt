@@ -58,6 +58,7 @@ internal class IosExternalSourceHost(
         storage = IosSourceHostStorage(sourceId, requirements),
         cookies = IosSourceHostCookies(sourceId, requirements),
         config = IosSourceHostConfig(sourceContext.config, requirements),
+        requirements = requirements,
     )
 
     fun call(bytes: ByteArray): ByteArray {

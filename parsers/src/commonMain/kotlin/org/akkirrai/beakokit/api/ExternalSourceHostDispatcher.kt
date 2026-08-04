@@ -11,6 +11,9 @@ class ExternalSourceHostDispatcher(
     private val storage: ExternalSourceHostStorageAccess?,
     private val cookies: SourceHostCookiesAccess?,
     private val config: SourceHostConfigAccess?,
+    private val requirements: SourceHostRequirements = SourceHostRequirements(
+        capabilities = setOf(SourceHostCapability.NETWORK),
+    ),
 ) {
     constructor(
         executeHttpRequest: suspend (ExternalSourceHostHttpRequest) -> ExternalSourceHostHttpResponse,
@@ -30,6 +33,9 @@ class ExternalSourceHostDispatcher(
     suspend fun dispatch(request: ExternalSourceHostRequest): ExternalSourceHostResponse {
         val payload = when (request.operation) {
             ExternalSourceHostOperation.HTTP_REQUEST -> {
+                if (!requirements.requires(SourceHostCapability.NETWORK)) {
+                    throw SourceHostCapabilityException(SourceHostCapability.NETWORK)
+                }
                 val httpRequest = ExternalSourceHostProtocolCodec.decodeHttpRequest(request.payload)
                 ExternalSourceHostProtocolCodec.encodeHttpResponse(executeHttpRequest(httpRequest))
             }

@@ -155,6 +155,7 @@ private class AndroidExternalSourceHost(
         storage = storage,
         cookies = cookies,
         config = config,
+        requirements = requirements,
     )
 
     fun call(bytes: ByteArray): ByteArray {

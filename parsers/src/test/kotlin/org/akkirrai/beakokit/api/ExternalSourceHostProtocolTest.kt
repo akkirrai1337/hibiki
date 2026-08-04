@@ -41,6 +41,36 @@ class ExternalSourceHostProtocolTest {
     }
 
     @Test
+    fun dispatcher_rejects_http_without_network_capability() = runBlocking {
+        val request = ExternalSourceHostRequest(
+            requestId = "host-network-denied",
+            operation = ExternalSourceHostOperation.HTTP_REQUEST,
+            payload = ExternalSourceHostProtocolCodec.encodeHttpRequest(
+                ExternalSourceHostHttpRequest(
+                    method = "GET",
+                    url = "https://example.com/anime",
+                ),
+            ),
+        )
+        var executed = false
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = {
+                executed = true
+                error("Network request must be denied")
+            },
+            storage = null,
+            cookies = null,
+            config = null,
+            requirements = SourceHostRequirements(),
+        )
+
+        assertFailsWith<SourceHostCapabilityException> {
+            dispatcher.dispatch(request)
+        }
+        assertEquals(false, executed)
+    }
+
+    @Test
     fun http_request_and_response_round_trip_with_explicit_nulls() {
         val request = ExternalSourceHostRequest(
             requestId = "host-1",
