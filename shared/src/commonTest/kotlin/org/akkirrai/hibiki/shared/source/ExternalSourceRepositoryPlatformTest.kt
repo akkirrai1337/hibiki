@@ -82,6 +82,19 @@ class ExternalSourceRepositoryPlatformTest {
     }
 
     @Test
+    fun missingSourceConfigRemainsMissingThroughThePlatformBoundary() {
+        val sourceId = SourceId("external-source-missing-config")
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = emptyCoordinator(),
+            activePackageLoaderFactory = { error("Package loading is not used by this test") },
+            sourceConfigStore = MissingConfigStore,
+            closeResources = {},
+        )
+
+        assertEquals(null, platform.loadSourceConfigOrNull(sourceId))
+    }
+
+    @Test
     fun sourceConfigIsValidatedAgainstTheActiveManifestSchema() {
         val sourceId = SourceId("configured-source")
         val installed = InstalledSourcePackage(sourceId, "1.0.0", "package/path")
@@ -385,5 +398,15 @@ class ExternalSourceRepositoryPlatformTest {
         override fun remove(sourceId: SourceId) {
             states.remove(sourceId)
         }
+    }
+
+    private object MissingConfigStore : SourceConfigStore {
+        override fun load(sourceId: SourceId): SourceConfigState = SourceConfigState()
+
+        override fun loadOrNull(sourceId: SourceId): SourceConfigState? = null
+
+        override fun persistAtomically(sourceId: SourceId, state: SourceConfigState) = Unit
+
+        override fun remove(sourceId: SourceId) = Unit
     }
 }
