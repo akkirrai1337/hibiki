@@ -71,6 +71,9 @@ data class SourceConfigState(
 interface SourceConfigStore {
     fun load(sourceId: SourceId): SourceConfigState
 
+    /** Returns null when this store has no state for the source yet. */
+    fun loadOrNull(sourceId: SourceId): SourceConfigState? = load(sourceId)
+
     /** Implementations must replace one source namespace atomically. */
     fun persistAtomically(sourceId: SourceId, state: SourceConfigState)
 

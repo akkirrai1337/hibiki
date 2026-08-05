@@ -35,11 +35,15 @@ class SourceConfigStoreInstrumentedTest {
         val recreated = AndroidSourceConfigStore(context)
         assertEquals(firstState, recreated.load(first))
         assertEquals(secondState, recreated.load(second))
-        assertNull(recreated.load(SourceId("config-source-three")).values["base_url"])
+        val third = SourceId("config-source-three")
+        assertNull(recreated.loadOrNull(third))
+        recreated.persistAtomically(third, SourceConfigState())
+        assertEquals(SourceConfigState(), recreated.loadOrNull(third))
 
         recreated.remove(first)
         assertEquals(SourceConfigState(), AndroidSourceConfigStore(context).load(first))
         recreated.remove(second)
+        recreated.remove(third)
     }
 
     @Test

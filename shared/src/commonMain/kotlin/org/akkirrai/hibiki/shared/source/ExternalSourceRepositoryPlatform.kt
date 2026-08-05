@@ -95,7 +95,7 @@ class ExternalSourceRepositoryPlatform(
     }.load(sourceId)
 
     fun loadSourceConfigOrNull(sourceId: SourceId): SourceConfigState? =
-        sourceConfigStore?.load(sourceId)
+        sourceConfigStore?.loadOrNull(sourceId)
 
     fun persistSourceConfig(sourceId: SourceId, state: SourceConfigState) {
         val manifest = runCatching { loadActivePackage(sourceId)?.manifest }.getOrNull()

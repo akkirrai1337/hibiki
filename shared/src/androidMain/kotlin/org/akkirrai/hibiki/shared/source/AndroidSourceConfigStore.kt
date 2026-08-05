@@ -20,7 +20,11 @@ class AndroidSourceConfigStore(
     ),
 ) : SourceConfigStore {
     override fun load(sourceId: SourceId): SourceConfigState {
-        val raw = preferences.getString(key(sourceId), null) ?: return SourceConfigState()
+        return loadOrNull(sourceId) ?: SourceConfigState()
+    }
+
+    override fun loadOrNull(sourceId: SourceId): SourceConfigState? {
+        val raw = preferences.getString(key(sourceId), null) ?: return null
         return try {
             json.decodeFromString(raw)
         } catch (error: Exception) {
