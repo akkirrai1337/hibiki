@@ -9,11 +9,17 @@ class JvmSourcePackageModuleReader(
 ) : SourcePackageModuleReader {
     init {
         require(maxModuleBytes > 0) { "Maximum module size must be positive" }
+        require(maxModuleBytes < Int.MAX_VALUE) {
+            "Maximum module size must fit in a platform byte array"
+        }
     }
 
     override fun read(packagePath: String, entrypoint: String): ByteArray {
         require(SourcePackageLayoutValidator.isSafeRelativePath(entrypoint)) {
             "Unsafe source package entrypoint: $entrypoint"
+        }
+        require(entrypoint != "manifest.json") {
+            "Source package entrypoint must not be manifest.json"
         }
         val root = Path.of(packagePath).toAbsolutePath().normalize()
         val module = root.resolve(entrypoint).normalize()

@@ -23,6 +23,9 @@ class IosSourcePackageModuleReader(
         require(SourcePackageLayoutValidator.isSafeRelativePath(entrypoint)) {
             "Unsafe source package entrypoint: $entrypoint"
         }
+        require(entrypoint != "manifest.json") {
+            "Source package entrypoint must not be manifest.json"
+        }
         val rootPath = packagePath.trimEnd('/')
         val modulePath = "$rootPath/$entrypoint"
         if (containsSymbolicLink(rootPath, entrypoint)) {

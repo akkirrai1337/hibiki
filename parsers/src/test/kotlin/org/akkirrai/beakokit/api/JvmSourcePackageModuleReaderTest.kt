@@ -25,6 +25,16 @@ class JvmSourcePackageModuleReaderTest {
     }
 
     @Test
+    fun `reader rejects the package manifest as a runtime module`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        Files.writeString(packageDirectory.resolve("manifest.json"), "{}")
+
+        assertFailsWith<IllegalArgumentException> {
+            JvmSourcePackageModuleReader().read(packageDirectory.toString(), "manifest.json")
+        }
+    }
+
+    @Test
     fun `reader rejects modules over the configured limit`() {
         val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
         Files.write(packageDirectory.resolve("source.wasm"), byteArrayOf(0, 1, 2))
@@ -32,6 +42,13 @@ class JvmSourcePackageModuleReaderTest {
         assertFailsWith<SourcePackageStateException> {
             JvmSourcePackageModuleReader(maxModuleBytes = 2)
                 .read(packageDirectory.toString(), "source.wasm")
+        }
+    }
+
+    @Test
+    fun `reader rejects a limit that cannot fit in a byte array`() {
+        assertFailsWith<IllegalArgumentException> {
+            JvmSourcePackageModuleReader(maxModuleBytes = Long.MAX_VALUE)
         }
     }
 
