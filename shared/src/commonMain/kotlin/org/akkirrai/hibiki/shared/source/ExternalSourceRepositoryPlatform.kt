@@ -97,9 +97,14 @@ class ExternalSourceRepositoryPlatform(
     fun loadSourceConfigOrNull(sourceId: SourceId): SourceConfigState? =
         sourceConfigStore?.load(sourceId)
 
-    fun persistSourceConfig(sourceId: SourceId, state: SourceConfigState) = requireNotNull(sourceConfigStore) {
-        "Source config storage is not available on this platform"
-    }.persistAtomically(sourceId, state)
+    fun persistSourceConfig(sourceId: SourceId, state: SourceConfigState) {
+        val manifest = runCatching { loadActivePackage(sourceId)?.manifest }.getOrNull()
+            ?: coordinator.availableSourceManifest(sourceId)
+        manifest?.sourceInfo?.configSchema?.requireValid(state.asConfig())
+        requireNotNull(sourceConfigStore) {
+            "Source config storage is not available on this platform"
+        }.persistAtomically(sourceId, state)
+    }
 
     fun removeSourceConfig(sourceId: SourceId) = requireNotNull(sourceConfigStore) {
         "Source config storage is not available on this platform"

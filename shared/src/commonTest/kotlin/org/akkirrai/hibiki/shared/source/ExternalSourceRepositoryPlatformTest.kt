@@ -31,6 +31,10 @@ import org.akkirrai.beakokit.api.SourceRepositoryTransport
 import org.akkirrai.beakokit.api.SourceRuntime
 import org.akkirrai.beakokit.api.SourceConfigState
 import org.akkirrai.beakokit.api.SourceConfigStore
+import org.akkirrai.beakokit.api.SourceConfigField
+import org.akkirrai.beakokit.api.SourceConfigSchema
+import org.akkirrai.beakokit.api.SourceConfigValueKind
+import org.akkirrai.beakokit.api.SourceHostCapability
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
 class ExternalSourceRepositoryPlatformTest {
@@ -75,6 +79,112 @@ class ExternalSourceRepositoryPlatformTest {
         assertEquals(state, platform.loadSourceConfig(sourceId))
         platform.removeSourceConfig(sourceId)
         assertEquals(SourceConfigState(), platform.loadSourceConfig(sourceId))
+    }
+
+    @Test
+    fun sourceConfigIsValidatedAgainstTheActiveManifestSchema() {
+        val sourceId = SourceId("configured-source")
+        val installed = InstalledSourcePackage(sourceId, "1.0.0", "package/path")
+        val manifest = manifest(sourceId).copy(
+            hostCapabilities = setOf(SourceHostCapability.CONFIG),
+            sourceInfo = manifest(sourceId).sourceInfo!!.copy(
+                configSchema = SourceConfigSchema(
+                    listOf(
+                        SourceConfigField(
+                            key = "base_url",
+                            kind = SourceConfigValueKind.HTTPS_URL,
+                            required = true,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val packageStore = InMemoryStore(SourcePackageActivationState(active = installed))
+        val configStore = InMemoryConfigStore()
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = emptyCoordinator(),
+            activePackageLoaderFactory = { requestedId ->
+                ActiveExternalSourcePackageLoader(
+                    activationRepository = SourcePackageActivationRepository(requestedId, packageStore),
+                    manifestReader = SourcePackageManifestReader { manifest },
+                )
+            },
+            sourceConfigStore = configStore,
+            closeResources = {},
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            platform.persistSourceConfig(
+                sourceId,
+                SourceConfigState(values = mapOf("base_url" to "http://insecure.test")),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            platform.persistSourceConfig(sourceId, SourceConfigState())
+        }
+        val valid = SourceConfigState(values = mapOf("base_url" to "https://secure.test"))
+        platform.persistSourceConfig(sourceId, valid)
+        assertEquals(valid, platform.loadSourceConfig(sourceId))
+    }
+
+    @Test
+    fun sourceConfigUsesTheAvailableManifestSchemaBeforeActivation() = runTest {
+        val sourceId = SourceId("available-config-source")
+        val manifest = manifest(sourceId).copy(
+            hostCapabilities = setOf(SourceHostCapability.CONFIG),
+            sourceInfo = manifest(sourceId).sourceInfo!!.copy(
+                configSchema = SourceConfigSchema(
+                    listOf(
+                        SourceConfigField(
+                            key = "base_url",
+                            kind = SourceConfigValueKind.HTTPS_URL,
+                            required = true,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val endpoint = SourceRepositoryEndpoint("https://available.example/index.json")
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(object : SourceRepositoryStore {
+                    override fun load() = listOf(endpoint)
+
+                    override fun persistAtomically(
+                        repositories: List<SourceRepositoryEndpoint>,
+                    ) = Unit
+                }),
+                loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
+                    SourceRepositoryResponse(
+                        statusCode = 200,
+                        body = SourceRepositoryIndexCodec.encode(
+                            SourceRepositoryIndex(
+                                apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                                sources = listOf(manifest),
+                            ),
+                        ),
+                    )
+                }),
+            ),
+        )
+        val configStore = InMemoryConfigStore()
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = coordinator,
+            activePackageLoaderFactory = { error("The source is not active yet") },
+            sourceConfigStore = configStore,
+            closeResources = {},
+        )
+        coordinator.refresh(clientVersion = 1)
+
+        assertFailsWith<IllegalArgumentException> {
+            platform.persistSourceConfig(
+                sourceId,
+                SourceConfigState(values = mapOf("base_url" to "http://insecure.test")),
+            )
+        }
+        val valid = SourceConfigState(values = mapOf("base_url" to "https://secure.test"))
+        platform.persistSourceConfig(sourceId, valid)
+        assertEquals(valid, platform.loadSourceConfig(sourceId))
     }
 
     @Test
