@@ -24,6 +24,9 @@ import org.akkirrai.beakokit.api.SourceRuntime
 import org.akkirrai.beakokit.api.SourceHostCapability
 import org.akkirrai.beakokit.api.SourceHostNetworkPolicy
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
 import org.junit.Test
@@ -60,20 +63,19 @@ class ExternalSourcePackageValidationInstrumentedTest {
             val manifest = manifest()
             packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
             val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
-            val runtime = createAndroidExternalSourceRuntimeFactory(context).create(
-                sourcePackage = ActiveExternalSourcePackage(
-                    manifest = installedManifest,
-                    installed = InstalledSourcePackage(
-                        sourceId = installedManifest.sourceId,
-                        packageVersion = installedManifest.packageVersion,
-                        packagePath = packageDirectory.toString(),
-                    ),
-                ),
-                context = DefaultSourceContext(
-                    httpClient = client,
-                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            val activePackage = ActiveExternalSourcePackage(
+                manifest = installedManifest,
+                installed = InstalledSourcePackage(
+                    sourceId = installedManifest.sourceId,
+                    packageVersion = installedManifest.packageVersion,
+                    packagePath = packageDirectory.toString(),
                 ),
             )
+            val sourceContext = DefaultSourceContext(
+                httpClient = client,
+                preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+            )
+            val runtime = createAndroidExternalSourceRuntimeFactory(context).create(activePackage, sourceContext)
 
             val search = runtime.search(AnimeSearchRequest(query = "naruto", limit = 20))
             assertTrue(search.any { it.id == "413" })
@@ -88,6 +90,20 @@ class ExternalSourcePackageValidationInstrumentedTest {
             assertTrue(group.episodes.any { it.id == "episode-1" })
             val links = playbackRuntime.playerLinks(title, group, group.episodes.single())
             assertTrue(links.any { it.url.endsWith("720.m3u8") })
+
+            val source = activeExternalSourceRegistry(
+                packages = listOf(activePackage),
+                catalogCapabilities = { CatalogCapabilities.FULL },
+                runtimeFactory = createAndroidExternalSourceRuntimeFactory(context),
+            ).create(installedManifest.sourceId, sourceContext)
+            assertTrue(source.search("naruto").any { it.id == "413" })
+            assertTrue(source.getById("413").originalName == "Naruto")
+            val registeredPlayback = source as PlaybackSource
+            val registeredGroup = registeredPlayback.getPlaybackGroups(title).single()
+            assertTrue(
+                registeredPlayback.getPlayerLinks(title, registeredGroup, registeredGroup.episodes.single())
+                    .any { it.url.endsWith("720.m3u8") },
+            )
         } finally {
             client.close()
             module.deleteIfExists()
@@ -158,6 +174,44 @@ class ExternalSourcePackageValidationInstrumentedTest {
             validateAndroidExternalSourceRuntime(
                 ActiveExternalSourcePackage(manifest = installedManifest, installed = installed),
             )
+            assertTrue(module.toFile().exists())
+        } finally {
+            module.deleteIfExists()
+            packageDirectory.resolve("manifest.json").deleteIfExists()
+            packageDirectory.toFile().delete()
+        }
+    }
+
+    @Test
+    fun invalidWasmPackageFailsAndroidRuntimeValidation() = runBlocking {
+        val packageDirectory = InstrumentationRegistry.getInstrumentation().targetContext.cacheDir
+            .toPath()
+            .resolve("external-source-invalid-validation-${System.nanoTime()}")
+        val module = packageDirectory.resolve("source.wasm")
+        packageDirectory.toFile().mkdirs()
+        try {
+            val manifest = manifest()
+            packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
+            val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
+            module.writeBytes(byteArrayOf(0, 1, 2, 3))
+
+            var failed = false
+            try {
+                validateAndroidExternalSourceRuntime(
+                    ActiveExternalSourcePackage(
+                        manifest = installedManifest,
+                        installed = InstalledSourcePackage(
+                            sourceId = installedManifest.sourceId,
+                            packageVersion = installedManifest.packageVersion,
+                            packagePath = packageDirectory.toString(),
+                        ),
+                    ),
+                )
+            } catch (_: Throwable) {
+                failed = true
+            }
+
+            assertTrue(failed)
             assertTrue(module.toFile().exists())
         } finally {
             module.deleteIfExists()
