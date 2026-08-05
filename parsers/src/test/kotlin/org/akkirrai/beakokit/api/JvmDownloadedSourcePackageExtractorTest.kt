@@ -101,6 +101,26 @@ class JvmDownloadedSourcePackageExtractorTest {
         }
     }
 
+    @Test
+    fun `adapter rejects case-colliding archive entries before extraction`() = runBlocking {
+        val manifest = manifest()
+        val archive = zipOf(
+            "manifest.json" to Json.encodeToString(manifest).encodeToByteArray(),
+            "source.wasm" to byteArrayOf(0, 1, 2),
+            "SOURCE.WASM" to byteArrayOf(3, 4, 5),
+        )
+        val staging = Files.createTempDirectory("hibiki-source-staging-").resolve("package")
+
+        assertFailsWith<SourcePackageLayoutException> {
+            JvmDownloadedSourcePackageExtractor().extract(
+                downloaded = DownloadedSourcePackage(archive),
+                stagingPath = staging.toString(),
+                repositoryManifest = manifest,
+            )
+        }
+        assertEquals(false, Files.exists(staging))
+    }
+
     private fun zipOf(vararg entries: Pair<String, ByteArray>): ByteArray {
         val output = java.io.ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
