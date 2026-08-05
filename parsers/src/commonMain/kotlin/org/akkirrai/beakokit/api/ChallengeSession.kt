@@ -12,7 +12,9 @@ data class ChallengeSessionRequest(
     val forceRefresh: Boolean = false,
 ) {
     init {
-        require(isAbsoluteHttpsUrl(url)) { "Challenge URL must be an absolute HTTPS URL" }
+        require('#' !in url && isAbsoluteHttpsUrl(url)) {
+            "Challenge URL must be an absolute HTTPS URL without a fragment"
+        }
         require(requiredCookieNames.isNotEmpty()) { "At least one completion cookie is required" }
         require(requiredCookieNames.all(COOKIE_NAME::matches)) { "Completion cookie names are invalid" }
     }

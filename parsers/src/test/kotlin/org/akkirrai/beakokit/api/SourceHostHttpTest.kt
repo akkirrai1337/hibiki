@@ -75,6 +75,9 @@ class SourceHostHttpTest {
             SourceHostHttpRequest("GET", "https://example.com\nX-Injected: true")
         }
         assertFailsWith<IllegalArgumentException> {
+            SourceHostHttpRequest("GET", "https://example.com/path#fragment")
+        }
+        assertFailsWith<IllegalArgumentException> {
             SourceHostHttpRequest(
                 "GET",
                 "https://example.com",

@@ -14,6 +14,7 @@ data class SourceHostHttpRequest(
     init {
         require(method.isNotBlank()) { "HTTP method must not be blank" }
         require(url.isNotBlank()) { "HTTP URL must not be blank" }
+        require('#' !in url) { "HTTP URL must not contain a fragment" }
         requireHttpToken(method, "HTTP method")
         requireSafeHttpField(url, "HTTP URL")
         requireSafeHttpHeaders(headers)

@@ -17,6 +17,9 @@ class ChallengeSessionTest {
         assertFailsWith<IllegalArgumentException> {
             ChallengeSessionRequest("https://source.test", setOf("bad cookie"))
         }
+        assertFailsWith<IllegalArgumentException> {
+            ChallengeSessionRequest("https://source.test/challenge#fragment", setOf("cf_clearance"))
+        }
     }
 
     @Test

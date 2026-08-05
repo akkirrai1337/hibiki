@@ -133,6 +133,28 @@ class SourceManifestTest {
     }
 
     @Test
+    fun `manifest rejects fragments in source metadata URLs`() {
+        val invalid = manifest().copy(
+            sourceInfo = SourceManifestInfo(
+                displayName = "External source",
+                languages = setOf(SourceLanguage.ENGLISH),
+                primaryLanguage = SourceLanguage.ENGLISH,
+                website = "https://example.com/source#website",
+                iconUrl = "https://example.com/icon.png#icon",
+            ),
+        )
+
+        assertContains(
+            invalid.violations(clientVersion = 1, supportedApiVersion = SourceApi.VERSION),
+            "Source website must use HTTPS",
+        )
+        assertContains(
+            invalid.violations(clientVersion = 1, supportedApiVersion = SourceApi.VERSION),
+            "Source icon URL must use HTTPS",
+        )
+    }
+
+    @Test
     fun `manifest rejects unsafe package entrypoint before download`() {
         val invalid = manifest().copy(entrypoint = "../source.wasm")
 
