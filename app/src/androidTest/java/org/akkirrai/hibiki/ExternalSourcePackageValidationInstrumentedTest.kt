@@ -256,7 +256,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
                 respond(archive.bytes, status = HttpStatusCode.OK)
             }
         })
-        val platform = createAndroidExternalSourceRepositoryPlatform(
+        var platform = createAndroidExternalSourceRepositoryPlatform(
             context = InstrumentationRegistry.getInstrumentation().targetContext,
             httpClient = client,
         )
@@ -271,6 +271,15 @@ class ExternalSourcePackageValidationInstrumentedTest {
             assertTrue(active.installed.packageVersion == repositoryManifest.packageVersion)
             assertTrue(active.installed.artifactSha256 == archive.sha256)
             assertTrue(active.installed.packagePath.contains(sourceId.value))
+
+            platform.close()
+            platform = createAndroidExternalSourceRepositoryPlatform(
+                context = InstrumentationRegistry.getInstrumentation().targetContext,
+                httpClient = client,
+            )
+            val restored = requireNotNull(platform.loadActivePackage(sourceId))
+            assertTrue(restored.installed.packageVersion == repositoryManifest.packageVersion)
+            assertTrue(restored.installed.artifactSha256 == archive.sha256)
         } finally {
             platform.close()
             client.close()
@@ -311,7 +320,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
                 respond(current.archive.bytes, status = HttpStatusCode.OK)
             }
         })
-        val platform = createAndroidExternalSourceRepositoryPlatform(
+        var platform = createAndroidExternalSourceRepositoryPlatform(
             context = InstrumentationRegistry.getInstrumentation().targetContext,
             httpClient = client,
         )
@@ -329,6 +338,13 @@ class ExternalSourcePackageValidationInstrumentedTest {
             val rollback = platform.rollbackActivePackage(sourceId)
 
             assertTrue(rollback.active?.packageVersion == "1.0.0")
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+
+            platform.close()
+            platform = createAndroidExternalSourceRepositoryPlatform(
+                context = InstrumentationRegistry.getInstrumentation().targetContext,
+                httpClient = client,
+            )
             assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
         } finally {
             platform.close()
