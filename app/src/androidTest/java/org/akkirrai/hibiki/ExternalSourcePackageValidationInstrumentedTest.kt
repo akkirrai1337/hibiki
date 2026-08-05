@@ -325,8 +325,6 @@ class ExternalSourcePackageValidationInstrumentedTest {
         try {
             platform.coordinator.addRepository(SourceRepositoryEndpoint("https://example.com/index.json"))
             platform.coordinator.refresh()
-            platform.installAvailablePackage(sourceId) {}
-
             val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
                 platform = platform,
                 catalogCapabilities = { CatalogCapabilities.FULL },
@@ -340,7 +338,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
                     )
                 },
             )
-            runtimeCoordinator.refresh()
+            runtimeCoordinator.installAvailablePackage(sourceId) {}
 
             val source = runtimeCoordinator.createActiveSource(
                 sourceId = sourceId,
