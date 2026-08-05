@@ -82,7 +82,13 @@ data class ExternalSourceHostResponse(
     }
 
     fun requirePayload(expectedRequestId: String): JsonObject {
-        require(requestId == expectedRequestId) { "Host response request ID does not match" }
+        if (requestId != expectedRequestId) {
+            throw SourceException(
+                message = "Host response request ID does not match",
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_RESPONSE,
+            )
+        }
         return payload ?: when (errorCode) {
             ExternalSourceHostErrorCode.CANCELLED -> throw CancellationException(
                 errorMessage?.takeIf(String::isNotBlank) ?: "Host request was cancelled",
@@ -395,8 +401,16 @@ object ExternalSourceHostProtocolCodec {
 }
 
 private fun requireProtocolPayloadSize(bytes: ByteArray, limit: Long, label: String) {
-    require(bytes.size.toLong() <= limit) {
-        "External source host $label exceeds $limit bytes"
+    if (bytes.size.toLong() > limit) {
+        throw SourceException(
+            message = "External source host $label exceeds $limit bytes",
+            kind = SourceErrorKind.PARSE,
+            code = if (label == "request") {
+                SourceErrorCode.INVALID_REQUEST
+            } else {
+                SourceErrorCode.INVALID_RESPONSE
+            },
+        )
     }
 }
 

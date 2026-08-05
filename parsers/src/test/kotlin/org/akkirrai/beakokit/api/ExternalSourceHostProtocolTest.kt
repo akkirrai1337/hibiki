@@ -318,9 +318,10 @@ class ExternalSourceHostProtocolTest {
             ),
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        val error = assertFailsWith<SourceException> {
             response.requirePayload("host-1")
         }
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
     }
 
     @Test
@@ -423,16 +424,19 @@ class ExternalSourceHostProtocolTest {
 
     @Test
     fun protocol_codec_rejects_oversized_envelopes_before_decoding() {
-        assertFailsWith<IllegalArgumentException> {
+        val requestError = assertFailsWith<SourceException> {
             ExternalSourceHostProtocolCodec.decodeRequest(
                 ByteArray((EXTERNAL_SOURCE_HOST_MAX_REQUEST_BYTES + 1).toInt()),
             )
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertEquals(SourceErrorCode.INVALID_REQUEST, requestError.code)
+
+        val responseError = assertFailsWith<SourceException> {
             ExternalSourceHostProtocolCodec.decodeResponse(
                 ByteArray((EXTERNAL_SOURCE_HOST_MAX_RESPONSE_BYTES + 1).toInt()),
             )
         }
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, responseError.code)
     }
 
     @Test

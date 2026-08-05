@@ -1,5 +1,7 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.coroutines.CancellationException
+
 /** Runtime-neutral HTTP request exposed by the host. */
 data class SourceHostHttpRequest(
     val method: String,
@@ -79,7 +81,20 @@ abstract class SourceHostHttpClient : SourceHostAccess {
     suspend fun execute(request: SourceHostHttpRequest): SourceHostHttpResponse {
         require(SourceHostCapability.NETWORK)
         requirements.networkPolicy.requireAllowed(request.url)
-        val response = executeNetwork(request)
+        val response = try {
+            executeNetwork(request)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "Host HTTP request failed",
+                cause = error,
+                kind = SourceErrorKind.NETWORK,
+                code = SourceErrorCode.NETWORK_FAILURE,
+            )
+        }
         requireHttpResponseWithinLimit(response.body, request.maxResponseBytes)
         return response
     }

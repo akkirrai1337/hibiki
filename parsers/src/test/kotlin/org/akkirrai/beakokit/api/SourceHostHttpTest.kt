@@ -127,6 +127,18 @@ class SourceHostHttpTest {
         }
     }
 
+    @Test
+    fun `http client normalizes platform network failures`() = runBlocking {
+        val client = FailingHttpClient(requirements(SourceHostCapability.NETWORK))
+
+        val error = assertFailsWith<SourceException> {
+            client.execute(SourceHostHttpRequest(method = "GET", url = "https://example.com"))
+        }
+
+        assertEquals(SourceErrorCode.NETWORK_FAILURE, error.code)
+        assertEquals("Host HTTP request failed", error.message)
+    }
+
     private class FakeHttpClient(
         override val requirements: SourceHostRequirements,
         private val responseBody: String = "ok",
@@ -136,6 +148,14 @@ class SourceHostHttpTest {
         protected override suspend fun executeNetwork(request: SourceHostHttpRequest): SourceHostHttpResponse {
             lastRequest = request
             return SourceHostHttpResponse(statusCode = 200, body = responseBody)
+        }
+    }
+
+    private class FailingHttpClient(
+        override val requirements: SourceHostRequirements,
+    ) : SourceHostHttpClient() {
+        override suspend fun executeNetwork(request: SourceHostHttpRequest): SourceHostHttpResponse {
+            error("network unavailable")
         }
     }
 
