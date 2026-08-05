@@ -76,16 +76,16 @@ interface SourceHostAccess {
     }
 }
 
-class SourceHostCapabilityException(
+open class SourceHostCapabilityException(
     val capability: SourceHostCapability,
+    message: String = "Source host capability is not declared: ${capability.name}",
 ) : SourceException(
-    message = "Source host capability is not declared: ${capability.name}",
+    message = message,
     kind = SourceErrorKind.UNAVAILABLE,
     code = SourceErrorCode.HOST_ACCESS_DENIED,
 )
 
-class SourceHostNetworkPolicyException : SourceException(
+class SourceHostNetworkPolicyException : SourceHostCapabilityException(
+    capability = SourceHostCapability.NETWORK,
     message = "Source network URL is not allowed",
-    kind = SourceErrorKind.UNAVAILABLE,
-    code = SourceErrorCode.HOST_ACCESS_DENIED,
 )

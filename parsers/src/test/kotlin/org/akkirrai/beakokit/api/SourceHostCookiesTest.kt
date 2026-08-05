@@ -27,6 +27,15 @@ class SourceHostCookiesTest {
     }
 
     @Test
+    fun `cookies reject origins outside the network policy`() = runBlocking {
+        val cookies = FakeCookies(requirements())
+
+        assertFailsWith<SourceHostNetworkPolicyException> {
+            cookies.forUrl("https://other.example.com")
+        }
+    }
+
+    @Test
     fun `cookie limits and blank urls are rejected`() = runBlocking {
         val cookies = FakeCookies(requirements())
 
