@@ -126,4 +126,26 @@ class SourceConfigSchemaTest {
             )
         }
     }
+
+    @Test
+    fun `schema rejects allowed values with surrounding whitespace`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceConfigField(
+                key = "mode",
+                kind = SourceConfigValueKind.TEXT,
+                allowedValues = setOf(" fast"),
+            )
+        }
+    }
+
+    @Test
+    fun `schema rejects title keys with surrounding whitespace`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourceConfigField(
+                key = "mode",
+                kind = SourceConfigValueKind.TEXT,
+                titleKey = " settings.mode",
+            )
+        }
+    }
 }
