@@ -17,6 +17,22 @@ import org.akkirrai.beakokit.model.PlayerType
 
 class ProtocolBackedExternalSourceRuntimeTest {
     @Test
+    fun `invalid request id factory result becomes an invalid request error`() = runBlocking {
+        val runtime = ProtocolBackedExternalSourceRuntime(
+            transport = ExternalSourceRuntimeTransport { _, _ -> error("Transport must not be called") },
+            payloadCodec = AnimeTitleRuntimePayloadCodec,
+            requestIdFactory = { "" },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            runtime.details("title-1")
+        }
+
+        assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
+        assertEquals("Unable to create external source runtime request", error.message)
+    }
+
+    @Test
     fun searchSendsOperationAndDecodesPayload() = runBlocking {
         var received: ExternalSourceRuntimeRequest? = null
         var receivedLimits: ExternalSourceRuntimeCallLimits? = null
@@ -167,6 +183,7 @@ class ProtocolBackedExternalSourceRuntimeTest {
         }
 
         assertEquals(SourceErrorKind.PARSE, exception.kind)
+        assertEquals(SourceErrorCode.INVALID_RESPONSE, exception.code)
     }
 
     @Test

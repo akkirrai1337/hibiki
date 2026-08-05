@@ -1,5 +1,7 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.coroutines.CancellationException
+
 /** Creates the platform bridge for one validated package module. */
 fun interface ExternalSourceRuntimeNativeBridgeFactory {
     fun create(
@@ -33,17 +35,29 @@ class NativeBridgeExternalSourceRuntimeFactory(
         val declaresPlayback = SourceCapability.PLAYBACK in sourcePackage.manifest.capabilities
         val playbackPayloadCodec = if (declaresPlayback) requirePlaybackCodec() else null
         val runtimePayloadCodec = playbackPayloadCodec ?: payloadCodec
-        val transport = NativeBridgeExternalSourceRuntimeTransport(
-                bridge = bridgeFactory.create(
-                    sourcePackage = sourcePackage,
-                    context = context,
-                    module = moduleReader.read(
-                        packagePath = sourcePackage.installed.packagePath,
-                        entrypoint = sourcePackage.manifest.entrypoint,
-                    ),
-                    hostRequirements = sourcePackage.manifest.hostRequirements(),
+        val bridge = try {
+            bridgeFactory.create(
+                sourcePackage = sourcePackage,
+                context = context,
+                module = moduleReader.read(
+                    packagePath = sourcePackage.installed.packagePath,
+                    entrypoint = sourcePackage.manifest.entrypoint,
                 ),
+                hostRequirements = sourcePackage.manifest.hostRequirements(),
             )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "Unable to create native runtime bridge",
+                cause = error,
+                kind = SourceErrorKind.UNKNOWN,
+                code = SourceErrorCode.RUNTIME_FAILURE,
+            )
+        }
+        val transport = NativeBridgeExternalSourceRuntimeTransport(bridge)
         return when {
             declaresLatest && declaresPlayback -> ProtocolBackedExternalSourceLatestPlaybackRuntime(
                 transport = transport,

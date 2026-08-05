@@ -4,6 +4,7 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -17,6 +18,43 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 
 class InstalledExternalSourcePipelineTest {
+    @Test
+    fun native_bridge_creation_failures_are_reported_as_runtime_source_errors() {
+        val manifest = manifest()
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest,
+            installed = InstalledSourcePackage(
+                sourceId = manifest.sourceId,
+                packageVersion = manifest.packageVersion,
+                packagePath = "package",
+            ),
+        )
+        val runtimeFactory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                error("bridge initialization failed")
+            },
+            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(0, 97, 115, 109) },
+            requestIdFactory = { "request" },
+        )
+        val client = HttpClient(MockEngine { error("Network is not expected in this test") })
+        try {
+            val error = assertFailsWith<SourceException> {
+                runtimeFactory.create(
+                    sourcePackage = activePackage,
+                    context = DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                    ),
+                )
+            }
+
+            assertEquals(SourceErrorCode.RUNTIME_FAILURE, error.code)
+            assertEquals("Unable to create native runtime bridge", error.message)
+        } finally {
+            client.close()
+        }
+    }
+
     @Test
     fun installed_package_reaches_catalog_and_playback_through_the_external_registry() = runBlocking {
         val manifest = manifest()

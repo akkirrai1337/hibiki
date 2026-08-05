@@ -88,11 +88,22 @@ open class ProtocolBackedExternalSourceRuntime(
         payload: JsonObject,
         decode: (JsonObject) -> T,
     ): T {
-        val request = ExternalSourceRuntimeRequest(
-            requestId = requestIdFactory(),
-            operation = operation,
-            payload = payload,
-        )
+        val request = try {
+            ExternalSourceRuntimeRequest(
+                requestId = requestIdFactory(),
+                operation = operation,
+                payload = payload,
+            )
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "Unable to create external source runtime request",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+                code = SourceErrorCode.INVALID_REQUEST,
+            )
+        }
         requireRequestWithinLimit(request)
         val response = try {
             withTimeout(callLimits.timeoutMillis) {
