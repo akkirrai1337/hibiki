@@ -31,3 +31,14 @@ data class DefaultSourceContext(
         require(preferredLanguages.isNotEmpty()) { "At least one preferred language is required" }
     }
 }
+
+/** Keeps the host services of a context while replacing only source-scoped configuration. */
+fun SourceContext.withConfig(config: SourceConfig): SourceContext = DefaultSourceContext(
+    httpClient = httpClient,
+    preferredLanguages = preferredLanguages,
+    config = config,
+    logger = logger,
+    sourceHealthReporter = sourceHealthReporter,
+    challengeSessionProvider = challengeSessionProvider,
+    sourceExecutionPolicy = sourceExecutionPolicy,
+)

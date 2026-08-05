@@ -23,6 +23,8 @@ import org.akkirrai.beakokit.api.ExternalSourceRuntime
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.InstalledSourcePackage
 import org.akkirrai.beakokit.api.SourceApi
+import org.akkirrai.beakokit.api.SourceConfigState
+import org.akkirrai.beakokit.api.SourceConfigStore
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
@@ -55,6 +57,52 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 
 class ExternalSourceRuntimeCoordinatorTest {
+    @Test
+    fun persistedConfigIsUsedDuringRollbackRuntimeInitialization() = runTest {
+        val sourceId = SourceId("external-source")
+        val persistedConfig = SourceConfigState(
+            values = mapOf("base_url" to "https://persisted.test"),
+            secrets = mapOf("token" to "persisted-secret"),
+        )
+        val platform = platformFor(
+            sourceId = sourceId,
+            installedPreviousPackageVersion = "0.9.0",
+            sourceConfigState = persistedConfig,
+        )
+        val client = HttpClient()
+        var initializedBaseUrl: String? = null
+        var initializedToken: String? = null
+        val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
+            platform = platform,
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, _ ->
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+            sourceContextFactory = {
+                DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                    config = SourceConfigState(values = mapOf("base_url" to "https://default.test"))
+                        .asConfig(),
+                )
+            },
+            runtimeInitializer = { _, context ->
+                initializedBaseUrl = context.config.value("base_url")
+                initializedToken = context.config.secret("token")
+            },
+        )
+
+        runtimeCoordinator.rollbackActivePackage(sourceId)
+
+        assertEquals("https://persisted.test", initializedBaseUrl)
+        assertEquals("persisted-secret", initializedToken)
+        client.close()
+    }
+
     @Test
     fun refreshBuildsExternalRegistryWithoutChangingTheBuiltInPath() = runTest {
         val sourceId = SourceId("external-source")
@@ -749,6 +797,7 @@ class ExternalSourceRuntimeCoordinatorTest {
         installedPreviousPackageVersion: String? = null,
         repositoryPackageSha256: String = "a".repeat(64),
         installedPackageSha256: String = repositoryPackageSha256,
+        sourceConfigState: SourceConfigState? = null,
     ): ExternalSourceRepositoryPlatform {
         val endpoint = SourceRepositoryEndpoint("https://example.test/index.json")
         val repositoryEndpoints = mutableListOf(endpoint)
@@ -821,6 +870,7 @@ class ExternalSourceRuntimeCoordinatorTest {
             activationRepositoryFactory = { requestedId ->
                 SourcePackageActivationRepository(requestedId, activationStore)
             },
+            sourceConfigStore = sourceConfigState?.let(::InMemoryConfigStore),
             closeResources = {},
         )
     }
@@ -874,6 +924,20 @@ class ExternalSourceRuntimeCoordinatorTest {
             state: SourcePackageActivationState,
         ) {
             this.state = state
+        }
+    }
+
+    private class InMemoryConfigStore(
+        private var state: SourceConfigState,
+    ) : SourceConfigStore {
+        override fun load(sourceId: SourceId): SourceConfigState = state
+
+        override fun persistAtomically(sourceId: SourceId, state: SourceConfigState) {
+            this.state = state
+        }
+
+        override fun remove(sourceId: SourceId) {
+            state = SourceConfigState()
         }
     }
 }

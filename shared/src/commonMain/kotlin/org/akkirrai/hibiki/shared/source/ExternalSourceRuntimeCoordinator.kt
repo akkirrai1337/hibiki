@@ -14,6 +14,7 @@ import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceContext
+import org.akkirrai.beakokit.api.withConfig
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -138,7 +139,7 @@ class ExternalSourceRuntimeCoordinator(
             activation = platform.installAvailablePackage(
                 sourceId = sourceId,
                 initialize = initialize,
-                initializeCandidate = sourceContextFactory?.let { contextFactory ->
+                initializeCandidate = sourceContextFactory?.let {
                     { candidate ->
                         val manifest = platform.coordinator.availableSourceManifest(sourceId)
                             ?: throw SourcePackageStateException(
@@ -148,7 +149,7 @@ class ExternalSourceRuntimeCoordinator(
                             manifest = manifest,
                             installed = candidate,
                         )
-                        val context = contextFactory(sourceId)
+                        val context = sourceContextFor(sourceId)
                         runtimeInitializer(sourcePackage, context)
                         runtimeFactory.create(sourcePackage, context)
                     }
@@ -182,8 +183,8 @@ class ExternalSourceRuntimeCoordinator(
         }
         try {
             val previous = platform.loadPreviousActivePackage(sourceId)
-            sourceContextFactory?.let { contextFactory ->
-                val context = contextFactory(sourceId)
+            sourceContextFactory?.let {
+                val context = sourceContextFor(sourceId)
                 runtimeInitializer(previous, context)
                 runtimeFactory.create(previous, context)
             }
@@ -208,6 +209,14 @@ class ExternalSourceRuntimeCoordinator(
             throw error
         }
         }
+
+    private fun sourceContextFor(sourceId: SourceId): SourceContext {
+        val baseContext = requireNotNull(sourceContextFactory) {
+            "External source context factory is not configured"
+        }(sourceId)
+        val persistedConfig = platform.loadSourceConfigOrNull(sourceId) ?: return baseContext
+        return baseContext.withConfig(persistedConfig.asConfig())
+    }
 
     /**
      * Returns installed packages whose repository manifest differs from the active artifact.

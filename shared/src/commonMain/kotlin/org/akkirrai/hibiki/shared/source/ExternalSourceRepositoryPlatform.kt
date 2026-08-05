@@ -94,6 +94,9 @@ class ExternalSourceRepositoryPlatform(
         "Source config storage is not available on this platform"
     }.load(sourceId)
 
+    fun loadSourceConfigOrNull(sourceId: SourceId): SourceConfigState? =
+        sourceConfigStore?.load(sourceId)
+
     fun persistSourceConfig(sourceId: SourceId, state: SourceConfigState) = requireNotNull(sourceConfigStore) {
         "Source config storage is not available on this platform"
     }.persistAtomically(sourceId, state)

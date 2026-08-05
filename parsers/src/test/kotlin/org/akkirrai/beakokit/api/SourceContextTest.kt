@@ -36,4 +36,29 @@ class SourceContextTest {
         assertNull(config.value("token"))
         assertNull(config.secret("base_url"))
     }
+
+    @Test
+    fun `withConfig preserves host services while replacing source config`() {
+        val client = HttpClient(MockEngine { error("Network must not be called") })
+        try {
+            val reporter = InMemorySourceHealthReporter()
+            val context = DefaultSourceContext(
+                httpClient = client,
+                preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                config = MapSourceConfig(values = mapOf("old" to "value")),
+                sourceHealthReporter = reporter,
+            )
+            val replaced = context.withConfig(
+                MapSourceConfig(values = mapOf("new" to "value")),
+            )
+
+            assertEquals(client, replaced.httpClient)
+            assertEquals(context.preferredLanguages, replaced.preferredLanguages)
+            assertEquals(reporter, replaced.sourceHealthReporter)
+            assertEquals("value", replaced.config.value("new"))
+            assertNull(replaced.config.value("old"))
+        } finally {
+            client.close()
+        }
+    }
 }
