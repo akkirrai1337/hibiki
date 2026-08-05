@@ -11,6 +11,7 @@ class SourcePackageValidator(
     private val clientVersion: Int,
     private val supportedApiVersion: Int = SourceApi.VERSION,
     private val supportedHostApiVersion: Int = SourceHostApi.VERSION,
+    private val runtimeSupportPolicy: SourceRuntimeSupportPolicy = SourceRuntimeSupportPolicy.WASMTIME_WASI,
     private val maxArtifactSizeBytes: Long = DEFAULT_MAX_ARTIFACT_SIZE_BYTES,
     private val trustPolicy: SourcePackageTrustPolicy = SourcePackageTrustPolicy.TRUSTED_CATALOG,
 ) {
@@ -24,6 +25,9 @@ class SourcePackageValidator(
         artifact: SourcePackageArtifact,
     ): List<String> = buildList {
         addAll(manifest.violations(clientVersion, supportedApiVersion, supportedHostApiVersion))
+        if (!runtimeSupportPolicy.supports(manifest.runtime)) {
+            add("Unsupported source runtime: ${manifest.runtime.id}/${manifest.runtime.abi}")
+        }
         if (artifact.sizeBytes <= 0) add("Downloaded artifact size must be positive")
         if (artifact.sizeBytes > maxArtifactSizeBytes) {
             add("Downloaded artifact exceeds the maximum allowed size")

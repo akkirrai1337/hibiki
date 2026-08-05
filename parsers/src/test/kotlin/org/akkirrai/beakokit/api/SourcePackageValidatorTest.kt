@@ -6,6 +6,35 @@ import kotlin.test.assertFailsWith
 
 class SourcePackageValidatorTest {
     @Test
+    fun `custom runtime policy can accept a platform specific runtime`() {
+        val manifest = manifest().copy(runtime = SourceRuntime("custom-runtime", "custom-abi"))
+        val validator = SourcePackageValidator(
+            clientVersion = 3,
+            runtimeSupportPolicy = SourceRuntimeSupportPolicy { runtime ->
+                runtime == manifest.runtime
+            },
+        )
+
+        validator.requireValid(
+            manifest,
+            SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+        )
+    }
+
+    @Test
+    fun `unsupported runtime is rejected before package activation`() {
+        val manifest = manifest().copy(runtime = SourceRuntime("unsupported-runtime", "unknown-abi"))
+
+        assertContains(
+            SourcePackageValidator(clientVersion = 3).violations(
+                manifest,
+                SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+            ),
+            "Unsupported source runtime: unsupported-runtime/unknown-abi",
+        )
+    }
+
+    @Test
     fun `matching artifact metadata is accepted`() {
         val manifest = manifest()
         SourcePackageValidator(clientVersion = 3).requireValid(
