@@ -2,8 +2,8 @@ package org.akkirrai.hibiki.shared.player
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.akkirrai.hibiki.shared.model.EpisodeProgressStatus
-import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.shared.player.model.EpisodeProgressStatus
+import org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress
 
 class EpisodeFormattingTest {
     @Test

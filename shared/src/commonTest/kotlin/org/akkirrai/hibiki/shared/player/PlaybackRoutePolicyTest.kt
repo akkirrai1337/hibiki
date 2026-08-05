@@ -27,7 +27,7 @@ class PlaybackRoutePolicyTest {
     }
 }
 
-private fun testWatchSource() = org.akkirrai.hibiki.shared.model.WatchSource(
+private fun testWatchSource() = org.akkirrai.hibiki.shared.player.model.WatchSource(
     sourceId = "source-1",
     title = "Source",
     episodeCount = 1,

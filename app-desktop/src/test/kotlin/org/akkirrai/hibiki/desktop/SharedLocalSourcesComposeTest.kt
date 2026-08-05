@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.source.AppLocalSourcesScreen
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.SourceSearchSectionState
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

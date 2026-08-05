@@ -1,9 +1,9 @@
 package org.akkirrai.hibiki.shared.profile
 
-import org.akkirrai.hibiki.shared.model.EpisodeWatchProgress
-import org.akkirrai.hibiki.shared.model.PlaybackContext
-import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.model.PlaybackSelection
+import org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.shared.player.model.PlaybackContext
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
 import kotlin.time.Clock
 import kotlinx.datetime.toLocalDateTime
 import platform.Foundation.NSUserDefaults

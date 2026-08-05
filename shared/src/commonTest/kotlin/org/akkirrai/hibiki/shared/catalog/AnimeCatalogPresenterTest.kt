@@ -1,4 +1,6 @@
 package org.akkirrai.hibiki.shared.catalog
+import org.akkirrai.hibiki.shared.catalog.presentation.*
+import org.akkirrai.hibiki.shared.catalog.sort.*
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -7,8 +9,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AnimeCatalogPresenterTest {

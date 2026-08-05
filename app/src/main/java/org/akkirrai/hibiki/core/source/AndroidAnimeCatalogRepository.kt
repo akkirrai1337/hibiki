@@ -7,11 +7,11 @@ import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPage
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
-import org.akkirrai.hibiki.shared.model.AnimeCatalogCapabilities
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilter
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogCapabilities
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 
 /** Android data-source adapter for the platform-neutral catalog contract. */
 class AndroidAnimeCatalogRepository(

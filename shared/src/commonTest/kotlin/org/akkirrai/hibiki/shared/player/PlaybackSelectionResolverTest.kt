@@ -2,7 +2,7 @@ package org.akkirrai.hibiki.shared.player
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.akkirrai.hibiki.shared.model.PlaybackSelection
+import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
 
 class PlaybackSelectionResolverTest {
     @Test

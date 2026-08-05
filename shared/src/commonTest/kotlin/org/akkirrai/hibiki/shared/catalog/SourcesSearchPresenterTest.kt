@@ -1,4 +1,6 @@
 package org.akkirrai.hibiki.shared.catalog
+import org.akkirrai.hibiki.shared.catalog.presentation.*
+import org.akkirrai.hibiki.shared.catalog.sort.*
 
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -6,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 
 class SourcesSearchPresenterTest {

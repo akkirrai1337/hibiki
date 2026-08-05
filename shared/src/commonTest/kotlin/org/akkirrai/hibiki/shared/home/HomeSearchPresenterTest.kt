@@ -1,4 +1,10 @@
 package org.akkirrai.hibiki.shared.home
+import org.akkirrai.hibiki.shared.home.data.*
+import org.akkirrai.hibiki.shared.home.model.*
+import org.akkirrai.hibiki.shared.home.presentation.*
+import org.akkirrai.hibiki.shared.home.screen.*
+import org.akkirrai.hibiki.shared.home.state.*
+import org.akkirrai.hibiki.shared.home.ui.*
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
@@ -8,11 +14,11 @@ import kotlin.test.assertIs
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogPage
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
-import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterOption
-import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
-import org.akkirrai.hibiki.shared.model.SearchUiState
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption
+import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.search.model.SearchUiState
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class HomeSearchPresenterTest {

@@ -1,9 +1,11 @@
 package org.akkirrai.hibiki.shared.catalog
+import org.akkirrai.hibiki.shared.catalog.presentation.*
+import org.akkirrai.hibiki.shared.catalog.sort.*
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.test.runTest
-import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 
 class AnimeCatalogRepositoryTest {
     @Test

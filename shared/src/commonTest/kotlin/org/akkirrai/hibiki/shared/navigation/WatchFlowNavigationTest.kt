@@ -2,7 +2,7 @@ package org.akkirrai.hibiki.shared.navigation
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class WatchFlowNavigationTest {
     @Test

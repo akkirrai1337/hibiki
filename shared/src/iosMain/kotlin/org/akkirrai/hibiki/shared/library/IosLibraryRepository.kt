@@ -1,9 +1,9 @@
 package org.akkirrai.hibiki.shared.library
 
-import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.AnimeRating
-import org.akkirrai.hibiki.shared.model.AnimeTrailer
-import org.akkirrai.hibiki.shared.model.RelatedAnime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.AnimeRating
+import org.akkirrai.hibiki.shared.catalog.model.AnimeTrailer
+import org.akkirrai.hibiki.shared.catalog.model.RelatedAnime
 import platform.Foundation.NSUserDefaults
 
 internal class IosLibraryRepository(

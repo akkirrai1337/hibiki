@@ -1,10 +1,11 @@
 package org.akkirrai.hibiki.desktop
+import org.akkirrai.hibiki.desktop.data.*
 
 import java.util.UUID
 import java.util.prefs.Preferences
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.hibiki.shared.library.LibraryCategory
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

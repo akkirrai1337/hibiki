@@ -17,7 +17,7 @@ import org.akkirrai.hibiki.shared.library.AppLibraryScreenLabels
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.library.LibraryUiState
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

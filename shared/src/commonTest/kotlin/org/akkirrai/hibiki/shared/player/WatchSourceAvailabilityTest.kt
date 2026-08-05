@@ -3,8 +3,8 @@ package org.akkirrai.hibiki.shared.player
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.WatchSource
-import org.akkirrai.hibiki.shared.model.WatchSourceSelection
+import org.akkirrai.hibiki.shared.player.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSourceSelection
 
 class WatchSourceAvailabilityTest {
     @Test

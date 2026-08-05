@@ -1,5 +1,10 @@
 package org.akkirrai.hibiki.desktop
 
+import org.akkirrai.hibiki.desktop.data.*
+import org.akkirrai.hibiki.desktop.player.*
+import org.akkirrai.hibiki.desktop.settings.*
+import org.akkirrai.hibiki.desktop.source.*
+
 import java.awt.Desktop
 import java.net.URI
 import java.nio.file.Paths
@@ -15,7 +20,11 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.unit.dp
-import org.akkirrai.hibiki.shared.app.HibikiApp
+import org.akkirrai.hibiki.shared.app.screen.HibikiApp
+import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
+import org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks
+import org.akkirrai.hibiki.shared.source.AppSourcePlatformCallbacks
+import org.akkirrai.hibiki.shared.layout.AppLayoutOptions
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
@@ -99,50 +108,56 @@ fun main() = application {
                         settingsStore = settingsStore,
                         progressRepository = progressRepository,
                         profileRepository = profileRepository,
-                        sources = sources,
-                        selectedSourceId = selectedSourceId,
-                        onSourceSelected = { sourceId ->
-                            settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
-                        },
-                        onPlaybackSelectionChanged = progressRepository::savePlaybackSelection,
-                        loadPlaybackSelection = progressRepository::loadPlaybackSelection,
-                        onWatchSourceSelected = { titleId, source ->
-                            progressRepository.savePlaybackSelection(
-                                org.akkirrai.hibiki.shared.model.PlaybackSelection(
-                                    titleId = titleId,
-                                    sourceId = source.sourceId,
-                                    sourceTitle = source.title,
-                                    quality = source.qualityLabel,
-                                    playerName = null,
-                                ),
-                            )
-                        },
-                        playbackHost = { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                            DesktopVlcPlaybackHost(
-                                playback = requireNotNull(playback),
-                                context = context,
-                                navigationState = navigationState,
-                                settingsStore = settingsStore,
-                                progressRepository = progressRepository,
-                                onBack = onBack,
-                                onEpisodeSelected = onEpisodeSelected,
-                                onSettingsAction = onSettingsAction,
-                                onOverlayEvent = onOverlayEvent,
-                            )
-                        },
+                        sourceCallbacks = AppSourcePlatformCallbacks(
+                            sources = sources,
+                            selectedSourceId = selectedSourceId,
+                            onSourceSelected = { sourceId ->
+                                settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
+                            },
+                        ),
+                        playbackCallbacks = AppPlaybackPlatformCallbacks(
+                            onWatchSourceSelected = { titleId, source ->
+                                progressRepository.savePlaybackSelection(
+                                    org.akkirrai.hibiki.shared.player.model.PlaybackSelection(
+                                        titleId = titleId,
+                                        sourceId = source.sourceId,
+                                        sourceTitle = source.title,
+                                        quality = source.qualityLabel,
+                                        playerName = null,
+                                    ),
+                                )
+                            },
+                            onPlaybackSelectionChanged = progressRepository::savePlaybackSelection,
+                            loadPlaybackSelection = progressRepository::loadPlaybackSelection,
+                            playbackHost = { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+                                DesktopVlcPlaybackHost(
+                                    playback = requireNotNull(playback),
+                                    context = context,
+                                    navigationState = navigationState,
+                                    settingsStore = settingsStore,
+                                    progressRepository = progressRepository,
+                                    onBack = onBack,
+                                    onEpisodeSelected = onEpisodeSelected,
+                                    onSettingsAction = onSettingsAction,
+                                    onOverlayEvent = onOverlayEvent,
+                                )
+                            },
+                        ),
                         systemLanguage = systemLanguage,
-                        onOpenUrl = { url ->
-                            if (Desktop.isDesktopSupported()) {
-                                Desktop.getDesktop().browse(URI(url))
-                            }
-                        },
-                        onGitHubClick = {
-                            if (Desktop.isDesktopSupported()) {
-                                Desktop.getDesktop().browse(URI(HIBIKI_GITHUB_URL))
-                            }
-                        },
-                        notificationsAvailable = false,
-                        includeNavigationBarPadding = true,
+                        platformCallbacks = AppPlatformCallbacks(
+                            onOpenUrl = { url ->
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(URI(url))
+                                }
+                            },
+                            onGitHubClick = {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(URI(HIBIKI_GITHUB_URL))
+                                }
+                            },
+                            notificationsAvailable = false,
+                        ),
+                        layoutOptions = AppLayoutOptions(includeNavigationBarPadding = true),
                     )
                 }
             }

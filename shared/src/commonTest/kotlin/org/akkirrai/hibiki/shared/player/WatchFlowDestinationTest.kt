@@ -3,7 +3,7 @@ package org.akkirrai.hibiki.shared.player
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class WatchFlowDestinationTest {
     @Test

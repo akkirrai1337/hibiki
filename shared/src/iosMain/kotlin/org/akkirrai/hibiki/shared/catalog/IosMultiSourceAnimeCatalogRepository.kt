@@ -7,8 +7,8 @@ import org.akkirrai.beakokit.api.ResilientSourceExecutionPolicy
 import org.akkirrai.beakokit.api.SourceExecutionPolicy
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.source.BuiltInSources
-import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
 
 internal class IosMultiSourceAnimeCatalogRepository(
     private val preferEnglish: Boolean = false,

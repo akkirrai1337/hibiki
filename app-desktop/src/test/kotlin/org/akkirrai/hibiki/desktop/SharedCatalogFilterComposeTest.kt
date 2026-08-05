@@ -9,8 +9,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.catalog.AppCatalogFilterSheet
-import org.akkirrai.hibiki.shared.model.AnimeCatalogFilterCatalog
-import org.akkirrai.hibiki.shared.model.AnimeSearchFilters
+import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

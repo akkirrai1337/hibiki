@@ -27,7 +27,7 @@ import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiTypography
-import org.akkirrai.hibiki.shared.home.CatalogBackedHomeDataRepository
+import org.akkirrai.hibiki.shared.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.library.IosLibraryRepository
 import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
 import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
@@ -56,8 +56,8 @@ import org.akkirrai.hibiki.shared.player.IosAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.platform.IosBackBridge
-import org.akkirrai.hibiki.shared.model.PlaybackContext
-import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackContext
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
 import platform.AVFoundation.AVURLAsset
@@ -226,46 +226,46 @@ fun MainViewController(systemLanguage: String): UIViewController {
             )
             CompositionLocalProvider(LocalAppLayoutEnvironment provides safeDrawingInsets) {
                 Surface {
-                    HibikiApp(
+                    org.akkirrai.hibiki.shared.app.screen.HibikiApp(
                     repository = repository,
                     watchRepository = routedWatchRepository,
-                    onPlaybackReady = { playback, context ->
-                        if (!USE_EMBEDDED_IOS_PLAYER) {
-                            presentPlayback(hostController, playback, context)
-                        }
-                    },
-                    onPlaybackSelectionChanged = { selection ->
-                        watchStateRepository.savePlaybackSelection(selection)
-                    },
-                    loadPlaybackSelection = watchStateRepository::loadPlaybackSelection,
-                    onWatchSourceSelected = { titleId, source ->
-                        watchStateRepository.savePlaybackSelection(
-                            org.akkirrai.hibiki.shared.model.PlaybackSelection(
-                                titleId = titleId,
-                                sourceId = source.sourceId,
-                                sourceTitle = source.title,
-                                quality = source.qualityLabel,
-                                playerName = null,
-                            ),
-                        )
-                    },
-                    playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
-                        { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                            IosEmbeddedPlaybackHost(
-                                playback = playback,
-                                context = context,
-                                navigationState = navigationState,
-                                onBack = onBack,
-                                onEpisodeSelected = onEpisodeSelected,
-                                settingsStore = settingsStore,
-                                onSettingsAction = onSettingsAction,
-                                progressRepository = watchStateRepository,
-                                onOverlayEvent = onOverlayEvent,
+                    playbackCallbacks = org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks(
+                        onWatchSourceSelected = { titleId, source ->
+                            watchStateRepository.savePlaybackSelection(
+                                org.akkirrai.hibiki.shared.player.model.PlaybackSelection(
+                                    titleId = titleId,
+                                    sourceId = source.sourceId,
+                                    sourceTitle = source.title,
+                                    quality = source.qualityLabel,
+                                    playerName = null,
+                                ),
                             )
-                        }
-                    } else {
-                        null
-                    },
+                        },
+                        onPlaybackReady = { playback, context ->
+                            if (!USE_EMBEDDED_IOS_PLAYER) {
+                                presentPlayback(hostController, playback, context)
+                            }
+                        },
+                        onPlaybackSelectionChanged = watchStateRepository::savePlaybackSelection,
+                        loadPlaybackSelection = watchStateRepository::loadPlaybackSelection,
+                        playbackHost = if (USE_EMBEDDED_IOS_PLAYER) {
+                            { playback, context, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+                                IosEmbeddedPlaybackHost(
+                                    playback = playback,
+                                    context = context,
+                                    navigationState = navigationState,
+                                    onBack = onBack,
+                                    onEpisodeSelected = onEpisodeSelected,
+                                    settingsStore = settingsStore,
+                                    onSettingsAction = onSettingsAction,
+                                    progressRepository = watchStateRepository,
+                                    onOverlayEvent = onOverlayEvent,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    ),
                     homeRepository = homeRepository,
                     libraryRepository = libraryRepository,
                     profileRepository = profileRepository,
@@ -274,16 +274,21 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     systemLanguage = systemLanguage,
                     enableOnboarding = true,
                     onboardingNotificationPermissionState = notificationPermissionState.value,
-                    onRequestOnboardingNotificationPermission = requestNotificationPermission,
-                    onConfigureNotifications = requestNotificationPermission,
-                    notificationsAvailable = true,
                     appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev",
-                    onProfileAvatarEdit = { onPicked -> avatarPicker.present(hostController, onPicked) },
-                    profileAvatarEditAvailable = true,
-                    onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
-                    onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
-                    externalSourceRepositoryController = externalRepositoryController,
-                    sourceConfigContent = { source, onSaved, onCancel ->
+                    platformCallbacks = org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks(
+                        onRequestOnboardingNotificationPermission = requestNotificationPermission,
+                        onConfigureNotifications = requestNotificationPermission,
+                        notificationsAvailable = true,
+                        onProfileAvatarEdit = { onPicked -> avatarPicker.present(hostController, onPicked) },
+                        profileAvatarEditAvailable = true,
+                        onGitHubClick = { UIApplication.sharedApplication.openURL(NSURL(string = HIBIKI_GITHUB_URL)) },
+                        onOpenUrl = { url -> UIApplication.sharedApplication.openURL(NSURL(string = url)) },
+                    ),
+                    sourceCallbacks = org.akkirrai.hibiki.shared.source.AppSourcePlatformCallbacks(
+                        externalSourceRepositoryController = externalRepositoryController,
+                        sources = sources,
+                        selectedSourceId = selectedSourceId.value,
+                        sourceConfigContent = { source, onSaved, onCancel ->
                         val sourceId = SourceId(source.id)
                         val draft = externalConfigStore.loadDraft(sourceId)
                         AppSourceConfigScreen(
@@ -321,15 +326,16 @@ fun MainViewController(systemLanguage: String): UIViewController {
                             },
                             onCancel = onCancel,
                         )
-                    },
-                    sources = sources,
-                    selectedSourceId = selectedSourceId.value,
-                    includeNavigationBarPadding = true,
-                    onSourceSelected = { sourceId ->
-                        repository.selectSource(sourceId)
-                        sourceSelectionRepository.saveSelectedSourceId(sourceId)
-                        selectedSourceId.value = sourceId
-                    },
+                        },
+                        onSourceSelected = { sourceId ->
+                            repository.selectSource(sourceId)
+                            sourceSelectionRepository.saveSelectedSourceId(sourceId)
+                            selectedSourceId.value = sourceId
+                        },
+                    ),
+                    layoutOptions = org.akkirrai.hibiki.shared.layout.AppLayoutOptions(
+                        includeNavigationBarPadding = true,
+                    ),
                     )
                 }
             }

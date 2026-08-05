@@ -3,8 +3,8 @@ package org.akkirrai.hibiki.shared.player
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
 
 class PlaybackSessionKeyTest {
     @Test

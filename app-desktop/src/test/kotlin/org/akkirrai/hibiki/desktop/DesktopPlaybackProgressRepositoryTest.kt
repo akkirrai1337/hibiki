@@ -1,10 +1,11 @@
 package org.akkirrai.hibiki.desktop
+import org.akkirrai.hibiki.desktop.data.*
 
 import java.util.UUID
 import java.util.prefs.Preferences
-import org.akkirrai.hibiki.shared.model.PlaybackContext
-import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.player.model.PlaybackContext
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before

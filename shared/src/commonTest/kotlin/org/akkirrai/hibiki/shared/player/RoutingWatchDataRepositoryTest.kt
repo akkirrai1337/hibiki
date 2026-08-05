@@ -5,11 +5,11 @@ import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.PlayerLink
-import org.akkirrai.hibiki.shared.model.PlaybackSettingsOptions
-import org.akkirrai.hibiki.shared.model.PlaybackStream
-import org.akkirrai.hibiki.shared.model.PlaybackStreamType
-import org.akkirrai.hibiki.shared.model.WatchEpisode
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.PlaybackSettingsOptions
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.player.model.WatchEpisode
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class RoutingWatchDataRepositoryTest {
     @Test

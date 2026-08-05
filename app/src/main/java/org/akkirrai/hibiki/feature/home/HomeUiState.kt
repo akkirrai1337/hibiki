@@ -1,3 +1,3 @@
 package org.akkirrai.hibiki.feature.home
 
-typealias HomeUiState = org.akkirrai.hibiki.shared.home.HomeUiState
+typealias HomeUiState = org.akkirrai.hibiki.shared.home.state.HomeUiState

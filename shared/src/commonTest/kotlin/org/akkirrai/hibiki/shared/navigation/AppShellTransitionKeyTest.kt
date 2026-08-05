@@ -53,7 +53,7 @@ class AppShellTransitionKeyTest {
             watchId = "anime-1",
             sourceId = "source-1",
             routeKey = AppRoute.Episodes(
-                source = org.akkirrai.hibiki.shared.model.WatchSource("source-1", "Dub", 12),
+                source = org.akkirrai.hibiki.shared.player.model.WatchSource("source-1", "Dub", 12),
                 animeId = "anime-1",
             ).transitionKey(),
         )

@@ -1,4 +1,7 @@
 package org.akkirrai.hibiki.shared.catalog
+import org.akkirrai.hibiki.shared.catalog.model.AnimeTypeAlias
+import org.akkirrai.hibiki.shared.catalog.presentation.*
+import org.akkirrai.hibiki.shared.catalog.sort.*
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

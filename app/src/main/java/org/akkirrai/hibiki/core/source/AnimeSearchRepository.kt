@@ -24,7 +24,7 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
-import org.akkirrai.hibiki.shared.details.isAnnouncementStatus
+import org.akkirrai.hibiki.shared.details.model.isAnnouncementStatus
 import org.akkirrai.hibiki.shared.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.shared.source.formatReleaseDateLabel
 import org.akkirrai.hibiki.shared.source.resolveAlternativeTitles

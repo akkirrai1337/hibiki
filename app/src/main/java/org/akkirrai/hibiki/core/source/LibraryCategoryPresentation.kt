@@ -2,7 +2,7 @@ package org.akkirrai.hibiki.core.source
 
 import androidx.annotation.StringRes
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.library.localizationKey
+import org.akkirrai.hibiki.shared.library.ui.localizationKey
 
 @get:StringRes
 val LibraryCategory.labelResId: Int

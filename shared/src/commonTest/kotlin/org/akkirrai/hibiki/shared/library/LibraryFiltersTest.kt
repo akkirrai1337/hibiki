@@ -1,9 +1,12 @@
 package org.akkirrai.hibiki.shared.library
+import org.akkirrai.hibiki.shared.library.presentation.*
+import org.akkirrai.hibiki.shared.library.state.*
+import org.akkirrai.hibiki.shared.library.ui.*
 
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 
 class LibraryFiltersTest {
     @Test

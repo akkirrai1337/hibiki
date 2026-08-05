@@ -3,8 +3,8 @@ package org.akkirrai.hibiki.shared.profile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.akkirrai.hibiki.shared.library.LibraryCategory
-import org.akkirrai.hibiki.shared.model.Anime
-import org.akkirrai.hibiki.shared.model.AnimeRating
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.AnimeRating
 
 class LocalProfileSnapshotTest {
     @Test

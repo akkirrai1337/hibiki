@@ -1,7 +1,11 @@
 package org.akkirrai.hibiki.shared.library
+import org.akkirrai.hibiki.shared.library.presentation.*
+import org.akkirrai.hibiki.shared.library.state.*
+import org.akkirrai.hibiki.shared.library.ui.*
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.akkirrai.hibiki.shared.library.ui.resolveLibraryEmptyStateText
 
 class LibraryEmptyStateResolverTest {
     private val categoryLabels = mapOf(

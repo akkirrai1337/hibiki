@@ -3,7 +3,7 @@ package org.akkirrai.hibiki.shared.navigation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class AppRouteNavigationTest {
     private val source = WatchSource("source-1", "Dub", 12)

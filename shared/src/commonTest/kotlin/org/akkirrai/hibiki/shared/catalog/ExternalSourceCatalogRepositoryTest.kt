@@ -23,7 +23,7 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchSort
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 
 class ExternalSourceCatalogRepositoryTest {
@@ -61,7 +61,7 @@ class ExternalSourceCatalogRepositoryTest {
                 text = "query",
                 page = 3,
                 pageSize = 7,
-                filters = org.akkirrai.hibiki.shared.model.AnimeSearchFilters(
+                filters = org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters(
                     sortAlias = "popular",
                     typeAlias = "tv",
                     statusAlias = "released",

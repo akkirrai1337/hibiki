@@ -13,7 +13,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.v2.runComposeUiTest
-import org.akkirrai.hibiki.shared.app.AppProductionRoot
+import org.akkirrai.hibiki.shared.app.shell.layout.AppProductionRoot
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
 import org.junit.Assert.assertEquals

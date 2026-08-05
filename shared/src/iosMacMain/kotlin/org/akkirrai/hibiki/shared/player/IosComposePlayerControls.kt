@@ -3,8 +3,8 @@ package org.akkirrai.hibiki.shared.player
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
-import org.akkirrai.hibiki.shared.model.PlaybackContext
-import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackContext
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 
 @Composable
 internal fun IosComposePlayerControls(

@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.shared.details
+package org.akkirrai.hibiki.shared.details.model
 
 import androidx.compose.ui.graphics.Color
 import coil3.Image

@@ -1,4 +1,5 @@
 package org.akkirrai.hibiki.desktop
+import org.akkirrai.hibiki.desktop.settings.*
 
 import java.util.UUID
 import java.util.prefs.Preferences

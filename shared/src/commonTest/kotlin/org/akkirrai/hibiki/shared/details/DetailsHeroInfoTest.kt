@@ -1,9 +1,13 @@
 package org.akkirrai.hibiki.shared.details
+import org.akkirrai.hibiki.shared.details.data.*
+import org.akkirrai.hibiki.shared.details.model.*
+import org.akkirrai.hibiki.shared.details.screen.*
+import org.akkirrai.hibiki.shared.details.state.*
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 
 class DetailsHeroInfoTest {
     @Test

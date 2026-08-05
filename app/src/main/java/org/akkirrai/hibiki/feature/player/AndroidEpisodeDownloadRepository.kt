@@ -2,9 +2,9 @@ package org.akkirrai.hibiki.feature.player
 
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
-import org.akkirrai.hibiki.shared.model.WatchEpisode
-import org.akkirrai.hibiki.shared.model.WatchSource
-import org.akkirrai.hibiki.shared.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.WatchEpisode
+import org.akkirrai.hibiki.shared.player.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
 import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository

@@ -4,7 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class WatchSourcesStateResolverTest {
     @Test

@@ -40,7 +40,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
-import org.akkirrai.hibiki.ui.theme.HibikiTheme
+import org.akkirrai.hibiki.app.theme.HibikiAndroidTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides this@MainActivity) {
                 HibikiSettingsProvider(appPreferences = appPreferences) {
                     val preferences = LocalAppPreferencesState.current
-                    HibikiTheme(
+                    HibikiAndroidTheme(
                         themeMode = preferences.themeMode,
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,

@@ -1,15 +1,15 @@
 package org.akkirrai.hibiki.feature.details
 
-import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.RelatedAnime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.RelatedAnime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.akkirrai.hibiki.shared.details.DetailsHeroInfo
-import org.akkirrai.hibiki.shared.details.DetailsSection
-import org.akkirrai.hibiki.shared.details.RelatedSection
-import org.akkirrai.hibiki.shared.details.SimilarSection
-import org.akkirrai.hibiki.shared.details.buildDetailsUiModel
+import org.akkirrai.hibiki.shared.details.screen.DetailsHeroInfo
+import org.akkirrai.hibiki.shared.details.state.DetailsSection
+import org.akkirrai.hibiki.shared.details.state.RelatedSection
+import org.akkirrai.hibiki.shared.details.state.SimilarSection
+import org.akkirrai.hibiki.shared.details.state.buildDetailsUiModel
 
 class DetailsUiModelTest {
     private val hero = DetailsHeroInfo("TV", "2024", "12 episodes", null, "Ongoing", "Studio")

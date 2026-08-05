@@ -13,7 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import org.akkirrai.hibiki.shared.details.AppDetailsScreen
 import org.akkirrai.hibiki.shared.library.LibraryCategory
-import org.akkirrai.hibiki.shared.model.Anime
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

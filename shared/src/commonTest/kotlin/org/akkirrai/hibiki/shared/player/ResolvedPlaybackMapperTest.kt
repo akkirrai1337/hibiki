@@ -11,8 +11,8 @@ import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
 import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.beakokit.playback.ResolvedPlaybackStream
-import org.akkirrai.hibiki.shared.model.PlaybackSegmentType
-import org.akkirrai.hibiki.shared.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.player.model.PlaybackSegmentType
+import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
 
 class ResolvedPlaybackMapperTest {
     @Test

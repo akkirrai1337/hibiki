@@ -6,8 +6,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
-import org.akkirrai.hibiki.shared.model.PlaybackSettingsOptions
-import org.akkirrai.hibiki.shared.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.PlaybackSettingsOptions
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.junit.Assert.assertEquals

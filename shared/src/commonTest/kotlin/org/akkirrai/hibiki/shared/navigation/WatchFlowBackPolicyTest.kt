@@ -8,7 +8,7 @@ class WatchFlowBackPolicyTest {
     fun `watch flow back returns reduced state and matching effect`() {
         val state = AppNavigationState()
             .navigateToWatchSources("anime")
-            .navigateToEpisodes(org.akkirrai.hibiki.shared.model.WatchSource("source", "Dub", 12), animeId = "anime")
+            .navigateToEpisodes(org.akkirrai.hibiki.shared.player.model.WatchSource("source", "Dub", 12), animeId = "anime")
 
         val transition = state.reduceWatchFlowBack()
 
@@ -23,7 +23,7 @@ class WatchFlowBackPolicyTest {
             resolveWatchFlowBackEffect(
                 routeBeforeBack = AppRoute.Player("source", "episode"),
                 routeAfterBack = AppRoute.Episodes(
-                    source = org.akkirrai.hibiki.shared.model.WatchSource("source", "Dub", 12),
+                    source = org.akkirrai.hibiki.shared.player.model.WatchSource("source", "Dub", 12),
                     animeId = "anime",
                 ),
             ),
@@ -37,7 +37,7 @@ class WatchFlowBackPolicyTest {
         assertEquals(
             WatchFlowBackEffect.ResetEpisodesAndPlayer,
             resolveWatchFlowBackEffect(AppRoute.Episodes(
-                source = org.akkirrai.hibiki.shared.model.WatchSource("source", "Dub", 12),
+                source = org.akkirrai.hibiki.shared.player.model.WatchSource("source", "Dub", 12),
                 animeId = "anime",
             ), details),
         )

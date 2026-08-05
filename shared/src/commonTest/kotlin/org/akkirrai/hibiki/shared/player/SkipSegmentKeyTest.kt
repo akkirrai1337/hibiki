@@ -2,8 +2,8 @@ package org.akkirrai.hibiki.shared.player
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.akkirrai.hibiki.shared.model.PlaybackSegment
-import org.akkirrai.hibiki.shared.model.PlaybackSegmentType
+import org.akkirrai.hibiki.shared.player.model.PlaybackSegment
+import org.akkirrai.hibiki.shared.player.model.PlaybackSegmentType
 
 class SkipSegmentKeyTest {
     @Test

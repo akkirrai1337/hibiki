@@ -1,4 +1,8 @@
 package org.akkirrai.hibiki.shared.details
+import org.akkirrai.hibiki.shared.details.data.*
+import org.akkirrai.hibiki.shared.details.model.*
+import org.akkirrai.hibiki.shared.details.screen.*
+import org.akkirrai.hibiki.shared.details.state.*
 
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
