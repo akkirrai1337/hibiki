@@ -5,6 +5,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SourcePackageActivationPersistenceTest {
     @Test
@@ -18,6 +19,15 @@ class SourcePackageActivationPersistenceTest {
         val restored = Json.decodeFromString<SourcePackageActivationState>(encoded)
 
         assertEquals(state, restored)
+    }
+
+    @Test
+    fun `json persistence rejects a previous package without an active package`() {
+        assertFailsWith<IllegalArgumentException> {
+            Json.decodeFromString<SourcePackageActivationState>(
+                """{"previous":{"sourceId":"external-source","packageVersion":"1.0.0","packagePath":"packages/1.0.0"}}""",
+            )
+        }
     }
 
     private fun packageVersion(version: String) = InstalledSourcePackage(

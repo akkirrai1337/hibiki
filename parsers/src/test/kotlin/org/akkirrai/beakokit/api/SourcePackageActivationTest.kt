@@ -16,6 +16,13 @@ class SourcePackageActivationTest {
     }
 
     @Test
+    fun `activation state rejects a previous package without an active package`() {
+        assertFailsWith<IllegalArgumentException> {
+            SourcePackageActivationState(previous = packageVersion("1.0.0"))
+        }
+    }
+
+    @Test
     fun `activation state rejects duplicate active and previous packages`() {
         val packageVersion = InstalledSourcePackage(SourceId("source"), "1.0.0", "active")
 
@@ -50,6 +57,20 @@ class SourcePackageActivationTest {
         val result = controller.activate(packageVersion("2.0.0"), initializationSucceeded = false)
 
         assertEquals(SourcePackageActivationState(active = old), result)
+    }
+
+    @Test
+    fun `activation rejects a candidate from another source`() {
+        val controller = SourcePackageActivationController(
+            SourcePackageActivationState(active = packageVersion("1.0.0")),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            controller.activate(
+                candidate = InstalledSourcePackage(SourceId("another-source"), "2.0.0", "active"),
+                initializationSucceeded = true,
+            )
+        }
     }
 
     @Test

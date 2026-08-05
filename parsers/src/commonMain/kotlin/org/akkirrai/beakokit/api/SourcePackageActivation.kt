@@ -37,6 +37,12 @@ data class SourcePackageActivationState(
     val previous: InstalledSourcePackage? = null,
 ) {
     init {
+        require(active != null || previous == null) {
+            "A previous source package requires an active package"
+        }
+    }
+
+    init {
         require(active?.sourceId == null || previous?.sourceId == null || active.sourceId == previous.sourceId) {
             "Active and previous packages must belong to the same source"
         }
@@ -62,6 +68,10 @@ class SourcePackageActivationController(
         candidate: InstalledSourcePackage,
         initializationSucceeded: Boolean,
     ): SourcePackageActivationState {
+        val currentSourceId = state.active?.sourceId ?: state.previous?.sourceId
+        require(currentSourceId == null || currentSourceId == candidate.sourceId) {
+            "Package source ID does not match the activation state: ${candidate.sourceId}"
+        }
         require(candidate.packageVersion.isNotBlank()) { "Package version must not be blank" }
         require(candidate.packagePath.isNotBlank()) { "Package path must not be blank" }
         if (!initializationSucceeded) return state
