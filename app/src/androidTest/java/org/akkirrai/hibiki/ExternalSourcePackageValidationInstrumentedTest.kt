@@ -457,6 +457,79 @@ class ExternalSourcePackageValidationInstrumentedTest {
     }
 
     @Test
+    fun androidCoordinatorRollsBackWorkingRuntimePackage() = runBlocking {
+        val sourceId = SourceId("instrumented-runtime-update-${System.nanoTime()}")
+        val packageUrl = "https://example.com/runtime-update.zip"
+        val module = InstrumentationRegistry.getInstrumentation().context.assets
+            .open("aniliberty-source.wasm")
+            .use { it.readBytes() }
+        val first = repositoryPackage(
+            manifest().copy(sourceId = sourceId, packageVersion = "1.0.0", packageUrl = packageUrl),
+            module = module,
+        )
+        val second = repositoryPackage(
+            manifest().copy(sourceId = sourceId, packageVersion = "2.0.0", packageUrl = packageUrl),
+            module = module,
+        )
+        var current = first
+        val client = HttpClient(MockEngine { request ->
+            if (request.url.toString().endsWith("index.json")) {
+                respond(
+                    SourceRepositoryIndexCodec.encode(
+                        SourceRepositoryIndex(
+                            apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                            sources = listOf(current.manifest),
+                        ),
+                    ),
+                    status = HttpStatusCode.OK,
+                )
+            } else {
+                respond(current.archive.bytes, status = HttpStatusCode.OK)
+            }
+        })
+        val platform = createAndroidExternalSourceRepositoryPlatform(
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            httpClient = client,
+        )
+        try {
+            platform.coordinator.addRepository(SourceRepositoryEndpoint("https://example.com/index.json"))
+            platform.coordinator.refresh()
+            val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
+                platform = platform,
+                catalogCapabilities = { CatalogCapabilities.FULL },
+                runtimeFactory = createAndroidExternalSourceRuntimeFactory(
+                    InstrumentationRegistry.getInstrumentation().targetContext,
+                ),
+                sourceContextFactory = {
+                    DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                    )
+                },
+            )
+            runtimeCoordinator.installAvailablePackage(sourceId) {}
+            current = second
+            platform.coordinator.refresh()
+            runtimeCoordinator.installAvailablePackage(sourceId) {}
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "2.0.0")
+
+            runtimeCoordinator.rollbackActivePackage(sourceId)
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+            val source = runtimeCoordinator.createActiveSource(
+                sourceId = sourceId,
+                baseContext = DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                ),
+            )
+            assertTrue(source.search(AnimeSearchRequest(query = "naruto", limit = 20)).any { it.id == "413" })
+        } finally {
+            platform.close()
+            client.close()
+        }
+    }
+
+    @Test
     fun androidRepositoryPlatformRollsBackToPreviousPackageVersion() = runBlocking {
         val sourceId = SourceId("instrumented-rollback-source")
         val packageUrl = "https://example.com/rollback-source.zip"
