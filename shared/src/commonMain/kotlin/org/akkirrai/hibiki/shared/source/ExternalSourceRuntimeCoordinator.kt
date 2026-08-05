@@ -52,15 +52,16 @@ class ExternalSourceRuntimeCoordinator(
         }
 
     /** Creates an installed source with its persisted configuration applied to the caller context. */
-    fun createActiveSource(sourceId: SourceId, baseContext: SourceContext): AnimeSource {
-        require(sourceId !in reservedSourceIds) {
-            "External source ID is reserved by a built-in source: $sourceId"
+    suspend fun createActiveSource(sourceId: SourceId, baseContext: SourceContext): AnimeSource =
+        operationMutex.withLock {
+            require(sourceId !in reservedSourceIds) {
+                "External source ID is reserved by a built-in source: $sourceId"
+            }
+            val registry = requireNotNull(snapshot.value.registry) {
+                "External source registry is not ready"
+            }
+            registry.create(sourceId, sourceContextFor(sourceId, baseContext))
         }
-        val registry = requireNotNull(snapshot.value.registry) {
-            "External source registry is not ready"
-        }
-        return registry.create(sourceId, sourceContextFor(sourceId, baseContext))
-    }
 
     /** Returns advertised packages together with their currently active versions. */
     suspend fun packageStatuses(): List<ExternalSourcePackageStatus> = operationMutex.withLock {
