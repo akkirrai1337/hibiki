@@ -19,6 +19,7 @@ import org.akkirrai.beakokit.api.ExternalSourcePlaybackRuntime
 import org.akkirrai.beakokit.api.InstalledSourcePackage
 import org.akkirrai.beakokit.api.JvmSourcePackageManifestReader
 import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.api.SourceConfigState
 import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceManifest
@@ -328,6 +329,11 @@ class ExternalSourcePackageValidationInstrumentedTest {
         try {
             val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
             platform.coordinator.addRepository(endpoint)
+            val config = SourceConfigState(
+                values = mapOf("base_url" to "https://config.test"),
+                secrets = mapOf("token" to "rollback-secret"),
+            )
+            platform.persistSourceConfig(sourceId, config)
             platform.coordinator.refresh()
             platform.installAvailablePackage(sourceId) {}
 
@@ -340,6 +346,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
 
             assertTrue(rollback.active?.packageVersion == "1.0.0")
             assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+            assertTrue(platform.loadSourceConfig(sourceId) == config)
 
             platform.close()
             platform = createAndroidExternalSourceRepositoryPlatform(
@@ -347,6 +354,8 @@ class ExternalSourcePackageValidationInstrumentedTest {
                 httpClient = client,
             )
             assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+            assertTrue(platform.loadSourceConfig(sourceId) == config)
+            platform.removeSourceConfig(sourceId)
         } finally {
             platform.close()
             client.close()
@@ -395,6 +404,11 @@ class ExternalSourcePackageValidationInstrumentedTest {
         try {
             val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
             platform.coordinator.addRepository(endpoint)
+            val config = SourceConfigState(
+                values = mapOf("base_url" to "https://config.test"),
+                secrets = mapOf("token" to "failed-update-secret"),
+            )
+            platform.persistSourceConfig(sourceId, config)
             platform.coordinator.refresh()
             platform.installAvailablePackage(sourceId) {}
 
@@ -420,6 +434,8 @@ class ExternalSourcePackageValidationInstrumentedTest {
 
             assertTrue(failed)
             assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+            assertTrue(platform.loadSourceConfig(sourceId) == config)
+            platform.removeSourceConfig(sourceId)
         } finally {
             platform.close()
             client.close()
