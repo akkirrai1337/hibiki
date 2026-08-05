@@ -12,6 +12,8 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.DefaultSourceContext
@@ -156,6 +158,48 @@ class ExternalSourcePackageValidationInstrumentedTest {
             )
             Unit
 
+        } finally {
+            client.close()
+            module.deleteIfExists()
+            packageDirectory.resolve("manifest.json").deleteIfExists()
+            packageDirectory.toFile().delete()
+        }
+    }
+
+    @Test
+    fun androidRuntimeCancellationStopsGuestExecution() = runBlocking {
+        val packageDirectory = InstrumentationRegistry.getInstrumentation().targetContext.cacheDir
+            .toPath()
+            .resolve("external-source-cancellation-${System.nanoTime()}")
+        val module = packageDirectory.resolve("source.wasm")
+        packageDirectory.toFile().mkdirs()
+        val client = HttpClient(MockEngine { error("Host must not be called") })
+        try {
+            module.writeBytes(loopingModuleBytes())
+            val manifest = manifest()
+            packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
+            val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
+            val runtime = createAndroidExternalSourceRuntimeFactory(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            ).create(
+                sourcePackage = ActiveExternalSourcePackage(
+                    manifest = installedManifest,
+                    installed = InstalledSourcePackage(
+                        sourceId = installedManifest.sourceId,
+                        packageVersion = installedManifest.packageVersion,
+                        packagePath = packageDirectory.toString(),
+                    ),
+                ),
+                context = DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                ),
+            )
+
+            val call = launch { runtime.details("title-1") }
+            Thread.sleep(100)
+            call.cancelAndJoin()
+            assertTrue(call.isCancelled)
         } finally {
             client.close()
             module.deleteIfExists()
@@ -788,5 +832,16 @@ class ExternalSourcePackageValidationInstrumentedTest {
             i32.const 4096)
           (func (export "beakokit_call") (param i32 i32) (result i64)
             i64.const 0))
+    """.trimIndent().toByteArray(StandardCharsets.UTF_8)
+
+    private fun loopingModuleBytes(): ByteArray = """
+        (module
+          (memory (export "memory") 2)
+          (func (export "beakokit_reset"))
+          (func (export "beakokit_alloc") (param i32) (result i32)
+            i32.const 4096)
+          (func (export "beakokit_call") (param i32 i32) (result i64)
+            (loop br 0))
+        )
     """.trimIndent().toByteArray(StandardCharsets.UTF_8)
 }
