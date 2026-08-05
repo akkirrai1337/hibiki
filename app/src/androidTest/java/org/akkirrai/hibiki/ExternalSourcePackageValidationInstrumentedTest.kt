@@ -6,11 +6,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.runBlocking
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.ExternalSourcePlaybackRuntime
 import org.akkirrai.beakokit.api.InstalledSourcePackage
+import org.akkirrai.beakokit.api.JvmSourcePackageManifestReader
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceId
@@ -27,6 +30,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.writeText
 import kotlin.io.path.writeBytes
 import kotlin.test.assertTrue
 
@@ -51,12 +55,14 @@ class ExternalSourcePackageValidationInstrumentedTest {
                 module.writeBytes(input.readBytes())
             }
             val manifest = manifest()
+            packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
+            val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
             val runtime = createAndroidExternalSourceRuntimeFactory(context).create(
                 sourcePackage = ActiveExternalSourcePackage(
-                    manifest = manifest,
+                    manifest = installedManifest,
                     installed = InstalledSourcePackage(
-                        sourceId = manifest.sourceId,
-                        packageVersion = manifest.packageVersion,
+                        sourceId = installedManifest.sourceId,
+                        packageVersion = installedManifest.packageVersion,
                         packagePath = packageDirectory.toString(),
                     ),
                 ),
@@ -82,6 +88,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
         } finally {
             client.close()
             module.deleteIfExists()
+            packageDirectory.resolve("manifest.json").deleteIfExists()
             packageDirectory.toFile().delete()
         }
     }
@@ -100,12 +107,14 @@ class ExternalSourcePackageValidationInstrumentedTest {
                 module.writeBytes(input.readBytes())
             }
             val manifest = manifest()
+            packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
+            val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
             val runtime = createAndroidExternalSourceRuntimeFactory(context).create(
                 sourcePackage = ActiveExternalSourcePackage(
-                    manifest = manifest,
+                    manifest = installedManifest,
                     installed = InstalledSourcePackage(
-                        sourceId = manifest.sourceId,
-                        packageVersion = manifest.packageVersion,
+                        sourceId = installedManifest.sourceId,
+                        packageVersion = installedManifest.packageVersion,
                         packagePath = packageDirectory.toString(),
                     ),
                 ),
@@ -119,6 +128,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
         } finally {
             client.close()
             module.deleteIfExists()
+            packageDirectory.resolve("manifest.json").deleteIfExists()
             packageDirectory.toFile().delete()
         }
     }
@@ -133,18 +143,21 @@ class ExternalSourcePackageValidationInstrumentedTest {
         try {
             module.writeBytes(moduleBytes())
             val manifest = manifest()
+            packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
+            val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
             val installed = InstalledSourcePackage(
-                sourceId = manifest.sourceId,
-                packageVersion = manifest.packageVersion,
+                sourceId = installedManifest.sourceId,
+                packageVersion = installedManifest.packageVersion,
                 packagePath = packageDirectory.toString(),
             )
 
             validateAndroidExternalSourceRuntime(
-                ActiveExternalSourcePackage(manifest = manifest, installed = installed),
+                ActiveExternalSourcePackage(manifest = installedManifest, installed = installed),
             )
             assertTrue(module.toFile().exists())
         } finally {
             module.deleteIfExists()
+            packageDirectory.resolve("manifest.json").deleteIfExists()
             packageDirectory.toFile().delete()
         }
     }
