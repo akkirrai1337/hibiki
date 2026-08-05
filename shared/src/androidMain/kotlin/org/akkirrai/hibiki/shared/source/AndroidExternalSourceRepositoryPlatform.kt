@@ -26,10 +26,12 @@ import org.akkirrai.beakokit.api.SourceRepositoryLoader
 fun createAndroidExternalSourceRepositoryPlatform(
     context: Context,
     clientVersion: Int = SourceClientVersion.CURRENT,
+    httpClient: HttpClient = HttpClient(OkHttp),
 ): ExternalSourceRepositoryPlatform {
-    val client = HttpClient(OkHttp)
+    val client = httpClient
+    val filesRoot = context.filesDir.toPath().toRealPath()
     val activationStore = JvmSourcePackageActivationStore(
-        rootDirectory = context.filesDir.toPath().resolve("beakokit/source-state"),
+        rootDirectory = filesRoot.resolve("beakokit/source-state"),
     )
     val catalog = SourceRepositoryCatalog(AndroidSourceRepositoryStore(context))
     val loader = SourceRepositoryCatalogLoader(
@@ -39,7 +41,7 @@ fun createAndroidExternalSourceRepositoryPlatform(
         ),
     )
     val packageValidator = SourcePackageValidator(clientVersion = clientVersion)
-    val packageRoot = context.filesDir.toPath().resolve("beakokit/source-packages")
+    val packageRoot = filesRoot.resolve("beakokit/source-packages")
     val packageInstallationFactory = SourcePackageInstallationCoordinatorFactory(
         downloadService = SourcePackageDownloadService(
             transport = KtorSourcePackageTransport(client),

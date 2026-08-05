@@ -21,18 +21,16 @@ import org.akkirrai.beakokit.model.PlayerType
 
 class ExternalSourceRegistrationTest {
     @Test
-    fun activePackageRejectsMismatchedPersistedChecksum() {
-        assertFailsWith<IllegalArgumentException> {
-            ActiveExternalSourcePackage(
-                manifest = manifest(),
-                installed = InstalledSourcePackage(
-                    sourceId = SourceId("external-test"),
-                    packageVersion = "1.0.0",
-                    packagePath = "sources/external-test/1.0.0",
-                    artifactSha256 = "b".repeat(64),
-                ),
-            )
-        }
+    fun activePackageAllowsArchiveChecksumToDifferFromPackageManifestMetadata() {
+        ActiveExternalSourcePackage(
+            manifest = manifest(),
+            installed = InstalledSourcePackage(
+                sourceId = SourceId("external-test"),
+                packageVersion = "1.0.0",
+                packagePath = "sources/external-test/1.0.0",
+                artifactSha256 = "b".repeat(64),
+            ),
+        )
     }
 
     @Test
@@ -727,7 +725,7 @@ class ExternalSourceRegistrationTest {
     }
 
     @Test
-    fun activePackageLoaderRejectsMismatchedPersistedChecksum() {
+    fun activePackageLoaderAllowsArchiveChecksumToDifferFromPackageManifestMetadata() {
         val installed = InstalledSourcePackage(
             sourceId = SourceId("external-test"),
             packageVersion = "1.0.0",
@@ -742,7 +740,7 @@ class ExternalSourceRegistrationTest {
             manifestReader = SourcePackageManifestReader { manifest() },
         )
 
-        assertFailsWith<SourcePackageStateException> { loader.load() }
+        assertEquals(installed, loader.load()?.installed)
     }
 
     @Test

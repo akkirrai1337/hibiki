@@ -104,9 +104,6 @@ data class ActiveExternalSourcePackage(
         require(manifest.packageVersion == installed.packageVersion) {
             "Manifest package version does not match the installed package"
         }
-        require(installed.artifactSha256 == null || installed.artifactSha256 == manifest.sha256) {
-            "Manifest checksum does not match the installed package"
-        }
         require(
             SourcePackageLayoutValidator.isSafeRelativePath(manifest.entrypoint) &&
                 manifest.entrypoint != "manifest.json",

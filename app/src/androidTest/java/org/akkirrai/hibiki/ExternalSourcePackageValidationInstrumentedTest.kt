@@ -6,6 +6,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
+import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.runBlocking
@@ -19,6 +23,9 @@ import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceManifestInfo
+import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
+import org.akkirrai.beakokit.api.SourceRepositoryIndex
+import org.akkirrai.beakokit.api.SourceRepositoryIndexCodec
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceRuntime
 import org.akkirrai.beakokit.api.SourceHostCapability
@@ -28,6 +35,7 @@ import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
+import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -219,6 +227,78 @@ class ExternalSourcePackageValidationInstrumentedTest {
             packageDirectory.toFile().delete()
         }
     }
+
+    @Test
+    fun androidRepositoryPlatformDownloadsExtractsAndActivatesPackage() = runBlocking {
+        val sourceId = SourceId("instrumented-install-source")
+        val packageUrl = "https://example.com/instrumented-source.zip"
+        val packageManifest = manifest().copy(
+            sourceId = sourceId,
+            packageUrl = packageUrl,
+            sha256 = "a".repeat(64),
+            artifactSizeBytes = 1,
+        )
+        val archive = zipPackage(packageManifest)
+        val repositoryManifest = packageManifest.copy(
+            sha256 = archive.sha256,
+            artifactSizeBytes = archive.bytes.size.toLong(),
+        )
+        val index = SourceRepositoryIndexCodec.encode(
+            SourceRepositoryIndex(
+                apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                sources = listOf(repositoryManifest),
+            ),
+        )
+        val client = HttpClient(MockEngine { request ->
+            if (request.url.toString().endsWith("index.json")) {
+                respond(index, status = HttpStatusCode.OK)
+            } else {
+                respond(archive.bytes, status = HttpStatusCode.OK)
+            }
+        })
+        val platform = createAndroidExternalSourceRepositoryPlatform(
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            httpClient = client,
+        )
+        try {
+            val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
+            platform.coordinator.addRepository(endpoint)
+            platform.coordinator.refresh()
+
+            platform.installAvailablePackage(sourceId) {}
+
+            val active = requireNotNull(platform.loadActivePackage(sourceId))
+            assertTrue(active.installed.packageVersion == repositoryManifest.packageVersion)
+            assertTrue(active.installed.artifactSha256 == archive.sha256)
+            assertTrue(active.installed.packagePath.contains(sourceId.value))
+        } finally {
+            platform.close()
+            client.close()
+        }
+    }
+
+    private fun zipPackage(manifest: SourceManifest): ArchiveFixture {
+        val output = ByteArrayOutputStream()
+        ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("manifest.json"))
+            zip.write(Json.encodeToString(manifest).encodeToByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry(manifest.entrypoint))
+            zip.write(moduleBytes())
+            zip.closeEntry()
+        }
+        val bytes = output.toByteArray()
+        return ArchiveFixture(bytes = bytes, sha256 = sha256(bytes))
+    }
+
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
+        .digest(bytes)
+        .joinToString(separator = "") { byte -> "%02x".format(byte) }
+
+    private data class ArchiveFixture(
+        val bytes: ByteArray,
+        val sha256: String,
+    )
 
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
