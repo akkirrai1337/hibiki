@@ -19,6 +19,47 @@ import io.ktor.client.engine.mock.MockEngine
 
 class InstalledExternalSourcePipelineTest {
     @Test
+    fun unsupported_runtime_is_rejected_before_loading_the_package_module() {
+        val manifest = manifest().copy(runtime = SourceRuntime("unsupported-runtime", "unknown-abi"))
+        val activePackage = ActiveExternalSourcePackage(
+            manifest = manifest,
+            installed = InstalledSourcePackage(
+                sourceId = manifest.sourceId,
+                packageVersion = manifest.packageVersion,
+                packagePath = "package",
+            ),
+        )
+        var moduleRead = false
+        val runtimeFactory = NativeBridgeExternalSourceRuntimeFactory(
+            bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                error("Bridge must not be created for an unsupported runtime")
+            },
+            moduleReader = SourcePackageModuleReader { _, _ ->
+                moduleRead = true
+                error("Module must not be read for an unsupported runtime")
+            },
+            requestIdFactory = { "request" },
+        )
+        val client = HttpClient(MockEngine { error("Network is not expected in this test") })
+        try {
+            val error = assertFailsWith<SourcePackageValidationException> {
+                runtimeFactory.create(
+                    sourcePackage = activePackage,
+                    context = DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.ENGLISH),
+                    ),
+                )
+            }
+
+            assertEquals(false, moduleRead)
+            assertEquals(listOf("Unsupported source runtime: unsupported-runtime/unknown-abi"), error.violations)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun native_bridge_creation_failures_are_reported_as_runtime_source_errors() {
         val manifest = manifest()
         val activePackage = ActiveExternalSourcePackage(
