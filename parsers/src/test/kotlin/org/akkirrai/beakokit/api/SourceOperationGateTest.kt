@@ -30,6 +30,26 @@ class SourceOperationGateTest {
     }
 
     @Test
+    fun `real source gate requires both capability and optional interface`() {
+        val source = FakeSource(sourceInfo(setOf(SourceCapability.LATEST_RELEASES)))
+
+        assertEquals(false, SourceOperationGate.supports(source, SourceOperation.LATEST))
+        assertFailsWith<SourceException> {
+            SourceOperationGate.requireSupported(source, SourceOperation.LATEST)
+        }
+    }
+
+    @Test
+    fun `real source gate rejects playback capability without playback interface`() {
+        val source = FakeSource(sourceInfo(setOf(SourceCapability.PLAYBACK)))
+
+        assertEquals(false, SourceOperationGate.supports(source, SourceOperation.PLAYBACK_GROUPS))
+        assertFailsWith<SourceException> {
+            SourceOperationGate.requireSupported(source, SourceOperation.PLAYER_LINKS)
+        }
+    }
+
+    @Test
     fun `unsupported operation has stable error code`() {
         val exception = assertFailsWith<SourceException> {
             SourceOperationGate.requireSupported(FakeSource(sourceInfo()), SourceOperation.SCHEDULE)
@@ -49,6 +69,7 @@ class SourceOperationGateTest {
     @Test
     fun `health check is available only to health check sources`() {
         assertTrue(SourceOperationGate.supports(HealthyFakeSource(sourceInfo()), SourceOperation.HEALTH_CHECK))
+        assertEquals(false, SourceOperationGate.supports(FakeSource(sourceInfo()), SourceOperation.HEALTH_CHECK))
     }
 
     private open class FakeSource(

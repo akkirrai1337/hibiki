@@ -4,6 +4,11 @@ package org.akkirrai.beakokit.api
 object SourceOperationGate {
     fun supports(source: AnimeSource, operation: SourceOperation): Boolean = when (operation) {
         SourceOperation.HEALTH_CHECK -> source is HealthCheckSource
+        SourceOperation.LATEST ->
+            source is LatestSource && SourceCapability.LATEST_RELEASES in source.info.capabilities
+        SourceOperation.PLAYBACK_GROUPS,
+        SourceOperation.PLAYER_LINKS,
+        -> source is PlaybackSource && SourceCapability.PLAYBACK in source.info.capabilities
         else -> supports(source.info, operation)
     }
 
