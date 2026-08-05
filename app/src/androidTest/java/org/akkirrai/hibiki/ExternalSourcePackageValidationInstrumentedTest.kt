@@ -277,14 +277,169 @@ class ExternalSourcePackageValidationInstrumentedTest {
         }
     }
 
-    private fun zipPackage(manifest: SourceManifest): ArchiveFixture {
+    @Test
+    fun androidRepositoryPlatformRollsBackToPreviousPackageVersion() = runBlocking {
+        val sourceId = SourceId("instrumented-rollback-source")
+        val packageUrl = "https://example.com/rollback-source.zip"
+        val v1 = repositoryPackage(
+            manifest().copy(
+                sourceId = sourceId,
+                packageVersion = "1.0.0",
+                packageUrl = packageUrl,
+            ),
+        )
+        val v2 = repositoryPackage(
+            manifest().copy(
+                sourceId = sourceId,
+                packageVersion = "2.0.0",
+                packageUrl = packageUrl,
+            ),
+        )
+        var current = v1
+        val client = HttpClient(MockEngine { request ->
+            if (request.url.toString().endsWith("index.json")) {
+                respond(
+                    SourceRepositoryIndexCodec.encode(
+                        SourceRepositoryIndex(
+                            apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                            sources = listOf(current.manifest),
+                        ),
+                    ),
+                    status = HttpStatusCode.OK,
+                )
+            } else {
+                respond(current.archive.bytes, status = HttpStatusCode.OK)
+            }
+        })
+        val platform = createAndroidExternalSourceRepositoryPlatform(
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            httpClient = client,
+        )
+        try {
+            val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
+            platform.coordinator.addRepository(endpoint)
+            platform.coordinator.refresh()
+            platform.installAvailablePackage(sourceId) {}
+
+            current = v2
+            platform.coordinator.refresh()
+            platform.installAvailablePackage(sourceId) {}
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "2.0.0")
+
+            val rollback = platform.rollbackActivePackage(sourceId)
+
+            assertTrue(rollback.active?.packageVersion == "1.0.0")
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+        } finally {
+            platform.close()
+            client.close()
+        }
+    }
+
+    @Test
+    fun androidRepositoryPlatformKeepsPreviousPackageWhenUpdateValidationFails() = runBlocking {
+        val sourceId = SourceId("instrumented-failed-update-source")
+        val packageUrl = "https://example.com/failed-update-source.zip"
+        val v1 = repositoryPackage(
+            manifest().copy(
+                sourceId = sourceId,
+                packageVersion = "1.0.0",
+                packageUrl = packageUrl,
+            ),
+        )
+        val v2 = repositoryPackage(
+            manifest().copy(
+                sourceId = sourceId,
+                packageVersion = "2.0.0",
+                packageUrl = packageUrl,
+            ),
+            module = byteArrayOf(0, 1, 2, 3),
+        )
+        var current = v1
+        val client = HttpClient(MockEngine { request ->
+            if (request.url.toString().endsWith("index.json")) {
+                respond(
+                    SourceRepositoryIndexCodec.encode(
+                        SourceRepositoryIndex(
+                            apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                            sources = listOf(current.manifest),
+                        ),
+                    ),
+                    status = HttpStatusCode.OK,
+                )
+            } else {
+                respond(current.archive.bytes, status = HttpStatusCode.OK)
+            }
+        })
+        val platform = createAndroidExternalSourceRepositoryPlatform(
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            httpClient = client,
+        )
+        try {
+            val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
+            platform.coordinator.addRepository(endpoint)
+            platform.coordinator.refresh()
+            platform.installAvailablePackage(sourceId) {}
+
+            current = v2
+            platform.coordinator.refresh()
+            var failed = false
+            try {
+                platform.installAvailablePackage(
+                    sourceId = sourceId,
+                    initializeCandidate = { candidate ->
+                        validateAndroidExternalSourceRuntime(
+                            ActiveExternalSourcePackage(
+                                manifest = current.manifest,
+                                installed = candidate,
+                            ),
+                        )
+                    },
+                    initialize = {},
+                )
+            } catch (_: Throwable) {
+                failed = true
+            }
+
+            assertTrue(failed)
+            assertTrue(platform.loadActivePackage(sourceId)?.installed?.packageVersion == "1.0.0")
+        } finally {
+            platform.close()
+            client.close()
+        }
+    }
+
+    private fun repositoryPackage(
+        manifest: SourceManifest,
+        module: ByteArray = moduleBytes(),
+    ): RepositoryPackage {
+        val archive = zipPackage(
+            manifest.copy(
+                sha256 = "a".repeat(64),
+                artifactSizeBytes = 1,
+            ),
+            module = module,
+        )
+        return RepositoryPackage(
+            manifest = manifest.copy(
+                sha256 = archive.sha256,
+                artifactSizeBytes = archive.bytes.size.toLong(),
+            ),
+            archive = archive,
+        )
+    }
+
+    private fun zipPackage(
+        manifest: SourceManifest,
+        module: ByteArray = moduleBytes(),
+    ): ArchiveFixture {
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
             zip.putNextEntry(ZipEntry("manifest.json"))
             zip.write(Json.encodeToString(manifest).encodeToByteArray())
             zip.closeEntry()
             zip.putNextEntry(ZipEntry(manifest.entrypoint))
-            zip.write(moduleBytes())
+            zip.write(module)
             zip.closeEntry()
         }
         val bytes = output.toByteArray()
@@ -298,6 +453,11 @@ class ExternalSourcePackageValidationInstrumentedTest {
     private data class ArchiveFixture(
         val bytes: ByteArray,
         val sha256: String,
+    )
+
+    private data class RepositoryPackage(
+        val manifest: SourceManifest,
+        val archive: ArchiveFixture,
     )
 
     private fun manifest() = SourceManifest(
