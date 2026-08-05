@@ -1,5 +1,7 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.serialization.Serializable
+
 /** Source-scoped values supplied by the host; secrets are deliberately read separately. */
 interface SourceConfig {
     fun value(key: String): String?
@@ -41,7 +43,44 @@ class MapSourceConfig(
     override fun value(key: String): String? = values[key]
 
     override fun secret(key: String): String? = secrets[key]
+
+    fun snapshot(): SourceConfigState = SourceConfigState(
+        values = values,
+        secrets = secrets,
+    )
 }
+
+/** Persistable source-scoped configuration with regular values and secrets kept separate. */
+@Serializable
+data class SourceConfigState(
+    val values: Map<String, String> = emptyMap(),
+    val secrets: Map<String, String> = emptyMap(),
+) {
+    init {
+        require(values.keys.intersect(secrets.keys).isEmpty()) {
+            "Source config keys must not be stored as both values and secrets"
+        }
+        (values.keys + secrets.keys).forEach(SourceHostConfigLimits::requireKey)
+        (values.values + secrets.values).forEach(SourceHostConfigLimits::requireValue)
+    }
+
+    fun asConfig(): MapSourceConfig = MapSourceConfig(values = values, secrets = secrets)
+}
+
+/** Platform persistence boundary for source-scoped configuration. */
+interface SourceConfigStore {
+    fun load(sourceId: SourceId): SourceConfigState
+
+    /** Implementations must replace one source namespace atomically. */
+    fun persistAtomically(sourceId: SourceId, state: SourceConfigState)
+
+    fun remove(sourceId: SourceId)
+}
+
+class SourceConfigStateException(
+    message: String,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
 
 enum class SourceLogLevel {
     DEBUG,

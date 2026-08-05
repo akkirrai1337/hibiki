@@ -71,6 +71,7 @@ fun createAndroidExternalSourceRepositoryPlatform(
         activationRepositoryFactory = { sourceId ->
             SourcePackageActivationRepository(sourceId, activationStore)
         },
+        sourceConfigStore = AndroidSourceConfigStore(context),
         closeResources = client::close,
     )
 }

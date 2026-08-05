@@ -12,6 +12,8 @@ import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.InstalledSourcePackage
+import org.akkirrai.beakokit.api.SourceConfigState
+import org.akkirrai.beakokit.api.SourceConfigStore
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
@@ -22,6 +24,7 @@ class ExternalSourceRepositoryPlatform(
     private val packageInstallationFactory: SourcePackageInstallationCoordinatorFactory? = null,
     private val stagingPathFactory: ((SourceId) -> String)? = null,
     private val activationRepositoryFactory: ((SourceId) -> SourcePackageActivationRepository)? = null,
+    private val sourceConfigStore: SourceConfigStore? = null,
     private val closeResources: () -> Unit,
 ) {
     fun loadActivePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
@@ -86,6 +89,18 @@ class ExternalSourceRepositoryPlatform(
     ): SourcePackageActivationState = requireNotNull(activationRepositoryFactory) {
         "Source package rollback is not available on this platform"
     }(sourceId).deactivateFirstPackage(candidate)
+
+    fun loadSourceConfig(sourceId: SourceId): SourceConfigState = requireNotNull(sourceConfigStore) {
+        "Source config storage is not available on this platform"
+    }.load(sourceId)
+
+    fun persistSourceConfig(sourceId: SourceId, state: SourceConfigState) = requireNotNull(sourceConfigStore) {
+        "Source config storage is not available on this platform"
+    }.persistAtomically(sourceId, state)
+
+    fun removeSourceConfig(sourceId: SourceId) = requireNotNull(sourceConfigStore) {
+        "Source config storage is not available on this platform"
+    }.remove(sourceId)
 
     /** Builds the inactive external registry without changing the built-in registry. */
     fun loadActiveRegistry(

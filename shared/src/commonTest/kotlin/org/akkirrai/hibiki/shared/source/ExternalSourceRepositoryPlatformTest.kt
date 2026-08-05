@@ -29,6 +29,8 @@ import org.akkirrai.beakokit.api.SourceRepositoryResponse
 import org.akkirrai.beakokit.api.SourceRepositoryStore
 import org.akkirrai.beakokit.api.SourceRepositoryTransport
 import org.akkirrai.beakokit.api.SourceRuntime
+import org.akkirrai.beakokit.api.SourceConfigState
+import org.akkirrai.beakokit.api.SourceConfigStore
 import org.akkirrai.beakokit.model.CatalogCapabilities
 
 class ExternalSourceRepositoryPlatformTest {
@@ -51,6 +53,28 @@ class ExternalSourceRepositoryPlatformTest {
 
         assertEquals(previous, state.active)
         assertEquals(state, store.state)
+    }
+
+    @Test
+    fun sourceConfigUsesThePlatformConfigStore() {
+        val sourceId = SourceId("external-source")
+        val store = InMemoryConfigStore()
+        val platform = ExternalSourceRepositoryPlatform(
+            coordinator = emptyCoordinator(),
+            activePackageLoaderFactory = { error("Package loading is not used by this test") },
+            sourceConfigStore = store,
+            closeResources = {},
+        )
+        val state = SourceConfigState(
+            values = mapOf("base_url" to "https://source.test"),
+            secrets = mapOf("token" to "secret"),
+        )
+
+        platform.persistSourceConfig(sourceId, state)
+
+        assertEquals(state, platform.loadSourceConfig(sourceId))
+        platform.removeSourceConfig(sourceId)
+        assertEquals(SourceConfigState(), platform.loadSourceConfig(sourceId))
     }
 
     @Test
@@ -236,6 +260,20 @@ class ExternalSourceRepositoryPlatformTest {
 
         override fun persistAtomically(sourceId: SourceId, state: SourcePackageActivationState) {
             this.state = state
+        }
+    }
+
+    private class InMemoryConfigStore : SourceConfigStore {
+        private val states = mutableMapOf<SourceId, SourceConfigState>()
+
+        override fun load(sourceId: SourceId): SourceConfigState = states[sourceId] ?: SourceConfigState()
+
+        override fun persistAtomically(sourceId: SourceId, state: SourceConfigState) {
+            states[sourceId] = state
+        }
+
+        override fun remove(sourceId: SourceId) {
+            states.remove(sourceId)
         }
     }
 }
