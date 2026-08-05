@@ -43,15 +43,18 @@ class ExternalSourcePackageValidationInstrumentedTest {
             .resolve("external-source-details-${System.nanoTime()}")
         val module = packageDirectory.resolve("source.wasm")
         packageDirectory.toFile().mkdirs()
-        val client = HttpClient(MockEngine {
-            respond(
-                content = "{\"data\":${releaseJson()}}",
-                status = HttpStatusCode.OK,
-            )
+        val client = HttpClient(MockEngine { request ->
+            val content = if (request.url.toString().contains("/anime/releases/")) {
+                "{\"data\":${releaseJson()}}"
+            } else {
+                "{\"data\":[${releaseJson()}]}"
+            }
+            respond(content = content, status = HttpStatusCode.OK)
         })
         try {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
-            context.assets.open("aniliberty-source.wasm").use { input ->
+            InstrumentationRegistry.getInstrumentation().context.assets
+                .open("aniliberty-source.wasm").use { input ->
                 module.writeBytes(input.readBytes())
             }
             val manifest = manifest()
@@ -103,7 +106,8 @@ class ExternalSourcePackageValidationInstrumentedTest {
         val client = HttpClient(MockEngine { error("HTTP must not be called while creating runtime") })
         try {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
-            context.assets.open("aniliberty-source.wasm").use { input ->
+            InstrumentationRegistry.getInstrumentation().context.assets
+                .open("aniliberty-source.wasm").use { input ->
                 module.writeBytes(input.readBytes())
             }
             val manifest = manifest()
