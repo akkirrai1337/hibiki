@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
+import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceId
@@ -49,6 +50,17 @@ class ExternalSourceRuntimeCoordinator(
         operationMutex.withLock {
             sourceId.takeUnless(reservedSourceIds::contains)?.let(::loadActivePackageOrNull)
         }
+
+    /** Creates an installed source with its persisted configuration applied to the caller context. */
+    fun createActiveSource(sourceId: SourceId, baseContext: SourceContext): AnimeSource {
+        require(sourceId !in reservedSourceIds) {
+            "External source ID is reserved by a built-in source: $sourceId"
+        }
+        val registry = requireNotNull(snapshot.value.registry) {
+            "External source registry is not ready"
+        }
+        return registry.create(sourceId, sourceContextFor(sourceId, baseContext))
+    }
 
     /** Returns advertised packages together with their currently active versions. */
     suspend fun packageStatuses(): List<ExternalSourcePackageStatus> = operationMutex.withLock {
@@ -214,6 +226,10 @@ class ExternalSourceRuntimeCoordinator(
         val baseContext = requireNotNull(sourceContextFactory) {
             "External source context factory is not configured"
         }(sourceId)
+        return sourceContextFor(sourceId, baseContext)
+    }
+
+    private fun sourceContextFor(sourceId: SourceId, baseContext: SourceContext): SourceContext {
         val persistedConfig = platform.loadSourceConfigOrNull(sourceId) ?: return baseContext
         return baseContext.withConfig(persistedConfig.asConfig())
     }

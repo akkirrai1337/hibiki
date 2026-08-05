@@ -416,6 +416,42 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
+    fun createActiveSourceAppliesPersistedConfigToTheCallerContext() = runTest {
+        val sourceId = SourceId("external-source")
+        val client = HttpClient()
+        val receivedConfigs = mutableListOf<String?>()
+        val coordinator = ExternalSourceRuntimeCoordinator(
+            platform = platformFor(
+                sourceId = sourceId,
+                sourceConfigState = SourceConfigState(
+                    values = mapOf("base_url" to "https://persisted.example"),
+                ),
+            ),
+            catalogCapabilities = { CatalogCapabilities.FULL },
+            runtimeFactory = ExternalSourceRuntimeFactory { _, context ->
+                receivedConfigs += context.config.value("base_url")
+                object : ExternalSourceRuntime {
+                    override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = emptyList()
+
+                    override suspend fun details(id: String): AnimeTitle = title(id)
+                }
+            },
+        )
+
+        coordinator.refresh()
+        coordinator.createActiveSource(
+            sourceId = sourceId,
+            baseContext = DefaultSourceContext(
+                httpClient = client,
+                preferredLanguages = listOf(SourceLanguage.ENGLISH),
+            ),
+        )
+
+        assertEquals(listOf<String?>("https://persisted.example"), receivedConfigs)
+        client.close()
+    }
+
+    @Test
     fun availablePackageUpdatesReportVersionMismatchesWithoutGuessingOrdering() = runTest {
         val sourceId = SourceId("external-source")
         val coordinator = ExternalSourceRuntimeCoordinator(

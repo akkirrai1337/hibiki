@@ -38,6 +38,7 @@ import org.akkirrai.beakokit.api.activeExternalSourceRegistry
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
+import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
@@ -282,6 +283,82 @@ class ExternalSourcePackageValidationInstrumentedTest {
             val restored = requireNotNull(platform.loadActivePackage(sourceId))
             assertTrue(restored.installed.packageVersion == repositoryManifest.packageVersion)
             assertTrue(restored.installed.artifactSha256 == archive.sha256)
+        } finally {
+            platform.close()
+            client.close()
+        }
+    }
+
+    @Test
+    fun androidRepositoryInstallBuildsUsableExternalSourceRegistry() = runBlocking {
+        val sourceId = SourceId("instrumented-runtime-source-${System.nanoTime()}")
+        val packageUrl = "https://example.com/runtime-source.zip"
+        val module = InstrumentationRegistry.getInstrumentation().context.assets
+            .open("aniliberty-source.wasm")
+            .use { it.readBytes() }
+        val packageFixture = repositoryPackage(
+            manifest().copy(
+                sourceId = sourceId,
+                packageUrl = packageUrl,
+            ),
+            module = module,
+        )
+        val client = HttpClient(MockEngine { request ->
+            if (request.url.toString().endsWith("index.json")) {
+                respond(
+                    SourceRepositoryIndexCodec.encode(
+                        SourceRepositoryIndex(
+                            apiVersion = SourceRepositoryIndex.CURRENT_API_VERSION,
+                            sources = listOf(packageFixture.manifest),
+                        ),
+                    ),
+                    status = HttpStatusCode.OK,
+                )
+            } else {
+                respond(packageFixture.archive.bytes, status = HttpStatusCode.OK)
+            }
+        })
+        val platform = createAndroidExternalSourceRepositoryPlatform(
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            httpClient = client,
+        )
+        try {
+            platform.coordinator.addRepository(SourceRepositoryEndpoint("https://example.com/index.json"))
+            platform.coordinator.refresh()
+            platform.installAvailablePackage(sourceId) {}
+
+            val runtimeCoordinator = ExternalSourceRuntimeCoordinator(
+                platform = platform,
+                catalogCapabilities = { CatalogCapabilities.FULL },
+                runtimeFactory = createAndroidExternalSourceRuntimeFactory(
+                    InstrumentationRegistry.getInstrumentation().targetContext,
+                ),
+                sourceContextFactory = {
+                    DefaultSourceContext(
+                        httpClient = client,
+                        preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                    )
+                },
+            )
+            runtimeCoordinator.refresh()
+
+            val source = runtimeCoordinator.createActiveSource(
+                sourceId = sourceId,
+                baseContext = DefaultSourceContext(
+                    httpClient = client,
+                    preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                ),
+            )
+            val search = source.search(AnimeSearchRequest(query = "naruto", limit = 20))
+            assertTrue(search.any { it.id == "413" })
+            val title = source.getById("413")
+            assertTrue(title.originalName == "Naruto")
+            val playback = source as PlaybackSource
+            val group = playback.getPlaybackGroups(title).single()
+            assertTrue(
+                playback.getPlayerLinks(title, group, group.episodes.single())
+                    .any { it.url.endsWith("720.m3u8") },
+            )
         } finally {
             platform.close()
             client.close()
