@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.CancellationException
 
 class ExternalSourceRuntimeProtocolCodecTest {
     @Test
@@ -97,6 +98,45 @@ class ExternalSourceRuntimeProtocolCodecTest {
 
         assertEquals(SourceErrorKind.PARSE, error.kind)
         assertEquals(SourceErrorCode.INVALID_RESPONSE, error.code)
+    }
+
+    @Test
+    fun nativeBridgeNormalizesBridgeFailures() = runBlocking {
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { _, _ -> error("native bridge crashed") },
+        )
+        val request = ExternalSourceRuntimeRequest(
+            requestId = "bridge-failure",
+            operation = ExternalSourceRuntimeOperation.DETAILS,
+            payload = buildJsonObject { put("id", "title-1") },
+        )
+
+        val error = assertFailsWith<SourceException> {
+            transport.call(request, ExternalSourceRuntimeCallLimits())
+        }
+
+        assertEquals(SourceErrorKind.UNKNOWN, error.kind)
+        assertEquals(SourceErrorCode.RUNTIME_FAILURE, error.code)
+        assertEquals("native bridge crashed", error.cause?.message)
+    }
+
+    @Test
+    fun nativeBridgePreservesCancellation() = runBlocking {
+        val cancellation = CancellationException("caller cancelled native runtime")
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { _, _ -> throw cancellation },
+        )
+        val request = ExternalSourceRuntimeRequest(
+            requestId = "bridge-cancelled",
+            operation = ExternalSourceRuntimeOperation.DETAILS,
+            payload = buildJsonObject { put("id", "title-1") },
+        )
+
+        val error = assertFailsWith<CancellationException> {
+            transport.call(request, ExternalSourceRuntimeCallLimits())
+        }
+
+        assertEquals(cancellation.message, error.message)
     }
 
     @Test

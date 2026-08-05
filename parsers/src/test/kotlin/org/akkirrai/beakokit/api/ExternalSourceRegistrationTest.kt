@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -598,11 +599,17 @@ class ExternalSourceRegistrationTest {
 
             override fun decodeDetails(payload: JsonObject): AnimeTitle = title("details")
         }
+        var bridgeCreated = false
+        var moduleRead = false
         val factory = NativeBridgeExternalSourceRuntimeFactory(
             bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { _, _, _, _ ->
+                bridgeCreated = true
                 ExternalSourceRuntimeNativeBridge { _, _ -> error("Runtime call is not expected") }
             },
-            moduleReader = SourcePackageModuleReader { _, _ -> byteArrayOf(1) },
+            moduleReader = SourcePackageModuleReader { _, _ ->
+                moduleRead = true
+                byteArrayOf(1)
+            },
             requestIdFactory = { "catalog-only-runtime" },
             payloadCodec = catalogOnlyCodec,
         )
@@ -616,6 +623,8 @@ class ExternalSourceRegistrationTest {
                 ),
             )
         }
+        assertFalse(bridgeCreated)
+        assertFalse(moduleRead)
     }
 
     @Test

@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 
 /** Strict UTF-8 JSON codec shared by native runtime bridges on every platform. */
 object ExternalSourceRuntimeProtocolCodec {
@@ -61,18 +62,31 @@ class NativeBridgeExternalSourceRuntimeTransport(
         request: ExternalSourceRuntimeRequest,
         limits: ExternalSourceRuntimeCallLimits,
     ): ExternalSourceRuntimeResponse {
-        val response = bridge.call(
-            request = ExternalSourceRuntimeProtocolCodec.encodeRequest(request).also { requestBytes ->
-                if (requestBytes.size.toLong() > limits.maxRequestBytes) {
-                    throw SourceException(
-                        message = "Native runtime request exceeds ${limits.maxRequestBytes} bytes",
-                        kind = SourceErrorKind.PARSE,
-                        code = SourceErrorCode.INVALID_REQUEST,
-                    )
-                }
-            },
-            maxResponseBytes = limits.maxResponseBytes,
-        )
+        val response = try {
+            bridge.call(
+                request = ExternalSourceRuntimeProtocolCodec.encodeRequest(request).also { requestBytes ->
+                    if (requestBytes.size.toLong() > limits.maxRequestBytes) {
+                        throw SourceException(
+                            message = "Native runtime request exceeds ${limits.maxRequestBytes} bytes",
+                            kind = SourceErrorKind.PARSE,
+                            code = SourceErrorCode.INVALID_REQUEST,
+                        )
+                    }
+                },
+                maxResponseBytes = limits.maxResponseBytes,
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                message = "Native runtime bridge failed",
+                cause = error,
+                kind = SourceErrorKind.UNKNOWN,
+                code = SourceErrorCode.RUNTIME_FAILURE,
+            )
+        }
         if (response.size.toLong() > limits.maxResponseBytes) {
             throw SourceUnavailableException(
                 message = "Native runtime response exceeds ${limits.maxResponseBytes} bytes",

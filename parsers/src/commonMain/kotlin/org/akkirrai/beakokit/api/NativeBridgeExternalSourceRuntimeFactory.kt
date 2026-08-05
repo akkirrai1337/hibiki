@@ -29,6 +29,10 @@ class NativeBridgeExternalSourceRuntimeFactory(
                 listOf("Unsupported source runtime: ${runtime.id}/${runtime.abi}"),
             )
         }
+        val declaresLatest = SourceCapability.LATEST_RELEASES in sourcePackage.manifest.capabilities
+        val declaresPlayback = SourceCapability.PLAYBACK in sourcePackage.manifest.capabilities
+        val playbackPayloadCodec = if (declaresPlayback) requirePlaybackCodec() else null
+        val runtimePayloadCodec = playbackPayloadCodec ?: payloadCodec
         val transport = NativeBridgeExternalSourceRuntimeTransport(
                 bridge = bridgeFactory.create(
                     sourcePackage = sourcePackage,
@@ -40,12 +44,10 @@ class NativeBridgeExternalSourceRuntimeFactory(
                     hostRequirements = sourcePackage.manifest.hostRequirements(),
                 ),
             )
-        val declaresLatest = SourceCapability.LATEST_RELEASES in sourcePackage.manifest.capabilities
-        val declaresPlayback = SourceCapability.PLAYBACK in sourcePackage.manifest.capabilities
         return when {
             declaresLatest && declaresPlayback -> ProtocolBackedExternalSourceLatestPlaybackRuntime(
                 transport = transport,
-                payloadCodec = requirePlaybackCodec(),
+                payloadCodec = playbackPayloadCodec!!,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
             )
@@ -57,7 +59,7 @@ class NativeBridgeExternalSourceRuntimeFactory(
             )
             declaresPlayback -> ProtocolBackedExternalSourcePlaybackRuntime(
                 transport = transport,
-                payloadCodec = requirePlaybackCodec(),
+                payloadCodec = playbackPayloadCodec!!,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
             )
