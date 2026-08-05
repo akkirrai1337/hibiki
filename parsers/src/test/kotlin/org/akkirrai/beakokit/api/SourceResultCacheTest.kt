@@ -109,4 +109,34 @@ class SourceResultCacheTest {
         )
         assertEquals(2, loads)
     }
+
+    @Test
+    fun `clear prevents an in-flight result from being cached`() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val cache = SourceResultCache()
+        var loads = 0
+
+        val first = async {
+            cache.getOrLoad(sourceId, SourceOperation.DETAILS, "clear-me", 1_000) {
+                loads += 1
+                started.complete(Unit)
+                release.await()
+                "stale"
+            }
+        }
+        started.await()
+        cache.clear()
+        release.complete(Unit)
+        assertEquals("stale", first.await())
+
+        assertEquals(
+            "fresh",
+            cache.getOrLoad(sourceId, SourceOperation.DETAILS, "clear-me", 1_000) {
+                loads += 1
+                "fresh"
+            },
+        )
+        assertEquals(2, loads)
+    }
 }

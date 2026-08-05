@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.api
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -84,6 +85,44 @@ class SourceExecutionPolicyTest {
         })
         assertEquals(SourceCircuitState.CLOSED, policy.circuit(sourceId).state)
         assertEquals(3, attempts)
+    }
+
+    @Test
+    fun `cancelled recovery probe releases its in-flight reservation`() = runBlocking {
+        var now = 0L
+        var cancelWait = true
+        val policy = ResilientSourceExecutionPolicy(
+            healthReporter = InMemorySourceHealthReporter(),
+            policy = SourceResiliencePolicy(
+                minimumIntervalMillis = 150,
+                failureThreshold = 1,
+                cooldownMillis = 100,
+            ),
+            nowMillis = { now },
+            wait = { duration ->
+                if (cancelWait) {
+                    cancelWait = false
+                    throw CancellationException("caller cancelled recovery probe")
+                }
+                now += duration
+            },
+        )
+
+        assertFailsWith<SourceException> {
+            policy.execute(sourceId, SourceOperation.SEARCH) {
+                throw SourceException("temporary", kind = SourceErrorKind.NETWORK)
+            }
+        }
+        now = 100
+
+        assertFailsWith<CancellationException> {
+            policy.execute(sourceId, SourceOperation.SEARCH) { "cancelled" }
+        }
+        assertEquals(
+            "recovered",
+            policy.execute(sourceId, SourceOperation.SEARCH) { "recovered" },
+        )
+        assertEquals(SourceCircuitState.CLOSED, policy.circuit(sourceId).state)
     }
 
     @Test

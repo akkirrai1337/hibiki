@@ -102,7 +102,8 @@ class ResilientSourceExecutionPolicy(
             if (openUntil > beforeWait) {
                 throw SourceCircuitOpenException(sourceId, openUntil - beforeWait, recoveryProbeInFlight = false)
             }
-            if (openUntil != 0L) {
+            val recoveryProbe = openUntil != 0L
+            if (recoveryProbe) {
                 if (recoveryProbeInFlight) {
                     throw SourceCircuitOpenException(sourceId, 0, recoveryProbeInFlight = true)
                 }
@@ -119,8 +120,13 @@ class ResilientSourceExecutionPolicy(
                 }
                 (nextAllowedAt - beforeWait).coerceAtLeast(0)
             }
-            if (waitMillis > 0) wait(waitMillis)
-            lastStartedAt = nowMillis()
+            try {
+                if (waitMillis > 0) wait(waitMillis)
+                lastStartedAt = nowMillis()
+            } catch (error: Throwable) {
+                if (recoveryProbe) recoveryProbeInFlight = false
+                throw error
+            }
         }
 
         suspend fun recordSuccess() = mutex.withLock {
