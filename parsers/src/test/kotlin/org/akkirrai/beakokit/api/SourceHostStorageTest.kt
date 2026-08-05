@@ -61,6 +61,14 @@ class SourceHostStorageTest {
         assertFailsWith<IllegalArgumentException> {
             CorruptMetricsStorage(requirements, size = 0, count = -1).write("key", "value")
         }
+        assertFailsWith<IllegalArgumentException> {
+            CorruptMetricsStorage(requirements, size = 0, count = SourceHostStorage.DEFAULT_MAX_ENTRY_COUNT + 1)
+                .write("key", "value")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            CorruptMetricsStorage(requirements, size = SourceHostStorage.DEFAULT_MAX_STORAGE_BYTES + 1, count = 0)
+                .write("key", "value")
+        }
     }
 
     private class FakeStorage(

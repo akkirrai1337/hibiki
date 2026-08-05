@@ -36,7 +36,9 @@ abstract class SourceHostCookies : SourceHostAccess, SourceHostCookiesAccess {
         const val MAX_COOKIE_VALUE_LENGTH: Int = 8192
 
         fun requireUrl(url: String) {
-            require(isValidHttpsUrl(url)) { "Cookie URL must be a valid HTTPS URL" }
+            require('#' !in url && isValidHttpsUrl(url)) {
+                "Cookie URL must be a valid HTTPS URL without a fragment"
+            }
         }
 
         fun requireCookies(cookies: Map<String, String>) {

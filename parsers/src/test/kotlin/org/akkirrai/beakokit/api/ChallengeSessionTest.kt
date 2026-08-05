@@ -37,6 +37,16 @@ class ChallengeSessionTest {
     }
 
     @Test
+    fun `session rejects cookie values containing header delimiters`() {
+        assertFailsWith<IllegalArgumentException> {
+            ChallengeSession(
+                cookies = mapOf("session" to "value; forged=1"),
+                userAgent = "Browser agent",
+            )
+        }
+    }
+
+    @Test
     fun `unsupported provider reports host capability clearly`() {
         assertFailsWith<SourceUnavailableException> {
             runBlocking {

@@ -43,6 +43,7 @@ class SourceHostCookiesTest {
         assertFailsWith<IllegalArgumentException> { cookies.forUrl("http://example.com") }
         assertFailsWith<IllegalArgumentException> { cookies.forUrl("file:///tmp/cookies") }
         assertFailsWith<IllegalArgumentException> { cookies.forUrl("https://") }
+        assertFailsWith<IllegalArgumentException> { cookies.forUrl("https://example.com/path#fragment") }
         assertFailsWith<IllegalArgumentException> {
             cookies.storeFromResponse(
                 "https://example.com",

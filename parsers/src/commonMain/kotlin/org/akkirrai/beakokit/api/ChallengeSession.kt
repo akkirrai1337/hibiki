@@ -32,7 +32,7 @@ data class ChallengeSession(
         require(cookies.keys.all { it.isNotBlank() && '=' !in it && ';' !in it }) {
             "A challenge session contains an invalid cookie name"
         }
-        require(cookies.values.none { '\r' in it || '\n' in it }) {
+        require(cookies.values.none { '\r' in it || '\n' in it || ';' in it }) {
             "A challenge session contains an invalid cookie value"
         }
         require('\r' !in userAgent && '\n' !in userAgent) { "A challenge session contains an invalid user agent" }
