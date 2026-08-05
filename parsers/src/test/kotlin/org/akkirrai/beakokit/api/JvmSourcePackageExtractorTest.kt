@@ -75,6 +75,30 @@ class JvmSourcePackageExtractorTest {
         }
     }
 
+    @Test
+    fun `staging parent symbolic links are rejected before extraction`() {
+        val root = Files.createTempDirectory("hibiki-source-extract-")
+        val target = Files.createTempDirectory("hibiki-source-target-")
+        val link = root.resolve("link")
+        val created = runCatching { Files.createSymbolicLink(link, target) }.getOrNull() ?: return
+        try {
+            val manifest = manifest()
+            val archive = writeArchive(root.resolve("source.zip"), mapOf(
+                "manifest.json" to Json.encodeToString(manifest),
+                "source.wasm" to "payload",
+            ))
+
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageExtractor().extract(archive, link.resolve("staging"), manifest)
+            }
+            assertFalse(Files.exists(target.resolve("staging")))
+        } finally {
+            Files.deleteIfExists(created)
+            deleteRecursively(target)
+            deleteRecursively(root)
+        }
+    }
+
     private fun manifest() = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId("external-source"),

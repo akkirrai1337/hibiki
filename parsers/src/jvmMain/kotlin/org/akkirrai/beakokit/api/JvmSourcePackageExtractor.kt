@@ -25,6 +25,7 @@ class JvmSourcePackageExtractor(
         require(!Files.exists(stagingDirectory)) {
             "Staging directory must not already exist: $stagingDirectory"
         }
+        stagingDirectory.parent?.let(::requireNoSymbolicLinkInParents)
 
         ZipFile(archive.toFile()).use { zip ->
             val entries = zip.entries().asSequence().map { entry ->
@@ -130,6 +131,18 @@ class JvmSourcePackageExtractor(
         if (!Files.exists(directory)) return
         Files.walk(directory).use { stream ->
             stream.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
+    }
+
+    private fun requireNoSymbolicLinkInParents(directory: Path) {
+        var current: Path? = directory
+        while (current != null) {
+            if (Files.isSymbolicLink(current)) {
+                throw SourcePackageStateException(
+                    "Source package staging parent must not be a symbolic link: $current",
+                )
+            }
+            current = current.parent
         }
     }
 
