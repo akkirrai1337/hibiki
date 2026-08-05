@@ -48,6 +48,7 @@ class ExternalSourceHostDispatcher(
                 ExternalSourceHostProtocolCodec.encodeHttpResponse(response)
             }
             ExternalSourceHostOperation.STORAGE_READ -> {
+                requireDeclared(SourceHostCapability.STORAGE)
                 val storageRequest = ExternalSourceHostProtocolCodec.decodeStorageReadRequest(request.payload)
                 SourceHostStorage.requireKey(storageRequest.key)
                 val value = requireStorage().read(storageRequest.key)
@@ -57,6 +58,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.STORAGE_WRITE -> {
+                requireDeclared(SourceHostCapability.STORAGE)
                 val storageRequest = ExternalSourceHostProtocolCodec.decodeStorageWriteRequest(request.payload)
                 SourceHostStorage.requireKey(storageRequest.key)
                 SourceHostStorage.requireValue(storageRequest.value)
@@ -66,6 +68,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.STORAGE_REMOVE -> {
+                requireDeclared(SourceHostCapability.STORAGE)
                 val storageRequest = ExternalSourceHostProtocolCodec.decodeStorageRemoveRequest(request.payload)
                 SourceHostStorage.requireKey(storageRequest.key)
                 requireStorage().remove(storageRequest.key)
@@ -74,6 +77,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.COOKIES_FOR_URL -> {
+                requireDeclared(SourceHostCapability.COOKIES)
                 val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesForUrlRequest(request.payload)
                 SourceHostCookies.requireUrl(cookiesRequest.url)
                 val cookies = requireCookies().forUrl(cookiesRequest.url)
@@ -83,6 +87,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.COOKIES_STORE_RESPONSE -> {
+                requireDeclared(SourceHostCapability.COOKIES)
                 val cookiesRequest =
                     ExternalSourceHostProtocolCodec.decodeCookiesStoreResponseRequest(request.payload)
                 SourceHostCookies.requireUrl(cookiesRequest.url)
@@ -93,6 +98,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.COOKIES_CLEAR -> {
+                requireDeclared(SourceHostCapability.COOKIES)
                 val cookiesRequest = ExternalSourceHostProtocolCodec.decodeCookiesClearRequest(request.payload)
                 SourceHostCookies.requireUrl(cookiesRequest.url)
                 requireCookies().clear(cookiesRequest.url)
@@ -101,6 +107,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.CONFIG_VALUE -> {
+                requireDeclared(SourceHostCapability.CONFIG)
                 val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
                 SourceHostConfigLimits.requireKey(configRequest.key)
                 val configAccess = requireConfig()
@@ -111,6 +118,7 @@ class ExternalSourceHostDispatcher(
                 )
             }
             ExternalSourceHostOperation.CONFIG_SECRET -> {
+                requireDeclared(SourceHostCapability.CONFIG)
                 val configRequest = ExternalSourceHostProtocolCodec.decodeConfigRequest(request.payload)
                 SourceHostConfigLimits.requireKey(configRequest.key)
                 val configAccess = requireConfig()
@@ -129,17 +137,17 @@ class ExternalSourceHostDispatcher(
 
     private fun requireStorage(): ExternalSourceHostStorageAccess {
         requireDeclared(SourceHostCapability.STORAGE)
-        return storage ?: throw SourceHostCapabilityException(SourceHostCapability.STORAGE)
+        return storage ?: throw SourceHostAdapterUnavailableException(SourceHostCapability.STORAGE)
     }
 
     private fun requireCookies(): SourceHostCookiesAccess {
         requireDeclared(SourceHostCapability.COOKIES)
-        return cookies ?: throw SourceHostCapabilityException(SourceHostCapability.COOKIES)
+        return cookies ?: throw SourceHostAdapterUnavailableException(SourceHostCapability.COOKIES)
     }
 
     private fun requireConfig(): SourceHostConfigAccess {
         requireDeclared(SourceHostCapability.CONFIG)
-        return config ?: throw SourceHostCapabilityException(SourceHostCapability.CONFIG)
+        return config ?: throw SourceHostAdapterUnavailableException(SourceHostCapability.CONFIG)
     }
 
     private fun requireDeclared(capability: SourceHostCapability) {

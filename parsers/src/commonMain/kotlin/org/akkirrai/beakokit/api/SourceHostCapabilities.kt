@@ -89,3 +89,9 @@ class SourceHostNetworkPolicyException : SourceHostCapabilityException(
     capability = SourceHostCapability.NETWORK,
     message = "Source network URL is not allowed",
 )
+
+class SourceHostAdapterUnavailableException(
+    capability: SourceHostCapability,
+) : SourceUnavailableException(
+    message = "Source host adapter is unavailable for ${capability.name}",
+)

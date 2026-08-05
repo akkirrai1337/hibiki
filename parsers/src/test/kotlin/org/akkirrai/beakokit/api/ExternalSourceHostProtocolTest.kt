@@ -68,7 +68,13 @@ class ExternalSourceHostProtocolTest {
         )
 
         val error = assertFailsWith<SourceException> {
-            ExternalSourceHostDispatcher { error("HTTP must not be called") }.dispatch(request)
+            ExternalSourceHostDispatcher(
+                executeHttpRequest = { error("HTTP must not be called") },
+                storage = null,
+                requirements = SourceHostRequirements(
+                    capabilities = setOf(SourceHostCapability.NETWORK, SourceHostCapability.CONFIG),
+                ),
+            ).dispatch(request)
         }
 
         assertEquals(SourceErrorCode.INVALID_REQUEST, error.code)
@@ -193,6 +199,80 @@ class ExternalSourceHostProtocolTest {
         assertFailsWith<SourceHostCapabilityException> {
             dispatcher.dispatch(request)
         }
+    }
+
+    @Test
+    fun dispatcher_rejects_malformed_storage_before_decoding_when_capability_is_not_declared() = runBlocking {
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = object : ExternalSourceHostStorageAccess {
+                override suspend fun read(key: String): String? = error("Storage must not be called")
+                override suspend fun write(key: String, value: String) = error("Storage must not be called")
+                override suspend fun remove(key: String) = error("Storage must not be called")
+            },
+            requirements = SourceHostRequirements(capabilities = emptySet()),
+        )
+        val request = ExternalSourceHostRequest(
+            requestId = "host-storage-malformed-denied",
+            operation = ExternalSourceHostOperation.STORAGE_READ,
+            payload = buildJsonObject { put("key", 42) },
+        )
+
+        assertFailsWith<SourceHostCapabilityException> {
+            dispatcher.dispatch(request)
+        }
+    }
+
+    @Test
+    fun dispatcher_rejects_malformed_cookies_and_config_before_decoding() = runBlocking {
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            requirements = SourceHostRequirements(capabilities = emptySet()),
+        )
+
+        listOf(
+            ExternalSourceHostOperation.COOKIES_FOR_URL,
+            ExternalSourceHostOperation.COOKIES_STORE_RESPONSE,
+            ExternalSourceHostOperation.COOKIES_CLEAR,
+            ExternalSourceHostOperation.CONFIG_VALUE,
+            ExternalSourceHostOperation.CONFIG_SECRET,
+        ).forEach { operation ->
+            assertFailsWith<SourceHostCapabilityException> {
+                dispatcher.dispatch(
+                    ExternalSourceHostRequest(
+                        requestId = "host-${operation.name.lowercase()}-denied",
+                        operation = operation,
+                        payload = buildJsonObject { put("unexpected", 42) },
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun dispatcher_distinguishes_declared_but_unavailable_adapters() = runBlocking {
+        val dispatcher = ExternalSourceHostDispatcher(
+            executeHttpRequest = { error("HTTP must not be called") },
+            storage = null,
+            requirements = SourceHostRequirements(
+                capabilities = setOf(SourceHostCapability.STORAGE),
+            ),
+        )
+        val request = ExternalSourceHostRequest(
+            requestId = "host-storage-unavailable",
+            operation = ExternalSourceHostOperation.STORAGE_READ,
+            payload = ExternalSourceHostProtocolCodec.encodeStorageReadRequest(
+                ExternalSourceHostStorageReadRequest("token"),
+            ),
+        )
+
+        val error = assertFailsWith<SourceHostAdapterUnavailableException> {
+            dispatcher.dispatch(request)
+        }
+
+        assertEquals(SourceErrorKind.UNAVAILABLE, error.kind)
+        assertEquals(SourceErrorCode.UNAVAILABLE, error.code)
     }
 
     @Test
