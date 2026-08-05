@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import org.akkirrai.beakokit.api.SourceRepositoryCatalog
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
@@ -22,6 +23,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceApi
 import org.akkirrai.beakokit.api.SourceHostApi
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceRepositoryUrlException
 
 class ExternalSourceRepositoryCoordinatorTest {
     @Test
@@ -177,6 +179,37 @@ class ExternalSourceRepositoryCoordinatorTest {
         assertEquals(listOf(endpoint), coordinator.addRepository(endpoint))
         assertEquals(emptyList(), coordinator.removeRepository(endpoint.url))
         assertEquals(emptyList(), coordinator.snapshot.value.loaded)
+    }
+
+    @Test
+    fun repositoryUrlIsResolvedBeforeItIsPersisted() = runTest {
+        val store = FakeStore()
+        val coordinator = ExternalSourceRepositoryCoordinator(
+            SourceRepositoryCatalogLoader(
+                catalog = SourceRepositoryCatalog(store),
+                loader = SourceRepositoryLoader(SourceRepositoryTransport { _, _ ->
+                    error("Repository loading is not part of this test")
+                }),
+            ),
+        )
+
+        assertEquals(
+            listOf(SourceRepositoryEndpoint(
+                "https://raw.githubusercontent.com/vadim/hibiki-sources/main/repository/index.json",
+            )),
+            coordinator.addRepositoryUrl(
+                "https://github.com/vadim/hibiki-sources/blob/main/repository/index.json",
+            ),
+        )
+        assertEquals(
+            emptyList(),
+            coordinator.removeRepositoryUrl(
+                "https://github.com/vadim/hibiki-sources/blob/main/repository/index.json",
+            ),
+        )
+        assertFailsWith<SourceRepositoryUrlException> {
+            coordinator.addRepositoryUrl("https://github.com/vadim/hibiki-sources")
+        }
     }
 
     @Test

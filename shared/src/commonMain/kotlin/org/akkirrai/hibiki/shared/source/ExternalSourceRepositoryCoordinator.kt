@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceRepositoryCatalogLoader
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
+import org.akkirrai.beakokit.api.SourceRepositoryUrlResolver
 
 /**
  * Application-level owner of the background external-repository snapshot.
@@ -22,6 +23,7 @@ import org.akkirrai.beakokit.api.SourceRepositoryLoadSnapshot
  */
 class ExternalSourceRepositoryCoordinator(
     private val catalogLoader: SourceRepositoryCatalogLoader,
+    private val repositoryUrlResolver: SourceRepositoryUrlResolver = SourceRepositoryUrlResolver(),
 ) {
     private val refreshMutex = Mutex()
 
@@ -40,6 +42,10 @@ class ExternalSourceRepositoryCoordinator(
     fun addRepository(endpoint: SourceRepositoryEndpoint): List<SourceRepositoryEndpoint> =
         catalogLoader.addRepository(endpoint)
 
+    /** Resolves a user-provided repository link before persisting it. */
+    fun addRepositoryUrl(input: String): List<SourceRepositoryEndpoint> =
+        addRepository(repositoryUrlResolver.resolve(input))
+
     /** Removes one repository endpoint and evicts only its entries from the loaded snapshot. */
     fun removeRepository(url: String): List<SourceRepositoryEndpoint> {
         val repositories = catalogLoader.removeRepository(url)
@@ -49,6 +55,10 @@ class ExternalSourceRepositoryCoordinator(
         )
         return repositories
     }
+
+    /** Resolves a user-provided repository link before removing it. */
+    fun removeRepositoryUrl(input: String): List<SourceRepositoryEndpoint> =
+        removeRepository(repositoryUrlResolver.resolve(input).url)
 
     /** Source IDs advertised by successfully loaded repositories, without duplicates. */
     fun availableSourceIds(): List<SourceId> = snapshot.value.loaded

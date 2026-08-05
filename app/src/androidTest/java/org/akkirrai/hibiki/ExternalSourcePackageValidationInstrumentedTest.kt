@@ -261,8 +261,9 @@ class ExternalSourcePackageValidationInstrumentedTest {
             httpClient = client,
         )
         try {
-            val endpoint = SourceRepositoryEndpoint("https://example.com/index.json")
-            platform.coordinator.addRepository(endpoint)
+            platform.coordinator.addRepositoryUrl(
+                "https://github.com/vadim/hibiki-sources/blob/main/repository/index.json",
+            )
             platform.coordinator.refresh()
 
             platform.installAvailablePackage(sourceId) {}
