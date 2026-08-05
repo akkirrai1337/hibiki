@@ -46,6 +46,9 @@ import java.util.UUID
 fun createAndroidExternalSourceRuntimeFactory(context: Context): ExternalSourceRuntimeFactory =
     NativeBridgeExternalSourceRuntimeFactory(
         bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, sourceContext, module, requirements ->
+            runBlocking(Dispatchers.IO) {
+                NativeSourceRuntimeBridge.validateModule(module)
+            }
             AndroidExternalSourceRuntimeBridge(
                 appContext = context.applicationContext,
                 sourceContext = sourceContext,

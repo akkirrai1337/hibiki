@@ -40,6 +40,7 @@ import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPl
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
 import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.junit.Test
+import org.junit.Assert.assertThrows
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
 import kotlin.io.path.deleteIfExists
@@ -222,6 +223,28 @@ class ExternalSourcePackageValidationInstrumentedTest {
             }
 
             assertTrue(failed)
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val client = HttpClient(MockEngine { error("HTTP must not be called") })
+            try {
+                assertThrows(Throwable::class.java) {
+                    createAndroidExternalSourceRuntimeFactory(context).create(
+                        ActiveExternalSourcePackage(
+                            manifest = installedManifest,
+                            installed = InstalledSourcePackage(
+                                sourceId = installedManifest.sourceId,
+                                packageVersion = installedManifest.packageVersion,
+                                packagePath = packageDirectory.toString(),
+                            ),
+                        ),
+                        DefaultSourceContext(
+                            httpClient = client,
+                            preferredLanguages = listOf(SourceLanguage.RUSSIAN),
+                        ),
+                    )
+                }
+            } finally {
+                client.close()
+            }
             assertTrue(module.toFile().exists())
         } finally {
             module.deleteIfExists()
