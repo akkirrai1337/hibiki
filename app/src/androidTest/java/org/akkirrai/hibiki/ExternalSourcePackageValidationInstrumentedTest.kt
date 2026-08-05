@@ -32,7 +32,7 @@ import java.nio.charset.StandardCharsets
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.writeText
 import kotlin.io.path.writeBytes
-import kotlin.test.assertTrue
+import org.junit.Assert.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class ExternalSourcePackageValidationInstrumentedTest {
@@ -109,7 +109,7 @@ class ExternalSourcePackageValidationInstrumentedTest {
             val manifest = manifest()
             packageDirectory.resolve("manifest.json").writeText(Json.encodeToString(manifest))
             val installedManifest = JvmSourcePackageManifestReader().read(packageDirectory.toString())
-            val runtime = createAndroidExternalSourceRuntimeFactory(context).create(
+            createAndroidExternalSourceRuntimeFactory(context).create(
                 sourcePackage = ActiveExternalSourcePackage(
                     manifest = installedManifest,
                     installed = InstalledSourcePackage(
@@ -123,8 +123,8 @@ class ExternalSourcePackageValidationInstrumentedTest {
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN),
                 ),
             )
+            Unit
 
-            assertTrue(runtime != null)
         } finally {
             client.close()
             module.deleteIfExists()

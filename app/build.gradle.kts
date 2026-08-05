@@ -167,6 +167,7 @@ dependencies {
     testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
