@@ -78,7 +78,9 @@ class SourcePackageLayoutValidator(
 
         fun isSafeRelativePath(path: String, directory: Boolean = false): Boolean {
             val normalized = normalizedPath(path, directory)
-            if (normalized.isBlank() || normalized.startsWith('/') || normalized.contains('\\')) return false
+            if (normalized.isBlank() || normalized.startsWith('/') || normalized.contains('\\') || ':' in normalized) {
+                return false
+            }
             if (normalized.any { character -> character.code < 0x20 || character == '\u007f' }) return false
             if (!directory && path.endsWith('/')) return false
             if (normalized.split('/').any { it.isEmpty() || it == "." || it == ".." }) return false

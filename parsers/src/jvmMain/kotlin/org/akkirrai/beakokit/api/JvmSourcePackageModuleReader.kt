@@ -22,8 +22,12 @@ class JvmSourcePackageModuleReader(
             "Source package entrypoint must not be manifest.json"
         }
         val root = Path.of(packagePath).toAbsolutePath().normalize()
+        if (Files.isSymbolicLink(root)) {
+            throw SourcePackageStateException("Installed source package directory must not be a symbolic link")
+        }
         val module = root.resolve(entrypoint).normalize()
         require(module.startsWith(root)) { "Source package entrypoint escapes package directory" }
+        requireNoSymbolicLinkBetween(root, module)
         val realRoot = try {
             root.toRealPath()
         } catch (error: Exception) {
@@ -64,5 +68,18 @@ class JvmSourcePackageModuleReader(
 
     companion object {
         const val DEFAULT_MAX_MODULE_BYTES: Long = SourcePackageModuleReader.DEFAULT_MAX_MODULE_BYTES
+    }
+
+    private fun requireNoSymbolicLinkBetween(root: Path, module: Path) {
+        var current: Path? = module
+        while (current != null && current.startsWith(root)) {
+            if (Files.isSymbolicLink(current)) {
+                throw SourcePackageStateException(
+                    "Source package entrypoint path must not contain a symbolic link: $current",
+                )
+            }
+            if (current == root) return
+            current = current.parent
+        }
     }
 }

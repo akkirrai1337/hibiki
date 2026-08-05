@@ -59,6 +59,19 @@ class SourcePackageLayoutTest {
     }
 
     @Test
+    fun `drive-qualified entry paths are rejected for cross-platform safety`() {
+        val violations = SourcePackageLayoutValidator().violations(
+            manifest(),
+            listOf(
+                SourcePackageEntry("manifest.json", 100),
+                SourcePackageEntry("C:/outside.wasm", 200),
+            ),
+        )
+
+        assertContains(violations, "Unsafe package entry path: C:/outside.wasm")
+    }
+
+    @Test
     fun `entry count and unpacked size limits are enforced`() {
         val manifest = manifest()
         val validator = SourcePackageLayoutValidator(maxEntryCount = 2, maxUnpackedSizeBytes = 100)

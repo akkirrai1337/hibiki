@@ -70,4 +70,46 @@ class JvmSourcePackageModuleReaderTest {
             Files.deleteIfExists(target)
         }
     }
+
+    @Test
+    fun `reader rejects a symbolic link directory in the entrypoint path`() {
+        val packageDirectory = Files.createTempDirectory("hibiki-source-package-")
+        val targetDirectory = Files.createTempDirectory("hibiki-source-module-dir-")
+        Files.write(targetDirectory.resolve("source.wasm"), byteArrayOf(0, 1, 2))
+        val linkDirectory = runCatching {
+            Files.createSymbolicLink(packageDirectory.resolve("modules"), targetDirectory)
+        }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageModuleReader().read(packageDirectory.toString(), "modules/source.wasm")
+            }
+        } finally {
+            Files.deleteIfExists(linkDirectory)
+            Files.deleteIfExists(targetDirectory.resolve("source.wasm"))
+            Files.deleteIfExists(targetDirectory)
+        }
+    }
+
+    @Test
+    fun `reader rejects a symbolic link package directory`() {
+        val targetDirectory = Files.createTempDirectory("hibiki-source-package-target-")
+        Files.write(targetDirectory.resolve("source.wasm"), byteArrayOf(0, 1, 2))
+        val linkDirectory = runCatching {
+            Files.createSymbolicLink(
+                targetDirectory.parent.resolve("hibiki-source-package-link-${System.nanoTime()}"),
+                targetDirectory,
+            )
+        }.getOrNull() ?: return
+
+        try {
+            assertFailsWith<SourcePackageStateException> {
+                JvmSourcePackageModuleReader().read(linkDirectory.toString(), "source.wasm")
+            }
+        } finally {
+            Files.deleteIfExists(linkDirectory)
+            Files.deleteIfExists(targetDirectory.resolve("source.wasm"))
+            Files.deleteIfExists(targetDirectory)
+        }
+    }
 }
