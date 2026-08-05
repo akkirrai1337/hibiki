@@ -200,6 +200,56 @@ class SourcePackageInstallationCoordinatorTest {
     }
 
     @Test
+    fun `initialization failure preserves the previously active package`() = runBlocking {
+        val manifest = manifest()
+        val previous = InstalledSourcePackage(
+            sourceId = manifest.sourceId,
+            packageVersion = "0.9.0",
+            packagePath = "active/0.9.0",
+            artifactSha256 = manifest.sha256,
+        )
+        val store = RecordingStore().apply {
+            state = SourcePackageActivationState(active = previous)
+        }
+        val candidate = InstalledSourcePackage(
+            sourceId = manifest.sourceId,
+            packageVersion = manifest.packageVersion,
+            packagePath = "staging/1.0.0",
+        )
+        val coordinator = SourcePackageInstallationCoordinator(
+            downloadService = SourcePackageDownloadService(
+                transport = SourcePackageTransport { _, _ -> DownloadedSourcePackage(byteArrayOf(1, 2, 3)) },
+                artifactVerifier = SourcePackageArtifactVerifier(
+                    validator = SourcePackageValidator(clientVersion = 1),
+                    sha256 = SourcePackageSha256 { manifest.sha256 },
+                ),
+            ),
+            extractor = SourcePackageExtractor { _, _, _ ->
+                ExtractedSourcePackage(
+                    manifest = manifest,
+                    entries = listOf(
+                        SourcePackageEntry("manifest.json", 1),
+                        SourcePackageEntry(manifest.entrypoint, 1),
+                    ),
+                )
+            },
+            installer = SourcePackageInstaller(
+                packageValidator = SourcePackageValidator(clientVersion = 1),
+                layoutValidator = SourcePackageLayoutValidator(),
+                activationRepository = SourcePackageActivationRepository(manifest.sourceId, store),
+            ),
+        )
+
+        assertFailsWith<IllegalStateException> {
+            coordinator.install(manifest, candidate, candidate.packagePath) {
+                error("initialization failed")
+            }
+        }
+
+        assertEquals(SourcePackageActivationState(active = previous), store.state)
+    }
+
+    @Test
     fun `cleanup failure does not replace the installation failure`() = runBlocking {
         val manifest = manifest()
         val candidate = InstalledSourcePackage(

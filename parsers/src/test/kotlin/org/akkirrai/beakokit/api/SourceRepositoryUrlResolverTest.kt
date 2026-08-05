@@ -84,6 +84,12 @@ class SourceRepositoryUrlResolverTest {
         assertFailsWith<SourceRepositoryUrlException> {
             resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/nested\\index.json")
         }
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://github.com/vadim/hibiki-sources/blob/main/%2e%2e/index.json")
+        }
+        assertFailsWith<SourceRepositoryUrlException> {
+            resolver.resolve("https://raw.githubusercontent.com/vadim/hibiki-sources/main/%2findex.json")
+        }
     }
 
     @Test

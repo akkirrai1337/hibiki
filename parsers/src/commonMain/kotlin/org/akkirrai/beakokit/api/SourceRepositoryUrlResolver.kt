@@ -75,6 +75,7 @@ class SourceRepositoryUrlResolver {
 
     private fun isSafeGithubPathSegment(segment: String): Boolean =
         segment != "." && segment != ".." && '\\' !in segment &&
+            '%' !in segment &&
             segment.all { character -> character.code >= 0x20 && character != '\u007f' }
 }
 
