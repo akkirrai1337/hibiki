@@ -42,6 +42,7 @@ kotlin {
                     }
                     create("iosKeychain") {
                         defFile(project.file("src/nativeInterop/cinterop/iosKeychain.def"))
+                        compilerOpts("-I${project.file("src/nativeInterop/cinterop").absolutePath}")
                     }
                 }
             }
