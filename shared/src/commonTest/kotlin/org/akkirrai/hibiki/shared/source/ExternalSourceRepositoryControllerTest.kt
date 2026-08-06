@@ -190,6 +190,11 @@ class ExternalSourceRepositoryControllerTest {
             rolledBack += sourceId
         }
 
+        override suspend fun uninstallPackageFromUi(sourceId: SourceId) {
+            installed.removeAll { it == sourceId }
+            packageInstalled = false
+        }
+
         private fun manifest() = SourceManifest(
             manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
             sourceId = SourceId("external-source"),

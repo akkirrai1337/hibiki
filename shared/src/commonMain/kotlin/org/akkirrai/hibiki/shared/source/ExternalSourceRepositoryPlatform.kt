@@ -72,6 +72,14 @@ class ExternalSourceRepositoryPlatform(
             "Source package rollback is not available on this platform"
         }(sourceId).rollback()
 
+    /** Removes the active and rollback activation records for one external source. */
+    fun uninstallPackage(sourceId: SourceId) {
+        requireNotNull(activationRepositoryFactory) {
+            "Source package uninstall is not available on this platform"
+        }(sourceId).uninstall()
+        sourceConfigStore?.remove(sourceId)
+    }
+
     /** Returns the previously active package without changing persisted activation state. */
     fun loadPreviousActivePackage(sourceId: SourceId): ActiveExternalSourcePackage {
         val activationRepository = requireNotNull(activationRepositoryFactory) {

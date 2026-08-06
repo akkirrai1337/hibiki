@@ -18,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.shared.design.UiDimens
 
 @Composable
@@ -35,20 +37,23 @@ fun AppSearchTopBar(
     clearIcon: ImageVector,
     onFilterClick: () -> Unit = {},
     showFilterButton: Boolean = true,
+    barHeight: Dp = UiDimens.SearchBarHeight,
+    innerHeight: Dp = UiDimens.SearchBarInnerHeight,
+    onFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(UiDimens.SearchBarHeight),
+            .height(barHeight),
         horizontalArrangement = Arrangement.spacedBy(UiDimens.SearchBarRowGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(UiDimens.SearchBarInnerHeight)
-                .clip(RoundedCornerShape(UiDimens.SearchBarInnerHeight / 2))
+                .height(innerHeight)
+                .clip(RoundedCornerShape(innerHeight / 2))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(start = UiDimens.SearchBarStartPadding, end = UiDimens.SearchBarEndPadding),
             verticalAlignment = Alignment.CenterVertically,
@@ -75,7 +80,9 @@ fun AppSearchTopBar(
                 BasicTextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { onFocusChanged(it.isFocused) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,

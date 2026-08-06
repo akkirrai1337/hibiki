@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.shared.app.destination.routes
 
 import org.akkirrai.hibiki.shared.app.destination.*
 
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
@@ -10,12 +9,9 @@ import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.SettingsDestinationContent
 import org.akkirrai.hibiki.shared.settings.ThemeMode
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 
 @Composable
 internal fun SettingsDestinationRoute(
-    showExternalSources: Boolean,
     profileData: LocalProfileData,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
@@ -42,15 +38,10 @@ internal fun SettingsDestinationRoute(
     onCheckForUpdates: () -> Unit,
     onExportLogs: () -> Unit,
     notificationsAvailable: Boolean,
-    externalSourceRepositoryState: ExternalSourceRepositoryUiState?,
-    externalSourceRepositoryController: ExternalSourceRepositoryController?,
-    settingsListState: LazyListState,
-    externalSourcesListState: LazyListState,
+    settingsListState: androidx.compose.foundation.lazy.LazyListState,
     bottomContentPadding: androidx.compose.ui.unit.Dp,
-    onExternalSourcesClick: () -> Unit,
 ) {
     SettingsDestinationContent(
-        showExternalSources = showExternalSources,
         profileData = profileData,
         languageMode = languageMode,
         onLanguageModeChange = onLanguageModeChange,
@@ -77,11 +68,7 @@ internal fun SettingsDestinationRoute(
         onCheckForUpdates = onCheckForUpdates,
         onExportLogs = onExportLogs,
         notificationsAvailable = notificationsAvailable,
-        externalSourceRepositoryState = externalSourceRepositoryState,
-        externalSourceRepositoryController = externalSourceRepositoryController,
         settingsListState = settingsListState,
-        externalSourcesListState = externalSourcesListState,
         bottomContentPadding = bottomContentPadding,
-        onExternalSourcesClick = onExternalSourcesClick,
     )
 }

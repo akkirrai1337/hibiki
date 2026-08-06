@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.playback
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeout
+import io.ktor.http.Url
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceUnavailableException
@@ -79,7 +80,7 @@ class PlaybackResolver(
                     val streams = extractor.extractVariants(link)
                         .filterNot { it.url in excludedStreamUrls }
                         .sortedWith(streamQualityComparator(preferredQuality))
-                    if (streams.isEmpty()) throw ExtractorFailedException(link.playerName)
+                    if (streams.isEmpty()) throw ExtractorFailedException(link.errorPlayerName())
 
                     streams.firstNotNullOfOrNull { stream ->
                         val validation = validator.validate(stream)
@@ -93,7 +94,7 @@ class PlaybackResolver(
                                 }.distinct(),
                             )
                         } else {
-                            failures += validation.toFailure(link.playerName)
+                            failures += validation.toFailure(link.errorPlayerName())
                             null
                         }
                     }
@@ -146,3 +147,6 @@ class PlaybackResolver(
 }
 
 private fun String?.orFallbackName(): String = this?.takeIf(String::isNotBlank) ?: "unknown"
+
+private fun PlayerLink.errorPlayerName(): String? = playerName?.takeIf(String::isNotBlank)
+    ?: runCatching { Url(url).host.takeIf(String::isNotBlank) }.getOrNull()

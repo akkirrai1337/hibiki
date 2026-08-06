@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.app.shell.navigation
 import org.akkirrai.hibiki.shared.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
+import org.akkirrai.hibiki.shared.navigation.currentRoute
 import org.akkirrai.hibiki.shared.navigation.reduceHibikiRootTabSelection
 import org.akkirrai.hibiki.shared.player.EpisodesPresenter
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
@@ -19,13 +20,22 @@ internal class HibikiRootNavigationCoordinator(
     private val resetPlayerState: () -> Unit,
 ) {
     fun select(destination: AppDestination) {
+        val currentState = navigationState()
         val result = reduceHibikiRootTabSelection(
-            state = navigationState(),
+            state = currentState,
             selectedTab = selectedTab(),
             destination = destination,
         )
         if (!result.handled) return
         setNavigationState(result.state)
+
+        // A regular top-level switch has no details/watch state to clear. Avoid
+        // emitting several identical presenter states and invalidating the
+        // whole shell before the screen transition can start.
+        val hasNestedState = currentState.currentRoute !is org.akkirrai.hibiki.shared.navigation.AppRoute.TopLevel ||
+            presenter.state.value.selectedAnime != null
+        if (!hasNestedState) return
+
         presenter.clearDetails()
         setDetailsAnime(null)
         playbackSession.cancelAndInvalidate()

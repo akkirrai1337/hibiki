@@ -18,14 +18,6 @@ fun AppNavigationState.navigateToSettings(): AppNavigationState = if (currentRou
     reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
 }
 
-fun AppNavigationState.navigateToExternalSources(): AppNavigationState = if (
-    currentRoute is AppRoute.ExternalSources
-) {
-    this
-} else {
-    reduce(AppNavigationEvent.Navigate(AppRoute.ExternalSources))
-}
-
 fun AppNavigationState.navigateToSourceRepositories(): AppNavigationState = if (
     currentRoute is AppRoute.SourceRepositories
 ) {
@@ -36,6 +28,13 @@ fun AppNavigationState.navigateToSourceRepositories(): AppNavigationState = if (
 
 fun AppNavigationState.navigateToSourceRepository(url: String): AppNavigationState = reduce(
     AppNavigationEvent.Navigate(AppRoute.SourceRepository(url)),
+)
+
+fun AppNavigationState.navigateToSourcePackageInfo(
+    repositoryUrl: String,
+    sourceId: String,
+): AppNavigationState = reduce(
+    AppNavigationEvent.Navigate(AppRoute.SourcePackageInfo(repositoryUrl, sourceId)),
 )
 
 fun AppNavigationState.navigateToWatchSources(

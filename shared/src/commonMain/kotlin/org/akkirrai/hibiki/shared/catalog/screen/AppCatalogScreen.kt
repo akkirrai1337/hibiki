@@ -22,13 +22,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import org.akkirrai.hibiki.shared.design.UiDimens
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
@@ -118,6 +121,9 @@ fun AppCatalogScreen(
     var isFilterSheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isSortVisible by remember { mutableStateOf(true) }
+    var searchFieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
@@ -150,7 +156,15 @@ fun AppCatalogScreen(
         onLoadMore = onLoadMoreRetry,
     )
 
-    Box(modifier = modifier) {
+    AppSystemBackHandler(
+        enabled = searchFieldFocused,
+        onBack = {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            searchFieldFocused = false
+        },
+    ) {
+        Box(modifier = modifier) {
         AppCatalogScreenContent(
             state = state,
             listState = listState,
@@ -183,6 +197,7 @@ fun AppCatalogScreen(
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
             sortModifier = Modifier.alpha(sortAlpha),
+            onSearchFocusChanged = { searchFieldFocused = it },
             sortContent = {
                 AppCatalogSortControl(
                     sortKey = selectedSort.name,
@@ -211,10 +226,10 @@ fun AppCatalogScreen(
                 )
             },
         )
-    }
+        }
 
-    if (isFilterSheetOpen) {
-        AppCatalogFilterSheet(
+        if (isFilterSheetOpen) {
+            AppCatalogFilterSheet(
             initialFilters = state.filters,
             filterCatalog = state.filterCatalog,
             isFilterCatalogLoading = state.isFilterCatalogLoading,
@@ -233,6 +248,7 @@ fun AppCatalogScreen(
             defaultYearRange = defaultCatalogFilterYearRange(currentYear),
             optionText = labels.optionText,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(UiDimens.LargeCorner),
-        )
+            )
+        }
     }
 }

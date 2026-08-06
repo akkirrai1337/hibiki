@@ -110,6 +110,13 @@ class ExternalSourceRuntimeCoordinator(
         refresh()
     }
 
+    override suspend fun refreshRepository(url: String) {
+        operationMutex.withLock {
+            val repository = platform.coordinator.refreshRepository(url)
+            replaceRegistry(repository)
+        }
+    }
+
     override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> =
         packageStatuses()
 
@@ -140,6 +147,10 @@ class ExternalSourceRuntimeCoordinator(
 
     override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
         rollbackActivePackage(sourceId)
+    }
+
+    override suspend fun uninstallPackageFromUi(sourceId: SourceId) {
+        uninstallPackage(sourceId)
     }
 
     override suspend fun addRepositoryFromUi(endpoint: SourceRepositoryEndpoint) {
@@ -230,6 +241,7 @@ class ExternalSourceRuntimeCoordinator(
         require(sourceId !in reservedSourceIds) {
             "External source ID is reserved by a built-in source: $sourceId"
         }
+
         try {
             val previous = platform.loadPreviousActivePackage(sourceId)
             sourceContextFactory?.let {
@@ -258,6 +270,15 @@ class ExternalSourceRuntimeCoordinator(
             throw error
         }
         }
+
+    /** Uninstalls one external package and removes it from the active registry. */
+    suspend fun uninstallPackage(sourceId: SourceId) = operationMutex.withLock {
+        require(sourceId !in reservedSourceIds) {
+            "External source ID is reserved by a built-in source: $sourceId"
+        }
+        platform.uninstallPackage(sourceId)
+        rebuildActiveRegistry()
+    }
 
     private fun sourceContextFor(sourceId: SourceId): SourceContext {
         val baseContext = requireNotNull(sourceContextFactory) {
@@ -349,6 +370,10 @@ interface ExternalSourceRepositoryActions {
 
     suspend fun refreshRepositories()
 
+    suspend fun refreshRepository(url: String) {
+        refreshRepositories()
+    }
+
     suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus>
 
     suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent>
@@ -360,6 +385,8 @@ interface ExternalSourceRepositoryActions {
     )
 
     suspend fun rollbackPackageFromUi(sourceId: SourceId)
+
+    suspend fun uninstallPackageFromUi(sourceId: SourceId)
 }
 
 /** Repository-only adapter for platforms that do not yet support package installation. */
@@ -384,6 +411,10 @@ class RepositoryManagementActions(
         coordinator.refresh()
     }
 
+    override suspend fun refreshRepository(url: String) {
+        coordinator.refreshRepository(url)
+    }
+
     override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
 
     override suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent> = repositories()
@@ -401,6 +432,12 @@ class RepositoryManagementActions(
     override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
         throw SourcePackageStateException(
             "Source package rollback is not available on this platform: $sourceId",
+        )
+    }
+
+    override suspend fun uninstallPackageFromUi(sourceId: SourceId) {
+        throw SourcePackageStateException(
+            "Source package uninstall is not available on this platform: $sourceId",
         )
     }
 }

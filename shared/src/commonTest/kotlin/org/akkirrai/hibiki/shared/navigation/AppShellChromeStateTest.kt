@@ -16,13 +16,17 @@ class AppShellChromeStateTest {
     }
 
     @Test
-    fun nestedScreensHideBottomBar() {
+    fun titleDetailsHideBottomBarAfterTransition() {
         assertFalse(
             appBottomBarVisible(
                 selectedTab = AppDestination.HOME,
                 currentRoute = AppRoute.Details("anime-1"),
             ),
         )
+    }
+
+    @Test
+    fun watchScreensHideBottomBar() {
         assertFalse(
             appBottomBarVisible(
                 selectedTab = AppDestination.HOME,

@@ -21,6 +21,8 @@ import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.IosMultiSourceAnimeCatalogRepository
@@ -84,7 +86,15 @@ fun MainViewController(systemLanguage: String): UIViewController {
         val externalRuntimeCoordinator = remember(externalSourcePlatform, externalRuntimeHttpClient) {
             ExternalSourceRuntimeCoordinator(
                 platform = externalSourcePlatform,
-                catalogCapabilities = { CatalogCapabilities.FULL },
+                catalogCapabilities = { manifest ->
+                    CatalogCapabilities.FULL.copy(
+                        features = if (SourceCapability.LATEST_RELEASES in manifest.capabilities) {
+                            setOf(CatalogFeature.LATEST_RELEASES)
+                        } else {
+                            emptySet()
+                        },
+                    )
+                },
                 runtimeFactory = createIosExternalSourceRuntimeFactory(externalRuntimeHttpClient),
                 sourceContextFactory = { sourceId ->
                     DefaultSourceContext(

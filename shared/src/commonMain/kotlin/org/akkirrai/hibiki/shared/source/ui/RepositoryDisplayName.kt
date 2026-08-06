@@ -31,4 +31,7 @@ fun repositoryDisplayName(url: String): String {
         .let { if (normalized.length > it.length) "$it…" else it }
 }
 
+fun repositoryShortName(url: String): String = repositoryDisplayName(url)
+    .substringAfterLast('/')
+
 private const val MAX_REPOSITORY_DISPLAY_NAME_LENGTH = 48

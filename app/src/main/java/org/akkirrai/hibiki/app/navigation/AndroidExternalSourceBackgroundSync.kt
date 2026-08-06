@@ -12,8 +12,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
@@ -48,7 +50,15 @@ internal fun AndroidExternalSourceBackgroundSync(
     val coordinator = remember(platform, configStore) {
         ExternalSourceRuntimeCoordinator(
             platform = platform,
-            catalogCapabilities = { CatalogCapabilities.FULL },
+            catalogCapabilities = { manifest ->
+                CatalogCapabilities.FULL.copy(
+                    features = if (SourceCapability.LATEST_RELEASES in manifest.capabilities) {
+                        setOf(CatalogFeature.LATEST_RELEASES)
+                    } else {
+                        emptySet()
+                    },
+                )
+            },
             runtimeFactory = createAndroidExternalSourceRuntimeFactory(context),
             sourceContextFactory = { sourceId ->
                 DefaultSourceContext(

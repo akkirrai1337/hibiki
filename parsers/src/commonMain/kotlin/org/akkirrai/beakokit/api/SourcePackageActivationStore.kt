@@ -36,6 +36,14 @@ class SourcePackageActivationRepository(
         return next
     }
 
+    /** Removes the active and rollback package records for this source. */
+    fun uninstall(): SourcePackageActivationState {
+        val current = load()
+        val next = SourcePackageActivationState()
+        if (next != current) store.persistAtomically(sourceId, next)
+        return next
+    }
+
     /** Clears a just-activated first package when its activation cannot be completed. */
     fun deactivateFirstPackage(candidate: InstalledSourcePackage): SourcePackageActivationState {
         require(candidate.sourceId == sourceId) {

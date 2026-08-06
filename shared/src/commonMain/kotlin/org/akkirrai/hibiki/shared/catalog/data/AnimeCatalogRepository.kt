@@ -9,6 +9,12 @@ import org.akkirrai.hibiki.shared.demo.DemoCatalog
 interface AnimeCatalogRepository {
     val initialItems: List<Anime>
 
+    /**
+     * Some external APIs cap a page below the requested size without exposing a total.
+     * The catalog may continue requesting pages until the source returns no new items.
+     */
+    fun canContinuePaginationAfterShortPage(): Boolean = false
+
     fun selectSource(sourceId: String) = Unit
 
     suspend fun getDetails(id: String, fallback: Anime): Anime = fallback

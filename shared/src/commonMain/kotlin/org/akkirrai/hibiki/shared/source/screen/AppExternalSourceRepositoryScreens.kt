@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,11 +8,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FilterList
@@ -30,28 +36,36 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
+import org.akkirrai.hibiki.shared.design.component.button.AppSplitActionButton
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 
@@ -161,7 +175,7 @@ fun AppExternalSourcesTabScreen(
             searchPlaceholder = appText(AppTextKey.SourcesExternalRepositorySearch),
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             showFilter = false,
-            onRefresh = onRefresh,
+            onRefresh = null,
             onAddClick = onAddRepository,
             tabContent = {
                 AppSourcesTabs(
@@ -203,14 +217,226 @@ fun AppExternalSourcesTabScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AppSourcesTabsScreen(
+    selectedTab: Int,
+    packages: List<ExternalSourcePackageStatus>,
+    selectedSourceId: String?,
+    state: ExternalSourceRepositoryUiState,
+    isBusy: Boolean,
+    bottomContentPadding: Dp,
+    onSelectedTabChange: (Int) -> Unit,
+    onRepositoryClick: (String) -> Unit,
+    onRemoveRepository: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onCopyUrl: (String) -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onAddRepository: () -> Unit,
+    onInstall: (SourceId) -> Unit,
+    onSourceSelected: (String) -> Unit,
+    onManage: (SourceId) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var extensionsQuery by remember { mutableStateOf("") }
+    var extensionsSearchOpen by remember { mutableStateOf(false) }
+    var sourcesQuery by remember { mutableStateOf("") }
+    var sourcesSearchOpen by remember { mutableStateOf(false) }
+    var languageFilterOpen by remember { mutableStateOf(false) }
+    var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
+    val languages = remember(packages) {
+        packages.flatMap { it.availableManifest.sourceInfo?.languages.orEmpty() }
+            .map { it.tag }
+            .distinct()
+            .sorted()
+    }
+    var searchFieldFocused by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val pagerState = rememberPagerState(
+        initialPage = selectedTab.coerceIn(0, 1),
+        pageCount = { 2 },
+    )
+    val extensionsTabSelected = selectedTab == 0
+    val activeQuery = if (extensionsTabSelected) extensionsQuery else sourcesQuery
+    val activeSearchOpen = if (extensionsTabSelected) extensionsSearchOpen else sourcesSearchOpen
+
+    LaunchedEffect(selectedTab) {
+        val targetPage = selectedTab.coerceIn(0, 1)
+        if (pagerState.currentPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
+        }
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect(onSelectedTabChange)
+    }
+
+    AppSystemBackHandler(
+        enabled = activeSearchOpen && searchFieldFocused,
+        onBack = {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            searchFieldFocused = false
+        },
+    ) {
+        Column(modifier = modifier.fillMaxSize()) {
+            AppMihonSourcesToolbar(
+            title = appText(AppTextKey.Sources),
+            searchOpen = activeSearchOpen,
+            query = activeQuery,
+            onQueryChange = { query ->
+                if (extensionsTabSelected) extensionsQuery = query else sourcesQuery = query
+            },
+            onClearSearch = {
+                if (extensionsTabSelected) extensionsQuery = "" else sourcesQuery = ""
+            },
+            onOpenSearch = {
+                if (extensionsTabSelected) extensionsSearchOpen = true else sourcesSearchOpen = true
+            },
+            onCloseSearch = {
+                if (extensionsTabSelected) {
+                    extensionsQuery = ""
+                    extensionsSearchOpen = false
+                } else {
+                    sourcesQuery = ""
+                    sourcesSearchOpen = false
+                }
+            },
+            onFilterClick = { languageFilterOpen = true },
+            searchPlaceholder = appText(AppTextKey.SourcesExternalRepositorySearch),
+            filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
+            showFilter = extensionsTabSelected,
+            titleStyle = MaterialTheme.typography.titleLarge,
+            onRefresh = null,
+            onAddClick = if (extensionsTabSelected) null else onAddRepository,
+            onSearchFocusChanged = { searchFieldFocused = it },
+            tabContent = {
+                AppSourcesTabs(
+                    selectedTab = selectedTab.coerceIn(0, 1),
+                    sourcesLabel = appText(AppTextKey.Sources),
+                    extensionsLabel = appText(AppTextKey.SourcesExtensions),
+                    onSourcesSelected = { onSelectedTabChange(1) },
+                    onExtensionsSelected = { onSelectedTabChange(0) },
+                )
+            },
+            )
+            state.error?.let { error ->
+                Text(
+                    text = error.message ?: appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f),
+            ) { page ->
+                if (page == 0) {
+                val visiblePackages = packages.filter { packageStatus ->
+                    val manifest = packageStatus.availableManifest
+                    val name = manifest.sourceInfo?.displayName.orEmpty()
+                    val matchesQuery = extensionsQuery.isBlank() ||
+                        name.contains(extensionsQuery, ignoreCase = true) ||
+                        manifest.sourceId.value.contains(extensionsQuery, ignoreCase = true)
+                    val packageLanguages = manifest.sourceInfo?.languages.orEmpty().map { it.tag }.toSet()
+                    matchesQuery && (selectedLanguages.isEmpty() || packageLanguages.any(selectedLanguages::contains))
+                }
+                if (visiblePackages.isEmpty()) {
+                    SourceRepositoryEmptyState(
+                        text = appText(AppTextKey.SourcesExternalRepositoryPackagesEmpty),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = 0.dp,
+                            top = 8.dp,
+                            end = 0.dp,
+                            bottom = bottomContentPadding + 16.dp,
+                        ),
+                    ) {
+                        items(visiblePackages, key = { it.sourceId.value }) { packageStatus ->
+                            SourcePackageCard(
+                                packageStatus = packageStatus,
+                                busy = isBusy,
+                                onInstall = { onInstall(packageStatus.sourceId) },
+                                onPackageClick = {
+                                    if (packageStatus.activePackage != null) {
+                                        onSourceSelected(packageStatus.sourceId.value)
+                                    }
+                                },
+                                selected = selectedSourceId == packageStatus.sourceId.value,
+                                onManage = { onManage(packageStatus.sourceId) },
+                                onUpdate = { onInstall(packageStatus.sourceId) },
+                            )
+                        }
+                    }
+                }
+                } else {
+                val visibleRepositories = state.repositoryContents.filter { repository ->
+                    sourcesQuery.isBlank() || repositoryDisplayName(repository.endpoint.url)
+                        .contains(sourcesQuery, ignoreCase = true) ||
+                        repository.endpoint.url.contains(sourcesQuery, ignoreCase = true)
+                }
+                if (visibleRepositories.isEmpty()) {
+                    SourceRepositoryEmptyState(
+                        text = appText(AppTextKey.SourcesExternalRepositoriesEmpty),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = 0.dp,
+                            top = 12.dp,
+                            end = 0.dp,
+                            bottom = bottomContentPadding + 16.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        items(visibleRepositories, key = { it.endpoint.url }) { repository ->
+                            SourceRepositoryCard(
+                                repository = repository,
+                                onClick = { onRepositoryClick(repository.endpoint.url) },
+                                onOpenUrl = { onOpenUrl(repository.endpoint.url) },
+                                onRemove = { onRemoveRepository(repository.endpoint.url) },
+                                onCopy = { onCopyUrl(repository.endpoint.url) },
+                            )
+                        }
+                    }
+                }
+                }
+            }
+        }
+    }
+    if (languageFilterOpen) {
+        SourceRepositoryLanguageFilterDialog(
+            languages = languages,
+            selectedLanguages = selectedLanguages,
+            onLanguageToggle = { language ->
+                selectedLanguages = if (language in selectedLanguages) {
+                    selectedLanguages - language
+                } else {
+                    selectedLanguages + language
+                }
+            },
+            onDismiss = { languageFilterOpen = false },
+        )
+    }
+}
+
 @Composable
 fun AppSourceExtensionsTabScreen(
     packages: List<ExternalSourcePackageStatus>,
+    selectedSourceId: String? = null,
     isBusy: Boolean,
     bottomContentPadding: Dp,
     onSourcesSelected: () -> Unit,
     onInstall: (SourceId) -> Unit,
-    onRollback: (SourceId) -> Unit,
+    onManage: (SourceId) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -249,7 +475,8 @@ fun AppSourceExtensionsTabScreen(
             onFilterClick = { languageFilterOpen = true },
             searchPlaceholder = appText(AppTextKey.SourcesExternalRepositorySearch),
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
-            onRefresh = onRefresh,
+            titleStyle = MaterialTheme.typography.titleLarge,
+            onRefresh = null,
             tabContent = {
                 AppSourcesTabs(
                     selectedTab = 0,
@@ -280,7 +507,12 @@ fun AppSourceExtensionsTabScreen(
                         packageStatus = packageStatus,
                         busy = isBusy,
                         onInstall = { onInstall(packageStatus.sourceId) },
-                        onRollback = { onRollback(packageStatus.sourceId) },
+                        onPackageClick = {
+                            Unit
+                        },
+                        selected = selectedSourceId == packageStatus.sourceId.value,
+                        onManage = { onManage(packageStatus.sourceId) },
+                        onUpdate = { onInstall(packageStatus.sourceId) },
                     )
                 }
             }
@@ -305,18 +537,21 @@ fun AppSourceExtensionsTabScreen(
 @Composable
 fun AppSourceRepositoryPackagesScreen(
     repository: ExternalSourceRepositoryContent?,
+    selectedSourceId: String? = null,
     isBusy: Boolean,
     bottomContentPadding: Dp,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onInstall: (SourceId) -> Unit,
-    onRollback: (SourceId) -> Unit,
+    onSourceSelected: (String) -> Unit = {},
+    onManage: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by remember(repository?.endpoint?.url) { mutableStateOf("") }
     var selectedLanguages by remember(repository?.endpoint?.url) { mutableStateOf(emptySet<String>()) }
-    var searchDialogOpen by remember(repository?.endpoint?.url) { mutableStateOf(false) }
+    var searchOpen by remember(repository?.endpoint?.url) { mutableStateOf(false) }
     var languageFilterOpen by remember(repository?.endpoint?.url) { mutableStateOf(false) }
+    var searchFieldFocused by remember(repository?.endpoint?.url) { mutableStateOf(false) }
     val packages = repository?.packages.orEmpty()
     val languages = remember(packages) {
         packages.flatMap { it.availableManifest.sourceInfo?.languages.orEmpty() }
@@ -334,56 +569,37 @@ fun AppSourceRepositoryPackagesScreen(
             matchesQuery && (selectedLanguages.isEmpty() || packageLanguages.any(selectedLanguages::contains))
         }
     }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    AppSystemBackHandler(
+        enabled = searchOpen && searchFieldFocused,
+        onBack = {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            searchFieldFocused = false
+        },
+    ) {
     Column(modifier = modifier.fillMaxSize()) {
-        SourceRepositoryTopBar(
-            title = repository?.endpoint?.url?.let(::repositoryDisplayName)
+        AppMihonSourcesToolbar(
+            title = repository?.endpoint?.url?.let(::repositoryShortName)
                 ?: appText(AppTextKey.SourcesExternalRepositories),
-            onBack = onBack,
-            actions = {
-                IconButton(onClick = { searchDialogOpen = true }) {
-                    Icon(
-                        Icons.Outlined.Search,
-                        contentDescription = appText(AppTextKey.SourcesExternalRepositorySearch),
-                    )
-                }
-                IconButton(onClick = { languageFilterOpen = true }) {
-                    Icon(
-                        Icons.Outlined.FilterList,
-                        contentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
-                    )
-                }
-                IconButton(onClick = onRefresh) {
-                    Icon(
-                        Icons.Outlined.Refresh,
-                        contentDescription = appText(AppTextKey.SettingsExternalRepositoryRefresh),
-                    )
-                }
+            searchOpen = searchOpen,
+            query = query,
+            onQueryChange = { query = it },
+            onClearSearch = { query = "" },
+            onOpenSearch = { searchOpen = true },
+            onCloseSearch = {
+                query = ""
+                searchOpen = false
+                searchFieldFocused = false
             },
+            onFilterClick = { languageFilterOpen = true },
+            searchPlaceholder = appText(AppTextKey.SourcesExternalRepositorySearch),
+            filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
+            titleStyle = MaterialTheme.typography.titleLarge,
+            onRefresh = onRefresh,
+            onSearchFocusChanged = { searchFieldFocused = it },
         )
-        if (searchDialogOpen) {
-            AlertDialog(
-                onDismissRequest = { searchDialogOpen = false },
-                title = { Text(appText(AppTextKey.SourcesExternalRepositorySearch)) },
-                text = {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                },
-                confirmButton = {
-                    Button(onClick = { searchDialogOpen = false }) {
-                        Text(appText(AppTextKey.Search))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { query = ""; searchDialogOpen = false }) {
-                        Text(appText(AppTextKey.Cancel))
-                    }
-                },
-            )
-        }
         if (languageFilterOpen) {
             SourceRepositoryLanguageFilterDialog(
                 languages = languages,
@@ -426,11 +642,160 @@ fun AppSourceRepositoryPackagesScreen(
                         packageStatus = packageStatus,
                         busy = isBusy,
                         onInstall = { onInstall(packageStatus.sourceId) },
-                        onRollback = { onRollback(packageStatus.sourceId) },
+                        onPackageClick = {
+                            if (packageStatus.activePackage != null) {
+                                onSourceSelected(packageStatus.sourceId.value)
+                            }
+                        },
+                        selected = selectedSourceId == packageStatus.sourceId.value,
+                        onManage = { onManage(packageStatus.sourceId) },
+                        onUpdate = { onInstall(packageStatus.sourceId) },
                     )
                 }
             }
         }
+    }
+    }
+}
+
+@Composable
+fun AppExternalSourcePackageInfoScreen(
+    packageStatus: ExternalSourcePackageStatus?,
+    isBusy: Boolean,
+    bottomContentPadding: Dp,
+    onBack: () -> Unit,
+    onUninstall: () -> Unit,
+    onUpdate: () -> Unit,
+    onRollback: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        SourceRepositoryTopBar(
+            title = appText(AppTextKey.SourcesExternalPackageInfo),
+            onBack = onBack,
+        )
+        if (packageStatus == null) {
+            SourceRepositoryEmptyState(
+                text = appText(AppTextKey.SourcesExternalRepositoryPackagesEmpty),
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            val manifest = packageStatus.availableManifest
+            val title = manifest.sourceInfo?.displayName?.takeIf(String::isNotBlank)
+                ?: manifest.sourceId.value
+            val languages = manifest.sourceInfo?.languages.orEmpty().joinToString { it.tag.uppercase() }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = bottomContentPadding + 16.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp, bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                AppSourceIconImage(
+                    url = manifest.sourceInfo?.iconUrl,
+                    sourceId = manifest.sourceId.value,
+                    modifier = Modifier.size(112.dp),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = manifest.sourceId.value,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SourcePackageInfoValue(
+                        value = manifest.packageVersion,
+                        label = appText(AppTextKey.SourcesExternalPackageVersion),
+                    )
+                    VerticalDivider(modifier = Modifier.height(20.dp))
+                    SourcePackageInfoValue(
+                        value = languages.ifBlank { "—" },
+                        label = appText(AppTextKey.SourcesExternalPackageLanguage),
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onUninstall,
+                        enabled = !isBusy && packageStatus.activePackage != null,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(appText(AppTextKey.SettingsExternalPackageUninstall))
+                    }
+                    when {
+                        packageStatus.updateAvailable && packageStatus.rollbackAvailable -> {
+                            AppSplitActionButton(
+                                primaryLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
+                                secondaryLabel = appText(AppTextKey.SettingsExternalPackageRollback),
+                                onPrimaryClick = onUpdate,
+                                onSecondaryClick = onRollback,
+                                enabled = !isBusy,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        packageStatus.updateAvailable -> {
+                            Button(
+                                onClick = onUpdate,
+                                enabled = !isBusy,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(appText(AppTextKey.SettingsExternalPackageUpdate))
+                            }
+                        }
+                        else -> {
+                            Button(
+                                onClick = onRollback,
+                                enabled = !isBusy && packageStatus.rollbackAvailable,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(appText(AppTextKey.SettingsExternalPackageRollback))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourcePackageInfoValue(
+    modifier: Modifier = Modifier,
+    value: String,
+    label: String,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(value, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            label,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        )
     }
 }
 
@@ -553,7 +918,7 @@ private fun sourceLanguagePresentation(language: String): SourceLanguagePresenta
 private fun SourceRepositoryTopBar(
     title: String,
     onBack: () -> Unit,
-    actions: @Composable RowScope.() -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
@@ -632,16 +997,19 @@ private fun SourcePackageCard(
     packageStatus: ExternalSourcePackageStatus,
     busy: Boolean,
     onInstall: () -> Unit,
-    onRollback: () -> Unit,
+    onPackageClick: () -> Unit,
+    selected: Boolean,
+    onManage: () -> Unit,
+    onUpdate: () -> Unit,
 ) {
     val manifest = packageStatus.availableManifest
     val title = manifest.sourceInfo?.displayName?.takeIf(String::isNotBlank) ?: manifest.sourceId.value
     val languages = manifest.sourceInfo?.languages.orEmpty().joinToString { it.tag.uppercase() }
-    var manageExpanded by remember(packageStatus.sourceId, packageStatus.updateAvailable, packageStatus.rollbackAvailable) {
-        mutableStateOf(false)
-    }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !busy, onClick = onPackageClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -650,54 +1018,39 @@ private fun SourcePackageCard(
                 sourceId = manifest.sourceId.value,
                 modifier = Modifier.size(52.dp).clip(CircleShape),
             )
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = listOfNotNull(languages.takeIf(String::isNotBlank), manifest.packageVersion).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            if (packageStatus.activePackage == null) {
+        }
+        if (selected) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        if (packageStatus.activePackage == null) {
                 Button(onClick = onInstall, enabled = !busy) {
                     Text(appText(AppTextKey.SettingsExternalPackageInstall))
                 }
+            } else if (packageStatus.updateAvailable) {
+                AppSplitActionButton(
+                    primaryLabel = appText(AppTextKey.SettingsExternalPackageManage),
+                    secondaryLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
+                    onPrimaryClick = onManage,
+                    onSecondaryClick = onUpdate,
+                    enabled = !busy,
+                    modifier = Modifier.width(128.dp),
+                )
             } else {
-                Box {
-                    Button(onClick = { manageExpanded = true }, enabled = !busy) {
+                    Button(onClick = onManage, enabled = !busy) {
                         Text(appText(AppTextKey.SettingsExternalPackageManage))
                     }
-                    DropdownMenu(
-                        expanded = manageExpanded,
-                        onDismissRequest = { manageExpanded = false },
-                    ) {
-                        if (packageStatus.updateAvailable) {
-                            DropdownMenuItem(
-                                text = { Text(appText(AppTextKey.SettingsExternalPackageUpdate)) },
-                                onClick = {
-                                    manageExpanded = false
-                                    onInstall()
-                                },
-                            )
-                        }
-                        if (packageStatus.rollbackAvailable) {
-                            DropdownMenuItem(
-                                text = { Text(appText(AppTextKey.SettingsExternalPackageRollback)) },
-                                onClick = {
-                                    manageExpanded = false
-                                    onRollback()
-                                },
-                            )
-                        }
-                        if (!packageStatus.updateAvailable && !packageStatus.rollbackAvailable) {
-                            DropdownMenuItem(
-                                text = { Text(appText(AppTextKey.SettingsExternalPackageInstalled)) },
-                                enabled = false,
-                                onClick = {},
-                            )
-                        }
-                    }
-                }
             }
     }
 }

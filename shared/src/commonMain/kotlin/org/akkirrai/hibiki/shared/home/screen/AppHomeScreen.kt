@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import androidx.compose.ui.unit.dp
@@ -84,12 +86,23 @@ fun AppHomeScreen(
     onDismissIme: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val searchBackAction = homeSearchBackAction(isImeVisible, state.isSearchActive)
+    var searchFieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val searchBackAction = homeSearchBackAction(
+        isImeVisible = isImeVisible || searchFieldFocused,
+        isSearchActive = state.isSearchActive,
+    )
     AppSystemBackHandler(
         enabled = searchBackAction != HomeSearchBackAction.None,
         onBack = {
             when (searchBackAction) {
-                HomeSearchBackAction.DismissIme -> onDismissIme()
+                HomeSearchBackAction.DismissIme -> {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    searchFieldFocused = false
+                    onDismissIme()
+                }
                 HomeSearchBackAction.ClearSearch -> onClearSearch()
                 HomeSearchBackAction.None -> Unit
             }
@@ -163,6 +176,7 @@ fun AppHomeScreen(
             showFilterButton = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
                 state.isSearchFilterCatalogLoading,
             scrimHeight = HomeTopSearchScrimHeight,
+            onSearchFocusChanged = { searchFieldFocused = it },
             )
         }
 

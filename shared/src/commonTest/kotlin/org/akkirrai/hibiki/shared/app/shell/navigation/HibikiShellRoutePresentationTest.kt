@@ -9,7 +9,6 @@ import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination
-import org.akkirrai.hibiki.shared.navigation.navigateToExternalSources
 
 class HibikiShellRoutePresentationTest {
     @Test
@@ -49,25 +48,4 @@ class HibikiShellRoutePresentationTest {
         assertFalse(presentation.activeDownloadMode)
     }
 
-    @Test
-    fun externalSourcesRouteRemainsInsideSettingsDestination() {
-        val presentation = AppNavigationState(
-            currentTopLevel = AppTopLevelDestination.HOME,
-            backStack = listOf(AppRoute.ExternalSources),
-        ).toHibikiShellRoutePresentation()
-
-        assertEquals(AppDestination.SETTINGS, presentation.selectedTab)
-        assertEquals(AppTopLevelDestination.PROFILE, presentation.topLevelDestination)
-        assertEquals(AppRoute.ExternalSources, presentation.currentRoute)
-        assertFalse(presentation.isPlayerRoute)
-    }
-
-    @Test
-    fun reopeningExternalSourcesDoesNotDuplicateRoute() {
-        val state = AppNavigationState(
-            backStack = listOf(AppRoute.ExternalSources),
-        )
-
-        assertEquals(state, state.navigateToExternalSources())
-    }
 }

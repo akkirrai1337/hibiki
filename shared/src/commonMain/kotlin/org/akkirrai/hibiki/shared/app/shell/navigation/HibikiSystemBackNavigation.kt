@@ -37,7 +37,7 @@ internal fun reduceHibikiSystemBack(
         return HibikiSystemBackResult(navigationState.reduce(AppNavigationEvent.Back), handled = true)
     }
     if (selectedTab == AppDestination.SETTINGS) {
-        val canPopSettings = routeBeforeBack is AppRoute.Settings || routeBeforeBack is AppRoute.ExternalSources
+        val canPopSettings = routeBeforeBack is AppRoute.Settings
         return HibikiSystemBackResult(
             state = if (canPopSettings) navigationState.reduce(AppNavigationEvent.Back) else navigationState,
             handled = true,

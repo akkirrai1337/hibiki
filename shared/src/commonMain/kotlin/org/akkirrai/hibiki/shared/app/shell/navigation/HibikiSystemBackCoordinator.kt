@@ -24,8 +24,8 @@ internal class HibikiSystemBackCoordinator(
             playbackReturnRoute = playbackReturnRoute(),
         )
         if (!result.handled) return
-        if (result.cleanup == HibikiBackCleanup.Details) closeDetails()
         setNavigationState(result.state)
+        if (result.cleanup == HibikiBackCleanup.Details) closeDetails()
         if (result.clearPlaybackReturnRoute) setPlaybackReturnRoute(null)
         when (result.cleanup) {
             HibikiBackCleanup.ActivePlayback -> {

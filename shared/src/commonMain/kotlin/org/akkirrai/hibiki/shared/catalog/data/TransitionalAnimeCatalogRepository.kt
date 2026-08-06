@@ -11,6 +11,9 @@ class TransitionalAnimeCatalogRepository(
 
     override val initialItems: List<Anime> = builtIn.initialItems
 
+    override fun canContinuePaginationAfterShortPage(): Boolean =
+        selectedSourceId?.let(external::hasSource) == true
+
     override fun selectSource(sourceId: String) {
         selectedSourceId = sourceId
         if (external.hasSource(sourceId)) {

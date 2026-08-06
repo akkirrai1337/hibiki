@@ -24,6 +24,8 @@ import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
+import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -94,6 +96,9 @@ internal fun AndroidSharedAppShell(
     // External source search/details must keep redirects inside the manifest's host policy.
     val externalHttpClient = remember {
         HttpClient(OkHttp) {
+            installBeakoKitHttpDefaults(
+                BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-source"),
+            )
             followRedirects = false
         }
     }
@@ -130,11 +135,7 @@ internal fun AndroidSharedAppShell(
     }
     val builtInCatalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
     val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
-        if (BuildConfig.DEBUG) {
-            externalCatalogRepository
-        } else {
-            TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
-        }
+        TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
     }
     val homeRepository = remember(dependencies) { dependencies.homeRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
@@ -143,7 +144,11 @@ internal fun AndroidSharedAppShell(
     val externalWatchRepository = remember(externalCoordinator, externalSnapshot?.registry) {
         externalCoordinator?.let { coordinator ->
             SharedAnimeWatchRepository(
-                client = HttpClient(OkHttp),
+                client = HttpClient(OkHttp) {
+                    installBeakoKitHttpDefaults(
+                        BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-playback"),
+                    )
+                },
                 sourceHttpClient = externalHttpClient,
                 externalSourceFactory = { sourceId, sourceContext ->
                     coordinator.snapshot.value.registry?.create(sourceId, sourceContext)
@@ -194,7 +199,7 @@ internal fun AndroidSharedAppShell(
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
     val sources = remember(externalSnapshot?.registry) {
-        val builtInSources = if (BuildConfig.DEBUG) emptyList() else AnimeSourceRegistry.sources.map { source ->
+        val builtInSources = AnimeSourceRegistry.sources.map { source ->
             AppSourceDescriptor(
                 id = source.id.value,
                 name = source.name,

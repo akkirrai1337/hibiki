@@ -26,17 +26,21 @@ import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
 @Composable
-internal fun AppDestinationContent(input: AppDestinationContentInput) {
-    val selectedTab = input.selectedTab
-    val contentState = input.watch.state
-    val sourceState = input.sources.state
-    val hostContext = input.platform.hostContext
+internal fun AppDestinationContent(
+    input: AppDestinationContentInput,
+    routeOverride: AppRoute? = null,
+) {
+    val effectiveInput = input.withRouteOverride(routeOverride)
+    val selectedTab = effectiveInput.selectedTab
+    val contentState = effectiveInput.watch.state
+    val sourceState = effectiveInput.sources.state
+    val hostContext = effectiveInput.platform.hostContext
     var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val sourceConfigContent = LocalAppSourceConfigContent.current
     val homeSourcesById = remember(sourceState.sources) { sourceState.sources.associateBy(AppSourceDescriptor::id) }
     val bottomSystemInset = appBottomSystemInsetValue(hostContext.includeNavigationBarPadding)
     if (contentState.isWatchRouteDriven() && contentState.watchAnime != null) {
-        AppDestinationWatchRoute(input)
+        AppDestinationWatchRoute(effectiveInput)
         return
     }
 
@@ -46,43 +50,51 @@ internal fun AppDestinationContent(input: AppDestinationContentInput) {
         selectedTab
     }
 
-    AppDestinationTopLevelRoutes(
-        input = input,
-        selectedTab = baseSelectedTab,
-        topLevelBottomContentPadding = if (
-            baseSelectedTab != AppDestination.SETTINGS && contentState.currentRoute is AppRoute.TopLevel
-        ) {
-            AppBottomBarHeight + bottomSystemInset + AppBottomBarContentExtraPadding
-        } else {
-            bottomSystemInset
-        },
-        homeSourcesById = homeSourcesById,
-        editingSourceConfig = editingSourceConfig,
-        sourceConfigContent = sourceConfigContent,
-        onEditSourceConfig = { editingSourceConfig = it },
-    )
-
-    AnimatedContent(
-        targetState = selectedTab == AppDestination.SETTINGS,
-        transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
-        label = "settings_route_transition",
-        modifier = Modifier.fillMaxSize(),
-    ) { settingsVisible ->
-        if (settingsVisible) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+    // Details is a full-screen destination. Do not keep composing the whole
+    // underlying top-level screen while the root transition is already
+    // retaining the outgoing screen for its fade-out.
+    val showBaseRoutes = contentState.currentRoute !is AppRoute.Details
+    if (showBaseRoutes) {
+        AppDestinationTopLevelRoutes(
+            input = effectiveInput,
+            selectedTab = baseSelectedTab,
+            topLevelBottomContentPadding = if (
+                baseSelectedTab != AppDestination.SETTINGS && contentState.currentRoute is AppRoute.TopLevel
             ) {
-                AppDestinationTopLevelRoutes(
-                    input = input,
-                    selectedTab = AppDestination.SETTINGS,
-                    topLevelBottomContentPadding = bottomSystemInset,
-                    homeSourcesById = homeSourcesById,
-                    editingSourceConfig = editingSourceConfig,
-                    sourceConfigContent = sourceConfigContent,
-                    onEditSourceConfig = { editingSourceConfig = it },
-                )
+                AppBottomBarHeight + bottomSystemInset + AppBottomBarContentExtraPadding
+            } else {
+                bottomSystemInset
+            },
+            homeSourcesById = homeSourcesById,
+            editingSourceConfig = editingSourceConfig,
+            sourceConfigContent = sourceConfigContent,
+            onEditSourceConfig = { editingSourceConfig = it },
+        )
+    }
+
+    if (showBaseRoutes) {
+        AnimatedContent(
+            targetState = selectedTab == AppDestination.SETTINGS,
+            transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
+            label = "settings_route_transition",
+            modifier = Modifier.fillMaxSize(),
+        ) { settingsVisible ->
+            if (settingsVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
+                    AppDestinationTopLevelRoutes(
+                        input = effectiveInput,
+                        selectedTab = AppDestination.SETTINGS,
+                        topLevelBottomContentPadding = bottomSystemInset,
+                        homeSourcesById = homeSourcesById,
+                        editingSourceConfig = editingSourceConfig,
+                        sourceConfigContent = sourceConfigContent,
+                        onEditSourceConfig = { editingSourceConfig = it },
+                    )
+                }
             }
         }
     }
@@ -106,9 +118,25 @@ internal fun AppDestinationContent(input: AppDestinationContentInput) {
         modifier = Modifier.fillMaxSize(),
     ) { target ->
         target.anime?.let { anime ->
-            AppDestinationDetailsRoute(input = input, animeOverride = anime)
+            AppDestinationDetailsRoute(input = effectiveInput, animeOverride = anime)
         }
     }
 }
 
 private data class DetailsLayerTarget(val anime: Anime?)
+
+private fun AppDestinationContentInput.withRouteOverride(route: AppRoute?): AppDestinationContentInput {
+    if (route == null || route == watch.state.currentRoute) return this
+    return AppDestinationContentInput(
+        selectedTab = selectedTab,
+        catalog = catalog,
+        home = home,
+        library = library,
+        settings = settings,
+        sources = sources,
+        watch = watch.copy(state = watch.state.copy(currentRoute = route)),
+        profile = profile,
+        platform = platform,
+        navigation = navigation,
+    )
+}

@@ -44,6 +44,13 @@ class ExternalSourceRepositoryController(
         }
     }
 
+    fun refreshRepository(url: String) {
+        launchOperation {
+            actions.refreshRepository(url)
+            loadState()
+        }
+    }
+
     fun addRepository(
         url: String,
         onRepositoryAvailable: (String) -> Unit = {},
@@ -81,6 +88,13 @@ class ExternalSourceRepositoryController(
         launchOperation {
             actions.rollbackPackageFromUi(sourceId)
             loadState()
+        }
+    }
+
+    fun uninstallPackage(sourceId: SourceId, onUninstalled: () -> Unit = {}) {
+        launchOperation {
+            actions.uninstallPackageFromUi(sourceId)
+            loadState().also { onUninstalled() }
         }
     }
 

@@ -31,6 +31,7 @@ fun AppCatalogTopOverlay(
     showFilterButton: Boolean,
     sortModifier: Modifier,
     sortContent: @Composable () -> Unit,
+    onSearchFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -61,6 +62,7 @@ fun AppCatalogTopOverlay(
                 clearIcon = Icons.Outlined.Close,
                 onFilterClick = onFilterClick,
                 showFilterButton = showFilterButton,
+                onFocusChanged = onSearchFocusChanged,
                 modifier = Modifier.zIndex(1f),
             )
             Box(modifier = sortModifier) {

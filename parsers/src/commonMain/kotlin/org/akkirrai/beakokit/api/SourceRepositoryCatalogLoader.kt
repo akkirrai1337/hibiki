@@ -54,4 +54,31 @@ class SourceRepositoryCatalogLoader(
         }
         return SourceRepositoryLoadSnapshot(loaded = loaded, failures = failures)
     }
+
+    suspend fun loadOne(
+        endpoint: SourceRepositoryEndpoint,
+        clientVersion: Int,
+        supportedSourceApiVersion: Int = SourceApi.VERSION,
+        supportedHostApiVersion: Int = SourceHostApi.VERSION,
+    ): SourceRepositoryLoadSnapshot = try {
+        SourceRepositoryLoadSnapshot(
+            loaded = listOf(
+                LoadedSourceRepository(
+                    endpoint = endpoint,
+                    index = loader.load(
+                        url = endpoint.url,
+                        clientVersion = clientVersion,
+                        supportedSourceApiVersion = supportedSourceApiVersion,
+                        supportedHostApiVersion = supportedHostApiVersion,
+                    ),
+                ),
+            ),
+            failures = emptyList(),
+        )
+    } catch (error: SourceRepositoryLoadException) {
+        SourceRepositoryLoadSnapshot(
+            loaded = emptyList(),
+            failures = listOf(SourceRepositoryLoadFailure(endpoint, error)),
+        )
+    }
 }

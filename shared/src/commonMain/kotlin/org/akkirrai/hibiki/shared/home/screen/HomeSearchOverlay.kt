@@ -26,6 +26,7 @@ fun AppHomeSearchOverlay(
     onFilterClick: () -> Unit,
     showFilterButton: Boolean,
     scrimHeight: Dp,
+    onSearchFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -47,6 +48,7 @@ fun AppHomeSearchOverlay(
             clearIcon = Icons.Outlined.Close,
             onFilterClick = onFilterClick,
             showFilterButton = showFilterButton,
+            onFocusChanged = onSearchFocusChanged,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()

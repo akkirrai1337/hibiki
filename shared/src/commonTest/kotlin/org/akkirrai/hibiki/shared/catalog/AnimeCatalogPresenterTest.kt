@@ -45,6 +45,47 @@ class AnimeCatalogPresenterTest {
     }
 
     @Test
+    fun presenterContinuesExternalPaginationAfterAShortPage() = runTest {
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override fun canContinuePaginationAfterShortPage() = true
+
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
+                if (query.page == 1) {
+                    AnimeCatalogPage(
+                        items = listOf(Anime("1", "One", "", "", "")),
+                        page = 1,
+                        canLoadMore = false,
+                    )
+                } else if (query.page == 2) {
+                    AnimeCatalogPage(
+                        items = listOf(Anime("2", "Two", "", "", "")),
+                        page = query.page,
+                        canLoadMore = false,
+                    )
+                } else {
+                    AnimeCatalogPage(emptyList(), query.page, canLoadMore = false)
+                }
+        }
+        val presenter = AnimeCatalogPresenter(repository, this, pageSize = 24)
+
+        presenter.search()
+        advanceUntilIdle()
+        assertTrue(presenter.state.value.canLoadMore)
+
+        presenter.loadMore()
+        advanceUntilIdle()
+
+        assertEquals(listOf("1", "2"), presenter.state.value.items.map(Anime::id))
+        assertTrue(presenter.state.value.canLoadMore)
+
+        presenter.loadMore()
+        advanceUntilIdle()
+
+        assertFalse(presenter.state.value.canLoadMore)
+    }
+
+    @Test
     fun presenterRestoresASeparateSourceSession() = runTest {
         val repository = object : AnimeCatalogRepository {
             override val initialItems: List<Anime> = emptyList()

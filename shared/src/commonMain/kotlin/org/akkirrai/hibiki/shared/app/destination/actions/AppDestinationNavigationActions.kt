@@ -11,8 +11,8 @@ internal data class AppDestinationNavigationActions(
     val onSourceSelected: (String) -> Unit,
     val onBrowseCatalog: () -> Unit,
     val onOpenLibrary: () -> Unit,
-    val onExternalSourcesClick: () -> Unit,
     val onSourceRepositoriesClick: () -> Unit,
     val onSourceRepositoryClick: (String) -> Unit,
+    val onSourcePackageInfoClick: (String, String) -> Unit,
     val onSettingsBack: () -> Unit,
 )

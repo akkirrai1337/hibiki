@@ -43,7 +43,7 @@ internal fun AppDestinationTopLevelRoutes(
         when (selectedTab) {
             AppDestination.HOME -> HomeDestinationRoute(
                 state = catalog.state.ui,
-                listState = catalog.state.listState,
+                listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryEntries = library.state.entries,
                 libraryStatusByAnimeId = library.state.entries.associate { it.anime.id to it.category },
@@ -134,15 +134,17 @@ internal fun AppDestinationTopLevelRoutes(
                 currentRoute = content.currentRoute ?: AppRoute.TopLevel(org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination.SOURCES),
                 externalSourcesState = sources.externalSourcesState.repository,
                 externalSourcesController = sources.externalSourcesState.controller,
+                selectedSourcesTab = sources.externalSourcesState.selectedTab,
+                onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
                 onOpenRepositories = navigation.actions.onSourceRepositoriesClick,
                 onOpenRepository = navigation.actions.onSourceRepositoryClick,
+                onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
                 onBack = navigation.actions.onSettingsBack,
                 onOpenUrl = platform.hostContext.onOpenUrl,
                 readClipboardText = sources.externalSourcesState.readClipboardText,
                 copyText = sources.externalSourcesState.copyText,
             )
             AppDestination.SETTINGS -> SettingsDestinationRoute(
-                showExternalSources = content.currentRoute is AppRoute.ExternalSources,
                 profileData = profile.state.data,
                 languageMode = platform.dataContext.languageMode,
                 onLanguageModeChange = settings.actions.onLanguageModeChange,
@@ -169,12 +171,8 @@ internal fun AppDestinationTopLevelRoutes(
                 onCheckForUpdates = settings.actions.onCheckForUpdates,
                 onExportLogs = settings.actions.onExportLogs,
                 notificationsAvailable = settings.state.notificationsAvailable,
-                externalSourceRepositoryState = sources.externalSourcesState.repository,
-                externalSourceRepositoryController = sources.externalSourcesState.controller,
                 settingsListState = settings.listsState.settings,
-                externalSourcesListState = settings.listsState.externalSources,
                 bottomContentPadding = topLevelBottomContentPadding,
-                onExternalSourcesClick = navigation.actions.onExternalSourcesClick,
             )
         }
     }

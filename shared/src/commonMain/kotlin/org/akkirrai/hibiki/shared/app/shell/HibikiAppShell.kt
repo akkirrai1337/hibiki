@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
@@ -107,7 +108,6 @@ import org.akkirrai.hibiki.shared.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.shared.player.shouldShowPlaybackHost
 import org.akkirrai.hibiki.shared.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.shared.navigation.navigateToSettings
-import org.akkirrai.hibiki.shared.navigation.navigateToExternalSources
 import org.akkirrai.hibiki.shared.navigation.navigateToPlayer
 import org.akkirrai.hibiki.shared.navigation.navigateToWatchSources
 import org.akkirrai.hibiki.shared.navigation.reduceDetailsOverlayChange
@@ -182,9 +182,9 @@ internal fun HibikiAppShell(
     fun setHomeStatePreservingDescriptions(state: HomeUiState) {
         homePresenter.setState(state.preserveHomeDescriptions(homePresenter.state.value))
     }
+    val homeListState = resources.homeListState
     val catalogListState = resources.catalogListState
     val settingsListState = resources.settingsListState
-    val externalSourcesListState = resources.externalSourcesListState
     val sourceSearchPresenter = resources.sourceSearchPresenter
     val sourceSearchActions = HibikiSourceSearchActions(sourceSearchPresenter)
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
@@ -208,6 +208,7 @@ internal fun HibikiAppShell(
     val playerPresenter = resources.playerPresenter
     val playerState by playerPresenter.state.collectAsState()
     val playbackSession = remember { HibikiPlaybackSession() }
+    var selectedSourcesTab by rememberSaveable { mutableStateOf(0) }
     var playbackJob by playbackSession.job
     var homeRefreshJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by playbackSession.activeRoute
@@ -468,11 +469,11 @@ internal fun HibikiAppShell(
                         ),
                         includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
                         transitionDirection = navigationState.transitionDirection,
+                        contentRoute = routePresentation.currentRoute,
                         contentTransitionKey = if (
                             routePresentation.currentRoute is AppRoute.TopLevel ||
                             routePresentation.currentRoute is AppRoute.Details ||
-                            routePresentation.currentRoute is AppRoute.Settings ||
-                            routePresentation.currentRoute is AppRoute.ExternalSources
+                            routePresentation.currentRoute is AppRoute.Settings
                         ) {
                             org.akkirrai.hibiki.shared.navigation.AppTransitionKey(
                                 route = "top-level-content",
@@ -495,11 +496,12 @@ internal fun HibikiAppShell(
                         modifier = Modifier
                             .fillMaxSize()
                             .appRootTopInsetPadding(layoutOptions.applyStatusBarPadding),
-                    ) { animatedDestination ->
+                    ) { animatedDestination, animatedRoute ->
                         val animatedTab = animatedDestination.toAppDestination(
                             settingsVisible = selectedTab == AppDestination.SETTINGS,
                         )
                         AppDestinationContent(
+                            routeOverride = animatedRoute,
                             input = AppDestinationContentInput(
                             selectedTab = animatedTab,
                             catalog = CatalogContentInput(
@@ -523,6 +525,7 @@ internal fun HibikiAppShell(
                                 state = AppDestinationHomeState(
                                     ui = homeState,
                                     search = homeSearchState,
+                                    listState = homeListState,
                                 ),
                                 actions = AppDestinationHomeActions(
                                     onQueryChange = homeSearchActions.onQueryChange,
@@ -653,7 +656,6 @@ internal fun HibikiAppShell(
                                 ),
                                 listsState = AppDestinationSettingsListsState(
                                     settings = settingsListState,
-                                    externalSources = externalSourcesListState,
                                 ),
                             ),
                             profile = ProfileContentInput(
@@ -687,6 +689,8 @@ internal fun HibikiAppShell(
                                 externalSourcesState = AppDestinationExternalSourcesState(
                                     repository = externalSourceRepositoryState,
                                     controller = sourceCallbacks.externalSourceRepositoryController,
+                                    selectedTab = selectedSourcesTab,
+                                    onSelectedTabChange = { selectedSourcesTab = it },
                                     readClipboardText = sourceCallbacks.readClipboardText,
                                     copyText = sourceCallbacks.copyText,
                                 ),

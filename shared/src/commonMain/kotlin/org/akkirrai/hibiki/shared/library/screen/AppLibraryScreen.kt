@@ -5,6 +5,7 @@ import org.akkirrai.hibiki.shared.library.ui.resolveLibraryEmptyStateText
 import org.akkirrai.hibiki.shared.library.state.*
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,9 +48,14 @@ fun AppLibraryScreen(
 ) {
     var localFilterVisible by remember { mutableStateOf(false) }
     val isFilterVisible = filterVisible ?: localFilterVisible
+    val categoryEntryCount = state.categoryCounts[state.selectedCategory] ?: 0
+    val filterAvailable = categoryEntryCount >= LIBRARY_FILTER_MINIMUM_ENTRY_COUNT
     fun setFilterVisible(visible: Boolean) {
         if (filterVisible == null) localFilterVisible = visible
         onFilterVisibilityChange(visible)
+    }
+    LaunchedEffect(filterAvailable) {
+        if (!filterAvailable) setFilterVisible(false)
     }
 
     AppLibraryEntriesContent(
@@ -71,6 +77,7 @@ fun AppLibraryScreen(
                             onFilterClick()
                             setFilterVisible(true)
                         },
+                        showFilterButton = filterAvailable,
                         modifier = searchModifier,
                     )
                 },
@@ -99,7 +106,9 @@ fun AppLibraryScreen(
         entryContent = { entry, entryModifier -> entryContent(entry, entryModifier) },
     )
 
-    if (isFilterVisible && filterContent != null) {
+    if (isFilterVisible && filterAvailable && filterContent != null) {
         filterContent { setFilterVisible(false) }
     }
 }
+
+private const val LIBRARY_FILTER_MINIMUM_ENTRY_COUNT = 2

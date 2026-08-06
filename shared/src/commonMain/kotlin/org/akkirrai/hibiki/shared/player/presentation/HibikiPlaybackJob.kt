@@ -108,7 +108,11 @@ internal fun launchHibikiPlaybackJob(
                 episodeNumber = episode.number,
             )
         }
-        println("Hibiki playback resolution failed: ${error.message ?: error::class.simpleName}")
+        println(
+            "Hibiki playback resolution failed: ${error::class.simpleName}: " +
+                (error.message ?: "no message") +
+                error.cause?.let { "; cause=${it::class.simpleName}: ${it.message}" }.orEmpty(),
+        )
     }
     onFinished()
 }

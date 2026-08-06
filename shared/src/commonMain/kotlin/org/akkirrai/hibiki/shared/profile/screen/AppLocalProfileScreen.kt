@@ -91,7 +91,7 @@ fun AppLocalProfileScreen(
             },
             bannerElevatedContent = { _, actionModifier ->
                 Row(
-                    modifier = actionModifier.offset(y = (-40).dp),
+                    modifier = actionModifier.offset(y = (-26).dp),
                     horizontalArrangement = Arrangement.spacedBy(ProfileSmallPadding),
                 ) {
                     ProfileEditActionButton(

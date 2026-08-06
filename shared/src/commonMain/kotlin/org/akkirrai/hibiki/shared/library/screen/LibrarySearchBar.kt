@@ -19,6 +19,7 @@ fun AppLibrarySearchBar(
     filterContentDescription: String,
     clearContentDescription: String,
     onFilterClick: () -> Unit,
+    showFilterButton: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     AppSearchTopBar(
@@ -32,6 +33,7 @@ fun AppLibrarySearchBar(
         filterIcon = Icons.Outlined.FilterList,
         clearIcon = Icons.Outlined.Close,
         onFilterClick = onFilterClick,
+        showFilterButton = showFilterButton,
         modifier = modifier.fillMaxWidth(),
     )
 }

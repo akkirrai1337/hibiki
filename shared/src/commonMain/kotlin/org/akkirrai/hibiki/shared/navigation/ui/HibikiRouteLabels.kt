@@ -6,7 +6,6 @@ import org.akkirrai.hibiki.shared.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.shared.home.screen.AppHomeScreenLabels
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
-import org.akkirrai.hibiki.shared.settings.ExternalSourceRepositorySectionLabels
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appSearchResultsCount
 import org.akkirrai.hibiki.shared.text.appText
@@ -27,25 +26,6 @@ internal fun NotificationPermissionState.textKey(): AppTextKey = when (this) {
     NotificationPermissionState.GRANTED -> AppTextKey.SettingsNotificationsGranted
     NotificationPermissionState.DENIED -> AppTextKey.SettingsNotificationsDenied
 }
-
-@Composable
-internal fun externalSourceRepositoryLabels(): ExternalSourceRepositorySectionLabels =
-    ExternalSourceRepositorySectionLabels(
-        title = appText(AppTextKey.SettingsExternalSources),
-        urlLabel = appText(AppTextKey.SettingsExternalRepositoryUrl),
-        urlHint = appText(AppTextKey.SettingsExternalRepositoryUrlHint),
-        invalidUrlError = appText(AppTextKey.SettingsExternalRepositoryInvalidUrl),
-        operationFailedError = appText(AppTextKey.SettingsExternalRepositoryOperationFailed),
-        addLabel = appText(AppTextKey.SettingsExternalRepositoryAdd),
-        refreshLabel = appText(AppTextKey.SettingsExternalRepositoryRefresh),
-        removeLabel = appText(AppTextKey.SettingsExternalRepositoryRemove),
-        busyLabel = appText(AppTextKey.SettingsExternalRepositoryBusy),
-        packagesTitle = appText(AppTextKey.SettingsExternalPackages),
-        installLabel = appText(AppTextKey.SettingsExternalPackageInstall),
-        updateLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
-        installedLabel = appText(AppTextKey.SettingsExternalPackageInstalled),
-        rollbackLabel = appText(AppTextKey.SettingsExternalPackageRollback),
-    )
 
 @Composable
 internal fun defaultCatalogScreenLabels(): AppCatalogScreenLabels {

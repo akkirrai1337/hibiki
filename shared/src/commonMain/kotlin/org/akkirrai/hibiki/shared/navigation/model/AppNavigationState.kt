@@ -35,8 +35,10 @@ val AppNavigationState.selectedWatchSource: org.akkirrai.hibiki.shared.player.mo
 
 /** Resolves the visible root tab, including Settings nested under Profile. */
 fun AppNavigationState.selectedAppDestination(): AppDestination = when {
-    currentRoute is AppRoute.Settings || currentRoute is AppRoute.ExternalSources -> AppDestination.SETTINGS
-    currentRoute is AppRoute.SourceRepositories || currentRoute is AppRoute.SourceRepository -> AppDestination.SOURCES
+    currentRoute is AppRoute.Settings -> AppDestination.SETTINGS
+    currentRoute is AppRoute.SourceRepositories ||
+        currentRoute is AppRoute.SourceRepository ||
+        currentRoute is AppRoute.SourcePackageInfo -> AppDestination.SOURCES
     else -> when (currentTopLevel) {
         AppTopLevelDestination.HOME -> AppDestination.HOME
         AppTopLevelDestination.CATALOG -> AppDestination.CATALOG

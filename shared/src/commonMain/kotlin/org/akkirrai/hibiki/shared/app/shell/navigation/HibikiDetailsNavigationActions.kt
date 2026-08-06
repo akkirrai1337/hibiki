@@ -22,7 +22,8 @@ internal class HibikiDetailsNavigationActions(
     }
 
     fun close() {
+        val nextNavigationState = navigationState().navigateBackFromDetails()
+        setNavigationState(nextNavigationState)
         presenter.closeDetails()
-        setNavigationState(navigationState().navigateBackFromDetails())
     }
 }

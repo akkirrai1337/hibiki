@@ -137,7 +137,7 @@ class AnimeCatalogPresenter(
                     it.copy(
                         items = preserveLoadedDescriptions(it.items, result.items),
                         page = result.page,
-                        canLoadMore = result.canLoadMore,
+                        canLoadMore = canRequestNextPage(result),
                         isLoading = false,
                         isLoadingMore = false,
                     )
@@ -166,10 +166,11 @@ class AnimeCatalogPresenter(
                     ),
                 )
                 _state.update {
+                    val mergedItems = (it.items + result.items).distinctBy(Anime::id)
                     it.copy(
-                        items = (it.items + result.items).distinctBy(Anime::id),
+                        items = mergedItems,
                         page = result.page,
-                        canLoadMore = result.canLoadMore,
+                        canLoadMore = canRequestNextPage(result, hasNewItems = mergedItems.size > it.items.size),
                         isLoading = false,
                         isLoadingMore = false,
                     )
@@ -272,4 +273,11 @@ class AnimeCatalogPresenter(
             }
         }
     }
+
+    private fun canRequestNextPage(
+        result: AnimeCatalogPage,
+        hasNewItems: Boolean = result.items.isNotEmpty(),
+    ): Boolean = hasNewItems && (
+        result.canLoadMore || repository.canContinuePaginationAfterShortPage()
+    )
 }

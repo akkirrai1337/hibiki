@@ -123,6 +123,10 @@ enum class AppTextKey {
     SettingsExternalPackageInstalled,
     SettingsExternalPackageManage,
     SettingsExternalPackageRollback,
+    SettingsExternalPackageUninstall,
+    SourcesExternalPackageInfo,
+    SourcesExternalPackageVersion,
+    SourcesExternalPackageLanguage,
     SourcesExternalRepositories,
     SourcesExternalRepositoriesEmpty,
     SourcesExternalRepositoryAddTitle,
@@ -420,6 +424,10 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsExternalPackageInstalled -> if (russian) "Установлено" else "Installed"
             AppTextKey.SettingsExternalPackageManage -> if (russian) "Управление" else "Manage"
             AppTextKey.SettingsExternalPackageRollback -> if (russian) "Откатить" else "Rollback"
+            AppTextKey.SettingsExternalPackageUninstall -> if (russian) "Удалить" else "Uninstall"
+            AppTextKey.SourcesExternalPackageInfo -> if (russian) "Информация об источнике" else "Extension info"
+            AppTextKey.SourcesExternalPackageVersion -> if (russian) "Версия" else "Version"
+            AppTextKey.SourcesExternalPackageLanguage -> if (russian) "Язык" else "Language"
             AppTextKey.SourcesExternalRepositories -> if (russian) "Репозитории расширений" else "Extension repositories"
             AppTextKey.SourcesExternalRepositoriesEmpty -> if (russian) "Добавь репозиторий, чтобы устанавливать источники" else "Add a repository to install sources"
             AppTextKey.SourcesExternalRepositoryAddTitle -> if (russian) "Добавить репозиторий" else "Add repository"
