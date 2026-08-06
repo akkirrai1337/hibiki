@@ -186,7 +186,7 @@ private fun iosHostCallback(
 
 @OptIn(ExperimentalForeignApi::class)
 private inline fun <R> ByteArray?.usePinnedOrNull(
-    block: (Pinned<ByteVar>?) -> R,
+    block: (Pinned<ByteArray>?) -> R,
 ): R = if (this == null || isEmpty()) {
     block(null)
 } else {
