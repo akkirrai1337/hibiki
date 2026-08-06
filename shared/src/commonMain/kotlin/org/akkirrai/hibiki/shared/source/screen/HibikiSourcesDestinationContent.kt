@@ -29,6 +29,8 @@ internal fun SourcesDestinationContent(
     onSourceSearchRetry: () -> Unit,
     onSearchRetryForSource: (String) -> Unit,
     onAnimeClick: (Anime) -> Unit,
+    onAddSourceClick: () -> Unit,
+    onExtensionsSelected: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     editingSourceConfig?.let { source ->
@@ -58,6 +60,9 @@ internal fun SourcesDestinationContent(
         onAnimeClick = onAnimeClick,
         searchSections = sourceSearchState.sections,
         onSearchRetryForSource = onSearchRetryForSource,
+        addSourceLabel = appText(AppTextKey.SourcesExternalRepositoryAddTitle),
+        onAddSourceClick = onAddSourceClick,
+        onExtensionsSelected = onExtensionsSelected,
         searchSourceIconContent = { section, iconModifier ->
             AppSourceIconImage(
                 url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,

@@ -30,8 +30,6 @@ class ExternalSourceRuntimeCoordinator(
     private val runtimeInitializer: suspend (ActiveExternalSourcePackage, SourceContext) -> Unit = { _, _ -> },
     /** Built-in source IDs retain ownership while external sources run in the background. */
     private val reservedSourceIds: Set<SourceId> = emptySet(),
-    /** Debug Android builds may refresh rebuilt artifacts without a version bump. */
-    private val autoInstallRebuiltPackages: Boolean = false,
 ) : ExternalSourceRepositoryActions {
     private val operationMutex = Mutex()
     private val state = MutableStateFlow(
@@ -84,7 +82,6 @@ class ExternalSourceRuntimeCoordinator(
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
         refreshLocked()
-        installAllAvailablePackagesLocked()
     }
 
     /** Adds one repository and refreshes only the inactive external registry. */
@@ -96,7 +93,6 @@ class ExternalSourceRuntimeCoordinator(
         }
         updateConfiguredRepositories()
         refreshLocked()
-        installAllAvailablePackagesLocked()
     }
 
     /** Removes one repository and refreshes only the inactive external registry. */
@@ -116,6 +112,24 @@ class ExternalSourceRuntimeCoordinator(
 
     override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> =
         packageStatuses()
+
+    override suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent> = operationMutex.withLock {
+        val packageStatuses = packageStatusesLocked().associateBy(ExternalSourcePackageStatus::sourceId)
+        val repository = platform.coordinator.snapshot.value
+        val loadedByUrl = repository.loaded.associateBy { it.endpoint.url }
+        val failuresByUrl = repository.failures.associateBy { it.endpoint.url }
+        platform.coordinator.repositories().map { endpoint ->
+            ExternalSourceRepositoryContent(
+                endpoint = endpoint,
+                packages = loadedByUrl[endpoint.url]
+                    ?.index
+                    ?.sources
+                    .orEmpty()
+                    .mapNotNull { manifest -> packageStatuses[manifest.sourceId] },
+                error = failuresByUrl[endpoint.url]?.error,
+            )
+        }
+    }
 
     override suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
@@ -160,36 +174,6 @@ class ExternalSourceRuntimeCoordinator(
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = operationMutex.withLock {
         installAvailablePackageLocked(sourceId, initialize)
-    }
-
-    /** Installs every newly advertised package after a repository has been refreshed. */
-    private suspend fun installAllAvailablePackagesLocked() {
-        val sourceIds = platform.coordinator.availableSourceManifests()
-            .asSequence()
-            .filterNot { it.sourceId in reservedSourceIds }
-            .filter { manifest ->
-                val active = loadActivePackageOrNull(manifest.sourceId)
-                active == null || (
-                    autoInstallRebuiltPackages &&
-                        active.manifest.packageVersion == manifest.packageVersion &&
-                        active.installed.artifactSha256?.let { it != manifest.sha256 } == true
-                )
-            }
-            .map { it.sourceId }
-            .toList()
-        var firstError: Throwable? = null
-        sourceIds.forEach { sourceId ->
-            try {
-                installAvailablePackageLocked(sourceId) {}
-            } catch (error: Throwable) {
-                if (error is CancellationException) throw error
-                firstError = firstError ?: error
-            }
-        }
-        firstError?.let { error ->
-            state.value = state.value.copy(error = error)
-            throw error
-        }
     }
 
     private suspend fun installAvailablePackageLocked(
@@ -367,6 +351,8 @@ interface ExternalSourceRepositoryActions {
 
     suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus>
 
+    suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent>
+
     /** The host supplies initialization because it owns the platform runtime setup. */
     suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
@@ -399,6 +385,9 @@ class RepositoryManagementActions(
     }
 
     override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> = emptyList()
+
+    override suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent> = repositories()
+        .map { endpoint -> ExternalSourceRepositoryContent(endpoint = endpoint) }
 
     override suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
@@ -464,3 +453,9 @@ data class ExternalSourcePackageStatus(
                 activePackage.installed.artifactSha256?.let { it != availableManifest.sha256 } == true
             )
 }
+
+data class ExternalSourceRepositoryContent(
+    val endpoint: SourceRepositoryEndpoint,
+    val packages: List<ExternalSourcePackageStatus> = emptyList(),
+    val error: Throwable? = null,
+)

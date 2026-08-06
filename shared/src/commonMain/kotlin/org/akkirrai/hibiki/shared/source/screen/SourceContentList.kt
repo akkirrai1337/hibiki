@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.Dp
 fun AppSourceContentList(
     isSearchMode: Boolean,
     bottomContentPadding: Dp,
+    topContentPadding: Dp = SourceContentListTopPadding,
     searchContent: LazyListScope.() -> Unit,
     sourceContent: LazyListScope.() -> Unit,
     modifier: Modifier = Modifier,
@@ -21,7 +22,7 @@ fun AppSourceContentList(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = SourceContentListHorizontalPadding,
-            top = SourceContentListTopPadding,
+            top = topContentPadding,
             end = SourceContentListHorizontalPadding,
             bottom = bottomContentPadding + SourceContentListBottomExtraPadding,
         ),

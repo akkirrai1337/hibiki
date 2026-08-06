@@ -7,4 +7,6 @@ class AppSourcePlatformCallbacks(
     val sourceConfigContent: AppSourceConfigContent? = null,
     val selectedSourceId: String? = null,
     val onSourceSelected: (String) -> Unit = {},
+    val readClipboardText: () -> String? = { null },
+    val copyText: (String) -> Unit = {},
 )

@@ -131,6 +131,15 @@ internal fun AppDestinationTopLevelRoutes(
                 onSourceSearchRetry = sources.searchActions.onRetry,
                 onSearchRetryForSource = sources.searchActions.onRetryForSource,
                 onAnimeClick = navigation.actions.onAnimeClick,
+                currentRoute = content.currentRoute ?: AppRoute.TopLevel(org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination.SOURCES),
+                externalSourcesState = sources.externalSourcesState.repository,
+                externalSourcesController = sources.externalSourcesState.controller,
+                onOpenRepositories = navigation.actions.onSourceRepositoriesClick,
+                onOpenRepository = navigation.actions.onSourceRepositoryClick,
+                onBack = navigation.actions.onSettingsBack,
+                onOpenUrl = platform.hostContext.onOpenUrl,
+                readClipboardText = sources.externalSourcesState.readClipboardText,
+                copyText = sources.externalSourcesState.copyText,
             )
             AppDestination.SETTINGS -> SettingsDestinationRoute(
                 showExternalSources = content.currentRoute is AppRoute.ExternalSources,

@@ -26,6 +26,18 @@ fun AppNavigationState.navigateToExternalSources(): AppNavigationState = if (
     reduce(AppNavigationEvent.Navigate(AppRoute.ExternalSources))
 }
 
+fun AppNavigationState.navigateToSourceRepositories(): AppNavigationState = if (
+    currentRoute is AppRoute.SourceRepositories
+) {
+    this
+} else {
+    reduce(AppNavigationEvent.Navigate(AppRoute.SourceRepositories))
+}
+
+fun AppNavigationState.navigateToSourceRepository(url: String): AppNavigationState = reduce(
+    AppNavigationEvent.Navigate(AppRoute.SourceRepository(url)),
+)
+
 fun AppNavigationState.navigateToWatchSources(
     animeId: String,
     downloadMode: Boolean = false,

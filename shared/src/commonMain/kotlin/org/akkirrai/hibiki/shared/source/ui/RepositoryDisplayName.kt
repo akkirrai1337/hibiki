@@ -15,8 +15,8 @@ fun repositoryDisplayName(url: String): String {
         .map { it.removeSuffix(".git") }
 
     val githubName = when {
-        host == "github.com" && pathSegments.size >= 2 -> pathSegments[1]
-        host == "raw.githubusercontent.com" && pathSegments.size >= 2 -> pathSegments[1]
+        host == "github.com" && pathSegments.size >= 2 -> "${pathSegments[0]}/${pathSegments[1]}"
+        host == "raw.githubusercontent.com" && pathSegments.size >= 2 -> "${pathSegments[0]}/${pathSegments[1]}"
         else -> null
     }
     if (!githubName.isNullOrBlank()) return githubName

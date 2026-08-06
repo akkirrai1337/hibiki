@@ -15,6 +15,7 @@ import org.akkirrai.beakokit.api.SourceRepositoryUrlResolver
 
 data class ExternalSourceRepositoryUiState(
     val repositories: List<SourceRepositoryEndpoint> = emptyList(),
+    val repositoryContents: List<ExternalSourceRepositoryContent> = emptyList(),
     val packages: List<ExternalSourcePackageStatus> = emptyList(),
     val isBusy: Boolean = false,
     val error: Throwable? = null,
@@ -43,9 +44,21 @@ class ExternalSourceRepositoryController(
         }
     }
 
-    fun addRepository(url: String) {
+    fun addRepository(
+        url: String,
+        onRepositoryAvailable: (String) -> Unit = {},
+    ) {
         launchOperation {
-            actions.addRepositoryFromUi(urlResolver.resolve(url))
+            val endpoint = urlResolver.resolve(url)
+            try {
+                actions.addRepositoryFromUi(endpoint)
+            } catch (error: Throwable) {
+                if (actions.repositories().any { it.url == endpoint.url }) {
+                    onRepositoryAvailable(endpoint.url)
+                }
+                throw error
+            }
+            onRepositoryAvailable(endpoint.url)
             loadState()
         }
     }
@@ -106,6 +119,7 @@ class ExternalSourceRepositoryController(
     private suspend fun loadState(): ExternalSourceRepositoryUiState =
         ExternalSourceRepositoryUiState(
             repositories = actions.repositories(),
+            repositoryContents = actions.repositoryContentsForUi(),
             packages = actions.packageStatusesForUi(),
         )
 }

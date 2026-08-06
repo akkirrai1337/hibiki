@@ -73,7 +73,6 @@ internal fun AndroidExternalSourceBackgroundSync(
             } else {
                 AnimeSourceRegistry.sources.mapTo(linkedSetOf()) { it.id }
             },
-            autoInstallRebuiltPackages = BuildConfig.DEBUG,
         )
     }
     LaunchedEffect(coordinator) {

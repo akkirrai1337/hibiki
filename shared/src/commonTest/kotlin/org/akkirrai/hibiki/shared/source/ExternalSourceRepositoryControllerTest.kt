@@ -28,6 +28,7 @@ class ExternalSourceRepositoryControllerTest {
         controller.addRepository(" https://example.test/index.json ")
         advanceUntilIdle()
         assertEquals(listOf("https://example.test/index.json"), controller.state.value.repositories.map { it.url })
+        assertEquals(emptyList(), actions.installed)
 
         controller.removeRepository("https://example.test/index.json")
         advanceUntilIdle()
@@ -168,6 +169,13 @@ class ExternalSourceRepositoryControllerTest {
                     ),
                 )
             }
+
+        override suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent> = items.map { endpoint ->
+            ExternalSourceRepositoryContent(
+                endpoint = endpoint,
+                packages = packageStatusesForUi(),
+            )
+        }
 
         override suspend fun installAvailablePackageFromUi(
             sourceId: SourceId,

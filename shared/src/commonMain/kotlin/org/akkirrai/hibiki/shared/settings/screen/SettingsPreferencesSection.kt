@@ -18,9 +18,10 @@ fun AppSettingsPreferencesSection(
     externalSourcesSubtitle: String,
     externalSourcesCount: Int,
     onExternalSourcesClick: () -> Unit,
+    showExternalSources: Boolean = false,
 ) {
     AppSettingsSection(title = sectionTitle) {
-        AppSettingsItems(count = if (notificationsAvailable) 3 else 2) { index, shape ->
+        AppSettingsItems(count = (if (notificationsAvailable) 2 else 1) + if (showExternalSources) 1 else 0) { index, shape ->
             when {
                 index == 0 -> AppSettingsIconVerticalItem(
                     icon = SettingsLanguageIcon,
@@ -42,7 +43,7 @@ fun AppSettingsPreferencesSection(
                     showChevron = true,
                     onClick = onNotificationsClick,
                 )
-                else -> AppSettingsIconActionItem(
+                showExternalSources -> AppSettingsIconActionItem(
                     icon = SettingsExternalSourcesIcon,
                     title = externalSourcesTitle,
                     subtitle = externalSourcesSubtitle.replace("%s", externalSourcesCount.toString()),

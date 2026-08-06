@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.app.navigation
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -296,6 +299,14 @@ internal fun AndroidSharedAppShell(
                 selectedSourceId = preferences.animeSource.value,
                 onSourceSelected = { sourceId ->
                     settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
+                },
+                readClipboardText = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                },
+                copyText = { text ->
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Hibiki source repository", text))
                 },
             ),
             watchRepository = routedWatchRepository,

@@ -61,7 +61,9 @@ internal fun SettingsDestinationContent(
             listState = externalSourcesListState,
             onBackClick = onSettingsBack,
             backContentDescription = appText(AppTextKey.Back),
-            onAddRepository = externalSourceRepositoryController?.let { it::addRepository } ?: {},
+            onAddRepository = externalSourceRepositoryController?.let { controller ->
+                { url -> controller.addRepository(url) }
+            } ?: {},
             onRemoveRepository = externalSourceRepositoryController?.let { it::removeRepository } ?: {},
             onRefresh = externalSourceRepositoryController?.let { it::refreshRepositories } ?: {},
             onInstallPackage = externalSourceRepositoryController?.let { controller ->

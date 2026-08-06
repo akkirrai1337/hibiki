@@ -13,6 +13,7 @@ enum class AppTextKey {
     Search,
     Library,
     Sources,
+    SourcesExtensions,
     SourcesEmptyTitle,
     SourcesSearchFailed,
     SourcesSearchEmptyTitle,
@@ -120,7 +121,16 @@ enum class AppTextKey {
     SettingsExternalPackageInstall,
     SettingsExternalPackageUpdate,
     SettingsExternalPackageInstalled,
+    SettingsExternalPackageManage,
     SettingsExternalPackageRollback,
+    SourcesExternalRepositories,
+    SourcesExternalRepositoriesEmpty,
+    SourcesExternalRepositoryAddTitle,
+    SourcesExternalRepositoryPaste,
+    SourcesExternalRepositoryCopy,
+    SourcesExternalRepositorySearch,
+    SourcesExternalRepositoryLanguages,
+    SourcesExternalRepositoryPackagesEmpty,
     PrototypeNotice,
     PrototypeSubtitle,
     SeeAll,
@@ -285,6 +295,7 @@ class DefaultAppTextResolver(
             AppTextKey.Library -> if (russian) "Библиотека" else "Library"
             AppTextKey.Catalog -> if (russian) "Каталог" else "Catalog"
             AppTextKey.Sources -> if (russian) "Источники" else "Sources"
+            AppTextKey.SourcesExtensions -> if (russian) "Расширения" else "Extensions"
             AppTextKey.SourcesEmptyTitle -> if (russian) "Источников пока нет" else "No sources yet"
             AppTextKey.SourcesSearchFailed -> if (russian) "Не удалось выполнить поиск в этом источнике" else "This source could not be searched."
             AppTextKey.SourcesSearchEmptyTitle -> if (russian) "Результатов по источникам нет" else "No source results"
@@ -407,7 +418,16 @@ class DefaultAppTextResolver(
             AppTextKey.SettingsExternalPackageInstall -> if (russian) "Установить" else "Install"
             AppTextKey.SettingsExternalPackageUpdate -> if (russian) "Обновить" else "Update"
             AppTextKey.SettingsExternalPackageInstalled -> if (russian) "Установлено" else "Installed"
+            AppTextKey.SettingsExternalPackageManage -> if (russian) "Управление" else "Manage"
             AppTextKey.SettingsExternalPackageRollback -> if (russian) "Откатить" else "Rollback"
+            AppTextKey.SourcesExternalRepositories -> if (russian) "Репозитории расширений" else "Extension repositories"
+            AppTextKey.SourcesExternalRepositoriesEmpty -> if (russian) "Добавь репозиторий, чтобы устанавливать источники" else "Add a repository to install sources"
+            AppTextKey.SourcesExternalRepositoryAddTitle -> if (russian) "Добавить репозиторий" else "Add repository"
+            AppTextKey.SourcesExternalRepositoryPaste -> if (russian) "Вставить" else "Paste"
+            AppTextKey.SourcesExternalRepositoryCopy -> if (russian) "Скопировать ссылку" else "Copy link"
+            AppTextKey.SourcesExternalRepositorySearch -> if (russian) "Поиск источников" else "Search sources"
+            AppTextKey.SourcesExternalRepositoryLanguages -> if (russian) "Языки" else "Languages"
+            AppTextKey.SourcesExternalRepositoryPackagesEmpty -> if (russian) "Нет подходящих источников" else "No matching sources"
             AppTextKey.PrototypeNotice -> if (russian) {
                 "Прототип: данные пока демонстрационные"
             } else {

@@ -687,6 +687,8 @@ internal fun HibikiAppShell(
                                 externalSourcesState = AppDestinationExternalSourcesState(
                                     repository = externalSourceRepositoryState,
                                     controller = sourceCallbacks.externalSourceRepositoryController,
+                                    readClipboardText = sourceCallbacks.readClipboardText,
+                                    copyText = sourceCallbacks.copyText,
                                 ),
                             ),
                             ),

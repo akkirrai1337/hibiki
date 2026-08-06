@@ -44,7 +44,7 @@ fun AppCatalogFilterSheet(
     optionText: @Composable (AnimeCatalogFilterOption) -> String,
     shape: Shape,
     showGenreFilters: Boolean = true,
-    maxCollapsedGenreGroups: Int? = null,
+    maxCollapsedGenreGroups: Int? = 3,
     maxCollapsedGenreItems: Int? = 15,
     modifier: Modifier = Modifier,
 ) {

@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 fun AppSourceScreenLayout(
     isSearchMode: Boolean,
     bottomContentPadding: androidx.compose.ui.unit.Dp,
+    topContentPadding: androidx.compose.ui.unit.Dp = SourceContentListTopPadding,
     searchContent: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
     sourceContent: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
     searchBarContent: @Composable BoxScope.() -> Unit,
@@ -25,6 +26,7 @@ fun AppSourceScreenLayout(
         AppSourceContentList(
             isSearchMode = isSearchMode,
             bottomContentPadding = bottomContentPadding,
+            topContentPadding = topContentPadding,
             searchContent = searchContent,
             sourceContent = sourceContent,
         )

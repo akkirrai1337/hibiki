@@ -6,4 +6,6 @@ import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
 internal data class AppDestinationExternalSourcesState(
     val repository: ExternalSourceRepositoryUiState?,
     val controller: ExternalSourceRepositoryController?,
+    val readClipboardText: () -> String? = { null },
+    val copyText: (String) -> Unit = {},
 )

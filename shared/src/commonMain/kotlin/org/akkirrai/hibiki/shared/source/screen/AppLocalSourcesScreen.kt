@@ -1,13 +1,18 @@
 package org.akkirrai.hibiki.shared.source
 
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.text.AppTextKey
+import org.akkirrai.hibiki.shared.text.appText
 
 fun sourceLanguageSectionLabel(language: String): String = when (language.lowercase()) {
     "ru", "russian" -> "RU"
@@ -43,8 +48,14 @@ fun AppLocalSourcesScreen(
     onSearchRetryForSource: ((String) -> Unit)? = null,
     sourceIconContent: (@Composable (AppSourceDescriptor, Modifier) -> Unit)? = null,
     searchSourceIconContent: (@Composable (SourceSearchSectionState<org.akkirrai.hibiki.shared.catalog.model.Anime>, Modifier) -> Unit)? = null,
+    addSourceLabel: String = "Add source",
+    onAddSourceClick: () -> Unit = {},
+    onExtensionsSelected: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var searchOpen by remember { mutableStateOf(searchQuery.isNotBlank()) }
+    var languageFilterOpen by remember { mutableStateOf(false) }
+    var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
     val sections = sources
         .groupBy(AppSourceDescriptor::language)
         .toList()
@@ -55,9 +66,12 @@ fun AppLocalSourcesScreen(
                 items = items,
             )
         }
+    val availableLanguages = sections.map { it.key }.distinct().sorted()
+    val visibleSections = sections.filter { selectedLanguages.isEmpty() || it.key in selectedLanguages }
     AppSourceScreenLayout(
         isSearchMode = isSourceSearchActive(searchQuery),
         bottomContentPadding = bottomContentPadding,
+        topContentPadding = if (searchOpen) SourceContentListTopPadding else SourceContentListTopPadding + 48.dp,
         searchContent = {
             val effectiveSearchSections = searchSections ?: listOf(
                     SourceSearchSectionState(
@@ -98,49 +112,73 @@ fun AppLocalSourcesScreen(
             )
         },
         sourceContent = {
-            appSourceLanguageSections(
-                sections = sections,
-                trailingContent = { iconModifier ->
-                    Icon(
-                        imageVector = Icons.Outlined.ExpandMore,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = iconModifier,
-                    )
-                },
-                emptyContent = { SourceEmptyState(text = emptyText) },
-                isSelected = { source -> source.id == selectedSourceId },
-                itemContent = { source, selected, itemModifier ->
-                    AppSourceGridItem(
-                        name = source.name,
-                        selected = selected,
-                        onClick = { onSourceSelected(source.id) },
-                        modifier = itemModifier,
-                        iconContent = { iconModifier ->
-                            sourceIconContent?.invoke(source, iconModifier)
-                            ?: AppSourceIconImage(
-                                url = source.iconUrl,
-                                sourceId = source.id,
-                                modifier = iconModifier,
-                            )
-                        },
-                    )
-                },
-            )
+            if (visibleSections.isEmpty()) {
+                item(key = "sources_empty") { SourceEmptyState(text = emptyText) }
+            } else {
+                visibleSections.forEach { section ->
+                    item(key = "${section.key}_header") {
+                        androidx.compose.material3.Text(
+                            text = section.title,
+                            style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    items(section.items, key = { source -> "source-${source.id}" }) { source ->
+                        AppMihonSourceListItem(
+                            source = source,
+                            onClick = { onSourceSelected(source.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
         },
         searchBarContent = {
-            AppSourceSearchBar(
+            AppMihonSourcesToolbar(
+                title = appText(AppTextKey.Sources),
+                searchOpen = searchOpen,
                 query = searchQuery,
-                onQueryChange = onSearchQueryChange,
-                onClear = onSearchClear,
-                placeholder = searchPlaceholder,
+                onQueryChange = {
+                    searchOpen = true
+                    onSearchQueryChange(it)
+                },
+                onClearSearch = onSearchClear,
+                onOpenSearch = { searchOpen = true },
+                onCloseSearch = {
+                    searchOpen = false
+                    onSearchClear()
+                },
+                onFilterClick = { languageFilterOpen = true },
+                searchPlaceholder = searchPlaceholder,
                 filterContentDescription = searchPlaceholder,
-                clearContentDescription = searchPlaceholder,
-                showFilterButton = false,
-                onFilterClick = {},
-                modifier = Modifier,
+                onAddClick = onAddSourceClick,
+                tabContent = {
+                    AppSourcesTabs(
+                        selectedTab = 0,
+                        sourcesLabel = appText(AppTextKey.Sources),
+                        extensionsLabel = appText(AppTextKey.SourcesExtensions),
+                        onSourcesSelected = {},
+                        onExtensionsSelected = onExtensionsSelected,
+                    )
+                },
             )
         },
         modifier = modifier,
     )
+    if (languageFilterOpen) {
+        AppLanguageFilterDialog(
+            languages = availableLanguages,
+            selectedLanguages = selectedLanguages,
+            title = appText(AppTextKey.SourcesExternalRepositoryLanguages),
+            cancelLabel = appText(AppTextKey.Cancel),
+            onLanguageToggle = { language ->
+                selectedLanguages = if (language in selectedLanguages) {
+                    selectedLanguages - language
+                } else {
+                    selectedLanguages + language
+                }
+            },
+            onDismiss = { languageFilterOpen = false },
+        )
+    }
 }

@@ -5,6 +5,8 @@ import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
 import org.akkirrai.hibiki.shared.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.shared.navigation.navigateToExternalSources
+import org.akkirrai.hibiki.shared.navigation.navigateToSourceRepositories
+import org.akkirrai.hibiki.shared.navigation.navigateToSourceRepository
 import org.akkirrai.hibiki.shared.navigation.navigateToSettings
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.app.shell.player.watch.HibikiWatchFlowNavigationActions
@@ -31,6 +33,12 @@ internal fun createHibikiAppShellDestinationNavigationActions(
     onOpenLibrary = { rootNavigationCoordinator.select(AppDestination.LIBRARY) },
     onExternalSourcesClick = {
         updateNavigationState { it.navigateToExternalSources() }
+    },
+    onSourceRepositoriesClick = {
+        updateNavigationState { it.navigateToSourceRepositories() }
+    },
+    onSourceRepositoryClick = { url ->
+        updateNavigationState { it.navigateToSourceRepository(url) }
     },
     onSettingsBack = {
         updateNavigationState { it.reduce(AppNavigationEvent.Back) }

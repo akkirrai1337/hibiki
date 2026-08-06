@@ -1,0 +1,199 @@
+package org.akkirrai.hibiki.shared.source
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.akkirrai.hibiki.shared.design.component.search.AppSearchTopBar
+
+@Composable
+fun AppMihonSourcesToolbar(
+    title: String,
+    searchOpen: Boolean,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+    onFilterClick: () -> Unit,
+    searchPlaceholder: String,
+    filterContentDescription: String,
+    showFilter: Boolean = true,
+    onRefresh: (() -> Unit)? = null,
+    onAddClick: (() -> Unit)? = null,
+    tabContent: @Composable () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (searchOpen) {
+                IconButton(onClick = onCloseSearch) {
+                    Icon(Icons.Outlined.Close, contentDescription = null)
+                }
+                AppSearchTopBar(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    onClear = onClearSearch,
+                    placeholder = searchPlaceholder,
+                    filterContentDescription = filterContentDescription,
+                    clearContentDescription = searchPlaceholder,
+                    searchIcon = Icons.Outlined.Search,
+                    filterIcon = Icons.Outlined.FilterList,
+                    clearIcon = Icons.Outlined.Close,
+                    showFilterButton = false,
+                    modifier = Modifier.weight(1f),
+                )
+                if (showFilter) {
+                    IconButton(onClick = onFilterClick) {
+                        Icon(Icons.Outlined.FilterList, contentDescription = filterContentDescription)
+                    }
+                }
+                onRefresh?.let { refresh ->
+                    IconButton(onClick = refresh) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                    }
+                }
+                onAddClick?.let { add ->
+                    IconButton(onClick = add) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                    }
+                }
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
+                IconButton(onClick = onOpenSearch) {
+                    Icon(Icons.Outlined.Search, contentDescription = searchPlaceholder)
+                }
+                if (showFilter) {
+                    IconButton(onClick = onFilterClick) {
+                        Icon(Icons.Outlined.FilterList, contentDescription = filterContentDescription)
+                    }
+                }
+                onRefresh?.let { refresh ->
+                    IconButton(onClick = refresh) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                    }
+                }
+                onAddClick?.let { add ->
+                    IconButton(onClick = add) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                    }
+                }
+            }
+        }
+        tabContent()
+    }
+}
+
+@Composable
+fun AppSourcesTabs(
+    selectedTab: Int,
+    sourcesLabel: String,
+    extensionsLabel: String,
+    onSourcesSelected: () -> Unit,
+    onExtensionsSelected: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PrimaryTabRow(selectedTabIndex = selectedTab, modifier = modifier.fillMaxWidth()) {
+        Tab(
+            onClick = onExtensionsSelected,
+            selected = selectedTab == 0,
+            text = { Text(extensionsLabel) },
+        )
+        Tab(
+            selected = selectedTab == 1,
+            onClick = onSourcesSelected,
+            text = { Text(sourcesLabel) },
+        )
+    }
+}
+
+@Composable
+fun AppLanguageFilterDialog(
+    languages: List<String>,
+    selectedLanguages: Set<String>,
+    title: String,
+    cancelLabel: String,
+    onLanguageToggle: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            ) {
+                languages.forEach { language ->
+                    val presentation = appLanguagePresentation(language)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
+                            Text(presentation.first, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                presentation.second,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = language in selectedLanguages,
+                            onCheckedChange = { onLanguageToggle(language) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(cancelLabel)
+            }
+        },
+    )
+}
+
+private fun appLanguagePresentation(language: String): Pair<String, String> = when (language.lowercase()) {
+    "ru", "russian" -> "Русский" to "Russian"
+    "uk", "ukrainian" -> "Українська" to "Ukrainian"
+    "en", "english" -> "English" to "English"
+    "pt", "portuguese" -> "Português" to "Portuguese"
+    "tr", "turkish" -> "Türkçe" to "Turkish"
+    "th", "thai" -> "ไทย" to "Thai"
+    else -> language.uppercase() to language.uppercase()
+}

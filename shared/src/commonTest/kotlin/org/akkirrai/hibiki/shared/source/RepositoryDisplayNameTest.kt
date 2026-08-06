@@ -7,7 +7,7 @@ class RepositoryDisplayNameTest {
     @Test
     fun `github repository url uses repository segment`() {
         assertEquals(
-            "hibiki-sources",
+            "akkirrai1337/hibiki-sources",
             repositoryDisplayName("https://github.com/akkirrai1337/hibiki-sources/blob/main/index.json"),
         )
     }
@@ -15,7 +15,7 @@ class RepositoryDisplayNameTest {
     @Test
     fun `raw github repository url uses repository segment`() {
         assertEquals(
-            "hibiki-sources",
+            "akkirrai1337/hibiki-sources",
             repositoryDisplayName("https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/main/index.json"),
         )
     }
