@@ -117,7 +117,7 @@ private fun ByteArray.toNSData(): NSData = if (isEmpty()) {
     NSData()
 } else {
     usePinned { pinned ->
-        NSData.create(
+        NSData(
             bytes = pinned.addressOf(0),
             length = size.toULong(),
         )
