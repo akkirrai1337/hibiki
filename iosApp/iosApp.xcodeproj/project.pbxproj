@@ -183,7 +183,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				OTHER_LDFLAGS = "$(inherited) -lwasmtime_spike";
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(SRCROOT)/../tools/wasmtime-spike/target/aarch64-apple-ios/release/libwasmtime_spike.a";
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(SRCROOT)/../tools/wasmtime-spike/target/ios-simulator/release/libwasmtime_spike.a";
 				PRODUCT_BUNDLE_IDENTIFIER = org.akkirrai.hibiki.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -210,7 +211,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				OTHER_LDFLAGS = "$(inherited) -lwasmtime_spike";
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = "$(inherited) -force_load $(SRCROOT)/../tools/wasmtime-spike/target/aarch64-apple-ios/release/libwasmtime_spike.a";
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = "$(inherited) -force_load $(SRCROOT)/../tools/wasmtime-spike/target/ios-simulator/release/libwasmtime_spike.a";
 				PRODUCT_BUNDLE_IDENTIFIER = org.akkirrai.hibiki.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
