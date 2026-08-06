@@ -85,6 +85,13 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Build iOS Wasmtime runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+          ./tools/wasmtime-spike/build-ios-runtime.sh
+
       - name: Determine release version
         id: release
         shell: bash
@@ -316,6 +323,13 @@ jobs:
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
+
+      - name: Build iOS Wasmtime runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+          ./tools/wasmtime-spike/build-ios-runtime.sh
 
       - name: Compile iOS targets and run JVM tests
         run: >-
