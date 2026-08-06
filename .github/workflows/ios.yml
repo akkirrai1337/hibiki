@@ -1,23 +1,13 @@
 name: iOS
 
 on:
-  push:
-    branches:
-      - main
-      - unified-ui
-    paths:
-      - ".github/workflows/ios.yml"
-      - "gradle/**"
-      - "gradle.properties"
-      - "gradlew"
-      - "settings.gradle.kts"
-      - "build.gradle.kts"
-      - "app/**"
-      - "parsers/**"
-      - "shared/**"
-      - "iosApp/**"
   workflow_dispatch:
     inputs:
+      create_release:
+        description: Create a GitHub release after building the IPA
+        required: true
+        default: false
+        type: boolean
       prerelease:
         description: Create a prerelease
         required: true
@@ -39,7 +29,7 @@ concurrency:
 jobs:
   release:
     name: Build iOS device IPA
-    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[iOS build]')) || (github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests)
+    if: github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests
     runs-on: macos-15
     timeout-minutes: 45
     env:
@@ -100,7 +90,7 @@ jobs:
         shell: bash
         env:
           IS_PRERELEASE: ${{ inputs.prerelease }}
-          EVENT_NAME: ${{ github.event_name }}
+          CREATE_RELEASE: ${{ inputs.create_release }}
         run: |
           set -euo pipefail
 
@@ -116,7 +106,7 @@ jobs:
           fi
 
           TARGET_VERSION="$BASE_VERSION"
-          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "$IS_PRERELEASE" = true ]; then
+          if [ "$CREATE_RELEASE" = true ] && [ "$IS_PRERELEASE" = true ]; then
             EXISTING_PRERELEASE_FOR_COMMIT=$(
               git tag --points-at HEAD --list "v${TARGET_VERSION}-prerelease.*" |
                 head -n 1 || true
@@ -138,20 +128,20 @@ jobs:
               PRERELEASE_NUMBER=1
             fi
             RELEASE_VERSION="${TARGET_VERSION}-prerelease.${PRERELEASE_NUMBER}"
-          elif [ "$EVENT_NAME" = workflow_dispatch ]; then
+          elif [ "$CREATE_RELEASE" = true ]; then
             RELEASE_VERSION="$TARGET_VERSION"
           else
             RELEASE_VERSION="$TARGET_VERSION"
           fi
 
           TAG="v${RELEASE_VERSION}"
-          if [ "$EVENT_NAME" = workflow_dispatch ] && git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+          if [ "$CREATE_RELEASE" = true ] && git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             echo "Release tag ${TAG} already exists. Bump versionName before running the workflow."
             exit 1
           fi
 
           PREVIOUS_TAG=""
-          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "$IS_PRERELEASE" = true ]; then
+          if [ "$CREATE_RELEASE" = true ] && [ "$IS_PRERELEASE" = true ]; then
             PREVIOUS_TAG=$(
               git tag --list "v${TARGET_VERSION}-prerelease.*" --sort=-version:refname |
                 head -n 1 || true
@@ -174,7 +164,7 @@ jobs:
 
           echo "version=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "is_prerelease=$([ "$EVENT_NAME" = workflow_dispatch ] && echo "$IS_PRERELEASE" || echo false)" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$([ "$CREATE_RELEASE" = true ] && echo "$IS_PRERELEASE" || echo false)" >> "$GITHUB_OUTPUT"
 
           {
             echo "## What's changed"
@@ -271,7 +261,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'workflow_dispatch'
+        if: inputs.create_release
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           name: v${{ steps.release.outputs.version }} iOS
@@ -281,7 +271,7 @@ jobs:
 
   test:
     name: Build iOS targets and Simulator app
-    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[ios-test]')) || (github.event_name == 'workflow_dispatch' && inputs.run_ios_tests)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ios_tests
     runs-on: macos-15
     timeout-minutes: 30
     env:
