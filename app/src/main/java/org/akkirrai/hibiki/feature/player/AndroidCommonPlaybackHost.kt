@@ -22,6 +22,7 @@ import android.os.SystemClock
 import android.os.Build
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
+import java.util.UUID
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -137,8 +138,13 @@ internal fun AndroidCommonPlaybackHost(
     val exoPlayer = remember(androidContext, playback.sessionKey()) {
         ExoPlayer.Builder(androidContext).build()
     }
+    val mediaSessionId = remember {
+        "hibiki-playback-${UUID.randomUUID()}"
+    }
     val mediaSession = remember(exoPlayer) {
-        MediaSession.Builder(androidContext, exoPlayer).build()
+        MediaSession.Builder(androidContext, exoPlayer)
+            .setId(mediaSessionId)
+            .build()
     }
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
     val progressCoordinator = remember(exoPlayer) {
