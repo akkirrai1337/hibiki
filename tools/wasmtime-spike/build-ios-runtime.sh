@@ -30,7 +30,10 @@ mkdir -p "$(dirname "${simulator_library}")"
 lipo -create "${simulator_arm64_library}" "${simulator_x86_64_library}" -output "${simulator_library}"
 
 for library in "${device_library}" "${simulator_library}"; do
-  nm -gU "${library}" | grep -q "beakokit_runtime_protocol_call_with_module_and_host" || {
+  # Xcode 26.3's nm cannot read LLVM 22 object metadata emitted by newer Rust
+  # toolchains. Check the archive for the exported ABI name without parsing
+  # every object member; the final Xcode linker remains the authoritative check.
+  grep -a -q "beakokit_runtime_protocol_call_with_module_and_host" "${library}" || {
     echo "Host callback ABI export was not found in ${library}" >&2
     exit 1
   }
