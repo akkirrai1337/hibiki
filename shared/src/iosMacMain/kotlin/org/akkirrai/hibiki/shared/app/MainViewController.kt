@@ -142,7 +142,17 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 initialSourceId = initialSourceId,
             )
         }
-        val externalCatalogRepository = remember(externalRuntimeCoordinator, externalRuntimeHttpClient) {
+        val externalStatusLabels = ExternalAnimeStatusLabels(
+            unknown = appText(AppTextKey.Unknown),
+            ongoing = appText(AppTextKey.Ongoing),
+            released = appText(AppTextKey.Released),
+            announcement = appText(AppTextKey.Announcement),
+        )
+        val externalCatalogRepository = remember(
+            externalRuntimeCoordinator,
+            externalRuntimeHttpClient,
+            externalStatusLabels,
+        ) {
             ExternalSourceCatalogRepository(
                 registryProvider = { externalRuntimeCoordinator.snapshot.value.registry },
                 registryAwaiter = { externalRuntimeCoordinator.awaitRegistry() },
@@ -153,12 +163,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         config = externalConfigStore.load(sourceId),
                     )
                 },
-                statusLabels = ExternalAnimeStatusLabels(
-                    unknown = appText(AppTextKey.Unknown),
-                    ongoing = appText(AppTextKey.Ongoing),
-                    released = appText(AppTextKey.Released),
-                    announcement = appText(AppTextKey.Announcement),
-                ),
+                statusLabels = externalStatusLabels,
             )
         }
         val repository = remember(builtInRepository, externalCatalogRepository) {

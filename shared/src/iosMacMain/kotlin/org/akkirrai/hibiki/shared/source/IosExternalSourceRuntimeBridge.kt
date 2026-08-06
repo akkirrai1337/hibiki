@@ -1,16 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.ULongVar
-import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.asCPointer
-import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.staticCFunction
-import kotlinx.cinterop.usePinned
-import kotlinx.cinterop.readBytes
+import kotlinx.cinterop.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSUUID
@@ -112,13 +102,13 @@ private class IosExternalSourceRuntimeBridge(
                 memScoped {
                     val responseLength = alloc<ULongVar>()
                     val status = beakokit_runtime_protocol_call_with_module_and_host(
-                        module_ptr = modulePinned.addressOf(0),
+                        module_ptr = modulePinned.addressOf(0).reinterpret<UByteVar>(),
                         module_len = module.size.convert(),
-                        request_ptr = requestPinned.addressOf(0),
+                        request_ptr = requestPinned.addressOf(0).reinterpret<UByteVar>(),
                         request_len = request.size.convert(),
                         host_call = staticCFunction(::iosHostCallback),
                         user_data = state.asCPointer(),
-                        response_ptr = responsePinned?.addressOf(0),
+                        response_ptr = responsePinned?.addressOf(0)?.reinterpret<UByteVar>(),
                         response_capacity = response?.size?.toULong() ?: 0UL,
                         response_len = responseLength.ptr,
                     )
@@ -144,9 +134,9 @@ private class IosHostCallbackState(
 @OptIn(ExperimentalForeignApi::class)
 private fun iosHostCallback(
     userData: kotlinx.cinterop.COpaquePointer?,
-    requestPtr: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>?,
+    requestPtr: CPointer<UByteVar>?,
     requestLen: ULong,
-    responsePtr: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>?,
+    responsePtr: CPointer<UByteVar>?,
     responseCapacity: ULong,
     responseLen: kotlinx.cinterop.CPointer<kotlinx.cinterop.ULongVar>?,
 ): Int {
@@ -154,7 +144,11 @@ private fun iosHostCallback(
         return BEAKOKIT_PROTOCOL_CALL_RUNTIME_FAILURE
     }
     val state = userData.asStableRef<IosHostCallbackState>().get()
-    val request = if (requestLen == 0UL) ByteArray(0) else requestPtr!!.readBytes(requestLen.toInt())
+    val request = if (requestLen == 0UL) {
+        ByteArray(0)
+    } else {
+        requestPtr!!.reinterpret<ByteVar>().readBytes(requestLen.toInt())
+    }
     if (responsePtr == null) {
         val response = try {
             state.host.call(request)
@@ -177,7 +171,11 @@ private fun iosHostCallback(
     }
     if (pendingResponse.isNotEmpty()) {
         pendingResponse.usePinned { pinned ->
-            memcpy(responsePtr, pinned.addressOf(0), pendingResponse.size.convert())
+            memcpy(
+                responsePtr,
+                pinned.addressOf(0).reinterpret<UByteVar>(),
+                pendingResponse.size.convert(),
+            )
         }
     }
     responseLen.pointed.value = pendingResponse.size.toULong()
@@ -186,8 +184,9 @@ private fun iosHostCallback(
     return BEAKOKIT_PROTOCOL_CALL_OK
 }
 
+@OptIn(ExperimentalForeignApi::class)
 private inline fun <R> ByteArray?.usePinnedOrNull(
-    block: (kotlinx.cinterop.Pinned<kotlinx.cinterop.ByteVar>?) -> R,
+    block: (Pinned<ByteVar>?) -> R,
 ): R = if (this == null || isEmpty()) {
     block(null)
 } else {
