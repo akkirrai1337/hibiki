@@ -122,7 +122,8 @@ fun AppCatalogScreen(
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
-    val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true
+    val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
+        state.isFilterCatalogLoading
 
     AppCatalogFilterVisibilityEffect(
         hasFilters = hasCatalogFilters,
@@ -141,6 +142,12 @@ fun AppCatalogScreen(
     AppCatalogSortVisibilityEffect(
         listState = listState,
         onVisibilityChange = { isSortVisible = it },
+    )
+
+    AppCatalogPaginationEffect(
+        listState = listState,
+        state = state,
+        onLoadMore = onLoadMoreRetry,
     )
 
     Box(modifier = modifier) {

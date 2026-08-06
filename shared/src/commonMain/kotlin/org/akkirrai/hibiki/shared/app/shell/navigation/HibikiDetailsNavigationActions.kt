@@ -22,7 +22,7 @@ internal class HibikiDetailsNavigationActions(
     }
 
     fun close() {
-        setNavigationState(navigationState().navigateBackFromDetails())
         presenter.closeDetails()
+        setNavigationState(navigationState().navigateBackFromDetails())
     }
 }

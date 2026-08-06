@@ -57,31 +57,38 @@ class NativeBridgeExternalSourceRuntimeFactory(
                 code = SourceErrorCode.RUNTIME_FAILURE,
             )
         }
-        val transport = NativeBridgeExternalSourceRuntimeTransport(bridge)
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            bridge = bridge,
+            logger = context.logger,
+        )
         return when {
             declaresLatest && declaresPlayback -> ProtocolBackedExternalSourceLatestPlaybackRuntime(
                 transport = transport,
                 payloadCodec = playbackPayloadCodec!!,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
+                logger = context.logger,
             )
             declaresLatest -> ProtocolBackedExternalSourceLatestRuntime(
                 transport = transport,
                 payloadCodec = payloadCodec,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
+                logger = context.logger,
             )
             declaresPlayback -> ProtocolBackedExternalSourcePlaybackRuntime(
                 transport = transport,
                 payloadCodec = playbackPayloadCodec!!,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
+                logger = context.logger,
             )
             else -> ProtocolBackedExternalSourceRuntime(
                 transport = transport,
                 payloadCodec = payloadCodec,
                 requestIdFactory = requestIdFactory,
                 callLimits = callLimits,
+                logger = context.logger,
             )
         }
     }

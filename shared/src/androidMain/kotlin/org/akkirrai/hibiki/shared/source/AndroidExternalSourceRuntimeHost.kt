@@ -39,21 +39,29 @@ import org.akkirrai.beakokit.api.SourceHostRequirements
 import org.akkirrai.beakokit.api.SourceHostCapabilityException
 import org.akkirrai.beakokit.api.SourceHostConfigAccess
 import org.akkirrai.beakokit.api.SourceHostCapability
+import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge
+import java.io.File
 import java.util.UUID
+
+private const val COMPILED_MODULE_ARTIFACT_FILE = ".hibiki-wasmtime-module"
+
+private fun compiledModuleArtifactPath(sourcePackage: ActiveExternalSourcePackage): String =
+    File(sourcePackage.installed.packagePath, COMPILED_MODULE_ARTIFACT_FILE).absolutePath
 
 /** Creates the Android native runtime adapter without changing the built-in source registry. */
 fun createAndroidExternalSourceRuntimeFactory(context: Context): ExternalSourceRuntimeFactory =
     NativeBridgeExternalSourceRuntimeFactory(
         bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, sourceContext, module, requirements ->
-            runBlocking(Dispatchers.IO) {
-                NativeSourceRuntimeBridge.validateModule(module)
-            }
+            // Installation validation persists the compiled artifact. Runtime calls only
+            // deserialize that artifact, so creating the bridge does not compile the module.
             AndroidExternalSourceRuntimeBridge(
                 appContext = context.applicationContext,
                 sourceContext = sourceContext,
                 sourcePackage = sourcePackage,
                 module = module,
+                compiledModuleArtifactPath = compiledModuleArtifactPath(sourcePackage),
                 requirements = requirements,
             )
         },
@@ -68,7 +76,10 @@ suspend fun validateAndroidExternalSourceRuntime(sourcePackage: ActiveExternalSo
         entrypoint = sourcePackage.manifest.entrypoint,
     )
     withContext(Dispatchers.IO) {
-        NativeSourceRuntimeBridge.validateModule(module)
+        NativeSourceRuntimeBridge.validateModuleWithArtifact(
+            module = module,
+            artifactPath = compiledModuleArtifactPath(sourcePackage),
+        )
     }
 }
 
@@ -77,11 +88,13 @@ private class AndroidExternalSourceRuntimeBridge(
     private val sourceContext: SourceContext,
     sourcePackage: ActiveExternalSourcePackage,
     private val module: ByteArray,
+    private val compiledModuleArtifactPath: String,
     requirements: SourceHostRequirements,
 ) : ExternalSourceRuntimeNativeBridge {
     private val host = AndroidExternalSourceHost(
         client = sourceContext.httpClient,
         requirements = requirements,
+        logger = sourceContext.logger,
         storage = AndroidSourceHostStorage(
             context = appContext,
             sourceId = sourcePackage.manifest.sourceId,
@@ -109,11 +122,12 @@ private class AndroidExternalSourceRuntimeBridge(
             try {
                 withContext(Dispatchers.IO) {
                     ensureActive()
-                    val response = NativeSourceRuntimeBridge.protocolModuleCallWithHost(
+                    val response = NativeSourceRuntimeBridge.protocolModuleCallWithHostAndArtifact(
                         module = module,
                         request = request.decodeToString(),
                         host = NativeSourceRuntimeBridge.Host(host::call),
                         cancellationScopeId = cancellationScopeId,
+                        artifactPath = compiledModuleArtifactPath,
                     )
                     ensureActive()
                     response.encodeToByteArray().also { responseBytes ->
@@ -132,6 +146,7 @@ private class AndroidExternalSourceRuntimeBridge(
 private class AndroidExternalSourceHost(
     private val client: HttpClient,
     private val requirements: SourceHostRequirements,
+    private val logger: SourceLogger,
     private val storage: AndroidSourceHostStorage,
     private val cookies: AndroidSourceHostCookies,
     private val config: AndroidSourceHostConfig,
@@ -181,6 +196,12 @@ private class AndroidExternalSourceHost(
                 message = "Host request was cancelled",
             )
         } catch (error: Throwable) {
+            logger.log(
+                SourceLogLevel.ERROR,
+                "External source host request failed: ${error::class.simpleName}: " +
+                    (error.message ?: "no error message"),
+                error,
+            )
             return errorResponse(
                 requestId = extractRequestId(bytes),
                 code = when (error) {

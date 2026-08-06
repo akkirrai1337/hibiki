@@ -7,6 +7,8 @@ pub const PROTOCOL_VERSION: u32 = 1;
 pub enum Operation {
     #[serde(rename = "SEARCH")]
     Search,
+    #[serde(rename = "FILTER_CATALOG")]
+    FilterCatalog,
     #[serde(rename = "DETAILS")]
     Details,
     #[serde(rename = "PLAYBACK_GROUPS")]
@@ -45,6 +47,7 @@ impl Request {
         request.validate()?;
         match request.operation {
             Operation::Search => validate_search_payload(&request.payload)?,
+            Operation::FilterCatalog => validate_filter_catalog_request(&request.payload)?,
             Operation::Details => validate_details_payload(&request.payload)?,
             Operation::PlaybackGroups => validate_playback_groups_payload(&request.payload)?,
             Operation::PlayerLinks => validate_player_links_payload(&request.payload)?,
@@ -109,6 +112,7 @@ impl Response {
         if let Some(payload) = &self.payload {
             match &request.operation {
                 Operation::Search => validate_search_response_payload(payload)?,
+                Operation::FilterCatalog => validate_filter_catalog_response_payload(payload)?,
                 Operation::Details => validate_title_payload(payload)?,
                 Operation::PlaybackGroups => validate_playback_groups_response_payload(payload)?,
                 Operation::PlayerLinks => validate_player_links_response_payload(payload)?,
@@ -120,7 +124,7 @@ impl Response {
 
 pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
     let object = payload.as_object().ok_or("payload must be a JSON object")?;
-    required_string(object, "query")?;
+    required_string_value(object, "query")?;
     required_non_negative_integer(object, "limit")?;
     required_non_negative_integer(object, "offset")?;
     required_string(object, "sort")?;
@@ -134,6 +138,39 @@ pub fn validate_search_payload(payload: &Value) -> Result<(), &'static str> {
     }
     optional_integer_or_null(object, "yearFrom")?;
     optional_integer_or_null(object, "yearTo")?;
+    Ok(())
+}
+
+fn validate_filter_catalog_request(payload: &Value) -> Result<(), &'static str> {
+    payload
+        .as_object()
+        .map(|_| ())
+        .ok_or("payload must be a JSON object")
+}
+
+fn validate_filter_catalog_response_payload(payload: &Value) -> Result<(), &'static str> {
+    let object = payload
+        .as_object()
+        .ok_or("filter catalog payload must be a JSON object")?;
+    for field in ["sortOptions", "typeOptions", "statusOptions", "genreOptions"] {
+        let options = object
+            .get(field)
+            .and_then(Value::as_array)
+            .ok_or(match field {
+                "sortOptions" => "filter catalog array is missing or invalid: sortOptions",
+                "typeOptions" => "filter catalog array is missing or invalid: typeOptions",
+                "statusOptions" => "filter catalog array is missing or invalid: statusOptions",
+                "genreOptions" => "filter catalog array is missing or invalid: genreOptions",
+                _ => "filter catalog array is missing or invalid",
+            })?;
+        for option in options {
+            let option = option
+                .as_object()
+                .ok_or("filter catalog option must be an object")?;
+            required_string(option, "id")?;
+            required_string(option, "title")?;
+        }
+    }
     Ok(())
 }
 
@@ -288,7 +325,33 @@ fn required_string(
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
         .map(|_| ())
-        .ok_or("required string field is missing or invalid")
+        .ok_or(match field {
+            "query" => "required string field is missing or invalid: query",
+            "sort" => "required string field is missing or invalid: sort",
+            "id" => "required string field is missing or invalid: id",
+            "originalName" => "required string field is missing or invalid: originalName",
+            "titleId" => "required string field is missing or invalid: titleId",
+            "groupId" => "required string field is missing or invalid: groupId",
+            "episodeId" => "required string field is missing or invalid: episodeId",
+            "url" => "required string field is missing or invalid: url",
+            "type" => "required string field is missing or invalid: type",
+            "title" => "required string field is missing or invalid: title",
+            _ => "required string field is missing or invalid",
+        })
+}
+
+fn required_string_value(
+    object: &serde_json::Map<String, Value>,
+    field: &'static str,
+) -> Result<(), &'static str> {
+    object
+        .get(field)
+        .and_then(Value::as_str)
+        .map(|_| ())
+        .ok_or(match field {
+            "query" => "required string field is missing or invalid: query",
+            _ => "required string field is missing or invalid",
+        })
 }
 
 fn required_non_negative_integer(
@@ -300,7 +363,11 @@ fn required_non_negative_integer(
         .and_then(Value::as_i64)
         .filter(|value| *value >= 0)
         .map(|_| ())
-        .ok_or("required non-negative integer field is missing or invalid")
+        .ok_or(match field {
+            "limit" => "required non-negative integer field is missing or invalid: limit",
+            "offset" => "required non-negative integer field is missing or invalid: offset",
+            _ => "required non-negative integer field is missing or invalid",
+        })
 }
 
 fn required_number(
@@ -311,7 +378,11 @@ fn required_number(
         .get(field)
         .filter(|value| value.as_f64().is_some())
         .map(|_| ())
-        .ok_or("required number field is missing or invalid")
+        .ok_or(match field {
+            "number" => "required number field is missing or invalid: number",
+            "episodeNumber" => "required number field is missing or invalid: episodeNumber",
+            _ => "required number field is missing or invalid",
+        })
 }
 
 fn optional_integer_or_null(
@@ -321,7 +392,11 @@ fn optional_integer_or_null(
     match object.get(field) {
         Some(Value::Null) | None => Ok(()),
         Some(value) if value.as_i64().is_some() => Ok(()),
-        _ => Err("optional integer field is invalid"),
+        _ => Err(match field {
+            "yearFrom" => "optional integer field is invalid: yearFrom",
+            "yearTo" => "optional integer field is invalid: yearTo",
+            _ => "optional integer field is invalid",
+        }),
     }
 }
 
@@ -332,7 +407,12 @@ fn optional_string_or_null(
     match object.get(field) {
         Some(Value::Null) | None => Ok(()),
         Some(value) if value.as_str().is_some() => Ok(()),
-        _ => Err("optional string field is invalid"),
+        _ => Err(match field {
+            "russianName" => "optional string field is invalid: russianName",
+            "englishName" => "optional string field is invalid: englishName",
+            "originalName" => "optional string field is invalid: originalName",
+            _ => "optional string field is invalid",
+        }),
     }
 }
 
@@ -345,7 +425,17 @@ fn required_string_array(
         .and_then(Value::as_array)
         .filter(|values| values.iter().all(Value::is_string))
         .map(|_| ())
-        .ok_or("required string array field is missing or invalid")
+        .ok_or(match field {
+            "typeAliases" => "required string array field is missing or invalid: typeAliases",
+            "statusAliases" => "required string array field is missing or invalid: statusAliases",
+            "includedGenreAliases" => "required string array field is missing or invalid: includedGenreAliases",
+            "excludedGenreAliases" => "required string array field is missing or invalid: excludedGenreAliases",
+            "synonyms" => "required string array field is missing or invalid: synonyms",
+            "genres" => "required string array field is missing or invalid: genres",
+            "screenshots" => "required string array field is missing or invalid: screenshots",
+            "studios" => "required string array field is missing or invalid: studios",
+            _ => "required string array field is missing or invalid",
+        })
 }
 
 fn required_object_array(
@@ -357,7 +447,14 @@ fn required_object_array(
         .and_then(Value::as_array)
         .filter(|values| values.iter().all(Value::is_object))
         .map(|_| ())
-        .ok_or("required object array field is missing or invalid")
+        .ok_or(match field {
+            "ratings" => "required object array field is missing or invalid: ratings",
+            "mainCharacters" => "required object array field is missing or invalid: mainCharacters",
+            "similarAnime" => "required object array field is missing or invalid: similarAnime",
+            "franchiseAnime" => "required object array field is missing or invalid: franchiseAnime",
+            "relatedAnime" => "required object array field is missing or invalid: relatedAnime",
+            _ => "required object array field is missing or invalid",
+        })
 }
 
 pub fn run_roundtrip_probe() -> Result<(), Box<dyn std::error::Error>> {
@@ -483,6 +580,24 @@ mod tests {
     }
 
     #[test]
+    fn accepts_empty_search_query_for_catalog_requests() {
+        let payload = serde_json::json!({
+            "query": "",
+            "limit": 20,
+            "offset": 0,
+            "sort": "RELEVANCE",
+            "typeAliases": [],
+            "statusAliases": [],
+            "includedGenreAliases": [],
+            "excludedGenreAliases": [],
+            "yearFrom": null,
+            "yearTo": null
+        });
+
+        assert_eq!(validate_search_payload(&payload), Ok(()));
+    }
+
+    #[test]
     fn validates_the_details_payload_shape() {
         assert_eq!(
             validate_details_payload(&serde_json::json!({ "id": "title-1" })),
@@ -582,7 +697,7 @@ mod tests {
             validate_search_response_payload(&serde_json::json!({
                 "items": [{ "id": "title-1" }]
             })),
-            Err("required string field is missing or invalid")
+            Err("required string field is missing or invalid: originalName")
         );
     }
 
@@ -593,7 +708,7 @@ mod tests {
                 "id": "title-1",
                 "originalName": "Title"
             })),
-            Err("required string array field is missing or invalid")
+            Err("required string array field is missing or invalid: synonyms")
         );
     }
 }

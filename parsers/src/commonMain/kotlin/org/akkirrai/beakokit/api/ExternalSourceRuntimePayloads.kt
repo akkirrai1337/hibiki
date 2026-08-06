@@ -11,6 +11,8 @@ import org.akkirrai.beakokit.model.Episode
 
 /** Canonical host-to-runtime payloads for the first external-source operations. */
 object ExternalSourceRuntimePayloads {
+    fun filterCatalog(): JsonObject = buildJsonObject { }
+
     fun search(request: AnimeSearchRequest): JsonObject {
         require(request.limit > 0) { "External source search limit must be positive" }
         require(request.offset >= 0) { "External source search offset must not be negative" }

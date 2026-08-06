@@ -7,6 +7,7 @@ import org.akkirrai.hibiki.shared.player.model.PlaybackContext
 import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
 import org.akkirrai.hibiki.shared.player.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.TitleWatchState
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.model.WatchSource
 import org.akkirrai.hibiki.shared.navigation.AppNavigationState
@@ -74,6 +75,7 @@ internal class HibikiPlaybackRequestCoordinator(
             ?: PlaybackSettingsOptions()
         val preparedRequest = preparePlaybackRequest(
             titleId = titleId,
+            animeTitle = watchAnime()?.title.orEmpty(),
             episode = episode,
             selectedSource = selectedSource,
             sourceOverride = sourceOverride,
@@ -152,6 +154,24 @@ internal class HibikiPlaybackRequestCoordinator(
                 onPlaybackPublished = if (playbackHost()) onPlaybackPublished else null,
                 onFinished = { setPlaybackJob(null) },
             ),
+        )
+    }
+
+    fun requestResume(progress: TitleWatchState) {
+        if (watchRepository() == null) return
+        request(
+            episode = WatchEpisode(
+                id = progress.episodeId,
+                number = progress.episodeNumber,
+                title = null,
+            ),
+            sourceOverride = WatchSource(
+                sourceId = progress.sourceId,
+                title = progress.sourceTitle,
+                episodeCount = null,
+                qualityLabel = progress.quality,
+            ),
+            preferredQuality = progress.quality,
         )
     }
 

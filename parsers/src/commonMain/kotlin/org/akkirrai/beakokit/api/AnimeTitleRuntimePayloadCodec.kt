@@ -13,6 +13,8 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.CharacterTitle
@@ -30,6 +32,13 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         .map { it.jsonObject.decodeTitle() }
 
     override fun decodeDetails(payload: JsonObject): AnimeTitle = payload.decodeTitle()
+
+    override fun decodeFilterCatalog(payload: JsonObject): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
+        sortOptions = payload.requiredOptions("sortOptions"),
+        typeOptions = payload.requiredOptions("typeOptions"),
+        statusOptions = payload.requiredOptions("statusOptions"),
+        genreOptions = payload.requiredOptions("genreOptions"),
+    )
 
     override fun decodePlaybackGroups(payload: JsonObject): List<PlaybackGroup> =
         payload.requiredArray("groups").map { group ->
@@ -103,6 +112,13 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
         putJsonArray("items") { items.forEach { add(it.encodeTitle()) } }
     }
 
+    fun encodeFilterCatalog(catalog: AnimeSearchFilterCatalog): JsonObject = buildJsonObject {
+        putJsonArray("sortOptions") { catalog.sortOptions.forEach { add(it.encodeOption()) } }
+        putJsonArray("typeOptions") { catalog.typeOptions.forEach { add(it.encodeOption()) } }
+        putJsonArray("statusOptions") { catalog.statusOptions.forEach { add(it.encodeOption()) } }
+        putJsonArray("genreOptions") { catalog.genreOptions.forEach { add(it.encodeOption()) } }
+    }
+
     fun encodeDetails(title: AnimeTitle): JsonObject = title.encodeTitle()
 
     private fun AnimeTitle.encodeTitle(): JsonObject = buildJsonObject {
@@ -158,6 +174,11 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
                 })
             }
         }
+    }
+
+    private fun SearchFilterOption.encodeOption(): JsonObject = buildJsonObject {
+        put("id", id)
+        put("title", title)
     }
 
     private fun PlayerLink.encodePlayerLink(): JsonObject = buildJsonObject {
@@ -304,6 +325,15 @@ object AnimeTitleRuntimePayloadCodec : ExternalSourcePlaybackRuntimePayloadCodec
     }
 
     private fun JsonObject.requiredString(key: String): String = requiredPrimitive(key).content
+
+    private fun JsonObject.requiredOptions(key: String): List<SearchFilterOption> = requiredArray(key)
+        .map { item ->
+            val option = item.jsonObject
+            SearchFilterOption(
+                id = option.requiredString("id"),
+                title = option.requiredString("title"),
+            )
+        }
 
     private fun JsonObject.nullableString(key: String): String? = get(key)
         ?.takeUnless { it is JsonNull }

@@ -10,9 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.doOnLayout
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.shared.player.VideoScaleMode
+import org.akkirrai.hibiki.shared.player.VideoScaleFactors
 import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 
 @Composable
@@ -48,6 +50,13 @@ internal fun AndroidPlayerSurface(
 }
 
 internal fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: Float) {
+    resizeMode = when (mode) {
+        VideoScaleMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        VideoScaleMode.CROP,
+        VideoScaleMode.STRETCH,
+        -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+    }
+
     val textureView = videoSurfaceView as? TextureView ?: return
     if (!textureView.isLaidOut || textureView.width == 0 || textureView.height == 0) {
         textureView.doOnLayout { applyVideoScale(mode, videoAspectRatio) }
@@ -56,7 +65,11 @@ internal fun PlayerView.applyVideoScale(mode: VideoScaleMode, videoAspectRatio: 
 
     val containerAspectRatio = textureView.width.toFloat() / textureView.height
     val aspectRatioFactor = videoAspectRatio / containerAspectRatio
-    val factors = resolveVideoScaleFactors(mode, aspectRatioFactor)
+    val factors = if (mode == VideoScaleMode.FIT) {
+        VideoScaleFactors(scaleX = 1f, scaleY = 1f)
+    } else {
+        resolveVideoScaleFactors(mode, aspectRatioFactor)
+    }
     val target = TextureVideoScale(mode, factors.scaleX, factors.scaleY)
     if (textureView.tag == target) return
 

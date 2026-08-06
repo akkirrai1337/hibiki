@@ -12,6 +12,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -283,6 +284,8 @@ class ExternalSourceRegistrationTest {
                         val payload = when (request.operation) {
                             ExternalSourceRuntimeOperation.SEARCH ->
                                 AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
+                            ExternalSourceRuntimeOperation.FILTER_CATALOG ->
+                                AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(AnimeSearchFilterCatalog())
                             ExternalSourceRuntimeOperation.DETAILS ->
                                 AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
                             ExternalSourceRuntimeOperation.LATEST ->

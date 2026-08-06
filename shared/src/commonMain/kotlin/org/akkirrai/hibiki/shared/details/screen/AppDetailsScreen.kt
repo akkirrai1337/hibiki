@@ -16,7 +16,6 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
@@ -285,9 +284,6 @@ fun AppDetailsScreen(
                                     }
                                 },
                                 playbackContent = {
-                                    if (isDetailsLoading) {
-                                        CircularProgressIndicator()
-                                    }
                                     detailsError?.let { message ->
                                         Text(
                                             text = message,

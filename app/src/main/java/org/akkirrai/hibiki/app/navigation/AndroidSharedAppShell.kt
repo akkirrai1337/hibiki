@@ -14,10 +14,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.Dispatchers
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -75,7 +78,11 @@ internal fun AndroidSharedAppShell(
     val externalRepositoryControllerScope = rememberCoroutineScope()
     val externalRepositoryController = remember(externalCoordinator) {
         externalCoordinator?.let {
-            ExternalSourceRepositoryController(it, externalRepositoryControllerScope)
+            ExternalSourceRepositoryController(
+                actions = it,
+                scope = externalRepositoryControllerScope,
+                operationContext = Dispatchers.IO,
+            )
         }
     }
     DisposableEffect(externalRepositoryController) {
@@ -99,11 +106,20 @@ internal fun AndroidSharedAppShell(
     val externalCatalogRepository = remember(externalCoordinator, externalHttpClient, externalStatusLabels) {
         ExternalSourceCatalogRepository(
             registryProvider = { externalCoordinator?.snapshot?.value?.registry },
+            registryAwaiter = { externalCoordinator?.awaitRegistry() },
             contextProvider = { sourceId ->
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
                     preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
                     config = externalSourceConfigStore.load(sourceId),
+                    logger = SourceLogger { level, message, throwable ->
+                        val tag = "BeakoKit/${sourceId.value}"
+                        when (level) {
+                            SourceLogLevel.DEBUG -> AppLogger.d(tag, message)
+                            SourceLogLevel.WARNING -> AppLogger.w(tag, message, throwable)
+                            SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
+                        }
+                    },
                 )
             },
             statusLabels = externalStatusLabels,
@@ -111,7 +127,11 @@ internal fun AndroidSharedAppShell(
     }
     val builtInCatalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
     val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
-        TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
+        if (BuildConfig.DEBUG) {
+            externalCatalogRepository
+        } else {
+            TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
+        }
     }
     val homeRepository = remember(dependencies) { dependencies.homeRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
@@ -171,7 +191,7 @@ internal fun AndroidSharedAppShell(
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
     val sources = remember(externalSnapshot?.registry) {
-        val builtInSources = AnimeSourceRegistry.sources.map { source ->
+        val builtInSources = if (BuildConfig.DEBUG) emptyList() else AnimeSourceRegistry.sources.map { source ->
             AppSourceDescriptor(
                 id = source.id.value,
                 name = source.name,

@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.Episode
@@ -125,6 +126,8 @@ class InstalledExternalSourcePipelineTest {
                     val payload = when (decodedRequest.operation) {
                         ExternalSourceRuntimeOperation.SEARCH ->
                             AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
+                        ExternalSourceRuntimeOperation.FILTER_CATALOG ->
+                            AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(AnimeSearchFilterCatalog())
                         ExternalSourceRuntimeOperation.DETAILS ->
                             AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
                         ExternalSourceRuntimeOperation.LATEST ->

@@ -15,11 +15,26 @@ class NativeSourceRuntimeBridge private constructor() {
         external fun validateModule(module: ByteArray)
 
         @JvmStatic
+        external fun validateModuleWithArtifact(
+            module: ByteArray,
+            artifactPath: String,
+        )
+
+        @JvmStatic
         external fun protocolModuleCallWithHost(
             module: ByteArray,
             request: String,
             host: Host,
             cancellationScopeId: Long,
+        ): String
+
+        @JvmStatic
+        external fun protocolModuleCallWithHostAndArtifact(
+            module: ByteArray,
+            request: String,
+            host: Host,
+            cancellationScopeId: Long,
+            artifactPath: String,
         ): String
 
         @JvmStatic

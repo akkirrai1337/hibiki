@@ -34,6 +34,21 @@ class SourceRepositoryLoaderTest {
     }
 
     @Test
+    fun `loader accepts a UTF-8 BOM before the repository index`() = runBlocking {
+        val expected = index()
+        val loader = SourceRepositoryLoader(
+            transport = SourceRepositoryTransport { _, _ ->
+                SourceRepositoryResponse(
+                    statusCode = 200,
+                    body = "\uFEFF${SourceRepositoryIndexCodec.encode(expected)}",
+                )
+            },
+        )
+
+        assertEquals(expected, loader.load("https://example.com/repository.json", clientVersion = 3))
+    }
+
+    @Test
     fun `loader rejects insecure urls without calling transport`() = runBlocking {
         var called = false
         val loader = SourceRepositoryLoader(

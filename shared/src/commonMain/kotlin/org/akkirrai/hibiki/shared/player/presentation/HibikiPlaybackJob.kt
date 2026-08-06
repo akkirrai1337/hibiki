@@ -10,6 +10,7 @@ import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.model.WatchSource
 import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
+import kotlinx.coroutines.CancellationException
 
 internal fun launchHibikiPlaybackJob(
     scope: CoroutineScope,
@@ -35,17 +36,23 @@ internal fun launchHibikiPlaybackJob(
     onPlaybackPublished: ((PlaybackStream, PlaybackContext) -> Unit)?,
     onFinished: () -> Unit,
 ): Job = scope.launch {
-    val result = runCatching {
-        resolveHibikiPlayback(
-            repository = repository,
-            offlineRepository = offlineWatchDataRepository,
-            source = source,
-            requestedEpisode = episode,
-            requestEpisodes = requestEpisodes,
-            preferredQuality = preferredQuality,
-            preferredPlayerName = preferredPlayerName,
-            forceRefresh = forceRefresh,
+    val result = try {
+        Result.success(
+            resolveHibikiPlayback(
+                repository = repository,
+                offlineRepository = offlineWatchDataRepository,
+                source = source,
+                requestedEpisode = episode,
+                requestEpisodes = requestEpisodes,
+                preferredQuality = preferredQuality,
+                preferredPlayerName = preferredPlayerName,
+                forceRefresh = forceRefresh,
+            ),
         )
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Throwable) {
+        Result.failure(error)
     }
     if (requestGeneration != currentRequestGeneration()) return@launch
     result.onSuccess { resolution ->

@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.app.shell.player.watch
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.shared.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.player.model.PlaybackRoute
@@ -74,10 +75,12 @@ internal fun HibikiWatchDataEffects(
                 forceRefresh = true,
             ),
         )
-        runCatching {
-            if (forceWatchSourcesRefresh) repositoryForWatch.refreshSources(anime.id)
-            else repositoryForWatch.loadSources(anime.id)
-        }.onSuccess { sourcesForWatch ->
+        try {
+            val sourcesForWatch = if (forceWatchSourcesRefresh) {
+                repositoryForWatch.refreshSources(anime.id)
+            } else {
+                repositoryForWatch.loadSources(anime.id)
+            }
             watchPresenter.update { state ->
                 state.withLoadedSources(
                     sources = sourcesForWatch,
@@ -85,7 +88,9 @@ internal fun HibikiWatchDataEffects(
                     isLoading = false,
                 )
             }
-        }.onFailure { error ->
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
             watchPresenter.update {
                 it.withWatchSourcesError(error.message ?: "Unable to load watch sources")
             }
@@ -99,12 +104,16 @@ internal fun HibikiWatchDataEffects(
     ) {
         val repositoryForPlayback = watchRepository ?: return@LaunchedEffect
         val route = activePlaybackRoute ?: return@LaunchedEffect
-        val options = runCatching {
+        val options = try {
             repositoryForPlayback.getPlaybackSettingsOptions(
                 sourceId = route.context.sourceId,
                 episodeId = route.context.episodeId,
             )
-        }.getOrNull() ?: return@LaunchedEffect
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            return@LaunchedEffect
+        }
         if (activePlaybackRoute.context.episodeId == route.context.episodeId) {
             onPlaybackRouteChanged(route.copy(context = route.context.copy(settingsOptions = options)))
         }
@@ -115,12 +124,15 @@ internal fun HibikiWatchDataEffects(
         val source = selectedWatchSource ?: return@LaunchedEffect
         val offlineEpisodes = offlineWatchDataRepository?.getOfflineEpisodes(source.sourceId).orEmpty()
         episodesPresenter.setState(initialEpisodesState(offlineEpisodes))
-        runCatching { repositoryForWatch.getEpisodes(source.sourceId) }
-            .onSuccess { episodes -> episodesPresenter.setState(loadedEpisodesState(episodes, offlineEpisodes)) }
-            .onFailure { error ->
-                episodesPresenter.setState(
-                    errorEpisodesState(error.message ?: "Unable to load episodes", offlineEpisodes),
-                )
-            }
+        try {
+            val episodes = repositoryForWatch.getEpisodes(source.sourceId)
+            episodesPresenter.setState(loadedEpisodesState(episodes, offlineEpisodes))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            episodesPresenter.setState(
+                errorEpisodesState(error.message ?: "Unable to load episodes", offlineEpisodes),
+            )
+        }
     }
 }

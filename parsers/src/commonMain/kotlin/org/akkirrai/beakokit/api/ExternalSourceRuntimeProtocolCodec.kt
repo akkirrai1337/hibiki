@@ -57,6 +57,7 @@ fun interface ExternalSourceRuntimeNativeBridge {
 /** Adapts a JNI/Obj-C/Swift byte bridge to the common runtime transport contract. */
 class NativeBridgeExternalSourceRuntimeTransport(
     private val bridge: ExternalSourceRuntimeNativeBridge,
+    private val logger: SourceLogger = SourceLogger.NONE,
 ) : ExternalSourceRuntimeTransport {
     override suspend fun call(
         request: ExternalSourceRuntimeRequest,
@@ -95,14 +96,25 @@ class NativeBridgeExternalSourceRuntimeTransport(
         return try {
             ExternalSourceRuntimeProtocolCodec.decodeResponse(response)
         } catch (error: SourceException) {
+            logger.log(SourceLogLevel.ERROR, "External runtime response decode failed", error)
             throw error
         } catch (error: Exception) {
+            logger.log(SourceLogLevel.ERROR, "External runtime response decode failed", error)
             throw SourceException(
                 message = "Native runtime response is invalid",
                 cause = error,
                 kind = SourceErrorKind.PARSE,
                 code = SourceErrorCode.INVALID_RESPONSE,
             )
+        }.also { runtimeResponse ->
+            if (runtimeResponse.errorCode != null) {
+                logger.log(
+                    SourceLogLevel.ERROR,
+                    "External runtime ${request.operation} failed: " +
+                        "${runtimeResponse.errorCode}: ${runtimeResponse.errorMessage ?: "no error message"}",
+                    null,
+                )
+            }
         }
     }
 }

@@ -94,7 +94,8 @@ class SourceRepositoryLoader(
 
         return try {
             SourceRepositoryIndexCodec.decodeAndValidate(
-                value = response.body,
+                // GitHub-hosted repository indexes may be saved with a UTF-8 BOM.
+                value = response.body.removePrefix("\uFEFF"),
                 clientVersion = clientVersion,
                 supportedSourceApiVersion = supportedSourceApiVersion,
                 supportedHostApiVersion = supportedHostApiVersion,

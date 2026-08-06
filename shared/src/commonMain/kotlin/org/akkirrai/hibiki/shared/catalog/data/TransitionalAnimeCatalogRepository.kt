@@ -26,7 +26,10 @@ class TransitionalAnimeCatalogRepository(
     override suspend fun latest(limit: Int): List<Anime> = builtIn.latest(limit)
 
     override suspend fun filterCatalog(): org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog =
-        builtIn.filterCatalog()
+        selectedSourceId
+            ?.takeIf(external::hasSource)
+            ?.let { external.filterCatalog() }
+            ?: builtIn.filterCatalog()
 
     override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage =
         selectedSourceId

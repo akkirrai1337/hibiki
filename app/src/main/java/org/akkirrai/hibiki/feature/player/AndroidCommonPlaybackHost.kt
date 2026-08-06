@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.feature.player
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.AppPreferencesState
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.player.model.PlaybackContext
@@ -43,6 +46,11 @@ import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
+import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
+import org.akkirrai.hibiki.shared.player.AppPlayerActionControls
+import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
@@ -59,6 +67,7 @@ import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
 import org.akkirrai.hibiki.shared.player.formatEpisodeNumber
+import org.akkirrai.hibiki.shared.player.formatEpisodeDuration
 import org.akkirrai.hibiki.shared.player.resolveAdjacentEpisode
 import org.akkirrai.hibiki.shared.player.resolveEpisodeNavigationAvailability
 import org.akkirrai.hibiki.shared.player.resolveAutoPlayNextEpisode
@@ -93,7 +102,7 @@ internal class AndroidPlayerWindowController {
 /** Android platform host for the common playback controls and Media3 transport. */
 @Composable
 internal fun AndroidCommonPlaybackHost(
-    playback: PlaybackStream,
+    playback: PlaybackStream?,
     context: PlaybackContext,
     navigationState: AppNavigationState,
     progressRepository: PlaybackProgressRepository,
@@ -105,11 +114,26 @@ internal fun AndroidCommonPlaybackHost(
     modifier: Modifier = Modifier,
 ) {
     val androidContext = LocalContext.current
+    val preferences = LocalAppPreferences.current
+    val preferencesState = LocalAppPreferencesState.current
+    if (playback == null) {
+        AndroidPlaybackLoadingChrome(
+            context = context,
+            navigationState = navigationState,
+            preferences = preferences,
+            preferencesState = preferencesState,
+            onBack = onBack,
+            onPlaylistClick = { dispatchPlayerPlaylistOpen(onOverlayEvent) },
+            onSettingsClick = { dispatchPlayerSettingsOpen(onOverlayEvent) },
+            onEpisodeSelected = onEpisodeSelected,
+            onSettingsAction = onSettingsAction,
+            onOverlayEvent = onOverlayEvent,
+        )
+        return
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
     val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val preferences = LocalAppPreferences.current
-    val preferencesState = LocalAppPreferencesState.current
     val exoPlayer = remember(androidContext, playback.sessionKey()) {
         ExoPlayer.Builder(androidContext).build()
     }
@@ -314,12 +338,18 @@ internal fun AndroidCommonPlaybackHost(
                         videoSize.height.toFloat()
                 }
             }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY && exoPlayer.playWhenReady) {
+                    exoPlayer.play()
+                }
+            }
         }
         exoPlayer.addListener(listener)
+        exoPlayer.playWhenReady = true
         exoPlayer.setMediaSource(playback.toAndroidMediaSource(androidContext))
         exoPlayer.setPlaybackSpeed(preferencesState.playbackSpeed)
         exoPlayer.prepare()
-        exoPlayer.playWhenReady = true
         onDispose {
             savePlaybackProgress()
             mediaSession.release()
@@ -552,6 +582,131 @@ internal fun AndroidCommonPlaybackHost(
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
             }
         }
+    }
+}
+
+@Composable
+private fun AndroidPlaybackLoadingChrome(
+    context: PlaybackContext,
+    navigationState: AppNavigationState,
+    preferences: AppPreferences,
+    preferencesState: AppPreferencesState,
+    onBack: () -> Unit,
+    onPlaylistClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onSettingsAction: (PlaybackSettingsAction) -> Unit,
+    onOverlayEvent: (AppNavigationEvent) -> Unit,
+) {
+    val playlistVisible = navigationState.overlays.lastOrNull() == AppOverlay.Playlist
+    val settingsVisible = navigationState.overlays.lastOrNull() == AppOverlay.PlayerSettings
+    val title = context.animeTitle.ifBlank { context.sourceTitle }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black),
+    ) {
+        AppPlayerTopOverlay(
+            title = title,
+            subtitle = appText(AppTextKey.PlayerEpisodeNumber).replace(
+                "%s",
+                formatEpisodeNumber(context.episodeNumber),
+            ),
+            playlistEnabled = context.episodes.isNotEmpty(),
+            backContent = {
+                org.akkirrai.hibiki.shared.design.component.navigation.AppBackButton(
+                    onClick = onBack,
+                    contentDescription = appText(AppTextKey.Back),
+                )
+            },
+            playlistContent = {
+                AppPlayerPlaylistButton(
+                    onClick = onPlaylistClick,
+                    contentDescription = null,
+                )
+            },
+        )
+        AppPlayerBottomOverlay(
+            positionLabel = "${formatEpisodeDuration(0L)} / ${formatEpisodeDuration(0L)}",
+            durationMs = 0L,
+            bufferedPositionMs = 0L,
+            sliderPositionMs = 0L,
+            onSliderValueChange = {},
+            onSliderValueChangeFinished = {},
+            timelineEnabled = false,
+            controlsContent = {
+                AppPlayerActionControls(
+                    onScaleClick = {},
+                    scaleEnabled = false,
+                    onLockClick = {},
+                    lockEnabled = false,
+                    pictureInPictureEnabled = false,
+                    onPictureInPictureClick = {},
+                    onSettingsClick = onSettingsClick,
+                    settingsEnabled = true,
+                    settingsContentDescription = appText(AppTextKey.PlayerSettings),
+                )
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+        AppPlayerPanelOverlays(
+            playlistVisible = playlistVisible,
+            settingsVisible = settingsVisible,
+            currentEpisodeId = context.episodeId,
+            episodes = context.episodes,
+            episodeHeadline = { episode ->
+                appText(AppTextKey.PlayerEpisodeNumber)
+                    .replace("%s", formatEpisodeNumber(episode.number))
+            },
+            onDismissPlaylist = {
+                dispatchPlayerPlaylistDismiss({}, onOverlayEvent)
+            },
+            onDismissSettings = {
+                dispatchPlayerSettingsDismiss({}, onOverlayEvent)
+            },
+            onEpisodeClick = { episodeId ->
+                context.episodes.firstOrNull { it.id == episodeId }?.let(onEpisodeSelected)
+            },
+            nowMs = SystemClock::elapsedRealtime,
+            backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
+            settingsContent = { onSettingsBack ->
+                AppPlayerSettingsContent(
+                    destination = navigationState.playerSettingsDestination,
+                    selectedSpeed = preferencesState.playbackSpeed,
+                    selectedSourceId = context.sourceId,
+                    selectedPlayerName = context.selectedPlayerName,
+                    selectedQualityLabel = context.selectedQualityLabel,
+                    availableQualityLabels = emptyList(),
+                    autoSkipSegments = preferencesState.autoSkipSegments,
+                    autoPlayNextEpisode = preferencesState.autoPlayNextEpisode,
+                    options = context.settingsOptions,
+                    onNavigate = {
+                        dispatchPlayerSettingsDestination(it, {}, onOverlayEvent)
+                    },
+                    onBack = onSettingsBack,
+                    backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
+                    onSelectSpeed = preferences::setPlaybackSpeed,
+                    onSelectVoiceover = { onSettingsAction(PlaybackSettingsAction.SelectVoiceover(it)) },
+                    onSelectPlayer = { onSettingsAction(PlaybackSettingsAction.SelectPlayer(it)) },
+                    onSelectQuality = { onSettingsAction(PlaybackSettingsAction.SelectQuality(it)) },
+                    onAutoSkipSegmentsChange = {
+                        onSettingsAction(PlaybackSettingsAction.SetAutoSkipSegments(it))
+                    },
+                    onAutoPlayNextEpisodeChange = {
+                        onSettingsAction(PlaybackSettingsAction.SetAutoPlayNextEpisode(it))
+                    },
+                )
+            },
+            skipVisible = false,
+            controlsVisible = true,
+            skipCountdownSeconds = 0,
+            autoSkipEnabled = false,
+            skipLabel = "",
+            watchLabel = "",
+            onSkipClick = {},
+            onWatchClick = {},
+        )
     }
 }
 

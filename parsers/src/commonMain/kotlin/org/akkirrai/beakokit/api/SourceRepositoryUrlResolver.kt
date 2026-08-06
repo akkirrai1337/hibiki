@@ -3,8 +3,7 @@ package org.akkirrai.beakokit.api
 /**
  * Resolves a user-provided repository link to the HTTPS URL of its index file.
  *
- * A GitHub repository root is intentionally not accepted: the index file location and ref are
- * part of the repository contract and must be supplied explicitly by the caller.
+ * A GitHub repository root resolves to the conventional main/repository/index.json location.
  */
 class SourceRepositoryUrlResolver {
     fun resolve(input: String): SourceRepositoryEndpoint {
@@ -36,11 +35,19 @@ class SourceRepositoryUrlResolver {
         val path = url.substring("https://github.com/".length)
             .split('/')
             .filter(String::isNotEmpty)
-        require(path.size >= 4) {
-            "GitHub URL must point to a repository index file"
-        }
         require(path.all(::isSafeGithubPathSegment)) {
             "GitHub URL contains an unsafe path segment"
+        }
+        if (path.size == 2) {
+            val owner = path[0]
+            val repository = path[1].removeSuffix(".git")
+            require(owner.isNotBlank() && repository.isNotBlank()) {
+                "GitHub repository URL must include an owner and repository"
+            }
+            return "https://raw.githubusercontent.com/$owner/$repository/main/repository/index.json"
+        }
+        require(path.size >= 4) {
+            "GitHub URL must point to a repository or index file"
         }
         val owner = path[0]
         val repository = path[1].removeSuffix(".git")

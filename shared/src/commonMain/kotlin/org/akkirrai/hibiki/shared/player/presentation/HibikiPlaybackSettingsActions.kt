@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.model.WatchSource
@@ -39,8 +40,13 @@ internal fun handlePlaybackSettingsAction(
     }
     when (action) {
         is PlaybackSettingsAction.SelectVoiceover -> scope.launch {
-            val episodes = runCatching { repository.getEpisodes(action.source.sourceId) }.getOrNull()
-                ?: return@launch
+            val episodes = try {
+                repository.getEpisodes(action.source.sourceId)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                return@launch
+            }
             val episode = episodes.firstOrNull { it.number == route.context.episodeNumber }
                 ?: episodes.firstOrNull() ?: return@launch
             onSourceSelected(route.context.titleId, action.source)

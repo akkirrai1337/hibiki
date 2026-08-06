@@ -24,6 +24,7 @@ fun AppPlayerBottomOverlay(
     sliderPositionMs: Long,
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
+    timelineEnabled: Boolean = true,
     controlsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -54,6 +55,7 @@ fun AppPlayerBottomOverlay(
                 sliderPositionMs = sliderPositionMs,
                 onSeekPreview = onSliderValueChange,
                 onSeekFinished = onSliderValueChangeFinished,
+                enabled = timelineEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = PlayerBottomOverlayTimelineTopPadding, bottom = PlayerBottomOverlayZeroSpacing)

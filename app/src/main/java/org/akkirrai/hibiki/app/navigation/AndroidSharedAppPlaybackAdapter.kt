@@ -12,19 +12,17 @@ internal fun androidSharedAppPlaybackHost(
     progressRepository: PlaybackProgressRepository,
     windowController: AndroidPlayerWindowController,
 ): AppPlaybackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-    playback?.let { readyPlayback ->
-        AndroidCommonPlaybackHost(
-            playback = readyPlayback,
-            context = playbackContext,
-            navigationState = navigationState,
-            progressRepository = progressRepository,
-            windowController = windowController,
-            onBack = onBack,
-            onEpisodeSelected = onEpisodeSelected,
-            onSettingsAction = onSettingsAction,
-            onOverlayEvent = onOverlayEvent,
-        )
-    }
+    AndroidCommonPlaybackHost(
+        playback = playback,
+        context = playbackContext,
+        navigationState = navigationState,
+        progressRepository = progressRepository,
+        windowController = windowController,
+        onBack = onBack,
+        onEpisodeSelected = onEpisodeSelected,
+        onSettingsAction = onSettingsAction,
+        onOverlayEvent = onOverlayEvent,
+    )
 }
 
 @Composable

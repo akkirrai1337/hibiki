@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.shared.design.component.controls.AppFilledIconButtonS
 @Composable
 fun AppPlayerActionControls(
     onScaleClick: () -> Unit,
+    scaleEnabled: Boolean = true,
     scaleMode: VideoScaleMode = VideoScaleMode.FIT,
     scaleContentDescription: String? = null,
     scaleContent: @Composable () -> Unit = {
@@ -39,6 +40,7 @@ fun AppPlayerActionControls(
         )
     },
     onLockClick: () -> Unit,
+    lockEnabled: Boolean = true,
     lockContentDescription: String? = null,
     lockContent: @Composable () -> Unit = {
         Icon(
@@ -58,6 +60,7 @@ fun AppPlayerActionControls(
         )
     },
     onSettingsClick: () -> Unit,
+    settingsEnabled: Boolean = true,
     settingsContentDescription: String? = null,
     settingsContent: @Composable () -> Unit = {
         Icon(
@@ -75,12 +78,14 @@ fun AppPlayerActionControls(
     ) {
         AppFilledIconButton(
             onClick = onScaleClick,
+            enabled = scaleEnabled,
             modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = scaleContent,
         )
         AppFilledIconButton(
             onClick = onLockClick,
+            enabled = lockEnabled,
             modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = lockContent,
@@ -94,6 +99,7 @@ fun AppPlayerActionControls(
         )
         AppFilledIconButton(
             onClick = onSettingsClick,
+            enabled = settingsEnabled,
             modifier = Modifier.size(PlayerActionButtonSize),
             style = AppFilledIconButtonStyle.DarkOverlay,
             content = settingsContent,

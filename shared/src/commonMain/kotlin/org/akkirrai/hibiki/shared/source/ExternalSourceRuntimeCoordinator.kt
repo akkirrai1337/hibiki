@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
@@ -29,6 +30,8 @@ class ExternalSourceRuntimeCoordinator(
     private val runtimeInitializer: suspend (ActiveExternalSourcePackage, SourceContext) -> Unit = { _, _ -> },
     /** Built-in source IDs retain ownership while external sources run in the background. */
     private val reservedSourceIds: Set<SourceId> = emptySet(),
+    /** Debug Android builds may refresh rebuilt artifacts without a version bump. */
+    private val autoInstallRebuiltPackages: Boolean = false,
 ) : ExternalSourceRepositoryActions {
     private val operationMutex = Mutex()
     private val state = MutableStateFlow(
@@ -39,6 +42,16 @@ class ExternalSourceRuntimeCoordinator(
     )
 
     val snapshot: StateFlow<ExternalSourceRuntimeSnapshot> = state.asStateFlow()
+
+    /** Waits until the first repository refresh has either produced or failed to produce a registry. */
+    suspend fun awaitRegistry(): ExternalSourceRegistry? {
+        snapshot.value.let { current ->
+            if (current.registry != null || current.error != null) return current.registry
+        }
+        return snapshot
+            .first { current -> current.registry != null || current.error != null }
+            .registry
+    }
 
     /** Returns the persisted repository endpoints without loading their indexes. */
     override suspend fun repositories(): List<SourceRepositoryEndpoint> = operationMutex.withLock {
@@ -71,6 +84,7 @@ class ExternalSourceRuntimeCoordinator(
     /** Refreshes repositories and replaces only the inactive external registry on success. */
     suspend fun refresh() = operationMutex.withLock {
         refreshLocked()
+        installAllAvailablePackagesLocked()
     }
 
     /** Adds one repository and refreshes only the inactive external registry. */
@@ -82,6 +96,7 @@ class ExternalSourceRuntimeCoordinator(
         }
         updateConfiguredRepositories()
         refreshLocked()
+        installAllAvailablePackagesLocked()
     }
 
     /** Removes one repository and refreshes only the inactive external registry. */
@@ -144,11 +159,48 @@ class ExternalSourceRuntimeCoordinator(
         sourceId: SourceId,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = operationMutex.withLock {
+        installAvailablePackageLocked(sourceId, initialize)
+    }
+
+    /** Installs every newly advertised package after a repository has been refreshed. */
+    private suspend fun installAllAvailablePackagesLocked() {
+        val sourceIds = platform.coordinator.availableSourceManifests()
+            .asSequence()
+            .filterNot { it.sourceId in reservedSourceIds }
+            .filter { manifest ->
+                val active = loadActivePackageOrNull(manifest.sourceId)
+                active == null || (
+                    autoInstallRebuiltPackages &&
+                        active.manifest.packageVersion == manifest.packageVersion &&
+                        active.installed.artifactSha256?.let { it != manifest.sha256 } == true
+                )
+            }
+            .map { it.sourceId }
+            .toList()
+        var firstError: Throwable? = null
+        sourceIds.forEach { sourceId ->
+            try {
+                installAvailablePackageLocked(sourceId) {}
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                firstError = firstError ?: error
+            }
+        }
+        firstError?.let { error ->
+            state.value = state.value.copy(error = error)
+            throw error
+        }
+    }
+
+    private suspend fun installAvailablePackageLocked(
+        sourceId: SourceId,
+        initialize: suspend () -> Unit,
+    ): SourcePackageActivationState {
         require(sourceId !in reservedSourceIds) {
             "External source ID is reserved by a built-in source: $sourceId"
         }
         var activation: SourcePackageActivationState? = null
-        try {
+        return try {
             activation = platform.installAvailablePackage(
                 sourceId = sourceId,
                 initialize = initialize,

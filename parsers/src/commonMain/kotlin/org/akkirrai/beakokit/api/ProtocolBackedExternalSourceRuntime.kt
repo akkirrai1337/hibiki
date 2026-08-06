@@ -50,6 +50,9 @@ interface ExternalSourceRuntimePayloadCodec {
 
     fun decodeDetails(payload: JsonObject): AnimeTitle
 
+    fun decodeFilterCatalog(payload: JsonObject): org.akkirrai.beakokit.model.AnimeSearchFilterCatalog =
+        org.akkirrai.beakokit.model.AnimeSearchFilterCatalog()
+
     fun decodeLatest(payload: JsonObject): List<AnimeTitle> = decodeSearch(payload)
 }
 
@@ -66,7 +69,8 @@ open class ProtocolBackedExternalSourceRuntime(
     private val payloadCodec: ExternalSourceRuntimePayloadCodec,
     private val requestIdFactory: () -> String,
     private val callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
-) : ExternalSourceRuntime {
+    private val logger: SourceLogger = SourceLogger.NONE,
+) : ExternalSourceFilterCatalogRuntime {
     override suspend fun search(request: AnimeSearchRequest): List<AnimeTitle> = call(
         operation = ExternalSourceRuntimeOperation.SEARCH,
         payload = ExternalSourceRuntimePayloads.search(request),
@@ -81,6 +85,12 @@ open class ProtocolBackedExternalSourceRuntime(
         operation = ExternalSourceRuntimeOperation.DETAILS,
         payload = ExternalSourceRuntimePayloads.details(id),
         decode = payloadCodec::decodeDetails,
+    )
+
+    override suspend fun filterCatalog() = call(
+        operation = ExternalSourceRuntimeOperation.FILTER_CATALOG,
+        payload = ExternalSourceRuntimePayloads.filterCatalog(),
+        decode = payloadCodec::decodeFilterCatalog,
     )
 
     protected suspend fun <T> call(
@@ -139,8 +149,18 @@ open class ProtocolBackedExternalSourceRuntime(
         } catch (error: CancellationException) {
             throw error
         } catch (error: SourceException) {
+            logger.log(
+                SourceLogLevel.ERROR,
+                "External runtime ${operation} payload validation failed",
+                error,
+            )
             throw error
         } catch (error: Exception) {
+            logger.log(
+                SourceLogLevel.ERROR,
+                "External runtime ${operation} payload validation failed",
+                error,
+            )
             throw SourceException(
                 message = "External source runtime returned an invalid payload",
                 cause = error,
@@ -176,11 +196,13 @@ open class ProtocolBackedExternalSourceLatestRuntime(
     payloadCodec: ExternalSourceRuntimePayloadCodec,
     requestIdFactory: () -> String,
     callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+    logger: SourceLogger = SourceLogger.NONE,
 ) : ProtocolBackedExternalSourceRuntime(
     transport = transport,
     payloadCodec = payloadCodec,
     requestIdFactory = requestIdFactory,
     callLimits = callLimits,
+    logger = logger,
 ), ExternalSourceLatestRuntime {
     private val latestPayloadCodec = payloadCodec
 
@@ -204,11 +226,13 @@ class ProtocolBackedExternalSourcePlaybackRuntime(
     private val payloadCodec: ExternalSourcePlaybackRuntimePayloadCodec,
     requestIdFactory: () -> String,
     callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+    logger: SourceLogger = SourceLogger.NONE,
 ) : ProtocolBackedExternalSourceRuntime(
     transport = transport,
     payloadCodec = payloadCodec,
     requestIdFactory = requestIdFactory,
     callLimits = callLimits,
+    logger = logger,
 ), ExternalSourcePlaybackRuntime {
     override suspend fun playbackGroups(title: AnimeTitle): List<PlaybackGroup> = call(
         operation = ExternalSourceRuntimeOperation.PLAYBACK_GROUPS,
@@ -233,11 +257,13 @@ class ProtocolBackedExternalSourceLatestPlaybackRuntime(
     payloadCodec: ExternalSourcePlaybackRuntimePayloadCodec,
     requestIdFactory: () -> String,
     callLimits: ExternalSourceRuntimeCallLimits = ExternalSourceRuntimeCallLimits(),
+    logger: SourceLogger = SourceLogger.NONE,
 ) : ProtocolBackedExternalSourceLatestRuntime(
     transport = transport,
     payloadCodec = payloadCodec,
     requestIdFactory = requestIdFactory,
     callLimits = callLimits,
+    logger = logger,
 ), ExternalSourceLatestPlaybackRuntime {
     private val playbackPayloadCodec = payloadCodec
 

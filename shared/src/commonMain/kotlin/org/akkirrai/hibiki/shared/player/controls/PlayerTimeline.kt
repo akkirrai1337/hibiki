@@ -31,6 +31,7 @@ fun AppPlayerTimeline(
     sliderPositionMs: Long,
     onSeekPreview: (Long) -> Unit,
     onSeekFinished: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     var trackWidthPx by remember { mutableFloatStateOf(1f) }
@@ -47,9 +48,8 @@ fun AppPlayerTimeline(
         onSeekPreview((safeDuration * fraction).toLong())
     }
 
-    Box(
-        modifier = modifier
-            .height(PlayerTimelineContainerHeight)
+    val interactionModifier = if (enabled) {
+        Modifier
             .pointerInput(safeDuration, trackWidthPx) {
                 detectTapGestures(
                     onTap = { offset ->
@@ -68,7 +68,15 @@ fun AppPlayerTimeline(
                     onDragEnd = onSeekFinished,
                     onDragCancel = onSeekFinished,
                 )
-            },
+            }
+    } else {
+        Modifier
+    }
+
+    Box(
+        modifier = modifier
+            .height(PlayerTimelineContainerHeight)
+            .then(interactionModifier),
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(

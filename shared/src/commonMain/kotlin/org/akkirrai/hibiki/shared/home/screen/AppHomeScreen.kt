@@ -160,7 +160,8 @@ fun AppHomeScreen(
             filterContentDescription = labels.searchFilters,
             clearContentDescription = labels.searchClear,
             onFilterClick = { isFilterSheetOpen = true },
-            showFilterButton = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true,
+            showFilterButton = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
+                state.isSearchFilterCatalogLoading,
             scrimHeight = HomeTopSearchScrimHeight,
             )
         }

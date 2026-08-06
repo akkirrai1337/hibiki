@@ -114,7 +114,16 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         searchJob = scope.launch {
             val current = state.value
-            _state.update { it.copy(isLoading = true, isLoadingMore = false, error = null, page = 1) }
+            _state.update {
+                it.copy(
+                    items = emptyList(),
+                    isLoading = true,
+                    isLoadingMore = false,
+                    error = null,
+                    page = 1,
+                    canLoadMore = false,
+                )
+            }
             try {
                 val result = repository.search(
                     AnimeCatalogQuery(
@@ -218,8 +227,8 @@ class AnimeCatalogPresenter(
 
     private fun loadDetails(anime: Anime) {
         detailsJob?.cancel()
+        _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
         detailsJob = scope.launch {
-            _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
             try {
                 val details = repository.getDetails(anime.id, anime)
                 _state.update { it.copy(selectedAnime = details, isDetailsLoading = false) }

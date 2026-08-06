@@ -63,10 +63,11 @@ class SourceRepositoryUrlResolverTest {
     }
 
     @Test
-    fun `rejects GitHub repository root without an index path`() {
-        assertFailsWith<SourceRepositoryUrlException> {
-            resolver.resolve("https://github.com/vadim/hibiki-sources")
-        }
+    fun `resolves GitHub repository root to conventional main index URL`() {
+        assertEquals(
+            "https://raw.githubusercontent.com/vadim/hibiki-sources/main/repository/index.json",
+            resolver.resolve("https://github.com/vadim/hibiki-sources").url,
+        )
     }
 
     @Test

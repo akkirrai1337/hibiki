@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidExternalSourceBackgroundSync(skipInitialRefresh = true) {
+                        AndroidExternalSourceBackgroundSync {
                             AndroidSharedAppShell(
                                 activity = this@MainActivity,
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },

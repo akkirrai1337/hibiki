@@ -117,6 +117,23 @@ class ExternalSourceCatalogRepositoryTest {
     }
 
     @Test
+    fun catalogOperationsReuseTheCreatedExternalSource() = runTest {
+        val sourceId = SourceId("external-source")
+        var creations = 0
+        val repository = ExternalSourceCatalogRepository(
+            registryProvider = { registry(sourceId, onCreate = { creations++ }) },
+            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
+            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
+            initialSourceId = sourceId,
+        )
+
+        val search = repository.search(AnimeCatalogQuery(text = "query"))
+        repository.getDetails(search.items.single().id, search.items.single())
+
+        assertEquals(1, creations)
+    }
+
+    @Test
     fun transitionalRepositoryKeepsBuiltInDefaultAndRoutesExternalIds() = runTest {
         val sourceId = SourceId("external-source")
         val external = ExternalSourceCatalogRepository(
@@ -191,6 +208,7 @@ class ExternalSourceCatalogRepositoryTest {
         sourceId: SourceId,
         onSearch: (AnimeSearchRequest) -> Unit = {},
         onContext: (org.akkirrai.beakokit.api.SourceContext) -> Unit = {},
+        onCreate: () -> Unit = {},
     ): ExternalSourceRegistry =
         ExternalSourceRegistry(
             org.akkirrai.beakokit.api.SourceCatalog(
@@ -203,6 +221,7 @@ class ExternalSourceCatalogRepositoryTest {
                             primaryLanguage = SourceLanguage.ENGLISH,
                         ),
                         factory = org.akkirrai.beakokit.api.SourceFactory { context ->
+                            onCreate()
                             onContext(context)
                             org.akkirrai.beakokit.api.RuntimeBackedAnimeSource(
                                 info = SourceInfo(

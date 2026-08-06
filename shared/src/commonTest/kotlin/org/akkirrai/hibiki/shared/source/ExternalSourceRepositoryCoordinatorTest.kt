@@ -207,9 +207,12 @@ class ExternalSourceRepositoryCoordinatorTest {
                 "https://github.com/vadim/hibiki-sources/blob/main/repository/index.json",
             ),
         )
-        assertFailsWith<SourceRepositoryUrlException> {
-            coordinator.addRepositoryUrl("https://github.com/vadim/hibiki-sources")
-        }
+        assertEquals(
+            listOf(SourceRepositoryEndpoint(
+                "https://raw.githubusercontent.com/vadim/hibiki-sources/main/repository/index.json",
+            )),
+            coordinator.addRepositoryUrl("https://github.com/vadim/hibiki-sources"),
+        )
     }
 
     @Test

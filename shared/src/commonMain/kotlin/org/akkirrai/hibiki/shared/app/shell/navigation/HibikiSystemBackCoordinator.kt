@@ -24,6 +24,7 @@ internal class HibikiSystemBackCoordinator(
             playbackReturnRoute = playbackReturnRoute(),
         )
         if (!result.handled) return
+        if (result.cleanup == HibikiBackCleanup.Details) closeDetails()
         setNavigationState(result.state)
         if (result.clearPlaybackReturnRoute) setPlaybackReturnRoute(null)
         when (result.cleanup) {
@@ -42,7 +43,7 @@ internal class HibikiSystemBackCoordinator(
                 playbackSession.clearRouteState()
                 applyWatchFlowBackEffect(result.effect)
             }
-            HibikiBackCleanup.Details -> closeDetails()
+            HibikiBackCleanup.Details -> Unit
             HibikiBackCleanup.None -> Unit
         }
     }

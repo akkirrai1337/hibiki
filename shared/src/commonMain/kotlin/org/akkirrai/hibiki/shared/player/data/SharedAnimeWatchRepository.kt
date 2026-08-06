@@ -1,6 +1,10 @@
 package org.akkirrai.hibiki.shared.player
 
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
@@ -15,6 +19,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.api.SourceUnavailableException
+import org.akkirrai.beakokit.api.RuntimeBackedPlaybackAnimeSource
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -51,28 +56,60 @@ class SharedAnimeWatchRepository(
     )
     private val sources = mutableMapOf<SourceId, AnimeSource>()
     private val payloads = mutableMapOf<String, WatchPayload>()
+    private val cachedSources = mutableMapOf<String, List<WatchSource>>()
     private val resolvedPlayback = TimedPlaybackCache<String, PlaybackStream>(
         ttlMillis = PLAYBACK_CACHE_TTL_MILLIS,
         nowMillis = { Clock.System.now().toEpochMilliseconds() },
     )
 
     override suspend fun loadSources(animeId: String): List<WatchSource> {
+        cachedSources[animeId]?.let { return it }
         resolvedPlayback.clear()
         val titleKey = AnimeKey.parse(animeId)
             ?: throw IllegalArgumentException("Invalid anime id: $animeId")
-        val source = sourceFor(titleKey.sourceId)
-        val title = source.getById(titleKey.nativeId)
-        val playback = source as? PlaybackSource
-            ?: throw SourceUnavailableException(
-                "Source does not support playback: ${titleKey.sourceId.value}",
-            )
-        val groups = playback.getPlaybackGroups(title)
+        val loaded = withContext(Dispatchers.Default) {
+            val source = sourceFor(titleKey.sourceId)
+            val playback = source as? PlaybackSource
+                ?: throw SourceUnavailableException(
+                    "Source does not support playback: ${titleKey.sourceId.value}",
+                )
+            if (source is RuntimeBackedPlaybackAnimeSource) {
+                coroutineScope {
+                    val title = async { source.getById(titleKey.nativeId) }
+                    val groups = async {
+                        playback.getPlaybackGroups(
+                            AnimeTitle(
+                                id = titleKey.nativeId,
+                                russianName = null,
+                                englishName = null,
+                                originalName = titleKey.nativeId,
+                                japaneseName = null,
+                                synonyms = emptyList(),
+                                year = null,
+                                type = null,
+                                episodeCount = null,
+                                posterUrl = null,
+                                status = null,
+                                description = null,
+                            ),
+                        )
+                    }
+                    title.await() to (playback to groups.await())
+                }
+            } else {
+                val title = source.getById(titleKey.nativeId)
+                title to (playback to playback.getPlaybackGroups(title))
+            }
+        }
+        val title = loaded.first
+        val playback = loaded.second.first
+        val groups = loaded.second.second
         if (groups.isEmpty()) {
             throw SourceUnavailableException(
                 "Source returned no playback groups: ${titleKey.sourceId.value}",
             )
         }
-        return groups.mapIndexed { index, group ->
+        val result = groups.mapIndexed { index, group ->
             val watchSource = WatchSource(
                 sourceId = buildWatchSourceId(animeId, group.title, index),
                 title = group.title,
@@ -88,6 +125,14 @@ class SharedAnimeWatchRepository(
             )
             watchSource
         }
+        cachedSources[animeId] = result
+        return result
+    }
+
+    override suspend fun refreshSources(animeId: String): List<WatchSource> {
+        cachedSources.remove(animeId)
+        payloads.keys.removeAll { watchTitleIdFromSourceId(it) == animeId }
+        return loadSources(animeId)
     }
 
     override suspend fun getEpisodes(sourceId: String): List<WatchEpisode> = payloadFor(sourceId)
@@ -99,7 +144,9 @@ class SharedAnimeWatchRepository(
         val payload = payloadFor(sourceId)
         val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
             ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
-        return payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+        return withContext(Dispatchers.Default) {
+            payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+        }
     }
 
     override suspend fun getPlaybackSettingsOptions(
@@ -113,7 +160,9 @@ class SharedAnimeWatchRepository(
             .filter { it.title == payload.title }
             .map(WatchPayload::source)
             .distinctBy(WatchSource::sourceId)
-        val links = payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+        val links = withContext(Dispatchers.Default) {
+            payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+        }
             .map { link -> PlaybackLinkOption(link.playerName, link.quality) }
             .distinct()
         return PlaybackSettingsOptions(voiceovers = voiceovers, links = links)
@@ -133,8 +182,11 @@ class SharedAnimeWatchRepository(
         val payload = payloadFor(sourceId)
         val episode = payload.group.episodes.firstOrNull { it.id == episodeId }
             ?: throw IllegalArgumentException("Episode is not registered: $episodeId")
+        val links = withContext(Dispatchers.Default) {
+            payload.playback.getPlayerLinks(payload.title, payload.group, episode)
+        }
         val prioritizedLinks = selectPlaybackLinks(
-            links = payload.playback.getPlayerLinks(payload.title, payload.group, episode),
+            links = links,
             supports = { link -> playbackExtractors.any { extractor -> extractor.supports(link) } },
             preferredPlayerName = preferredPlayerName,
             preferredQuality = preferredQuality,
@@ -155,19 +207,28 @@ class SharedAnimeWatchRepository(
     /** Drops cached external source state after its host-provided configuration changes. */
     fun invalidateSource(sourceId: SourceId) {
         sources.remove(sourceId)
+        cachedSources.keys.removeAll { AnimeKey.parse(it)?.sourceId == sourceId }
         payloads.clear()
         resolvedPlayback.clear()
     }
 
     override fun close() {
+        cachedSources.clear()
         payloads.clear()
         resolvedPlayback.clear()
         sources.clear()
         client.close()
     }
 
-    private fun payloadFor(sourceId: String): WatchPayload = payloads[sourceId]
-        ?: error("Watch source is not loaded: $sourceId")
+    private suspend fun payloadFor(sourceId: String): WatchPayload {
+        payloads[sourceId]?.let { return it }
+
+        val titleId = watchTitleIdFromSourceId(sourceId)
+        if (titleId != sourceId) loadSources(titleId)
+
+        return payloads[sourceId]
+            ?: error("Watch source is not loaded: $sourceId")
+    }
 
     private fun sourceFor(sourceId: SourceId): AnimeSource = sources.getOrPut(sourceId) {
         val context = DefaultSourceContext(

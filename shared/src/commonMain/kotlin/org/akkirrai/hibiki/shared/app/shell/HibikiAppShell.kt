@@ -468,14 +468,30 @@ internal fun HibikiAppShell(
                         ),
                         includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
                         transitionDirection = navigationState.transitionDirection,
-                        contentTransitionKey = appShellTransitionKey(
-                            topLevelDestination = topLevelDestination,
-                            selectedTab = selectedTab.name,
-                            detailsId = state.selectedAnime?.id,
-                            watchId = watchAnime?.id,
-                            sourceId = selectedWatchSource?.sourceId,
-                            routeKey = routePresentation.currentTransitionKey,
-                        ),
+                        contentTransitionKey = if (
+                            routePresentation.currentRoute is AppRoute.TopLevel ||
+                            routePresentation.currentRoute is AppRoute.Details ||
+                            routePresentation.currentRoute is AppRoute.Settings ||
+                            routePresentation.currentRoute is AppRoute.ExternalSources
+                        ) {
+                            org.akkirrai.hibiki.shared.navigation.AppTransitionKey(
+                                route = "top-level-content",
+                                identity = if (selectedTab == AppDestination.SETTINGS) {
+                                    "${org.akkirrai.hibiki.shared.navigation.AppTopLevelDestination.PROFILE.name}:PROFILE"
+                                } else {
+                                    "${topLevelDestination.name}:${selectedTab.name}"
+                                },
+                            )
+                        } else {
+                            appShellTransitionKey(
+                                topLevelDestination = topLevelDestination,
+                                selectedTab = selectedTab.name,
+                                detailsId = state.selectedAnime?.id,
+                                watchId = watchAnime?.id,
+                                sourceId = selectedWatchSource?.sourceId,
+                                routeKey = routePresentation.currentTransitionKey,
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxSize()
                             .appRootTopInsetPadding(layoutOptions.applyStatusBarPadding),
@@ -566,20 +582,7 @@ internal fun HibikiAppShell(
                                     },
                                     onEpisodeClick = playbackRequestCoordinator::request,
                                     onResumePlayback = { progress ->
-                                        playbackRequestCoordinator.request(
-                                            episode = WatchEpisode(
-                                                id = progress.episodeId,
-                                                number = progress.episodeNumber,
-                                                title = null,
-                                            ),
-                                            sourceOverride = WatchSource(
-                                                sourceId = progress.sourceId,
-                                                title = progress.sourceTitle,
-                                                episodeCount = null,
-                                                qualityLabel = progress.quality,
-                                            ),
-                                            preferredQuality = progress.quality,
-                                        )
+                                        playbackRequestCoordinator.requestResume(progress)
                                     },
                                 ),
                                 state = AppDestinationContentState(

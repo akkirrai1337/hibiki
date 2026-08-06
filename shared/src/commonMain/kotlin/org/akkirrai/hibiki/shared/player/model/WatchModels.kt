@@ -29,6 +29,7 @@ data class PlaybackContext(
     val episodeId: String,
     val episodeNumber: Double,
     val sourceTitle: String,
+    val animeTitle: String = "",
     val episodes: List<WatchEpisode> = emptyList(),
     val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
     val selectedPlayerName: String? = null,

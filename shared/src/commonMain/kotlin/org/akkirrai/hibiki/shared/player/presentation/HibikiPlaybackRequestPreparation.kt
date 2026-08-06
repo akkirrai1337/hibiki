@@ -30,6 +30,7 @@ internal data class PreparedPlaybackRequest(
 
 internal fun preparePlaybackRequest(
     titleId: String,
+    animeTitle: String = "",
     episode: WatchEpisode,
     selectedSource: WatchSource?,
     sourceOverride: WatchSource?,
@@ -56,6 +57,7 @@ internal fun preparePlaybackRequest(
         episodeId = episode.id,
         episodeNumber = episode.number,
         sourceTitle = source.title,
+        animeTitle = animeTitle,
         episodes = episodes,
         selectedPlayerName = playerName,
         selectedQualityLabel = quality ?: source.qualityLabel,

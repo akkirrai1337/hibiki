@@ -135,6 +135,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
         val externalCatalogRepository = remember(externalRuntimeCoordinator, externalRuntimeHttpClient) {
             ExternalSourceCatalogRepository(
                 registryProvider = { externalRuntimeCoordinator.snapshot.value.registry },
+                registryAwaiter = { externalRuntimeCoordinator.awaitRegistry() },
                 contextProvider = { sourceId ->
                     DefaultSourceContext(
                         httpClient = externalRuntimeHttpClient,

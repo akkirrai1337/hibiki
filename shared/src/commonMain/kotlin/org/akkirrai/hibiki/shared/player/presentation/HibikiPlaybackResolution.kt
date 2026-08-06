@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.shared.player
 
+import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.model.WatchSource
@@ -28,7 +29,13 @@ internal suspend fun resolveHibikiPlayback(
         offlineRepository
             ?.getOfflineEpisodes(source.sourceId)
             ?.takeIf { it.isNotEmpty() }
-            ?: runCatching { repository.getEpisodes(source.sourceId) }.getOrDefault(emptyList())
+            ?: try {
+                repository.getEpisodes(source.sourceId)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                emptyList()
+            }
     }
     val effectiveEpisode = resolveCurrentEpisode(
         requestedEpisodeId = requestedEpisode.id,

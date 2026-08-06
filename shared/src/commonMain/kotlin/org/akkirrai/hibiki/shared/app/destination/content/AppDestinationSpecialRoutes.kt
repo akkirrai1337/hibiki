@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.shared.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.shared.app.destination.routes.DetailsDestinationRoute
+import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.player.HibikiWatchFlowContent
 
 @Composable
@@ -37,13 +38,16 @@ internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
 }
 
 @Composable
-internal fun AppDestinationDetailsRoute(input: AppDestinationContentInput) {
+internal fun AppDestinationDetailsRoute(
+    input: AppDestinationContentInput,
+    animeOverride: Anime? = null,
+) {
     val content = input.watch.state
     val platform = input.platform
     val playback = input.watch.playbackContext
     val source = input.sources.state
     val overlay = input.navigation.detailsOverlayState
-    val anime = requireNotNull(content.selectedAnime)
+    val anime = animeOverride ?: requireNotNull(content.selectedAnime)
 
     DetailsDestinationRoute(
         anime = anime,

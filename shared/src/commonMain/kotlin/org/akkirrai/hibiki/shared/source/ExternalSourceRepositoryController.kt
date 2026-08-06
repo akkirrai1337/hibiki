@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.shared.source
 
 import kotlinx.coroutines.CoroutineScope
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,7 @@ class ExternalSourceRepositoryController(
     private val actions: ExternalSourceRepositoryActions,
     private val scope: CoroutineScope,
     private val urlResolver: SourceRepositoryUrlResolver = SourceRepositoryUrlResolver(),
+    private val operationContext: CoroutineContext = EmptyCoroutineContext,
 ) {
     private val _state = MutableStateFlow(ExternalSourceRepositoryUiState())
     val state: StateFlow<ExternalSourceRepositoryUiState> = _state.asStateFlow()
@@ -78,7 +81,7 @@ class ExternalSourceRepositoryController(
 
     private fun launchOperation(operationBlock: suspend () -> ExternalSourceRepositoryUiState) {
         operation?.cancel()
-        operation = scope.launch {
+        operation = scope.launch(operationContext) {
             _state.value = _state.value.copy(isBusy = true, error = null)
             try {
                 _state.value = operationBlock()

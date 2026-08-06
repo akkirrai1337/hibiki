@@ -5,12 +5,17 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 
 /** Minimal runtime surface for the first external-source milestone. */
 interface ExternalSourceRuntime {
     suspend fun search(request: AnimeSearchRequest): List<AnimeTitle>
 
     suspend fun details(id: String): AnimeTitle
+}
+
+interface ExternalSourceFilterCatalogRuntime : ExternalSourceRuntime {
+    suspend fun filterCatalog(): AnimeSearchFilterCatalog
 }
 
 /** Optional runtime contract for sources that expose their latest updated titles. */
@@ -66,6 +71,12 @@ open class RuntimeBackedAnimeSource(
         SourceOperationGate.requireSupported(this, SourceOperation.DETAILS)
         requireValidExternalRuntimeId(id, "title")
         return runtime.details(id).also { requireValidExternalTitle(it, "details") }
+    }
+
+    override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
+        val filterRuntime = runtime as? ExternalSourceFilterCatalogRuntime ?: return super.getSearchFilterCatalog()
+        SourceOperationGate.requireSupported(this, SourceOperation.FILTER_CATALOG)
+        return filterRuntime.filterCatalog()
     }
 }
 

@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.shared.app.shell.layout
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -56,7 +55,7 @@ fun AppProductionRoot(
                     transitionKey = contentTransitionKey
                         ?: AppTransitionKey("top-level", currentDestination.route),
                 ),
-                transitionSpec = { appRootTransition(transitionDirection) },
+                transitionSpec = { appScreenTransition(transitionDirection) },
                 label = "top_level_screen_transition",
             ) { state ->
                 content(state.destination)
@@ -70,14 +69,12 @@ private data class AppRootContentState(
     val transitionKey: AppTransitionKey,
 )
 
-private fun appRootTransition(direction: AppTransitionDirection): ContentTransform {
-    return when (direction) {
-        AppTransitionDirection.Forward,
-        AppTransitionDirection.Pop,
-        -> fadeIn(
-            animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
-        ) togetherWith fadeOut(
-            animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
-        )
-    }
+internal fun appScreenTransition(direction: AppTransitionDirection) = when (direction) {
+    AppTransitionDirection.Forward,
+    AppTransitionDirection.Pop,
+    -> fadeIn(
+        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+    ) togetherWith fadeOut(
+        animationSpec = tween(AppMotion.ScreenTransitionDurationMillis),
+    )
 }

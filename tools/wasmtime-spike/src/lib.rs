@@ -7,6 +7,7 @@ use std::sync::mpsc;
 use std::sync::{Mutex, OnceLock};
 #[cfg(feature = "android-production-jni")]
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
@@ -44,10 +45,17 @@ struct CancellationScope {
 static CANCELLATION_SCOPES: OnceLock<Mutex<HashMap<i64, CancellationScope>>> = OnceLock::new();
 #[cfg(feature = "android-production-jni")]
 static NEXT_CANCELLATION_SCOPE_ID: AtomicI64 = AtomicI64::new(1);
+#[cfg(feature = "android-production-jni")]
+static COMPILED_MODULES: OnceLock<Mutex<HashMap<Vec<u8>, Vec<u8>>>> = OnceLock::new();
 
 #[cfg(feature = "android-production-jni")]
 fn cancellation_scopes() -> &'static Mutex<HashMap<i64, CancellationScope>> {
     CANCELLATION_SCOPES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[cfg(feature = "android-production-jni")]
+fn compiled_modules() -> &'static Mutex<HashMap<Vec<u8>, Vec<u8>>> {
+    COMPILED_MODULES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -99,10 +107,38 @@ fn runtime_engine() -> Result<Engine, wasmtime::Error> {
 }
 
 #[cfg(feature = "android-production-jni")]
-fn validate_protocol_module(module_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+fn compiled_protocol_module_artifact(
+    module_bytes: &[u8],
+    artifact_path: Option<&Path>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     if module_bytes.len() > PROTOCOL_MAX_MODULE_BYTES {
         return Err("caller-supplied module exceeds the native limit".into());
     }
+
+    if let Ok(cache) = compiled_modules().lock() {
+        if let Some(artifact) = cache.get(module_bytes) {
+            return Ok(artifact.clone());
+        }
+    }
+
+    if let Some(path) = artifact_path {
+        if let Ok(artifact) = std::fs::read(path) {
+            let engine = runtime_engine()?;
+            if let Ok(module) = unsafe { Module::deserialize(&engine, &artifact) } {
+                if module.get_export("memory").is_some()
+                    && module.get_export("beakokit_reset").is_some()
+                    && module.get_export("beakokit_alloc").is_some()
+                    && module.get_export("beakokit_call").is_some()
+                {
+                    if let Ok(mut cache) = compiled_modules().lock() {
+                        cache.insert(module_bytes.to_vec(), artifact.clone());
+                    }
+                    return Ok(artifact);
+                }
+            }
+        }
+    }
+
     let engine = runtime_engine()?;
     let module = Module::new(&engine, module_bytes)?;
     match module.get_export("memory") {
@@ -117,7 +153,33 @@ fn validate_protocol_module(module_bytes: &[u8]) -> Result<(), Box<dyn std::erro
         &[ValType::I32, ValType::I32],
         &[ValType::I64],
     )?;
-    Ok(())
+    let artifact = module.serialize()?;
+    if let Some(path) = artifact_path {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, &artifact)?;
+    }
+    if let Ok(mut cache) = compiled_modules().lock() {
+        cache.insert(module_bytes.to_vec(), artifact.clone());
+    }
+    Ok(artifact)
+}
+
+#[cfg(feature = "android-production-jni")]
+fn validate_protocol_module(module_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    compiled_protocol_module_artifact(module_bytes, None).map(|_| ())
+}
+
+#[cfg(feature = "android-production-jni")]
+fn load_protocol_module(
+    module_bytes: &[u8],
+    artifact_path: Option<&Path>,
+) -> Result<(Engine, Module), Box<dyn std::error::Error>> {
+    let engine = runtime_engine()?;
+    let artifact = compiled_protocol_module_artifact(module_bytes, artifact_path)?;
+    let module = unsafe { Module::deserialize(&engine, artifact)? };
+    Ok((engine, module))
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -420,6 +482,9 @@ fn run_protocol_host_call_request_with_module(
                 .map_err(|error| wasmtime::Error::msg(error.to_string()))?;
             let payload = match &request.operation {
                 protocol::Operation::Search => serde_json::json!({ "items": [] }),
+                protocol::Operation::FilterCatalog => serde_json::json!({
+                    "sortOptions": [], "typeOptions": [], "statusOptions": [], "genreOptions": []
+                }),
                 protocol::Operation::Details => sample_title_payload(),
                 protocol::Operation::PlaybackGroups => serde_json::json!({ "groups": [] }),
                 protocol::Operation::PlayerLinks => serde_json::json!({ "links": [] }),
@@ -729,6 +794,7 @@ pub unsafe extern "C" fn beakokit_runtime_protocol_call_with_module_and_host(
             callback,
             user_data,
             None,
+            None,
         ) {
             Ok(value) => value,
             Err(_) => return PROTOCOL_CALL_RUNTIME_FAILURE,
@@ -751,16 +817,23 @@ fn run_protocol_host_call_request_with_callback(
     host_call: HostCall,
     user_data: *mut core::ffi::c_void,
     _cancellation_scope_id: Option<i64>,
+    _artifact_path: Option<&Path>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let user_data = user_data as usize;
-    let engine = runtime_engine()?;
+    #[cfg(feature = "android-production-jni")]
+    let (engine, module) = load_protocol_module(module_bytes, _artifact_path)?;
+    #[cfg(not(feature = "android-production-jni"))]
+    let (engine, module) = {
+        let engine = runtime_engine()?;
+        let module = Module::new(&engine, module_bytes)?;
+        (engine, module)
+    };
     #[cfg(feature = "android-production-jni")]
     if let Some(scope_id) = _cancellation_scope_id {
         if bind_cancellation_scope(scope_id, &engine) || cancellation_requested(scope_id) {
             return Err("external runtime call was cancelled".into());
         }
     }
-    let module = Module::new(&engine, module_bytes)?;
     let mut linker = Linker::new(&engine);
     p1::add_to_linker_sync(&mut linker, |wasi| wasi)?;
     linker.func_wrap(
@@ -884,6 +957,32 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
     }
 }
 
+/// Production JNI validation entry point that also persists the compiled module artifact.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_validateModuleWithArtifact(
+    mut env: JNIEnv,
+    _class: JClass,
+    module: JByteArray,
+    artifact_path: JString,
+) {
+    let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+        let module_len = env.get_array_length(&module)? as usize;
+        let mut signed_module = vec![0_i8; module_len];
+        env.get_byte_array_region(&module, 0, &mut signed_module)?;
+        let module_bytes: Vec<u8> = signed_module.into_iter().map(|byte| byte as u8).collect();
+        let artifact_path: String = env.get_string(&artifact_path)?.into();
+        if artifact_path.is_empty() {
+            return Err("compiled module artifact path is empty".into());
+        }
+        compiled_protocol_module_artifact(&module_bytes, Some(Path::new(&artifact_path)))?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = env.throw_new("java/lang/IllegalArgumentException", error.to_string());
+    }
+}
+
 /// Production JNI bridge for one verified binary Wasm module call.
 #[cfg(feature = "android-production-jni")]
 #[no_mangle]
@@ -933,6 +1032,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
         request,
         host,
         (cancellation_scope_id != 0).then_some(cancellation_scope_id),
+        None,
     )
         .unwrap_or_else(|error| {
             serde_json::json!({
@@ -944,6 +1044,54 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
             })
             .to_string()
         });
+    env.new_string(response)
+        .map(|value| value.into_raw())
+        .unwrap_or(null_mut())
+}
+
+/// Production JNI host call that loads the artifact persisted during installation.
+#[cfg(feature = "android-production-jni")]
+#[no_mangle]
+pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBridge_protocolModuleCallWithHostAndArtifact(
+    mut env: JNIEnv,
+    _class: JClass,
+    module: JByteArray,
+    request: JString,
+    host: JObject,
+    cancellation_scope_id: i64,
+    artifact_path: JString,
+) -> jni::sys::jstring {
+    let request_id = env
+        .get_string(&request)
+        .ok()
+        .map(String::from)
+        .and_then(|value| serde_json::from_str::<serde_json::Value>(&value).ok())
+        .and_then(|value| value.get("requestId")?.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "jni-host-runtime-error".to_owned());
+    let response = match env.get_string(&artifact_path) {
+        Ok(path) => {
+            let path: String = path.into();
+            protocol_response_from_production_jni_with_host(
+                &mut env,
+                module,
+                request,
+                host,
+                (cancellation_scope_id != 0).then_some(cancellation_scope_id),
+                Some(Path::new(&path)),
+            )
+        }
+        Err(error) => Err(error.into()),
+    }
+    .unwrap_or_else(|error| {
+        serde_json::json!({
+            "requestId": request_id,
+            "payload": null,
+            "errorCode": "RUNTIME_FAILURE",
+            "errorMessage": error.to_string(),
+            "protocolVersion": protocol::PROTOCOL_VERSION
+        })
+        .to_string()
+    });
     env.new_string(response)
         .map(|value| value.into_raw())
         .unwrap_or(null_mut())
@@ -1085,6 +1233,7 @@ fn protocol_response_from_production_jni_with_host(
     request: JString,
     host: JObject,
     cancellation_scope_id: Option<i64>,
+    artifact_path: Option<&Path>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let module_len = env.get_array_length(&module)? as usize;
     if module_len > PROTOCOL_MAX_MODULE_BYTES {
@@ -1106,6 +1255,7 @@ fn protocol_response_from_production_jni_with_host(
         jni_host_callback,
         user_data,
         cancellation_scope_id,
+        artifact_path,
     )?;
     Ok(String::from_utf8(response)?)
 }

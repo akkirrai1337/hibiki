@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 @Serializable
 enum class ExternalSourceRuntimeOperation {
     SEARCH,
+    FILTER_CATALOG,
     DETAILS,
     LATEST,
     PLAYBACK_GROUPS,
