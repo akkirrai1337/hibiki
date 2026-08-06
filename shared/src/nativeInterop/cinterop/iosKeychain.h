@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
+#include <stddef.h>
+#include <stdint.h>
 
 static inline NSData *hibiki_keychain_read(NSString *service, NSString *account) {
     NSDictionary *query = @{
@@ -20,7 +22,8 @@ static inline NSData *hibiki_keychain_read(NSString *service, NSString *account)
 static inline BOOL hibiki_keychain_write(
     NSString *service,
     NSString *account,
-    NSData *value
+    const uint8_t *valueBytes,
+    size_t valueLength
 ) {
     NSDictionary *query = @{
         (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
@@ -32,7 +35,7 @@ static inline BOOL hibiki_keychain_write(
         (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
         (__bridge id)kSecAttrService: service,
         (__bridge id)kSecAttrAccount: account,
-        (__bridge id)kSecValueData: value,
+        (__bridge id)kSecValueData: [NSData dataWithBytes:valueBytes length:valueLength],
     };
     return SecItemAdd((__bridge CFDictionaryRef)attributes, NULL) == errSecSuccess;
 }

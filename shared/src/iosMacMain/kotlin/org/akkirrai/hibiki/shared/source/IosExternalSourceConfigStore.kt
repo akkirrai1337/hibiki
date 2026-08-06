@@ -1,8 +1,6 @@
 package org.akkirrai.hibiki.shared.source
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.*
 import platform.Foundation.NSData
 import platform.Foundation.NSUserDefaults
 import org.akkirrai.beakokit.api.MapSourceConfig
@@ -59,11 +57,15 @@ internal class IosExternalSourceConfigStore(
             clearSecret(sourceId, key)
             return
         }
-        val saved = hibiki_keychain_write(
-            KEYCHAIN_SERVICE,
-            secretKey(sourceId, key),
-            value.encodeToByteArray().toNSData(),
-        )
+        val bytes = value.encodeToByteArray()
+        val saved = bytes.usePinned { pinned ->
+            hibiki_keychain_write(
+                KEYCHAIN_SERVICE,
+                secretKey(sourceId, key),
+                if (bytes.isEmpty()) null else pinned.addressOf(0).reinterpret<UByteVar>(),
+                bytes.size.toULong(),
+            )
+        }
         check(saved) { "Could not persist external source secret in Keychain" }
         updateSecretKeys(sourceId) { it + key }
     }
@@ -109,18 +111,6 @@ internal class IosExternalSourceConfigStore(
                 "Invalid external source config key: $key"
             }
         }
-    }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private fun ByteArray.toNSData(): NSData = if (isEmpty()) {
-    NSData()
-} else {
-    usePinned { pinned ->
-        NSData(
-            bytes = pinned.addressOf(0),
-            length = size.toULong(),
-        )
     }
 }
 
