@@ -100,6 +100,17 @@ class IosDownloadedSourcePackageExtractor(
             }
             val parent = currentPath.substringBeforeLast('/', missingDelimiterValue = "")
             if (parent == currentPath || parent.isEmpty()) break
+
+            // iOS application containers are commonly exposed below /var, which is a
+            // system-owned symbolic link. Once we reach the closest existing parent we
+            // have checked every path component controlled by this package install; do
+            // not walk into system-owned ancestors and reject a valid container path.
+            if (fileManager.fileExistsAtPath(parent)) {
+                require(fileManager.destinationOfSymbolicLinkAtPath(parent, error = null) == null) {
+                    "$label must not be a symbolic link: $parent"
+                }
+                break
+            }
             currentPath = parent
         }
     }

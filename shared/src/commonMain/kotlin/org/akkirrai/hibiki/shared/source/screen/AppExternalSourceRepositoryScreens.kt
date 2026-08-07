@@ -368,7 +368,8 @@ fun AppSourcesTabsScreen(
                                         onSourceSelected(packageStatus.sourceId.value)
                                     }
                                 },
-                                selected = selectedSourceId == packageStatus.sourceId.value,
+                                selected = packageStatus.activePackage != null &&
+                                    selectedSourceId == packageStatus.sourceId.value,
                                 onManage = { onManage(packageStatus.sourceId) },
                                 onUpdate = { onInstall(packageStatus.sourceId) },
                             )
@@ -510,7 +511,8 @@ fun AppSourceExtensionsTabScreen(
                         onPackageClick = {
                             Unit
                         },
-                        selected = selectedSourceId == packageStatus.sourceId.value,
+                        selected = packageStatus.activePackage != null &&
+                            selectedSourceId == packageStatus.sourceId.value,
                         onManage = { onManage(packageStatus.sourceId) },
                         onUpdate = { onInstall(packageStatus.sourceId) },
                     )
@@ -647,7 +649,8 @@ fun AppSourceRepositoryPackagesScreen(
                                 onSourceSelected(packageStatus.sourceId.value)
                             }
                         },
-                        selected = selectedSourceId == packageStatus.sourceId.value,
+                        selected = packageStatus.activePackage != null &&
+                            selectedSourceId == packageStatus.sourceId.value,
                         onManage = { onManage(packageStatus.sourceId) },
                         onUpdate = { onInstall(packageStatus.sourceId) },
                     )
