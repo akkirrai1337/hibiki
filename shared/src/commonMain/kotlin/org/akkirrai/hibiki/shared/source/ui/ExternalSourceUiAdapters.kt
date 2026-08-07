@@ -19,8 +19,8 @@ fun ExternalSourceRegistry.toAppSourceDescriptors(): List<AppSourceDescriptor> =
         )
     }
 
-/** Merges source metadata for the transition period; built-in entries win on duplicate IDs. */
+/** Merges source metadata; an installed external package replaces its built-in counterpart. */
 fun mergeAppSourceDescriptors(
     builtIn: List<AppSourceDescriptor>,
     external: List<AppSourceDescriptor>,
-): List<AppSourceDescriptor> = (builtIn + external).distinctBy(AppSourceDescriptor::id)
+): List<AppSourceDescriptor> = (external + builtIn).distinctBy(AppSourceDescriptor::id)

@@ -29,7 +29,6 @@ import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
@@ -56,6 +55,7 @@ import org.akkirrai.beakokit.api.SourceConfigSchema
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
@@ -133,7 +133,7 @@ internal fun AndroidSharedAppShell(
             statusLabels = externalStatusLabels,
         )
     }
-    val builtInCatalogRepository = remember(dependencies) { dependencies.animeCatalogRepository() }
+    val builtInCatalogRepository = EmptyAnimeCatalogRepository
     val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
         TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
     }
@@ -199,22 +199,8 @@ internal fun AndroidSharedAppShell(
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
     val sources = remember(externalSnapshot?.registry) {
-        val builtInSources = AnimeSourceRegistry.sources.map { source ->
-            AppSourceDescriptor(
-                id = source.id.value,
-                name = source.name,
-                language = source.language.toString(),
-                languageTags = source.info.languages.mapTo(linkedSetOf()) { it.tag },
-                iconUrl = source.iconUrl,
-                supportsPlayback = source.supportsPlayback,
-                supportsSearch = true,
-                // Built-in settings still belong to the legacy source adapters. Do not route
-                // their schema through the external-source config store.
-                configSchema = SourceConfigSchema(),
-            )
-        }
         mergeAppSourceDescriptors(
-            builtIn = builtInSources,
+            builtIn = emptyList(),
             external = externalSnapshot?.registry?.toAppSourceDescriptors().orEmpty(),
         )
     }

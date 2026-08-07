@@ -31,6 +31,17 @@ interface AnimeCatalogRepository {
         search(AnimeCatalogQuery(text = query)).items
 }
 
+/** Empty legacy catalog used while the app is running in external-sources-only mode. */
+object EmptyAnimeCatalogRepository : AnimeCatalogRepository {
+    override val initialItems: List<Anime> = emptyList()
+
+    override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage = AnimeCatalogPage(
+        items = emptyList(),
+        page = query.page.coerceAtLeast(1),
+        canLoadMore = false,
+    )
+}
+
 /** Optional catalog capability for source-separated search results. */
 interface MultiSourceAnimeCatalogRepository : AnimeCatalogRepository {
     suspend fun searchSource(sourceId: String, query: AnimeCatalogQuery): AnimeCatalogPage

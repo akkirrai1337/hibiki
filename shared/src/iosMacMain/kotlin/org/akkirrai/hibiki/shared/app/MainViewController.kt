@@ -103,7 +103,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         config = externalConfigStore.load(sourceId),
                     )
                 },
-                reservedSourceIds = IosSourceRegistry.sources.mapTo(linkedSetOf()) { SourceId(it.id) },
+                // External packages are the selectable source implementation on iOS too.
+                // Keeping built-in IDs reserved here hides packages such as AniLiberty from
+                // repository pages before they can be installed.
+                reservedSourceIds = emptySet(),
             )
         }
         val externalRefreshScope = rememberCoroutineScope()
@@ -288,7 +291,7 @@ fun MainViewController(systemLanguage: String): UIViewController {
                     settingsStore = settingsStore,
                     progressRepository = watchStateRepository,
                     systemLanguage = systemLanguage,
-                    enableOnboarding = true,
+                    enableOnboarding = false,
                     onboardingNotificationPermissionState = notificationPermissionState.value,
                     appVersionName = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "dev",
                     platformCallbacks = org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks(

@@ -23,7 +23,6 @@ import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.createAndroidExternalSourceRuntimeFactory
 import org.akkirrai.hibiki.shared.source.validateAndroidExternalSourceRuntime
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.BuildConfig
@@ -78,11 +77,7 @@ internal fun AndroidExternalSourceBackgroundSync(
             runtimeInitializer = { sourcePackage, _ ->
                 validateAndroidExternalSourceRuntime(sourcePackage)
             },
-            reservedSourceIds = if (BuildConfig.DEBUG) {
-                emptySet()
-            } else {
-                AnimeSourceRegistry.sources.mapTo(linkedSetOf()) { it.id }
-            },
+            reservedSourceIds = emptySet(),
         )
     }
     LaunchedEffect(coordinator) {

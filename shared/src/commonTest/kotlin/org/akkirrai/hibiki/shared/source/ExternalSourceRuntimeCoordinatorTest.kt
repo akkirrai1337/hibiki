@@ -133,7 +133,7 @@ class ExternalSourceRuntimeCoordinatorTest {
             ),
             external = listOf(descriptor),
         )
-        assertEquals(listOf("Built-in source"), merged.map { it.name })
+        assertEquals(listOf("External source"), merged.map { it.name })
         val mapped = AnimeTitle(
             id = "native-1",
             russianName = null,

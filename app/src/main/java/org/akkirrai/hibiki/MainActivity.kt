@@ -157,7 +157,7 @@ class MainActivity : ComponentActivity() {
                                 activity = this@MainActivity,
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                 onConfigureNotifications = ::configureNotifications,
-                                enableOnboarding = true,
+                                enableOnboarding = false,
                             )
                             if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
                                 availableUpdate?.let { update ->
