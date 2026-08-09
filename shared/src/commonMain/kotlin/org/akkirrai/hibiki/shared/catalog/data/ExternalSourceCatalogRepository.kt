@@ -36,6 +36,10 @@ class ExternalSourceCatalogRepository(
 
     override val initialItems: List<Anime> = emptyList()
 
+    override fun invalidate() {
+        sourceCache.clear()
+    }
+
     override fun canContinuePaginationAfterShortPage(): Boolean = true
 
     fun hasSource(sourceId: String): Boolean = registryProvider()?.sources

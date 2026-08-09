@@ -9,6 +9,8 @@ import org.akkirrai.hibiki.shared.demo.DemoCatalog
 interface AnimeCatalogRepository {
     val initialItems: List<Anime>
 
+    fun invalidate() = Unit
+
     /**
      * Some external APIs cap a page below the requested size without exposing a total.
      * The catalog may continue requesting pages until the source returns no new items.

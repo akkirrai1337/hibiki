@@ -46,6 +46,7 @@ fun HibikiApp(
     watchRepository: WatchDataRepository? = null,
     playbackCallbacks: AppPlaybackPlatformCallbacks = AppPlaybackPlatformCallbacks(),
     layoutOptions: AppLayoutOptions = AppLayoutOptions(),
+    catalogRefreshKey: Any? = null,
 ) {
     CompositionLocalProvider(LocalAppSourceConfigContent provides sourceCallbacks.sourceConfigContent) {
         HibikiAppShell(
@@ -68,6 +69,7 @@ fun HibikiApp(
         watchRepository = watchRepository,
         playbackCallbacks = playbackCallbacks,
         layoutOptions = layoutOptions,
+        catalogRefreshKey = catalogRefreshKey,
         )
     }
 }

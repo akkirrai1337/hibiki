@@ -219,6 +219,7 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             enableOnboarding = enableOnboarding,
+            catalogRefreshKey = externalSnapshot?.registry,
             platformCallbacks = AppPlatformCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->

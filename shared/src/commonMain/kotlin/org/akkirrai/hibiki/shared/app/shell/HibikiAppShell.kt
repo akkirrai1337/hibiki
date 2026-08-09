@@ -152,6 +152,7 @@ internal fun HibikiAppShell(
     watchRepository: WatchDataRepository? = null,
     playbackCallbacks: AppPlaybackPlatformCallbacks = AppPlaybackPlatformCallbacks(),
     layoutOptions: AppLayoutOptions = AppLayoutOptions(),
+    catalogRefreshKey: Any? = null,
 ) {
     val scope = rememberCoroutineScope {
         CoroutineExceptionHandler { _, throwable ->
@@ -269,6 +270,7 @@ internal fun HibikiAppShell(
         presenter = presenter,
         homeSearchPresenter = homeSearchPresenter,
         sourceSearchPresenter = sourceSearchPresenter,
+        catalogRefreshKey = catalogRefreshKey,
         onDisposed = sourceSelectionCoordinator::cancel,
     )
 
@@ -509,6 +511,7 @@ internal fun HibikiAppShell(
                                     onQueryChange = catalogActions.onQueryChange,
                                     onFiltersChange = catalogActions.onFiltersChange,
                                     onRetry = catalogActions.onRetry,
+                                    onRefresh = catalogActions.onRefresh,
                                     onLoadMoreRetry = catalogActions.onLoadMoreRetry,
                                     onSortSelected = catalogActions.onSortSelected,
                                 ),

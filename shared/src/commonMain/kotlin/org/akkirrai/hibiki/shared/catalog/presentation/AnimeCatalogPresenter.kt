@@ -274,6 +274,11 @@ class AnimeCatalogPresenter(
         }
     }
 
+    fun refresh() {
+        repository.invalidate()
+        search()
+    }
+
     private fun canRequestNextPage(
         result: AnimeCatalogPage,
         hasNewItems: Boolean = result.items.isNotEmpty(),

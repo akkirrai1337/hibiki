@@ -76,6 +76,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onFiltersChange = catalog.actions.onFiltersChange,
                 onAnimeClick = navigation.actions.onAnimeClick,
                 onRetry = catalog.actions.onRetry,
+                onRefresh = catalog.actions.onRefresh,
                 onLoadMoreRetry = catalog.actions.onLoadMoreRetry,
                 onSortSelected = catalog.actions.onSortSelected,
                 bottomContentPadding = topLevelBottomContentPadding,

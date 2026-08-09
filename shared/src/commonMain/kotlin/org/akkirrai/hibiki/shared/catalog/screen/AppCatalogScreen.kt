@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,6 +66,7 @@ data class AppCatalogScreenLabels(
     val optionText: @Composable (org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption) -> String,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppCatalogScreen(
     state: AnimeCatalogUiState,
@@ -72,6 +77,7 @@ fun AppCatalogScreen(
     labels: AppCatalogScreenLabels,
     onQueryChange: (String) -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onLoadMoreRetry: () -> Unit,
     onItemVisible: (Anime) -> Unit,
     onSortSelected: (CatalogSort) -> Unit,
@@ -122,6 +128,7 @@ fun AppCatalogScreen(
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isSortVisible by remember { mutableStateOf(true) }
     var searchFieldFocused by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
@@ -165,6 +172,17 @@ fun AppCatalogScreen(
         },
     ) {
         Box(modifier = modifier) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && !state.isLoadingMore,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = state.isLoading && !state.isLoadingMore,
+                )
+            },
+        ) {
         AppCatalogScreenContent(
             state = state,
             listState = listState,
@@ -181,6 +199,7 @@ fun AppCatalogScreen(
             onRetry = onRetry,
             onLoadMoreRetry = onLoadMoreRetry,
         )
+        }
 
         val sortAlpha by animateFloatAsState(
             targetValue = if (isSortVisible) 1f else 0f,

@@ -11,6 +11,7 @@ internal class HibikiCatalogActions(
     val onQueryChange: (String) -> Unit = presenter::onQueryChange
     val onFiltersChange: (AnimeSearchFilters) -> Unit = presenter::updateFilters
     val onRetry: () -> Unit = presenter::search
+    val onRefresh: () -> Unit = presenter::refresh
     val onLoadMoreRetry: () -> Unit = presenter::loadMore
     val onSortSelected: (CatalogSort) -> Unit = { sort ->
         presenter.setFilters(presenter.state.value.filters.copy(sortAlias = sort.toAlias()))

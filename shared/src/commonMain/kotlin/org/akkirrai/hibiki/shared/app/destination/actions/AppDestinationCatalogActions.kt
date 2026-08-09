@@ -7,6 +7,7 @@ internal data class AppDestinationCatalogActions(
     val onQueryChange: (String) -> Unit,
     val onFiltersChange: (AnimeSearchFilters) -> Unit,
     val onRetry: () -> Unit,
+    val onRefresh: () -> Unit,
     val onLoadMoreRetry: () -> Unit,
     val onSortSelected: (CatalogSort) -> Unit,
 )
