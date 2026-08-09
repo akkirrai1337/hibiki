@@ -163,6 +163,7 @@ class ExternalSourceRepositoryControllerTest {
                                 sourceId = available.sourceId,
                                 packageVersion = activeManifest.packageVersion,
                                 packagePath = "package/${activeManifest.packageVersion}",
+                                artifactSha256 = if (packageInstalled) available.sha256 else null,
                             ),
                         ),
                         rollbackAvailable = packageInstalled,

@@ -1,8 +1,10 @@
 package org.akkirrai.beakokit.api
 
 import io.ktor.client.HttpClient
+import io.ktor.client.request.header
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
 import io.ktor.utils.io.core.readBytes
 import io.ktor.utils.io.readRemaining
 
@@ -14,7 +16,13 @@ class KtorSourceRepositoryTransport(
         url: String,
         limits: SourceRepositoryLoadLimits,
     ): SourceRepositoryResponse {
-        val response = client.get(url)
+        // Repository indexes are mutable metadata. A manual refresh must not
+        // be satisfied from an intermediate HTTP/CDN cache after a publisher
+        // has released a new package version.
+        val response = client.get(url) {
+            header(HttpHeaders.CacheControl, "no-cache, no-store, max-age=0")
+            header(HttpHeaders.Pragma, "no-cache")
+        }
         if (response.status.value !in 200..299) {
             response.bodyAsChannel().cancel(null)
             return SourceRepositoryResponse(

@@ -244,6 +244,9 @@ fun AppSourcesTabsScreen(
     var sourcesSearchOpen by remember { mutableStateOf(false) }
     var languageFilterOpen by remember { mutableStateOf(false) }
     var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
+    var displayedSelectedSourceId by remember(selectedSourceId) {
+        mutableStateOf(selectedSourceId)
+    }
     val languages = remember(packages) {
         packages.flatMap { it.availableManifest.sourceInfo?.languages.orEmpty() }
             .map { it.tag }
@@ -274,11 +277,18 @@ fun AppSourcesTabsScreen(
     }
 
     AppSystemBackHandler(
-        enabled = activeSearchOpen && searchFieldFocused,
+        enabled = activeSearchOpen,
         onBack = {
             focusManager.clearFocus()
             keyboardController?.hide()
             searchFieldFocused = false
+            if (extensionsTabSelected) {
+                extensionsQuery = ""
+                extensionsSearchOpen = false
+            } else {
+                sourcesQuery = ""
+                sourcesSearchOpen = false
+            }
         },
     ) {
         Column(modifier = modifier.fillMaxSize()) {
@@ -365,11 +375,12 @@ fun AppSourcesTabsScreen(
                                 onInstall = { onInstall(packageStatus.sourceId) },
                                 onPackageClick = {
                                     if (packageStatus.activePackage != null) {
+                                        displayedSelectedSourceId = packageStatus.sourceId.value
                                         onSourceSelected(packageStatus.sourceId.value)
                                     }
                                 },
                                 selected = packageStatus.activePackage != null &&
-                                    selectedSourceId == packageStatus.sourceId.value,
+                                    displayedSelectedSourceId == packageStatus.sourceId.value,
                                 onManage = { onManage(packageStatus.sourceId) },
                                 onUpdate = { onInstall(packageStatus.sourceId) },
                             )
@@ -550,6 +561,9 @@ fun AppSourceRepositoryPackagesScreen(
     modifier: Modifier = Modifier,
 ) {
     var query by remember(repository?.endpoint?.url) { mutableStateOf("") }
+    var displayedSelectedSourceId by remember(repository?.endpoint?.url, selectedSourceId) {
+        mutableStateOf(selectedSourceId)
+    }
     var selectedLanguages by remember(repository?.endpoint?.url) { mutableStateOf(emptySet<String>()) }
     var searchOpen by remember(repository?.endpoint?.url) { mutableStateOf(false) }
     var languageFilterOpen by remember(repository?.endpoint?.url) { mutableStateOf(false) }
@@ -574,11 +588,13 @@ fun AppSourceRepositoryPackagesScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     AppSystemBackHandler(
-        enabled = searchOpen && searchFieldFocused,
+        enabled = searchOpen,
         onBack = {
             focusManager.clearFocus()
             keyboardController?.hide()
             searchFieldFocused = false
+            query = ""
+            searchOpen = false
         },
     ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -646,11 +662,12 @@ fun AppSourceRepositoryPackagesScreen(
                         onInstall = { onInstall(packageStatus.sourceId) },
                         onPackageClick = {
                             if (packageStatus.activePackage != null) {
+                                displayedSelectedSourceId = packageStatus.sourceId.value
                                 onSourceSelected(packageStatus.sourceId.value)
                             }
                         },
                         selected = packageStatus.activePackage != null &&
-                            selectedSourceId == packageStatus.sourceId.value,
+                            displayedSelectedSourceId == packageStatus.sourceId.value,
                         onManage = { onManage(packageStatus.sourceId) },
                         onUpdate = { onInstall(packageStatus.sourceId) },
                     )

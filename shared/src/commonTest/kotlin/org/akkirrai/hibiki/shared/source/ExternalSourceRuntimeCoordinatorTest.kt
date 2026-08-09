@@ -547,7 +547,7 @@ class ExternalSourceRuntimeCoordinatorTest {
     }
 
     @Test
-    fun legacyActivationWithoutArtifactHashDoesNotInventSameVersionUpdate() {
+    fun legacyActivationWithoutArtifactHashRequestsArtifactMetadataRefresh() {
         val sourceId = SourceId("external-source")
         val available = manifest(sourceId).copy(sha256 = "b".repeat(64))
         val active = ActiveExternalSourcePackage(
@@ -559,7 +559,7 @@ class ExternalSourceRuntimeCoordinatorTest {
             ),
         )
 
-        assertFalse(
+        assertEquals(true,
             ExternalSourcePackageStatus(
                 sourceId = sourceId,
                 availableManifest = available,

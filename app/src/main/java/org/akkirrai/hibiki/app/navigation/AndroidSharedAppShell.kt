@@ -28,6 +28,7 @@ import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
+import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
@@ -80,6 +81,11 @@ internal fun AndroidSharedAppShell(
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
     val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
+    val externalCatalogRefreshKey = externalSnapshot?.repository?.loaded?.joinToString("|") { loaded ->
+        loaded.endpoint.url + loaded.index.sources.joinToString(",") { manifest ->
+            "${manifest.sourceId}:${manifest.packageVersion}:${manifest.sha256}"
+        }
+    }
     val externalRepositoryControllerScope = rememberCoroutineScope()
     val externalRepositoryController = remember(externalCoordinator) {
         externalCoordinator?.let {
@@ -111,7 +117,12 @@ internal fun AndroidSharedAppShell(
         released = appText(AppTextKey.Released),
         announcement = appText(AppTextKey.Announcement),
     )
-    val externalCatalogRepository = remember(externalCoordinator, externalHttpClient, externalStatusLabels) {
+    val externalCatalogRepository = remember(
+        externalCoordinator,
+        externalSnapshot?.registry,
+        externalHttpClient,
+        externalStatusLabels,
+    ) {
         ExternalSourceCatalogRepository(
             registryProvider = { externalCoordinator?.snapshot?.value?.registry },
             registryAwaiter = { externalCoordinator?.awaitRegistry() },
@@ -188,6 +199,7 @@ internal fun AndroidSharedAppShell(
     }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val preferences = LocalAppPreferencesState.current
+    val appPreferences = LocalAppPreferences.current
     androidx.compose.runtime.LaunchedEffect(
         catalogRepository,
         preferences.animeSource.value,
@@ -219,7 +231,7 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             enableOnboarding = enableOnboarding,
-            catalogRefreshKey = externalSnapshot?.registry,
+            catalogRefreshKey = externalCatalogRefreshKey,
             platformCallbacks = AppPlatformCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->
@@ -290,6 +302,7 @@ internal fun AndroidSharedAppShell(
                 },
                 selectedSourceId = preferences.animeSource.value,
                 onSourceSelected = { sourceId ->
+                    appPreferences.setAnimeSource(SourceId(sourceId))
                     settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
                 },
                 readClipboardText = {

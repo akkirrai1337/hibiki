@@ -101,9 +101,32 @@ fn finish_cancellation_scope(scope_id: i64) {
 
 fn runtime_engine() -> Result<Engine, wasmtime::Error> {
     let mut config = Config::new();
+    // Android must use explicit Wasm trap checks. Signal-based traps can surface
+    // as an unhandled SIGILL in the app's dispatcher thread on some devices,
+    // taking down the whole process instead of returning a runtime error.
+    config.signals_based_traps(false);
     config.consume_fuel(true);
     config.epoch_interruption(true);
     Engine::new(&config)
+}
+
+#[cfg(feature = "android-production-jni")]
+fn normalize_runtime_error_message(message: impl Into<String>) -> String {
+    let message = message.into().replace(['\r', '\n'], " ");
+    message.chars().take(4 * 1024).collect()
+}
+
+#[cfg(feature = "android-production-jni")]
+fn normalize_runtime_response(response: Vec<u8>) -> Result<String, Box<dyn std::error::Error>> {
+    let mut value: serde_json::Value = serde_json::from_slice(&response)?;
+    if let Some(normalized) = value
+        .get("errorMessage")
+        .and_then(serde_json::Value::as_str)
+        .map(normalize_runtime_error_message)
+    {
+        value["errorMessage"] = serde_json::Value::String(normalized);
+    }
+    Ok(serde_json::to_string(&value)?)
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -998,7 +1021,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
                 "requestId": "jni-runtime-error",
                 "payload": null,
                 "errorCode": "RUNTIME_FAILURE",
-                "errorMessage": error.to_string(),
+                "errorMessage": normalize_runtime_error_message(error.to_string()),
                 "protocolVersion": protocol::PROTOCOL_VERSION
             })
             .to_string()
@@ -1039,7 +1062,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
                 "requestId": request_id,
                 "payload": null,
                 "errorCode": "RUNTIME_FAILURE",
-                "errorMessage": error.to_string(),
+                "errorMessage": normalize_runtime_error_message(error.to_string()),
                 "protocolVersion": protocol::PROTOCOL_VERSION
             })
             .to_string()
@@ -1087,7 +1110,7 @@ pub extern "system" fn Java_org_akkirrai_beakokit_runtime_NativeSourceRuntimeBri
             "requestId": request_id,
             "payload": null,
             "errorCode": "RUNTIME_FAILURE",
-            "errorMessage": error.to_string(),
+            "errorMessage": normalize_runtime_error_message(error.to_string()),
             "protocolVersion": protocol::PROTOCOL_VERSION
         })
         .to_string()
@@ -1257,7 +1280,7 @@ fn protocol_response_from_production_jni_with_host(
         cancellation_scope_id,
         artifact_path,
     )?;
-    Ok(String::from_utf8(response)?)
+    normalize_runtime_response(response)
 }
 
 #[cfg(feature = "android-production-jni")]
@@ -1350,7 +1373,7 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
             "requestId": "jni-error",
             "payload": null,
             "errorCode": "INVALID_REQUEST",
-            "errorMessage": error.to_string(),
+            "errorMessage": normalize_runtime_error_message(error.to_string()),
             "protocolVersion": protocol::PROTOCOL_VERSION
         })
         .to_string(),
@@ -1374,7 +1397,7 @@ pub extern "system" fn Java_org_akkirrai_wasmtime_WasmtimeRuntimeSmokeActivity_p
             "requestId": "jni-module-error",
             "payload": null,
             "errorCode": "RUNTIME_FAILURE",
-            "errorMessage": error.to_string(),
+            "errorMessage": normalize_runtime_error_message(error.to_string()),
             "protocolVersion": protocol::PROTOCOL_VERSION
         })
         .to_string(),

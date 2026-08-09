@@ -317,10 +317,11 @@ class ExternalSourceRuntimeCoordinator(
             packageStatusesLocked().mapNotNull { status ->
                 val active = status.activePackage ?: return@mapNotNull null
                 if (!status.updateAvailable) return@mapNotNull null
+                val installedSha256 = active.installed.artifactSha256 ?: return@mapNotNull null
                 SourcePackageUpdateCandidate(
                     sourceId = status.sourceId,
                     installedVersion = active.installed.packageVersion,
-                    installedSha256 = active.installed.artifactSha256 ?: active.manifest.sha256,
+                    installedSha256 = installedSha256,
                     availableManifest = status.availableManifest,
                 )
             }
@@ -505,7 +506,8 @@ data class ExternalSourcePackageStatus(
     val updateAvailable: Boolean
         get() = activePackage != null && (
             activePackage.manifest.packageVersion != availableManifest.packageVersion ||
-                activePackage.installed.artifactSha256?.let { it != availableManifest.sha256 } == true
+                activePackage.installed.artifactSha256 == null ||
+                activePackage.installed.artifactSha256 != availableManifest.sha256
             )
 }
 

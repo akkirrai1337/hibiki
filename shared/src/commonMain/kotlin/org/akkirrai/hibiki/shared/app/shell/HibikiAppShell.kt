@@ -238,6 +238,11 @@ internal fun HibikiAppShell(
     )
     val routePresentation = navigationState.toHibikiShellRoutePresentation()
     val selectedTab = routePresentation.selectedTab
+    LaunchedEffect(selectedTab, sourceCallbacks.externalSourceRepositoryController) {
+        if (selectedTab == AppDestination.SOURCES) {
+            sourceCallbacks.externalSourceRepositoryController?.refreshRepositories()
+        }
+    }
     val appSettingsState = rememberHibikiAppSettingsState(
         settingsStore = settingsStore,
         selectedSourceId = sourceCallbacks.selectedSourceId,

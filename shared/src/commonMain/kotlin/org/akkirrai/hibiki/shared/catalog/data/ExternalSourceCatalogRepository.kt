@@ -6,6 +6,7 @@ import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -108,6 +109,14 @@ class ExternalSourceCatalogRepository(
                 yearTo = filters.yearTo,
             ),
         )
+        val logger = contextProvider(sourceId).logger
+        logger.log(
+            SourceLogLevel.DEBUG,
+            "External catalog request: source=${sourceId.value}, query=${query.text.take(80)}, " +
+                "page=${query.page}, offset=${request.offset}, limit=${request.limit}, " +
+                "sort=${request.sort}, filters=${query.filters}",
+            null,
+        )
         val items = withContext(Dispatchers.Default) { source.search(request) }.map { title ->
             title.toAppAnime(
                 sourceId = sourceId,
@@ -115,6 +124,12 @@ class ExternalSourceCatalogRepository(
                 statusLabels = statusLabels,
             )
         }
+        logger.log(
+            if (items.isEmpty()) SourceLogLevel.WARNING else SourceLogLevel.DEBUG,
+            "External catalog response: source=${sourceId.value}, items=${items.size}, " +
+                "page=${query.page}, offset=${request.offset}, limit=${request.limit}",
+            null,
+        )
         return AnimeCatalogPage(
             items = items,
             page = query.page.coerceAtLeast(1),
