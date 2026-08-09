@@ -17,8 +17,6 @@ class DependencyBoundaryTest {
             Path.of("parsers", "src", "commonMain", "kotlin"),
             Path.of("src", "jvmMain", "kotlin"),
             Path.of("parsers", "src", "jvmMain", "kotlin"),
-            Path.of("src", "iosMain", "kotlin"),
-            Path.of("parsers", "src", "iosMain", "kotlin"),
         )
         assertNoLegacyImports(sourceRoots, "BeakoKit")
     }
@@ -39,8 +37,6 @@ class DependencyBoundaryTest {
             Path.of("parsers", "src", "commonMain", "kotlin"),
             Path.of("src", "jvmMain", "kotlin"),
             Path.of("parsers", "src", "jvmMain", "kotlin"),
-            Path.of("src", "iosMain", "kotlin"),
-            Path.of("parsers", "src", "iosMain", "kotlin"),
         )
         val legacySources = productionRoots.flatMap { kotlinRoot ->
             val legacyRoot = kotlinRoot.resolve(Path.of("org", "akkirrai", "animeresolver"))

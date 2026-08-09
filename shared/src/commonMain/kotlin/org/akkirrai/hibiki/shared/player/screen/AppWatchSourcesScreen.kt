@@ -30,7 +30,7 @@ data class AppWatchSourcesScreenIcons(
     val empty: ImageVector,
 )
 
-/** Stateless sources picker shared by the Android, iOS and desktop hosts. */
+/** Stateless sources picker shared by the Android and desktop hosts. */
 @Composable
 fun AppWatchSourcesScreen(
     state: WatchSourcesScreenState,

@@ -15,9 +15,9 @@ guest memory instead of overwriting address zero.
 
 The standalone Android harness additionally calls the Rust protocol validator
 through JNI with a real JSON request and checks that a JSON response returns.
-Native Android/iOS hosts use `beakokit_runtime_protocol_call_with_module` from
-the C header for an installed package. Android host calls are routed through
-the JNI bridge; the two-phase callback ABI is retained only for spike tests.
+The Android host uses `beakokit_runtime_protocol_call_with_module` from the C
+header for an installed package. Android host calls are routed through the JNI
+bridge; the two-phase callback ABI is retained only for spike tests.
 
 It is not part of the application build and must not replace the existing
 built-in source path.
@@ -43,24 +43,6 @@ The Android library is emitted as
 `target/aarch64-linux-android/debug/libwasmtime_spike.so`. The exported ABI
 symbol can be checked with the NDK `llvm-nm` tool before adding a Kotlin/JNI
 or Swift bridge.
-
-The same C ABI is declared for the iOS Kotlin/Native cinterop in
-`shared/src/nativeInterop/cinterop/wasmtimeSpike.def`. The iOS build only
-registers that interop on macOS, where the Rust library must be built for the
-Apple target and linked by the native application. Windows builds therefore
-continue to verify the shared contracts and Android runtime without pretending
-that an iOS native binary exists.
-
-On macOS, install the three Rust Apple targets and build the device and
-simulator static libraries with:
-
-```bash
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
-./build-ios-runtime.sh
-```
-
-The script combines both simulator architectures and verifies that the host
-callback ABI is exported before the libraries are linked into the app.
 
 To build and verify production Android libraries for `arm64-v8a` and `x86_64`
 with the real JNI bridge but without WAT/harness features, run:

@@ -592,7 +592,7 @@ fn sample_title_payload() -> serde_json::Value {
     })
 }
 
-/// C ABI smoke entry point for the future Android/iOS bridge.
+/// C ABI smoke entry point for the Android bridge.
 /// Returns 0 on success and a negative value on failure or panic.
 #[no_mangle]
 #[cfg(feature = "spike-probes")]

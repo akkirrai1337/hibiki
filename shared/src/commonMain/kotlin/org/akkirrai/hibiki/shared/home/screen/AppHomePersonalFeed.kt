@@ -32,7 +32,7 @@ import org.akkirrai.hibiki.shared.catalog.model.buildCardMeta
 /**
  * Common Home content for personal sections. The host supplies only strings,
  * icons and platform image/badge slots; the list geometry and card hierarchy
- * are shared with Android and future iOS hosts.
+ * are shared with Android and desktop hosts.
  */
 fun LazyListScope.appHomePersonalFeedContent(
     continueAnime: Anime?,

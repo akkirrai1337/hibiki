@@ -23,36 +23,6 @@ kotlin {
         }
     }
 
-    val iosTargets = listOf(iosArm64(), iosSimulatorArm64())
-    val hostIsMacOs = System.getProperty("os.name").contains("mac", ignoreCase = true)
-    iosTargets.forEach { target ->
-        if (hostIsMacOs) {
-            target.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("src/iosMacMain/kotlin")
-            target.compilations.getByName("main") {
-                cinterops {
-                    create("iosPlayer") {
-                        defFile(project.file("src/nativeInterop/cinterop/iosPlayer.def"))
-                        compilerOpts("-I${project.file("src/nativeInterop/cinterop").absolutePath}")
-                    }
-                    create("wasmtimeSpike") {
-                        defFile(project.file("src/nativeInterop/cinterop/wasmtimeSpike.def"))
-                        compilerOpts(
-                            "-I${project.file("../tools/wasmtime-spike/include").absolutePath}",
-                        )
-                    }
-                    create("iosKeychain") {
-                        defFile(project.file("src/nativeInterop/cinterop/iosKeychain.def"))
-                        compilerOpts("-I${project.file("src/nativeInterop/cinterop").absolutePath}")
-                    }
-                }
-            }
-        }
-        target.binaries.framework {
-            baseName = "shared"
-            isStatic = true
-        }
-    }
-
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -88,16 +58,6 @@ kotlin {
                 implementation(libs.coil.network.ktor3)
                 implementation(libs.ktor.client.cio)
             }
-        }
-        val iosMain by creating {
-            dependsOn(commonMain)
-            kotlin.srcDir("src/iosMain/kotlin")
-        }
-        val iosArm64Main by getting { dependsOn(iosMain) }
-        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
-        iosMain.dependencies {
-            implementation("io.ktor:ktor-client-darwin:3.5.0")
-            implementation(libs.coil.network.ktor3)
         }
     }
 }

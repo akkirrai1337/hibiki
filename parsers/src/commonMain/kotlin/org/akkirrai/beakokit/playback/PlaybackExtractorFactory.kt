@@ -13,7 +13,7 @@ import org.akkirrai.beakokit.playback.extractor.SibnetExtractor
  * Extractors available on every BeakoKit target.
  *
  * JVM-only extractors are intentionally not hidden here: callers that have a platform
- * implementation can append them, while iOS gets the complete KMP-compatible stack.
+ * implementation can append them, while shared consumers use the complete KMP-compatible stack.
  */
 fun commonPlaybackExtractors(client: HttpClient): List<StreamExtractor> = listOf(
     DirectHlsExtractor(),
