@@ -27,6 +27,7 @@ class SourcePackageInstallationCoordinator(
         repositoryManifest: SourceManifest,
         stagingPath: String,
         initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = install(
         repositoryManifest = repositoryManifest,
@@ -38,6 +39,7 @@ class SourcePackageInstallationCoordinator(
         stagingPath = stagingPath,
         initialize = initialize,
         initializeCandidate = initializeCandidate,
+        onStage = onStage,
     )
 
     suspend fun install(
@@ -45,6 +47,7 @@ class SourcePackageInstallationCoordinator(
         candidate: InstalledSourcePackage,
         stagingPath: String,
         initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
         buildList {
@@ -58,23 +61,30 @@ class SourcePackageInstallationCoordinator(
                 add("Installation candidate path must match the extraction staging path")
             }
         }.takeIf { it.isNotEmpty() }?.let(::SourcePackageValidationException)?.let { throw it }
-        val verified = downloadService.download(repositoryManifest)
+        onStage(SourcePackageInstallStage.DOWNLOADING)
+        val verified = downloadService.download(repositoryManifest) { stage ->
+            if (stage == SourcePackageInstallStage.VERIFYING_ARTIFACT) onStage(stage)
+        }
         val installedCandidate = candidate.copy(artifactSha256 = verified.artifact.sha256)
+        onStage(SourcePackageInstallStage.EXTRACTING)
         val extracted = extractor.extract(
             downloaded = verified.downloaded,
             stagingPath = stagingPath,
             repositoryManifest = repositoryManifest,
         )
         return try {
+            onStage(SourcePackageInstallStage.VALIDATING_PACKAGE)
             installer.installAfterInitialization(
                 repositoryManifest = repositoryManifest,
                 packageManifest = extracted.manifest,
                 artifact = verified.artifact,
                 entries = extracted.entries,
                 candidate = installedCandidate,
-                initialize = {
-                    initializeCandidate?.invoke(installedCandidate) ?: initialize()
+                initialize = { approvedCandidate ->
+                    onStage(SourcePackageInstallStage.INITIALIZING_RUNTIME)
+                    initializeCandidate?.invoke(approvedCandidate) ?: initialize()
                 },
+                beforeActivation = { onStage(SourcePackageInstallStage.ACTIVATING) },
             )
         } catch (error: Throwable) {
             runCatching { extracted.discard() }

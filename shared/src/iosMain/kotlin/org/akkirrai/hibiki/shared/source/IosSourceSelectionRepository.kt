@@ -11,6 +11,10 @@ internal class IosSourceSelectionRepository(
         defaults.setObject(sourceId, forKey = SELECTED_SOURCE_KEY)
     }
 
+    fun clearSelectedSourceId() {
+        defaults.removeObjectForKey(SELECTED_SOURCE_KEY)
+    }
+
     private companion object {
         const val SELECTED_SOURCE_KEY = "hibiki.source.selected"
     }

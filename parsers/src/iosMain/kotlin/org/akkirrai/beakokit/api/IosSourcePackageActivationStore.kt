@@ -10,6 +10,7 @@ class IosSourcePackageActivationStore(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
     private val json: Json = Json { ignoreUnknownKeys = true },
     private val maxStateBytes: Long = DEFAULT_MAX_STATE_BYTES,
+    private val packagePathValidator: (String) -> String = { it },
 ) : SourcePackageActivationStore {
     init {
         require(maxStateBytes > 0) { "Maximum activation state size must be positive" }
@@ -49,7 +50,23 @@ class IosSourcePackageActivationStore(
         defaults.setObject(raw, forKey = key(sourceId))
     }
 
-    private fun key(sourceId: SourceId): String = "beakokit.source_package.${sourceId.value}"
+    /** Returns only validated package paths; corrupt records are left untouched for diagnostics. */
+    fun activePackagePaths(): Set<String> = defaults.dictionaryRepresentation()
+        .entries
+        .asSequence()
+        .mapNotNull { (key, raw) ->
+            val name = key as? String ?: return@mapNotNull null
+            if (!name.startsWith(KEY_PREFIX)) return@mapNotNull null
+            val sourceId = runCatching { SourceId(name.removePrefix(KEY_PREFIX)) }.getOrNull()
+                ?: return@mapNotNull null
+            runCatching { checkedState(sourceId, json.decodeFromString<SourcePackageActivationState>(raw as? String ?: return@mapNotNull null)) }
+                .getOrNull()
+        }
+        .flatMap { state -> sequenceOf(state.active?.packagePath, state.previous?.packagePath) }
+        .filterNotNull()
+        .toSet()
+
+    private fun key(sourceId: SourceId): String = KEY_PREFIX + sourceId.value
 
     private fun checkedState(sourceId: SourceId, state: SourcePackageActivationState): SourcePackageActivationState {
         if (state.active?.sourceId != null && state.active.sourceId != sourceId) {
@@ -62,10 +79,13 @@ class IosSourcePackageActivationStore(
                 "Previous package source ID does not match activation store: ${state.previous.sourceId}",
             )
         }
+        state.active?.let { packagePathValidator(it.packagePath) }
+        state.previous?.let { packagePathValidator(it.packagePath) }
         return state
     }
 
     private companion object {
+        const val KEY_PREFIX = "beakokit.source_package."
         const val DEFAULT_MAX_STATE_BYTES: Long = 2L * 1024L * 1024L
     }
 }

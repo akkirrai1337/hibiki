@@ -12,17 +12,20 @@ class SourcePackageInstaller(
         artifact: SourcePackageArtifact,
         entries: List<SourcePackageEntry>,
         candidate: InstalledSourcePackage,
-        initialize: suspend () -> Unit,
+        initialize: suspend (InstalledSourcePackage) -> Unit,
+        beforeActivation: () -> Unit = {},
     ): SourcePackageActivationState {
+        val approvedCandidate = candidateWithApprovedRequirements(repositoryManifest, candidate)
         validate(
             repositoryManifest = repositoryManifest,
             packageManifest = packageManifest,
             artifact = artifact,
             entries = entries,
-            candidate = candidate,
+            candidate = approvedCandidate,
         )
-        initialize()
-        return activationRepository.activate(candidate, initializationSucceeded = true)
+        initialize(approvedCandidate)
+        beforeActivation()
+        return activationRepository.activate(approvedCandidate, initializationSucceeded = true)
     }
 
     fun install(
@@ -33,14 +36,15 @@ class SourcePackageInstaller(
         candidate: InstalledSourcePackage,
         initializationSucceeded: Boolean,
     ): SourcePackageActivationState {
+        val approvedCandidate = candidateWithApprovedRequirements(repositoryManifest, candidate)
         validate(
             repositoryManifest = repositoryManifest,
             packageManifest = packageManifest,
             artifact = artifact,
             entries = entries,
-            candidate = candidate,
+            candidate = approvedCandidate,
         )
-        return activationRepository.activate(candidate, initializationSucceeded)
+        return activationRepository.activate(approvedCandidate, initializationSucceeded)
     }
 
     private fun validate(
@@ -66,5 +70,23 @@ class SourcePackageInstaller(
         }.takeIf { it.isNotEmpty() }?.let(::SourcePackageValidationException)?.let { throw it }
         packageValidator.requireValid(repositoryManifest, artifact)
         layoutValidator.requireValid(packageManifest, entries)
+    }
+
+    private fun candidateWithApprovedRequirements(
+        repositoryManifest: SourceManifest,
+        candidate: InstalledSourcePackage,
+    ): InstalledSourcePackage {
+        val requested = repositoryManifest.hostRequirements()
+        val granted = activationRepository.load().active?.approvedHostRequirements
+        if (granted != null && !requested.isWithin(granted)) {
+            throw SourcePackageValidationException(
+                listOf("Package requests capabilities or network domains that were not previously approved"),
+            )
+        }
+        return candidate.copy(
+            approvedHostRequirements = requested.takeUnless {
+                it.capabilities.isEmpty() && it.networkPolicy.allowedHosts.isEmpty()
+            },
+        )
     }
 }

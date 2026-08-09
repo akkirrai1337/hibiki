@@ -50,7 +50,7 @@ class ExternalSourceRepositoryCoordinatorTest {
     }
 
     @Test
-    fun availableManifestsUseTheFirstRepositoryForDuplicateSourceIds() = runTest {
+    fun duplicateSourceIdsAreExcludedUntilTheRepositoryConflictIsResolved() = runTest {
         val first = SourceRepositoryEndpoint("https://first.example/index.json")
         val second = SourceRepositoryEndpoint("https://second.example/index.json")
         val firstManifest = index().sources.single()
@@ -73,7 +73,9 @@ class ExternalSourceRepositoryCoordinatorTest {
 
         coordinator.refresh(clientVersion = 1)
 
-        assertEquals(listOf(firstManifest), coordinator.availableSourceManifests())
+        assertEquals(setOf(firstManifest.sourceId), coordinator.conflictingSourceIds())
+        assertEquals(emptyList(), coordinator.availableSourceIds())
+        assertEquals(emptyList(), coordinator.availableSourceManifests())
     }
 
     @Test

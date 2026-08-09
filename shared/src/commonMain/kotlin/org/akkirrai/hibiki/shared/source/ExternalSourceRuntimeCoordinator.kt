@@ -14,6 +14,7 @@ import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.SourcePackageStateException
+import org.akkirrai.beakokit.api.SourcePackageInstallStage
 import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.withConfig
@@ -125,7 +126,15 @@ class ExternalSourceRuntimeCoordinator(
         val repository = platform.coordinator.snapshot.value
         val loadedByUrl = repository.loaded.associateBy { it.endpoint.url }
         val failuresByUrl = repository.failures.associateBy { it.endpoint.url }
+        val conflictingSourceIds = platform.coordinator.conflictingSourceIds()
         platform.coordinator.repositories().map { endpoint ->
+            val conflictingInRepository = loadedByUrl[endpoint.url]
+                ?.index
+                ?.sources
+                ?.map { it.sourceId }
+                ?.toSet()
+                ?.intersect(conflictingSourceIds)
+                .orEmpty()
             ExternalSourceRepositoryContent(
                 endpoint = endpoint,
                 packages = loadedByUrl[endpoint.url]
@@ -133,16 +142,19 @@ class ExternalSourceRuntimeCoordinator(
                     ?.sources
                     .orEmpty()
                     .mapNotNull { manifest -> packageStatuses[manifest.sourceId] },
-                error = failuresByUrl[endpoint.url]?.error,
+                error = failuresByUrl[endpoint.url]?.error
+                    ?: conflictingInRepository.takeIf(Set<SourceId>::isNotEmpty)
+                        ?.let(::ExternalSourceRepositoryConflictException),
             )
         }
     }
 
     override suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
+        onStage: (SourcePackageInstallStage) -> Unit,
         initialize: suspend () -> Unit,
     ) {
-        installAvailablePackage(sourceId, initialize = initialize)
+        installAvailablePackage(sourceId, initialize = initialize, onStage = onStage)
     }
 
     override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
@@ -182,13 +194,15 @@ class ExternalSourceRuntimeCoordinator(
     /** Installs a repository-advertised package and refreshes only the inactive registry. */
     suspend fun installAvailablePackage(
         sourceId: SourceId,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState = operationMutex.withLock {
-        installAvailablePackageLocked(sourceId, initialize)
+        installAvailablePackageLocked(sourceId, onStage, initialize)
     }
 
     private suspend fun installAvailablePackageLocked(
         sourceId: SourceId,
+        onStage: (SourcePackageInstallStage) -> Unit,
         initialize: suspend () -> Unit,
     ): SourcePackageActivationState {
         require(sourceId !in reservedSourceIds) {
@@ -199,6 +213,7 @@ class ExternalSourceRuntimeCoordinator(
             activation = platform.installAvailablePackage(
                 sourceId = sourceId,
                 initialize = initialize,
+                onStage = onStage,
                 initializeCandidate = sourceContextFactory?.let {
                     { candidate ->
                         val manifest = platform.coordinator.availableSourceManifest(sourceId)
@@ -229,6 +244,7 @@ class ExternalSourceRuntimeCoordinator(
                         platform.deactivateFirstPackage(sourceId, candidate)
                     }
                 }.onFailure(error::addSuppressed)
+                platform.discardPackage(candidate)
             }
             state.value = state.value.copy(error = error)
             throw error
@@ -381,6 +397,7 @@ interface ExternalSourceRepositoryActions {
     /** The host supplies initialization because it owns the platform runtime setup. */
     suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     )
 
@@ -422,6 +439,7 @@ class RepositoryManagementActions(
 
     override suspend fun installAvailablePackageFromUi(
         sourceId: SourceId,
+        onStage: (SourcePackageInstallStage) -> Unit,
         initialize: suspend () -> Unit,
     ) {
         throw SourcePackageStateException(

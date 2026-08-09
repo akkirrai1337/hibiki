@@ -47,6 +47,14 @@ kotlin {
         val iosX64Main by getting { dependsOn(iosMain) }
         val iosArm64Main by getting { dependsOn(iosMain) }
         val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
+        val commonTest by getting
+        val iosTest by creating {
+            dependsOn(commonTest)
+            kotlin.srcDir("src/iosTest/kotlin")
+        }
+        val iosX64Test by getting { dependsOn(iosTest) }
+        val iosArm64Test by getting { dependsOn(iosTest) }
+        val iosSimulatorArm64Test by getting { dependsOn(iosTest) }
         val jvmTest by getting {
             kotlin.srcDir("src/test/kotlin")
             kotlin.srcDir("src/testFixtures/kotlin")

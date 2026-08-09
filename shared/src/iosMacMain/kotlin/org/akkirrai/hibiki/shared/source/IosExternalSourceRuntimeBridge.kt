@@ -11,6 +11,7 @@ import org.akkirrai.beakokit.api.ExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridge
 import org.akkirrai.beakokit.api.ExternalSourceRuntimeNativeBridgeFactory
 import org.akkirrai.beakokit.api.IosSourcePackageModuleReader
+import org.akkirrai.beakokit.api.IosSourcePackageStorage
 import org.akkirrai.beakokit.api.NativeBridgeExternalSourceRuntimeFactory
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceHostRequirements
@@ -23,7 +24,10 @@ import org.akkirrai.hibiki.shared.runtime.nativebridge.beakokit_runtime_protocol
 
 /** Creates the iOS runtime factory once the Rust library is linked by the Apple app. */
 @OptIn(ExperimentalForeignApi::class)
-internal fun createIosExternalSourceRuntimeFactory(client: HttpClient): ExternalSourceRuntimeFactory =
+internal fun createIosExternalSourceRuntimeFactory(
+    client: HttpClient,
+    packageStorage: IosSourcePackageStorage = IosSourcePackageStorage(),
+): ExternalSourceRuntimeFactory =
     NativeBridgeExternalSourceRuntimeFactory(
         bridgeFactory = ExternalSourceRuntimeNativeBridgeFactory { sourcePackage, context, module, requirements ->
             IosExternalSourceRuntimeBridge(
@@ -34,7 +38,7 @@ internal fun createIosExternalSourceRuntimeFactory(client: HttpClient): External
                 client = client,
             )
         },
-        moduleReader = IosSourcePackageModuleReader(),
+        moduleReader = IosSourcePackageModuleReader(storage = packageStorage),
         requestIdFactory = { NSUUID().UUIDString },
         runtimeSupportPolicy = SourceRuntimeSupportPolicy.WASMTIME_WASI,
     )

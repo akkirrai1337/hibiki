@@ -60,19 +60,22 @@ class ExternalSourceRepositoryCoordinator(
     fun removeRepositoryUrl(input: String): List<SourceRepositoryEndpoint> =
         removeRepository(repositoryUrlResolver.resolve(input).url)
 
-    /** Source IDs advertised by successfully loaded repositories, without duplicates. */
-    fun availableSourceIds(): List<SourceId> = snapshot.value.loaded
-        .asSequence()
-        .flatMap { repository -> repository.index.sources.asSequence() }
-        .map { manifest -> manifest.sourceId }
-        .distinct()
-        .toList()
+    /** IDs claimed by more than one loaded repository. They are never made installable. */
+    fun conflictingSourceIds(): Set<SourceId> = snapshot.value.loaded
+        .flatMap { repository -> repository.index.sources }
+        .groupingBy { manifest -> manifest.sourceId }
+        .eachCount()
+        .filterValues { count -> count > 1 }
+        .keys
 
-    /** Source manifests advertised by loaded repositories; the first repository wins per ID. */
+    /** Source IDs advertised by exactly one successfully loaded repository. */
+    fun availableSourceIds(): List<SourceId> = availableSourceManifests().map(SourceManifest::sourceId)
+
+    /** Source manifests advertised by exactly one repository; collisions must be resolved by the user. */
     fun availableSourceManifests(): List<SourceManifest> = snapshot.value.loaded
         .asSequence()
         .flatMap { repository -> repository.index.sources.asSequence() }
-        .distinctBy { manifest -> manifest.sourceId }
+        .filterNot { manifest -> manifest.sourceId in conflictingSourceIds() }
         .toList()
 
     fun availableSourceManifest(sourceId: SourceId): SourceManifest? =
@@ -127,3 +130,9 @@ class ExternalSourceRepositoryCoordinator(
         ).also { snapshotState.value = it }
     }
 }
+
+class ExternalSourceRepositoryConflictException(
+    sourceIds: Set<SourceId>,
+) : IllegalStateException(
+    "Source IDs are published by multiple repositories: " + sourceIds.joinToString { it.value },
+)

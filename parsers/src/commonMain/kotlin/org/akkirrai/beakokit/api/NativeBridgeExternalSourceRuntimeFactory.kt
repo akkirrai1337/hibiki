@@ -43,7 +43,8 @@ class NativeBridgeExternalSourceRuntimeFactory(
                     packagePath = sourcePackage.installed.packagePath,
                     entrypoint = sourcePackage.manifest.entrypoint,
                 ),
-                hostRequirements = sourcePackage.manifest.hostRequirements(),
+                hostRequirements = sourcePackage.installed.approvedHostRequirements
+                    ?: sourcePackage.manifest.hostRequirements(),
             )
         } catch (error: CancellationException) {
             throw error

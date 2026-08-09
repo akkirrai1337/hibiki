@@ -47,6 +47,7 @@ import org.akkirrai.hibiki.shared.source.IosSourceRegistry
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRepositoryPlatform
 import org.akkirrai.hibiki.shared.source.createIosExternalSourceRuntimeFactory
+import org.akkirrai.beakokit.api.IosSourcePackageStorage
 import org.akkirrai.hibiki.shared.source.ExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.IosSourceSelectionRepository
@@ -76,7 +77,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
     val avatarPicker = IosAvatarPicker()
     lateinit var hostController: UIViewController
     hostController = ComposeUIViewController(configure = { parallelRendering = false }) {
-        val externalSourcePlatform = remember { createIosExternalSourceRepositoryPlatform() }
+        val externalPackageStorage = remember { IosSourcePackageStorage() }
+        val externalSourcePlatform = remember(externalPackageStorage) {
+            createIosExternalSourceRepositoryPlatform(externalPackageStorage)
+        }
         val externalRuntimeHttpClient = remember {
             HttpClient(Darwin) {
                 followRedirects = false
@@ -95,7 +99,10 @@ fun MainViewController(systemLanguage: String): UIViewController {
                         },
                     )
                 },
-                runtimeFactory = createIosExternalSourceRuntimeFactory(externalRuntimeHttpClient),
+                runtimeFactory = createIosExternalSourceRuntimeFactory(
+                    client = externalRuntimeHttpClient,
+                    packageStorage = externalPackageStorage,
+                ),
                 sourceContextFactory = { sourceId ->
                     DefaultSourceContext(
                         httpClient = externalRuntimeHttpClient,
@@ -175,15 +182,30 @@ fun MainViewController(systemLanguage: String): UIViewController {
                 external = externalCatalogRepository,
             )
         }
+        val selectedSourceId = remember { androidx.compose.runtime.mutableStateOf(initialSourceId) }
         val externalRegistry = externalRuntimeCoordinator.snapshot.collectAsState().value.registry
-        LaunchedEffect(repository, initialSourceId, externalRegistry) {
-            initialSourceId?.let(repository::selectSource)
-        }
         val sources = remember(externalRegistry) {
             mergeAppSourceDescriptors(
                 builtIn = IosSourceRegistry.sources,
                 external = externalRegistry?.toAppSourceDescriptors().orEmpty(),
             )
+        }
+        LaunchedEffect(repository, externalRegistry, sources) {
+            val availableIds = sources.map { it.id }
+            val selected = selectedSourceId.value
+            val fallback = selected?.takeIf(availableIds::contains)
+                ?: initialSourceId?.takeIf(availableIds::contains)
+                ?: availableIds.firstOrNull()
+            if (fallback != null) {
+                repository.selectSource(fallback)
+                if (fallback != selected) {
+                    sourceSelectionRepository.saveSelectedSourceId(fallback)
+                    selectedSourceId.value = fallback
+                }
+            } else if (selected != null) {
+                sourceSelectionRepository.clearSelectedSourceId()
+                selectedSourceId.value = null
+            }
         }
         val watchRepository = remember(systemLanguage) {
             IosAnimeWatchRepository(preferEnglish = !systemLanguage.lowercase().startsWith("ru"))
@@ -224,7 +246,6 @@ fun MainViewController(systemLanguage: String): UIViewController {
         val notificationPermissionState = remember {
             androidx.compose.runtime.mutableStateOf(settingsStore.load().notificationPermissionState)
         }
-        val selectedSourceId = remember { androidx.compose.runtime.mutableStateOf(initialSourceId) }
         val requestNotificationPermission = {
             requestIosNotificationPermission { state ->
                 notificationPermissionState.value = state

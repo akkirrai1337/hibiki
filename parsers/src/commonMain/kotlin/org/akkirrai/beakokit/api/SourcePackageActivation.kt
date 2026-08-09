@@ -10,6 +10,8 @@ data class InstalledSourcePackage(
     val packagePath: String,
     /** SHA-256 of the downloaded archive; null keeps compatibility with pre-metadata state. */
     val artifactSha256: String? = null,
+    /** Permissions approved when this package was activated; null migrates pre-permission states. */
+    val approvedHostRequirements: SourceHostRequirements? = null,
 ) {
     init {
         require(packageVersion.isNotBlank()) { "Installed package version must not be blank" }

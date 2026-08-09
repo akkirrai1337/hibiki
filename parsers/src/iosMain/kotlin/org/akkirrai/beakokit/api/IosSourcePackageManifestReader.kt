@@ -14,6 +14,7 @@ import platform.posix.memcpy
 class IosSourcePackageManifestReader(
     private val json: Json = Json { ignoreUnknownKeys = true },
     private val maxManifestBytes: Long = SourcePackageManifestReader.DEFAULT_MAX_MANIFEST_BYTES,
+    private val storage: IosSourcePackageStorage = IosSourcePackageStorage(),
 ) : SourcePackageManifestReader {
     init {
         require(maxManifestBytes > 0) { "Maximum manifest size must be positive" }
@@ -23,7 +24,7 @@ class IosSourcePackageManifestReader(
     }
 
     override fun read(packagePath: String): SourceManifest {
-        val rootPath = packagePath.trimEnd('/')
+        val rootPath = storage.requireManagedPackagePath(packagePath)
         val manifestPath = "$rootPath/manifest.json"
         if (containsSymbolicLink(rootPath, "manifest.json")) {
             throw SourcePackageStateException(
@@ -69,6 +70,7 @@ class IosSourcePackageManifestReader(
     }
 
     private fun containsSymbolicLink(rootPath: String, relativePath: String): Boolean {
+        storage.requireNoSymbolicLinks(rootPath, "Installed source package")
         var currentPath = rootPath
         if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
             return true

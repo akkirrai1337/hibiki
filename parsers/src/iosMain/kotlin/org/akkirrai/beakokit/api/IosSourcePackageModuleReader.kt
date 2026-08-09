@@ -11,6 +11,7 @@ import platform.posix.memcpy
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 class IosSourcePackageModuleReader(
     private val maxModuleBytes: Long = SourcePackageModuleReader.DEFAULT_MAX_MODULE_BYTES,
+    private val storage: IosSourcePackageStorage = IosSourcePackageStorage(),
 ) : SourcePackageModuleReader {
     init {
         require(maxModuleBytes > 0) { "Maximum module size must be positive" }
@@ -26,7 +27,7 @@ class IosSourcePackageModuleReader(
         require(entrypoint != "manifest.json") {
             "Source package entrypoint must not be manifest.json"
         }
-        val rootPath = packagePath.trimEnd('/')
+        val rootPath = storage.requireManagedPackagePath(packagePath)
         val modulePath = "$rootPath/$entrypoint"
         if (containsSymbolicLink(rootPath, entrypoint)) {
             throw SourcePackageStateException(
@@ -57,6 +58,7 @@ class IosSourcePackageModuleReader(
     }
 
     private fun containsSymbolicLink(rootPath: String, entrypoint: String): Boolean {
+        storage.requireNoSymbolicLinks(rootPath, "Installed source package")
         var currentPath = rootPath
         if (NSFileManager.defaultManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) != null) {
             return true

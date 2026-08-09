@@ -12,12 +12,14 @@ import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRepositoryUrlResolver
+import org.akkirrai.beakokit.api.SourcePackageInstallStage
 
 data class ExternalSourceRepositoryUiState(
     val repositories: List<SourceRepositoryEndpoint> = emptyList(),
     val repositoryContents: List<ExternalSourceRepositoryContent> = emptyList(),
     val packages: List<ExternalSourcePackageStatus> = emptyList(),
     val isBusy: Boolean = false,
+    val installationStage: SourcePackageInstallStage? = null,
     val error: Throwable? = null,
 )
 
@@ -79,7 +81,13 @@ class ExternalSourceRepositoryController(
 
     fun installPackage(sourceId: SourceId, initialize: suspend () -> Unit = {}) {
         launchOperation {
-            actions.installAvailablePackageFromUi(sourceId, initialize)
+            actions.installAvailablePackageFromUi(
+                sourceId = sourceId,
+                initialize = initialize,
+                onStage = { stage ->
+                _state.value = _state.value.copy(installationStage = stage)
+                },
+            )
             loadState()
         }
     }
@@ -109,7 +117,7 @@ class ExternalSourceRepositoryController(
     private fun launchOperation(operationBlock: suspend () -> ExternalSourceRepositoryUiState) {
         operation?.cancel()
         operation = scope.launch(operationContext) {
-            _state.value = _state.value.copy(isBusy = true, error = null)
+            _state.value = _state.value.copy(isBusy = true, installationStage = null, error = null)
             try {
                 _state.value = operationBlock()
             } catch (error: CancellationException) {
@@ -124,6 +132,7 @@ class ExternalSourceRepositoryController(
                 }
                 _state.value = (recoveredState ?: _state.value).copy(
                     isBusy = false,
+                    installationStage = null,
                     error = error,
                 )
             }

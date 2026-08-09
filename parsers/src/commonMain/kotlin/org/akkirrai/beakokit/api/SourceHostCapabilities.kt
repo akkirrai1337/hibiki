@@ -15,6 +15,7 @@ enum class SourceHostCapability {
 }
 
 /** Immutable permission declaration carried by a source package manifest. */
+@Serializable
 data class SourceHostRequirements(
     val capabilities: Set<SourceHostCapability> = emptySet(),
     val networkPolicy: SourceHostNetworkPolicy = SourceHostNetworkPolicy.EMPTY,
@@ -26,6 +27,11 @@ data class SourceHostRequirements(
     }
 
     fun requires(capability: SourceHostCapability): Boolean = capability in capabilities
+
+    /** True when this request cannot gain capabilities or network origins over [granted]. */
+    fun isWithin(granted: SourceHostRequirements): Boolean =
+        capabilities.all(granted.capabilities::contains) &&
+            networkPolicy.allowedHosts.all(granted.networkPolicy.allowedHosts::contains)
 }
 
 /** Converts an installed package manifest into the host permissions enforced by its runtime. */

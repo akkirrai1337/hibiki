@@ -15,7 +15,8 @@ import platform.posix.write
 /** Adapts downloaded bytes to the iOS ZIP extraction contract. */
 @OptIn(ExperimentalForeignApi::class)
 class IosDownloadedSourcePackageExtractor(
-    private val manifestReader: IosSourcePackageManifestReader = IosSourcePackageManifestReader(),
+    private val storage: IosSourcePackageStorage = IosSourcePackageStorage(),
+    private val manifestReader: IosSourcePackageManifestReader = IosSourcePackageManifestReader(storage = storage),
     private val layoutValidator: SourcePackageLayoutValidator = SourcePackageLayoutValidator(),
 ) : SourcePackageExtractor {
     override suspend fun extract(
@@ -42,20 +43,20 @@ class IosDownloadedSourcePackageExtractor(
             "Source package staging directory must not already exist: $stagingPath"
         }
         try {
-            ensureDirectory(fileManager, stagingPath, "source package staging directory")
+            storage.ensurePackageDirectory(stagingPath, "source package staging directory")
             files.filterNot(StoredEntry::directory).forEach { file ->
                 val path = "$stagingPath/${file.path}"
                 val parent = path.substringBeforeLast('/', stagingPath)
-                ensureDirectory(fileManager, parent, "source package entry directory")
+                storage.ensurePackageDirectory(parent, "source package entry directory")
                 writeFile(path, file.bytes)
             }
             return ExtractedSourcePackage(
                 manifest = manifestReader.read(stagingPath),
                 entries = entries,
-                discard = { fileManager.removeItemAtPath(stagingPath, error = null) },
+                discard = { storage.removePackage(stagingPath) },
             )
         } catch (error: Throwable) {
-            fileManager.removeItemAtPath(stagingPath, error = null)
+            storage.removePackage(stagingPath)
             throw error
         }
     }
@@ -77,43 +78,6 @@ class IosDownloadedSourcePackageExtractor(
         }
     }
 
-    private fun ensureDirectory(fileManager: NSFileManager, path: String, label: String) {
-        requireNoSymbolicLinkInParents(fileManager, path, label)
-        if (fileManager.fileExistsAtPath(path)) return
-        require(fileManager.createDirectoryAtPath(
-            path = path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )) { "Unable to create $label" }
-    }
-
-    private fun requireNoSymbolicLinkInParents(
-        fileManager: NSFileManager,
-        path: String,
-        label: String,
-    ) {
-        var currentPath = path
-        while (currentPath.isNotEmpty()) {
-            require(fileManager.destinationOfSymbolicLinkAtPath(currentPath, error = null) == null) {
-                "$label must not be a symbolic link: $currentPath"
-            }
-            val parent = currentPath.substringBeforeLast('/', missingDelimiterValue = "")
-            if (parent == currentPath || parent.isEmpty()) break
-
-            // iOS application containers are commonly exposed below /var, which is a
-            // system-owned symbolic link. Once we reach the closest existing parent we
-            // have checked every path component controlled by this package install; do
-            // not walk into system-owned ancestors and reject a valid container path.
-            if (fileManager.fileExistsAtPath(parent)) {
-                require(fileManager.destinationOfSymbolicLinkAtPath(parent, error = null) == null) {
-                    "$label must not be a symbolic link: $parent"
-                }
-                break
-            }
-            currentPath = parent
-        }
-    }
 
     private fun readEntries(bytes: ByteArray): List<StoredEntry> {
         val stored = mutableListOf<StoredEntry>()

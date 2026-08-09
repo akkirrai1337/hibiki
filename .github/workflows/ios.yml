@@ -18,6 +18,11 @@ on:
         required: true
         default: false
         type: boolean
+      package_smoke_test:
+        description: Run external package installation smoke tests in iOS Simulator
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -29,7 +34,7 @@ concurrency:
 jobs:
   release:
     name: Build iOS device IPA
-    if: github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests
+    if: github.event_name == 'workflow_dispatch' && !inputs.run_ios_tests && !inputs.package_smoke_test
     runs-on: macos-15
     timeout-minutes: 45
     env:
@@ -278,7 +283,7 @@ jobs:
 
   test:
     name: Build iOS targets and Simulator app
-    if: github.event_name == 'workflow_dispatch' && inputs.run_ios_tests
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ios_tests && !inputs.package_smoke_test
     runs-on: macos-15
     timeout-minutes: 30
     env:
@@ -342,6 +347,66 @@ jobs:
           :parsers:jvmTest
 
       - name: Build iOS Simulator app
+        run: >-
+          xcodebuild
+          -project iosApp/iosApp.xcodeproj
+          -scheme iosApp
+          -sdk iphonesimulator
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+  package-smoke:
+    name: iOS external package smoke test
+    if: github.event_name == 'workflow_dispatch' && inputs.package_smoke_test
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Select Xcode
+        shell: bash
+        run: |
+          selected=""
+          for candidate in \
+            /Applications/Xcode_26.3.0.app/Contents/Developer \
+            /Applications/Xcode_26.3.app/Contents/Developer \
+            /Applications/Xcode_26.0.app/Contents/Developer \
+            /Applications/Xcode_16.4.app/Contents/Developer; do
+            if [ -d "$candidate" ]; then
+              sudo xcode-select -s "$candidate"
+              selected="$candidate"
+              break
+            fi
+          done
+          test -n "$selected"
+          xcodebuild -version
+
+      - name: Build Simulator Wasmtime runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-ios-sim
+          ./tools/wasmtime-spike/build-ios-runtime.sh simulator
+
+      - name: Run iOS package storage smoke tests
+        run: ./gradlew :parsers:iosSimulatorArm64Test
+
+      - name: Link the Simulator app with the external runtime
         run: >-
           xcodebuild
           -project iosApp/iosApp.xcodeproj

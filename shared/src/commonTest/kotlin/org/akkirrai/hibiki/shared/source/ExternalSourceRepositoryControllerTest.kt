@@ -179,6 +179,7 @@ class ExternalSourceRepositoryControllerTest {
 
         override suspend fun installAvailablePackageFromUi(
             sourceId: SourceId,
+            onStage: (org.akkirrai.beakokit.api.SourcePackageInstallStage) -> Unit,
             initialize: suspend () -> Unit,
         ) {
             installed += sourceId

@@ -12,6 +12,7 @@ import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourcePackageActivationRepository
 import org.akkirrai.beakokit.api.SourcePackageActivationState
 import org.akkirrai.beakokit.api.InstalledSourcePackage
+import org.akkirrai.beakokit.api.SourcePackageInstallStage
 import org.akkirrai.beakokit.api.SourceConfigState
 import org.akkirrai.beakokit.api.SourceConfigStore
 import org.akkirrai.beakokit.api.activeExternalSourceRegistry
@@ -25,6 +26,7 @@ class ExternalSourceRepositoryPlatform(
     private val stagingPathFactory: ((SourceId) -> String)? = null,
     private val activationRepositoryFactory: ((SourceId) -> SourcePackageActivationRepository)? = null,
     private val sourceConfigStore: SourceConfigStore? = null,
+    private val packageCleanup: ((InstalledSourcePackage) -> Unit)? = null,
     private val closeResources: () -> Unit,
 ) {
     fun loadActivePackage(sourceId: SourceId): ActiveExternalSourcePackage? =
@@ -40,6 +42,7 @@ class ExternalSourceRepositoryPlatform(
         sourceId: SourceId,
         stagingPath: String,
         initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     ) = coordinator.availableSourceManifest(sourceId)?.let { manifest ->
         createPackageInstallationCoordinator(sourceId).install(
@@ -47,6 +50,7 @@ class ExternalSourceRepositoryPlatform(
             stagingPath = stagingPath,
             initialize = initialize,
             initializeCandidate = initializeCandidate,
+            onStage = onStage,
         )
     } ?: throw SourcePackageStateException(
         "Source package is not advertised by a loaded repository: $sourceId",
@@ -56,6 +60,7 @@ class ExternalSourceRepositoryPlatform(
     suspend fun installAvailablePackage(
         sourceId: SourceId,
         initializeCandidate: (suspend (InstalledSourcePackage) -> Unit)? = null,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
         initialize: suspend () -> Unit,
     ) = installAvailablePackage(
         sourceId = sourceId,
@@ -64,6 +69,7 @@ class ExternalSourceRepositoryPlatform(
         }(sourceId),
         initialize = initialize,
         initializeCandidate = initializeCandidate,
+        onStage = onStage,
     )
 
     /** Rolls back one source to its previously activated package version. */
@@ -74,10 +80,15 @@ class ExternalSourceRepositoryPlatform(
 
     /** Removes the active and rollback activation records for one external source. */
     fun uninstallPackage(sourceId: SourceId) {
-        requireNotNull(activationRepositoryFactory) {
+        val activationRepository = requireNotNull(activationRepositoryFactory) {
             "Source package uninstall is not available on this platform"
-        }(sourceId).uninstall()
-        sourceConfigStore?.remove(sourceId)
+        }(sourceId)
+        val installed = activationRepository.load().let { listOfNotNull(it.active, it.previous) }
+        // Activation state is the transaction boundary. Physical cleanup is recoverable and must
+        // never turn a successful uninstall into an apparent failure afterwards.
+        activationRepository.uninstall()
+        runCatching { sourceConfigStore?.remove(sourceId) }
+        installed.forEach(::discardPackage)
     }
 
     /** Returns the previously active package without changing persisted activation state. */
@@ -97,6 +108,11 @@ class ExternalSourceRepositoryPlatform(
     ): SourcePackageActivationState = requireNotNull(activationRepositoryFactory) {
         "Source package rollback is not available on this platform"
     }(sourceId).deactivateFirstPackage(candidate)
+
+    /** Removes an unreferenced candidate package; failures are retried by platform startup cleanup. */
+    fun discardPackage(candidate: InstalledSourcePackage) {
+        runCatching { packageCleanup?.invoke(candidate) }
+    }
 
     fun loadSourceConfig(sourceId: SourceId): SourceConfigState = requireNotNull(sourceConfigStore) {
         "Source config storage is not available on this platform"

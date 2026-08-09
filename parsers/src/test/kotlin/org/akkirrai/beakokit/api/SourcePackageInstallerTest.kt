@@ -147,6 +147,35 @@ class SourcePackageInstallerTest {
         assertEquals(0, store.persistCount)
     }
 
+    @Test
+    fun `update cannot expand previously approved host domains or capabilities`() {
+        val approved = SourceHostRequirements(
+            capabilities = setOf(SourceHostCapability.NETWORK),
+            networkPolicy = SourceHostNetworkPolicy(setOf("api.example.com")),
+        )
+        val store = RecordingStore().apply {
+            state = SourcePackageActivationState(active = oldCandidate().copy(approvedHostRequirements = approved))
+        }
+        val manifest = manifest().copy(
+            hostCapabilities = setOf(SourceHostCapability.NETWORK, SourceHostCapability.COOKIES),
+            hostNetworkPolicy = SourceHostNetworkPolicy(setOf("api.example.com", "evil.example")),
+        )
+
+        assertFailsWith<SourcePackageValidationException> {
+            installer(store).install(
+                repositoryManifest = manifest,
+                packageManifest = manifest,
+                artifact = SourcePackageArtifact(manifest.artifactSizeBytes, manifest.sha256),
+                entries = entries(manifest),
+                candidate = candidate(),
+                initializationSucceeded = true,
+            )
+        }
+
+        assertEquals(0, store.persistCount)
+        assertEquals(approved, store.state.active?.approvedHostRequirements)
+    }
+
     private fun installer(store: RecordingStore) = SourcePackageInstaller(
         packageValidator = SourcePackageValidator(clientVersion = 3),
         layoutValidator = SourcePackageLayoutValidator(),

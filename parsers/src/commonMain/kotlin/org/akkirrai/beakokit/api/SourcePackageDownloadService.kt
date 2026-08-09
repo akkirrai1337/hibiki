@@ -16,7 +16,10 @@ class SourcePackageDownloadService(
     private val artifactVerifier: SourcePackageArtifactVerifier,
     private val limits: SourcePackageDownloadLimits = SourcePackageDownloadLimits(),
 ) {
-    suspend fun download(manifest: SourceManifest): VerifiedSourcePackageDownload {
+    suspend fun download(
+        manifest: SourceManifest,
+        onStage: (SourcePackageInstallStage) -> Unit = {},
+    ): VerifiedSourcePackageDownload {
         artifactVerifier.requireManifestCompatible(manifest)
         val downloaded = try {
             withTimeout(limits.timeoutMillis) {
@@ -45,6 +48,7 @@ class SourcePackageDownloadService(
                 kind = SourceErrorKind.UNAVAILABLE,
             )
         }
+        onStage(SourcePackageInstallStage.VERIFYING_ARTIFACT)
         val artifact = artifactVerifier.verify(manifest, downloaded)
         return VerifiedSourcePackageDownload(downloaded, artifact)
     }
