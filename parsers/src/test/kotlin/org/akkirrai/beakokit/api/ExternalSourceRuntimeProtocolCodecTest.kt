@@ -1,5 +1,8 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -58,6 +61,38 @@ class ExternalSourceRuntimeProtocolCodecTest {
             ExternalSourceRuntimeProtocolCodec.encodeRequest(request),
             receivedRequest,
         )
+    }
+
+    @Test
+    fun nativeBridgeSerializesConcurrentCallsForOneWasmInstance() = runBlocking {
+        var activeCalls = 0
+        var overlapped = false
+        val transport = NativeBridgeExternalSourceRuntimeTransport(
+            ExternalSourceRuntimeNativeBridge { request, _ ->
+                if (++activeCalls > 1) overlapped = true
+                delay(10)
+                activeCalls--
+                val requestId = ExternalSourceRuntimeProtocolCodec.decodeRequest(request).requestId
+                """
+                {"requestId":"$requestId","payload":{},"errorCode":null,"errorMessage":null,"protocolVersion":1}
+                """.trimIndent().encodeToByteArray()
+            },
+        )
+        val requests = (1..2).map { index ->
+            ExternalSourceRuntimeRequest(
+                requestId = "bridge-concurrent-$index",
+                operation = ExternalSourceRuntimeOperation.DETAILS,
+                payload = buildJsonObject { put("id", "title-$index") },
+            )
+        }
+
+        coroutineScope {
+            requests.map { request ->
+                async { transport.call(request, ExternalSourceRuntimeCallLimits()) }
+            }.forEach { it.await() }
+        }
+
+        assertEquals(false, overlapped)
     }
 
     @Test

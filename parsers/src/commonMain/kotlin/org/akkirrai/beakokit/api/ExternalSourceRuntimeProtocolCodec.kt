@@ -4,6 +4,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Strict UTF-8 JSON codec shared by native runtime bridges on every platform. */
 object ExternalSourceRuntimeProtocolCodec {
@@ -59,10 +61,14 @@ class NativeBridgeExternalSourceRuntimeTransport(
     private val bridge: ExternalSourceRuntimeNativeBridge,
     private val logger: SourceLogger = SourceLogger.NONE,
 ) : ExternalSourceRuntimeTransport {
+    // A bridge owns one WASM/Wasmtime instance. Wasmtime calls are not re-entrant;
+    // concurrent catalog requests must queue instead of corrupting the instance.
+    private val callMutex = Mutex()
+
     override suspend fun call(
         request: ExternalSourceRuntimeRequest,
         limits: ExternalSourceRuntimeCallLimits,
-    ): ExternalSourceRuntimeResponse {
+    ): ExternalSourceRuntimeResponse = callMutex.withLock {
         val response = try {
             bridge.call(
                 request = ExternalSourceRuntimeProtocolCodec.encodeRequest(request).also { requestBytes ->
