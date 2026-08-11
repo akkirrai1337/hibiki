@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
@@ -191,7 +192,9 @@ fun AppCatalogScreen(
                 PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
                     isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
-                    modifier = Modifier.padding(top = CatalogContentTopPadding),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = CatalogContentTopPadding),
                 )
             },
         ) {
