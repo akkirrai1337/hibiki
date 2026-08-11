@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
@@ -29,7 +34,7 @@ fun AppCatalogTopOverlay(
     clearContentDescription: String,
     onFilterClick: () -> Unit,
     showFilterButton: Boolean,
-    sortModifier: Modifier,
+    showSort: Boolean,
     sortContent: @Composable () -> Unit,
     onSearchFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -65,8 +70,14 @@ fun AppCatalogTopOverlay(
                 onFocusChanged = onSearchFocusChanged,
                 modifier = Modifier.zIndex(1f),
             )
-            Box(modifier = sortModifier) {
-                sortContent()
+            AnimatedVisibility(
+                visible = showSort,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    sortContent()
+                }
             }
         }
     }

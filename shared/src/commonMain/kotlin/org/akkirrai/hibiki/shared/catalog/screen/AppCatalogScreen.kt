@@ -213,11 +213,6 @@ fun AppCatalogScreen(
         )
         }
 
-        val sortAlpha by animateFloatAsState(
-            targetValue = if (isSortVisible) 1f else 0f,
-            animationSpec = tween(CatalogSortAnimationDurationMs),
-            label = "catalog_sort_alpha",
-        )
         AppCatalogTopOverlay(
             query = state.query,
             onQueryChange = onQueryChange,
@@ -227,7 +222,10 @@ fun AppCatalogScreen(
             clearContentDescription = labels.clearContentDescription,
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
-            sortModifier = Modifier.alpha(sortAlpha),
+            showSort = isSortVisible &&
+                state.items.isNotEmpty() &&
+                !state.isLoading &&
+                state.error == null,
             onSearchFocusChanged = { searchFieldFocused = it },
             sortContent = {
                 AppCatalogSortControl(

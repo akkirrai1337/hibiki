@@ -54,6 +54,7 @@ fun AppCatalogResultsContent(
             onRetry = onRetry,
             errorIcon = errorIcon,
             errorIconTint = MaterialTheme.colorScheme.error,
+            errorScrollable = true,
             content = {
                 LazyColumn(
                     state = listState,

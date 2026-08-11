@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.shared.design.component.state
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,6 +20,7 @@ fun AppContentState(
     onRetry: () -> Unit,
     errorIcon: ImageVector? = null,
     errorIconTint: Color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+    errorScrollable: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -26,7 +29,10 @@ fun AppContentState(
         errorMessage != null && !hasContent -> AppMessageState(
             title = errorTitle,
             message = errorMessage,
-            modifier = modifier.fillMaxSize().padding(UiDimens.ContentStatePadding),
+            modifier = modifier
+                .fillMaxSize()
+                .padding(UiDimens.ContentStatePadding)
+                .then(if (errorScrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier),
             actionLabel = retryLabel,
             onActionClick = onRetry,
             icon = errorIcon,
