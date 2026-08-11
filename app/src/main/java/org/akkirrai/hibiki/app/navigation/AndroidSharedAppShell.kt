@@ -86,6 +86,9 @@ internal fun AndroidSharedAppShell(
             "${manifest.sourceId}:${manifest.packageVersion}:${manifest.sha256}"
         }
     }
+    val externalCatalogReady = externalCoordinator == null ||
+        externalSnapshot?.registry != null ||
+        externalSnapshot?.error != null
     val externalRepositoryControllerScope = rememberCoroutineScope()
     val externalRepositoryController = remember(externalCoordinator) {
         externalCoordinator?.let {
@@ -232,6 +235,7 @@ internal fun AndroidSharedAppShell(
             appVersionName = BuildConfig.VERSION_NAME,
             enableOnboarding = enableOnboarding,
             catalogRefreshKey = externalCatalogRefreshKey,
+            catalogReady = externalCatalogReady,
             platformCallbacks = AppPlatformCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->

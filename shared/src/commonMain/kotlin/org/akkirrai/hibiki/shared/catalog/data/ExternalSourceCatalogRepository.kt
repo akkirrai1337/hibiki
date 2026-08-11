@@ -34,6 +34,9 @@ class ExternalSourceCatalogRepository(
     private var selectedSourceId: SourceId? = initialSourceId
     private val sourceCache = mutableMapOf<SourceId, AnimeSource>()
     private val sourceCacheMutex = Mutex()
+    // A source runtime may own one WASM/HTML parser instance. Keep catalog,
+    // filter and details calls serialized even if presenters start them together.
+    private val sourceOperationMutex = Mutex()
 
     override val initialItems: List<Anime> = emptyList()
 
@@ -56,8 +59,10 @@ class ExternalSourceCatalogRepository(
 
     override suspend fun filterCatalog(): AnimeCatalogFilterCatalog {
         val source = source(requireSelectedSource())
-        val externalCatalog = withContext(Dispatchers.Default) {
-            source.getSearchFilterCatalog()
+        val externalCatalog = sourceOperationMutex.withLock {
+            withContext(Dispatchers.Default) {
+                source.getSearchFilterCatalog()
+            }
         }
         val capabilities = source.catalogCapabilities
         val sortOptions = (externalCatalog.sortOptions + capabilities.supportedSorts.map { sort ->
@@ -117,7 +122,9 @@ class ExternalSourceCatalogRepository(
                 "sort=${request.sort}, filters=${query.filters}",
             null,
         )
-        val items = withContext(Dispatchers.Default) { source.search(request) }.map { title ->
+        val items = sourceOperationMutex.withLock {
+            withContext(Dispatchers.Default) { source.search(request) }
+        }.map { title ->
             title.toAppAnime(
                 sourceId = sourceId,
                 preferEnglish = SourceLanguage.ENGLISH in contextProvider(sourceId).preferredLanguages,

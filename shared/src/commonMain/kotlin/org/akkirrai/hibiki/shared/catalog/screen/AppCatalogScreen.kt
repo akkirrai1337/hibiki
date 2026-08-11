@@ -129,6 +129,7 @@ fun AppCatalogScreen(
     var isSortMenuOpen by remember { mutableStateOf(false) }
     var isSortVisible by remember { mutableStateOf(true) }
     var searchFieldFocused by remember { mutableStateOf(false) }
+    var isPullRefreshing by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -164,6 +165,12 @@ fun AppCatalogScreen(
         onLoadMore = onLoadMoreRetry,
     )
 
+    LaunchedEffect(state.isLoading, state.isLoadingMore) {
+        if (!state.isLoading || state.isLoadingMore) {
+            isPullRefreshing = false
+        }
+    }
+
     AppSystemBackHandler(
         enabled = searchFieldFocused,
         onBack = {
@@ -174,13 +181,16 @@ fun AppCatalogScreen(
     ) {
         Box(modifier = modifier) {
         PullToRefreshBox(
-            isRefreshing = state.isLoading && !state.isLoadingMore,
-            onRefresh = onRefresh,
+            isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
+            onRefresh = {
+                isPullRefreshing = true
+                onRefresh()
+            },
             state = pullToRefreshState,
             indicator = {
                 PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
-                    isRefreshing = state.isLoading && !state.isLoadingMore,
+                    isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
                     modifier = Modifier.padding(top = CatalogContentTopPadding),
                 )
             },
