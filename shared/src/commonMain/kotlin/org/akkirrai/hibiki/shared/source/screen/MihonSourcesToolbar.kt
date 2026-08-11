@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Refresh
@@ -21,7 +22,9 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.shared.design.component.search.AppSearchTopBar
 
@@ -131,16 +134,37 @@ fun AppSourcesTabs(
     onExtensionsSelected: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    PrimaryTabRow(selectedTabIndex = selectedTab, modifier = modifier.fillMaxWidth()) {
+    PrimaryTabRow(
+        selectedTabIndex = selectedTab,
+        modifier = modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.background,
+        divider = {},
+    ) {
         Tab(
             onClick = onExtensionsSelected,
             selected = selectedTab == 0,
-            text = { Text(extensionsLabel) },
+            text = {
+                Text(
+                    text = extensionsLabel,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = if (selectedTab == 0) 1f else 0.5f),
+                    maxLines = 1,
+                )
+            },
+            modifier = Modifier.padding(horizontal = 1.dp, vertical = 4.dp).clip(CircleShape),
         )
         Tab(
             selected = selectedTab == 1,
             onClick = onSourcesSelected,
-            text = { Text(sourcesLabel) },
+            text = {
+                Text(
+                    text = sourcesLabel,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = if (selectedTab == 1) 1f else 0.5f),
+                    maxLines = 1,
+                )
+            },
+            modifier = Modifier.padding(horizontal = 1.dp, vertical = 4.dp).clip(CircleShape),
         )
     }
 }

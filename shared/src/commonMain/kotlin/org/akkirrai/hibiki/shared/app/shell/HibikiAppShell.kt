@@ -278,6 +278,7 @@ internal fun HibikiAppShell(
         sourceSearchPresenter = sourceSearchPresenter,
         catalogRefreshKey = catalogRefreshKey,
         catalogReady = catalogReady,
+        catalogVisible = selectedTab == AppDestination.CATALOG,
         onDisposed = sourceSelectionCoordinator::cancel,
     )
 

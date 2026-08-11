@@ -14,10 +14,11 @@ internal fun HibikiCatalogPresenterLifecycle(
     sourceSearchPresenter: SourcesSearchPresenter,
     catalogRefreshKey: Any?,
     catalogReady: Boolean,
+    catalogVisible: Boolean,
     onDisposed: () -> Unit,
 ) {
-    LaunchedEffect(presenter, catalogRefreshKey, catalogReady) {
-        if (!catalogReady) return@LaunchedEffect
+    LaunchedEffect(presenter, catalogRefreshKey, catalogReady, catalogVisible) {
+        if (!catalogReady || !catalogVisible) return@LaunchedEffect
         presenter.loadFilterCatalog()
         presenter.search()
     }

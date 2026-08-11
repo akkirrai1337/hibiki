@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalFocusManager
@@ -63,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.shared.design.component.button.AppSplitActionButton
@@ -256,11 +258,12 @@ fun AppSourcesTabsScreen(
     var searchFieldFocused by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val tabScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
         initialPage = selectedTab.coerceIn(0, 1),
         pageCount = { 2 },
     )
-    val extensionsTabSelected = selectedTab == 0
+    val extensionsTabSelected = pagerState.currentPage == 0
     val activeQuery = if (extensionsTabSelected) extensionsQuery else sourcesQuery
     val activeSearchOpen = if (extensionsTabSelected) extensionsSearchOpen else sourcesSearchOpen
 
@@ -319,16 +322,16 @@ fun AppSourcesTabsScreen(
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             showFilter = extensionsTabSelected,
             titleStyle = MaterialTheme.typography.titleLarge,
-            onRefresh = null,
+            onRefresh = if (extensionsTabSelected) onRefresh else null,
             onAddClick = if (extensionsTabSelected) null else onAddRepository,
             onSearchFocusChanged = { searchFieldFocused = it },
             tabContent = {
                 AppSourcesTabs(
-                    selectedTab = selectedTab.coerceIn(0, 1),
+                    selectedTab = pagerState.currentPage,
                     sourcesLabel = appText(AppTextKey.Sources),
                     extensionsLabel = appText(AppTextKey.SourcesExtensions),
-                    onSourcesSelected = { onSelectedTabChange(1) },
-                    onExtensionsSelected = { onSelectedTabChange(0) },
+                    onSourcesSelected = { tabScope.launch { pagerState.animateScrollToPage(1) } },
+                    onExtensionsSelected = { tabScope.launch { pagerState.animateScrollToPage(0) } },
                 )
             },
             )
