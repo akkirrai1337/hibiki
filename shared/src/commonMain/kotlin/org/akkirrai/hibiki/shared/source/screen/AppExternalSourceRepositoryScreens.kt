@@ -743,7 +743,8 @@ fun AppExternalSourcePackageInfoScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SourcePackageInfoValue(
-                        value = manifest.packageVersion,
+                        value = packageStatus.activePackage?.installed?.packageVersion
+                            ?: manifest.packageVersion,
                         label = appText(AppTextKey.SourcesExternalPackageVersion),
                     )
                     VerticalDivider(modifier = Modifier.height(20.dp))
@@ -1028,6 +1029,7 @@ private fun SourcePackageCard(
     val manifest = packageStatus.availableManifest
     val title = manifest.sourceInfo?.displayName?.takeIf(String::isNotBlank) ?: manifest.sourceId.value
     val languages = manifest.sourceInfo?.languages.orEmpty().joinToString { it.tag.uppercase() }
+    val installedVersion = packageStatus.activePackage?.installed?.packageVersion
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1044,7 +1046,7 @@ private fun SourcePackageCard(
         Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = listOfNotNull(languages.takeIf(String::isNotBlank), manifest.packageVersion).joinToString(" · "),
+                    text = listOfNotNull(languages.takeIf(String::isNotBlank), installedVersion ?: manifest.packageVersion).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
