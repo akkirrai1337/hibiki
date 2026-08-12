@@ -119,7 +119,7 @@ fun AppSourceRepositoriesScreen(
                     SourceRepositoryCard(
                         repository = repository,
                         onClick = { onRepositoryClick(repository.endpoint.url) },
-                        onOpenUrl = { onOpenUrl(repository.endpoint.url) },
+                        onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
                         onRemove = { onRemoveRepository(repository.endpoint.url) },
                         onCopy = { onCopyUrl(repository.endpoint.url) },
                     )
@@ -209,7 +209,7 @@ fun AppExternalSourcesTabScreen(
                     SourceRepositoryCard(
                         repository = repository,
                         onClick = { onRepositoryClick(repository.endpoint.url) },
-                        onOpenUrl = { onOpenUrl(repository.endpoint.url) },
+                        onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
                         onRemove = { onRemoveRepository(repository.endpoint.url) },
                         onCopy = { onCopyUrl(repository.endpoint.url) },
                     )
@@ -416,7 +416,7 @@ fun AppSourcesTabsScreen(
                             SourceRepositoryCard(
                                 repository = repository,
                                 onClick = { onRepositoryClick(repository.endpoint.url) },
-                                onOpenUrl = { onOpenUrl(repository.endpoint.url) },
+                                onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
                                 onRemove = { onRemoveRepository(repository.endpoint.url) },
                                 onCopy = { onCopyUrl(repository.endpoint.url) },
                             )

@@ -34,4 +34,23 @@ fun repositoryDisplayName(url: String): String {
 fun repositoryShortName(url: String): String = repositoryDisplayName(url)
     .substringAfterLast('/')
 
+/** Returns the public repository page when it can be derived from an index URL. */
+fun repositoryBrowseUrl(url: String): String {
+    val normalized = url.trim().substringBefore('#').substringBefore('?').trimEnd('/')
+    val authority = normalized.substringAfter("://", normalized).substringBefore('/')
+    val host = authority.substringAfter('@').substringBefore(':').lowercase()
+    val pathSegments = normalized
+        .substringAfter("://", "")
+        .substringAfter('/', "")
+        .split('/')
+        .filter(String::isNotBlank)
+
+    val (owner, repository) = when {
+        host == "github.com" && pathSegments.size >= 2 -> pathSegments[0] to pathSegments[1]
+        host == "raw.githubusercontent.com" && pathSegments.size >= 2 -> pathSegments[0] to pathSegments[1]
+        else -> return url
+    }
+    return "https://github.com/$owner/${repository.removeSuffix(".git")}"
+}
+
 private const val MAX_REPOSITORY_DISPLAY_NAME_LENGTH = 48
