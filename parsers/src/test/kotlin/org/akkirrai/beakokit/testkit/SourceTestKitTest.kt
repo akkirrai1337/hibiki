@@ -189,6 +189,7 @@ class SourceTestKitTest {
             posterUrl = "https://images.test/poster.jpg",
             status = "ongoing",
             episodeCount = 12,
+            genres = listOf("Action"),
             availableEpisodeCount = 3,
             nextEpisodeAt = 1_784_160_000L,
         )
@@ -201,6 +202,7 @@ class SourceTestKitTest {
                 poster = true,
                 releaseStatus = true,
                 episodeCount = true,
+                genres = true,
                 availableEpisodeCount = true,
                 nextEpisodeAt = true,
             ),

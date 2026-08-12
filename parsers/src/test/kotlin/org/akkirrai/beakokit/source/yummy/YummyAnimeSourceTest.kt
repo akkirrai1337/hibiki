@@ -10,6 +10,7 @@ import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
+import org.akkirrai.beakokit.testkit.TitleMetadataRequirements
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -87,6 +88,16 @@ class YummyAnimeSourceTest {
             val catalog = SourceTestKit.assertCatalogContract(
                 source,
                 AnimeSearchRequest(query = "Test", limit = 5),
+            )
+            SourceTestKit.assertTitleMetadataContract(
+                catalog.details,
+                TitleMetadataRequirements(
+                    description = true,
+                    poster = true,
+                    releaseStatus = true,
+                    episodeCount = true,
+                    genres = true,
+                ),
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
             val filters = SourceTestKit.assertFilterCatalogContract(source)

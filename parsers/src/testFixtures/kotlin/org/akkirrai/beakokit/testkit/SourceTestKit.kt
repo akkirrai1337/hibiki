@@ -29,6 +29,7 @@ data class TitleMetadataRequirements(
     val poster: Boolean = false,
     val releaseStatus: Boolean = false,
     val episodeCount: Boolean = false,
+    val genres: Boolean = false,
     val availableEpisodeCount: Boolean = false,
     val nextEpisodeAt: Boolean = false,
 )
@@ -302,6 +303,9 @@ object SourceTestKit {
         }
         assertContract(!requirements.episodeCount || details.episodeCount?.let { it > 0 } == true) {
             "Details for ${details.id} must include a positive episode count"
+        }
+        assertContract(!requirements.genres || details.genres.isNotEmpty() && details.genres.all { it.isNotBlank() }) {
+            "Details for ${details.id} must include non-blank genres"
         }
         assertContract(!requirements.availableEpisodeCount || details.availableEpisodeCount?.let { it >= 0 } == true) {
             "Details for ${details.id} must include the available episode count"

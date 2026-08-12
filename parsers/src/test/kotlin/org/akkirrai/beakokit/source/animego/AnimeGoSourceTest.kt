@@ -11,6 +11,7 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.testkit.FixtureRoute
 import org.akkirrai.beakokit.testkit.SourceFixtureHost
 import org.akkirrai.beakokit.testkit.SourceTestKit
+import org.akkirrai.beakokit.testkit.TitleMetadataRequirements
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -53,8 +54,12 @@ class AnimeGoSourceTest {
             )
             SourceTestKit.assertTitleMetadataContract(
                 catalog.details,
-                requireDescription = true,
-                requirePoster = true,
+                TitleMetadataRequirements(
+                    description = true,
+                    poster = true,
+                    episodeCount = true,
+                    genres = true,
+                ),
             )
             val latest = SourceTestKit.assertLatestContract(source, limit = 5)
             val playback = SourceTestKit.assertPlaybackContract(source, catalog.details)
