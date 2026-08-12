@@ -361,7 +361,7 @@ fun AppSourcesTabsScreen(
                         manifest.sourceId.value.contains(extensionsQuery, ignoreCase = true)
                     val packageLanguages = manifest.sourceInfo?.languages.orEmpty().map { it.tag }.toSet()
                     matchesQuery && (selectedLanguages.isEmpty() || packageLanguages.any(selectedLanguages::contains))
-                }
+                }.sortedForDisplay()
                 if (visiblePackages.isEmpty()) {
                     SourceRepositoryEmptyState(
                         text = appText(AppTextKey.SourcesExternalRepositoryPackagesEmpty),
@@ -479,7 +479,7 @@ fun AppSourceExtensionsTabScreen(
                 manifest.sourceId.value.contains(query, ignoreCase = true)
             val packageLanguages = manifest.sourceInfo?.languages.orEmpty().map { it.tag }.toSet()
             matchesQuery && (selectedLanguages.isEmpty() || packageLanguages.any(selectedLanguages::contains))
-        }
+        }.sortedForDisplay()
     }
     Column(modifier = modifier.fillMaxSize()) {
         AppMihonSourcesToolbar(
@@ -592,7 +592,7 @@ fun AppSourceRepositoryPackagesScreen(
                 manifest.sourceId.value.contains(query, ignoreCase = true)
             val packageLanguages = manifest.sourceInfo?.languages.orEmpty().map { it.tag }.toSet()
             matchesQuery && (selectedLanguages.isEmpty() || packageLanguages.any(selectedLanguages::contains))
-        }
+        }.sortedForDisplay()
     }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -1090,6 +1090,14 @@ private fun SourcePackageCard(
             }
     }
 }
+
+private fun List<ExternalSourcePackageStatus>.sortedForDisplay(): List<ExternalSourcePackageStatus> =
+    sortedWith(
+        compareBy(
+            { it.availableManifest.sourceInfo?.displayName.orEmpty().lowercase() },
+            { it.sourceId.value.lowercase() },
+        ),
+    )
 
 @Composable
 private fun SourceRepositoryEmptyState(text: String, modifier: Modifier = Modifier) {
