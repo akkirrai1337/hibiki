@@ -89,6 +89,12 @@ fun AppSourceRepositoriesScreen(
             title = appText(AppTextKey.SourcesExternalRepositories),
             onBack = onBack,
             actions = {
+                IconButton(onClick = onRefresh) {
+                    Icon(
+                        imageVector = Icons.Outlined.Refresh,
+                        contentDescription = appText(AppTextKey.SettingsExternalRepositoryRefresh),
+                    )
+                }
                 IconButton(onClick = onAddRepository) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
@@ -177,7 +183,7 @@ fun AppExternalSourcesTabScreen(
             searchPlaceholder = appText(AppTextKey.SourcesExternalRepositorySearch),
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             showFilter = false,
-            onRefresh = null,
+            onRefresh = onRefresh,
             onAddClick = onAddRepository,
             tabContent = {
                 AppSourcesTabs(
@@ -322,7 +328,7 @@ fun AppSourcesTabsScreen(
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             showFilter = extensionsTabSelected,
             titleStyle = MaterialTheme.typography.titleLarge,
-            onRefresh = if (extensionsTabSelected) onRefresh else null,
+            onRefresh = onRefresh,
             onAddClick = if (extensionsTabSelected) null else onAddRepository,
             onSearchFocusChanged = { searchFieldFocused = it },
             tabContent = {
