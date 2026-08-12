@@ -625,6 +625,7 @@ fun AppSourceRepositoryPackagesScreen(
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             titleStyle = MaterialTheme.typography.titleLarge,
             onRefresh = onRefresh,
+            onBack = onBack,
             onSearchFocusChanged = { searchFieldFocused = it },
         )
         if (languageFilterOpen) {

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +45,7 @@ fun AppMihonSourcesToolbar(
     titleStyle: TextStyle = MaterialTheme.typography.headlineMedium,
     onRefresh: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
     onSearchFocusChanged: (Boolean) -> Unit = {},
     tabContent: @Composable () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -96,6 +98,11 @@ fun AppMihonSourcesToolbar(
                     }
                 }
             } else {
+                onBack?.let { back ->
+                    IconButton(onClick = back) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null)
+                    }
+                }
                 Text(
                     text = title,
                     style = titleStyle,
