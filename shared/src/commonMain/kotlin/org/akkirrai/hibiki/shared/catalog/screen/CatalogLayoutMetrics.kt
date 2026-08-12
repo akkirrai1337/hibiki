@@ -32,4 +32,10 @@ val CatalogContentTopPadding = CatalogHeaderTopPadding +
     CatalogSortVerticalGap +
     CatalogSortControlHeight +
     CatalogSortVerticalGap
+
+fun catalogContentTopPadding(hasSort: Boolean) = if (hasSort) {
+    CatalogContentTopPadding
+} else {
+    CatalogHeaderTopPadding + CatalogSearchBarHeight + CatalogSortVerticalGap
+}
 const val CatalogSortAnimationDurationMs = 220

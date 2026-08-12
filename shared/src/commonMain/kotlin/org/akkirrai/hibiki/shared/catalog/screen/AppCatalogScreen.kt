@@ -139,6 +139,7 @@ fun AppCatalogScreen(
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts).orEmpty()
     }
     val hasSelectableCatalogSorts = availableSorts.size > 1
+    val contentTopPadding = catalogContentTopPadding(hasSelectableCatalogSorts)
     val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
         state.isFilterCatalogLoading
 
@@ -195,14 +196,14 @@ fun AppCatalogScreen(
                     isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = CatalogContentTopPadding),
+                        .padding(top = contentTopPadding),
                 )
             },
         ) {
         AppCatalogScreenContent(
             state = state,
             listState = listState,
-            topContentPadding = CatalogContentTopPadding,
+            topContentPadding = contentTopPadding,
             bottomContentPadding = bottomContentPadding,
             errorTitle = labels.errorTitle,
             retryLabel = labels.retryLabel,

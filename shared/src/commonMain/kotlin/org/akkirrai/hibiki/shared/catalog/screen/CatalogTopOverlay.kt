@@ -53,7 +53,11 @@ fun AppCatalogTopOverlay(
                     end = UiDimens.ScreenPadding,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CatalogSortVerticalGap),
+            verticalArrangement = if (showSort) {
+                Arrangement.spacedBy(CatalogSortVerticalGap)
+            } else {
+                Arrangement.Top
+            },
         ) {
             AppSearchTopBar(
                 query = query,
