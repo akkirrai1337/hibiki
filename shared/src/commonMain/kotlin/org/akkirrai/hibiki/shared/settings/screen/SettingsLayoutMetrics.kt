@@ -19,7 +19,7 @@ val SettingsBackButtonSize = 48.dp
 val SettingsBackButtonContentGap = 8.dp
 
 fun settingsContentTopPaddingWithBackButton(topSystemInset: Dp): Dp =
-    topSystemInset + SettingsBackButtonTopPadding + SettingsBackButtonSize + SettingsBackButtonContentGap
+    topSystemInset + SettingsBackButtonTopPadding + SettingsBackButtonSize + SettingsContentSectionGap
 
 val SettingsContentSectionGap = 28.dp
 val SettingsItemIconSize = 28.dp

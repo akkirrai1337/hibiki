@@ -5,9 +5,13 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +26,7 @@ import hibiki.shared.generated.resources.ic_github
 import hibiki.shared.generated.resources.hibiki_app_icon
 import org.jetbrains.compose.resources.painterResource
 import org.akkirrai.hibiki.shared.details.screen.AppDetailsHeroOverlayBackButton
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 data class AppSettingsScreenLabels(
@@ -106,15 +111,17 @@ fun AppSettingsScreen(
             },
             modifier = Modifier.fillMaxSize(),
             content = {
-        item(key = "settings-header") {
-            Text(
-                text = labels.title,
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (!showBackButton) {
+            item(key = "settings-header") {
+                Text(
+                    text = labels.title,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         item(key = SettingsSection.Appearance.key) {
             AppSettingsAppearanceSection(
@@ -237,6 +244,26 @@ fun AppSettingsScreen(
                 contentDescription = backContentDescription,
                 modifier = Modifier.align(Alignment.TopStart),
             )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(
+                        start = UiDimens.ScreenPadding + SettingsBackButtonSize + SettingsBackButtonContentGap,
+                        top = topSystemInset + SettingsBackButtonTopPadding,
+                    )
+                    .height(SettingsBackButtonSize),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = labels.title,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
