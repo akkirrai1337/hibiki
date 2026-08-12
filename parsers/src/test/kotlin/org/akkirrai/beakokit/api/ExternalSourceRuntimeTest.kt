@@ -233,6 +233,23 @@ class ExternalSourceRuntimeTest {
     }
 
     @Test
+    fun installedMetadataPolicyRejectsServiceGenreAliases() = runBlocking {
+        val runtime = FakeRuntime().apply {
+            searchResult = listOf(detailsResult.copy(genres = listOf("action")))
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+            metadataPolicy = ExternalSourceMetadataPolicy.INSTALLED_PACKAGE,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            source.search(AnimeSearchRequest(limit = 1))
+        }
+    }
+
+    @Test
     fun catalogRuntimeRejectsInvalidSearchBoundsAndOversizedResults() = runBlocking {
         val runtime = FakeRuntime().apply {
             searchResult = listOf(detailsResult, detailsResult.copy(id = "title-2"))

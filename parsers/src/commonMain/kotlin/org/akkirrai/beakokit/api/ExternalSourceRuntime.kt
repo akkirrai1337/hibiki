@@ -300,7 +300,13 @@ private fun requireValidExternalTitle(
     require(!metadataPolicy.requireGenres || title.genres.isNotEmpty()) {
         "External source returned no genres for ${title.id} in $operation"
     }
+    require(!metadataPolicy.requireGenres || title.genres.none(::isMachineGenre)) {
+        "External source returned service-formatted genres for ${title.id} in $operation"
+    }
 }
+
+private fun isMachineGenre(value: String): Boolean =
+    value.matches(Regex("[a-z0-9_-]+"))
 
 private fun requireValidExternalHttpUrl(url: String, field: String, titleId: String, operation: String) {
     require(url.isNotBlank()) {
