@@ -21,7 +21,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -77,8 +76,8 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
 import org.akkirrai.hibiki.shared.settings.DiscordRpcUiState
-import org.akkirrai.hibiki.shared.text.DefaultAppTextResolver
-import org.akkirrai.hibiki.shared.text.LocalAppTextResolver
+import org.akkirrai.hibiki.shared.settings.resolveAppLanguageTag
+import org.akkirrai.hibiki.shared.text.AppTextResourceLocale
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.navigation.AppDestination
@@ -435,8 +434,8 @@ internal fun HibikiAppShell(
         closeDetails = presenter::closeDetails,
     )
 
-    CompositionLocalProvider(
-        LocalAppTextResolver provides DefaultAppTextResolver(appSettingsState.languageMode, systemLanguage),
+    AppTextResourceLocale(
+        languageTag = resolveAppLanguageTag(appSettingsState.languageMode, systemLanguage),
     ) {
         MaterialTheme(
             colorScheme = hibikiAppColorScheme(appSettingsState.themeMode, appSettingsState.useAmoledTheme),
