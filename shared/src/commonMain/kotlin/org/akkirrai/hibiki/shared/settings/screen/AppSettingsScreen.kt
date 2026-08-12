@@ -9,9 +9,13 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import hibiki.shared.generated.resources.Res
 import hibiki.shared.generated.resources.ic_discord
 import hibiki.shared.generated.resources.ic_github
@@ -21,6 +25,7 @@ import org.akkirrai.hibiki.shared.details.screen.AppDetailsHeroOverlayBackButton
 import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 
 data class AppSettingsScreenLabels(
+    val title: String,
     val appearance: String,
     val theme: String,
     val themeSystem: String,
@@ -101,6 +106,16 @@ fun AppSettingsScreen(
             },
             modifier = Modifier.fillMaxSize(),
             content = {
+        item(key = "settings-header") {
+            Text(
+                text = labels.title,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         item(key = SettingsSection.Appearance.key) {
             AppSettingsAppearanceSection(
                 sectionTitle = labels.appearance,

@@ -60,6 +60,7 @@ internal fun SettingsScreen(
         discordEnabled = discordEnabled,
         discordAvailable = discordAvailable,
         labels = AppSettingsScreenLabels(
+            title = appText(AppTextKey.Settings),
             appearance = appText(AppTextKey.SettingsAppearance),
             theme = appText(AppTextKey.SettingsTheme),
             themeSystem = appText(AppTextKey.ThemeSystem),
