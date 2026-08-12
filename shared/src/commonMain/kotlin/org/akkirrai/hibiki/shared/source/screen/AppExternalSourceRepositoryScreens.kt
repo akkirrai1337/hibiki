@@ -1036,6 +1036,11 @@ private fun SourcePackageCard(
     val title = manifest.sourceInfo?.displayName?.takeIf(String::isNotBlank) ?: manifest.sourceId.value
     val languages = manifest.sourceInfo?.languages.orEmpty().joinToString { it.tag.uppercase() }
     val installedVersion = packageStatus.activePackage?.installed?.packageVersion
+    val versionLabel = if (installedVersion != null && packageStatus.updateAvailable) {
+        "$installedVersion → ${manifest.packageVersion}"
+    } else {
+        installedVersion ?: manifest.packageVersion
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1052,7 +1057,7 @@ private fun SourcePackageCard(
         Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = listOfNotNull(languages.takeIf(String::isNotBlank), installedVersion ?: manifest.packageVersion).joinToString(" · "),
+                    text = listOfNotNull(languages.takeIf(String::isNotBlank), versionLabel).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
