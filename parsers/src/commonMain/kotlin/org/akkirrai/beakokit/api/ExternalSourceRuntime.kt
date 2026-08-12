@@ -234,20 +234,40 @@ private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
     require(title.description == null || title.description.isNotBlank()) {
         "External source returned a blank description for ${title.id} in $operation"
     }
-    require(title.posterUrl == null || title.posterUrl.isNotBlank()) {
-        "External source returned a blank poster URL for ${title.id} in $operation"
+    title.posterUrl?.let { posterUrl ->
+        requireValidExternalHttpUrl(posterUrl, "poster URL", title.id, operation)
     }
     require(title.posterFallbackUrl == null || title.posterFallbackUrl.isNotBlank()) {
         "External source returned a blank poster fallback URL for ${title.id} in $operation"
     }
     title.posterFallbackUrl?.let { fallbackUrl ->
-        val parsed = runCatching { Url(fallbackUrl) }.getOrNull()
-        require(parsed != null && parsed.host.isNotBlank() && parsed.protocol.name in setOf("http", "https")) {
-            "External source returned an invalid poster fallback URL for ${title.id} in $operation"
-        }
+        requireValidExternalHttpUrl(fallbackUrl, "poster fallback URL", title.id, operation)
         require(fallbackUrl != title.posterUrl) {
             "External source returned a duplicate poster fallback URL for ${title.id} in $operation"
         }
+    }
+    require(title.episodeCount == null || title.episodeCount > 0) {
+        "External source returned a non-positive episode count for ${title.id} in $operation"
+    }
+    require(title.availableEpisodeCount == null || title.availableEpisodeCount >= 0) {
+        "External source returned a negative available episode count for ${title.id} in $operation"
+    }
+    require(title.episodeCount == null || title.availableEpisodeCount == null ||
+        title.availableEpisodeCount <= title.episodeCount) {
+        "External source returned more available episodes than total episodes for ${title.id} in $operation"
+    }
+    require(title.genres.all(String::isNotBlank)) {
+        "External source returned a blank genre for ${title.id} in $operation"
+    }
+}
+
+private fun requireValidExternalHttpUrl(url: String, field: String, titleId: String, operation: String) {
+    require(url.isNotBlank()) {
+        "External source returned a blank $field for $titleId in $operation"
+    }
+    val parsed = runCatching { Url(url) }.getOrNull()
+    require(parsed != null && parsed.host.isNotBlank() && parsed.protocol.name in setOf("http", "https")) {
+        "External source returned an invalid $field for $titleId in $operation"
     }
 }
 

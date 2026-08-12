@@ -262,6 +262,32 @@ class ExternalSourceRuntimeTest {
         assertFailsWith<IllegalArgumentException> {
             source.search(AnimeSearchRequest(limit = 1))
         }
+
+        val invalidEpisodeCountRuntime = FakeRuntime().apply {
+            searchResult = listOf(detailsResult.copy(episodeCount = 0))
+        }
+        val invalidEpisodeCountSource = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = invalidEpisodeCountRuntime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            invalidEpisodeCountSource.search(AnimeSearchRequest(limit = 1))
+        }
+
+        val invalidPosterRuntime = FakeRuntime().apply {
+            searchResult = listOf(detailsResult.copy(posterUrl = "javascript:alert(1)"))
+        }
+        val invalidPosterSource = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = invalidPosterRuntime,
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            invalidPosterSource.search(AnimeSearchRequest(limit = 1))
+        }
     }
 
     private fun sourceInfo() = SourceInfo(
