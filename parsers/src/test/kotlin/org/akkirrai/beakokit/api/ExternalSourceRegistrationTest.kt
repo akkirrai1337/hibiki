@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.beakokit.model.CatalogCapabilities
@@ -285,7 +286,14 @@ class ExternalSourceRegistrationTest {
                             ExternalSourceRuntimeOperation.SEARCH ->
                                 AnimeTitleRuntimePayloadCodec.encodeSearch(listOf(title("search-result")))
                             ExternalSourceRuntimeOperation.FILTER_CATALOG ->
-                                AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(AnimeSearchFilterCatalog())
+                                AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(
+                                    AnimeSearchFilterCatalog(
+                                        sortOptions = listOf(SearchFilterOption("relevance", "Relevance")),
+                                        typeOptions = listOf(SearchFilterOption("tv", "TV")),
+                                        statusOptions = listOf(SearchFilterOption("ongoing", "Ongoing")),
+                                        genreOptions = listOf(SearchFilterOption("action", "Action")),
+                                    ),
+                                )
                             ExternalSourceRuntimeOperation.DETAILS ->
                                 AnimeTitleRuntimePayloadCodec.encodeDetails(title("title-1"))
                             ExternalSourceRuntimeOperation.LATEST ->

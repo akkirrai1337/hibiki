@@ -96,7 +96,9 @@ open class RuntimeBackedAnimeSource(
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
         val filterRuntime = runtime as? ExternalSourceFilterCatalogRuntime ?: return super.getSearchFilterCatalog()
         SourceOperationGate.requireSupported(this, SourceOperation.FILTER_CATALOG)
-        return filterRuntime.filterCatalog().also(::requireValidExternalFilterCatalog)
+        return filterRuntime.filterCatalog().also {
+            requireValidExternalFilterCatalog(it, metadataPolicy)
+        }
     }
 }
 
@@ -249,7 +251,10 @@ private fun requireValidExternalRuntimeId(id: String, label: String) {
     }
 }
 
-private fun requireValidExternalFilterCatalog(catalog: AnimeSearchFilterCatalog) {
+private fun requireValidExternalFilterCatalog(
+    catalog: AnimeSearchFilterCatalog,
+    metadataPolicy: ExternalSourceMetadataPolicy,
+) {
     fun validateOptions(options: List<org.akkirrai.beakokit.model.SearchFilterOption>, label: String) {
         require(options.map { it.id }.distinct().size == options.size) {
             "External filter catalog contains duplicate $label IDs"
@@ -280,6 +285,21 @@ private fun requireValidExternalFilterCatalog(catalog: AnimeSearchFilterCatalog)
             catalog.genreOptions.isEmpty(),
     ) {
         "External filter catalog exposes genre options without genre support"
+    }
+    if (metadataPolicy.requireGenres) {
+        require(
+            !catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.TYPE) ||
+                catalog.typeOptions.isNotEmpty(),
+        ) { "External filter catalog declares TYPE support without type options" }
+        require(
+            !catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.STATUS) ||
+                catalog.statusOptions.isNotEmpty(),
+        ) { "External filter catalog declares STATUS support without status options" }
+        require(
+            (!catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.INCLUDED_GENRES) &&
+                !catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.EXCLUDED_GENRES)) ||
+                catalog.genreOptions.isNotEmpty(),
+        ) { "External filter catalog declares genre support without genre options" }
     }
 }
 

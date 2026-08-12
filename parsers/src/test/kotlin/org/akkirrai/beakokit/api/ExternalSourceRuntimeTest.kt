@@ -269,6 +269,21 @@ class ExternalSourceRuntimeTest {
     }
 
     @Test
+    fun installedMetadataPolicyRejectsSupportedFilterWithoutOptions() = runBlocking {
+        val runtime = FakeFilterRuntime().apply {
+            filterCatalogResult = AnimeSearchFilterCatalog()
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+            metadataPolicy = ExternalSourceMetadataPolicy.INSTALLED_PACKAGE,
+        )
+
+        assertFailsWith<IllegalArgumentException> { source.getSearchFilterCatalog() }
+    }
+
+    @Test
     fun catalogRuntimeRejectsInvalidSearchBoundsAndOversizedResults() = runBlocking {
         val runtime = FakeRuntime().apply {
             searchResult = listOf(detailsResult, detailsResult.copy(id = "title-2"))
