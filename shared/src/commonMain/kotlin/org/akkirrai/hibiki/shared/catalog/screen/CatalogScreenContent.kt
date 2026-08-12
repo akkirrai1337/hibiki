@@ -33,17 +33,18 @@ fun AppCatalogScreenContent(
     onItemVisible: (Anime) -> Unit,
     onRetry: () -> Unit,
     onLoadMoreRetry: () -> Unit,
+    isPullRefreshing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     AppCatalogContentState(
-        isLoading = state.isLoading,
+        isLoading = state.isLoading && !isPullRefreshing,
         hasContent = state.items.isNotEmpty(),
         errorMessage = state.error,
         errorTitle = errorTitle,
         retryLabel = retryLabel,
         onRetry = onRetry,
     ) {
-        if (state.isLoading && !state.isLoadingMore && state.items.isEmpty()) {
+        if (state.isLoading && !state.isLoadingMore && state.items.isEmpty() && !isPullRefreshing) {
             AppCenteredLoading(modifier = modifier.fillMaxSize())
         } else {
             AppCatalogContentList(

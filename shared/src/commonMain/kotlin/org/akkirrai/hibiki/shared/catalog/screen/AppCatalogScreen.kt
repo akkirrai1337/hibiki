@@ -213,6 +213,7 @@ fun AppCatalogScreen(
             onItemVisible = onItemVisible,
             onRetry = onRetry,
             onLoadMoreRetry = onLoadMoreRetry,
+            isPullRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
         )
         }
 
