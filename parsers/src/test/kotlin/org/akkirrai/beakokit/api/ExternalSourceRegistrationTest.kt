@@ -820,10 +820,11 @@ class ExternalSourceRegistrationTest {
         synonyms = emptyList(),
         year = null,
         type = null,
-        episodeCount = null,
-        posterUrl = null,
+        episodeCount = 12,
+        posterUrl = "https://images.example.com/$id.jpg",
         status = null,
         description = null,
+        genres = listOf("Action"),
     )
 
     private class InMemoryActivationStore(

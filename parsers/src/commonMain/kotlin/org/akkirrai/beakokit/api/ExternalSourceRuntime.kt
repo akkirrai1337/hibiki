@@ -45,11 +45,26 @@ fun interface ExternalSourceRuntimeFactory {
     ): ExternalSourceRuntime
 }
 
+data class ExternalSourceMetadataPolicy(
+    val requirePoster: Boolean = false,
+    val requireEpisodeCount: Boolean = false,
+    val requireGenres: Boolean = false,
+) {
+    companion object {
+        val INSTALLED_PACKAGE = ExternalSourceMetadataPolicy(
+            requirePoster = true,
+            requireEpisodeCount = true,
+            requireGenres = true,
+        )
+    }
+}
+
 /** Adapts a runtime-backed external source to the regular BeakoKit source contract. */
 open class RuntimeBackedAnimeSource(
     override val info: SourceInfo,
     override val catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     protected val runtime: ExternalSourceRuntime,
+    protected val metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ) : ConfigurableSource {
     override val configSchema: SourceConfigSchema
         get() = info.configSchema
@@ -63,14 +78,14 @@ open class RuntimeBackedAnimeSource(
         requireValidExternalSearchRequest(request)
         return runtime.search(request).also {
             requireValidExternalResultCount(it.size, request.limit, "search")
-            requireValidExternalTitles(it, "search")
+            requireValidExternalTitles(it, "search", metadataPolicy)
         }
     }
 
     override suspend fun getById(id: String): AnimeTitle {
         SourceOperationGate.requireSupported(this, SourceOperation.DETAILS)
         requireValidExternalRuntimeId(id, "title")
-        return runtime.details(id).also { requireValidExternalTitle(it, "details") }
+        return runtime.details(id).also { requireValidExternalTitle(it, "details", metadataPolicy) }
     }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
@@ -85,10 +100,12 @@ class RuntimeBackedLatestAnimeSource(
     info: SourceInfo,
     catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     runtime: ExternalSourceLatestRuntime,
+    metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ) : RuntimeBackedAnimeSource(
     info = info,
     catalogCapabilities = catalogCapabilities,
     runtime = runtime,
+    metadataPolicy = metadataPolicy,
 ), LatestSource {
     private val latestRuntime = runtime
 
@@ -97,7 +114,7 @@ class RuntimeBackedLatestAnimeSource(
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
         return latestRuntime.latest(limit).also {
             requireValidExternalResultCount(it.size, limit, "latest")
-            requireValidExternalTitles(it, "latest")
+            requireValidExternalTitles(it, "latest", this.metadataPolicy)
         }
     }
 }
@@ -107,10 +124,12 @@ open class RuntimeBackedPlaybackAnimeSource(
     info: SourceInfo,
     catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     runtime: ExternalSourcePlaybackRuntime,
+    metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ) : RuntimeBackedAnimeSource(
     info = info,
     catalogCapabilities = catalogCapabilities,
     runtime = runtime,
+    metadataPolicy = metadataPolicy,
 ), PlaybackSource {
     private val playbackRuntime = runtime
 
@@ -193,11 +212,15 @@ private fun requireValidExternalPlaybackGroups(groups: List<PlaybackGroup>) {
     }
 }
 
-private fun requireValidExternalTitles(titles: List<AnimeTitle>, operation: String) {
+private fun requireValidExternalTitles(
+    titles: List<AnimeTitle>,
+    operation: String,
+    metadataPolicy: ExternalSourceMetadataPolicy,
+) {
     require(titles.map(AnimeTitle::id).distinct().size == titles.size) {
         "External source returned duplicate title ids in $operation"
     }
-    titles.forEach { requireValidExternalTitle(it, operation) }
+    titles.forEach { requireValidExternalTitle(it, operation, metadataPolicy) }
 }
 
 private fun requireValidExternalSearchRequest(request: AnimeSearchRequest) {
@@ -221,7 +244,11 @@ private fun requireValidExternalRuntimeId(id: String, label: String) {
     }
 }
 
-private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
+private fun requireValidExternalTitle(
+    title: AnimeTitle,
+    operation: String,
+    metadataPolicy: ExternalSourceMetadataPolicy,
+) {
     require(title.id.isNotBlank()) {
         "External source returned a blank title id in $operation"
     }
@@ -237,6 +264,9 @@ private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
     title.posterUrl?.let { posterUrl ->
         requireValidExternalHttpUrl(posterUrl, "poster URL", title.id, operation)
     }
+    require(!metadataPolicy.requirePoster || title.posterUrl != null) {
+        "External source returned no poster URL for ${title.id} in $operation"
+    }
     require(title.posterFallbackUrl == null || title.posterFallbackUrl.isNotBlank()) {
         "External source returned a blank poster fallback URL for ${title.id} in $operation"
     }
@@ -249,6 +279,9 @@ private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
     require(title.episodeCount == null || title.episodeCount > 0) {
         "External source returned a non-positive episode count for ${title.id} in $operation"
     }
+    require(!metadataPolicy.requireEpisodeCount || title.episodeCount != null) {
+        "External source returned no episode count for ${title.id} in $operation"
+    }
     require(title.availableEpisodeCount == null || title.availableEpisodeCount >= 0) {
         "External source returned a negative available episode count for ${title.id} in $operation"
     }
@@ -258,6 +291,9 @@ private fun requireValidExternalTitle(title: AnimeTitle, operation: String) {
     }
     require(title.genres.all(String::isNotBlank)) {
         "External source returned a blank genre for ${title.id} in $operation"
+    }
+    require(!metadataPolicy.requireGenres || title.genres.isNotEmpty()) {
+        "External source returned no genres for ${title.id} in $operation"
     }
 }
 
@@ -276,10 +312,12 @@ class RuntimeBackedLatestPlaybackAnimeSource(
     info: SourceInfo,
     catalogCapabilities: org.akkirrai.beakokit.model.CatalogCapabilities,
     runtime: ExternalSourceLatestPlaybackRuntime,
+    metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ) : RuntimeBackedPlaybackAnimeSource(
     info = info,
     catalogCapabilities = catalogCapabilities,
     runtime = runtime,
+    metadataPolicy = metadataPolicy,
 ), LatestSource {
     private val latestRuntime = runtime
 
@@ -288,7 +326,7 @@ class RuntimeBackedLatestPlaybackAnimeSource(
         SourceOperationGate.requireSupported(this, SourceOperation.LATEST)
         return latestRuntime.latest(limit).also {
             requireValidExternalResultCount(it.size, limit, "latest")
-            requireValidExternalTitles(it, "latest")
+            requireValidExternalTitles(it, "latest", this.metadataPolicy)
         }
     }
 }

@@ -9,6 +9,7 @@ data class ExternalSourceRegistration(
     val catalogCapabilities: CatalogCapabilities,
     val runtimeFactory: (SourceContext) -> ExternalSourceRuntime,
     val registrationOrder: Int? = null,
+    val metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ) {
     init {
         require(
@@ -39,6 +40,7 @@ data class ExternalSourceRegistration(
                         info = info,
                         catalogCapabilities = catalogCapabilities,
                         runtime = runtime,
+                        metadataPolicy = metadataPolicy,
                     )
                 }
                 declaresPlayback -> {
@@ -49,6 +51,7 @@ data class ExternalSourceRegistration(
                         info = info,
                         catalogCapabilities = catalogCapabilities,
                         runtime = runtime,
+                        metadataPolicy = metadataPolicy,
                     )
                 }
                 declaresLatest -> {
@@ -59,12 +62,14 @@ data class ExternalSourceRegistration(
                         info = info,
                         catalogCapabilities = catalogCapabilities,
                         runtime = runtime,
+                        metadataPolicy = metadataPolicy,
                     )
                 }
                 else -> RuntimeBackedAnimeSource(
                     info = info,
                     catalogCapabilities = catalogCapabilities,
                     runtime = runtime,
+                    metadataPolicy = metadataPolicy,
                 )
             }
         },
@@ -121,6 +126,7 @@ data class ActiveExternalSourcePackage(
         catalogCapabilities = catalogCapabilities,
         runtimeFactory = { context -> runtimeFactory.create(this, context) },
         registrationOrder = registrationOrder,
+        metadataPolicy = ExternalSourceMetadataPolicy.INSTALLED_PACKAGE,
     )
 }
 
@@ -128,9 +134,11 @@ fun SourceManifest.toExternalSourceRegistration(
     catalogCapabilities: CatalogCapabilities,
     runtimeFactory: (SourceContext) -> ExternalSourceRuntime,
     registrationOrder: Int? = null,
+    metadataPolicy: ExternalSourceMetadataPolicy = ExternalSourceMetadataPolicy(),
 ): ExternalSourceRegistration = ExternalSourceRegistration(
     info = requireSourceInfo(),
     catalogCapabilities = catalogCapabilities,
     runtimeFactory = runtimeFactory,
     registrationOrder = registrationOrder,
+    metadataPolicy = metadataPolicy,
 )
