@@ -1,9 +1,6 @@
 package org.akkirrai.hibiki.shared.app.destination.content
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
@@ -104,13 +101,7 @@ internal fun AppDestinationContent(
     )
     AnimatedContent(
         targetState = detailsTarget,
-        transitionSpec = {
-            when {
-                initialState.anime != null && targetState.anime != null ->
-                    EnterTransition.None togetherWith ExitTransition.None
-                else -> EnterTransition.None togetherWith ExitTransition.None
-            }
-        },
+        transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
         label = "details_route_transition",
         modifier = Modifier.fillMaxSize(),
     ) { target ->
