@@ -8,6 +8,3 @@ val HomeContentTopPadding = UiDimens.SearchBarTopPadding +
     UiDimens.ScreenPadding
 
 val HomeTopSearchScrimHeight = HomeContentTopPadding + 18.dp
-
-val HomePullRefreshIndicatorTopOffset =
-    UiDimens.SearchBarTopPadding + UiDimens.SearchBarHeight - 8.dp

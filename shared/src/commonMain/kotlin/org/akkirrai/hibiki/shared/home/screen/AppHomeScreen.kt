@@ -9,8 +9,6 @@ import org.akkirrai.hibiki.shared.catalog.filters.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +60,6 @@ data class AppHomeScreenLabels(
     val optionText: @Composable (org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption) -> String,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppHomeScreen(
     state: HomeUiState,
@@ -74,7 +71,6 @@ fun AppHomeScreen(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     onFilterApply: (AnimeSearchFilters) -> Unit,
-    onRefresh: () -> Unit,
     onLoadMoreSearch: () -> Unit,
     onRetrySearch: () -> Unit = {},
     onAnimeClick: (Anime) -> Unit,
@@ -109,8 +105,6 @@ fun AppHomeScreen(
         },
     ) {
         var isFilterSheetOpen by remember { mutableStateOf(false) }
-        val pullToRefreshState = rememberPullToRefreshState()
-
         androidx.compose.foundation.layout.Box(modifier = modifier) {
             AppHomeContentSwitcher(
             isSearchActive = state.isSearchActive,
@@ -142,10 +136,8 @@ fun AppHomeScreen(
                 AppHomeFeedZone(
                     state = state,
                     listState = listState,
-                    pullToRefreshState = pullToRefreshState,
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
-                    indicatorTopPadding = HomePullRefreshIndicatorTopOffset,
                     continueSectionTitle = labels.continueTitle,
                     continueEmptyTitle = labels.continueEmptyTitle,
                     continueEmptyMessage = labels.continueEmptyMessage,
@@ -157,7 +149,6 @@ fun AppHomeScreen(
                     personalEmptyTitle = labels.personalEmptyTitle,
                     personalEmptyMessage = labels.personalEmptyMessage,
                     personalEmptyActionLabel = labels.personalEmptyActionLabel,
-                    onRefresh = onRefresh,
                     onAnimeClick = onAnimeClick,
                     onBrowseCatalog = onBrowseCatalog,
                     onOpenLibrary = onOpenLibrary,

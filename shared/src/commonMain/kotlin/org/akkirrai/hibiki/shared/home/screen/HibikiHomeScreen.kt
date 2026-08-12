@@ -92,7 +92,6 @@ internal fun ColumnScope.HomeScreen(
         onQueryChange = onQueryChange,
         onClearSearch = onSearchClear,
         onFilterApply = onFilterApply,
-        onRefresh = onHomeRefresh,
         onLoadMoreSearch = onSearchLoadMore,
         onRetrySearch = onSearchRetry,
         onAnimeClick = onAnimeClick,
