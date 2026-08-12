@@ -28,7 +28,7 @@ internal class HibikiAppSettingsState(
     var notificationPermissionState by mutableStateOf(initial.notificationPermissionState)
     var onboardingCompleted by mutableStateOf(initial.onboardingCompleted)
     var onboardingSourceId by mutableStateOf(initial.selectedSourceId ?: selectedSourceId)
-    var currentSelectedSourceId by mutableStateOf(initial.selectedSourceId ?: selectedSourceId)
+    var currentSelectedSourceId by mutableStateOf(selectedSourceId ?: initial.selectedSourceId)
 
     fun applyOnboardingPermission(state: NotificationPermissionState) {
         if (state != NotificationPermissionState.NOT_ASKED ||

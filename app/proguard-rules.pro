@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# The native Wasmtime bridge invokes this Kotlin callback by its stable JVM
+# method name. R8 must keep the interface and its implementations intact in
+# release builds, otherwise every external source fails on the first host call.
+-keep interface org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge$Host { *; }
+-keep class * implements org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge$Host { *; }
+-keep class org.akkirrai.beakokit.runtime.NativeSourceRuntimeBridge { *; }
