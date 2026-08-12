@@ -167,15 +167,9 @@ object AppLogger {
             e(LOG_EXPORT_TAG, "shareLogs: failed to get FileProvider uri, authority=$authority", throwable)
         }.getOrThrow()
         d(LOG_EXPORT_TAG, "shareLogs: uri=$uri")
-        val logText = runCatching {
-            file.readText()
-        }.onFailure { throwable ->
-            e(LOG_EXPORT_TAG, "shareLogs: failed to read exported log text", throwable)
-        }.getOrThrow()
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, logText)
             putExtra(Intent.EXTRA_SUBJECT, "Hibiki logs")
             clipData = ClipData.newUri(appContext.contentResolver, file.name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
