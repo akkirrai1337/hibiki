@@ -136,8 +136,9 @@ fun AppCatalogScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val selectedSort = catalogSortFromAlias(state.filters.sortAlias)
     val availableSorts = remember(state.filterCatalog?.capabilities) {
-        state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+        state.filterCatalog?.capabilities?.let(::availableCatalogSorts).orEmpty()
     }
+    val hasSelectableCatalogSorts = availableSorts.size > 1
     val hasCatalogFilters = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
         state.isFilterCatalogLoading
 
@@ -227,6 +228,7 @@ fun AppCatalogScreen(
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
             showSort = isSortVisible &&
+                hasSelectableCatalogSorts &&
                 state.items.isNotEmpty() &&
                 !state.isLoading &&
                 state.error == null,

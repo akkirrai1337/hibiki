@@ -25,4 +25,14 @@ class CatalogSortTest {
             ),
         )
     }
+
+    @Test
+    fun doesNotExposeSortControlsForRelevanceOnlySources() {
+        assertEquals(
+            emptyList(),
+            availableCatalogSorts(
+                AnimeCatalogCapabilities(supportedSorts = setOf("relevance")),
+            ),
+        )
+    }
 }
