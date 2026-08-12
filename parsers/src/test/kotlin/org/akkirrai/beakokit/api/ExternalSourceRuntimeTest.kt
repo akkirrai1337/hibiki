@@ -219,6 +219,20 @@ class ExternalSourceRuntimeTest {
     }
 
     @Test
+    fun catalogRuntimeRejectsDetailsForAnotherTitle() = runBlocking {
+        val runtime = FakeRuntime().apply {
+            detailsResult = detailsResult.copy(id = "different-title")
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> { source.getById("title-1") }
+    }
+
+    @Test
     fun catalogRuntimeRejectsInvalidSearchBoundsAndOversizedResults() = runBlocking {
         val runtime = FakeRuntime().apply {
             searchResult = listOf(detailsResult, detailsResult.copy(id = "title-2"))
@@ -299,7 +313,7 @@ class ExternalSourceRuntimeTest {
 
     private open class FakeRuntime : ExternalSourceRuntime {
         var searchResult = emptyList<AnimeTitle>()
-        val detailsResult = AnimeTitle(
+        var detailsResult = AnimeTitle(
             id = "title-1",
             russianName = null,
             englishName = "Test title",

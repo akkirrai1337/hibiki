@@ -85,7 +85,12 @@ open class RuntimeBackedAnimeSource(
     override suspend fun getById(id: String): AnimeTitle {
         SourceOperationGate.requireSupported(this, SourceOperation.DETAILS)
         requireValidExternalRuntimeId(id, "title")
-        return runtime.details(id).also { requireValidExternalTitle(it, "details", metadataPolicy) }
+        return runtime.details(id).also {
+            requireValidExternalTitle(it, "details", metadataPolicy)
+            require(it.id == id) {
+                "External source returned details for ${it.id} while ${id} was requested"
+            }
+        }
     }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
