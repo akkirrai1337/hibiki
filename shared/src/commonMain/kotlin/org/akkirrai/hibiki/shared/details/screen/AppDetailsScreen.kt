@@ -177,7 +177,7 @@ fun AppDetailsScreen(
         mutableStateOf(libraryRepository?.getLibraryCategory(anime.id) ?: initialLibraryCategory)
     }
     var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
-        mutableStateOf(initialTitleSeedColor)
+        mutableStateOf(initialTitleSeedColor ?: detailsTitleSeedColorCache[anime.id])
     }
     val posterPreviewVisible = posterPreviewOpen ?: isPosterPreviewOpen
     val titleSheetVisible = titleSheetOpen ?: isTitleDetailsSheetOpen
@@ -250,6 +250,7 @@ fun AppDetailsScreen(
                                         screenScope.launch {
                                             extractTitleSeedColor(image)?.let { color ->
                                                 titleSeedColor = color
+                                                detailsTitleSeedColorCache[anime.id] = color
                                                 onTitleSeedColorChange(color)
                                             }
                                         }
@@ -492,3 +493,4 @@ private data class DetailsScrollPosition(
 )
 
 private val detailsScrollStateCache = mutableMapOf<String, DetailsScrollPosition>()
+private val detailsTitleSeedColorCache = mutableMapOf<String, Long>()

@@ -108,10 +108,7 @@ internal fun AppDestinationContent(
             when {
                 initialState.anime != null && targetState.anime != null ->
                     EnterTransition.None togetherWith ExitTransition.None
-                targetState.anime != null ->
-                    appScreenTransition(AppTransitionDirection.Forward)
-                else ->
-                    appScreenTransition(AppTransitionDirection.Pop)
+                else -> EnterTransition.None togetherWith ExitTransition.None
             }
         },
         label = "details_route_transition",

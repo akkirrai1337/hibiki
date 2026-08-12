@@ -39,7 +39,7 @@ fun AppPosterImage(
         mutableStateOf(normalizedPrimary ?: normalizedFallback)
     }
     var isLoading by remember(normalizedPrimary, normalizedFallback) {
-        mutableStateOf(activeUrl != null)
+        mutableStateOf(false)
     }
     var hasError by remember(normalizedPrimary, normalizedFallback) {
         mutableStateOf(false)
