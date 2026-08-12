@@ -31,6 +31,7 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
+import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
@@ -70,6 +71,7 @@ internal fun AndroidSharedAppShell(
     onCheckForUpdates: () -> Unit,
     onConfigureNotifications: () -> Unit,
     enableOnboarding: Boolean = false,
+    settingsStoreOverride: AndroidAppSettingsStore? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -77,7 +79,7 @@ internal fun AndroidSharedAppShell(
     val uriHandler = LocalUriHandler.current
     val activityLaunchers = rememberAndroidSharedAppActivityLaunchers(context)
     val dependencies = remember(context) { context.hibikiDependencies() }
-    val settingsStore = remember(dependencies) { dependencies.appSettingsStore() }
+    val settingsStore = settingsStoreOverride ?: remember(dependencies) { dependencies.appSettingsStore() }
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
     val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value

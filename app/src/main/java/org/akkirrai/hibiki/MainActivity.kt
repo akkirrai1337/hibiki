@@ -39,6 +39,7 @@ import org.akkirrai.hibiki.core.update.AppUpdateRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
 import org.akkirrai.hibiki.app.theme.HibikiAndroidTheme
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +159,7 @@ class MainActivity : ComponentActivity() {
                                 onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                                 onConfigureNotifications = ::configureNotifications,
                                 enableOnboarding = false,
+                                settingsStoreOverride = AndroidAppSettingsStore(appPreferences),
                             )
                             if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
                                 availableUpdate?.let { update ->

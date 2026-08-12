@@ -8,8 +8,10 @@ import org.akkirrai.hibiki.shared.settings.AppSettingsState
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 
 /** Android adapter for the shared settings contract backed by existing preferences. */
-class AndroidAppSettingsStore(context: Context) : AppSettingsStore, AutoCloseable {
-    private val preferences = AppPreferences(context.applicationContext)
+class AndroidAppSettingsStore(
+    private val preferences: AppPreferences,
+) : AppSettingsStore, AutoCloseable {
+    constructor(context: Context) : this(AppPreferences(context.applicationContext))
 
     override fun load(): AppSettingsState = preferences.state.value.toSharedState()
 
