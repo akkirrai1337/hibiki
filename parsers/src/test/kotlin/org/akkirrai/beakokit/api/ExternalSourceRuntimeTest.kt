@@ -7,6 +7,7 @@ import kotlin.test.assertFailsWith
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
@@ -250,6 +251,24 @@ class ExternalSourceRuntimeTest {
     }
 
     @Test
+    fun catalogRuntimeRejectsMalformedFilterOptions() = runBlocking {
+        val runtime = FakeFilterRuntime().apply {
+            filterCatalogResult = AnimeSearchFilterCatalog(
+                typeOptions = listOf(
+                    org.akkirrai.beakokit.model.SearchFilterOption("tv", ""),
+                ),
+            )
+        }
+        val source = RuntimeBackedAnimeSource(
+            info = sourceInfo(),
+            catalogCapabilities = CatalogCapabilities.FULL,
+            runtime = runtime,
+        )
+
+        assertFailsWith<IllegalArgumentException> { source.getSearchFilterCatalog() }
+    }
+
+    @Test
     fun catalogRuntimeRejectsInvalidSearchBoundsAndOversizedResults() = runBlocking {
         val runtime = FakeRuntime().apply {
             searchResult = listOf(detailsResult, detailsResult.copy(id = "title-2"))
@@ -362,6 +381,12 @@ class ExternalSourceRuntimeTest {
         var latestResult = listOf(detailsResult)
 
         override suspend fun latest(limit: Int): List<AnimeTitle> = latestResult
+    }
+
+    private class FakeFilterRuntime : FakeRuntime(), ExternalSourceFilterCatalogRuntime {
+        var filterCatalogResult = AnimeSearchFilterCatalog()
+
+        override suspend fun filterCatalog(): AnimeSearchFilterCatalog = filterCatalogResult
     }
 
     private class FakePlaybackRuntime : FakeRuntime(), ExternalSourcePlaybackRuntime {

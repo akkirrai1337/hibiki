@@ -129,7 +129,7 @@ class InstalledExternalSourcePipelineTest {
                         ExternalSourceRuntimeOperation.FILTER_CATALOG ->
                             AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(AnimeSearchFilterCatalog())
                         ExternalSourceRuntimeOperation.DETAILS ->
-                            AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                            AnimeTitleRuntimePayloadCodec.encodeDetails(title("title-1"))
                         ExternalSourceRuntimeOperation.LATEST ->
                             AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                         ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->
@@ -163,14 +163,14 @@ class InstalledExternalSourcePipelineTest {
             )
 
             assertEquals("search-result", source.search(AnimeSearchRequest(query = "frieren")).single().id)
-            assertEquals("details-result", source.getById("title-1").id)
+            assertEquals("title-1", source.getById("title-1").id)
             val playbackSource = source as PlaybackSource
-            val group = playbackSource.getPlaybackGroups(title("details-result")).single()
+            val group = playbackSource.getPlaybackGroups(title("title-1")).single()
             assertEquals("group-1", group.id)
             val episode = group.episodes.single()
             assertEquals("episode-1", episode.id)
             assertEquals("https://video.example/episode-1.m3u8", playbackSource
-                .getPlayerLinks(title("details-result"), group, episode).single().url)
+                .getPlayerLinks(title("title-1"), group, episode).single().url)
             assertContentEquals(moduleBytes, receivedModule)
         } finally {
             client.close()

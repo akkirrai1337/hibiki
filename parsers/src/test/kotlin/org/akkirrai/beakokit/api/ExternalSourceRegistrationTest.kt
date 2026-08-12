@@ -287,7 +287,7 @@ class ExternalSourceRegistrationTest {
                             ExternalSourceRuntimeOperation.FILTER_CATALOG ->
                                 AnimeTitleRuntimePayloadCodec.encodeFilterCatalog(AnimeSearchFilterCatalog())
                             ExternalSourceRuntimeOperation.DETAILS ->
-                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("title-1"))
                             ExternalSourceRuntimeOperation.LATEST ->
                                 AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                             else -> error("Playback operation is not part of this catalog-only fixture")
@@ -309,7 +309,7 @@ class ExternalSourceRegistrationTest {
         val source = registry.create(SourceId("external-test"), context)
 
         assertEquals("search-result", source.search("frieren").single().id)
-        assertEquals("details-result", source.getById("title-1").id)
+        assertEquals("title-1", source.getById("title-1").id)
     }
 
     @Test
@@ -336,7 +336,7 @@ class ExternalSourceRegistrationTest {
                     transport = ExternalSourceRuntimeTransport { request, _ ->
                         val payload = when (request.operation) {
                             ExternalSourceRuntimeOperation.DETAILS ->
-                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("details-result"))
+                                AnimeTitleRuntimePayloadCodec.encodeDetails(title("title-1"))
                             ExternalSourceRuntimeOperation.LATEST ->
                                 AnimeTitleRuntimePayloadCodec.encodeSearch(emptyList())
                             ExternalSourceRuntimeOperation.PLAYBACK_GROUPS ->

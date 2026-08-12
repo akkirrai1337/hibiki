@@ -96,7 +96,7 @@ open class RuntimeBackedAnimeSource(
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
         val filterRuntime = runtime as? ExternalSourceFilterCatalogRuntime ?: return super.getSearchFilterCatalog()
         SourceOperationGate.requireSupported(this, SourceOperation.FILTER_CATALOG)
-        return filterRuntime.filterCatalog()
+        return filterRuntime.filterCatalog().also(::requireValidExternalFilterCatalog)
     }
 }
 
@@ -246,6 +246,40 @@ private fun requireValidExternalRuntimeId(id: String, label: String) {
     require(id.isNotBlank()) { "External source $label ID must not be blank" }
     require('\r' !in id && '\n' !in id) {
         "External source $label ID must not contain CR or LF"
+    }
+}
+
+private fun requireValidExternalFilterCatalog(catalog: AnimeSearchFilterCatalog) {
+    fun validateOptions(options: List<org.akkirrai.beakokit.model.SearchFilterOption>, label: String) {
+        require(options.map { it.id }.distinct().size == options.size) {
+            "External filter catalog contains duplicate $label IDs"
+        }
+        options.forEach { option ->
+            require(option.id.isNotBlank() && option.title.isNotBlank()) {
+                "External filter catalog contains a blank $label option"
+            }
+            require('\r' !in option.id && '\n' !in option.id && '\r' !in option.title && '\n' !in option.title) {
+                "External filter catalog contains control characters in a $label option"
+            }
+        }
+    }
+
+    validateOptions(catalog.sortOptions, "sort")
+    validateOptions(catalog.typeOptions, "type")
+    validateOptions(catalog.statusOptions, "status")
+    validateOptions(catalog.genreOptions, "genre")
+    require(catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.TYPE) || catalog.typeOptions.isEmpty()) {
+        "External filter catalog exposes type options without TYPE support"
+    }
+    require(catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.STATUS) || catalog.statusOptions.isEmpty()) {
+        "External filter catalog exposes status options without STATUS support"
+    }
+    require(
+        catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.INCLUDED_GENRES) ||
+            catalog.capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.EXCLUDED_GENRES) ||
+            catalog.genreOptions.isEmpty(),
+    ) {
+        "External filter catalog exposes genre options without genre support"
     }
 }
 
