@@ -110,13 +110,13 @@ class AnimeCatalogPresenter(
         }
     }
 
-    fun search() {
+    fun search(clearItems: Boolean = true) {
         searchJob?.cancel()
         searchJob = scope.launch {
             val current = state.value
             _state.update {
                 it.copy(
-                    items = emptyList(),
+                    items = if (clearItems) emptyList() else it.items,
                     isLoading = true,
                     isLoadingMore = false,
                     error = null,
@@ -276,7 +276,7 @@ class AnimeCatalogPresenter(
 
     fun refresh() {
         repository.invalidate()
-        search()
+        search(clearItems = false)
     }
 
     private fun canRequestNextPage(

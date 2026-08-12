@@ -43,7 +43,7 @@ fun AppCatalogScreenContent(
         retryLabel = retryLabel,
         onRetry = onRetry,
     ) {
-        if (state.isLoading && !state.isLoadingMore) {
+        if (state.isLoading && !state.isLoadingMore && state.items.isEmpty()) {
             AppCenteredLoading(modifier = modifier.fillMaxSize())
         } else {
             AppCatalogContentList(
