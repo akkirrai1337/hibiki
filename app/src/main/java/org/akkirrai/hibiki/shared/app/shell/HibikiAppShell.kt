@@ -652,7 +652,6 @@ internal fun HibikiAppShell(
                                     onDiscordChange = discordSettingsActions.onChange,
                                     onCheckForUpdates = platformCallbacks.onCheckForUpdates,
                                     onExportLogs = platformCallbacks.onExportLogs,
-                                    onInstallExtensionClick = platformCallbacks.onInstallExtensionClick,
                                 ),
                                 state = AppDestinationSettingsState(
                                     darkTheme = appSettingsState.darkTheme,

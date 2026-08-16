@@ -47,7 +47,6 @@ internal fun SettingsScreen(
     notificationsAvailable: Boolean = true,
     externalSourceRepositoryState: ExternalSourceRepositoryUiState? = null,
     onExternalSourcesClick: () -> Unit = {},
-    onInstallExtensionClick: () -> Unit = {},
     listState: LazyListState,
     bottomContentPadding: Dp,
 ) {
@@ -87,7 +86,6 @@ internal fun SettingsScreen(
             checkUpdates = appText(AppTextKey.SettingsCheckUpdates),
             support = appText(AppTextKey.SettingsSupport),
             exportLogs = appText(AppTextKey.SettingsExportLogs),
-            installExtension = appText(AppTextKey.SettingsInstallExtension),
             about = appText(AppTextKey.SettingsAbout),
             appName = appText(AppTextKey.AppName),
             versionName = versionName,
@@ -107,7 +105,6 @@ internal fun SettingsScreen(
         onGitHubClick = onGitHubClick,
         externalSourcesCount = externalSourceRepositoryState?.repositories?.size ?: 0,
         onExternalSourcesClick = onExternalSourcesClick,
-        onInstallExtensionClick = onInstallExtensionClick,
         listState = listState,
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,

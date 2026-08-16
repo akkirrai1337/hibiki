@@ -176,7 +176,6 @@ internal fun AppDestinationTopLevelRoutes(
                 onDiscordChange = settings.actions.onDiscordChange,
                 onCheckForUpdates = settings.actions.onCheckForUpdates,
                 onExportLogs = settings.actions.onExportLogs,
-                onInstallExtensionClick = settings.actions.onInstallExtensionClick,
                 notificationsAvailable = settings.state.notificationsAvailable,
                 settingsListState = settings.listsState.settings,
                 bottomContentPadding = topLevelBottomContentPadding,
