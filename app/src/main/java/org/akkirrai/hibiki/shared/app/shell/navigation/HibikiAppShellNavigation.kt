@@ -23,7 +23,6 @@ import org.akkirrai.hibiki.shared.navigation.navigateToDetails
 import org.akkirrai.hibiki.shared.navigation.navigateToSettings
 import org.akkirrai.hibiki.shared.navigation.navigateToSourcePackageInfo
 import org.akkirrai.hibiki.shared.navigation.navigateToSourceRepositories
-import org.akkirrai.hibiki.shared.navigation.navigateToSourceRepository
 import org.akkirrai.hibiki.shared.navigation.reduce
 import org.akkirrai.hibiki.shared.navigation.reduceHibikiRootTabSelection
 import org.akkirrai.hibiki.shared.navigation.resolveWatchFlowBackEffect
@@ -289,7 +288,6 @@ internal data class AppDestinationNavigationActions(
     val onBrowseCatalog: () -> Unit,
     val onOpenLibrary: () -> Unit,
     val onSourceRepositoriesClick: () -> Unit,
-    val onSourceRepositoryClick: (String) -> Unit,
     val onSourcePackageInfoClick: (String, String) -> Unit,
     val onSettingsBack: () -> Unit,
 )
@@ -316,9 +314,6 @@ internal fun createHibikiAppShellDestinationNavigationActions(
     onOpenLibrary = { rootNavigationCoordinator.select(AppDestination.LIBRARY) },
     onSourceRepositoriesClick = {
         updateNavigationState { it.navigateToSourceRepositories() }
-    },
-    onSourceRepositoryClick = { url ->
-        updateNavigationState { it.navigateToSourceRepository(url) }
     },
     onSourcePackageInfoClick = { repositoryUrl, sourceId ->
         updateNavigationState { it.navigateToSourcePackageInfo(repositoryUrl, sourceId) }

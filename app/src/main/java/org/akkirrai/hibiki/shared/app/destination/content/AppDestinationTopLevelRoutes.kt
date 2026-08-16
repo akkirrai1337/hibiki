@@ -143,7 +143,6 @@ internal fun AppDestinationTopLevelRoutes(
                 selectedSourcesTab = sources.externalSourcesState.selectedTab,
                 onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
                 onOpenRepositories = navigation.actions.onSourceRepositoriesClick,
-                onOpenRepository = navigation.actions.onSourceRepositoryClick,
                 onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
                 onBack = navigation.actions.onSettingsBack,
                 onOpenUrl = platform.hostContext.onOpenUrl,

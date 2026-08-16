@@ -97,10 +97,6 @@ fun AppNavigationState.navigateToSourceRepositories(): AppNavigationState = if (
     reduce(AppNavigationEvent.Navigate(AppRoute.SourceRepositories))
 }
 
-fun AppNavigationState.navigateToSourceRepository(url: String): AppNavigationState = reduce(
-    AppNavigationEvent.Navigate(AppRoute.SourceRepository(url)),
-)
-
 fun AppNavigationState.navigateToSourcePackageInfo(
     repositoryUrl: String,
     sourceId: String,
