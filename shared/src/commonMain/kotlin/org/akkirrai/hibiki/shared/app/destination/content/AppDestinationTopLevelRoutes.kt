@@ -5,8 +5,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import org.akkirrai.hibiki.shared.app.destination.catalog.*
 import org.akkirrai.hibiki.shared.app.destination.context.AppDestinationContentInput
-import org.akkirrai.hibiki.shared.app.destination.routes.*
+import org.akkirrai.hibiki.shared.app.destination.home.*
+import org.akkirrai.hibiki.shared.app.destination.library.*
+import org.akkirrai.hibiki.shared.app.destination.profile.*
+import org.akkirrai.hibiki.shared.app.destination.settings.*
+import org.akkirrai.hibiki.shared.app.destination.source.*
 import org.akkirrai.hibiki.shared.app.shell.navigation.shouldApplyTopSystemInset
 import org.akkirrai.hibiki.shared.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.shared.navigation.AppDestination

@@ -3,7 +3,9 @@ package org.akkirrai.hibiki.shared.app.destination.content
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.akkirrai.hibiki.shared.app.destination.state.AppDestinationContentState
+import org.akkirrai.hibiki.shared.app.destination.watch.AppDestinationContentState
+import org.akkirrai.hibiki.shared.app.destination.watch.isDetailsRouteDriven
+import org.akkirrai.hibiki.shared.app.destination.watch.isWatchRouteDriven
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState

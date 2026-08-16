@@ -4,11 +4,9 @@ package org.akkirrai.hibiki.shared.app.shell
 import org.akkirrai.hibiki.shared.player.HibikiPlaybackSession
 import org.akkirrai.hibiki.shared.navigation.resolveWatchFlowBackTransition
 import org.akkirrai.hibiki.shared.home.state.launchHomeDescriptionEnrichment
-import org.akkirrai.hibiki.shared.app.launchLocalDataRefresh
 import org.akkirrai.hibiki.shared.app.destination.content.AppDestinationContent
 import org.akkirrai.hibiki.shared.app.destination.context.*
-import org.akkirrai.hibiki.shared.app.destination.actions.*
-import org.akkirrai.hibiki.shared.app.destination.state.*
+import org.akkirrai.hibiki.shared.app.destination.watch.*
 import org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks
 import org.akkirrai.hibiki.shared.source.AppSourcePlatformCallbacks
 
@@ -38,14 +36,18 @@ import kotlinx.coroutines.Job
 import org.akkirrai.hibiki.shared.app.shell.layout.AppProductionRoot
 import org.akkirrai.hibiki.shared.app.shell.navigation.*
 import org.akkirrai.hibiki.shared.app.shell.settings.*
+import org.akkirrai.hibiki.shared.app.destination.profile.*
+import org.akkirrai.hibiki.shared.app.destination.settings.*
+import org.akkirrai.hibiki.shared.app.destination.source.*
 import org.akkirrai.hibiki.shared.app.shell.profile.*
-import org.akkirrai.hibiki.shared.app.shell.home.*
+import org.akkirrai.hibiki.shared.app.destination.catalog.*
+import org.akkirrai.hibiki.shared.app.destination.home.*
 import org.akkirrai.hibiki.shared.app.shell.catalog.*
 import org.akkirrai.hibiki.shared.app.shell.player.*
 import org.akkirrai.hibiki.shared.app.shell.player.watch.*
 import org.akkirrai.hibiki.shared.app.shell.layout.*
 import org.akkirrai.hibiki.shared.app.shell.runtime.*
-import org.akkirrai.hibiki.shared.app.shell.library.*
+import org.akkirrai.hibiki.shared.app.destination.library.*
 import org.akkirrai.hibiki.shared.app.shell.overlay.*
 import org.akkirrai.hibiki.shared.app.shell.source.*
 import org.akkirrai.hibiki.shared.app.shell.overlay.HibikiAppShellOverlayLayer

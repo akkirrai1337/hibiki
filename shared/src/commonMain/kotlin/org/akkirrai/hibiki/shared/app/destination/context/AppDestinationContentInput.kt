@@ -1,8 +1,18 @@
 package org.akkirrai.hibiki.shared.app.destination.context
 
-import org.akkirrai.hibiki.shared.app.destination.actions.*
-import org.akkirrai.hibiki.shared.app.destination.state.*
+import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.shared.app.destination.catalog.*
+import org.akkirrai.hibiki.shared.app.destination.home.*
+import org.akkirrai.hibiki.shared.app.destination.library.*
+import org.akkirrai.hibiki.shared.app.destination.profile.*
+import org.akkirrai.hibiki.shared.app.destination.settings.*
+import org.akkirrai.hibiki.shared.app.destination.source.*
+import org.akkirrai.hibiki.shared.app.destination.watch.*
+import org.akkirrai.hibiki.shared.app.shell.navigation.AppDestinationNavigationActions
+import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.navigation.AppDestination
+import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
+import org.akkirrai.hibiki.shared.settings.LanguageMode
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -65,4 +75,19 @@ internal data class PlatformContentInput(
 internal data class NavigationContentInput(
     val actions: AppDestinationNavigationActions,
     val detailsOverlayState: AppDestinationDetailsOverlayState,
+)
+
+internal data class AppDestinationDataContext(
+    val libraryRepository: LibraryRepository,
+    val profileRepository: LocalProfileDataRepository,
+    val languageMode: LanguageMode,
+)
+
+internal data class AppDestinationHostContext(
+    val systemLanguage: String,
+    val includeNavigationBarPadding: Boolean,
+    val onLibraryChanged: () -> Unit,
+    val onOpenUrl: (String) -> Unit,
+    val onGitHubClick: () -> Unit,
+    val modifier: Modifier,
 )

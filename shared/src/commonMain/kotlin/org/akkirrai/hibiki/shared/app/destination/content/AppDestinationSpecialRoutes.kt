@@ -3,7 +3,7 @@ package org.akkirrai.hibiki.shared.app.destination.content
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.shared.app.destination.context.AppDestinationContentInput
-import org.akkirrai.hibiki.shared.app.destination.routes.DetailsDestinationRoute
+import org.akkirrai.hibiki.shared.app.destination.watch.DetailsDestinationRoute
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.player.HibikiWatchFlowContent
 

@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.app.destination.context.AppDestinationContentInput
+import org.akkirrai.hibiki.shared.app.destination.watch.isWatchRouteDriven
 import org.akkirrai.hibiki.shared.app.shell.layout.appScreenTransition
 import org.akkirrai.hibiki.shared.design.component.navigation.AppBottomBarContentExtraPadding
 import org.akkirrai.hibiki.shared.design.component.navigation.AppBottomBarHeight
