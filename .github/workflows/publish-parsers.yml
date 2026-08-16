@@ -1,0 +1,68 @@
+name: Publish parsers library
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: publish-parsers
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish :parsers to GitHub Packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Read parsers version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' parsers/build.gradle.kts | head -n 1)
+          if [ -z "${VERSION:-}" ]; then
+            echo "Could not read version from parsers/build.gradle.kts"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag does not already exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="parsers-v${{ steps.version.outputs.version }}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists. Bump the version in parsers/build.gradle.kts before publishing."
+            exit 1
+          fi
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew :parsers:publish
+
+      - name: Tag published version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="parsers-v${{ steps.version.outputs.version }}"
+          git tag "$TAG"
+          git push origin "$TAG"
