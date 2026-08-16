@@ -28,4 +28,5 @@ include(":app")
 include(":parsers")
 include(":sources:stub-test")
 include(":sources:aniliberty")
+include(":sources:yummy")
  
