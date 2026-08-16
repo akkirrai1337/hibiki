@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 class SourceFixtureHostTest {
     @Test
     fun `loads fixture body from test resources`() {
-        val body = FixtureResources.read("/beakokit/yummy/empty-search.json")
+        val body = FixtureResources.read("/beakokit/testkit/sample-response.json")
 
         assertContains(body, "\"response\"")
     }

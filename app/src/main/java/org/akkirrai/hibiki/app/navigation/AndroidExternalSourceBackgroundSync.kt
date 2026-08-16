@@ -27,7 +27,7 @@ import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.BuildConfig
 
-/** Refreshes external sources in the background without changing the active built-in path. */
+/** Refreshes external sources in the background. */
 @Composable
 internal fun AndroidExternalSourceBackgroundSync(
     content: @Composable () -> Unit,

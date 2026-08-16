@@ -4,7 +4,6 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     `java-test-fixtures`
-    id("com.google.devtools.ksp")
 }
 
 kotlin {
@@ -50,14 +49,6 @@ kotlin {
             }
         }
     }
-}
-
-dependencies {
-    add("kspJvm", project(":beakokit-processor"))
-}
-
-ksp {
-    arg("beakokit.excludeCommonSourceEntries", "true")
 }
 
 tasks.named<Test>("jvmTest") {

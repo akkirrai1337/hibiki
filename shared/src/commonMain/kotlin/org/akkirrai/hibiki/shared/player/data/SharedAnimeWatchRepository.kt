@@ -9,7 +9,6 @@ import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.HealthTrackingSourceExecutionPolicy
-import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.SourceExecutionPolicy
@@ -28,8 +27,6 @@ import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.commonPlaybackExtractors
 import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
-import org.akkirrai.beakokit.source.BuiltInSources
-import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 import org.akkirrai.hibiki.shared.player.model.PlaybackLinkOption
 import org.akkirrai.hibiki.shared.player.model.PlaybackSettingsOptions
@@ -238,12 +235,7 @@ class SharedAnimeWatchRepository(
                 } else {
                     listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
                 },
-                config = when (sourceId) {
-                    BuiltInSources.YUMMY_ANIME_ID -> MapSourceConfig(
-                        secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to DEFAULT_YUMMY_APPLICATION_TOKEN),
-                    )
-                    else -> sourceConfigProvider(sourceId)
-                },
+                config = sourceConfigProvider(sourceId),
                 sourceHealthReporter = sourceHealthReporter,
                 sourceExecutionPolicy = sourceExecutionPolicy,
                 logger = SourceLogger { level, message, throwable ->
@@ -252,7 +244,7 @@ class SharedAnimeWatchRepository(
                 },
             )
         externalSourceFactory?.invoke(sourceId, context)
-            ?: BuiltInSources.catalog.create(sourceId, context)
+            ?: error("No external source available for $sourceId")
     }
 
     private data class WatchPayload(
@@ -263,7 +255,6 @@ class SharedAnimeWatchRepository(
     )
 
     private companion object {
-        const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
         const val DEFAULT_PLAYBACK_ATTEMPT_TIMEOUT_MILLIS = 8_000L
         const val PLAYBACK_CACHE_TTL_MILLIS = 5 * 60 * 1_000L
     }

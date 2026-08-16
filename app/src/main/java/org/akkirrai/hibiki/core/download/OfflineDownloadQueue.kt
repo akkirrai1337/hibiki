@@ -12,7 +12,6 @@ import androidx.media3.exoplayer.offline.DownloadService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
@@ -21,12 +20,10 @@ import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 object OfflineDownloadQueue {
     private const val TAG = "OfflineDownloadQueue"
@@ -40,14 +37,12 @@ object OfflineDownloadQueue {
     private const val SESSION_DOWNLOAD_IDS_KEY = "session_download_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
-    private const val STREAM_RESOLVE_RETRY_DELAY_MS = 500L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val processingLock = Any()
     private val requestLock = Any()
     private val installedManagers = mutableSetOf<Int>()
     private val downloadsBeingRemoved = mutableSetOf<String>()
-    private val successfulDownloadPlayers = ConcurrentHashMap<String, String>()
 
     @Volatile
     private var isProcessing = false
@@ -341,17 +336,21 @@ object OfflineDownloadQueue {
         }
 
         scope.launch {
-            val repository = AnimeWatchRepository(context.applicationContext)
             var addedAny = false
             try {
                 entries.forEach { entry ->
                     runCatching {
                         val source = entry.toWatchSource()
                         val episode = entry.toWatchEpisode()
-                        val playback = resolveStreamForDownload(
-                            repository = repository,
-                            source = source,
-                            episode = episode,
+                        // Offline downloads resolved streams through the built-in source
+                        // runtime, which was removed in favor of external sources only.
+                        // External sources are only reachable from the Compose-scoped
+                        // ExternalSourceRuntimeCoordinator, not from this background queue,
+                        // so download requests fail until a background-reachable external
+                        // source runtime is wired in as a follow-up.
+                        val playback: PlaybackStream = error(
+                            "Offline downloads are unavailable: built-in source support was removed " +
+                                "and background access to external sources is not wired up yet",
                         )
                         synchronized(requestLock) {
                             if (!isCurrentRequest(context, entry)) return@runCatching
@@ -382,7 +381,6 @@ object OfflineDownloadQueue {
                     }
                 }
             } finally {
-                repository.close()
                 synchronized(processingLock) { isProcessing = false }
                 if (!addedAny) {
                     drain(context, manager)
@@ -408,46 +406,6 @@ object OfflineDownloadQueue {
             Download.STATE_REMOVING -> OfflineEpisodeDownloadState.NotDownloaded
             else -> OfflineEpisodeDownloadState.NotDownloaded
         }
-    }
-
-    private suspend fun resolveStreamForDownload(
-        repository: AnimeWatchRepository,
-        source: WatchSource,
-        episode: WatchEpisode,
-    ): PlaybackStream {
-        return try {
-            val resolved = repository.resolveFastestStream(
-                sourceId = source.sourceId,
-                episodeId = episode.id,
-                forceRefresh = false,
-                preferredPlayerName = successfulDownloadPlayers[source.sourceId],
-            )
-            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
-            resolved.playback
-        } catch (error: Throwable) {
-            successfulDownloadPlayers.remove(source.sourceId)
-            if (!error.isStreamResolveTimeout()) throw error
-            AppLogger.w(
-                TAG,
-                "Stream resolve timed out; retrying once: id=${downloadId(source.sourceId, episode.id)}",
-                error,
-            )
-            delay(STREAM_RESOLVE_RETRY_DELAY_MS)
-            val resolved = repository.resolveFastestStream(
-                sourceId = source.sourceId,
-                episodeId = episode.id,
-                forceRefresh = true,
-            )
-            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
-            resolved.playback
-        }
-    }
-
-    private fun Throwable.isStreamResolveTimeout(): Boolean {
-        val normalizedMessage = message.orEmpty().lowercase()
-        return "timeout" in normalizedMessage ||
-            "timed out" in normalizedMessage ||
-            "тайм" in normalizedMessage
     }
 
     private fun activeDownloadCount(manager: DownloadManager): Int {

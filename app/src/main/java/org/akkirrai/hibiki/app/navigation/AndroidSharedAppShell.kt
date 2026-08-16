@@ -58,13 +58,13 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
-import org.akkirrai.hibiki.shared.player.RoutingWatchDataRepository
+import org.akkirrai.hibiki.shared.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
 import org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks
 import org.akkirrai.hibiki.shared.source.AppSourcePlatformCallbacks
 
-/** Android adapter for the shared shell with external sources kept behind the built-in path. */
+/** Android adapter for the shared shell, backed entirely by external sources. */
 @Composable
 internal fun AndroidSharedAppShell(
     activity: Activity,
@@ -153,10 +153,8 @@ internal fun AndroidSharedAppShell(
     val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
         TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
     }
-    val homeRepository = remember(dependencies) { dependencies.homeRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
-    val watchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
     val externalWatchRepository = remember(externalCoordinator, externalSnapshot?.registry) {
         externalCoordinator?.let { coordinator ->
             SharedAnimeWatchRepository(
@@ -176,25 +174,14 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalWatchRepository) {
         onDispose { externalWatchRepository?.close() }
     }
-    val routedWatchRepository = remember(
-        watchRepository,
-        externalWatchRepository,
-        externalCoordinator,
-        externalSnapshot?.registry,
-    ) {
-        externalWatchRepository?.let { externalRepository ->
-            RoutingWatchDataRepository(
-                builtIn = watchRepository,
-                external = externalRepository,
-                isExternalSource = { sourceId ->
-                    externalCoordinator?.snapshot?.value?.registry?.sources
-                        ?.any { it.id == sourceId }
-                        ?: false
-                },
-            )
-        } ?: watchRepository
-    }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
+    val homeRepository = remember(catalogRepository, libraryRepository, watchStateRepository) {
+        CatalogBackedHomeDataRepository(
+            catalogRepository = catalogRepository,
+            libraryRepository = libraryRepository,
+            watchStateRepository = watchStateRepository,
+        )
+    }
     val episodeDownloadRepository = remember(dependencies) {
         AndroidEpisodeDownloadRepository(dependencies.offlineDownloadRepository())
     }
@@ -320,7 +307,7 @@ internal fun AndroidSharedAppShell(
                     clipboard.setPrimaryClip(ClipData.newPlainText("Hibiki source repository", text))
                 },
             ),
-            watchRepository = routedWatchRepository,
+            watchRepository = externalWatchRepository,
             playbackCallbacks = AppPlaybackPlatformCallbacks(
                 onWatchSourceSelected = { titleId, source ->
                     watchStateRepository.savePlaybackSourceSelection(titleId, source)
