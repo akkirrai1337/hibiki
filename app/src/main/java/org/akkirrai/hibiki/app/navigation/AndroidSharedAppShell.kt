@@ -157,6 +157,13 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalRepositoryController) {
         onDispose { externalRepositoryController.close() }
     }
+    androidx.compose.runtime.LaunchedEffect(installedExtensionsRevision) {
+        // Installs/uninstalls hand off to the system confirmation dialog and complete
+        // asynchronously -- re-read package state once Android actually reports the change.
+        if (installedExtensionsRevision > 0) {
+            externalRepositoryController.refreshRepositories()
+        }
+    }
     val externalStatusLabels = ExternalAnimeStatusLabels(
         unknown = appText(AppTextKey.Unknown),
         ongoing = appText(AppTextKey.Ongoing),

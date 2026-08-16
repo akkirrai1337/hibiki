@@ -72,13 +72,7 @@ internal fun SourcesDestinationRoute(
     copyText: (String) -> Unit,
 ) {
     var isAddRepositoryDialogOpen by remember { mutableStateOf(false) }
-    var previousSelectedSourceId by remember { mutableStateOf<String?>(null) }
-    val selectSource: (String) -> Unit = { sourceId ->
-        if (sourceId != selectedSourceId) {
-            previousSelectedSourceId = selectedSourceId
-        }
-        onSourceSelected(sourceId)
-    }
+    val selectSource: (String) -> Unit = onSourceSelected
 
     when (currentRoute) {
         AppRoute.SourceRepositories -> AppSourceRepositoriesScreen(
@@ -106,18 +100,13 @@ internal fun SourcesDestinationRoute(
                 onBack = onBack,
                 onUninstall = externalSourcesController?.let { controller ->
                     {
+                        // Uninstalling hands off to the system confirmation dialog and
+                        // completes asynchronously -- don't navigate away or reassign the
+                        // selected source yet, the user hasn't actually confirmed anything.
+                        // The package-change broadcast receiver refreshes this screen's state
+                        // once the OS reports the uninstall really happened.
                         controller.uninstallPackage(
                             sourceId = org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId),
-                            onUninstalled = {
-                                if (selectedSourceId == currentRoute.sourceId) {
-                                    val fallbackSourceId = previousSelectedSourceId
-                                        ?.takeIf { sourceId -> sources.any { it.id == sourceId } }
-                                        ?: sources.firstOrNull { it.id != currentRoute.sourceId }
-                                        ?.id
-                                    fallbackSourceId?.let(selectSource)
-                                }
-                                onBack()
-                            },
                         )
                     }
                 } ?: {},
