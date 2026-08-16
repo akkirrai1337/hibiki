@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
+import org.akkirrai.beakokit.api.ChallengeSessionProvider
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.HealthTrackingSourceExecutionPolicy
 import org.akkirrai.beakokit.api.PlaybackGroup
@@ -18,6 +19,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.api.SourceUnavailableException
+import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.RuntimeBackedPlaybackAnimeSource
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
@@ -45,8 +47,10 @@ class SharedAnimeWatchRepository(
     private val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     private val sourceExecutionPolicy: SourceExecutionPolicy =
         HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
+    private val challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
+    private val additionalExtractors: List<StreamExtractor> = emptyList(),
 ) : WatchDataRepository {
-    private val playbackExtractors = commonPlaybackExtractors(client)
+    private val playbackExtractors = commonPlaybackExtractors(client) + additionalExtractors
     private val playbackResolver = PlaybackResolver(
         extractors = playbackExtractors,
         validator = HttpStreamValidator(client),
@@ -238,6 +242,7 @@ class SharedAnimeWatchRepository(
                 config = sourceConfigProvider(sourceId),
                 sourceHealthReporter = sourceHealthReporter,
                 sourceExecutionPolicy = sourceExecutionPolicy,
+                challengeSessionProvider = challengeSessionProvider,
                 logger = SourceLogger { level, message, throwable ->
                     val suffix = throwable?.message?.takeIf(String::isNotBlank)?.let { " ($it)" }.orEmpty()
                     println("BeakoKit/${sourceId.value} [$level] $message$suffix")

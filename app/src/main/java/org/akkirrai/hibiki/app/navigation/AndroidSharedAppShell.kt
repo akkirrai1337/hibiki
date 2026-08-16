@@ -36,7 +36,9 @@ import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
+import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
 import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidEpisodeDownloadRepository
@@ -88,6 +90,8 @@ internal fun AndroidSharedAppShell(
 ) {
     val context = LocalContext.current
     val externalSourceConfigStore = remember(context) { AndroidExternalSourceConfigStore(context) }
+    val androidChallengeSessionProvider = remember(context) { AndroidChallengeSessionProvider(context) }
+    val animePaheWebViewExtractor = remember(context) { AnimePaheWebViewExtractor(context) }
     val uriHandler = LocalUriHandler.current
     val activityLaunchers = rememberAndroidSharedAppActivityLaunchers(context)
     val dependencies = remember(context) { context.hibikiDependencies() }
@@ -196,6 +200,7 @@ internal fun AndroidSharedAppShell(
                             SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
                         }
                     },
+                    challengeSessionProvider = androidChallengeSessionProvider,
                 )
             },
             statusLabels = externalStatusLabels,
@@ -224,6 +229,8 @@ internal fun AndroidSharedAppShell(
                 if (registry.sources.any { it.id == sourceId }) registry.create(sourceId, sourceContext) else null
             },
             sourceConfigProvider = externalSourceConfigStore::load,
+            challengeSessionProvider = androidChallengeSessionProvider,
+            additionalExtractors = listOf(animePaheWebViewExtractor),
         )
     }
     DisposableEffect(externalWatchRepository) {
