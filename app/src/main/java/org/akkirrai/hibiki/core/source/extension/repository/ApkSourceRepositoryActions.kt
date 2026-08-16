@@ -104,10 +104,20 @@ class ApkSourceRepositoryActions(
             ?: throw SourcePackageStateException(
                 "Source package is no longer advertised by the repository: $sourceId",
             )
-        val intent = Intent(Intent.ACTION_DELETE)
-            .setData(Uri.parse("package:${entry.packageName}"))
+        val packageUri = Uri.parse("package:${entry.packageName}")
+        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE)
+            .setData(packageUri)
+            .putExtra(Intent.EXTRA_RETURN_RESULT, false)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        androidContext.startActivity(intent)
+        try {
+            androidContext.startActivity(intent)
+        } catch (_: android.content.ActivityNotFoundException) {
+            androidContext.startActivity(
+                Intent(Intent.ACTION_DELETE)
+                    .setData(packageUri)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
     }
 
     private fun statusFor(entry: SourceRepositoryEntry): ExternalSourcePackageStatus {
