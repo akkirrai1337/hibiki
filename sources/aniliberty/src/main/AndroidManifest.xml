@@ -1,0 +1,29 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="false"
+        android:label="Hibiki Source: AniLiberty"
+        android:icon="@android:drawable/sym_def_app_icon">
+
+        <!-- Discovery anchor only. Exists so the host can find this package via
+             PackageManager.queryIntentActivities; finishes immediately if ever launched. -->
+        <activity
+            android:name=".AniLibertyDiscoveryActivity"
+            android:exported="true">
+            <meta-data
+                android:name="hibiki.source.class"
+                android:value="org.akkirrai.beakokit.source.aniliberty.AniLibertySource" />
+            <meta-data
+                android:name="hibiki.source.contractVersion"
+                android:value="1" />
+            <intent-filter>
+                <action android:name="org.akkirrai.hibiki.action.SOURCE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
