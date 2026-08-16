@@ -4,7 +4,11 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     `java-test-fixtures`
+    `maven-publish`
 }
+
+group = "org.akkirrai.hibiki"
+version = "0.1.0"
 
 kotlin {
     compilerOptions {
@@ -39,4 +43,29 @@ dependencies {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            from(components["java"])
+            groupId = project.group.toString()
+            artifactId = "parsers"
+            version = project.version.toString()
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/akkirrai1337/hibiki")
+            credentials {
+                username = providers.gradleProperty("gpr.user").orElse(providers.environmentVariable("GITHUB_ACTOR")).orNull
+                password = providers.gradleProperty("gpr.key").orElse(providers.environmentVariable("GITHUB_TOKEN")).orNull
+            }
+        }
+    }
 }
