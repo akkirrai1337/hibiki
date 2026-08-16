@@ -132,6 +132,7 @@ fun AppSourceRepositoriesScreen(
                         onRemove = { onRemoveRepository(repository.endpoint.url) },
                         onCopy = { onCopyUrl(repository.endpoint.url) },
                         showRemove = customRepositoriesSupported,
+                        clickable = customRepositoriesSupported,
                     )
                 }
             }
@@ -433,6 +434,7 @@ fun AppSourcesTabsScreen(
                                 onRemove = { onRemoveRepository(repository.endpoint.url) },
                                 onCopy = { onCopyUrl(repository.endpoint.url) },
                                 showRemove = customRepositoriesSupported,
+                                clickable = customRepositoriesSupported,
                             )
                         }
                     }
@@ -985,12 +987,13 @@ private fun SourceRepositoryCard(
     onRemove: () -> Unit,
     onCopy: () -> Unit,
     showRemove: Boolean = true,
+    clickable: Boolean = true,
 ) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clickable(onClick = onClick),
+            .let { if (clickable) it.clickable(onClick = onClick) else it },
     ) {
         Row(
             modifier = Modifier
