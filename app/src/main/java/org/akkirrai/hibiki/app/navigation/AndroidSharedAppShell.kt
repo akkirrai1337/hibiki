@@ -1,14 +1,21 @@
 package org.akkirrai.hibiki.app.navigation
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -88,7 +95,25 @@ internal fun AndroidSharedAppShell(
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
     val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
-    val packageManagerSourceCatalog = remember(context) { PackageManagerSourceCatalog.build(context) }
+    var installedExtensionsRevision by remember { mutableIntStateOf(0) }
+    DisposableEffect(context) {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context, intent: Intent) {
+                installedExtensionsRevision++
+            }
+        }
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    val packageManagerSourceCatalog = remember(context, installedExtensionsRevision) {
+        PackageManagerSourceCatalog.build(context)
+    }
     fun mergedExternalRegistry(): ExternalSourceRegistry {
         val wasmCatalog = externalCoordinator?.snapshot?.value?.registry?.catalog ?: SourceCatalog(emptyList())
         val packageManagerIds = packageManagerSourceCatalog.sources.mapTo(mutableSetOf()) { it.id }

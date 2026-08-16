@@ -155,7 +155,7 @@ class ApkSourceRepositoryActions(
         packageVersion = version,
         sourceInfo = SourceManifestInfo(
             displayName = entry.name,
-            languages = setOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            languages = setOf(SourceLanguage.RUSSIAN),
             primaryLanguage = SourceLanguage.RUSSIAN,
         ),
         apiVersion = entry.contractVersion,
