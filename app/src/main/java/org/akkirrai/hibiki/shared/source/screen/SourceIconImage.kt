@@ -17,6 +17,8 @@ fun AppSourceIconImage(
     val effectivePlaceholder = placeholder ?: when (sourceId) {
         "yummy-anime" -> painterResource(R.drawable.source_yummy_anime)
         "ani-liberty" -> painterResource(R.drawable.source_ani_liberty)
+        "animego" -> painterResource(R.drawable.source_animego)
+        "animepahe" -> painterResource(R.drawable.source_animepahe)
         else -> null
     }
     AsyncImage(
