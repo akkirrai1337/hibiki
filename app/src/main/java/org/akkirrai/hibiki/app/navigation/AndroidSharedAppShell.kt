@@ -58,6 +58,9 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
+import org.akkirrai.beakokit.api.ExternalSourceRegistry
+import org.akkirrai.beakokit.api.SourceCatalog
+import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
 import org.akkirrai.hibiki.shared.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
@@ -83,6 +86,15 @@ internal fun AndroidSharedAppShell(
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
     val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
     val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
+    val packageManagerSourceCatalog = remember(context) { PackageManagerSourceCatalog.build(context) }
+    fun mergedExternalRegistry(): ExternalSourceRegistry {
+        val wasmCatalog = externalCoordinator?.snapshot?.value?.registry?.catalog ?: SourceCatalog(emptyList())
+        val packageManagerIds = packageManagerSourceCatalog.sources.mapTo(mutableSetOf()) { it.id }
+        val wasmCatalogWithoutOverrides = SourceCatalog(
+            wasmCatalog.entries.filterNot { it.info.id in packageManagerIds },
+        )
+        return ExternalSourceRegistry(wasmCatalogWithoutOverrides.mergedWith(packageManagerSourceCatalog))
+    }
     val externalCatalogRefreshKey = externalSnapshot?.repository?.loaded?.joinToString("|") { loaded ->
         loaded.endpoint.url + loaded.index.sources.joinToString(",") { manifest ->
             "${manifest.sourceId}:${manifest.packageVersion}:${manifest.sha256}"
@@ -125,12 +137,16 @@ internal fun AndroidSharedAppShell(
     val externalCatalogRepository = remember(
         externalCoordinator,
         externalSnapshot?.registry,
+        packageManagerSourceCatalog,
         externalHttpClient,
         externalStatusLabels,
     ) {
         ExternalSourceCatalogRepository(
-            registryProvider = { externalCoordinator?.snapshot?.value?.registry },
-            registryAwaiter = { externalCoordinator?.awaitRegistry() },
+            registryProvider = { mergedExternalRegistry() },
+            registryAwaiter = {
+                externalCoordinator?.awaitRegistry()
+                mergedExternalRegistry()
+            },
             contextProvider = { sourceId ->
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
@@ -155,21 +171,24 @@ internal fun AndroidSharedAppShell(
     }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
-    val externalWatchRepository = remember(externalCoordinator, externalSnapshot?.registry) {
-        externalCoordinator?.let { coordinator ->
-            SharedAnimeWatchRepository(
-                client = HttpClient(OkHttp) {
-                    installBeakoKitHttpDefaults(
-                        BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-playback"),
-                    )
-                },
-                sourceHttpClient = externalHttpClient,
-                externalSourceFactory = { sourceId, sourceContext ->
-                    coordinator.snapshot.value.registry?.create(sourceId, sourceContext)
-                },
-                sourceConfigProvider = externalSourceConfigStore::load,
-            )
-        }
+    val externalWatchRepository = remember(
+        externalCoordinator,
+        externalSnapshot?.registry,
+        packageManagerSourceCatalog,
+    ) {
+        SharedAnimeWatchRepository(
+            client = HttpClient(OkHttp) {
+                installBeakoKitHttpDefaults(
+                    BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-playback"),
+                )
+            },
+            sourceHttpClient = externalHttpClient,
+            externalSourceFactory = { sourceId, sourceContext ->
+                val registry = mergedExternalRegistry()
+                if (registry.sources.any { it.id == sourceId }) registry.create(sourceId, sourceContext) else null
+            },
+            sourceConfigProvider = externalSourceConfigStore::load,
+        )
     }
     DisposableEffect(externalWatchRepository) {
         onDispose { externalWatchRepository?.close() }
@@ -202,10 +221,10 @@ internal fun AndroidSharedAppShell(
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
-    val sources = remember(externalSnapshot?.registry) {
+    val sources = remember(externalSnapshot?.registry, packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(
-            builtIn = emptyList(),
-            external = externalSnapshot?.registry?.toAppSourceDescriptors().orEmpty(),
+            builtIn = externalSnapshot?.registry?.toAppSourceDescriptors().orEmpty(),
+            external = ExternalSourceRegistry(packageManagerSourceCatalog).toAppSourceDescriptors(),
         )
     }
     CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
