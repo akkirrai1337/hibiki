@@ -33,14 +33,15 @@ fun availableCatalogSorts(
         CatalogSort.Updated -> capabilities.supportedSorts.any {
             it.equals("updated", ignoreCase = true) ||
                 it.equals("latest", ignoreCase = true) ||
-                it.equals("latest_releases", ignoreCase = true)
+                it.equals("latest_releases", ignoreCase = true) ||
+                it.equals("relevance", ignoreCase = true)
         }
     }
 }
 
 fun catalogSortFromAlias(alias: String): CatalogSort = when (alias.lowercase()) {
     "alphabetical", "title" -> CatalogSort.Alphabetical
-    "updated", "latest", "latest_releases" -> CatalogSort.Updated
+    "updated", "latest", "latest_releases", "relevance" -> CatalogSort.Updated
     else -> CatalogSort.Popular
 }
 
