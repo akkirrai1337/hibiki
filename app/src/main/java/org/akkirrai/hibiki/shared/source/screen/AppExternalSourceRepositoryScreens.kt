@@ -82,6 +82,7 @@ fun AppSourceRepositoriesScreen(
     onCopyUrl: (String) -> Unit,
     onOpenUrl: (String) -> Unit,
     onAddRepository: () -> Unit,
+    customRepositoriesSupported: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -95,11 +96,13 @@ fun AppSourceRepositoriesScreen(
                         contentDescription = appText(AppTextKey.SettingsExternalRepositoryRefresh),
                     )
                 }
-                IconButton(onClick = onAddRepository) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = appText(AppTextKey.SourcesExternalRepositoryAddTitle),
-                    )
+                if (customRepositoriesSupported) {
+                    IconButton(onClick = onAddRepository) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = appText(AppTextKey.SourcesExternalRepositoryAddTitle),
+                        )
+                    }
                 }
             },
         )
@@ -128,17 +131,20 @@ fun AppSourceRepositoriesScreen(
                         onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
                         onRemove = { onRemoveRepository(repository.endpoint.url) },
                         onCopy = { onCopyUrl(repository.endpoint.url) },
+                        showRemove = customRepositoriesSupported,
                     )
                 }
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = bottomContentPadding + 12.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            TextButton(onClick = onAddRepository) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
-                Text(appText(AppTextKey.SourcesExternalRepositoryAddTitle))
+        if (customRepositoriesSupported) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = bottomContentPadding + 12.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                TextButton(onClick = onAddRepository) {
+                    Icon(Icons.Outlined.Add, contentDescription = null)
+                    Text(appText(AppTextKey.SourcesExternalRepositoryAddTitle))
+                }
             }
         }
     }
@@ -244,6 +250,7 @@ fun AppSourcesTabsScreen(
     onInstall: (SourceId) -> Unit,
     onSourceSelected: (String) -> Unit,
     onManage: (SourceId) -> Unit,
+    customRepositoriesSupported: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var extensionsQuery by remember { mutableStateOf("") }
@@ -329,7 +336,7 @@ fun AppSourcesTabsScreen(
             showFilter = extensionsTabSelected,
             titleStyle = MaterialTheme.typography.titleLarge,
             onRefresh = onRefresh,
-            onAddClick = if (extensionsTabSelected) null else onAddRepository,
+            onAddClick = if (extensionsTabSelected || !customRepositoriesSupported) null else onAddRepository,
             onSearchFocusChanged = { searchFieldFocused = it },
             tabContent = {
                 AppSourcesTabs(
@@ -425,6 +432,7 @@ fun AppSourcesTabsScreen(
                                 onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
                                 onRemove = { onRemoveRepository(repository.endpoint.url) },
                                 onCopy = { onCopyUrl(repository.endpoint.url) },
+                                showRemove = customRepositoriesSupported,
                             )
                         }
                     }
@@ -976,6 +984,7 @@ private fun SourceRepositoryCard(
     onOpenUrl: () -> Unit,
     onRemove: () -> Unit,
     onCopy: () -> Unit,
+    showRemove: Boolean = true,
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -1016,8 +1025,10 @@ private fun SourceRepositoryCard(
             IconButton(onClick = onCopy) {
                 Icon(Icons.Outlined.ContentCopy, contentDescription = appText(AppTextKey.SourcesExternalRepositoryCopy))
             }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Outlined.Delete, contentDescription = appText(AppTextKey.SettingsExternalRepositoryRemove))
+            if (showRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Outlined.Delete, contentDescription = appText(AppTextKey.SettingsExternalRepositoryRemove))
+                }
             }
         }
     }

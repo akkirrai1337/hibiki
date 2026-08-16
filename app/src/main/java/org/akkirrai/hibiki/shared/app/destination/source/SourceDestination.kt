@@ -93,6 +93,7 @@ internal fun SourcesDestinationRoute(
             onCopyUrl = copyText,
             onOpenUrl = onOpenUrl,
             onAddRepository = { isAddRepositoryDialogOpen = true },
+            customRepositoriesSupported = false,
             modifier = Modifier.fillMaxSize(),
         )
         is AppRoute.SourceRepository -> AppSourceRepositoryPackagesScreen(
@@ -172,6 +173,7 @@ internal fun SourcesDestinationRoute(
                     ?.endpoint?.url
                     ?.let { repositoryUrl -> onOpenPackageInfo(repositoryUrl, sourceId.value) }
             },
+            customRepositoriesSupported = false,
             modifier = Modifier.fillMaxSize(),
         )
     }
