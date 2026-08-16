@@ -127,7 +127,7 @@ kotlin {
 
 dependencies {
     implementation(project(":parsers"))
-    implementation(project(":shared"))
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
     implementation(libs.androidx.core.ktx)
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -164,6 +164,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
     testImplementation(libs.junit)
+    testImplementation(kotlin("test-junit"))
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
