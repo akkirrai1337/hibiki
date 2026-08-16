@@ -21,6 +21,7 @@ internal data class AppDestinationSettingsActions(
     val onDiscordChange: (Boolean) -> Unit,
     val onCheckForUpdates: () -> Unit,
     val onExportLogs: () -> Unit,
+    val onInstallExtensionClick: () -> Unit,
 )
 
 internal data class AppDestinationSettingsState(
@@ -68,6 +69,7 @@ internal fun SettingsDestinationRoute(
     onDiscordChange: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
     onExportLogs: () -> Unit,
+    onInstallExtensionClick: () -> Unit,
     notificationsAvailable: Boolean,
     settingsListState: LazyListState,
     bottomContentPadding: Dp,
@@ -98,6 +100,7 @@ internal fun SettingsDestinationRoute(
         onDiscordChange = onDiscordChange,
         onCheckForUpdates = onCheckForUpdates,
         onExportLogs = onExportLogs,
+        onInstallExtensionClick = onInstallExtensionClick,
         notificationsAvailable = notificationsAvailable,
         settingsListState = settingsListState,
         bottomContentPadding = bottomContentPadding,

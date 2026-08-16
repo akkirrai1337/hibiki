@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -61,6 +63,9 @@ import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
+import org.akkirrai.hibiki.core.source.extension.repository.InstallSourceExtensionDialog
+import org.akkirrai.hibiki.core.source.extension.repository.SourceExtensionInstaller
+import org.akkirrai.hibiki.core.source.extension.repository.SourceRepositoryClient
 import org.akkirrai.hibiki.shared.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
@@ -128,6 +133,11 @@ internal fun AndroidSharedAppShell(
     DisposableEffect(externalHttpClient) {
         onDispose { externalHttpClient.close() }
     }
+    val sourceRepositoryClient = remember(externalHttpClient) { SourceRepositoryClient(externalHttpClient) }
+    val sourceExtensionInstaller = remember(context, externalHttpClient) {
+        SourceExtensionInstaller(context, externalHttpClient)
+    }
+    var installExtensionDialogOpen by remember { mutableStateOf(false) }
     val externalStatusLabels = ExternalAnimeStatusLabels(
         unknown = appText(AppTextKey.Unknown),
         ongoing = appText(AppTextKey.Ongoing),
@@ -265,6 +275,7 @@ internal fun AndroidSharedAppShell(
                         Toast.makeText(context, R.string.settings_export_logs_failed, Toast.LENGTH_SHORT).show()
                     }
                 },
+                onInstallExtensionClick = { installExtensionDialogOpen = true },
                 onProfileAvatarEdit = activityLaunchers.editAvatar,
                 profileAvatarEditAvailable = true,
                 onOpenUrl = uriHandler::openUri,
@@ -346,5 +357,13 @@ internal fun AndroidSharedAppShell(
                 },
             ),
         )
+        if (installExtensionDialogOpen) {
+            InstallSourceExtensionDialog(
+                androidContext = context,
+                repositoryClient = sourceRepositoryClient,
+                installer = sourceExtensionInstaller,
+                onDismiss = { installExtensionDialogOpen = false },
+            )
+        }
     }
 }

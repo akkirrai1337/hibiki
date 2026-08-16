@@ -3,4 +3,7 @@
     <cache-path
         name="exported_logs"
         path="logs/" />
+    <cache-path
+        name="source_downloads"
+        path="source-downloads/" />
 </paths>

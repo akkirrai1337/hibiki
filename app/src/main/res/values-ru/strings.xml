@@ -411,6 +411,13 @@
     <string name="settings_export_logs">Экспортировать логи</string>
     <string name="settings_export_logs_summary">Поделиться очищенными логами приложения для багрепорта. Токены и cookie скрываются.</string>
     <string name="settings_export_logs_failed">Не удалось экспортировать логи</string>
+    <string name="settings_install_extension">Установить источник</string>
+    <string name="install_extension_dialog_title">Доступные источники</string>
+    <string name="install_extension_install_button">Установить</string>
+    <string name="install_extension_installing">Установка…</string>
+    <string name="install_extension_none_available">Все доступные источники уже установлены</string>
+    <string name="install_extension_load_failed">Не удалось загрузить список источников</string>
+    <string name="install_extension_retry">Повторить</string>
     <string name="settings_auto_skip_segments">Автопропуск опенинга/эндинга</string>
     <string name="settings_auto_skip_segments_enabled_summary">Через 10 секунд плеер сам пропустит найденный опенинг или эндинг.</string>
     <string name="settings_auto_skip_segments_disabled_summary">Показывать кнопку пропуска, но не пропускать автоматически.</string>

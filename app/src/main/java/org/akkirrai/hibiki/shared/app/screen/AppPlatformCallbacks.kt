@@ -13,6 +13,7 @@ class AppPlatformCallbacks(
     val notificationsAvailable: Boolean = true,
     val onCheckForUpdates: () -> Unit = {},
     val onExportLogs: () -> Unit = {},
+    val onInstallExtensionClick: () -> Unit = {},
     val onOpenUrl: (String) -> Unit = {},
     val onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
     val profileAvatarEditAvailable: Boolean = false,

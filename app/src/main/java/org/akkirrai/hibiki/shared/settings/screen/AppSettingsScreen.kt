@@ -52,6 +52,7 @@ data class AppSettingsScreenLabels(
     val checkUpdates: String,
     val support: String,
     val exportLogs: String,
+    val installExtension: String,
     val about: String,
     val appName: String,
     val versionName: String,
@@ -90,6 +91,7 @@ fun AppSettingsScreen(
     onGitHubClick: () -> Unit = {},
     externalSourcesCount: Int = 0,
     onExternalSourcesClick: () -> Unit = {},
+    onInstallExtensionClick: () -> Unit = {},
 ) {
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     val topSystemInset = if (layoutEnvironment.isProvided) {
@@ -208,6 +210,8 @@ fun AppSettingsScreen(
                 sectionTitle = labels.support,
                 exportLogsTitle = labels.exportLogs,
                 onExportLogs = onExportLogs,
+                installExtensionTitle = labels.installExtension,
+                onInstallExtensionClick = onInstallExtensionClick,
             )
         }
         item(key = SettingsSection.About.key) {
