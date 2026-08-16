@@ -26,4 +26,5 @@ dependencyResolutionManagement {
 rootProject.name = "hibiki"
 include(":app")
 include(":parsers")
+include(":sources:stub-test")
  

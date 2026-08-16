@@ -9,6 +9,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Android 11+ package visibility: without this, PackageManager queries for installed
+         source-extension APKs silently return nothing even when a matching package exists. -->
+    <queries>
+        <intent>
+            <action android:name="org.akkirrai.hibiki.action.SOURCE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
