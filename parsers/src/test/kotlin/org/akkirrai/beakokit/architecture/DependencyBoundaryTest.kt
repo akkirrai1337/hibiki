@@ -13,10 +13,8 @@ class DependencyBoundaryTest {
     @Test
     fun `BeakoKit main sources do not depend on the legacy resolver namespace`() {
         val sourceRoots = findSourceRoots(
-            Path.of("src", "commonMain", "kotlin"),
-            Path.of("parsers", "src", "commonMain", "kotlin"),
-            Path.of("src", "jvmMain", "kotlin"),
-            Path.of("parsers", "src", "jvmMain", "kotlin"),
+            Path.of("src", "main", "kotlin"),
+            Path.of("parsers", "src", "main", "kotlin"),
         )
         assertNoLegacyImports(sourceRoots, "BeakoKit")
     }
@@ -33,10 +31,8 @@ class DependencyBoundaryTest {
     @Test
     fun `legacy resolver namespace has no production sources`() {
         val productionRoots = findSourceRoots(
-            Path.of("src", "commonMain", "kotlin"),
-            Path.of("parsers", "src", "commonMain", "kotlin"),
-            Path.of("src", "jvmMain", "kotlin"),
-            Path.of("parsers", "src", "jvmMain", "kotlin"),
+            Path.of("src", "main", "kotlin"),
+            Path.of("parsers", "src", "main", "kotlin"),
         )
         val legacySources = productionRoots.flatMap { kotlinRoot ->
             val legacyRoot = kotlinRoot.resolve(Path.of("org", "akkirrai", "animeresolver"))

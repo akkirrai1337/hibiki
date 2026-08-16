@@ -1,6 +1,11 @@
 package org.akkirrai.beakokit.api
 
-internal expect fun isAbsoluteHttpsUrl(value: String): Boolean
+import java.net.URI
+
+internal fun isAbsoluteHttpsUrl(value: String): Boolean {
+    val uri = runCatching { URI(value) }.getOrNull()
+    return uri?.scheme.equals("https", ignoreCase = true) && !uri?.host.isNullOrBlank()
+}
 
 /**
  * A browser session requested by a source when ordinary HTTP is blocked by an interactive

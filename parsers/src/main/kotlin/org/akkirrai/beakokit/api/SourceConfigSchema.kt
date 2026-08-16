@@ -1,8 +1,12 @@
 package org.akkirrai.beakokit.api
 
 import kotlinx.serialization.Serializable
+import java.net.URI
 
-internal expect fun isHttpsConfigUrl(value: String): Boolean
+internal fun isHttpsConfigUrl(value: String): Boolean = runCatching {
+    val uri = URI(value)
+    uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
+}.getOrDefault(false)
 
 @Serializable
 enum class SourceConfigValueKind {
