@@ -16,13 +16,9 @@ kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+        withHostTestBuilder {}.configure {}
     }
-    jvm("desktop") {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
-
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -50,13 +46,6 @@ kotlin {
                 implementation(libs.coil.network.okhttp)
                 implementation(libs.androidx.palette.ktx)
                 implementation(libs.androidx.activity.compose)
-            }
-        }
-        val desktopMain by getting {
-            dependencies {
-                implementation(compose.desktop.currentOs)
-                implementation(libs.coil.network.ktor3)
-                implementation(libs.ktor.client.cio)
             }
         }
     }
