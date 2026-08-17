@@ -34,7 +34,7 @@ class ExternalSourceCatalogRepository(
     private var selectedSourceId: SourceId? = initialSourceId
     private val sourceCache = mutableMapOf<SourceId, AnimeSource>()
     private val sourceCacheMutex = Mutex()
-    // A source runtime may own one WASM/HTML parser instance. Keep catalog,
+    // A source runtime may own one HTML parser instance. Keep catalog,
     // filter and details calls serialized even if presenters start them together.
     private val sourceOperationMutex = Mutex()
 
