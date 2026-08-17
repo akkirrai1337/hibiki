@@ -232,7 +232,13 @@ class AnimeCatalogPresenter(
         detailsJob = scope.launch {
             try {
                 val details = repository.getDetails(anime.id, anime)
-                _state.update { it.copy(selectedAnime = details, isDetailsLoading = false) }
+                _state.update {
+                    // Keep the object reference stable when the fetch resolved to data
+                    // equal to what's already shown, so downstream `remember(anime, ...)`
+                    // blocks don't recompute and flash the screen right after it settles.
+                    val nextAnime = if (details == it.selectedAnime) it.selectedAnime else details
+                    it.copy(selectedAnime = nextAnime, isDetailsLoading = false)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {

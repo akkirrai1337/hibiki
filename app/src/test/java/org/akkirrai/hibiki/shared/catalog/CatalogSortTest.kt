@@ -28,8 +28,11 @@ class CatalogSortTest {
 
     @Test
     fun doesNotExposeSortControlsForRelevanceOnlySources() {
+        // "relevance" maps to CatalogSort.Updated so it can combine with other real sorts
+        // (e.g. AniLiberty's relevance+rating+year); the sort pill itself stays hidden by the
+        // UI's separate ">1 available sorts" gate, not by this list being empty.
         assertEquals(
-            emptyList(),
+            listOf(CatalogSort.Updated),
             availableCatalogSorts(
                 AnimeCatalogCapabilities(supportedSorts = setOf("relevance")),
             ),

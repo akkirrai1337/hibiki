@@ -42,6 +42,7 @@ fun AppProfileAnalyticsContent(
     val firstVisibleActivityDay = remember(snapshot.activityDays.size) {
         (snapshot.activityDays.size - PROFILE_ACTIVITY_VISIBLE_DAYS).coerceAtLeast(0)
     }
+    val activityBarItems = remember(snapshot.activityDays) { snapshot.activityDays.toProfileActivityBarItems() }
     val activityListState = rememberLazyListState(
         initialFirstVisibleItemIndex = firstVisibleActivityDay,
     )
@@ -60,7 +61,7 @@ fun AppProfileAnalyticsContent(
         activityContent = {
             AppProfileActivitySection(
                 title = activityTitle,
-                days = snapshot.activityDays.toProfileActivityBarItems(),
+                days = activityBarItems,
                 listState = activityListState,
                 visibleDays = PROFILE_ACTIVITY_VISIBLE_DAYS,
                 dayGap = PROFILE_ACTIVITY_DAY_GAP,

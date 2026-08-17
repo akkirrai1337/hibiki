@@ -383,7 +383,31 @@ private fun wrapTitleAtWords(
     }
     if (currentLine.isNotEmpty()) lines += currentLine
 
-    return lines.take(2).joinToString("\n")
+    if (lines.size <= 2) return lines.joinToString("\n")
+
+    // More text than fits on two lines: the manual word-wrap above already produces a
+    // string that occupies exactly two lines, so the outer Text's maxLines=2/Ellipsis
+    // never sees an overflow to ellipsize itself. Ellipsize the second line here instead.
+    val firstLine = lines[0]
+    var secondLine = lines[1]
+    while (secondLine.isNotEmpty()) {
+        val candidate = "$secondLine…"
+        val measurement = textMeasurer.measure(
+            text = AnnotatedString(candidate),
+            style = style,
+            overflow = TextOverflow.Clip,
+            softWrap = false,
+            maxLines = 1,
+            constraints = Constraints(maxWidth = maxWidth),
+        )
+        if (!measurement.didOverflowWidth) {
+            secondLine = candidate
+            break
+        }
+        secondLine = secondLine.dropLast(1).trimEnd()
+    }
+
+    return "$firstLine\n$secondLine"
 }
 
 private const val FORCE_POSTER_CARD_STYLE = true

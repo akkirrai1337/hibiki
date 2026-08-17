@@ -5,11 +5,16 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
@@ -36,8 +41,15 @@ fun LocalizedAppContext(
     content: @Composable () -> Unit
 ) {
     val baseContext = LocalContext.current
-    val localizedContext = remember(baseContext, languageMode) {
-        baseContext.withLanguage(languageMode)
+    // createConfigurationContext() rebuilds a Resources/AssetManager snapshot and isn't
+    // guaranteed cheap; building it inline in `remember` would block this composition's
+    // frame right before the full-tree recompose it triggers below. Build it off the main
+    // thread instead and swap in once ready, so the UI stays responsive meanwhile.
+    var localizedContext by remember(baseContext) {
+        mutableStateOf(baseContext.withLanguage(languageMode))
+    }
+    LaunchedEffect(baseContext, languageMode) {
+        localizedContext = withContext(Dispatchers.Default) { baseContext.withLanguage(languageMode) }
     }
 
     CompositionLocalProvider(

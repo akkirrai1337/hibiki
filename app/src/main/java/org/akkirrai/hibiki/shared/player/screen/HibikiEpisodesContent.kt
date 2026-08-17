@@ -107,6 +107,7 @@ internal fun HibikiEpisodesContent(
                         },
                     )
                 } else {
+                    val genericEpisodeTitle = defaultHeadline.replace("%s", formatEpisodeNumber(episode.number))
                     EpisodeRow(
                         headline = buildEpisodeRowHeadline(
                             episode = episode,
@@ -116,7 +117,12 @@ internal fun HibikiEpisodesContent(
                             defaultHeadline = { number -> defaultHeadline.replace("%s", number) },
                             watchedLabel = appText(AppTextKey.WatchStatusWatched),
                         ),
-                        subtitle = episode.title,
+                        // Some sources don't provide a real episode title and instead echo back
+                        // something like "Episode 1", identical to the generated headline. Only
+                        // show the subtitle when it actually adds information.
+                        subtitle = episode.title
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() && !it.equals(genericEpisodeTitle, ignoreCase = true) },
                         inProgress = status == org.akkirrai.hibiki.shared.player.model.EpisodeProgressStatus.InProgress,
                         enabled = !playbackLoading && !navigationLocked,
                         showDownloadAction = false,

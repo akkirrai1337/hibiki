@@ -240,8 +240,12 @@ internal fun HibikiAppShell(
     )
     val routePresentation = navigationState.toHibikiShellRoutePresentation()
     val selectedTab = routePresentation.selectedTab
+    // Only refresh once per real visit, not every time the user returns to an already-loaded
+    // Sources tab -- manual pull-to-refresh is wired separately via onRefresh.
+    var hasRefreshedSourceRepositories by remember { mutableStateOf(false) }
     LaunchedEffect(selectedTab, sourceCallbacks.externalSourceRepositoryController) {
-        if (selectedTab == AppDestination.SOURCES) {
+        if (selectedTab == AppDestination.SOURCES && !hasRefreshedSourceRepositories) {
+            hasRefreshedSourceRepositories = true
             sourceCallbacks.externalSourceRepositoryController?.refreshRepositories()
         }
     }
@@ -286,7 +290,6 @@ internal fun HibikiAppShell(
     HibikiAppDataEffects(
         libraryRepository = libraryRepository,
         libraryPresenter = libraryPresenter,
-        selectedAnimeKey = state.selectedAnime?.id,
         homeRepository = homeRepository,
         homePresenter = homePresenter,
         setHomeState = ::setHomeStatePreservingDescriptions,

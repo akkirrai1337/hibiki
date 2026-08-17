@@ -70,14 +70,13 @@ internal fun hibikiAppColorScheme(
 internal fun HibikiAppDataEffects(
     libraryRepository: LibraryRepository,
     libraryPresenter: LibraryPresenter,
-    selectedAnimeKey: String?,
     homeRepository: HomeDataRepository?,
     homePresenter: HomePresenter,
     setHomeState: (HomeUiState) -> Unit,
     profileRepository: LocalProfileDataRepository,
     profilePresenter: LocalProfilePresenter,
 ) {
-    LaunchedEffect(libraryRepository, selectedAnimeKey) {
+    LaunchedEffect(libraryRepository) {
         try {
             libraryPresenter.updateEntries(libraryRepository.getEntries())
         } catch (cancelled: CancellationException) {

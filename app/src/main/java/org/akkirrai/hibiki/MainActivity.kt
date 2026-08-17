@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
-import org.akkirrai.hibiki.app.navigation.AndroidExternalSourceBackgroundSync
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -153,23 +152,21 @@ class MainActivity : ComponentActivity() {
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidExternalSourceBackgroundSync {
-                            AndroidSharedAppShell(
-                                activity = this@MainActivity,
-                                onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
-                                onConfigureNotifications = ::configureNotifications,
-                                enableOnboarding = false,
-                                settingsStoreOverride = AndroidAppSettingsStore(appPreferences),
-                            )
-                            if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
-                                availableUpdate?.let { update ->
-                                    AppUpdateDialog(
-                                        update = update,
-                                        downloadProgress = updateDownloadProgress,
-                                        onUpdate = { downloadUpdate(update) },
-                                        onLater = { dismissUpdate(update.version) },
-                                    )
-                                }
+                        AndroidSharedAppShell(
+                            activity = this@MainActivity,
+                            onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
+                            onConfigureNotifications = ::configureNotifications,
+                            enableOnboarding = false,
+                            settingsStoreOverride = AndroidAppSettingsStore(appPreferences),
+                        )
+                        if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
+                            availableUpdate?.let { update ->
+                                AppUpdateDialog(
+                                    update = update,
+                                    downloadProgress = updateDownloadProgress,
+                                    onUpdate = { downloadUpdate(update) },
+                                    onLater = { dismissUpdate(update.version) },
+                                )
                             }
                         }
                     }

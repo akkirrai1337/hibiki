@@ -57,7 +57,6 @@ import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
-import org.akkirrai.hibiki.shared.source.LocalExternalSourceRuntimeCoordinator
 import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
 import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
 import org.akkirrai.beakokit.api.SourceConfigValueKind
@@ -67,7 +66,6 @@ import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
-import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
 import org.akkirrai.hibiki.core.source.extension.repository.ApkSourceRepositoryActions
 import org.akkirrai.hibiki.core.source.extension.repository.SourceExtensionInstaller
@@ -97,8 +95,6 @@ internal fun AndroidSharedAppShell(
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = settingsStoreOverride ?: remember(dependencies) { dependencies.appSettingsStore() }
     val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
-    val externalCoordinator = LocalExternalSourceRuntimeCoordinator.current
-    val externalSnapshot = externalCoordinator?.snapshot?.collectAsState()?.value
     var installedExtensionsRevision by remember { mutableIntStateOf(0) }
     DisposableEffect(context) {
         val filter = IntentFilter().apply {
@@ -118,22 +114,7 @@ internal fun AndroidSharedAppShell(
     val packageManagerSourceCatalog = remember(context, installedExtensionsRevision) {
         PackageManagerSourceCatalog.build(context)
     }
-    fun mergedExternalRegistry(): ExternalSourceRegistry {
-        val wasmCatalog = externalCoordinator?.snapshot?.value?.registry?.catalog ?: SourceCatalog(emptyList())
-        val packageManagerIds = packageManagerSourceCatalog.sources.mapTo(mutableSetOf()) { it.id }
-        val wasmCatalogWithoutOverrides = SourceCatalog(
-            wasmCatalog.entries.filterNot { it.info.id in packageManagerIds },
-        )
-        return ExternalSourceRegistry(wasmCatalogWithoutOverrides.mergedWith(packageManagerSourceCatalog))
-    }
-    val externalCatalogRefreshKey = externalSnapshot?.repository?.loaded?.joinToString("|") { loaded ->
-        loaded.endpoint.url + loaded.index.sources.joinToString(",") { manifest ->
-            "${manifest.sourceId}:${manifest.packageVersion}:${manifest.sha256}"
-        }
-    }
-    val externalCatalogReady = externalCoordinator == null ||
-        externalSnapshot?.registry != null ||
-        externalSnapshot?.error != null
+    fun mergedExternalRegistry(): ExternalSourceRegistry = ExternalSourceRegistry(packageManagerSourceCatalog)
     // External source search/details must keep redirects inside the manifest's host policy.
     val externalHttpClient = remember {
         HttpClient(OkHttp) {
@@ -175,18 +156,13 @@ internal fun AndroidSharedAppShell(
         announcement = appText(AppTextKey.Announcement),
     )
     val externalCatalogRepository = remember(
-        externalCoordinator,
-        externalSnapshot?.registry,
         packageManagerSourceCatalog,
         externalHttpClient,
         externalStatusLabels,
     ) {
         ExternalSourceCatalogRepository(
             registryProvider = { mergedExternalRegistry() },
-            registryAwaiter = {
-                externalCoordinator?.awaitRegistry()
-                mergedExternalRegistry()
-            },
+            registryAwaiter = { mergedExternalRegistry() },
             contextProvider = { sourceId ->
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
@@ -213,8 +189,6 @@ internal fun AndroidSharedAppShell(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val externalWatchRepository = remember(
-        externalCoordinator,
-        externalSnapshot?.registry,
         packageManagerSourceCatalog,
     ) {
         SharedAnimeWatchRepository(
@@ -257,16 +231,15 @@ internal fun AndroidSharedAppShell(
     androidx.compose.runtime.LaunchedEffect(
         catalogRepository,
         preferences.animeSource.value,
-        externalSnapshot?.registry,
     ) {
         preferences.animeSource.value.let(catalogRepository::selectSource)
     }
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
-    val sources = remember(externalSnapshot?.registry, packageManagerSourceCatalog) {
+    val sources = remember(packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(
-            builtIn = externalSnapshot?.registry?.toAppSourceDescriptors().orEmpty(),
+            builtIn = emptyList(),
             external = ExternalSourceRegistry(packageManagerSourceCatalog).toAppSourceDescriptors(),
         )
     }
@@ -285,8 +258,8 @@ internal fun AndroidSharedAppShell(
             systemLanguage = systemLanguage,
             appVersionName = BuildConfig.VERSION_NAME,
             enableOnboarding = enableOnboarding,
-            catalogRefreshKey = externalCatalogRefreshKey,
-            catalogReady = externalCatalogReady,
+            catalogRefreshKey = installedExtensionsRevision.toString(),
+            catalogReady = true,
             platformCallbacks = AppPlatformCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->

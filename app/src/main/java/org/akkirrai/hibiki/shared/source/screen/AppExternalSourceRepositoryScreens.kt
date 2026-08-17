@@ -935,6 +935,7 @@ private fun SourcePackageCard(
             AppSourceIconImage(
                 url = manifest.sourceInfo?.iconUrl,
                 sourceId = manifest.sourceId.value,
+                installedPackageName = packageStatus.activePackage?.installed?.packagePath,
                 modifier = Modifier.size(52.dp).clip(CircleShape),
             )
         Column(modifier = Modifier.weight(1f)) {
@@ -964,7 +965,6 @@ private fun SourcePackageCard(
                     onPrimaryClick = onManage,
                     onSecondaryClick = onUpdate,
                     enabled = !busy,
-                    modifier = Modifier.width(128.dp),
                 )
             } else {
                     Button(onClick = onManage, enabled = !busy) {

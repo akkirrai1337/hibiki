@@ -14,6 +14,8 @@ import org.akkirrai.beakokit.api.SourcePackageInstallStage
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRuntime
+import org.akkirrai.hibiki.core.source.extension.DiscoveredSourceExtension
+import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceDiscovery
 import org.akkirrai.hibiki.shared.source.ExternalSourcePackageStatus
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryActions
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryContent
@@ -67,8 +69,63 @@ class ApkSourceRepositoryActions(
 
     override suspend fun refreshRepository(url: String) = refreshRepositories()
 
-    override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> =
-        cachedEntries.map(::statusFor)
+    override suspend fun packageStatusesForUi(): List<ExternalSourcePackageStatus> {
+        val repositoryStatuses = cachedEntries.map(::statusFor)
+        val repositoryPackageNames = cachedEntries.map { it.packageName }.toSet()
+        // Extensions installed by dropping an APK on the device directly (not published in the
+        // hibiki-sources repository index yet) are already discoverable via PackageManager for
+        // catalog/search purposes -- surface them here too so they show up as installed instead
+        // of only appearing once someone adds them to the repository index.
+        val localOnlyStatuses = PackageManagerSourceDiscovery.discover(androidContext)
+            .filter { it.packageName !in repositoryPackageNames }
+            .mapNotNull { extension -> runCatching { statusForLocalOnly(extension) }.getOrNull() }
+        return repositoryStatuses + localOnlyStatuses
+    }
+
+    private fun statusForLocalOnly(extension: DiscoveredSourceExtension): ExternalSourcePackageStatus? {
+        val packageManager = androidContext.packageManager
+        val info = runCatching { packageManager.getPackageInfo(extension.packageName, 0) }.getOrNull() ?: return null
+        val installedVersion = info.versionName?.takeIf(String::isNotBlank) ?: return null
+        val displayName = info.applicationInfo
+            ?.let { runCatching { packageManager.getApplicationLabel(it).toString() }.getOrNull() }
+            ?.takeIf(String::isNotBlank)
+            ?: extension.packageName
+        // InstalledSourcePackage.artifactSha256 requires either null or a valid 64-char hex
+        // digest -- an empty string would fail that check, so bail out entirely if hashing fails.
+        val sha256 = apkSha256(info) ?: return null
+        val sourceId = localSourceIdFor(extension.packageName) ?: return null
+        val manifest = SourceManifest(
+            manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
+            sourceId = sourceId,
+            packageVersion = installedVersion,
+            sourceInfo = SourceManifestInfo(
+                displayName = displayName,
+                languages = setOf(SourceLanguage.RUSSIAN),
+                primaryLanguage = SourceLanguage.RUSSIAN,
+            ),
+            apiVersion = extension.contractVersion,
+            runtime = SourceRuntime(id = "apk", abi = "android"),
+            entrypoint = extension.packageName,
+            packageUrl = "",
+            sha256 = sha256,
+            artifactSizeBytes = File(extension.apkPath).length(),
+            minClientVersion = 1,
+        )
+        return ExternalSourcePackageStatus(
+            sourceId = sourceId,
+            availableManifest = manifest,
+            activePackage = ActiveExternalSourcePackage(
+                manifest = manifest,
+                installed = InstalledSourcePackage(
+                    sourceId = sourceId,
+                    packageVersion = installedVersion,
+                    packagePath = extension.packageName,
+                    artifactSha256 = sha256,
+                ),
+            ),
+            rollbackAvailable = false,
+        )
+    }
 
     override suspend fun repositoryContentsForUi(): List<ExternalSourceRepositoryContent> = listOf(
         ExternalSourceRepositoryContent(
@@ -100,11 +157,17 @@ class ApkSourceRepositoryActions(
     }
 
     override suspend fun uninstallPackageFromUi(sourceId: SourceId) {
-        val entry = cachedEntries.firstOrNull { it.id == sourceId.value }
+        // Repository-advertised packages are looked up by packageName; local-only packages
+        // (see packageStatusesForUi/localSourceIdFor) are keyed by a slug derived from their
+        // real packageName, so re-derive that mapping from what's currently installed.
+        val packageName = cachedEntries.firstOrNull { it.id == sourceId.value }?.packageName
+            ?: PackageManagerSourceDiscovery.discover(androidContext)
+                .firstOrNull { localSourceIdFor(it.packageName) == sourceId }
+                ?.packageName
             ?: throw SourcePackageStateException(
-                "Source package is no longer advertised by the repository: $sourceId",
+                "Source package is no longer installed or advertised: $sourceId",
             )
-        val packageUri = Uri.parse("package:${entry.packageName}")
+        val packageUri = Uri.parse("package:$packageName")
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE)
             .setData(packageUri)
             .putExtra(Intent.EXTRA_RETURN_RESULT, false)
@@ -176,6 +239,11 @@ class ApkSourceRepositoryActions(
         artifactSizeBytes = sizeBytes,
         minClientVersion = 1,
     )
+
+    /** SourceId requires a lowercase slug; an Android package name (reverse-DNS, dots) doesn't
+     *  qualify, so derive a slug from it for locally-discovered, non-repository packages. */
+    private fun localSourceIdFor(packageName: String): SourceId? =
+        runCatching { SourceId(packageName.lowercase().replace('.', '-')) }.getOrNull()
 
     private fun apkSha256(info: PackageInfo): String? = runCatching {
         val apkPath = info.applicationInfo?.sourceDir ?: return null

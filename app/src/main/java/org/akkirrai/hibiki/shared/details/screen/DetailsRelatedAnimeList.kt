@@ -17,10 +17,12 @@ fun AppDetailsRelatedAnimeList(
     modifier: Modifier = Modifier,
 ) {
     val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    val relatedItems = buildDetailsRelatedAnimeItems(
-        items = displayItems,
-        announcementLabel = announcementLabel,
-    )
+    val relatedItems = remember(displayItems, announcementLabel) {
+        buildDetailsRelatedAnimeItems(
+            items = displayItems,
+            announcementLabel = announcementLabel,
+        )
+    }
     val relatedById = remember(displayItems) { displayItems.associateBy(RelatedAnime::id) }
 
     DetailsRelatedAnimeSection(

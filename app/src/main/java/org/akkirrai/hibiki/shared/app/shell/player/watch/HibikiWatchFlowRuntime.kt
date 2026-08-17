@@ -100,14 +100,11 @@ internal class HibikiWatchFlowNavigationActions(
 ) {
     fun openWatch(anime: Anime, downloadMode: Boolean) {
         setForceWatchSourcesRefresh(false)
+        // Reset to loading is left to HibikiWatchDataEffects' LaunchedEffect(watchLoadGeneration),
+        // which fires exactly once after navigation completes. Setting it here too made the
+        // screen render once with this state, then again with the effect's reset right after
+        // the transition finished, showing as a spurious reload.
         incrementWatchLoadGeneration()
-        watchPresenter.setState(
-            initialWatchSourcesState(
-                cachedSources = null,
-                offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
-                forceRefresh = true,
-            ),
-        )
         episodesPresenter.setState(EpisodesScreenState())
         cancelPlaybackAndResetPlayer()
         setPlaybackReturnRoute(null)

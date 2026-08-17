@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.shared.catalog
 
 import org.akkirrai.hibiki.shared.catalog.model.Anime
+import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 
 /** Keeps the built-in catalog active while routing installed external sources in the background. */
 class TransitionalAnimeCatalogRepository(
@@ -26,7 +27,19 @@ class TransitionalAnimeCatalogRepository(
     override suspend fun getDetails(id: String, fallback: Anime): Anime =
         if (isExternalId(id)) external.getDetails(id, fallback) else builtIn.getDetails(id, fallback)
 
-    override suspend fun latest(limit: Int): List<Anime> = builtIn.latest(limit)
+    // builtIn is EmptyAnimeCatalogRepository in production, so delegating unconditionally here
+    // (as every other method already avoids doing) would make Home's "recently updated"
+    // section always empty. Route through the selected external source the same way search() does.
+    override suspend fun latest(limit: Int): List<Anime> =
+        selectedSourceId
+            ?.takeIf(external::hasSource)
+            ?.let { sourceId ->
+                external.selectSource(sourceId)
+                external.search(
+                    AnimeCatalogQuery(pageSize = limit, filters = AnimeSearchFilters(sortAlias = "updated")),
+                ).items
+            }
+            ?: builtIn.latest(limit)
 
     override suspend fun filterCatalog(): org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog =
         selectedSourceId
