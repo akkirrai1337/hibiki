@@ -17,22 +17,5 @@ open class CatalogSourceRegistry(
     override val catalog: SourceCatalog,
 ) : SourceRegistry
 
-/** Built-in sources retained as a separate registry during migration. */
-class BuiltInSourceRegistry(catalog: SourceCatalog) : CatalogSourceRegistry(catalog)
-
 /** Sources installed from external packages. */
 class ExternalSourceRegistry(catalog: SourceCatalog) : CatalogSourceRegistry(catalog)
-
-/** Transitional registry exposing both built-in and external sources uniformly. */
-class CombinedSourceRegistry(
-    builtIn: SourceRegistry,
-    external: SourceRegistry,
-) : CatalogSourceRegistry(
-    builtIn.catalog.mergedWith(
-        SourceCatalog(
-            external.catalog.entries.filterNot { externalEntry ->
-                builtIn.catalog[externalEntry.info.id] != null
-            },
-        ),
-    ),
-)

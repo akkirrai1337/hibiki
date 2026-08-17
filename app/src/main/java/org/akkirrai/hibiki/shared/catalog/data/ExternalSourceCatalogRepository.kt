@@ -7,6 +7,7 @@ import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -165,7 +166,18 @@ class ExternalSourceCatalogRepository(
             sourceCacheMutex.withLock {
                 sourceCache[sourceId] ?: run {
                     val registry = registryProvider() ?: registryAwaiter?.invoke()
-                    val created = registry?.create(sourceId, contextProvider(sourceId))
+                        ?: error("External source is not installed: $sourceId")
+                    // registry.create() loads/instantiates the extension's class (DexClassLoader,
+                    // reflection); a broken or incompatible installed APK throws here, same as it
+                    // would in PackageManagerSourceCatalog.build() -- surface a clear, catchable
+                    // error instead of letting an opaque loader exception propagate.
+                    val created = runCatching { registry.create(sourceId, contextProvider(sourceId)) }
+                        .getOrElse { throwable ->
+                            throw SourcePackageStateException(
+                                "Source extension failed to load: ${sourceId.value}",
+                                throwable,
+                            )
+                        }
                         ?: error("External source is not installed: $sourceId")
                     sourceCache[sourceId] = created
                     created

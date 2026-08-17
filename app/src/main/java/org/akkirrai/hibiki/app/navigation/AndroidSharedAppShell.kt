@@ -63,8 +63,6 @@ import org.akkirrai.beakokit.api.SourceConfigValueKind
 import org.akkirrai.beakokit.api.SourceConfigSchema
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
-import org.akkirrai.hibiki.shared.catalog.TransitionalAnimeCatalogRepository
-import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
 import org.akkirrai.hibiki.core.source.extension.repository.ApkSourceRepositoryActions
@@ -182,10 +180,9 @@ internal fun AndroidSharedAppShell(
             statusLabels = externalStatusLabels,
         )
     }
-    val builtInCatalogRepository = EmptyAnimeCatalogRepository
-    val catalogRepository = remember(builtInCatalogRepository, externalCatalogRepository) {
-        TransitionalAnimeCatalogRepository(builtInCatalogRepository, externalCatalogRepository)
-    }
+    // ExternalSourceCatalogRepository is already a complete AnimeCatalogRepository on its own
+    // (all sources are JVM APK extensions now, there is no separate built-in catalog to merge).
+    val catalogRepository = externalCatalogRepository
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val profileRepository = remember(dependencies) { dependencies.localProfileRepository() }
     val externalWatchRepository = remember(

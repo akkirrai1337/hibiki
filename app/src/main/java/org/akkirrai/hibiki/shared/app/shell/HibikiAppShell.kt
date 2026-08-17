@@ -54,7 +54,7 @@ import org.akkirrai.hibiki.shared.app.shell.overlay.HibikiAppShellOverlayLayer
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.shared.catalog.presentation.SourcesSearchPresenter
-import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
@@ -135,7 +135,7 @@ import org.akkirrai.hibiki.shared.platform.AppSystemBackHandler
 @Composable
 internal fun HibikiAppShell(
     modifier: Modifier = Modifier,
-    repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    repository: AnimeCatalogRepository = EmptyAnimeCatalogRepository,
     homeRepository: HomeDataRepository? = null,
     libraryRepository: LibraryRepository,
     profileRepository: LocalProfileDataRepository,

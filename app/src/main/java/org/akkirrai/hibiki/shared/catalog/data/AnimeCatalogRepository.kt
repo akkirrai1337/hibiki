@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.shared.catalog
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
-import org.akkirrai.hibiki.shared.demo.DemoCatalog
 
 /** Platform-neutral catalog boundary consumed by shared screens. */
 interface AnimeCatalogRepository {
@@ -33,7 +32,7 @@ interface AnimeCatalogRepository {
         search(AnimeCatalogQuery(text = query)).items
 }
 
-/** Empty legacy catalog used while the app is running in external-sources-only mode. */
+/** Empty catalog used as a safe default for previews/tests that don't need real search results. */
 object EmptyAnimeCatalogRepository : AnimeCatalogRepository {
     override val initialItems: List<Anime> = emptyList()
 
@@ -63,42 +62,3 @@ data class AnimeCatalogPage(
     val page: Int,
     val canLoadMore: Boolean,
 )
-
-/** Temporary deterministic data source for the Windows prototype. */
-object PrototypeAnimeCatalogRepository : AnimeCatalogRepository {
-    override val initialItems: List<Anime> = DemoCatalog.items
-
-    override suspend fun filterCatalog(): AnimeCatalogFilterCatalog = AnimeCatalogFilterCatalog(
-        sortOptions = listOf(
-            "relevance" to "Relevance",
-            "rating" to "Popular",
-            "title" to "Alphabetical",
-        ).map { (id, title) -> org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption(id, title) },
-        genreOptions = initialItems.flatMap { it.genres }
-            .distinct()
-            .sorted()
-            .map { genre -> org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterOption(genre, genre) },
-    )
-
-    override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
-        val filters = query.filters
-        val filtered = initialItems.filter { anime ->
-            (query.text.isBlank() || anime.title.contains(query.text, ignoreCase = true) ||
-                anime.subtitle.contains(query.text, ignoreCase = true) ||
-                anime.genres.any { genre -> genre.contains(query.text, ignoreCase = true) }) &&
-                (filters.includedGenreAliases.isEmpty() || filters.includedGenreAliases.any { genre ->
-                    anime.genres.any { it.equals(genre, ignoreCase = true) }
-                }) &&
-                filters.excludedGenreAliases.none { genre ->
-                    anime.genres.any { it.equals(genre, ignoreCase = true) }
-                }
-        }
-        val pageSize = query.pageSize.coerceAtLeast(1)
-        val pageItems = filtered.drop(query.offset).take(pageSize)
-        return AnimeCatalogPage(
-            items = pageItems,
-            page = query.page.coerceAtLeast(1),
-            canLoadMore = query.offset + pageItems.size < filtered.size,
-        )
-    }
-}

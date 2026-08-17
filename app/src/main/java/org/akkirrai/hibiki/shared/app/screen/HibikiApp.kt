@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
-import org.akkirrai.hibiki.shared.catalog.PrototypeAnimeCatalogRepository
+import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.shared.demo.DemoLocalProfileDataRepository
@@ -28,7 +28,7 @@ import org.akkirrai.hibiki.shared.layout.AppLayoutOptions
 @Composable
 fun HibikiApp(
     modifier: Modifier = Modifier,
-    repository: AnimeCatalogRepository = PrototypeAnimeCatalogRepository,
+    repository: AnimeCatalogRepository = EmptyAnimeCatalogRepository,
     homeRepository: HomeDataRepository? = null,
     libraryRepository: LibraryRepository = DemoLibraryRepository,
     profileRepository: LocalProfileDataRepository = DemoLocalProfileDataRepository,

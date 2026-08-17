@@ -58,16 +58,6 @@ class SourceCatalog(sourceEntries: Iterable<SourceCatalogEntry>) {
     fun create(id: SourceId, context: SourceContext): AnimeSource =
         entriesById[id]?.create(context) ?: throw SourceNotRegisteredException(id)
 
-    fun mergedWith(other: SourceCatalog): SourceCatalog {
-        val combined = entries + other.entries
-        return SourceCatalog(
-            if (combined.all { it.registrationOrder != null }) {
-                combined.sortedBy(SourceCatalogEntry::registrationOrder)
-            } else {
-                combined
-            },
-        )
-    }
 }
 
 class SourceNotRegisteredException(

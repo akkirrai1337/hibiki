@@ -5,7 +5,6 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
-import kotlin.test.assertSame
 import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.api.ExternalSourceRegistration
@@ -23,7 +22,6 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.AnimeSearchSort
-import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
 
 class ExternalSourceCatalogRepositoryTest {
@@ -131,77 +129,6 @@ class ExternalSourceCatalogRepositoryTest {
         repository.getDetails(search.items.single().id, search.items.single())
 
         assertEquals(1, creations)
-    }
-
-    @Test
-    fun transitionalRepositoryKeepsBuiltInDefaultAndRoutesExternalIds() = runTest {
-        val sourceId = SourceId("external-source")
-        val external = ExternalSourceCatalogRepository(
-            registryProvider = { registry(sourceId) },
-            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
-            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
-            initialSourceId = sourceId,
-        )
-        val builtIn = object : AnimeCatalogRepository {
-            override val initialItems = listOf(
-                Anime(
-                    id = "built-in",
-                    title = "Built-in",
-                    subtitle = "",
-                    episodesLabel = "",
-                    status = "",
-                ),
-            )
-            override suspend fun search(query: AnimeCatalogQuery) = AnimeCatalogPage(initialItems, 1, false)
-            override suspend fun getDetails(id: String, fallback: Anime) = fallback
-        }
-        val transitional = TransitionalAnimeCatalogRepository(builtIn, external)
-
-        assertSame(builtIn.initialItems, transitional.initialItems)
-        assertEquals("Built-in", transitional.search(AnimeCatalogQuery()).items.single().title)
-        transitional.selectSource(sourceId.value)
-        assertEquals(
-            "External title",
-            transitional.search(AnimeCatalogQuery(text = "query")).items.single().title,
-        )
-        assertEquals(
-            "External title",
-            transitional.searchSource(sourceId.value, AnimeCatalogQuery(text = "query")).items.single().title,
-        )
-    }
-
-    @Test
-    fun transitionalRepositoryFallsBackWhenExternalRegistryDisappears() = runTest {
-        val sourceId = SourceId("external-source")
-        var activeRegistry: ExternalSourceRegistry? = registry(sourceId)
-        val external = ExternalSourceCatalogRepository(
-            registryProvider = { activeRegistry },
-            contextProvider = { DefaultSourceContext(HttpClient(), listOf(SourceLanguage.ENGLISH)) },
-            statusLabels = ExternalAnimeStatusLabels("Unknown", "Ongoing", "Released", "Announcement"),
-        )
-        val builtInAnime = Anime(
-            id = "built-in",
-            title = "Built-in",
-            subtitle = "",
-            episodesLabel = "",
-            status = "",
-        )
-        val builtIn = object : AnimeCatalogRepository {
-            override val initialItems = listOf(builtInAnime)
-            override suspend fun search(query: AnimeCatalogQuery) = AnimeCatalogPage(initialItems, 1, false)
-        }
-        val transitional = TransitionalAnimeCatalogRepository(builtIn, external)
-
-        transitional.selectSource(sourceId.value)
-        assertEquals("External title", transitional.search(AnimeCatalogQuery()).items.single().title)
-
-        activeRegistry = null
-
-        assertEquals("Built-in", transitional.search(AnimeCatalogQuery()).items.single().title)
-
-        activeRegistry = registry(sourceId)
-
-        assertEquals("External title", transitional.search(AnimeCatalogQuery()).items.single().title)
     }
 
     private fun registry(

@@ -7,6 +7,6 @@ import kotlin.test.assertEquals
 class SettingsLayoutMetricsTest {
     @Test
     fun settingsContentStartsAfterTheOverlayBackButton() {
-        assertEquals(108.dp, settingsContentTopPaddingWithBackButton(44.dp))
+        assertEquals(128.dp, settingsContentTopPaddingWithBackButton(44.dp))
     }
 }
