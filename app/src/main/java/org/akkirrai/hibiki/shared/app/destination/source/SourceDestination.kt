@@ -17,7 +17,6 @@ import org.akkirrai.hibiki.shared.source.AppSourceRepositoriesScreen
 import org.akkirrai.hibiki.shared.source.AppSourcesTabsScreen
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryUiState
-import org.akkirrai.hibiki.shared.source.SourcesDestinationContent
 import org.akkirrai.hibiki.shared.source.SourcesSearchUiState
 
 internal data class AppDestinationSourceSearchActions(
