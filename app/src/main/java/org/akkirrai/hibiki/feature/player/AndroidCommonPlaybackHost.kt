@@ -630,6 +630,7 @@ private fun AndroidPlaybackLoadingChrome(
             .fillMaxSize()
             .background(androidx.compose.ui.graphics.Color.Black),
     ) {
+        AppPlayerLoadingOverlay(visible = playbackLoading)
         AppPlayerTopOverlay(
             title = title,
             subtitle = appText(AppTextKey.PlayerEpisodeNumber).replace(
@@ -673,7 +674,6 @@ private fun AndroidPlaybackLoadingChrome(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-        AppPlayerLoadingOverlay(visible = playbackLoading)
         AppPlayerPanelOverlays(
             playlistVisible = playlistVisible,
             settingsVisible = settingsVisible,
