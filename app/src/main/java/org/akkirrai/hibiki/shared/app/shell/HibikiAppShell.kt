@@ -724,9 +724,16 @@ internal fun HibikiAppShell(
                         playbackError = playerState.errorMessage,
                         onRetryPlayback = { playbackOverlayActions.retry(playerState.lastPlaybackRequest) },
                         onDismissPlayback = playbackOverlayActions::dismiss,
-                        onEpisodeSelected = { episode ->
+                        onEpisodeSelected = { episode, selectionContext ->
                             playbackRequestCoordinator.request(
                                 episode = episode,
+                                episodesOverride = selectionContext.episodes,
+                                fallbackSource = WatchSource(
+                                    sourceId = selectionContext.sourceId,
+                                    title = selectionContext.sourceTitle,
+                                    episodeCount = selectionContext.episodes.size,
+                                    qualityLabel = selectionContext.selectedQualityLabel,
+                                ),
                                 replacePlayerRoute = true,
                             )
                         },

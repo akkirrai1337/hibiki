@@ -63,6 +63,11 @@ internal class HibikiPlaybackRequestCoordinator(
         forceRefresh: Boolean = false,
         episodesOverride: List<WatchEpisode>? = null,
         replacePlayerRoute: Boolean = false,
+        // Only consulted when selectedWatchSource() itself is empty (e.g. the player was opened
+        // straight from Home/Catalog rather than via the Episodes tab, so that screen's own
+        // source-selection state was never populated) -- unlike sourceOverride, this never
+        // suppresses the saved player/quality selection below.
+        fallbackSource: WatchSource? = null,
     ) {
         AppLogger.d(PLAYBACK_REQUEST_TAG, "request: episodeId=${episode.id} sourceOverride=${sourceOverride?.sourceId} forceRefresh=$forceRefresh")
         val repository = watchRepository() ?: run {
@@ -71,7 +76,7 @@ internal class HibikiPlaybackRequestCoordinator(
         }
         val requestEpisodes = episodesOverride
             ?: (episodesState().result as? EpisodesUiState.Content)?.items.orEmpty()
-        val selectedSource = selectedWatchSource()
+        val selectedSource = selectedWatchSource() ?: fallbackSource
         val titleId = watchAnime()?.id.orEmpty()
         val retainedSettingsOptions = activePlaybackRoute()
             ?.takeIf { route -> (sourceOverride ?: selectedSource)?.sourceId == route.context.sourceId }

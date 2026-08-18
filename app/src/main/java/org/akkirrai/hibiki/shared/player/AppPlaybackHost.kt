@@ -14,7 +14,10 @@ typealias AppPlaybackHost = @Composable (
     AppNavigationState,
     Boolean, // playbackLoading -- e.g. a new episode's stream is being fetched
     () -> Unit,
-    (WatchEpisode) -> Unit,
+    // (selected episode, the context it was chosen from) -- the request coordinator has no other
+    // reliable way to know the current title's source/episodes when the player was opened
+    // straight from Home/Catalog rather than via the Episodes tab.
+    (WatchEpisode, PlaybackContext) -> Unit,
     (PlaybackSettingsAction) -> Unit,
     (AppNavigationEvent) -> Unit,
 ) -> Unit

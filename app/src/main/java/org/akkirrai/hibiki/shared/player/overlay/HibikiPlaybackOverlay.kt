@@ -19,7 +19,7 @@ internal fun HibikiPlaybackOverlay(
     playbackError: String?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
-    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
     content: @Composable (
@@ -28,7 +28,7 @@ internal fun HibikiPlaybackOverlay(
         AppNavigationState,
         Boolean,
         () -> Unit,
-        (WatchEpisode) -> Unit,
+        (WatchEpisode, PlaybackContext) -> Unit,
         (PlaybackSettingsAction) -> Unit,
         (AppNavigationEvent) -> Unit,
     ) -> Unit,

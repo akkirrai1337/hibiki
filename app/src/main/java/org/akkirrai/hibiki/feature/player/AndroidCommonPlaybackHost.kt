@@ -112,7 +112,7 @@ internal fun AndroidCommonPlaybackHost(
     progressRepository: PlaybackProgressRepository,
     windowController: AndroidPlayerWindowController,
     onBack: () -> Unit,
-    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
     modifier: Modifier = Modifier,
@@ -130,7 +130,7 @@ internal fun AndroidCommonPlaybackHost(
             onBack = onBack,
             onPlaylistClick = { dispatchPlayerPlaylistOpen(onOverlayEvent) },
             onSettingsClick = { dispatchPlayerSettingsOpen(onOverlayEvent) },
-            onEpisodeSelected = onEpisodeSelected,
+            onEpisodeSelected = { episode -> onEpisodeSelected(episode, context) },
             onSettingsAction = onSettingsAction,
             onOverlayEvent = onOverlayEvent,
         )
@@ -213,7 +213,7 @@ internal fun AndroidCommonPlaybackHost(
             setControlsVisible = { controlsVisible = true },
             pausePlayback = { transport.pause() },
             persistProgress = ::savePlaybackProgress,
-            onEpisodeSelected = onEpisodeSelected,
+            onEpisodeSelected = { episode -> onEpisodeSelected(episode, context) },
         )
         if (!dispatched) {
             AppLogger.w("BeakoKit/playback-request", "selectAdjacentEpisode: no adjacent episode found for offset=$offset")
@@ -519,7 +519,7 @@ internal fun AndroidCommonPlaybackHost(
                         setControlsVisible = { controlsVisible = true },
                         pausePlayback = { transport.pause() },
                         persistProgress = ::savePlaybackProgress,
-                        onEpisodeSelected = onEpisodeSelected,
+                        onEpisodeSelected = { episode -> onEpisodeSelected(episode, context) },
                     )
                 }
             },

@@ -66,7 +66,7 @@ internal fun HibikiPlaybackOverlayLayer(
     playbackError: String?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
-    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
@@ -126,7 +126,7 @@ internal fun HibikiAppShellOverlayLayer(
     playbackError: String?,
     onRetryPlayback: () -> Unit,
     onDismissPlayback: () -> Unit,
-    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onPlaybackSettingsAction: (PlaybackSettingsAction) -> Unit,
     onPlaybackOverlayEvent: (AppNavigationEvent) -> Unit,
     enableOnboarding: Boolean,

@@ -31,15 +31,15 @@ fun AppPlaybackOverlayHost(
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     content: AppPlaybackHost,
-    onEpisodeSelected: (WatchEpisode) -> Unit,
+    onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
     onOverlayEvent: (AppNavigationEvent) -> Unit,
 ) {
-    val handleEpisodeSelected: (WatchEpisode) -> Unit = { episode ->
+    val handleEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit = { episode, selectionContext ->
         if (navigationState.isPlaylistOverlayActive) {
             onOverlayEvent(AppNavigationEvent.DismissOverlay)
         }
-        onEpisodeSelected(episode)
+        onEpisodeSelected(episode, selectionContext)
     }
     val handleSettingsAction: (PlaybackSettingsAction) -> Unit = { action ->
         if (navigationState.isPlayerSettingsOverlayActive &&
