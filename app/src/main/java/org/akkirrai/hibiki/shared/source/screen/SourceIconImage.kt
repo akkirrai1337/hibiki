@@ -1,12 +1,15 @@
 package org.akkirrai.hibiki.shared.source
 
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.core.graphics.drawable.toBitmap
@@ -47,7 +50,9 @@ fun AppSourceIconImage(
         "ani-liberty" -> painterResource(R.drawable.source_ani_liberty)
         "animego" -> painterResource(R.drawable.source_animego)
         "animepahe" -> painterResource(R.drawable.source_animepahe)
-        else -> null
+        // Any source without a hand-picked icon above falls back to a generic
+        // placeholder automatically, so adding a new source needs no icon work.
+        else -> rememberVectorPainter(Icons.Outlined.Extension)
     }
     AsyncImage(
         model = url,
