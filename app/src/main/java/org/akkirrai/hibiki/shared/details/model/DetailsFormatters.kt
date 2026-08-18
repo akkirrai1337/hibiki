@@ -25,10 +25,27 @@ private fun formatCompactUnit(value: Long, unit: Long, suffix: String): String {
     return "${tenths / 10L}.${tenths % 10L}$suffix"
 }
 
+/** Canonical classification shared by every screen that needs to tell release statuses apart. */
+enum class AnimeReleaseStatus {
+    Ongoing,
+    Released,
+    Announcement,
+}
+
+private val ongoingStatusKeys = setOf("ongoing", "airing", "releasing")
+private val releasedStatusKeys = setOf("released", "completed", "finished", "finished airing")
+private val announcementStatusKeys = setOf("анонс", "announcement", "announced", "anons", "not yet aired")
+
+fun parseAnimeReleaseStatus(status: String): AnimeReleaseStatus? = when (status.trim().lowercase()) {
+    in ongoingStatusKeys -> AnimeReleaseStatus.Ongoing
+    in releasedStatusKeys -> AnimeReleaseStatus.Released
+    in announcementStatusKeys -> AnimeReleaseStatus.Announcement
+    else -> null
+}
+
 fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean =
-    listOf(status, episodesLabel).map { it.trim().lowercase() }.any {
-        it == "анонс" || it == "announcement" || it == "announced" || it == "anons"
-    }
+    parseAnimeReleaseStatus(status) == AnimeReleaseStatus.Announcement ||
+        parseAnimeReleaseStatus(episodesLabel) == AnimeReleaseStatus.Announcement
 
 fun formatRelatedAnimeMetadata(
     year: Int?,

@@ -1,13 +1,16 @@
 package org.akkirrai.hibiki.shared.details.screen
 
+import org.akkirrai.hibiki.shared.details.model.AnimeReleaseStatus
+import org.akkirrai.hibiki.shared.details.model.parseAnimeReleaseStatus
+
 fun resolveDetailsStatusLabel(
     status: String,
     ongoingLabel: String,
     releasedLabel: String,
     announcementLabel: String,
-): String = when (status.trim().lowercase()) {
-    "ongoing", "airing", "releasing" -> ongoingLabel
-    "released", "completed", "finished", "finished airing" -> releasedLabel
-    "announcement", "announced", "anons", "not yet aired" -> announcementLabel
-    else -> status
+): String = when (parseAnimeReleaseStatus(status)) {
+    AnimeReleaseStatus.Ongoing -> ongoingLabel
+    AnimeReleaseStatus.Released -> releasedLabel
+    AnimeReleaseStatus.Announcement -> announcementLabel
+    null -> status
 }
