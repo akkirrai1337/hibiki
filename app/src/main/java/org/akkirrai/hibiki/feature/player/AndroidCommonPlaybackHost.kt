@@ -96,12 +96,26 @@ import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
 internal class AndroidPlayerWindowController {
     private var restoreAction: (() -> Unit)? = null
 
+    // Lets the platform-agnostic system-back handler (which has no access to the ExoPlayer
+    // transport or video surface) ask the currently-mounted player to save its progress and
+    // resume frame before the shared navigation layer tears down the playback session --
+    // otherwise a system back gesture skips that entirely, unlike the in-player back button.
+    private var persistAction: (() -> Unit)? = null
+
     fun restore() {
         restoreAction?.invoke()
     }
 
+    fun persist() {
+        persistAction?.invoke()
+    }
+
     internal fun setRestoreAction(action: (() -> Unit)?) {
         restoreAction = action
+    }
+
+    internal fun setPersistAction(action: (() -> Unit)?) {
+        persistAction = action
     }
 }
 
@@ -209,6 +223,23 @@ internal fun AndroidCommonPlaybackHost(
     fun persistPlaybackState() {
         savePlaybackProgress()
         captureResumeFrame()
+    }
+
+    // The system back gesture exits through HibikiSystemBackCoordinator, which has no access to
+    // this composable's transport/video surface -- it calls windowController.persist() instead,
+    // which resolves here for as long as this player is on screen.
+    DisposableEffect(windowController, exoPlayer) {
+        windowController.setPersistAction(::persistPlaybackState)
+        onDispose { windowController.setPersistAction(null) }
+    }
+
+    // Belt-and-suspenders against process death/crash losing more than a few seconds of
+    // progress -- every other persist point is event-driven (pause, close, episode switch).
+    LaunchedEffect(exoPlayer) {
+        while (true) {
+            delay(PlaybackProgressAutoSaveIntervalMillis)
+            persistPlaybackState()
+        }
     }
 
     fun closePlayback() {
@@ -823,3 +854,4 @@ internal fun AndroidPlayerWindowMode(
 }
 
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
+private const val PlaybackProgressAutoSaveIntervalMillis = 15_000L

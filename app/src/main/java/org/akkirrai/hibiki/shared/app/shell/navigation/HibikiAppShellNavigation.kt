@@ -222,6 +222,10 @@ internal class HibikiSystemBackCoordinator(
     private val setPlaybackReturnRoute: (AppRoute?) -> Unit,
     private val applyWatchFlowBackEffect: (WatchFlowBackEffect) -> Unit,
     private val closeDetails: () -> Unit,
+    // Lets the currently-mounted platform player save its progress/resume frame before its
+    // session state is torn down -- the in-player back button already does this itself, but the
+    // system back gesture bypasses that composable entirely and lands here instead.
+    private val onExitPlayback: () -> Unit,
 ) {
     fun handle() {
         val result = reduceHibikiSystemBack(
@@ -236,6 +240,7 @@ internal class HibikiSystemBackCoordinator(
         if (result.clearPlaybackReturnRoute) setPlaybackReturnRoute(null)
         when (result.cleanup) {
             HibikiBackCleanup.ActivePlayback -> {
+                onExitPlayback()
                 playbackSession.cancelAndInvalidate()
                 playbackSession.clearRouteState()
                 applyWatchFlowBackEffect(result.effect)
@@ -246,6 +251,7 @@ internal class HibikiSystemBackCoordinator(
                 applyWatchFlowBackEffect(result.effect)
             }
             HibikiBackCleanup.Episodes -> {
+                onExitPlayback()
                 playbackSession.cancelAndInvalidate()
                 playbackSession.clearRouteState()
                 applyWatchFlowBackEffect(result.effect)
@@ -266,6 +272,7 @@ internal fun createHibikiSystemBackCoordinator(
     setPlaybackReturnRoute: (AppRoute?) -> Unit,
     applyWatchFlowBackEffect: (WatchFlowBackEffect) -> Unit,
     closeDetails: () -> Unit,
+    onExitPlayback: () -> Unit,
 ): HibikiSystemBackCoordinator = HibikiSystemBackCoordinator(
     navigationState = navigationState,
     setNavigationState = setNavigationState,
@@ -276,6 +283,7 @@ internal fun createHibikiSystemBackCoordinator(
     setPlaybackReturnRoute = setPlaybackReturnRoute,
     applyWatchFlowBackEffect = applyWatchFlowBackEffect,
     closeDetails = closeDetails,
+    onExitPlayback = onExitPlayback,
 )
 
 internal data class AppDestinationNavigationActions(

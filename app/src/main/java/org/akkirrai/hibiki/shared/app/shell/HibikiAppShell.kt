@@ -437,6 +437,7 @@ internal fun HibikiAppShell(
         setPlaybackReturnRoute = { playbackReturnRoute = it },
         applyWatchFlowBackEffect = playbackEffects::applyWatchFlowBackEffect,
         closeDetails = presenter::closeDetails,
+        onExitPlayback = playbackCallbacks.onExitPlayback,
     )
 
     AppTextResourceLocale(

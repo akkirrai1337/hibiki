@@ -14,4 +14,7 @@ class AppPlaybackPlatformCallbacks(
     val playbackHost: AppPlaybackHost? = null,
     val playerWindowMode: @Composable (Boolean) -> Unit = {},
     val onWatchSourceSelected: (String, WatchSource) -> Unit = { _, _ -> },
+    // Asks the platform player to save its progress/resume frame before the system back gesture
+    // tears down its session -- the in-player back button already does this itself.
+    val onExitPlayback: () -> Unit = {},
 )

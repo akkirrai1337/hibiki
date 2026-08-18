@@ -371,6 +371,7 @@ internal fun AndroidSharedAppShell(
                         activity = activity,
                     )
                 },
+                onExitPlayback = playerWindowController::persist,
             ),
         )
     }
