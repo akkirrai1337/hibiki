@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.profile
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import org.akkirrai.hibiki.core.source.LibraryEntry
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.shared.profile.LocalLibraryItem
