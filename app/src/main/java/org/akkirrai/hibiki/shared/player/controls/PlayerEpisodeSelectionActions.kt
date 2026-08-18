@@ -6,10 +6,15 @@ import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 fun dispatchPlayerEpisodeSelection(
     episode: WatchEpisode,
     setControlsVisible: () -> Unit,
+    pausePlayback: () -> Unit,
     persistProgress: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
 ) {
     setControlsVisible()
+    // Pause the outgoing episode immediately -- it otherwise keeps playing in the background
+    // for as long as the next episode's stream takes to load, which looks like the switch
+    // silently did nothing.
+    pausePlayback()
     persistProgress()
     onEpisodeSelected(episode)
 }
@@ -20,6 +25,7 @@ fun dispatchAdjacentPlayerEpisodeSelection(
     currentEpisodeNumber: Double?,
     offset: Int,
     setControlsVisible: () -> Unit,
+    pausePlayback: () -> Unit,
     persistProgress: () -> Unit,
     onEpisodeSelected: (WatchEpisode) -> Unit,
 ): Boolean {
@@ -32,6 +38,7 @@ fun dispatchAdjacentPlayerEpisodeSelection(
     dispatchPlayerEpisodeSelection(
         episode = episode,
         setControlsVisible = setControlsVisible,
+        pausePlayback = pausePlayback,
         persistProgress = persistProgress,
         onEpisodeSelected = onEpisodeSelected,
     )

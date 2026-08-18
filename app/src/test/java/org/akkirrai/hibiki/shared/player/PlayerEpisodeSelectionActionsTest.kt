@@ -13,11 +13,12 @@ class PlayerEpisodeSelectionActionsTest {
         dispatchPlayerEpisodeSelection(
             episode = episode,
             setControlsVisible = { events += "controls" },
+            pausePlayback = { events += "pause" },
             persistProgress = { events += "progress" },
             onEpisodeSelected = { events += "selected:${it.id}" },
         )
 
-        assertEquals(listOf("controls", "progress", "selected:episode-2"), events)
+        assertEquals(listOf("controls", "pause", "progress", "selected:episode-2"), events)
     }
 
     @Test
@@ -30,6 +31,7 @@ class PlayerEpisodeSelectionActionsTest {
             currentEpisodeNumber = 1.0,
             offset = 1,
             setControlsVisible = { events += "controls" },
+            pausePlayback = { events += "pause" },
             persistProgress = { events += "progress" },
             onEpisodeSelected = { events += "selected:${it.id}" },
         )
