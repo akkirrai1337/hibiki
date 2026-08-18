@@ -20,6 +20,11 @@ interface EpisodeDownloadRepository {
     fun resumeEpisode(sourceId: String, episodeId: String)
 
     fun removeEpisode(sourceId: String, episodeId: String)
+
+    // A title can have downloads under more than one WatchSource (different dubs). Checking only
+    // the currently-viewed source's local state after a removal would wrongly evict the whole
+    // title from the library if another source still has completed downloads.
+    fun hasDownloadsForTitle(titleId: String): Boolean
 }
 
 sealed interface EpisodeDownloadState {

@@ -37,6 +37,9 @@ internal class AndroidEpisodeDownloadRepository(
         delegate.removeEpisode(sourceId, episodeId)
     }
 
+    override fun hasDownloadsForTitle(titleId: String): Boolean =
+        delegate.getOfflineSources(titleId).isNotEmpty()
+
     override fun getOfflineSources(titleId: String): List<WatchSource> = delegate.getOfflineSources(titleId)
 
     override fun getOfflineEpisodes(sourceId: String): List<WatchEpisode> = delegate.getOfflineEpisodes(sourceId)

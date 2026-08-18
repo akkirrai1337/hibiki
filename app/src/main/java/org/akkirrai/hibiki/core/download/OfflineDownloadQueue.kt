@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -123,7 +124,7 @@ object OfflineDownloadQueue {
         val appContext = context.applicationContext
         if (episodes.isEmpty()) return 0
         val animeTitle = OfflineTitleMetadataRepository(appContext)
-            .get(source.sourceId.substringBefore(':'))
+            .get(watchTitleIdFromSourceId(source.sourceId))
             ?.title
             ?.trim()
             ?.takeIf(String::isNotBlank)
@@ -282,7 +283,7 @@ object OfflineDownloadQueue {
 
     fun getOfflineTitleIds(context: Context): List<String> {
         return visibleStoredEntries(context)
-            .map { entry -> entry.sourceId.substringBefore(':') }
+            .map { entry -> watchTitleIdFromSourceId(entry.sourceId) }
             .filter(String::isNotBlank)
             .distinct()
     }
@@ -292,7 +293,7 @@ object OfflineDownloadQueue {
         titleId: String,
     ): List<WatchSource> {
         val entries = visibleStoredEntries(context)
-            .filter { it.sourceId.substringBefore(':') == titleId }
+            .filter { watchTitleIdFromSourceId(it.sourceId) == titleId }
         return entries
             .groupBy { it.sourceId }
             .values

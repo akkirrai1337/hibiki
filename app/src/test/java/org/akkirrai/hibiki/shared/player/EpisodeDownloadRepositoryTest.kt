@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.shared.player
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class EpisodeDownloadRepositoryTest {
     @Test
@@ -32,15 +30,5 @@ class EpisodeDownloadRepositoryTest {
             EpisodeDownloadActionState.Failed,
             EpisodeDownloadState.Failed.toEpisodeDownloadActionState(),
         )
-    }
-
-    @Test
-    fun `only active or completed downloads keep title saved`() {
-        assertFalse(EpisodeDownloadActionState.NotDownloaded.keepsTitleSaved())
-        assertTrue(EpisodeDownloadActionState.Queued.keepsTitleSaved())
-        assertTrue(EpisodeDownloadActionState.Downloading(0.5f).keepsTitleSaved())
-        assertTrue(EpisodeDownloadActionState.Paused.keepsTitleSaved())
-        assertTrue(EpisodeDownloadActionState.Completed.keepsTitleSaved())
-        assertFalse(EpisodeDownloadActionState.Failed.keepsTitleSaved())
     }
 }

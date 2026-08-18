@@ -24,15 +24,6 @@ fun EpisodeDownloadActionState.forDisplay(controlsEnabled: Boolean): EpisodeDown
 fun EpisodeDownloadActionState.shouldShowAction(controlsEnabled: Boolean): Boolean =
     controlsEnabled || this == EpisodeDownloadActionState.Completed
 
-fun EpisodeDownloadActionState.keepsTitleSaved(): Boolean = when (this) {
-    EpisodeDownloadActionState.NotDownloaded,
-    EpisodeDownloadActionState.Failed -> false
-    EpisodeDownloadActionState.Queued,
-    is EpisodeDownloadActionState.Downloading,
-    EpisodeDownloadActionState.Paused,
-    EpisodeDownloadActionState.Completed -> true
-}
-
 fun resolveEpisodeDownloadSubtitle(
     state: EpisodeDownloadActionState,
     queuedLabel: String,

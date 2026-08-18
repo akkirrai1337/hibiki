@@ -18,7 +18,6 @@ import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
 import org.akkirrai.hibiki.shared.player.EpisodeRow
 import org.akkirrai.hibiki.shared.player.EpisodesScreenState
 import org.akkirrai.hibiki.shared.player.buildEpisodeRowHeadline
-import org.akkirrai.hibiki.shared.player.keepsTitleSaved
 import org.akkirrai.hibiki.shared.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.shared.player.toEpisodeDownloadActionState
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
@@ -94,13 +93,12 @@ internal fun HibikiEpisodesContent(
                         onResumeClick = { episodeDownloadRepository.resumeEpisode(source.sourceId, episode.id) },
                         onRemoveClick = {
                             episodeDownloadRepository.removeEpisode(source.sourceId, episode.id)
-                            val updatedStates = episodeDownloadStates +
-                                (episode.id to EpisodeDownloadState.NotDownloaded)
-                            onEpisodeDownloadStatesChange(updatedStates)
-                            if (!updatedStates.values
-                                    .map(EpisodeDownloadState::toEpisodeDownloadActionState)
-                                    .any(EpisodeDownloadActionState::keepsTitleSaved)
-                            ) {
+                            onEpisodeDownloadStatesChange(
+                                episodeDownloadStates + (episode.id to EpisodeDownloadState.NotDownloaded),
+                            )
+                            // Checked across all of the title's sources, not just this one --
+                            // another dub can still have completed downloads.
+                            if (!episodeDownloadRepository.hasDownloadsForTitle(anime.id)) {
                                 libraryRepository.removeSavedFromLibrary(anime.id)
                             }
                             onLibraryChanged()
