@@ -138,12 +138,14 @@ internal fun AndroidCommonPlaybackHost(
     val exoPlayer = remember(androidContext, playback.sessionKey()) {
         ExoPlayer.Builder(androidContext).build()
     }
-    val mediaSessionId = remember {
-        "hibiki-playback-${UUID.randomUUID()}"
-    }
     val mediaSession = remember(exoPlayer) {
+        // The id must be freshly generated per exoPlayer/session, not hoisted above this
+        // remember(exoPlayer) block -- media3 rejects reusing an id still held by a session
+        // that hasn't been released yet, and the old session's DisposableEffect cleanup only
+        // runs after this composition, so a stable id here throws "Session ID must be unique"
+        // every time exoPlayer is recreated (episode switch).
         MediaSession.Builder(androidContext, exoPlayer)
-            .setId(mediaSessionId)
+            .setId("hibiki-playback-${UUID.randomUUID()}")
             .build()
     }
     val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
