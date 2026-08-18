@@ -37,6 +37,7 @@ fun AppOnboardingScreen(
         AppSourceIconImage(
             url = source.iconUrl,
             modifier = iconModifier,
+            debugTag = "onboarding",
         )
     },
     modifier: Modifier = Modifier,

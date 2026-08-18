@@ -912,6 +912,7 @@ private fun SourcePackageCard(
             AppSourceIconImage(
                 url = manifest.sourceInfo?.iconUrl,
                 modifier = Modifier.size(52.dp).clip(CircleShape),
+                debugTag = "repository-card",
             )
         Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)

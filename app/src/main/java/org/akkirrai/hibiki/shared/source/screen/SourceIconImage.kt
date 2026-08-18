@@ -20,6 +20,7 @@ fun AppSourceIconImage(
     url: String?,
     placeholder: Painter? = null,
     modifier: Modifier = Modifier,
+    debugTag: String = "unknown",
 ) {
     val effectivePlaceholder = placeholder ?: rememberVectorPainter(Icons.Outlined.Extension)
     AsyncImage(
@@ -28,7 +29,11 @@ fun AppSourceIconImage(
         error = effectivePlaceholder,
         contentDescription = null,
         onError = { state ->
-            AppLogger.w("SourceIconImage", "Failed to load icon $url: ${state.result.throwable.message}", state.result.throwable)
+            AppLogger.w(
+                "SourceIconImage",
+                "[$debugTag] Failed to load icon $url: ${state.result.throwable.message}",
+                state.result.throwable,
+            )
         },
         modifier = modifier,
     )

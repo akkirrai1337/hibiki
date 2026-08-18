@@ -32,6 +32,7 @@ fun AppMihonSourceListItem(
         AppSourceIconImage(
             url = source.iconUrl,
             modifier = Modifier.size(56.dp).clip(CircleShape),
+            debugTag = "sources-list-item",
         )
         Column(
             modifier = Modifier

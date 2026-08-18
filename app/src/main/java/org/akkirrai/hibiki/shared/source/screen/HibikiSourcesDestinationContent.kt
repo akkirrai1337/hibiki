@@ -67,6 +67,7 @@ internal fun SourcesDestinationContent(
             AppSourceIconImage(
                 url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,
                 modifier = iconModifier,
+                debugTag = "search-source-icon",
             )
         },
         modifier = modifier,

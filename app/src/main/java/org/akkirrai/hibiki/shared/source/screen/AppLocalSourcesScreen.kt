@@ -96,6 +96,7 @@ fun AppLocalSourcesScreen(
                         ?: AppSourceIconImage(
                             url = null,
                             modifier = iconModifier,
+                            debugTag = "search-fallback-no-content",
                         )
                 },
                 itemContent = { anime ->

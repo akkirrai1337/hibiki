@@ -107,6 +107,7 @@ internal fun ColumnScope.HomeScreen(
                             AppSourceIconImage(
                                 url = source.iconUrl,
                                 modifier = iconModifier,
+                                debugTag = "home-badge",
                             )
                         },
                     )

@@ -95,6 +95,7 @@ internal fun ColumnScope.LibraryScreen(
                                     AppSourceIconImage(
                                         url = source.iconUrl,
                                         modifier = iconModifier,
+                                        debugTag = "library-badge",
                                     )
                                 },
                             )
