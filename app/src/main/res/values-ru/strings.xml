@@ -567,7 +567,6 @@
     <string name="settings_external_package_update">Обновить</string>
     <string name="settings_external_package_installed">Установлено</string>
     <string name="settings_external_package_manage">Управление</string>
-    <string name="settings_external_package_rollback">Откатить</string>
     <string name="settings_external_package_uninstall">Удалить</string>
     <string name="sources_external_package_info">Информация об источнике</string>
     <string name="sources_external_package_version">Версия</string>

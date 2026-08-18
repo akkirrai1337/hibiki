@@ -113,9 +113,6 @@ internal fun SourcesDestinationRoute(
                 onUpdate = externalSourcesController?.let { controller ->
                     { controller.installPackage(org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId)) }
                 } ?: {},
-                onRollback = externalSourcesController?.let { controller ->
-                    { controller.rollbackPackage(org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId)) }
-                } ?: {},
                 modifier = Modifier.fillMaxSize(),
             )
         }

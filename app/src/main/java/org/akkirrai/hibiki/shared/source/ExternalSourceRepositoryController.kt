@@ -92,13 +92,6 @@ class ExternalSourceRepositoryController(
         }
     }
 
-    fun rollbackPackage(sourceId: SourceId) {
-        launchOperation {
-            actions.rollbackPackageFromUi(sourceId)
-            loadState()
-        }
-    }
-
     fun uninstallPackage(sourceId: SourceId, onUninstalled: () -> Unit = {}) {
         launchOperation {
             actions.uninstallPackageFromUi(sourceId)

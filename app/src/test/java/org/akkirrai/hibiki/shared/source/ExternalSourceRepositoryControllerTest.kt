@@ -82,7 +82,7 @@ class ExternalSourceRepositoryControllerTest {
     }
 
     @Test
-    fun controllerDelegatesInstallationInitializationAndRollback() = runTest {
+    fun controllerDelegatesInstallationInitialization() = runTest {
         val actions = FakeActions()
         val controller = ExternalSourceRepositoryController(actions, this)
         advanceUntilIdle()
@@ -91,11 +91,8 @@ class ExternalSourceRepositoryControllerTest {
 
         controller.installPackage(sourceId) { initialized = true }
         advanceUntilIdle()
-        controller.rollbackPackage(sourceId)
-        advanceUntilIdle()
 
         assertEquals(listOf(sourceId), actions.installed)
-        assertEquals(listOf(sourceId), actions.rolledBack)
         assertEquals(true, initialized)
     }
 
@@ -110,7 +107,6 @@ class ExternalSourceRepositoryControllerTest {
         advanceUntilIdle()
 
         assertEquals(false, controller.state.value.packages.single().updateAvailable)
-        assertEquals(true, controller.state.value.packages.single().rollbackAvailable)
     }
 
     private class FakeActions(
@@ -119,7 +115,6 @@ class ExternalSourceRepositoryControllerTest {
     ) : ExternalSourceRepositoryActions {
         private val items = mutableListOf<SourceRepositoryEndpoint>()
         val installed = mutableListOf<SourceId>()
-        val rolledBack = mutableListOf<SourceId>()
         private var packageInstalled = false
 
         override suspend fun repositories(): List<SourceRepositoryEndpoint> = items.toList()
@@ -166,7 +161,6 @@ class ExternalSourceRepositoryControllerTest {
                                 artifactSha256 = if (packageInstalled) available.sha256 else null,
                             ),
                         ),
-                        rollbackAvailable = packageInstalled,
                     ),
                 )
             }
@@ -186,10 +180,6 @@ class ExternalSourceRepositoryControllerTest {
             installed += sourceId
             packageInstalled = true
             initialize()
-        }
-
-        override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
-            rolledBack += sourceId
         }
 
         override suspend fun uninstallPackageFromUi(sourceId: SourceId) {

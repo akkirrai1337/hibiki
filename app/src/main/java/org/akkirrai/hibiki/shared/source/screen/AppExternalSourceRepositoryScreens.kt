@@ -574,7 +574,6 @@ fun AppExternalSourcePackageInfoScreen(
     onBack: () -> Unit,
     onUninstall: () -> Unit,
     onUpdate: () -> Unit,
-    onRollback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -650,34 +649,13 @@ fun AppExternalSourcePackageInfoScreen(
                     ) {
                         Text(appText(AppTextKey.SettingsExternalPackageUninstall))
                     }
-                    when {
-                        packageStatus.updateAvailable && packageStatus.rollbackAvailable -> {
-                            AppSplitActionButton(
-                                primaryLabel = appText(AppTextKey.SettingsExternalPackageUpdate),
-                                secondaryLabel = appText(AppTextKey.SettingsExternalPackageRollback),
-                                onPrimaryClick = onUpdate,
-                                onSecondaryClick = onRollback,
-                                enabled = !isBusy,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        packageStatus.updateAvailable -> {
-                            Button(
-                                onClick = onUpdate,
-                                enabled = !isBusy,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text(appText(AppTextKey.SettingsExternalPackageUpdate))
-                            }
-                        }
-                        else -> {
-                            Button(
-                                onClick = onRollback,
-                                enabled = !isBusy && packageStatus.rollbackAvailable,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text(appText(AppTextKey.SettingsExternalPackageRollback))
-                            }
+                    if (packageStatus.updateAvailable) {
+                        Button(
+                            onClick = onUpdate,
+                            enabled = !isBusy,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(appText(AppTextKey.SettingsExternalPackageUpdate))
                         }
                     }
                 }

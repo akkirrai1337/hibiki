@@ -31,8 +31,6 @@ interface ExternalSourceRepositoryActions {
         initialize: suspend () -> Unit,
     )
 
-    suspend fun rollbackPackageFromUi(sourceId: SourceId)
-
     suspend fun uninstallPackageFromUi(sourceId: SourceId)
 }
 
@@ -40,7 +38,6 @@ data class ExternalSourcePackageStatus(
     val sourceId: SourceId,
     val availableManifest: SourceManifest,
     val activePackage: ActiveExternalSourcePackage?,
-    val rollbackAvailable: Boolean = false,
 ) {
     init {
         require(sourceId == availableManifest.sourceId) {

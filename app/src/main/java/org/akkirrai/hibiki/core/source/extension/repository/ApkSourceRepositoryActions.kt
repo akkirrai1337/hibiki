@@ -123,7 +123,6 @@ class ApkSourceRepositoryActions(
                     artifactSha256 = sha256,
                 ),
             ),
-            rollbackAvailable = false,
         )
     }
 
@@ -150,10 +149,6 @@ class ApkSourceRepositoryActions(
         }
         onStage(SourcePackageInstallStage.ACTIVATING)
         installer.requestInstall(apkFile)
-    }
-
-    override suspend fun rollbackPackageFromUi(sourceId: SourceId) {
-        throw SourcePackageStateException("Rollback is not supported for installed extensions: $sourceId")
     }
 
     override suspend fun uninstallPackageFromUi(sourceId: SourceId) {
@@ -193,7 +188,6 @@ class ApkSourceRepositoryActions(
             sourceId = SourceId(entry.id),
             availableManifest = availableManifest,
             activePackage = activePackage,
-            rollbackAvailable = false,
         )
     }
 

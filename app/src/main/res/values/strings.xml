@@ -565,7 +565,6 @@
     <string name="settings_external_package_update">Update</string>
     <string name="settings_external_package_installed">Installed</string>
     <string name="settings_external_package_manage">Manage</string>
-    <string name="settings_external_package_rollback">Rollback</string>
     <string name="settings_external_package_uninstall">Uninstall</string>
     <string name="sources_external_package_info">Extension info</string>
     <string name="sources_external_package_version">Version</string>
