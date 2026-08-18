@@ -171,8 +171,14 @@ class ExternalSourceCatalogRepository(
                     // reflection); a broken or incompatible installed APK throws here, same as it
                     // would in PackageManagerSourceCatalog.build() -- surface a clear, catchable
                     // error instead of letting an opaque loader exception propagate.
-                    val created = runCatching { registry.create(sourceId, contextProvider(sourceId)) }
+                    val sourceContext = contextProvider(sourceId)
+                    val created = runCatching { registry.create(sourceId, sourceContext) }
                         .getOrElse { throwable ->
+                            sourceContext.logger.log(
+                                SourceLogLevel.ERROR,
+                                "Source extension failed to load: ${sourceId.value}: ${throwable::class.qualifiedName}: ${throwable.message}",
+                                throwable,
+                            )
                             throw SourcePackageStateException(
                                 "Source extension failed to load: ${sourceId.value}",
                                 throwable,
