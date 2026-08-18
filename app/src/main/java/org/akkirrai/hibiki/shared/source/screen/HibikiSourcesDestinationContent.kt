@@ -64,8 +64,10 @@ internal fun SourcesDestinationContent(
         onAddSourceClick = onAddSourceClick,
         onExtensionsSelected = onExtensionsSelected,
         searchSourceIconContent = { section, iconModifier ->
+            val matchedSource = sources.firstOrNull { it.id == section.sourceId }
             AppSourceIconImage(
-                url = sources.firstOrNull { it.id == section.sourceId }?.iconUrl,
+                url = matchedSource?.iconUrl,
+                installedPackageName = matchedSource?.installedPackageName,
                 modifier = iconModifier,
             )
         },

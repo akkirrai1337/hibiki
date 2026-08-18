@@ -36,6 +36,7 @@ fun AppOnboardingScreen(
     sourceIconContent: @Composable (AppSourceDescriptor, Modifier) -> Unit = { source, iconModifier ->
         AppSourceIconImage(
             url = source.iconUrl,
+            installedPackageName = source.installedPackageName,
             modifier = iconModifier,
         )
     },

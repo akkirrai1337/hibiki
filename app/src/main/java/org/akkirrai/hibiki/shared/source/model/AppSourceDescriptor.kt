@@ -9,6 +9,8 @@ data class AppSourceDescriptor(
     val language: String,
     val languageTags: Set<String> = emptySet(),
     val iconUrl: String? = null,
+    /** Package name of the installed extension APK behind this source, when installed. */
+    val installedPackageName: String? = null,
     val supportsPlayback: Boolean = false,
     val supportsSearch: Boolean = false,
     val configSchema: SourceConfigSchema = SourceConfigSchema(),
