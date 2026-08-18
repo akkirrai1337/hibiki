@@ -178,7 +178,6 @@ fun AppPlaybackControls(
                         }
                     }
                     if (secondTapCompleted) {
-                        controlsVisible = false
                         handleDoubleTapSeek(secondDown.position.x, size.width)
                     }
                 }
@@ -195,7 +194,7 @@ fun AppPlaybackControls(
             hasPreviousEpisode = hasPreviousEpisode,
             hasNextEpisode = hasNextEpisode,
             isPlaying = isPlaying,
-            seekOverlayActive = false,
+            seekOverlayActive = seekOverlayVisible,
             onTogglePlay = {
                 keepControlsVisible()
                 if (isPlaying) transport.pause() else transport.play()
