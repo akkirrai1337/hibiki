@@ -1,7 +1,53 @@
 package org.akkirrai.hibiki.shared.home.state
 
+import kotlin.random.Random
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.search.model.SearchUiState
+
+fun mergeAnimePreservingOrder(primary: List<Anime>, additions: List<Anime>): List<Anime> =
+    (primary + additions).distinctBy(Anime::id)
+
+fun resolveTrendingOffset(selectionSeed: Long, maxOffsetExclusive: Int): Int =
+    Random(selectionSeed).nextInt(from = 0, until = maxOffsetExclusive)
+
+/** True when Home should render search results instead of the feed. */
+val HomeUiState.isSearchActive: Boolean
+    get() = searchQuery.isNotBlank() || searchResult !is SearchUiState.Idle
+
+/** True when Home has enough feed data to avoid replacing it with loading/error state. */
+val HomeUiState.hasFeedContent: Boolean
+    get() = continueAnime != null || recentlyWatched.isNotEmpty() || recentlyAddedToLibrary.isNotEmpty()
+
+enum class HomeSearchBackAction {
+    DismissIme,
+    ClearSearch,
+    None,
+}
+
+fun homeSearchBackAction(
+    isImeVisible: Boolean,
+    isSearchActive: Boolean,
+): HomeSearchBackAction = when {
+    isImeVisible -> HomeSearchBackAction.DismissIme
+    isSearchActive -> HomeSearchBackAction.ClearSearch
+    else -> HomeSearchBackAction.None
+}
+
+fun List<Anime>.mergeMissingDescriptions(descriptions: Map<String, String>): List<Anime> = map { anime ->
+    if (anime.description.isNullOrBlank()) {
+        descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
+    } else {
+        anime
+    }
+}
+
+fun List<Anime>.applyDescriptionUpdates(updates: Map<String, Anime>): List<Anime> {
+    var changed = false
+    val updatedItems = map { anime ->
+        updates[anime.id]?.also { changed = true } ?: anime
+    }
+    return if (changed) updatedItems else this
+}
 
 fun HomeUiState.applyDescriptionUpdates(updates: Map<String, Anime>): HomeUiState {
     val updatedFeatured = featuredAnime.applyDescriptionUpdates(updates)

@@ -14,7 +14,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.shared.catalog.presentation.AnimeCatalogUiState
 import org.akkirrai.hibiki.shared.catalog.sort.CatalogSort
-import org.akkirrai.hibiki.shared.home.state.AppHomeLoadingState
+import org.akkirrai.hibiki.shared.design.component.state.AppCenteredLoading
 import org.akkirrai.hibiki.shared.home.state.HomeErrorState
 import org.akkirrai.hibiki.shared.home.presentation.HomeSearchUiState
 import org.akkirrai.hibiki.shared.home.state.HomeUiState
@@ -67,7 +67,7 @@ internal fun ColumnScope.HomeScreen(
         searchFilters = homeSearchState.filters,
     )
     if (homeState.isLoading && !homeState.hasFeedContent && !homeState.isSearchActive) {
-        AppHomeLoadingState(modifier = Modifier.fillMaxSize())
+        AppCenteredLoading(modifier = Modifier.fillMaxSize())
         return
     }
     homeState.errorMessage?.let { errorMessage ->
