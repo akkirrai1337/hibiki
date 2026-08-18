@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import coil3.compose.AsyncImage
+import org.akkirrai.hibiki.core.log.AppLogger
 
 /**
  * Shows the icon the source itself publishes via [url]. Sources are installed as separate
@@ -26,6 +27,9 @@ fun AppSourceIconImage(
         placeholder = effectivePlaceholder,
         error = effectivePlaceholder,
         contentDescription = null,
+        onError = { state ->
+            AppLogger.w("SourceIconImage", "Failed to load icon $url: ${state.result.throwable.message}", state.result.throwable)
+        },
         modifier = modifier,
     )
 }

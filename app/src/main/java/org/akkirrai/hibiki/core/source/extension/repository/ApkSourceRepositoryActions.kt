@@ -68,8 +68,25 @@ class ApkSourceRepositoryActions(
     private fun probedSourceInfo(packageName: String): SourceInfo? {
         val extension = PackageManagerSourceDiscovery.discover(androidContext)
             .firstOrNull { it.packageName == packageName }
-            ?: return null
-        return runCatching { PackageManagerSourceLoader.load(androidContext, extension, probeContext).info }.getOrNull()
+        if (extension == null) {
+            AppLogger.w("BeakoKit/repository", "No discoverable extension found for package $packageName")
+            return null
+        }
+        return runCatching { PackageManagerSourceLoader.load(androidContext, extension, probeContext).info }
+            .onSuccess { info ->
+                AppLogger.d(
+                    "BeakoKit/repository",
+                    "Probed $packageName -> website=${info.website} iconUrl=${info.iconUrl}",
+                )
+            }
+            .onFailure { throwable ->
+                AppLogger.e(
+                    "BeakoKit/repository",
+                    "Failed to probe $packageName for icon/website: ${throwable::class.qualifiedName}: ${throwable.message}",
+                    throwable,
+                )
+            }
+            .getOrNull()
     }
 
     @Volatile
