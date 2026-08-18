@@ -238,7 +238,12 @@ internal fun AndroidSharedAppShell(
         mergeAppSourceDescriptors(
             builtIn = emptyList(),
             external = ExternalSourceRegistry(packageManagerSourceCatalog).toAppSourceDescriptors(),
-        )
+        ).also { descriptors ->
+            AppLogger.d(
+                "BeakoKit/sources",
+                "descriptors=" + descriptors.joinToString { "${it.id}:iconUrl=${it.iconUrl}" },
+            )
+        }
     }
     CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
         SharedHibikiApp(
