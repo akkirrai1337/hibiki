@@ -17,7 +17,6 @@ import org.akkirrai.hibiki.shared.navigation.isPlaylistOverlayActive
 import org.akkirrai.hibiki.shared.text.AppTextKey
 import org.akkirrai.hibiki.shared.text.appText
 import org.akkirrai.hibiki.shared.player.AppPlayerErrorOverlay
-import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 
 fun shouldDismissPlayerSettingsForAction(action: PlaybackSettingsAction): Boolean = false
 
@@ -56,15 +55,10 @@ fun AppPlaybackOverlayHost(
             .background(Color.Black),
     ) {
         if (playback != null || playbackLoading || playbackError != null) {
-            content(playback, context, navigationState, onDismiss, handleEpisodeSelected, handleSettingsAction, onOverlayEvent)
+            content(playback, context, navigationState, playbackLoading, onDismiss, handleEpisodeSelected, handleSettingsAction, onOverlayEvent)
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))
         }
-        AppPlayerLoadingOverlay(
-            visible = playbackLoading &&
-                !navigationState.isPlayerSettingsOverlayActive &&
-                !navigationState.isPlaylistOverlayActive,
-        )
         playbackError?.let { message ->
             AppPlayerErrorOverlay(
                 message = message,

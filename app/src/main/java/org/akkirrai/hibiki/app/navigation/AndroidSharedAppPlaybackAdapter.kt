@@ -11,11 +11,12 @@ import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 internal fun androidSharedAppPlaybackHost(
     progressRepository: PlaybackProgressRepository,
     windowController: AndroidPlayerWindowController,
-): AppPlaybackHost = { playback, playbackContext, navigationState, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+): AppPlaybackHost = { playback, playbackContext, navigationState, playbackLoading, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
     AndroidCommonPlaybackHost(
         playback = playback,
         context = playbackContext,
         navigationState = navigationState,
+        playbackLoading = playbackLoading,
         progressRepository = progressRepository,
         windowController = windowController,
         onBack = onBack,

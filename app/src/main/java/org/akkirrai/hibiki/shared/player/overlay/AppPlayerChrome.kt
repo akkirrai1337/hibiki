@@ -11,6 +11,9 @@ fun AppPlayerChrome(
     surface: @Composable () -> Unit,
     controlsEnabled: Boolean,
     controls: @Composable () -> Unit,
+    // Drawn above the surface/controls but below overlayContent, so a loading indicator dims
+    // the video without covering a settings/playlist panel opened on top of it.
+    loadingContent: @Composable () -> Unit = {},
     overlayContent: @Composable () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -18,6 +21,7 @@ fun AppPlayerChrome(
         if (controlsEnabled) {
             controls()
         }
+        loadingContent()
         overlayContent()
     }
 }

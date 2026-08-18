@@ -26,6 +26,7 @@ internal fun HibikiPlaybackOverlay(
         PlaybackStream?,
         PlaybackContext,
         AppNavigationState,
+        Boolean,
         () -> Unit,
         (WatchEpisode) -> Unit,
         (PlaybackSettingsAction) -> Unit,

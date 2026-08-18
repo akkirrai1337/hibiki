@@ -47,6 +47,7 @@ import org.akkirrai.hibiki.shared.player.AppPlaybackControls
 import org.akkirrai.hibiki.shared.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.AppPlayerChrome
+import org.akkirrai.hibiki.shared.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerPlaylistButton
 import org.akkirrai.hibiki.shared.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.shared.player.AppPlayerBottomOverlay
@@ -106,6 +107,7 @@ internal fun AndroidCommonPlaybackHost(
     playback: PlaybackStream?,
     context: PlaybackContext,
     navigationState: AppNavigationState,
+    playbackLoading: Boolean,
     progressRepository: PlaybackProgressRepository,
     windowController: AndroidPlayerWindowController,
     onBack: () -> Unit,
@@ -121,6 +123,7 @@ internal fun AndroidCommonPlaybackHost(
         AndroidPlaybackLoadingChrome(
             context = context,
             navigationState = navigationState,
+            playbackLoading = playbackLoading,
             preferences = preferences,
             preferencesState = preferencesState,
             onBack = onBack,
@@ -203,6 +206,7 @@ internal fun AndroidCommonPlaybackHost(
             currentEpisodeNumber = context.episodeNumber,
             offset = offset,
             setControlsVisible = { controlsVisible = true },
+            pausePlayback = { transport.pause() },
             persistProgress = ::savePlaybackProgress,
             onEpisodeSelected = onEpisodeSelected,
         )
@@ -466,6 +470,9 @@ internal fun AndroidCommonPlaybackHost(
                 topContentInset = 0.dp,
             )
             },
+            loadingContent = {
+                AppPlayerLoadingOverlay(visible = playbackLoading)
+            },
             overlayContent = {
                 AppPlayerOverlayStack(
             lockState = playerLockState,
@@ -501,6 +508,7 @@ internal fun AndroidCommonPlaybackHost(
                     dispatchPlayerEpisodeSelection(
                         episode = it,
                         setControlsVisible = { controlsVisible = true },
+                        pausePlayback = { transport.pause() },
                         persistProgress = ::savePlaybackProgress,
                         onEpisodeSelected = onEpisodeSelected,
                     )
@@ -594,6 +602,7 @@ internal fun AndroidCommonPlaybackHost(
 private fun AndroidPlaybackLoadingChrome(
     context: PlaybackContext,
     navigationState: AppNavigationState,
+    playbackLoading: Boolean,
     preferences: AppPreferences,
     preferencesState: AppPreferencesState,
     onBack: () -> Unit,
@@ -655,6 +664,7 @@ private fun AndroidPlaybackLoadingChrome(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+        AppPlayerLoadingOverlay(visible = playbackLoading)
         AppPlayerPanelOverlays(
             playlistVisible = playlistVisible,
             settingsVisible = settingsVisible,
