@@ -3,9 +3,9 @@ package org.akkirrai.hibiki.core.download
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.akkirrai.hibiki.core.model.PlaybackStream
-import org.akkirrai.hibiki.core.model.WatchEpisode
-import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.WatchEpisode
+import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 class OfflineDownloadRepository(
     context: Context,

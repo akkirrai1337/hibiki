@@ -8,9 +8,9 @@ import android.content.Context
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
-import org.akkirrai.hibiki.core.model.TitleWatchState
-import org.akkirrai.hibiki.core.model.WatchSourceSelection
+import org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.shared.player.model.TitleWatchState
+import org.akkirrai.hibiki.shared.player.model.WatchSourceSelection
 import org.akkirrai.hibiki.shared.profile.DailyWatchActivity
 
 private const val PROGRESS_PREFIX = "progress_"
