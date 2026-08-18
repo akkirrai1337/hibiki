@@ -42,19 +42,14 @@ fun watchNavigationLockKey(
 fun filterProgressForSource(progressItems: List<EpisodeWatchProgress>, selectedSource: WatchSource?): List<EpisodeWatchProgress> =
     selectedSource?.let { source -> progressItems.filter { it.sourceId == source.sourceId } } ?: progressItems
 
-fun resolveSourceProgress(fallback: TitleWatchState?, progressItems: List<EpisodeWatchProgress>): TitleWatchState? {
-    val latest = progressItems.maxByOrNull(EpisodeWatchProgress::updatedAt) ?: return fallback
-    return TitleWatchState(latest.titleId, latest.episodeId, latest.episodeNumber, latest.sourceId, latest.voiceoverId, latest.sourceTitle, latest.quality, latest.positionMs, latest.durationMs, latest.updatedAt)
-}
+fun resolveSourceProgress(fallback: TitleWatchState?, progressItems: List<EpisodeWatchProgress>): TitleWatchState? =
+    progressItems.maxByOrNull(EpisodeWatchProgress::updatedAt) ?: fallback
 
-fun resolveResumeWatchState(progressItems: List<EpisodeWatchProgress>): TitleWatchState? {
-    val latest = progressItems
+fun resolveResumeWatchState(progressItems: List<EpisodeWatchProgress>): TitleWatchState? =
+    progressItems
         .asSequence()
         .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
         .maxByOrNull(EpisodeWatchProgress::updatedAt)
-        ?: return null
-    return TitleWatchState(latest.titleId, latest.episodeId, latest.episodeNumber, latest.sourceId, latest.voiceoverId, latest.sourceTitle, latest.quality, latest.positionMs, latest.durationMs, latest.updatedAt)
-}
 
 fun resolvePlaybackStreamType(rawType: String): PlaybackStreamType = when (rawType) {
     "HLS" -> PlaybackStreamType.HLS

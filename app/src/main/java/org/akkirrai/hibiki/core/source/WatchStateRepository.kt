@@ -77,23 +77,7 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
 
     fun getTitleWatchState(titleId: String): TitleWatchState? {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
-        val progressItems = getEpisodeProgress(normalizedTitleId)
-        if (progressItems.isEmpty()) {
-            return null
-        }
-        val latest = progressItems.maxByOrNull(EpisodeWatchProgress::updatedAt) ?: return null
-        return TitleWatchState(
-            titleId = latest.titleId,
-            episodeId = latest.episodeId,
-            episodeNumber = latest.episodeNumber,
-            sourceId = latest.sourceId,
-            voiceoverId = latest.voiceoverId,
-            sourceTitle = latest.sourceTitle,
-            quality = latest.quality,
-            positionMs = latest.positionMs,
-            durationMs = latest.durationMs,
-            updatedAt = latest.updatedAt,
-        )
+        return getEpisodeProgress(normalizedTitleId).maxByOrNull(EpisodeWatchProgress::updatedAt)
     }
 
     fun getRecentTitleWatchState(): TitleWatchState? {
@@ -115,20 +99,6 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
             .values
             .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
             .maxByOrNull(EpisodeWatchProgress::updatedAt)
-            ?.let { latest ->
-                TitleWatchState(
-                    titleId = latest.titleId,
-                    episodeId = latest.episodeId,
-                    episodeNumber = latest.episodeNumber,
-                    sourceId = latest.sourceId,
-                    voiceoverId = latest.voiceoverId,
-                    sourceTitle = latest.sourceTitle,
-                    quality = latest.quality,
-                    positionMs = latest.positionMs,
-                    durationMs = latest.durationMs,
-                    updatedAt = latest.updatedAt,
-                )
-            }
     }
 
     fun getRecentTitleWatchStates(limit: Int): List<TitleWatchState> {
@@ -150,20 +120,6 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
             .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
             .sortedByDescending(EpisodeWatchProgress::updatedAt)
             .take(limit)
-            .map { progress ->
-                TitleWatchState(
-                    titleId = progress.titleId,
-                    episodeId = progress.episodeId,
-                    episodeNumber = progress.episodeNumber,
-                    sourceId = progress.sourceId,
-                    voiceoverId = progress.voiceoverId,
-                    sourceTitle = progress.sourceTitle,
-                    quality = progress.quality,
-                    positionMs = progress.positionMs,
-                    durationMs = progress.durationMs,
-                    updatedAt = progress.updatedAt,
-                )
-            }
     }
 
     fun getEpisodeProgress(titleId: String): List<EpisodeWatchProgress> {

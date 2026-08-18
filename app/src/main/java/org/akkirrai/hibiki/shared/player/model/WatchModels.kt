@@ -62,18 +62,9 @@ data class PlaybackSettingsOptions(
 
 enum class PlaybackStreamType { HLS, MP4, DASH }
 
-data class TitleWatchState(
-    val titleId: String,
-    val episodeId: String,
-    val episodeNumber: Double,
-    val sourceId: String,
-    val voiceoverId: String,
-    val sourceTitle: String,
-    val quality: String? = null,
-    val positionMs: Long,
-    val durationMs: Long,
-    val updatedAt: Long,
-)
+// Same shape as EpisodeWatchProgress -- "the most recent watch state for a title" is just
+// whichever EpisodeWatchProgress is latest, so it's the same type rather than a hand-copied twin.
+typealias TitleWatchState = EpisodeWatchProgress
 
 data class EpisodeWatchProgress(
     val titleId: String,
