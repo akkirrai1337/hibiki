@@ -95,7 +95,6 @@ fun AppLocalSourcesScreen(
                     searchSourceIconContent?.invoke(section, iconModifier)
                         ?: AppSourceIconImage(
                             url = null,
-                            sourceId = section.sourceId,
                             modifier = iconModifier,
                         )
                 },

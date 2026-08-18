@@ -31,7 +31,6 @@ fun AppMihonSourceListItem(
     ) {
         AppSourceIconImage(
             url = source.iconUrl,
-            sourceId = source.id,
             modifier = Modifier.size(56.dp).clip(CircleShape),
         )
         Column(

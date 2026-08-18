@@ -11,21 +11,18 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.AsyncImage
-import org.akkirrai.hibiki.R
 
 /**
  * Prefers the real icon bundled in the installed extension APK (read via PackageManager, same
- * as a launcher icon) over [url] or the hardcoded per-source drawables, which only exist as a
- * fallback for extensions that aren't installed yet and have no icon URL to load from.
+ * as a launcher icon) over [url] or the generic placeholder, which covers every source that
+ * isn't installed yet and has no icon URL to load from - no per-source icon setup needed.
  */
 @Composable
 fun AppSourceIconImage(
     url: String?,
     placeholder: Painter? = null,
-    sourceId: String? = null,
     installedPackageName: String? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -45,15 +42,7 @@ fun AppSourceIconImage(
         return
     }
 
-    val effectivePlaceholder = placeholder ?: when (sourceId) {
-        "yummy-anime" -> painterResource(R.drawable.source_yummy_anime)
-        "ani-liberty" -> painterResource(R.drawable.source_ani_liberty)
-        "animego" -> painterResource(R.drawable.source_animego)
-        "animepahe" -> painterResource(R.drawable.source_animepahe)
-        // Any source without a hand-picked icon above falls back to a generic
-        // placeholder automatically, so adding a new source needs no icon work.
-        else -> rememberVectorPainter(Icons.Outlined.Extension)
-    }
+    val effectivePlaceholder = placeholder ?: rememberVectorPainter(Icons.Outlined.Extension)
     AsyncImage(
         model = url,
         placeholder = effectivePlaceholder,

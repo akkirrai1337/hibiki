@@ -94,7 +94,6 @@ internal fun ColumnScope.LibraryScreen(
                                 iconContent = { iconModifier ->
                                     AppSourceIconImage(
                                         url = source.iconUrl,
-                                        sourceId = source.id,
                                         modifier = iconModifier,
                                     )
                                 },
