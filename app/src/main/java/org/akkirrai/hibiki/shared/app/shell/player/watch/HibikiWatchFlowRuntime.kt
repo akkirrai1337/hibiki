@@ -175,8 +175,7 @@ internal class HibikiAppShellPlaybackOverlayActions(
     }
 
     fun dismiss() {
-        playbackSession.cancelAndInvalidate()
-        playbackSession.clearRouteState()
+        playbackSession.teardown()
         playbackEffects.resetPlayerState()
         val backTransition = resolveWatchFlowBackTransition(navigationState(), playbackReturnRoute())
         setNavigationState(backTransition.state)

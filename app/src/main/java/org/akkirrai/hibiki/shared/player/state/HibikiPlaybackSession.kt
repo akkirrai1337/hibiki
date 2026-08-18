@@ -15,6 +15,17 @@ internal class HibikiPlaybackSession {
     val pendingContext: MutableState<PlaybackContext?> = mutableStateOf(null)
     val returnRoute: MutableState<AppRoute?> = mutableStateOf(null)
 
+    // Lets the currently-mounted platform player save its progress/resume frame before
+    // teardown() clears its route state. Every call site that exits an active playback screen
+    // (system back, dismissing the error overlay, switching tabs, ...) used to hand-roll its own
+    // cancelAndInvalidate()+clearRouteState() sequence, so it was easy for one of them to forget
+    // this step -- which is exactly what happened with the system-back path.
+    private var onExitPlayback: (() -> Unit)? = null
+
+    fun setOnExitPlayback(action: (() -> Unit)?) {
+        onExitPlayback = action
+    }
+
     fun cancelJob() {
         job.value?.cancel()
         job.value = null
@@ -28,6 +39,13 @@ internal class HibikiPlaybackSession {
     fun clearRouteState() {
         activeRoute.value = null
         pendingContext.value = null
+    }
+
+    /** The single "user is leaving an active/pending playback screen" teardown sequence. */
+    fun teardown() {
+        onExitPlayback?.invoke()
+        cancelAndInvalidate()
+        clearRouteState()
     }
 
     fun beginRequest(returnRoute: AppRoute?, context: PlaybackContext) {

@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -211,6 +212,7 @@ internal fun HibikiAppShell(
     val playerPresenter = resources.playerPresenter
     val playerState by playerPresenter.state.collectAsState()
     val playbackSession = remember { HibikiPlaybackSession() }
+    SideEffect { playbackSession.setOnExitPlayback(playbackCallbacks.onExitPlayback) }
     var selectedSourcesTab by rememberSaveable { mutableStateOf(0) }
     var playbackJob by playbackSession.job
     var homeRefreshJob by remember { mutableStateOf<Job?>(null) }
@@ -437,7 +439,6 @@ internal fun HibikiAppShell(
         setPlaybackReturnRoute = { playbackReturnRoute = it },
         applyWatchFlowBackEffect = playbackEffects::applyWatchFlowBackEffect,
         closeDetails = presenter::closeDetails,
-        onExitPlayback = playbackCallbacks.onExitPlayback,
     )
 
     AppTextResourceLocale(
