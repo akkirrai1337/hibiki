@@ -361,6 +361,7 @@ internal fun AndroidSharedAppShell(
                 loadPlaybackSelection = watchStateRepository::loadPlaybackSelectionOrNull,
                 playbackHost = androidSharedAppPlaybackHost(
                     progressRepository = watchStateRepository,
+                    resumeFrameRepository = resumeFrameRepository,
                     windowController = playerWindowController,
                 ),
                 playerWindowMode = { active ->

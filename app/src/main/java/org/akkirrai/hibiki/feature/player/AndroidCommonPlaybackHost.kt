@@ -21,7 +21,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.os.SystemClock
 import android.os.Build
 import android.content.pm.ActivityInfo
+import android.view.TextureView
 import android.view.WindowManager
+import androidx.media3.ui.PlayerView
 import java.util.UUID
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
@@ -40,6 +42,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.AppPreferencesState
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.player.model.PlaybackContext
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
@@ -110,6 +113,7 @@ internal fun AndroidCommonPlaybackHost(
     navigationState: AppNavigationState,
     playbackLoading: Boolean,
     progressRepository: PlaybackProgressRepository,
+    resumeFrameRepository: ResumeFrameRepository,
     windowController: AndroidPlayerWindowController,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
@@ -186,13 +190,30 @@ internal fun AndroidCommonPlaybackHost(
         activity?.packageManager?.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE) == true
     }
 
+    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+
     fun savePlaybackProgress() {
         progressCoordinator.persistCurrentPosition(transport)
     }
 
+    // Grabs whatever frame the TextureView is currently displaying -- must run synchronously
+    // before the outgoing exoPlayer/stream is swapped out (episode switch, source/quality
+    // change), not from a later onDispose, since by then the surface may already show the next
+    // stream or nothing at all.
+    fun captureResumeFrame() {
+        val textureView = playerView?.videoSurfaceView as? TextureView ?: return
+        val bitmap = runCatching { textureView.bitmap }.getOrNull() ?: return
+        resumeFrameRepository.saveFrame(context.titleId, bitmap)
+    }
+
+    fun persistPlaybackState() {
+        savePlaybackProgress()
+        captureResumeFrame()
+    }
+
     fun closePlayback() {
         dispatchPlayerClose(
-            persistProgress = ::savePlaybackProgress,
+            persistProgress = ::persistPlaybackState,
             onBack = {
                 windowController.restore()
                 onBack()
@@ -212,7 +233,7 @@ internal fun AndroidCommonPlaybackHost(
             offset = offset,
             setControlsVisible = { controlsVisible = true },
             pausePlayback = { transport.pause() },
-            persistProgress = ::savePlaybackProgress,
+            persistProgress = ::persistPlaybackState,
             onEpisodeSelected = { episode -> onEpisodeSelected(episode, context) },
         )
         if (!dispatched) {
@@ -375,7 +396,7 @@ internal fun AndroidCommonPlaybackHost(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    savePlaybackProgress()
+                    persistPlaybackState()
                     if (isPictureInPictureActive || isAudioOnly) return@LifecycleEventObserver
                     lifecycleResumePositionMs = transport.positionMs().coerceAtLeast(0L)
                     resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
@@ -413,7 +434,7 @@ internal fun AndroidCommonPlaybackHost(
                     videoScaleMode = videoScaleMode,
                     videoAspectRatio = videoAspectRatio,
                     isClosing = false,
-                    onAttached = {},
+                    onAttached = { view -> playerView = view },
                 )
             },
             controlsEnabled = !playerLockState.isLocked,
@@ -516,7 +537,7 @@ internal fun AndroidCommonPlaybackHost(
                         episode = it,
                         setControlsVisible = { controlsVisible = true },
                         pausePlayback = { transport.pause() },
-                        persistProgress = ::savePlaybackProgress,
+                        persistProgress = ::persistPlaybackState,
                         onEpisodeSelected = { episode -> onEpisodeSelected(episode, context) },
                     )
                 }
@@ -553,7 +574,7 @@ internal fun AndroidCommonPlaybackHost(
                         dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectVoiceover(source),
                             setControlsVisible = { controlsVisible = true },
-                            persistProgress = ::savePlaybackProgress,
+                            persistProgress = ::persistPlaybackState,
                             onSettingsAction = onSettingsAction,
                         )
                     },
@@ -561,7 +582,7 @@ internal fun AndroidCommonPlaybackHost(
                         dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectPlayer(playerName),
                             setControlsVisible = { controlsVisible = true },
-                            persistProgress = ::savePlaybackProgress,
+                            persistProgress = ::persistPlaybackState,
                             onSettingsAction = onSettingsAction,
                         )
                     },
@@ -569,7 +590,7 @@ internal fun AndroidCommonPlaybackHost(
                         dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectQuality(qualityLabel),
                             setControlsVisible = { controlsVisible = true },
-                            persistProgress = ::savePlaybackProgress,
+                            persistProgress = ::persistPlaybackState,
                             onSettingsAction = onSettingsAction,
                         )
                     },

@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.app.navigation
 
 import android.app.Activity
 import androidx.compose.runtime.Composable
+import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.feature.player.AndroidCommonPlaybackHost
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.feature.player.AndroidPlayerWindowMode
@@ -10,6 +11,7 @@ import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
 
 internal fun androidSharedAppPlaybackHost(
     progressRepository: PlaybackProgressRepository,
+    resumeFrameRepository: ResumeFrameRepository,
     windowController: AndroidPlayerWindowController,
 ): AppPlaybackHost = { playback, playbackContext, navigationState, playbackLoading, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
     AndroidCommonPlaybackHost(
@@ -18,6 +20,7 @@ internal fun androidSharedAppPlaybackHost(
         navigationState = navigationState,
         playbackLoading = playbackLoading,
         progressRepository = progressRepository,
+        resumeFrameRepository = resumeFrameRepository,
         windowController = windowController,
         onBack = onBack,
         onEpisodeSelected = onEpisodeSelected,
