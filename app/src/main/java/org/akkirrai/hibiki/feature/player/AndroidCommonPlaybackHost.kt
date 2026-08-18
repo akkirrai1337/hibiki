@@ -39,6 +39,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.AppPreferencesState
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.shared.player.model.PlaybackContext
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
@@ -200,7 +201,11 @@ internal fun AndroidCommonPlaybackHost(
     }
 
     fun selectAdjacentEpisode(offset: Int) {
-        dispatchAdjacentPlayerEpisodeSelection(
+        AppLogger.d(
+            "BeakoKit/playback-request",
+            "selectAdjacentEpisode: offset=$offset currentEpisodeId=${context.episodeId} episodeCount=${context.episodes.size}",
+        )
+        val dispatched = dispatchAdjacentPlayerEpisodeSelection(
             episodes = context.episodes,
             currentEpisodeId = context.episodeId,
             currentEpisodeNumber = context.episodeNumber,
@@ -210,6 +215,9 @@ internal fun AndroidCommonPlaybackHost(
             persistProgress = ::savePlaybackProgress,
             onEpisodeSelected = onEpisodeSelected,
         )
+        if (!dispatched) {
+            AppLogger.w("BeakoKit/playback-request", "selectAdjacentEpisode: no adjacent episode found for offset=$offset")
+        }
     }
 
     // Single tick drives position tracking, autoplay-next detection, and the Discord presence
@@ -504,6 +512,7 @@ internal fun AndroidCommonPlaybackHost(
                 dispatchPlayerSettingsDismiss({ controlsVisible = true }, onOverlayEvent)
             },
             onEpisodeClick = { episodeId ->
+                AppLogger.d("BeakoKit/playback-request", "playlist onEpisodeClick: episodeId=$episodeId")
                 context.episodes.firstOrNull { it.id == episodeId }?.let {
                     dispatchPlayerEpisodeSelection(
                         episode = it,

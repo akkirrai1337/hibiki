@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.app.shell.player
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.shared.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.shared.player.model.PlaybackContext
 import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
@@ -63,7 +64,11 @@ internal class HibikiPlaybackRequestCoordinator(
         episodesOverride: List<WatchEpisode>? = null,
         replacePlayerRoute: Boolean = false,
     ) {
-        val repository = watchRepository() ?: return
+        AppLogger.d(PLAYBACK_REQUEST_TAG, "request: episodeId=${episode.id} sourceOverride=${sourceOverride?.sourceId} forceRefresh=$forceRefresh")
+        val repository = watchRepository() ?: run {
+            AppLogger.w(PLAYBACK_REQUEST_TAG, "request: aborted, watchRepository() is null")
+            return
+        }
         val requestEpisodes = episodesOverride
             ?: (episodesState().result as? EpisodesUiState.Content)?.items.orEmpty()
         val selectedSource = selectedWatchSource()
@@ -87,7 +92,14 @@ internal class HibikiPlaybackRequestCoordinator(
                 preferredQuality == null,
             episodes = requestEpisodes,
             settingsOptions = retainedSettingsOptions,
-        ) ?: return
+        ) ?: run {
+            AppLogger.w(
+                PLAYBACK_REQUEST_TAG,
+                "request: aborted, preparePlaybackRequest returned null " +
+                    "(selectedSource=${selectedSource?.sourceId}, titleId=$titleId, episodes=${requestEpisodes.size})",
+            )
+            return
+        }
 
         val source = preparedRequest.source
         val playerName = preparedRequest.playerName
@@ -114,6 +126,10 @@ internal class HibikiPlaybackRequestCoordinator(
 
         playbackSession.cancelAndInvalidate()
         val requestGeneration = playbackSession.requestGeneration.value
+        AppLogger.d(
+            PLAYBACK_REQUEST_TAG,
+            "request: launching job sourceId=${source.sourceId} episodeId=${episode.id} generation=$requestGeneration",
+        )
         playerPresenter.update {
             it.copy(
                 currentSourceId = source.sourceId,
@@ -152,7 +168,10 @@ internal class HibikiPlaybackRequestCoordinator(
                 onPlaybackSelectionChanged = onPlaybackSelectionChanged,
                 onPlaybackReady = onPlaybackReady,
                 onPlaybackPublished = if (playbackHost()) onPlaybackPublished else null,
-                onFinished = { setPlaybackJob(null) },
+                onFinished = {
+                    AppLogger.d(PLAYBACK_REQUEST_TAG, "request: job finished generation=$requestGeneration")
+                    setPlaybackJob(null)
+                },
             ),
         )
     }
@@ -205,3 +224,5 @@ internal class HibikiPlaybackRequestCoordinator(
         )
     }
 }
+
+private const val PLAYBACK_REQUEST_TAG = "BeakoKit/playback-request"
