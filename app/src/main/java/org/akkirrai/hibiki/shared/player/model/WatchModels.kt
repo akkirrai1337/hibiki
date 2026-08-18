@@ -34,6 +34,9 @@ data class PlaybackContext(
     val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
     val selectedPlayerName: String? = null,
     val selectedQualityLabel: String? = null,
+    // Saved position to seek to once the transport is ready -- only meaningful for the initial
+    // load of this episode, not carried forward across episode switches.
+    val pendingSeekMs: Long = 0L,
 )
 
 data class PlaybackSelection(

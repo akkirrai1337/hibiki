@@ -41,7 +41,11 @@ internal fun HibikiWatchDataEffects(
     episodesPresenter: EpisodesPresenter,
     episodesLoadGeneration: Int,
 ) {
-    LaunchedEffect(progressRepository, selectedAnime?.id) {
+    // Also re-keyed on whether a player is currently active: teardown() persists progress
+    // synchronously before clearing the route, so by the time this flips to null->non-null the
+    // saved position is already there -- without this key, returning to Details for the same
+    // anime never re-reads it and the "Continue" banner keeps showing stale progress.
+    LaunchedEffect(progressRepository, selectedAnime?.id, activePlaybackRoute == null) {
         val animeId = selectedAnime?.id
         onDetailsResumeStateChanged(
             if (progressRepository != null && animeId != null) {

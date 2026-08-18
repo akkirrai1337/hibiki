@@ -69,17 +69,18 @@ internal fun launchHibikiPlaybackJob(
         } else {
             resolution.playback
         }
+        val savedSeekMs = progressRepository
+            ?.getPlaybackProgress(titleId, effectiveEpisodeId)
+            ?.let { progress ->
+                resolveResumablePlaybackPosition(progress.positionMs, progress.durationMs)
+            }
         playerPresenter.update {
             it.withPlaybackLoaded(
                 stream = playback,
                 episodes = loadedEpisodes,
                 episodeId = effectiveEpisodeId,
                 episodeNumber = effectiveEpisodeNumber,
-                savedSeekMs = progressRepository
-                    ?.getPlaybackProgress(titleId, effectiveEpisodeId)
-                    ?.let { progress ->
-                        resolveResumablePlaybackPosition(progress.positionMs, progress.durationMs)
-                    },
+                savedSeekMs = savedSeekMs,
             )
         }
         onNavigateToPlayer(source.sourceId, effectiveEpisodeId, effectiveEpisodeNumber)
@@ -87,6 +88,7 @@ internal fun launchHibikiPlaybackJob(
             episodeId = effectiveEpisodeId,
             episodeNumber = effectiveEpisodeNumber,
             episodes = loadedEpisodes,
+            pendingSeekMs = savedSeekMs ?: 0L,
         )
         onPendingPlaybackContextChanged(null)
         onPlaybackSelectionChanged(
