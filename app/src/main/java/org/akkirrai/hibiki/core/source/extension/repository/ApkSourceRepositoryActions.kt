@@ -190,7 +190,13 @@ class ApkSourceRepositoryActions(
     }
 
     private fun statusFor(entry: SourceRepositoryEntry): ExternalSourcePackageStatus {
-        val availableManifest = manifestFor(entry, version = entry.version, sha256 = entry.sha256, sizeBytes = entry.sizeBytes)
+        val availableManifest = manifestFor(
+            entry,
+            version = entry.version,
+            sha256 = entry.sha256,
+            sizeBytes = entry.sizeBytes,
+            probed = probedSourceInfo(entry.packageName),
+        )
         val installedInfo = runCatching {
             androidContext.packageManager.getPackageInfo(entry.packageName, 0)
         }.getOrNull()
