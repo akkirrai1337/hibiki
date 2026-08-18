@@ -52,6 +52,7 @@ fun AppPlaybackControls(
     onSettingsClick: () -> Unit = {},
     settingsContentDescription: String? = null,
     onControlsVisibilityChanged: (Boolean) -> Unit = {},
+    playbackLoading: Boolean = false,
     topContentInset: Dp = 0.dp,
 ) {
     var controlsVisible by remember { mutableStateOf(true) }
@@ -195,6 +196,7 @@ fun AppPlaybackControls(
             hasNextEpisode = hasNextEpisode,
             isPlaying = isPlaying,
             centerControlsSuppressed = seekOverlayVisible || holdSpeedOverlayVisible,
+            playbackLoading = playbackLoading,
             onTogglePlay = {
                 keepControlsVisible()
                 if (isPlaying) transport.pause() else transport.play()

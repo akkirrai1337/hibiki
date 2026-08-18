@@ -475,11 +475,9 @@ internal fun AndroidCommonPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
+                playbackLoading = playbackLoading,
                 topContentInset = 0.dp,
             )
-            },
-            loadingContent = {
-                AppPlayerLoadingOverlay(visible = playbackLoading)
             },
             overlayContent = {
                 AppPlayerOverlayStack(

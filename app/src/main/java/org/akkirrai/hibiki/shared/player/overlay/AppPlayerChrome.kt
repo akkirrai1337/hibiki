@@ -11,14 +11,10 @@ fun AppPlayerChrome(
     surface: @Composable () -> Unit,
     controlsEnabled: Boolean,
     controls: @Composable () -> Unit,
-    // Drawn above the surface but below controls/overlayContent, so a loading indicator dims
-    // only the video -- the controls and any settings/playlist panel on top of it stay fully lit.
-    loadingContent: @Composable () -> Unit = {},
     overlayContent: @Composable () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         surface()
-        loadingContent()
         if (controlsEnabled) {
             controls()
         }

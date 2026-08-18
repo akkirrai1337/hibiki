@@ -23,6 +23,9 @@ fun AppPlayerControlsLayer(
     // True while a transient gesture overlay (seek delta, hold-for-2x) is showing -- the center
     // play/pause + episode cluster hides so it doesn't sit underneath that overlay.
     centerControlsSuppressed: Boolean,
+    // True while the next episode's stream is loading -- the primary button shows a spinner
+    // instead of play/pause.
+    playbackLoading: Boolean,
     onTogglePlay: () -> Unit,
     onPreviousEpisode: () -> Unit,
     onNextEpisode: () -> Unit,
@@ -77,6 +80,7 @@ fun AppPlayerControlsLayer(
             onPreviousEpisode = onPreviousEpisode,
             onNextEpisode = onNextEpisode,
             isPlaying = isPlaying,
+            isLoading = playbackLoading,
             modifier = Modifier.align(Alignment.Center),
         )
 
