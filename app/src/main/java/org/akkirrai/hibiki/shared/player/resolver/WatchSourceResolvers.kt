@@ -1,5 +1,60 @@
 package org.akkirrai.hibiki.shared.player
 
+import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
+import org.akkirrai.hibiki.shared.player.model.WatchSource
+import org.akkirrai.hibiki.shared.player.model.WatchSourceSelection
+
+fun selectPlaybackLinks(
+    links: List<PlayerLink>,
+    supports: (PlayerLink) -> Boolean,
+    preferredPlayerName: String? = null,
+    preferredQuality: String? = null,
+): List<PlayerLink> {
+    val supportedLinks = links.filter(supports)
+    return prioritizePlayerSelection(
+        candidates = supportedLinks.mapIndexed { index, link ->
+            PlayerSelectionCandidate(index, link.playerName, link.quality)
+        },
+        preferredPlayerName = preferredPlayerName,
+        preferredQuality = preferredQuality,
+    ).map(supportedLinks::get)
+}
+
+fun resolveWatchSource(
+    sources: List<WatchSource>,
+    selection: WatchSourceSelection,
+): WatchSource? {
+    if (sources.isEmpty()) return null
+    return if (selection.autoSelect) {
+        sources.first()
+    } else {
+        sources.firstOrNull { it.sourceId == selection.sourceId } ?: sources.first()
+    }
+}
+
+fun hasWatchSource(selectedSource: WatchSource?, selection: WatchSourceSelection): Boolean =
+    selectedSource != null || !selection.sourceTitle.isNullOrBlank()
+
+data class EffectivePlaybackPreferences(
+    val playerName: String?,
+    val quality: String?,
+)
+
+fun resolvePlaybackPreferences(
+    sourceId: String,
+    savedSelection: PlaybackSelection?,
+    explicitPlayerName: String?,
+    explicitQuality: String?,
+    allowSavedSelection: Boolean,
+): EffectivePlaybackPreferences {
+    val saved = savedSelection?.takeIf { allowSavedSelection && it.sourceId == sourceId }
+    return EffectivePlaybackPreferences(
+        playerName = explicitPlayerName ?: saved?.playerName,
+        quality = explicitQuality ?: saved?.quality,
+    )
+}
+
 fun playerPriority(name: String?): Int = when {
     name.containsPlayerToken("kodik") -> 0
     name.containsPlayerToken("aksor") -> 1

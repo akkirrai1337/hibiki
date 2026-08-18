@@ -1,5 +1,13 @@
 package org.akkirrai.hibiki.shared.player
 
+enum class VideoScaleMode {
+    FIT,
+    CROP,
+    STRETCH;
+
+    fun next(): VideoScaleMode = entries[(ordinal + 1) % entries.size]
+}
+
 data class PlaybackViewportScale(
     val scaleX: Float,
     val scaleY: Float,
