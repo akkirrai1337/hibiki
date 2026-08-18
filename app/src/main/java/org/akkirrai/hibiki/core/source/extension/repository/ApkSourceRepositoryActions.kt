@@ -4,18 +4,28 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.net.Uri
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import org.akkirrai.beakokit.api.ActiveExternalSourcePackage
+import org.akkirrai.beakokit.api.DefaultSourceContext
 import org.akkirrai.beakokit.api.InstalledSourcePackage
+import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.api.SourceManifest
 import org.akkirrai.beakokit.api.SourceManifestInfo
 import org.akkirrai.beakokit.api.SourcePackageInstallStage
 import org.akkirrai.beakokit.api.SourcePackageStateException
 import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRuntime
+import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.extension.DiscoveredSourceExtension
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceDiscovery
+import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceLoader
 import org.akkirrai.hibiki.shared.source.ExternalSourcePackageStatus
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryActions
 import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryContent
@@ -37,6 +47,30 @@ class ApkSourceRepositoryActions(
 ) : ExternalSourceRepositoryActions {
 
     private val endpoint = SourceRepositoryEndpoint(SOURCE_REPOSITORY_INDEX_URL)
+
+    // Repository index entries carry no icon/website metadata -- probing the already-installed
+    // extension's own compiled SourceInfo is the only way to surface its real iconUrl in the UI.
+    private val probeContext: SourceContext by lazy {
+        DefaultSourceContext(
+            httpClient = HttpClient(OkHttp) { installBeakoKitHttpDefaults() },
+            preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            logger = SourceLogger { level, message, throwable ->
+                val tag = "BeakoKit/repository"
+                when (level) {
+                    SourceLogLevel.DEBUG -> AppLogger.d(tag, message)
+                    SourceLogLevel.WARNING -> AppLogger.w(tag, message, throwable)
+                    SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
+                }
+            },
+        )
+    }
+
+    private fun probedSourceInfo(packageName: String): SourceInfo? {
+        val extension = PackageManagerSourceDiscovery.discover(androidContext)
+            .firstOrNull { it.packageName == packageName }
+            ?: return null
+        return runCatching { PackageManagerSourceLoader.load(androidContext, extension, probeContext).info }.getOrNull()
+    }
 
     @Volatile
     private var cachedEntries: List<SourceRepositoryEntry> = emptyList()
@@ -94,6 +128,7 @@ class ApkSourceRepositoryActions(
         // digest -- an empty string would fail that check, so bail out entirely if hashing fails.
         val sha256 = apkSha256(info) ?: return null
         val sourceId = localSourceIdFor(extension.packageName) ?: return null
+        val probed = probedSourceInfo(extension.packageName)
         val manifest = SourceManifest(
             manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
             sourceId = sourceId,
@@ -102,6 +137,8 @@ class ApkSourceRepositoryActions(
                 displayName = displayName,
                 languages = setOf(SourceLanguage.RUSSIAN),
                 primaryLanguage = SourceLanguage.RUSSIAN,
+                website = probed?.website,
+                iconUrl = probed?.iconUrl,
             ),
             apiVersion = extension.contractVersion,
             runtime = SourceRuntime(id = "apk", abi = "android"),
@@ -199,6 +236,7 @@ class ApkSourceRepositoryActions(
             version = installedVersion,
             sha256 = installedSha256,
             sizeBytes = entry.sizeBytes,
+            probed = probedSourceInfo(entry.packageName),
         )
         return ActiveExternalSourcePackage(
             manifest = installedManifest,
@@ -216,6 +254,7 @@ class ApkSourceRepositoryActions(
         version: String,
         sha256: String,
         sizeBytes: Long,
+        probed: SourceInfo? = null,
     ): SourceManifest = SourceManifest(
         manifestFormatVersion = SourceManifest.CURRENT_FORMAT_VERSION,
         sourceId = SourceId(entry.id),
@@ -224,6 +263,8 @@ class ApkSourceRepositoryActions(
             displayName = entry.name,
             languages = setOf(SourceLanguage.RUSSIAN),
             primaryLanguage = SourceLanguage.RUSSIAN,
+            website = probed?.website,
+            iconUrl = probed?.iconUrl,
         ),
         apiVersion = entry.contractVersion,
         runtime = SourceRuntime(id = "apk", abi = "android"),
