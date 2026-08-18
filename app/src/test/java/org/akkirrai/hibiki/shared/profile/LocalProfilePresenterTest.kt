@@ -12,7 +12,7 @@ class LocalProfilePresenterTest {
         val expected = LocalProfileData(profileName = "Vadim")
 
         presenter.load(object : LocalProfileDataRepository {
-            override suspend fun load(): LocalProfileData = expected
+            override suspend fun load(libraryEntries: List<org.akkirrai.hibiki.shared.library.LibraryEntry>?): LocalProfileData = expected
         })
 
         assertEquals(expected, presenter.state.value.data)
@@ -25,7 +25,7 @@ class LocalProfilePresenterTest {
 
         runCatching {
             presenter.load(object : LocalProfileDataRepository {
-                override suspend fun load(): LocalProfileData = error("load failed")
+                override suspend fun load(libraryEntries: List<org.akkirrai.hibiki.shared.library.LibraryEntry>?): LocalProfileData = error("load failed")
             })
         }
 

@@ -19,8 +19,8 @@ class LocalProfileRepository(
     private val preferences = context.getSharedPreferences(PROFILE_PREFERENCES, Context.MODE_PRIVATE)
     private val defaultProfileName = context.getString(org.akkirrai.hibiki.R.string.app_name)
 
-    fun getData(): LocalProfileData {
-        val entries = libraryRepository.getLibraryEntries()
+    fun getData(libraryEntries: List<LibraryEntry>? = null): LocalProfileData {
+        val entries = libraryEntries ?: libraryRepository.getLibraryEntries()
         val library = entries
             .groupBy { it.anime.id }
             .map { (id, sameTitleEntries) ->
@@ -42,7 +42,7 @@ class LocalProfileRepository(
     }
 
     /** Shared CMP read boundary; profile mutation and Android URI permissions stay host-specific. */
-    override suspend fun load(): LocalProfileData = getData()
+    override suspend fun load(libraryEntries: List<LibraryEntry>?): LocalProfileData = getData(libraryEntries)
 
     override fun updateProfileName(name: String): String {
         val profileName = name.trim().ifBlank { defaultProfileName }

@@ -1,13 +1,14 @@
 package org.akkirrai.hibiki.shared.demo
 
 import org.akkirrai.hibiki.shared.library.LibraryCategory
+import org.akkirrai.hibiki.shared.library.LibraryEntry
 import org.akkirrai.hibiki.shared.profile.LocalLibraryItem
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 
 /** Deterministic profile data used by the development prototype. */
 object DemoLocalProfileDataRepository : LocalProfileDataRepository {
-    override suspend fun load(): LocalProfileData = LocalProfileData(
+    override suspend fun load(libraryEntries: List<LibraryEntry>?): LocalProfileData = LocalProfileData(
         profileName = "hibiki",
         library = DemoCatalog.items.map { anime ->
             LocalLibraryItem(

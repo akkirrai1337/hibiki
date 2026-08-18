@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.akkirrai.hibiki.shared.library.LibraryEntry
 
 data class LocalProfileUiState(
     val data: LocalProfileData = LocalProfileData(),
@@ -17,10 +18,10 @@ class LocalProfilePresenter(
     private val _state = MutableStateFlow(initialState)
     val state: StateFlow<LocalProfileUiState> = _state.asStateFlow()
 
-    suspend fun load(repository: LocalProfileDataRepository) {
+    suspend fun load(repository: LocalProfileDataRepository, libraryEntries: List<LibraryEntry>? = null) {
         _state.update { it.copy(isLoading = true) }
         try {
-            setData(repository.load())
+            setData(repository.load(libraryEntries))
         } finally {
             _state.update { it.copy(isLoading = false) }
         }

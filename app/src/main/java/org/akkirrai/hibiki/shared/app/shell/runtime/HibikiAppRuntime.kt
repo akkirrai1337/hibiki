@@ -76,13 +76,21 @@ internal fun HibikiAppDataEffects(
     profileRepository: LocalProfileDataRepository,
     profilePresenter: LocalProfilePresenter,
 ) {
-    LaunchedEffect(libraryRepository) {
-        try {
-            libraryPresenter.updateEntries(libraryRepository.getEntries())
+    LaunchedEffect(libraryRepository, profileRepository) {
+        val entries = try {
+            libraryRepository.getEntries()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Throwable) {
-            libraryPresenter.updateEntries(emptyList())
+            emptyList()
+        }
+        libraryPresenter.updateEntries(entries)
+        try {
+            profilePresenter.load(profileRepository, entries)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            profilePresenter.setData(LocalProfileData())
         }
     }
 
@@ -105,15 +113,6 @@ internal fun HibikiAppDataEffects(
         }
     }
 
-    LaunchedEffect(profileRepository) {
-        try {
-            profilePresenter.load(profileRepository)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Throwable) {
-            profilePresenter.setData(LocalProfileData())
-        }
-    }
 }
 
 internal fun launchLocalDataRefresh(
@@ -127,8 +126,9 @@ internal fun launchLocalDataRefresh(
 ) {
     scope.launch {
         try {
-            libraryPresenter.updateEntries(libraryRepository.getEntries())
-            profilePresenter.load(profileRepository)
+            val entries = libraryRepository.getEntries()
+            libraryPresenter.updateEntries(entries)
+            profilePresenter.load(profileRepository, entries)
             homeRepository?.let { repository ->
                 setHomeState(repository.loadHomeState())
             }
