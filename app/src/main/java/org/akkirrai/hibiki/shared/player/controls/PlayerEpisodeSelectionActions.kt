@@ -56,17 +56,3 @@ fun dispatchPlayerSettingsAction(
     persistProgress()
     onSettingsAction(action)
 }
-
-fun dispatchPlayerSettingsSelection(
-    action: PlaybackSettingsAction,
-    setControlsVisible: () -> Unit,
-    persistProgress: () -> Unit,
-    onSettingsAction: (PlaybackSettingsAction) -> Unit,
-) {
-    dispatchPlayerSettingsAction(
-        action = action,
-        setControlsVisible = setControlsVisible,
-        persistProgress = persistProgress,
-        onSettingsAction = onSettingsAction,
-    )
-}

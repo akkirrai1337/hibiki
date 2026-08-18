@@ -7,23 +7,6 @@ import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination
 
 class PlayerOverlayActionsTest {
     @Test
-    fun lockDismissesPlaylistBeforeSettings() {
-        val events = mutableListOf<AppNavigationEvent>()
-        dispatchPlayerOverlayDismissalsForLock(true, true, events::add)
-        assertEquals(
-            listOf(AppNavigationEvent.DismissOverlay, AppNavigationEvent.ClosePlayerSettings),
-            events,
-        )
-    }
-
-    @Test
-    fun hiddenOverlaysDoNotEmitDismissals() {
-        val events = mutableListOf<AppNavigationEvent>()
-        dispatchPlayerOverlayDismissalsForLock(false, false, events::add)
-        assertEquals(emptyList<AppNavigationEvent>(), events)
-    }
-
-    @Test
     fun dismissCallbacksEmitEventBeforeControlsVisibility() {
         val events = mutableListOf<String>()
 

@@ -37,11 +37,8 @@ fun dispatchPlayerLock(
 ) {
     setLocked()
     setControlsHidden()
-    dispatchPlayerOverlayDismissalsForLock(
-        playlistVisible = playlistVisible,
-        settingsVisible = settingsVisible,
-        onOverlayEvent = onOverlayEvent,
-    )
+    if (playlistVisible) onOverlayEvent(AppNavigationEvent.DismissOverlay)
+    if (settingsVisible) onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
 }
 
 fun dispatchPlayerUnlock(
@@ -52,15 +49,6 @@ fun dispatchPlayerUnlock(
     setControlsVisible()
 }
 
-fun dispatchPlayerOverlayDismissalsForLock(
-    playlistVisible: Boolean,
-    settingsVisible: Boolean,
-    onOverlayEvent: (AppNavigationEvent) -> Unit,
-) {
-    if (playlistVisible) onOverlayEvent(AppNavigationEvent.DismissOverlay)
-    if (settingsVisible) onOverlayEvent(AppNavigationEvent.ClosePlayerSettings)
-}
-
 fun dispatchPlayerSettingsDestination(
     destination: AppPlayerSettingsDestination,
     setControlsVisible: () -> Unit,
@@ -68,15 +56,4 @@ fun dispatchPlayerSettingsDestination(
 ) {
     setControlsVisible()
     onOverlayEvent(AppNavigationEvent.SetPlayerSettingsDestination(destination))
-}
-
-fun dispatchPlayerSettingsRoot(
-    setControlsVisible: () -> Unit,
-    onOverlayEvent: (AppNavigationEvent) -> Unit,
-) {
-    dispatchPlayerSettingsDestination(
-        destination = AppPlayerSettingsDestination.Root,
-        setControlsVisible = setControlsVisible,
-        onOverlayEvent = onOverlayEvent,
-    )
 }

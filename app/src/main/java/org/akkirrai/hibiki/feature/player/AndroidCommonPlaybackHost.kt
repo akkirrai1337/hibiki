@@ -55,7 +55,7 @@ import org.akkirrai.hibiki.shared.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.shared.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.shared.player.dispatchPlayerClose
-import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsSelection
+import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsAction
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsOpen
 import org.akkirrai.hibiki.shared.player.dispatchPlayerPlaylistDismiss
@@ -63,7 +63,7 @@ import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDismiss
 import org.akkirrai.hibiki.shared.player.dispatchPlayerLock
 import org.akkirrai.hibiki.shared.player.dispatchPlayerUnlock
 import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsDestination
-import org.akkirrai.hibiki.shared.player.dispatchPlayerSettingsRoot
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.PlayerUnlockBottomPadding
 import org.akkirrai.hibiki.shared.player.PlaybackSettingsAction
 import org.akkirrai.hibiki.shared.player.DefaultSkipSegmentCountdownSeconds
@@ -206,13 +206,19 @@ internal fun AndroidCommonPlaybackHost(
         )
     }
 
-    LaunchedEffect(exoPlayer, context.episodeId, preferencesState.autoPlayNextEpisode) {
+    // Single tick drives position tracking, autoplay-next detection, and the Discord presence
+    // update. DiscordRpcManager.showPlayback() already rate-limits its own publishes, so calling
+    // it every tick is safe and avoids running three separate polling loops over the same state.
+    LaunchedEffect(exoPlayer, context.episodeId, playback.streamUrl) {
         while (true) {
+            positionMs = transport.positionMs()
+            isPlaying = exoPlayer.isPlaying
+
             if (resolveAutoPlayNextEpisode(
                     episodes = context.episodes,
                     currentEpisodeId = context.episodeId,
                     currentEpisodeNumber = context.episodeNumber,
-                    positionMs = transport.positionMs(),
+                    positionMs = positionMs,
                     durationMs = transport.durationMs(),
                     autoPlayEnabled = preferencesState.autoPlayNextEpisode,
                     completionHandled = completionState.isHandled,
@@ -221,12 +227,7 @@ internal fun AndroidCommonPlaybackHost(
                 completionState = completionState.markHandled()
                 selectAdjacentEpisode(1)
             }
-            delay(500L)
-        }
-    }
 
-    LaunchedEffect(exoPlayer, context.episodeId, playback.streamUrl, isPlaying) {
-        while (true) {
             DiscordRpcManager.get(androidContext).showPlayback(
                 DiscordPlaybackPresence(
                     titleId = context.titleId,
@@ -238,15 +239,7 @@ internal fun AndroidCommonPlaybackHost(
                     isPlaying = isPlaying,
                 ),
             )
-            if (!isPlaying) return@LaunchedEffect
-            delay(1_000L)
-        }
-    }
 
-    LaunchedEffect(exoPlayer, context.episodeId) {
-        while (true) {
-            positionMs = transport.positionMs()
-            isPlaying = exoPlayer.isPlaying
             delay(250L)
         }
     }
@@ -528,7 +521,11 @@ internal fun AndroidCommonPlaybackHost(
                         dispatchPlayerSettingsDestination(it, { controlsVisible = true }, onOverlayEvent)
                     },
                     onBack = {
-                        dispatchPlayerSettingsRoot({ controlsVisible = true }, onOverlayEvent)
+                        dispatchPlayerSettingsDestination(
+                            AppPlayerSettingsDestination.Root,
+                            { controlsVisible = true },
+                            onOverlayEvent,
+                        )
                     },
                     backHandler = { enabled, callback -> BackHandler(enabled = enabled, onBack = callback) },
                     onSelectSpeed = { speed ->
@@ -536,7 +533,7 @@ internal fun AndroidCommonPlaybackHost(
                         exoPlayer.setPlaybackSpeed(speed)
                     },
                     onSelectVoiceover = { source ->
-                        dispatchPlayerSettingsSelection(
+                        dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectVoiceover(source),
                             setControlsVisible = { controlsVisible = true },
                             persistProgress = ::savePlaybackProgress,
@@ -544,7 +541,7 @@ internal fun AndroidCommonPlaybackHost(
                         )
                     },
                     onSelectPlayer = { playerName ->
-                        dispatchPlayerSettingsSelection(
+                        dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectPlayer(playerName),
                             setControlsVisible = { controlsVisible = true },
                             persistProgress = ::savePlaybackProgress,
@@ -552,7 +549,7 @@ internal fun AndroidCommonPlaybackHost(
                         )
                     },
                     onSelectQuality = { qualityLabel ->
-                        dispatchPlayerSettingsSelection(
+                        dispatchPlayerSettingsAction(
                             action = PlaybackSettingsAction.SelectQuality(qualityLabel),
                             setControlsVisible = { controlsVisible = true },
                             persistProgress = ::savePlaybackProgress,
@@ -582,7 +579,7 @@ internal fun AndroidCommonPlaybackHost(
         )
 
         BackHandler(enabled = playlistVisible || settingsVisible) {
-            if (settingsVisible && navigationState.playerSettingsDestination != org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination.Root) {
+            if (settingsVisible && navigationState.playerSettingsDestination != AppPlayerSettingsDestination.Root) {
                 onOverlayEvent(AppNavigationEvent.Back)
             } else {
                 onOverlayEvent(AppNavigationEvent.DismissOverlay)
