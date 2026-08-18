@@ -9,7 +9,10 @@ import org.akkirrai.beakokit.api.SourceCatalogEntry
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceFactory
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.SourceLogLevel
+import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
+import org.akkirrai.hibiki.core.log.AppLogger
 
 /**
  * Builds a [SourceCatalog] from every source-extension APK currently installed and discoverable
@@ -24,6 +27,14 @@ object PackageManagerSourceCatalog {
         val discoveryContext = DefaultSourceContext(
             httpClient = discoveryHttpClient,
             preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+            logger = SourceLogger { level, message, throwable ->
+                val tag = "BeakoKit/discovery"
+                when (level) {
+                    SourceLogLevel.DEBUG -> AppLogger.d(tag, message)
+                    SourceLogLevel.WARNING -> AppLogger.w(tag, message, throwable)
+                    SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
+                }
+            },
         )
         val entries = PackageManagerSourceDiscovery.discover(androidContext).mapNotNull { extension ->
             runCatching {
@@ -34,7 +45,15 @@ object PackageManagerSourceCatalog {
                         PackageManagerSourceLoader.load(androidContext, extension, context)
                     },
                 )
-            }.getOrNull()
+            }.getOrElse { throwable ->
+                AppLogger.e(
+                    "BeakoKit/discovery",
+                    "Failed to probe source extension ${extension.packageName} (${extension.sourceClassName}): " +
+                        "${throwable::class.qualifiedName}: ${throwable.message}",
+                    throwable,
+                )
+                null
+            }
         }
         return SourceCatalog(entries)
     }
