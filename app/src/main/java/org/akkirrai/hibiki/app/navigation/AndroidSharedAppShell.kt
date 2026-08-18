@@ -109,11 +109,9 @@ internal fun AndroidSharedAppShell(
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose { context.unregisterReceiver(receiver) }
     }
-    val packageManagerSourceCatalogResult = remember(context, installedExtensionsRevision) {
+    val packageManagerSourceCatalog = remember(context, installedExtensionsRevision) {
         PackageManagerSourceCatalog.build(context)
     }
-    val packageManagerSourceCatalog = packageManagerSourceCatalogResult.catalog
-    val installedSourcePackageNames = packageManagerSourceCatalogResult.packageNamesById
     fun mergedExternalRegistry(): ExternalSourceRegistry = ExternalSourceRegistry(packageManagerSourceCatalog)
     // External source search/details must keep redirects inside the manifest's host policy.
     val externalHttpClient = remember {
@@ -236,11 +234,10 @@ internal fun AndroidSharedAppShell(
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
-    val sources = remember(packageManagerSourceCatalog, installedSourcePackageNames) {
+    val sources = remember(packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(
             builtIn = emptyList(),
-            external = ExternalSourceRegistry(packageManagerSourceCatalog)
-                .toAppSourceDescriptors(installedSourcePackageNames),
+            external = ExternalSourceRegistry(packageManagerSourceCatalog).toAppSourceDescriptors(),
         )
     }
     CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {

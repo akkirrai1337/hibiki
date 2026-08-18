@@ -95,9 +95,6 @@ fun AppLocalSourcesScreen(
                     searchSourceIconContent?.invoke(section, iconModifier)
                         ?: AppSourceIconImage(
                             url = null,
-                            installedPackageName = sources
-                                .firstOrNull { it.id == section.sourceId }
-                                ?.installedPackageName,
                             modifier = iconModifier,
                         )
                 },

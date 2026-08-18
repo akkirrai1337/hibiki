@@ -106,7 +106,6 @@ internal fun ColumnScope.HomeScreen(
                         iconContent = { iconModifier ->
                             AppSourceIconImage(
                                 url = source.iconUrl,
-                                installedPackageName = source.installedPackageName,
                                 modifier = iconModifier,
                             )
                         },

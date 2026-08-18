@@ -933,7 +933,6 @@ private fun SourcePackageCard(
     ) {
             AppSourceIconImage(
                 url = manifest.sourceInfo?.iconUrl,
-                installedPackageName = packageStatus.activePackage?.installed?.packagePath,
                 modifier = Modifier.size(52.dp).clip(CircleShape),
             )
         Column(modifier = Modifier.weight(1f)) {
