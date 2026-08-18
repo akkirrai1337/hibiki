@@ -20,7 +20,6 @@ import org.akkirrai.hibiki.shared.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.shared.navigation.AppDestination
 import org.akkirrai.hibiki.shared.navigation.AppRoute
 import org.akkirrai.hibiki.shared.navigation.AppTransitionDirection
-import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
 import org.akkirrai.hibiki.shared.source.LocalAppSourceConfigContent
 @Composable
@@ -97,22 +96,24 @@ internal fun AppDestinationContent(
         }
     }
 
-    val detailsTarget = DetailsLayerTarget(
-        anime = contentState.selectedAnime.takeIf { contentState.currentRoute is org.akkirrai.hibiki.shared.navigation.AppRoute.Details },
-    )
+    // Keyed on the title id, not the Anime object itself: the details fetch replaces
+    // selectedAnime with a richer object once it resolves, and keying on the full object
+    // would make AnimatedContent treat that data refresh as a brand new navigation target,
+    // replaying the whole screen transition for a title the user never left.
+    val detailsAnimeId = contentState.selectedAnime?.id
+        ?.takeIf { contentState.currentRoute is org.akkirrai.hibiki.shared.navigation.AppRoute.Details }
     AnimatedContent(
-        targetState = detailsTarget,
+        targetState = detailsAnimeId,
         transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
         label = "details_route_transition",
         modifier = Modifier.fillMaxSize(),
-    ) { target ->
-        target.anime?.let { anime ->
+    ) { targetId ->
+        val anime = contentState.selectedAnime?.takeIf { it.id == targetId }
+        if (anime != null) {
             AppDestinationDetailsRoute(input = effectiveInput, animeOverride = anime)
         }
     }
 }
-
-private data class DetailsLayerTarget(val anime: Anime?)
 
 private fun AppDestinationContentInput.withRouteOverride(route: AppRoute?): AppDestinationContentInput {
     if (route == null || route == watch.state.currentRoute) return this
