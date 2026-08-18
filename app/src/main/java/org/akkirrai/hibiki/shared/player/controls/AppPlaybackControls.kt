@@ -194,7 +194,7 @@ fun AppPlaybackControls(
             hasPreviousEpisode = hasPreviousEpisode,
             hasNextEpisode = hasNextEpisode,
             isPlaying = isPlaying,
-            seekOverlayActive = seekOverlayVisible,
+            centerControlsSuppressed = seekOverlayVisible || holdSpeedOverlayVisible,
             onTogglePlay = {
                 keepControlsVisible()
                 if (isPlaying) transport.pause() else transport.play()

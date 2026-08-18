@@ -20,7 +20,9 @@ fun AppPlayerControlsLayer(
     hasPreviousEpisode: Boolean,
     hasNextEpisode: Boolean,
     isPlaying: Boolean,
-    seekOverlayActive: Boolean,
+    // True while a transient gesture overlay (seek delta, hold-for-2x) is showing -- the center
+    // play/pause + episode cluster hides so it doesn't sit underneath that overlay.
+    centerControlsSuppressed: Boolean,
     onTogglePlay: () -> Unit,
     onPreviousEpisode: () -> Unit,
     onNextEpisode: () -> Unit,
@@ -68,7 +70,7 @@ fun AppPlayerControlsLayer(
         )
 
         AppPlayerCenterControls(
-            visible = !seekOverlayActive,
+            visible = !centerControlsSuppressed,
             hasPreviousEpisode = hasPreviousEpisode,
             hasNextEpisode = hasNextEpisode,
             onTogglePlay = onTogglePlay,
