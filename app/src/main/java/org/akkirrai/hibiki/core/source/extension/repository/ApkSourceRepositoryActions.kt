@@ -109,8 +109,8 @@ class ApkSourceRepositoryActions(
             packageVersion = installedVersion,
             sourceInfo = SourceManifestInfo(
                 displayName = displayName,
-                languages = setOf(SourceLanguage.RUSSIAN),
-                primaryLanguage = SourceLanguage.RUSSIAN,
+                languages = probed?.languages ?: setOf(SourceLanguage.RUSSIAN),
+                primaryLanguage = probed?.primaryLanguage ?: SourceLanguage.RUSSIAN,
                 website = probed?.website,
                 iconUrl = probed?.iconUrl,
             ),
@@ -241,8 +241,8 @@ class ApkSourceRepositoryActions(
         packageVersion = version,
         sourceInfo = SourceManifestInfo(
             displayName = entry.name,
-            languages = setOf(SourceLanguage.RUSSIAN),
-            primaryLanguage = SourceLanguage.RUSSIAN,
+            languages = probed?.languages ?: setOf(SourceLanguage.RUSSIAN),
+            primaryLanguage = probed?.primaryLanguage ?: SourceLanguage.RUSSIAN,
             website = probed?.website,
             iconUrl = probed?.iconUrl,
         ),
