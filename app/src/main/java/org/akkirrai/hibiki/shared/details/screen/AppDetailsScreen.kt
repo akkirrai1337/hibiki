@@ -154,7 +154,7 @@ fun AppDetailsScreen(
             )
         }
     }
-    val mediaData = remember(uiModel.anime, resumeState) {
+    val mediaData = remember(uiModel.anime) {
         resolveDetailsHeroMediaData(uiModel.anime)
     }
     val nextEpisodeEta = rememberNextEpisodeEta(
