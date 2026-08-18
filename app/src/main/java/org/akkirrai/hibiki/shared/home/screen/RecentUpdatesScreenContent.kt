@@ -5,6 +5,7 @@ import org.akkirrai.hibiki.shared.home.state.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.shared.design.component.state.AppContentState
 import org.akkirrai.hibiki.shared.design.component.state.AppLoadMoreState
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.catalog.model.Anime
@@ -27,7 +28,7 @@ fun AppRecentUpdatesScreenContent(
     onLoadMoreRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppRecentUpdatesContentState(
+    AppContentState(
         isLoading = isLoading,
         hasContent = items.isNotEmpty(),
         errorMessage = errorMessage,

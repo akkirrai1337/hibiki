@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.library.LibraryCategory
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.search.model.SearchUiState
@@ -28,9 +29,10 @@ fun AppHomeSearchResultsZone(
     onItemVisible: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppHomeSearchList(
+    AppHomeFeedList(
         topContentPadding = topContentPadding,
         bottomContentPadding = bottomContentPadding,
+        horizontalPadding = UiDimens.ScreenPadding,
         modifier = modifier,
     ) {
         appSearchResultsContent(
