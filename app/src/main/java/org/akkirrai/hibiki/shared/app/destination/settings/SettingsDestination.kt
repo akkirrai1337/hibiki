@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.shared.profile.LocalProfileData
 import org.akkirrai.hibiki.shared.settings.LanguageMode
 import org.akkirrai.hibiki.shared.settings.NotificationPermissionState
-import org.akkirrai.hibiki.shared.settings.SettingsDestinationContent
+import org.akkirrai.hibiki.shared.settings.SettingsScreen
 import org.akkirrai.hibiki.shared.settings.ThemeMode
 
 internal data class AppDestinationSettingsActions(
@@ -72,7 +72,7 @@ internal fun SettingsDestinationRoute(
     settingsListState: LazyListState,
     bottomContentPadding: Dp,
 ) {
-    SettingsDestinationContent(
+    SettingsScreen(
         profileData = profileData,
         languageMode = languageMode,
         onLanguageModeChange = onLanguageModeChange,
@@ -80,7 +80,7 @@ internal fun SettingsDestinationRoute(
         onThemeChange = onThemeChange,
         themeMode = themeMode,
         onThemeModeChange = onThemeModeChange,
-        appVersionName = appVersionName,
+        versionName = appVersionName,
         useSystemColorScheme = useSystemColorScheme,
         useAmoledTheme = useAmoledTheme,
         autoSkipSegments = autoSkipSegments,
@@ -89,8 +89,8 @@ internal fun SettingsDestinationRoute(
         onAutoSkipChange = onAutoSkipChange,
         onConfigureNotifications = onConfigureNotifications,
         notificationPermissionState = notificationPermissionState,
-        showSettingsBackButton = showSettingsBackButton,
-        onSettingsBack = onSettingsBack,
+        showBackButton = showSettingsBackButton,
+        onBackClick = onSettingsBack,
         onGitHubClick = onGitHubClick,
         discordEnabled = discordEnabled,
         discordAvailable = discordAvailable,
@@ -99,7 +99,7 @@ internal fun SettingsDestinationRoute(
         onCheckForUpdates = onCheckForUpdates,
         onExportLogs = onExportLogs,
         notificationsAvailable = notificationsAvailable,
-        settingsListState = settingsListState,
+        listState = settingsListState,
         bottomContentPadding = bottomContentPadding,
     )
 }
