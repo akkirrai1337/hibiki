@@ -60,7 +60,11 @@ fun AppPlaybackOverlayHost(
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))
         }
-        AppPlayerLoadingOverlay(visible = playbackLoading)
+        AppPlayerLoadingOverlay(
+            visible = playbackLoading &&
+                !navigationState.isPlayerSettingsOverlayActive &&
+                !navigationState.isPlaylistOverlayActive,
+        )
         playbackError?.let { message ->
             AppPlayerErrorOverlay(
                 message = message,
