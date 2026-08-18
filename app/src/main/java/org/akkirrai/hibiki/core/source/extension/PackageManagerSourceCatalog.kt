@@ -8,11 +8,23 @@ import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceCatalogEntry
 import org.akkirrai.beakokit.api.SourceContext
 import org.akkirrai.beakokit.api.SourceFactory
+import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.hibiki.core.log.AppLogger
+
+/**
+ * Result of probing every installed source-extension APK once: the [SourceCatalog] used to
+ * browse/search sources, plus each extension's declared [SourceInfo] keyed by Android package
+ * name -- reused by the repository/management screen so it doesn't have to reload every
+ * extension's class a second time just to read its website/iconUrl.
+ */
+data class PackageManagerSourceProbe(
+    val catalog: SourceCatalog,
+    val infoByPackageName: Map<String, SourceInfo>,
+)
 
 /**
  * Builds a [SourceCatalog] from every source-extension APK currently installed and discoverable
@@ -22,7 +34,9 @@ import org.akkirrai.hibiki.core.log.AppLogger
  * declared [org.akkirrai.beakokit.api.SourceInfo] up front.
  */
 object PackageManagerSourceCatalog {
-    fun build(androidContext: Context): SourceCatalog {
+    fun build(androidContext: Context): SourceCatalog = buildProbe(androidContext).catalog
+
+    fun buildProbe(androidContext: Context): PackageManagerSourceProbe {
         val discoveryHttpClient = HttpClient(OkHttp) { installBeakoKitHttpDefaults() }
         val discoveryContext = DefaultSourceContext(
             httpClient = discoveryHttpClient,
@@ -36,9 +50,11 @@ object PackageManagerSourceCatalog {
                 }
             },
         )
+        val infoByPackageName = mutableMapOf<String, SourceInfo>()
         val entries = PackageManagerSourceDiscovery.discover(androidContext).mapNotNull { extension ->
             runCatching {
                 val probe = PackageManagerSourceLoader.load(androidContext, extension, discoveryContext)
+                infoByPackageName[extension.packageName] = probe.info
                 SourceCatalogEntry(
                     info = probe.info,
                     factory = SourceFactory { context ->
@@ -55,6 +71,6 @@ object PackageManagerSourceCatalog {
                 null
             }
         }
-        return SourceCatalog(entries)
+        return PackageManagerSourceProbe(SourceCatalog(entries), infoByPackageName)
     }
 }

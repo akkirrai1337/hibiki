@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -109,9 +110,11 @@ internal fun AndroidSharedAppShell(
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose { context.unregisterReceiver(receiver) }
     }
-    val packageManagerSourceCatalog = remember(context, installedExtensionsRevision) {
-        PackageManagerSourceCatalog.build(context)
+    val packageManagerSourceProbe = remember(context, installedExtensionsRevision) {
+        PackageManagerSourceCatalog.buildProbe(context)
     }
+    val packageManagerSourceCatalog = packageManagerSourceProbe.catalog
+    val currentPackageManagerSourceProbe by rememberUpdatedState(packageManagerSourceProbe)
     fun mergedExternalRegistry(): ExternalSourceRegistry = ExternalSourceRegistry(packageManagerSourceCatalog)
     // External source search/details must keep redirects inside the manifest's host policy.
     val externalHttpClient = remember {
@@ -132,7 +135,12 @@ internal fun AndroidSharedAppShell(
     val externalRepositoryControllerScope = rememberCoroutineScope()
     val externalRepositoryController = remember(context, sourceRepositoryClient, sourceExtensionInstaller) {
         ExternalSourceRepositoryController(
-            actions = ApkSourceRepositoryActions(context, sourceRepositoryClient, sourceExtensionInstaller),
+            actions = ApkSourceRepositoryActions(
+                context,
+                sourceRepositoryClient,
+                sourceExtensionInstaller,
+                sourceInfoByPackageName = { currentPackageManagerSourceProbe.infoByPackageName },
+            ),
             scope = externalRepositoryControllerScope,
             operationContext = Dispatchers.IO,
         )
