@@ -11,50 +11,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-interface YummyApplicationTokenStore {
-    fun getApplicationToken(): String?
-    fun getEffectiveApplicationToken(): String =
-        getApplicationToken()?.takeIf(String::isNotBlank) ?: DEFAULT_YUMMY_APPLICATION_TOKEN
-    fun saveApplicationToken(token: String)
-    fun clearApplicationToken()
-
-    companion object {
-        // This header is required for stable YummyAnime API access across all sources.
-        const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
-    }
-}
-
-class AndroidKeystoreYummyApplicationTokenStore(
-    context: Context,
-) : YummyApplicationTokenStore {
-    private val appContext = context.applicationContext
-    private val secureStore = AndroidKeystoreStringStore(
-        context = appContext,
-        prefsName = PREFS_NAME,
-        keyAlias = KEY_ALIAS,
-    )
-
-    override fun getApplicationToken(): String? {
-        return secureStore.get(KEY_APPLICATION_TOKEN)
-    }
-
-    override fun saveApplicationToken(token: String) {
-        val normalized = token.trim()
-        require(normalized.isNotBlank()) { "YummyAnime application token is blank" }
-        secureStore.save(KEY_APPLICATION_TOKEN, normalized)
-    }
-
-    override fun clearApplicationToken() {
-        secureStore.clear(KEY_APPLICATION_TOKEN)
-    }
-
-    private companion object {
-        const val PREFS_NAME = "hibiki_yummy_application_token"
-        const val KEY_APPLICATION_TOKEN = "application_token"
-        const val KEY_ALIAS = "hibiki_yummy_application_token"
-    }
-}
-
 internal class AndroidKeystoreStringStore(
     context: Context,
     prefsName: String,
