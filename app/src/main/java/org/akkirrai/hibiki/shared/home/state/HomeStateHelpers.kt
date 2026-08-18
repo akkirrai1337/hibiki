@@ -1,14 +1,10 @@
 package org.akkirrai.hibiki.shared.home.state
 
-import kotlin.random.Random
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.search.model.SearchUiState
 
 fun mergeAnimePreservingOrder(primary: List<Anime>, additions: List<Anime>): List<Anime> =
     (primary + additions).distinctBy(Anime::id)
-
-fun resolveTrendingOffset(selectionSeed: Long, maxOffsetExclusive: Int): Int =
-    Random(selectionSeed).nextInt(from = 0, until = maxOffsetExclusive)
 
 /** True when Home should render search results instead of the feed. */
 val HomeUiState.isSearchActive: Boolean

@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.shared.home.state.mergeAnimePreservingOrder
 import org.akkirrai.hibiki.shared.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.shared.search.model.SearchUiState
 
@@ -101,7 +102,7 @@ class HomeSearchPresenter(
                     state.copy(
                         page = page.page,
                         result = currentContent.copy(
-                            items = (currentContent.items + page.items).distinctBy { it.id },
+                            items = mergeAnimePreservingOrder(currentContent.items, page.items),
                             canLoadMore = page.canLoadMore,
                             isLoadingMore = false,
                         ),
