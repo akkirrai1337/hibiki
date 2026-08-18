@@ -151,3 +151,71 @@ object YummySearchFilterLocalizer {
         "etti" to LocalizedLabel("Этти", "Ecchi"),
     )
 }
+
+fun localizeYummyStatusFilterLabel(id: String, title: String): String = when (id) {
+    "released" -> "Вышел"
+    "ongoing" -> "Онгоинг"
+    "announcement" -> "Анонс"
+    else -> title
+}
+
+fun formatFilterFallbackLabel(alias: String, preferEnglish: Boolean): String {
+    if (!preferEnglish) return alias
+    return alias
+        .replace('-', ' ')
+        .replace('_', ' ')
+        .split(' ')
+        .filter(String::isNotBlank)
+        .joinToString(" ") { part ->
+            part.replaceFirstChar { it.uppercase() }
+        }
+}
+
+fun localizeYummyTypeFilterLabel(
+    id: String,
+    title: String,
+    preferEnglish: Boolean,
+): String {
+    val label = when (id.lowercase()) {
+        "tv" -> "Сериал" to "Series"
+        "movie" -> "Полнометражный фильм" to "Feature film"
+        "short_movie" -> "Короткометражный фильм" to "Short film"
+        "ova" -> "OVA" to "OVA"
+        "special" -> "Спэшл" to "Special"
+        "short_serial" -> "Малометражный сериал" to "Short series"
+        "ona" -> "ONA" to "ONA"
+        else -> null
+    }
+    return when {
+        label != null -> if (preferEnglish) label.second else label.first
+        title.trim().equals(id.trim(), ignoreCase = true) ->
+            formatFilterFallbackLabel(id, preferEnglish)
+        else -> title
+    }
+}
+
+fun localizeYummySortFilterLabel(
+    id: String,
+    title: String,
+    preferEnglish: Boolean,
+): String {
+    val label = when (id.lowercase()) {
+        "relevance" -> "Релевантности" to "Relevance"
+        "top", "rating" -> "Рейтингу" to "Rating"
+        "title" -> "Названию" to "Title"
+        "year" -> "Дате выхода" to "Release date"
+        "rating_counters" -> "Количеству оценок" to "Rating count"
+        "votes" -> "Голосам" to "Votes"
+        "views" -> "Просмотрам" to "Views"
+        "comments" -> "Комментариям" to "Comments"
+        "random" -> "Случайно" to "Random"
+        "id" -> "Сначала новые" to "Newest added"
+        else -> null
+    }
+    return when {
+        label != null -> if (preferEnglish) label.second else label.first
+        title.trim().equals(id.trim(), ignoreCase = true) ->
+            formatFilterFallbackLabel(id, preferEnglish)
+        else -> title
+    }
+}
