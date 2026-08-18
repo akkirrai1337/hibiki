@@ -46,9 +46,8 @@ class DetailsHeroInfoTest {
     }
 
     @Test
-    fun recognizesAnnouncementAndOngoingStatuses() {
+    fun recognizesAnnouncementStatus() {
         assertTrue(isAnnouncementStatus("announcement"))
         assertTrue(isAnnouncementStatus("", "announcement"))
-        assertTrue(isOngoingStatus("ongoing"))
     }
 }

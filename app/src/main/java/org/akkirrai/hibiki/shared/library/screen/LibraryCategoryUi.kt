@@ -20,5 +20,3 @@ fun LibraryCategory.icon(): ImageVector = when (this) {
     LibraryCategory.Favorite -> Icons.Filled.Bookmark
     LibraryCategory.Saved -> Icons.Outlined.Download
 }
-
-fun LibraryCategory?.iconOrDefault(): ImageVector = this?.icon() ?: Icons.Outlined.BookmarkBorder

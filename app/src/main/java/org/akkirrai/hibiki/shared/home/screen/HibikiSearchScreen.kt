@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.shared.home.screen
 
 import org.akkirrai.hibiki.shared.app.defaultCatalogScreenLabels
-import org.akkirrai.hibiki.shared.catalog.screen.CatalogScreenContent
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
