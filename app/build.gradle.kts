@@ -41,9 +41,19 @@ android {
         versionCode = 220
         versionName = "2.2.0"
 
-        buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("standard") {
+            dimension = "distribution"
+            buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "false")
+        }
     }
 
     signingConfigs {
@@ -71,11 +81,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
-        create("fdroid") {
-            initWith(getByName("release"))
-            buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "false")
-            matchingFallbacks += listOf("release")
         }
     }
     compileOptions {
