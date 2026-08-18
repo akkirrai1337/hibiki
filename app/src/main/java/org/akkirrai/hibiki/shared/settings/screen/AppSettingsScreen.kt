@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -239,33 +240,38 @@ fun AppSettingsScreen(
             },
         )
         if (showBackButton) {
-            Row(
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .padding(
-                        start = UiDimens.ScreenPadding,
-                        top = topSystemInset + SettingsBackButtonTopPadding,
-                    )
-                    .height(SettingsBackButtonSize),
-                verticalAlignment = Alignment.CenterVertically,
+                    .background(MaterialTheme.colorScheme.background)
+                    .height(topSystemInset + SettingsBackButtonTopPadding + SettingsBackButtonSize),
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = backContentDescription,
-                        tint = MaterialTheme.colorScheme.onBackground,
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(start = UiDimens.ScreenPadding)
+                        .height(SettingsBackButtonSize),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = backContentDescription,
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    Text(
+                        text = labels.title,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = SettingsBackButtonContentGap),
                     )
                 }
-                Text(
-                    text = labels.title,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = SettingsBackButtonContentGap),
-                )
             }
         }
     }
