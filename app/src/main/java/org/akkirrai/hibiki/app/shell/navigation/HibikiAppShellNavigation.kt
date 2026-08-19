@@ -133,9 +133,11 @@ internal class HibikiDetailsNavigationActions(
     private val presenter: AnimeCatalogPresenter,
     private val navigationState: () -> AppNavigationState,
     private val setNavigationState: (AppNavigationState) -> Unit,
+    private val setDetailsAnime: (Anime?) -> Unit,
 ) {
     fun open(anime: Anime) {
         presenter.openDetails(anime)
+        setDetailsAnime(anime)
         val currentRoute = navigationState().currentRoute
         if (currentRoute !is AppRoute.Details || currentRoute.animeId != anime.id) {
             setNavigationState(navigationState().navigateToDetails(anime.id))
@@ -146,6 +148,7 @@ internal class HibikiDetailsNavigationActions(
         val nextNavigationState = navigationState().navigateBackFromDetails()
         setNavigationState(nextNavigationState)
         presenter.closeDetails()
+        setDetailsAnime(null)
     }
 }
 

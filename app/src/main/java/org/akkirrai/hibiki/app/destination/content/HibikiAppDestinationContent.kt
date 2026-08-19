@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.app.destination.content
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
@@ -102,9 +105,12 @@ internal fun AppDestinationContent(
     // replaying the whole screen transition for a title the user never left.
     val detailsAnimeId = contentState.selectedAnime?.id
         ?.takeIf { contentState.currentRoute is org.akkirrai.hibiki.app.navigation.AppRoute.Details }
+    // No animation of its own -- the outer root transition in AppProductionRoot already
+    // fades every entry/exit of the Details route (its route field changes on every visit).
+    // Animating here too would stack a second, independent crossfade on top of that one.
     AnimatedContent(
         targetState = detailsAnimeId,
-        transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
+        transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
         label = "details_route_transition",
         modifier = Modifier.fillMaxSize(),
     ) { targetId ->

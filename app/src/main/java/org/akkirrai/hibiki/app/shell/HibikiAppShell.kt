@@ -398,6 +398,7 @@ internal fun HibikiAppShell(
         presenter = presenter,
         navigationState = { navigationState },
         setNavigationState = { navigationState = it },
+        setDetailsAnime = { detailsAnime = it },
     )
     val overlayActions = HibikiOverlayActions(
         navigationState = { navigationState },
