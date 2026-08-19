@@ -331,6 +331,21 @@ internal fun HibikiAppShell(
         invalidateEpisodes = { episodesLoadGeneration++ },
     )
 
+    val refreshLocalData = {
+        launchLocalDataRefresh(
+            scope = scope,
+            libraryPresenter = libraryPresenter,
+            libraryRepository = libraryRepository,
+            profilePresenter = profilePresenter,
+            profileRepository = profileRepository,
+            homeRepository = homeRepository,
+            setHomeState = { refreshedState ->
+                setHomeStatePreservingDescriptions(refreshedState)
+            },
+        )
+        Unit
+    }
+
     val playbackRequestCoordinator = HibikiPlaybackRequestCoordinator(
         scope = scope,
         watchRepository = { watchRepository },
@@ -357,6 +372,8 @@ internal fun HibikiAppShell(
         onSourceSelected = playbackCallbacks.onWatchSourceSelected,
         setAutoSkipSegments = { appSettingsState.autoSkipSegments = it },
         setAutoPlayNextEpisode = { appSettingsState.autoPlayNextEpisode = it },
+        libraryRepository = libraryRepository,
+        onLibraryChanged = refreshLocalData,
     )
 
     val watchRetryActions = HibikiWatchRetryActions(
@@ -378,21 +395,6 @@ internal fun HibikiAppShell(
         },
         retryEpisodes = { episodesLoadGeneration++ },
     )
-
-    val refreshLocalData = {
-        launchLocalDataRefresh(
-            scope = scope,
-            libraryPresenter = libraryPresenter,
-            libraryRepository = libraryRepository,
-            profilePresenter = profilePresenter,
-            profileRepository = profileRepository,
-            homeRepository = homeRepository,
-            setHomeState = { refreshedState ->
-                setHomeStatePreservingDescriptions(refreshedState)
-            },
-        )
-        Unit
-    }
 
     val detailsNavigationActions = HibikiDetailsNavigationActions(
         presenter = presenter,

@@ -4,6 +4,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.library.LibraryCategory
+import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.player.model.PlaybackContext
 import org.akkirrai.hibiki.player.model.PlaybackSelection
 import org.akkirrai.hibiki.player.model.PlaybackSettingsOptions
@@ -54,6 +56,8 @@ internal class HibikiPlaybackRequestCoordinator(
     private val onSourceSelected: (String, WatchSource) -> Unit,
     private val setAutoSkipSegments: (Boolean) -> Unit,
     private val setAutoPlayNextEpisode: (Boolean) -> Unit,
+    private val libraryRepository: LibraryRepository,
+    private val onLibraryChanged: () -> Unit,
 ) {
     fun request(
         episode: WatchEpisode,
@@ -104,6 +108,16 @@ internal class HibikiPlaybackRequestCoordinator(
                     "(selectedSource=${selectedSource?.sourceId}, titleId=$titleId, episodes=${requestEpisodes.size})",
             )
             return
+        }
+
+        // Auto-add the title to the library so it surfaces in "continue watching" the moment
+        // playback starts, without requiring the user to add it manually first. Only when it
+        // isn't in the library at all yet -- never overrides an existing category.
+        watchAnime()?.let { anime ->
+            if (libraryRepository.getLibraryCategory(anime.id) == null) {
+                libraryRepository.saveToLibrary(anime, LibraryCategory.Watching)
+                onLibraryChanged()
+            }
         }
 
         val source = preparedRequest.source

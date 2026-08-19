@@ -56,7 +56,9 @@ internal fun ColumnScope.HomeScreen(
 ) {
     val homeState = baseHomeState.copy(
         recentlyAddedToLibrary = if (baseHomeState.recentlyAddedToLibrary.isEmpty()) {
-            libraryEntries.filter { it.category != LibraryCategory.Saved }.map { it.anime }
+            libraryEntries
+                .filter { it.category != LibraryCategory.Saved && it.category != LibraryCategory.Watching }
+                .map { it.anime }
         } else {
             baseHomeState.recentlyAddedToLibrary
         },

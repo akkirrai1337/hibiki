@@ -49,8 +49,13 @@ class CatalogBackedHomeDataRepository(
         return HomeUiState(
             recentlyWatched = recentlyWatched,
             continueAnime = recentlyWatched.firstOrNull(),
+            // Watching is a system bookkeeping category (auto-assigned the moment playback
+            // starts, not a deliberate user action), so it shouldn't count as "recently added".
             recentlyAddedToLibrary = libraryEntries
-                .filter { it.category != org.akkirrai.hibiki.library.LibraryCategory.Saved }
+                .filter {
+                    it.category != org.akkirrai.hibiki.library.LibraryCategory.Saved &&
+                        it.category != org.akkirrai.hibiki.library.LibraryCategory.Watching
+                }
                 .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
                 .map { it.anime },
             recentlyUpdated = recentlyUpdated,
