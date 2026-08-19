@@ -5,7 +5,7 @@ fun appBackHandlerEnabled(
     selectedTab: AppDestination,
     currentRoute: AppRoute,
     hasOverlay: Boolean,
-): Boolean = selectedTab == AppDestination.SETTINGS ||
+): Boolean = selectedTab != AppDestination.HOME ||
     currentRoute !is AppRoute.TopLevel ||
     hasOverlay
 

@@ -68,4 +68,15 @@ class HibikiSystemBackNavigationTest {
 
         assertFalse(result.handled)
     }
+
+    @Test
+    fun emptyNonHomeTabBackReturnsToHomeInsteadOfExitingTheApp() {
+        val state = AppNavigationState(currentTopLevel = AppTopLevelDestination.PROFILE)
+
+        val result = reduceHibikiSystemBack(state, AppDestination.PROFILE, false, null)
+
+        assertTrue(result.handled)
+        assertEquals(AppRoute.TopLevel(AppTopLevelDestination.HOME), result.state.currentRoute)
+        assertEquals(AppTopLevelDestination.HOME, result.state.currentTopLevel)
+    }
 }

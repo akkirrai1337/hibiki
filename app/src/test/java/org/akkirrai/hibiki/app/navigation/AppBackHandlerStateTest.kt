@@ -19,7 +19,7 @@ class AppBackHandlerStateTest {
     }
 
     @Test
-    fun profileSettingsBackReturnsToRootAndReleasesSystemBackBridge() {
+    fun profileSettingsBackReturnsToRootAndKeepsSystemBackBridgeEnabled() {
         val settings = AppNavigationState()
             .reduce(AppNavigationEvent.SelectTopLevel(AppTopLevelDestination.PROFILE))
             .reduce(AppNavigationEvent.Navigate(AppRoute.Settings))
@@ -31,7 +31,10 @@ class AppBackHandlerStateTest {
             AppRoute.TopLevel(AppTopLevelDestination.PROFILE),
             profile.currentRoute,
         )
-        assertFalse(appBackHandlerEnabled(profile))
+        // Profile is a non-Home tab, so the bridge must stay enabled here too -- otherwise a
+        // further back gesture falls through to the system default and exits the app instead
+        // of returning to Home.
+        assertTrue(appBackHandlerEnabled(profile))
     }
 
     @Test

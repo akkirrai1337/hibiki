@@ -195,7 +195,20 @@ internal fun reduceHibikiSystemBack(
             effect = transition.effect,
         )
     }
-    if (navigationState.backStack.isEmpty()) return HibikiSystemBackResult(navigationState, handled = false)
+    if (navigationState.backStack.isEmpty()) {
+        // On a bare top-level tab (nothing pushed, no overlay, no active playback) with
+        // nothing left for this app to pop -- return to Home instead of letting the gesture
+        // fall through to the system default, which would finish the Activity outright.
+        if (selectedTab != AppDestination.HOME) {
+            val tabSwitch = reduceHibikiRootTabSelection(
+                state = navigationState,
+                selectedTab = selectedTab,
+                destination = AppDestination.HOME,
+            )
+            return HibikiSystemBackResult(state = tabSwitch.state, handled = tabSwitch.handled)
+        }
+        return HibikiSystemBackResult(navigationState, handled = false)
+    }
     val transition = resolveWatchFlowBackTransition(navigationState, playbackReturnRoute)
     val cleanup = when (routeBeforeBack) {
         is AppRoute.Player -> HibikiBackCleanup.Player
