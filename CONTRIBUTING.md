@@ -18,7 +18,11 @@ Please include enough information to reproduce the problem:
 
 ### Feature requests
 
-Describe the problem you want to solve and how the proposed change would help. New sources and larger features are welcome to be discussed in an issue before implementation.
+Describe the problem you want to solve and how the proposed change would help. Larger features are welcome to be discussed in an issue before implementation.
+
+### New sources
+
+Anime sources are no longer part of this repository. They live in [hibiki-sources](https://github.com/akkirrai1337/hibiki-sources) as separate installable extension modules, built and published by that repo's own CI. Open an issue or pull request there to add or fix a source.
 
 ## Pull requests
 

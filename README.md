@@ -6,18 +6,19 @@
 
   [Русский](README_RU.md)
 
-  **hibiki is an Android app for browsing and watching anime from selectable sources. It combines a catalog, search, a local library, offline downloads, and a built-in player, while keeping your watch progress and profile data on the device.**
+  **hibiki is an Android app for browsing and watching anime from installable sources. It combines a catalog, search, a local library, offline downloads, and a built-in player, while keeping your watch progress and profile data on the device.**
 
   ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
   ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
   ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
+  [![Release](https://img.shields.io/github/v/release/akkirrai1337/hibiki?include_prereleases)](https://github.com/akkirrai1337/hibiki/releases)
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
 ### 📚 Features
 
-* Switchable anime sources, with source-aware catalog, search, filters, and sorting
+* Anime sources are installed as separate extensions from an in-app source repository (see [hibiki-sources](https://github.com/akkirrai1337/hibiki-sources)), with source-aware catalog, search, filters, and sorting
 * Detailed title pages with descriptions, genres, related and similar titles
 * Episode and voice-over selection
 * Built-in Media3 player with HLS, DASH, and MP4 support
