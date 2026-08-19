@@ -8,11 +8,17 @@ import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 
 /** Platform-neutral Home data contract. Implementations provide network and persistence details. */
 interface HomeDataRepository {
-    fun fallbackHomeState(): HomeUiState
-
     suspend fun refreshHomeState(): HomeUiState
 
     suspend fun loadHomeState(): HomeUiState
+
+    /**
+     * Only the locally-derived sections (continue watching, recently added to library) --
+     * cheap, no network involved. Lets a caller paint real data immediately on cold start
+     * instead of waiting on [loadHomeState]'s catalog calls for content that never depended
+     * on them in the first place.
+     */
+    suspend fun loadLocalHomeState(): HomeUiState
 
     suspend fun search(query: String): List<Anime>
 

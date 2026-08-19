@@ -99,7 +99,10 @@ internal fun HibikiAppDataEffects(
             if (homeRepository == null) {
                 homePresenter.setState(HomeUiState())
             } else {
-                homePresenter.setState(homeRepository.fallbackHomeState())
+                // Paint the locally-derived sections (continue watching, recently added) first
+                // -- they're already on disk and don't need to wait on the catalog network
+                // calls that loadHomeState() also has to make.
+                homePresenter.setState(homeRepository.loadLocalHomeState())
                 setHomeState(homeRepository.loadHomeState())
             }
         } catch (cancelled: CancellationException) {

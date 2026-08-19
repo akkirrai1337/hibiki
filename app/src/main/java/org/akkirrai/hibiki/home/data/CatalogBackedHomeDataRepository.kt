@@ -3,8 +3,11 @@ package org.akkirrai.hibiki.home.data
 import org.akkirrai.hibiki.home.*
 import org.akkirrai.hibiki.home.state.HomeUiState
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.akkirrai.hibiki.catalog.AnimeCatalogQuery
 import org.akkirrai.hibiki.catalog.AnimeCatalogRepository
+import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.profile.LocalWatchStateRepository
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -17,14 +20,12 @@ class CatalogBackedHomeDataRepository(
     private val libraryRepository: LibraryRepository,
     private val watchStateRepository: LocalWatchStateRepository? = null,
 ) : HomeDataRepository {
-    override fun fallbackHomeState(): HomeUiState = HomeUiState()
-
     override suspend fun refreshHomeState(): HomeUiState = loadHomeState()
 
-    override suspend fun loadHomeState(): HomeUiState {
+    override suspend fun loadLocalHomeState(): HomeUiState {
         val libraryEntries = libraryRepository.getEntries()
         val libraryAnimeById = libraryEntries
-            .filter { it.category != org.akkirrai.hibiki.library.LibraryCategory.Saved }
+            .filter { it.category != LibraryCategory.Saved }
             .associateBy { it.anime.id }
         val recentlyWatched = watchStateRepository
             ?.getAllEpisodeProgress()
@@ -36,16 +37,6 @@ class CatalogBackedHomeDataRepository(
             ?.sortedByDescending { it.second ?: Long.MIN_VALUE }
             ?.map { it.first }
             .orEmpty()
-        val recentlyUpdated = runCatching { catalogRepository.latest(HOME_SECTION_PAGE_SIZE) }
-            .getOrDefault(emptyList())
-        val popular = runCatching {
-            catalogRepository.search(
-                AnimeCatalogQuery(
-                    pageSize = HOME_SECTION_PAGE_SIZE,
-                    filters = AnimeSearchFilters(sortAlias = "popular"),
-                ),
-            ).items
-        }.getOrDefault(emptyList())
         return HomeUiState(
             // Drop the first entry -- it's already spotlighted as continueAnime below, so
             // repeating it in the "recently watched" row would show the same title twice.
@@ -54,13 +45,33 @@ class CatalogBackedHomeDataRepository(
             // Recent is a hidden bookkeeping flag (auto-assigned the moment playback starts,
             // not a deliberate user action), so it shouldn't count as "recently added".
             recentlyAddedToLibrary = libraryEntries
-                .filter {
-                    it.category != org.akkirrai.hibiki.library.LibraryCategory.Saved &&
-                        it.category != org.akkirrai.hibiki.library.LibraryCategory.Recent
-                }
+                .filter { it.category != LibraryCategory.Saved && it.category != LibraryCategory.Recent }
                 .sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
                 .map { it.anime },
-            recentlyUpdated = recentlyUpdated,
+        )
+    }
+
+    override suspend fun loadHomeState(): HomeUiState = coroutineScope {
+        // Local sections (continue watching, recently added) don't depend on the network at
+        // all -- run them alongside the two catalog calls instead of behind them, and run the
+        // two catalog calls concurrently with each other too instead of one after the other.
+        val localDeferred = async { loadLocalHomeState() }
+        val recentlyUpdatedDeferred = async {
+            runCatching { catalogRepository.latest(HOME_SECTION_PAGE_SIZE) }.getOrDefault(emptyList())
+        }
+        val popularDeferred = async {
+            runCatching {
+                catalogRepository.search(
+                    AnimeCatalogQuery(
+                        pageSize = HOME_SECTION_PAGE_SIZE,
+                        filters = AnimeSearchFilters(sortAlias = "popular"),
+                    ),
+                ).items
+            }.getOrDefault(emptyList())
+        }
+        val popular = popularDeferred.await()
+        localDeferred.await().copy(
+            recentlyUpdated = recentlyUpdatedDeferred.await(),
             trending = popular,
             popular = popular,
         )
