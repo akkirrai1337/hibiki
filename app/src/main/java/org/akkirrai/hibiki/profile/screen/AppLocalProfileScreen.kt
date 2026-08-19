@@ -89,9 +89,14 @@ fun AppLocalProfileScreen(
                     )
                 }
             },
-            bannerElevatedContent = { _, actionModifier ->
+            bannerElevatedContent = { collapseRatio, actionModifier ->
+                // As the banner collapses (ratio 1 -> 0, avatar scrolling out of view), slide
+                // these buttons down from their expanded position (overlapping the avatar) to
+                // roughly the nickname's height, instead of staying pinned near the status bar.
+                val elevatedActionsOffset = ProfileHeaderActionsCollapsedOffsetY * (1f - collapseRatio) +
+                    ProfileHeaderActionsExpandedOffsetY * collapseRatio
                 Row(
-                    modifier = actionModifier.offset(y = (-26).dp),
+                    modifier = actionModifier.offset(y = elevatedActionsOffset),
                     horizontalArrangement = Arrangement.spacedBy(ProfileSmallPadding),
                 ) {
                     ProfileEditActionButton(

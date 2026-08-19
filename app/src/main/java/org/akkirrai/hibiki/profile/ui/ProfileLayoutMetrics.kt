@@ -61,3 +61,7 @@ val ProfileLegendGridRowGap = 10.dp
 val ProfileLegendGridColumnGap = 14.dp
 val ProfileBannerMaxHeight = 128.dp
 val ProfileBannerMinPadding = 24.dp
+// Vertical offset of the edit/settings buttons when the banner is fully expanded (overlapping
+// the bottom of the avatar) vs. fully collapsed (roughly level with the nickname).
+val ProfileHeaderActionsExpandedOffsetY = (-26).dp
+val ProfileHeaderActionsCollapsedOffsetY = 30.dp
