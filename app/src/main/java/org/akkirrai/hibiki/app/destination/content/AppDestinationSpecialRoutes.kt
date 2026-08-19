@@ -3,8 +3,8 @@ package org.akkirrai.hibiki.app.destination.content
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
-import org.akkirrai.hibiki.app.destination.watch.DetailsDestinationRoute
 import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.details.screen.DetailsDestinationContent
 import org.akkirrai.hibiki.player.HibikiWatchFlowContent
 
 @Composable
@@ -49,7 +49,7 @@ internal fun AppDestinationDetailsRoute(
     val overlay = input.navigation.detailsOverlayState
     val anime = animeOverride ?: requireNotNull(content.selectedAnime)
 
-    DetailsDestinationRoute(
+    DetailsDestinationContent(
         anime = anime,
         watchRepositoryAvailable = content.watchRepositoryAvailable,
         sources = source.sources,

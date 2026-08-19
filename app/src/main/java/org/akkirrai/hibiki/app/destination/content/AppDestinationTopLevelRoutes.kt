@@ -12,8 +12,13 @@ import org.akkirrai.hibiki.app.destination.library.*
 import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
+import org.akkirrai.hibiki.app.settings.SettingsScreen
 import org.akkirrai.hibiki.app.shell.navigation.shouldApplyTopSystemInset
+import org.akkirrai.hibiki.home.screen.HomeScreen
+import org.akkirrai.hibiki.home.screen.SearchScreen
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
+import org.akkirrai.hibiki.library.screen.LibraryScreen
+import org.akkirrai.hibiki.profile.ProfileDestinationContent
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppSourceConfigContent
@@ -46,7 +51,7 @@ internal fun AppDestinationTopLevelRoutes(
             .then(if (shouldApplyTopSystemInset(selectedTab)) topInsetModifier else Modifier),
     ) {
         when (selectedTab) {
-            AppDestination.HOME -> HomeDestinationRoute(
+            AppDestination.HOME -> HomeScreen(
                 state = catalog.state.ui,
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
@@ -69,10 +74,10 @@ internal fun AppDestinationTopLevelRoutes(
                 onHomeRefresh = home.actions.onRefresh,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.CATALOG -> CatalogDestinationRoute(
+            AppDestination.CATALOG -> SearchScreen(
                 state = catalog.state.ui,
                 listState = catalog.state.listState,
-                libraryEntries = library.state.entries,
+                libraryStatusByAnimeId = library.state.entries.associate { it.anime.id to it.category },
                 query = catalog.state.query,
                 onQueryChange = catalog.actions.onQueryChange,
                 items = catalog.state.items,
@@ -86,7 +91,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onSortSelected = catalog.actions.onSortSelected,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.LIBRARY -> LibraryDestinationRoute(
+            AppDestination.LIBRARY -> LibraryScreen(
                 entries = library.state.entries,
                 sources = sources.state.sources,
                 state = library.state.ui,
@@ -102,7 +107,7 @@ internal fun AppDestinationTopLevelRoutes(
                 systemLanguage = platform.hostContext.systemLanguage,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.PROFILE -> ProfileDestinationRoute(
+            AppDestination.PROFILE -> ProfileDestinationContent(
                 profileData = profile.state.data,
                 profileLoading = profile.state.isLoading,
                 profileAvatarEditAvailable = profile.state.avatarEditAvailable,
@@ -117,6 +122,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onProfileSettingsClick = navigation.actions.onProfileSettingsClick,
                 onProfileAvatarEdit = profile.actions.onAvatarEdit,
                 onProfileAvatarPicked = profile.actions.onAvatarPicked,
+                modifier = Modifier.fillMaxSize(),
             )
             AppDestination.SOURCES -> SourcesDestinationRoute(
                 editingSourceConfig = editingSourceConfig,
@@ -149,7 +155,7 @@ internal fun AppDestinationTopLevelRoutes(
                 readClipboardText = sources.externalSourcesState.readClipboardText,
                 copyText = sources.externalSourcesState.copyText,
             )
-            AppDestination.SETTINGS -> SettingsDestinationRoute(
+            AppDestination.SETTINGS -> SettingsScreen(
                 profileData = profile.state.data,
                 languageMode = platform.dataContext.languageMode,
                 onLanguageModeChange = settings.actions.onLanguageModeChange,
@@ -157,7 +163,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onThemeChange = settings.actions.onThemeChange,
                 themeMode = settings.state.themeMode,
                 onThemeModeChange = settings.actions.onThemeModeChange,
-                appVersionName = settings.state.appVersionName,
+                versionName = settings.state.appVersionName,
                 useSystemColorScheme = settings.state.useSystemColorScheme,
                 useAmoledTheme = settings.state.useAmoledTheme,
                 autoSkipSegments = settings.state.autoSkipSegments,
@@ -166,8 +172,8 @@ internal fun AppDestinationTopLevelRoutes(
                 onAutoSkipChange = settings.actions.onAutoSkipChange,
                 onConfigureNotifications = settings.actions.onConfigureNotifications,
                 notificationPermissionState = settings.state.notificationPermissionState,
-                showSettingsBackButton = settings.state.showBackButton,
-                onSettingsBack = navigation.actions.onSettingsBack,
+                showBackButton = settings.state.showBackButton,
+                onBackClick = navigation.actions.onSettingsBack,
                 onGitHubClick = platform.hostContext.onGitHubClick,
                 discordEnabled = settings.state.discordEnabled,
                 discordAvailable = settings.state.discordAvailable,
@@ -176,7 +182,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onCheckForUpdates = settings.actions.onCheckForUpdates,
                 onExportLogs = settings.actions.onExportLogs,
                 notificationsAvailable = settings.state.notificationsAvailable,
-                settingsListState = settings.listsState.settings,
+                listState = settings.listsState.settings,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
         }
