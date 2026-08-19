@@ -41,7 +41,9 @@ import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
 import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.player.AndroidCommonPlaybackHost
 import org.akkirrai.hibiki.player.AndroidPlayerWindowController
+import org.akkirrai.hibiki.player.AndroidPlayerWindowMode
 import org.akkirrai.hibiki.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.details.data.AndroidOfflineTitleMetadataRepository
 import org.akkirrai.hibiki.app.settings.AndroidDiscordRpcController
@@ -362,13 +364,23 @@ internal fun AndroidSharedAppShell(
                 },
                 onPlaybackSelectionChanged = watchStateRepository::savePlaybackSelection,
                 loadPlaybackSelection = watchStateRepository::loadPlaybackSelectionOrNull,
-                playbackHost = androidSharedAppPlaybackHost(
-                    progressRepository = watchStateRepository,
-                    resumeFrameRepository = resumeFrameRepository,
-                    windowController = playerWindowController,
-                ),
+                playbackHost = { playback, playbackContext, navigationState, playbackLoading, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
+                    AndroidCommonPlaybackHost(
+                        playback = playback,
+                        context = playbackContext,
+                        navigationState = navigationState,
+                        playbackLoading = playbackLoading,
+                        progressRepository = watchStateRepository,
+                        resumeFrameRepository = resumeFrameRepository,
+                        windowController = playerWindowController,
+                        onBack = onBack,
+                        onEpisodeSelected = onEpisodeSelected,
+                        onSettingsAction = onSettingsAction,
+                        onOverlayEvent = onOverlayEvent,
+                    )
+                },
                 playerWindowMode = { active ->
-                    AndroidSharedAppPlayerWindowMode(
+                    AndroidPlayerWindowMode(
                         active = active,
                         controller = playerWindowController,
                         activity = activity,
