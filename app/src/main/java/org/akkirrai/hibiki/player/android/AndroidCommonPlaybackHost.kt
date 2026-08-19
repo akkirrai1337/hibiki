@@ -50,6 +50,7 @@ import org.akkirrai.hibiki.player.AppPlayerOverlayStack
 import org.akkirrai.hibiki.player.AppPlaybackControls
 import org.akkirrai.hibiki.player.AppPlayerSettingsContent
 import org.akkirrai.hibiki.player.AppPlayerPanelOverlays
+import org.akkirrai.hibiki.player.AppPlayerCenterControls
 import org.akkirrai.hibiki.player.AppPlayerChrome
 import org.akkirrai.hibiki.player.AppPlayerPlaylistButton
 import org.akkirrai.hibiki.player.AppPlayerTopOverlay
@@ -141,6 +142,7 @@ internal fun AndroidCommonPlaybackHost(
         AndroidPlaybackLoadingChrome(
             context = context,
             navigationState = navigationState,
+            playbackLoading = playbackLoading,
             preferences = preferences,
             preferencesState = preferencesState,
             onBack = onBack,
@@ -662,6 +664,7 @@ internal fun AndroidCommonPlaybackHost(
 private fun AndroidPlaybackLoadingChrome(
     context: PlaybackContext,
     navigationState: AppNavigationState,
+    playbackLoading: Boolean,
     preferences: AppPreferences,
     preferencesState: AppPreferencesState,
     onBack: () -> Unit,
@@ -680,6 +683,16 @@ private fun AndroidPlaybackLoadingChrome(
             .fillMaxSize()
             .background(androidx.compose.ui.graphics.Color.Black),
     ) {
+        AppPlayerCenterControls(
+            visible = playbackLoading,
+            hasPreviousEpisode = false,
+            hasNextEpisode = false,
+            isLoading = true,
+            onTogglePlay = {},
+            onPreviousEpisode = {},
+            onNextEpisode = {},
+            modifier = Modifier.align(Alignment.Center),
+        )
         AppPlayerTopOverlay(
             title = title,
             subtitle = appText(AppTextKey.PlayerEpisodeNumber).replace(

@@ -35,9 +35,21 @@ fun AppPlayerTimeline(
     modifier: Modifier = Modifier,
 ) {
     var trackWidthPx by remember { mutableFloatStateOf(1f) }
+    // Duration is unknown (0) for a moment right after an episode starts loading, while a
+    // restored resume position can already be non-zero -- dividing by a coerced-to-1 duration
+    // would spike the fraction to 1.0 and flash the bar as fully played until the real duration
+    // arrives. Keep the bar empty until there's an actual duration to measure against.
     val safeDuration = durationMs.coerceAtLeast(1L)
-    val playedFraction = (sliderPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
-    val bufferedFraction = (bufferedPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+    val playedFraction = if (durationMs > 0) {
+        (sliderPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val bufferedFraction = if (durationMs > 0) {
+        (bufferedPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
     val playedColor = Color(0xFFE53935)
     val bufferedColor = playedColor.copy(alpha = 0.34f)
     val trackColor = Color.White.copy(alpha = 0.18f)
