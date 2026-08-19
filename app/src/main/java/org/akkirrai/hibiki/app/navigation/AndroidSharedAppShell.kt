@@ -40,7 +40,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
-import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.shared.settings.AndroidAppSettingsStore
 import org.akkirrai.hibiki.shared.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.shared.player.AndroidEpisodeDownloadRepository
 import org.akkirrai.hibiki.shared.details.data.AndroidOfflineTitleMetadataRepository

@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
 
 fun AnimatedContentTransitionScope<PlayerSettingsDestination>.playerSettingsPageTransition(): ContentTransform {
     val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1

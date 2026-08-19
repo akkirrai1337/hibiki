@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.runtime.Composable
 import org.akkirrai.hibiki.shared.design.component.navigation.AppBackButton
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
 import org.akkirrai.hibiki.shared.player.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.shared.player.model.WatchSource
 import org.akkirrai.hibiki.shared.text.AppTextKey

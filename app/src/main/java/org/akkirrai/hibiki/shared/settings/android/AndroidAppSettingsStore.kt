@@ -1,11 +1,8 @@
-package org.akkirrai.hibiki.core.settings
+package org.akkirrai.hibiki.shared.settings
 
 import android.content.Context
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.hibiki.app.settings.ThemeMode
-import org.akkirrai.hibiki.shared.settings.AppSettingsState
-import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 
 /** Android adapter for the shared settings contract backed by existing preferences. */
 class AndroidAppSettingsStore(

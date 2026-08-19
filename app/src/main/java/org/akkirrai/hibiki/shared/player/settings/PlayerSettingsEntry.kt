@@ -6,6 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
 
 data class PlayerSettingsEntry(
     val id: String,

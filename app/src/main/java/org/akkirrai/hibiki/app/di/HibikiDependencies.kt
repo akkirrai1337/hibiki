@@ -2,12 +2,12 @@ package org.akkirrai.hibiki.app.di
 
 import android.content.Context
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
-import org.akkirrai.hibiki.core.profile.LocalProfileRepository
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.shared.profile.LocalProfileRepository
+import org.akkirrai.hibiki.shared.settings.AndroidAppSettingsStore
 
 class HibikiDependencies(
     context: Context,

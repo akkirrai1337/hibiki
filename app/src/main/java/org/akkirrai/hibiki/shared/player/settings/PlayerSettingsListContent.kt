@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.shared.player
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
 
 fun LazyListScope.appPlayerSettingsItems(
     destination: PlayerSettingsDestination,

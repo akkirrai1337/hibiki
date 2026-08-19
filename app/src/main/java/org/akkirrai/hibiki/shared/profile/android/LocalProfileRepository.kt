@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.profile
+package org.akkirrai.hibiki.shared.profile
 
 import android.content.Context
 import android.content.Intent
@@ -6,9 +6,6 @@ import android.net.Uri
 import org.akkirrai.hibiki.core.source.LibraryEntry
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.shared.profile.LocalLibraryItem
-import org.akkirrai.hibiki.shared.profile.LocalProfileData
-import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
 
 /** Source-independent data owned by Hibiki and used by the local profile. */
 class LocalProfileRepository(

@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.shared.player
 
+import org.akkirrai.hibiki.shared.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
+
 fun PlayerSettingsDestination.localizationKey(): String = when (this) {
     PlayerSettingsDestination.Root -> "watch_player_settings_root"
     PlayerSettingsDestination.Speed -> "watch_player_settings_speed"
