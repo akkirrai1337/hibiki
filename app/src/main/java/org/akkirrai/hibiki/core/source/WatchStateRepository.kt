@@ -1,17 +1,17 @@
 package org.akkirrai.hibiki.core.source
 
-import org.akkirrai.hibiki.shared.player.watchTitleIdFromSourceId
-import org.akkirrai.hibiki.shared.profile.LocalWatchStateRepository
-import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
+import org.akkirrai.hibiki.player.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.profile.LocalWatchStateRepository
+import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 
 import android.content.Context
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress
-import org.akkirrai.hibiki.shared.player.model.TitleWatchState
-import org.akkirrai.hibiki.shared.player.model.WatchSourceSelection
-import org.akkirrai.hibiki.shared.profile.DailyWatchActivity
+import org.akkirrai.hibiki.player.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.player.model.TitleWatchState
+import org.akkirrai.hibiki.player.model.WatchSourceSelection
+import org.akkirrai.hibiki.profile.DailyWatchActivity
 
 private const val PROGRESS_PREFIX = "progress_"
 private const val EPISODE_KEY_SEPARATOR = "|episode|"
@@ -219,8 +219,8 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
     }
 
     override fun saveEpisodeProgress(
-        context: org.akkirrai.hibiki.shared.player.model.PlaybackContext,
-        playback: org.akkirrai.hibiki.shared.player.model.PlaybackStream,
+        context: org.akkirrai.hibiki.player.model.PlaybackContext,
+        playback: org.akkirrai.hibiki.player.model.PlaybackStream,
         positionMs: Long,
         durationMs: Long,
     ) {
@@ -240,9 +240,9 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
     override fun getPlaybackProgress(
         titleId: String,
         episodeId: String,
-    ): org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress? =
+    ): org.akkirrai.hibiki.player.model.EpisodeWatchProgress? =
         getEpisodeProgress(titleId, episodeId)?.let { progress ->
-            org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress(
+            org.akkirrai.hibiki.player.model.EpisodeWatchProgress(
                 titleId = progress.titleId,
                 episodeId = progress.episodeId,
                 episodeNumber = progress.episodeNumber,
@@ -256,7 +256,7 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
             )
         }
 
-    override fun getAllPlaybackProgress(): List<org.akkirrai.hibiki.shared.player.model.EpisodeWatchProgress> =
+    override fun getAllPlaybackProgress(): List<org.akkirrai.hibiki.player.model.EpisodeWatchProgress> =
         getAllEpisodeProgress()
 
     private fun parseProgress(

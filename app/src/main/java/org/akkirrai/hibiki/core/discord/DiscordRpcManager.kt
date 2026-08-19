@@ -27,7 +27,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.account.DiscordTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
+import org.akkirrai.hibiki.app.settings.DiscordRpcConnectionStatus
 
 data class DiscordRpcState(
     val status: DiscordRpcConnectionStatus = DiscordRpcConnectionStatus.Disabled,

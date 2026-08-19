@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.api.SourceConfigState
 import org.akkirrai.beakokit.api.SourceConfigStateException
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.shared.source.AndroidSourceConfigStore
+import org.akkirrai.hibiki.core.source.AndroidSourceConfigStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows

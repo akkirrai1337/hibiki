@@ -1,14 +1,14 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
-import org.akkirrai.hibiki.shared.catalog.model.Anime
-import org.akkirrai.hibiki.shared.catalog.model.AnimeRating
-import org.akkirrai.hibiki.shared.catalog.model.AnimeTrailer
-import org.akkirrai.hibiki.shared.catalog.model.RelatedAnime
+import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.catalog.model.AnimeRating
+import org.akkirrai.hibiki.catalog.model.AnimeTrailer
+import org.akkirrai.hibiki.catalog.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
-class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.LibraryRepository {
+class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryRepository {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getLibraryEntries(): List<LibraryEntry> {
@@ -474,5 +474,5 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.shared.library.L
     }
 }
 
-typealias LibraryEntry = org.akkirrai.hibiki.shared.library.LibraryEntry
-typealias LibraryCategory = org.akkirrai.hibiki.shared.library.LibraryCategory
+typealias LibraryEntry = org.akkirrai.hibiki.library.LibraryEntry
+typealias LibraryCategory = org.akkirrai.hibiki.library.LibraryCategory

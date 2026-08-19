@@ -17,9 +17,9 @@ import org.akkirrai.beakokit.api.SourceRepositoryEndpoint
 import org.akkirrai.beakokit.api.SourceRuntime
 import org.akkirrai.hibiki.core.source.extension.DiscoveredSourceExtension
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceDiscovery
-import org.akkirrai.hibiki.shared.source.ExternalSourcePackageStatus
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryActions
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryContent
+import org.akkirrai.hibiki.core.source.ExternalSourcePackageStatus
+import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryActions
+import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryContent
 import java.io.File
 import java.security.MessageDigest
 

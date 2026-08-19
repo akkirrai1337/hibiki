@@ -40,40 +40,40 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
-import org.akkirrai.hibiki.shared.settings.AndroidAppSettingsStore
-import org.akkirrai.hibiki.shared.player.AndroidPlayerWindowController
-import org.akkirrai.hibiki.shared.player.AndroidEpisodeDownloadRepository
-import org.akkirrai.hibiki.shared.details.data.AndroidOfflineTitleMetadataRepository
-import org.akkirrai.hibiki.shared.settings.AndroidDiscordRpcController
+import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.player.AndroidPlayerWindowController
+import org.akkirrai.hibiki.player.AndroidEpisodeDownloadRepository
+import org.akkirrai.hibiki.details.data.AndroidOfflineTitleMetadataRepository
+import org.akkirrai.hibiki.app.settings.AndroidDiscordRpcController
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.R
 import android.widget.Toast
 import coil3.compose.AsyncImage
-import org.akkirrai.hibiki.shared.app.screen.HibikiApp as SharedHibikiApp
-import org.akkirrai.hibiki.shared.layout.LocalAppLayoutEnvironment
-import org.akkirrai.hibiki.shared.source.AppSourceDescriptor
-import org.akkirrai.hibiki.shared.source.AppSourceConfigLabels
-import org.akkirrai.hibiki.shared.source.AppSourceConfigScreen
-import org.akkirrai.hibiki.shared.text.AppTextKey
-import org.akkirrai.hibiki.shared.text.appText
-import org.akkirrai.hibiki.shared.source.ExternalAnimeStatusLabels
-import org.akkirrai.hibiki.shared.source.ExternalSourceRepositoryController
-import org.akkirrai.hibiki.shared.source.mergeAppSourceDescriptors
-import org.akkirrai.hibiki.shared.source.toAppSourceDescriptors
+import org.akkirrai.hibiki.app.screen.HibikiApp as SharedHibikiApp
+import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.core.source.AppSourceDescriptor
+import org.akkirrai.hibiki.core.source.AppSourceConfigLabels
+import org.akkirrai.hibiki.core.source.AppSourceConfigScreen
+import org.akkirrai.hibiki.text.AppTextKey
+import org.akkirrai.hibiki.text.appText
+import org.akkirrai.hibiki.core.source.ExternalAnimeStatusLabels
+import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryController
+import org.akkirrai.hibiki.core.source.mergeAppSourceDescriptors
+import org.akkirrai.hibiki.core.source.toAppSourceDescriptors
 import org.akkirrai.beakokit.api.SourceConfigValueKind
 import org.akkirrai.beakokit.api.SourceConfigSchema
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.shared.catalog.ExternalSourceCatalogRepository
+import org.akkirrai.hibiki.catalog.ExternalSourceCatalogRepository
 import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
 import org.akkirrai.hibiki.core.source.extension.repository.ApkSourceRepositoryActions
 import org.akkirrai.hibiki.core.source.extension.repository.SourceExtensionInstaller
 import org.akkirrai.hibiki.core.source.extension.repository.SourceRepositoryClient
-import org.akkirrai.hibiki.shared.home.data.CatalogBackedHomeDataRepository
-import org.akkirrai.hibiki.shared.player.SharedAnimeWatchRepository
-import org.akkirrai.hibiki.shared.player.AppPlaybackPlatformCallbacks
-import org.akkirrai.hibiki.shared.app.screen.AppPlatformCallbacks
-import org.akkirrai.hibiki.shared.source.AppSourcePlatformCallbacks
+import org.akkirrai.hibiki.home.data.CatalogBackedHomeDataRepository
+import org.akkirrai.hibiki.player.SharedAnimeWatchRepository
+import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
+import org.akkirrai.hibiki.app.screen.AppPlatformCallbacks
+import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
 
 /** Android adapter for the shared shell, backed entirely by external sources. */
 @Composable

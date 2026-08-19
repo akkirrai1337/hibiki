@@ -1,0 +1,48 @@
+package org.akkirrai.hibiki.library
+import org.akkirrai.hibiki.library.presentation.*
+import org.akkirrai.hibiki.library.state.*
+import org.akkirrai.hibiki.library.ui.*
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import org.akkirrai.hibiki.catalog.model.Anime
+
+class LibraryPresenterTest {
+    @Test
+    fun keepsCurrentCategoryWhenEntriesChange() {
+        val presenter = LibraryPresenter()
+        val entry = LibraryEntry(
+            anime = Anime(id = "1", title = "Demo", subtitle = "", episodesLabel = "", status = ""),
+            category = LibraryCategory.Watching,
+        )
+
+        presenter.updateEntries(listOf(entry))
+
+        assertEquals(LibraryCategory.Watching, presenter.state.value.selectedCategory)
+        assertEquals(listOf(entry), presenter.state.value.visibleEntries)
+    }
+
+    @Test
+    fun fallsBackToFirstAvailableCategory() {
+        val presenter = LibraryPresenter(LibraryUiState(selectedCategory = LibraryCategory.Watching))
+        val entry = LibraryEntry(
+            anime = Anime(id = "1", title = "Saved title", subtitle = "", episodesLabel = "", status = ""),
+            category = LibraryCategory.Saved,
+        )
+
+        presenter.updateEntries(listOf(entry))
+
+        assertEquals(LibraryCategory.Saved, presenter.state.value.selectedCategory)
+    }
+
+    @Test
+    fun searchQueryCanBeClearedThroughCommonPresenter() {
+        val presenter = LibraryPresenter()
+
+        presenter.onSearchQueryChange("anime")
+        assertEquals("anime", presenter.state.value.searchQuery)
+
+        presenter.clearSearch()
+        assertEquals("", presenter.state.value.searchQuery)
+    }
+}

@@ -1,0 +1,25 @@
+package org.akkirrai.hibiki.player
+
+import org.akkirrai.hibiki.player.model.PlaybackSettingsOptions
+import org.akkirrai.hibiki.player.model.PlaybackStream
+import org.akkirrai.hibiki.player.model.WatchEpisode
+
+data class PlayerUiState(
+    val isLoading: Boolean = true,
+    val playback: PlaybackStream? = null,
+    val animeTitle: String = "",
+    val episodes: List<WatchEpisode> = emptyList(),
+    val currentSourceId: String = "",
+    val currentEpisodeId: String = "",
+    val currentEpisodeNumber: Double? = null,
+    val lastPlaybackRequest: PlaybackRequest? = null,
+    val pendingSeekMs: Long = 0L,
+    val errorMessage: String? = null,
+    val failedStreamUrls: Set<String> = emptySet(),
+    val recoveryAttempted: Boolean = false,
+    val isSettingsLoading: Boolean = false,
+    val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
+    val settingsOptionsKey: String? = null,
+    val selectedPlayerName: String? = null,
+    val selectedQualityLabel: String? = null,
+)

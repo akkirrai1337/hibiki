@@ -1,0 +1,21 @@
+package org.akkirrai.hibiki.app.screen
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.app.settings.DiscordRpcController
+
+/** Platform callbacks and availability flags used by shared settings/profile UI. */
+class AppPlatformCallbacks(
+    val resumeFrameContent: (@Composable (String, Modifier) -> Unit)? = null,
+    val discordRpcController: DiscordRpcController? = null,
+    val onRequestOnboardingNotificationPermission: () -> Unit = {},
+    val onConfigureNotifications: () -> Unit = {},
+    val notificationsAvailable: Boolean = true,
+    val onCheckForUpdates: () -> Unit = {},
+    val onExportLogs: () -> Unit = {},
+    val onOpenUrl: (String) -> Unit = {},
+    val onProfileAvatarEdit: (((String) -> Unit) -> Unit) = {},
+    val profileAvatarEditAvailable: Boolean = false,
+    val onGitHubClick: () -> Unit = {},
+    val onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
+)

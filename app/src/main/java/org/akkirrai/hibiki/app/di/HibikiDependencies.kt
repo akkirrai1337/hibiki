@@ -6,8 +6,8 @@ import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.shared.profile.LocalProfileRepository
-import org.akkirrai.hibiki.shared.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.profile.LocalProfileRepository
+import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
 
 class HibikiDependencies(
     context: Context,

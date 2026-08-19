@@ -10,9 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import org.akkirrai.hibiki.app.settings.ThemeMode
-import org.akkirrai.hibiki.shared.design.HibikiDarkColorScheme
-import org.akkirrai.hibiki.shared.design.HibikiLightColorScheme
-import org.akkirrai.hibiki.shared.design.HibikiTypography
+import org.akkirrai.hibiki.design.HibikiDarkColorScheme
+import org.akkirrai.hibiki.design.HibikiLightColorScheme
+import org.akkirrai.hibiki.design.HibikiTypography
 
 @Composable
 fun HibikiAndroidTheme(

@@ -1,0 +1,278 @@
+package org.akkirrai.hibiki.app.settings
+
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.painterResource
+import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.design.UiDimens
+import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
+
+data class AppSettingsScreenLabels(
+    val title: String,
+    val appearance: String,
+    val theme: String,
+    val themeSystem: String,
+    val themeLight: String,
+    val themeDark: String,
+    val systemColorScheme: String,
+    val amoled: String,
+    val preferences: String,
+    val language: String,
+    val languageSystem: String,
+    val languageRussian: String,
+    val languageEnglish: String,
+    val notifications: String,
+    val notificationsStatus: String,
+    val externalSources: String,
+    val externalSourcesSubtitle: String,
+    val player: String,
+    val autoSkip: String,
+    val experimental: String,
+    val discord: String,
+    val updates: String,
+    val checkUpdates: String,
+    val support: String,
+    val exportLogs: String,
+    val about: String,
+    val appName: String,
+    val versionName: String,
+)
+
+@Composable
+fun AppSettingsScreen(
+    languageMode: LanguageMode,
+    darkTheme: Boolean,
+    labels: AppSettingsScreenLabels,
+    useSystemColorScheme: Boolean,
+    useAmoledTheme: Boolean,
+    autoSkipSegments: Boolean,
+    themeMode: ThemeMode? = null,
+    discordAvailable: Boolean = true,
+    notificationsAvailable: Boolean = true,
+    discordEnabled: Boolean = false,
+    showUpdates: Boolean = true,
+    modifier: Modifier = Modifier,
+    bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
+    listState: LazyListState = rememberLazyListState(),
+    showBackButton: Boolean = false,
+    onBackClick: () -> Unit = {},
+    backContentDescription: String = "Back",
+    onLanguageModeChange: (LanguageMode) -> Unit,
+    onThemeChange: (Boolean) -> Unit,
+    onThemeModeChange: ((ThemeMode) -> Unit)? = null,
+    onSystemColorSchemeChange: (Boolean) -> Unit = {},
+    onAmoledChange: (Boolean) -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
+    onAutoSkipChange: (Boolean) -> Unit = {},
+    onDiscordClick: () -> Unit = {},
+    onDiscordChange: (Boolean) -> Unit = {},
+    onCheckForUpdates: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
+    onGitHubClick: () -> Unit = {},
+    externalSourcesCount: Int = 0,
+    onExternalSourcesClick: () -> Unit = {},
+) {
+    val layoutEnvironment = LocalAppLayoutEnvironment.current
+    val topSystemInset = if (layoutEnvironment.isProvided) {
+        layoutEnvironment.topSystemInset
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
+    Box(modifier = modifier.fillMaxSize()) {
+        AppSettingsContentList(
+            bottomContentPadding = bottomContentPadding,
+            state = listState,
+            topContentPadding = if (showBackButton) {
+                settingsContentTopPaddingWithBackButton(topSystemInset)
+            } else {
+                SettingsContentTopPadding
+            },
+            modifier = Modifier.fillMaxSize(),
+            content = {
+        if (!showBackButton) {
+            item(key = "settings-header") {
+                Text(
+                    text = labels.title,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        item(key = SettingsSection.Appearance.key) {
+            AppSettingsAppearanceSection(
+                sectionTitle = labels.appearance,
+                themeTitle = labels.theme,
+                themeOptions = themeModeOptions,
+                selectedTheme = themeMode ?: if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
+                themeLabel = { mode ->
+                    when (mode) {
+                        ThemeMode.SYSTEM -> labels.themeSystem
+                        ThemeMode.LIGHT -> labels.themeLight
+                        ThemeMode.DARK -> labels.themeDark
+                    }
+                },
+                onThemeSelected = { mode ->
+                    onThemeModeChange?.invoke(mode) ?: onThemeChange(mode == ThemeMode.DARK)
+                },
+                systemColorSchemeTitle = labels.systemColorScheme,
+                useSystemColorScheme = useSystemColorScheme,
+                onSystemColorSchemeChange = onSystemColorSchemeChange,
+                amoledTitle = labels.amoled,
+                useAmoledTheme = useAmoledTheme,
+                onAmoledChange = onAmoledChange,
+            )
+        }
+        item(key = SettingsSection.Preferences.key) {
+            AppSettingsPreferencesSection(
+                sectionTitle = labels.preferences,
+                languageTitle = labels.language,
+                languageOptions = languageModeOptions,
+                selectedLanguage = languageMode,
+                languageLabel = { mode ->
+                    when (mode) {
+                        LanguageMode.SYSTEM -> labels.languageSystem
+                        LanguageMode.RUSSIAN -> labels.languageRussian
+                        LanguageMode.ENGLISH -> labels.languageEnglish
+                    }
+                },
+                onLanguageSelected = onLanguageModeChange,
+                notificationsTitle = labels.notifications,
+                notificationsSubtitle = labels.notificationsStatus,
+                notificationsAvailable = notificationsAvailable,
+                onNotificationsClick = onNotificationsClick,
+                externalSourcesTitle = labels.externalSources,
+                externalSourcesSubtitle = labels.externalSourcesSubtitle,
+                externalSourcesCount = externalSourcesCount,
+                onExternalSourcesClick = onExternalSourcesClick,
+            )
+        }
+        item(key = SettingsSection.Player.key) {
+            AppSettingsPlayerSection(
+                sectionTitle = labels.player,
+                autoSkipTitle = labels.autoSkip,
+                autoSkipEnabled = autoSkipSegments,
+                onAutoSkipChange = onAutoSkipChange,
+            )
+        }
+        if (discordAvailable) {
+            item(key = SettingsSection.Experimental.key) {
+                AppSettingsExperimentalSection(
+                    sectionTitle = labels.experimental,
+                    discordIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(R.drawable.ic_discord),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    discordTitle = labels.discord,
+                    discordEnabled = discordEnabled,
+                    onDiscordClick = onDiscordClick,
+                    onDiscordChange = onDiscordChange,
+                )
+            }
+        }
+        if (showUpdates) {
+            item(key = SettingsSection.Updates.key) {
+                AppSettingsUpdatesSection(
+                    sectionTitle = labels.updates,
+                    checkForUpdatesTitle = labels.checkUpdates,
+                    onCheckForUpdates = onCheckForUpdates,
+                )
+            }
+        }
+        item(key = SettingsSection.Support.key) {
+            AppSettingsSupportSection(
+                sectionTitle = labels.support,
+                exportLogsTitle = labels.exportLogs,
+                onExportLogs = onExportLogs,
+            )
+        }
+        item(key = SettingsSection.About.key) {
+            AppSettingsSection(title = labels.about) {
+                AppSettingsAboutCard(
+                    appName = labels.appName,
+                    versionName = labels.versionName,
+                    appIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(R.drawable.hibiki_app_icon),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    githubIconContent = { iconModifier ->
+                        Image(
+                            painter = painterResource(R.drawable.ic_github),
+                            contentDescription = null,
+                            modifier = iconModifier,
+                        )
+                    },
+                    onGitHubClick = onGitHubClick,
+                )
+            }
+        }
+            },
+        )
+        if (showBackButton) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .height(topSystemInset + SettingsBackButtonTopPadding + SettingsBackButtonSize),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(start = UiDimens.ScreenPadding)
+                        .height(SettingsBackButtonSize),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = backContentDescription,
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    Text(
+                        text = labels.title,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = SettingsBackButtonContentGap),
+                    )
+                }
+            }
+        }
+    }
+}

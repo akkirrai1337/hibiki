@@ -1,8 +1,8 @@
 package org.akkirrai.hibiki.app.navigation
 
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
-import org.akkirrai.hibiki.shared.player.model.WatchSource
+import org.akkirrai.hibiki.player.model.PlaybackSelection
+import org.akkirrai.hibiki.player.model.WatchSource
 
 internal fun WatchStateRepository.savePlaybackSourceSelection(
     titleId: String,

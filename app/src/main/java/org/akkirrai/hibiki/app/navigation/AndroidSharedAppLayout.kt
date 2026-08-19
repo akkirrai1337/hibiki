@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Density
-import org.akkirrai.hibiki.shared.layout.AppLayoutEnvironment
-import org.akkirrai.hibiki.shared.layout.AppNavigationBarMode
-import org.akkirrai.hibiki.shared.layout.AppScreenEdgePolicy
+import org.akkirrai.hibiki.layout.AppLayoutEnvironment
+import org.akkirrai.hibiki.layout.AppNavigationBarMode
+import org.akkirrai.hibiki.layout.AppScreenEdgePolicy
 
 @Composable
 internal fun androidSharedAppLayoutEnvironment(density: Density): AppLayoutEnvironment =

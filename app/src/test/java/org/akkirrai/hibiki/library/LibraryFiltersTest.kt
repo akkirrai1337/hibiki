@@ -1,0 +1,43 @@
+package org.akkirrai.hibiki.library
+import org.akkirrai.hibiki.library.presentation.*
+import org.akkirrai.hibiki.library.state.*
+import org.akkirrai.hibiki.library.ui.*
+
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import org.akkirrai.hibiki.catalog.model.Anime
+
+class LibraryFiltersTest {
+    @Test
+    fun filtersMatchCategoryEntryMetadata() {
+        val entry = LibraryEntry(
+            anime = Anime(
+                id = "1",
+                title = "Demo",
+                subtitle = "TV | 2024",
+                episodesLabel = "12",
+                status = "Ongoing",
+                genres = listOf("Action", "Drama"),
+            ),
+            category = LibraryCategory.Watching,
+        )
+
+        assertTrue(LibrarySearchFilters(type = "TV", status = "ongoing", includedGenres = setOf("Action")).matches(entry))
+        assertFalse(LibrarySearchFilters(type = "Movie").matches(entry))
+        assertTrue(entry.anime.extractLibraryType() == "TV")
+    }
+
+    @Test
+    fun extractsTypeFromAndroidStyleMiddleDotSubtitle() {
+        val anime = Anime(
+            id = "2",
+            title = "Demo",
+            subtitle = "TV · 2024",
+            episodesLabel = "12",
+            status = "Ongoing",
+        )
+
+        assertTrue(anime.extractLibraryType() == "TV")
+    }
+}

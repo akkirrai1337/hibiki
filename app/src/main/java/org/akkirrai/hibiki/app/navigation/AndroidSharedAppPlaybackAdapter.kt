@@ -3,11 +3,11 @@ package org.akkirrai.hibiki.app.navigation
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
-import org.akkirrai.hibiki.shared.player.AndroidCommonPlaybackHost
-import org.akkirrai.hibiki.shared.player.AndroidPlayerWindowController
-import org.akkirrai.hibiki.shared.player.AndroidPlayerWindowMode
-import org.akkirrai.hibiki.shared.player.AppPlaybackHost
-import org.akkirrai.hibiki.shared.profile.PlaybackProgressRepository
+import org.akkirrai.hibiki.player.AndroidCommonPlaybackHost
+import org.akkirrai.hibiki.player.AndroidPlayerWindowController
+import org.akkirrai.hibiki.player.AndroidPlayerWindowMode
+import org.akkirrai.hibiki.player.AppPlaybackHost
+import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 
 internal fun androidSharedAppPlaybackHost(
     progressRepository: PlaybackProgressRepository,

@@ -9,13 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.shared.player.VideoScaleMode
-typealias LanguageMode = org.akkirrai.hibiki.shared.settings.LanguageMode
-
-typealias ThemeMode = org.akkirrai.hibiki.shared.settings.ThemeMode
-
-
-typealias NotificationPermissionState = org.akkirrai.hibiki.shared.settings.NotificationPermissionState
+import org.akkirrai.hibiki.player.VideoScaleMode
 
 data class AppPreferencesState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,

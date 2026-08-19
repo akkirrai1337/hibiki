@@ -1,10 +1,10 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
-import org.akkirrai.hibiki.shared.catalog.model.Anime
-import org.akkirrai.hibiki.shared.catalog.model.AnimeRating
-import org.akkirrai.hibiki.shared.catalog.model.AnimeTrailer
-import org.akkirrai.hibiki.shared.catalog.model.RelatedAnime
+import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.catalog.model.AnimeRating
+import org.akkirrai.hibiki.catalog.model.AnimeTrailer
+import org.akkirrai.hibiki.catalog.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
