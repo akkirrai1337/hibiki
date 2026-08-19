@@ -47,117 +47,6 @@ import org.akkirrai.hibiki.shared.design.UiDimens
 import org.akkirrai.hibiki.shared.catalog.model.Anime
 import org.akkirrai.hibiki.shared.text.preventTrailingOrphanWrap
 
-@Composable
-fun AppVerticalAnimeListItem(
-    anime: Anime,
-    metaText: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    posterWidth: Dp = 104.dp,
-    descriptionMaxLines: Int = 5,
-    trailingContent: (@Composable () -> Unit)? = null,
-    metaContent: (@Composable () -> Unit)? = null,
-    supportingContent: (@Composable () -> Unit)? = null,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    posterContent: @Composable BoxScope.() -> Unit,
-    posterFooterContent: (@Composable () -> Unit)? = null,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Box(
-            modifier = Modifier
-                .width(posterWidth)
-                .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-        ) {
-            posterContent()
-            posterFooterContent?.let { content ->
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0f to Color.Transparent,
-                                    0.48f to Color.Black.copy(alpha = 0.04f),
-                                    0.76f to Color.Black.copy(alpha = 0.32f),
-                                    1f to Color.Black.copy(alpha = 0.68f),
-                                ),
-                            ),
-                        )
-                        .padding(horizontal = 8.dp, vertical = 7.dp),
-                    contentAlignment = Alignment.BottomStart,
-                ) {
-                    content()
-                }
-            }
-        }
-
-        var titleLineCount by remember(anime.id, anime.title) { mutableIntStateOf(1) }
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = anime.title.preventTrailingOrphanWrap(),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { layout ->
-                        if (titleLineCount != layout.lineCount) titleLineCount = layout.lineCount
-                    },
-                )
-                trailingContent?.let {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    it()
-                }
-            }
-
-            if (metaContent != null) {
-                metaContent()
-            } else if (metaText.isNotBlank()) {
-                Text(
-                    text = metaText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            anime.description?.takeIf(String::isNotBlank)?.let { description ->
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = descriptionMaxLines.coerceAtMost(
-                        (3 + (3 - titleLineCount).coerceAtLeast(0)).coerceAtLeast(1),
-                    ),
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            supportingContent?.invoke()
-        }
-    }
-}
-
 fun LazyListScope.appVerticalAnimeListContent(
     items: List<Anime>,
     metaText: @Composable (Anime) -> String,
@@ -168,20 +57,7 @@ fun LazyListScope.appVerticalAnimeListContent(
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
 ) {
-    if (FORCE_POSTER_CARD_STYLE) {
-        appPosterAnimeListContent(
-            items = items,
-            metaText = metaText,
-            onAnimeClick = onAnimeClick,
-            modifier = modifier,
-            posterContent = posterContent,
-            posterFooterContent = posterFooterContent,
-            onItemVisible = onItemVisible,
-        )
-        return
-    }
-
-    appLegacyVerticalAnimeListContent(
+    appPosterAnimeListContent(
         items = items,
         metaText = metaText,
         onAnimeClick = onAnimeClick,
@@ -190,30 +66,6 @@ fun LazyListScope.appVerticalAnimeListContent(
         posterFooterContent = posterFooterContent,
         onItemVisible = onItemVisible,
     )
-}
-
-private fun LazyListScope.appLegacyVerticalAnimeListContent(
-    items: List<Anime>,
-    metaText: @Composable (Anime) -> String,
-    onAnimeClick: (Anime) -> Unit,
-    modifier: Modifier = Modifier,
-    posterContent: @Composable BoxScope.(Anime) -> Unit,
-    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
-    onItemVisible: ((Anime) -> Unit)? = null,
-) {
-    items(items, key = Anime::id) { anime ->
-        LaunchedEffect(anime.id) {
-            onItemVisible?.invoke(anime)
-        }
-        AppVerticalAnimeListItem(
-            anime = anime,
-            metaText = metaText(anime),
-            onClick = { onAnimeClick(anime) },
-            modifier = modifier.fillMaxWidth(),
-            posterContent = { posterContent(anime) },
-            posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
-        )
-    }
 }
 
 fun LazyListScope.appPosterAnimeListContent(
@@ -409,5 +261,3 @@ private fun wrapTitleAtWords(
 
     return "$firstLine\n$secondLine"
 }
-
-private const val FORCE_POSTER_CARD_STYLE = true

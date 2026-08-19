@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 
 object AppEdgeScrimDefaults {
     val TopHeight: Dp = 88.dp
-    val BottomHeight: Dp = 124.dp
 
     @Composable
     fun topBrush(): Brush {
@@ -24,24 +23,9 @@ object AppEdgeScrimDefaults {
             1f to surface.copy(alpha = 0f),
         ))
     }
-
-    @Composable
-    fun bottomBrush(): Brush {
-        val surface = MaterialTheme.colorScheme.surface
-        return Brush.verticalGradient(colorStops = arrayOf(
-            0f to surface.copy(alpha = 0f),
-            0.52f to surface.copy(alpha = 0.34f),
-            1f to surface.copy(alpha = 0.78f),
-        ))
-    }
 }
 
 @Composable
 fun AppTopScrim(modifier: Modifier = Modifier, height: Dp = AppEdgeScrimDefaults.TopHeight, brush: Brush = AppEdgeScrimDefaults.topBrush()) {
-    Box(modifier.fillMaxWidth().height(height).background(brush))
-}
-
-@Composable
-fun AppBottomScrim(modifier: Modifier = Modifier, height: Dp = AppEdgeScrimDefaults.BottomHeight, brush: Brush = AppEdgeScrimDefaults.bottomBrush()) {
     Box(modifier.fillMaxWidth().height(height).background(brush))
 }

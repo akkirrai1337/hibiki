@@ -7,8 +7,6 @@ import org.akkirrai.hibiki.shared.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.shared.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.hibiki.shared.library.LibraryRepository
 import org.akkirrai.hibiki.shared.profile.LocalProfileDataRepository
-import org.akkirrai.hibiki.shared.demo.DemoLocalProfileDataRepository
-import org.akkirrai.hibiki.shared.demo.DemoLibraryRepository
 import org.akkirrai.hibiki.shared.app.shell.HibikiAppShell
 import org.akkirrai.hibiki.shared.settings.AppSettingsStore
 import org.akkirrai.hibiki.shared.settings.InMemoryAppSettingsStore
@@ -30,8 +28,8 @@ fun HibikiApp(
     modifier: Modifier = Modifier,
     repository: AnimeCatalogRepository = EmptyAnimeCatalogRepository,
     homeRepository: HomeDataRepository? = null,
-    libraryRepository: LibraryRepository = DemoLibraryRepository,
-    profileRepository: LocalProfileDataRepository = DemoLocalProfileDataRepository,
+    libraryRepository: LibraryRepository,
+    profileRepository: LocalProfileDataRepository,
     settingsStore: AppSettingsStore = InMemoryAppSettingsStore(),
     progressRepository: PlaybackProgressRepository? = null,
     episodeDownloadRepository: EpisodeDownloadRepository? = null,
