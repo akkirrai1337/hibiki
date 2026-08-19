@@ -16,13 +16,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.watch.isWatchRouteDriven
-import org.akkirrai.hibiki.app.shell.layout.appScreenTransition
 import org.akkirrai.hibiki.design.component.navigation.AppBottomBarContentExtraPadding
 import org.akkirrai.hibiki.design.component.navigation.AppBottomBarHeight
 import org.akkirrai.hibiki.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
-import org.akkirrai.hibiki.app.navigation.AppTransitionDirection
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.LocalAppSourceConfigContent
 @Composable
@@ -73,9 +71,11 @@ internal fun AppDestinationContent(
     }
 
     if (showBaseRoutes) {
+        // No animation of its own -- same reasoning as details_route_transition below: the
+        // outer root transition already fades every entry/exit of Settings.
         AnimatedContent(
             targetState = selectedTab == AppDestination.SETTINGS,
-            transitionSpec = { appScreenTransition(AppTransitionDirection.Forward) },
+            transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
             label = "settings_route_transition",
             modifier = Modifier.fillMaxSize(),
         ) { settingsVisible ->
