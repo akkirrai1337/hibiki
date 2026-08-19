@@ -49,7 +49,8 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.R
 import android.widget.Toast
 import coil3.compose.AsyncImage
-import org.akkirrai.hibiki.app.screen.HibikiApp as SharedHibikiApp
+import org.akkirrai.hibiki.app.shell.HibikiAppShell
+import org.akkirrai.hibiki.core.source.LocalAppSourceConfigContent
 import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceConfigLabels
@@ -254,7 +255,64 @@ internal fun AndroidSharedAppShell(
         }
     }
     CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
-        SharedHibikiApp(
+        val sourceCallbacks = AppSourcePlatformCallbacks(
+            externalSourceRepositoryController = externalRepositoryController,
+            sources = sources,
+            sourceConfigContent = { source, onSaved, onCancel ->
+                val sourceId = SourceId(source.id)
+                val draft = externalSourceConfigStore.loadDraft(sourceId)
+                AppSourceConfigScreen(
+                    schema = source.configSchema,
+                    initialValues = draft.values,
+                    initialSecrets = draft.secrets,
+                    labels = AppSourceConfigLabels(
+                        fieldLabel = { field -> field.titleKey },
+                        saveLabel = appText(AppTextKey.Apply),
+                        cancelLabel = appText(AppTextKey.Cancel),
+                    ),
+                    onSave = { values, secrets ->
+                        source.configSchema.fields.forEach { field ->
+                            if (field.kind == SourceConfigValueKind.SECRET) {
+                                secrets[field.key]?.let { value ->
+                                    if (value.isBlank()) {
+                                        externalSourceConfigStore.clearSecret(sourceId, field.key)
+                                    } else {
+                                        externalSourceConfigStore.saveSecret(sourceId, field.key, value)
+                                    }
+                                }
+                            } else {
+                                values[field.key]?.let { value ->
+                                    val normalizedValue = value.trim()
+                                    if (normalizedValue.isEmpty()) {
+                                        externalSourceConfigStore.clearValue(sourceId, field.key)
+                                    } else {
+                                        externalSourceConfigStore.saveValue(sourceId, field.key, normalizedValue)
+                                    }
+                                }
+                            }
+                        }
+                        externalWatchRepository?.invalidateSource(sourceId)
+                        onSaved()
+                    },
+                    onCancel = onCancel,
+                )
+            },
+            selectedSourceId = preferences.animeSource.value,
+            onSourceSelected = { sourceId ->
+                appPreferences.setAnimeSource(SourceId(sourceId))
+                settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
+            },
+            readClipboardText = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+            },
+            copyText = { text ->
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Hibiki source repository", text))
+            },
+        )
+        CompositionLocalProvider(LocalAppSourceConfigContent provides sourceCallbacks.sourceConfigContent) {
+        HibikiAppShell(
             modifier = modifier,
             repository = catalogRepository,
             homeRepository = homeRepository,
@@ -296,62 +354,7 @@ internal fun AndroidSharedAppShell(
                 onOpenUrl = uriHandler::openUri,
                 onDiscordBrowserSignIn = activityLaunchers.signInWithDiscord,
             ),
-            sourceCallbacks = AppSourcePlatformCallbacks(
-                externalSourceRepositoryController = externalRepositoryController,
-                sources = sources,
-                sourceConfigContent = { source, onSaved, onCancel ->
-                val sourceId = SourceId(source.id)
-                val draft = externalSourceConfigStore.loadDraft(sourceId)
-                AppSourceConfigScreen(
-                    schema = source.configSchema,
-                    initialValues = draft.values,
-                    initialSecrets = draft.secrets,
-                    labels = AppSourceConfigLabels(
-                        fieldLabel = { field -> field.titleKey },
-                        saveLabel = appText(AppTextKey.Apply),
-                        cancelLabel = appText(AppTextKey.Cancel),
-                    ),
-                    onSave = { values, secrets ->
-                        source.configSchema.fields.forEach { field ->
-                            if (field.kind == SourceConfigValueKind.SECRET) {
-                                secrets[field.key]?.let { value ->
-                                    if (value.isBlank()) {
-                                        externalSourceConfigStore.clearSecret(sourceId, field.key)
-                                    } else {
-                                        externalSourceConfigStore.saveSecret(sourceId, field.key, value)
-                                    }
-                                }
-                            } else {
-                                values[field.key]?.let { value ->
-                                    val normalizedValue = value.trim()
-                                    if (normalizedValue.isEmpty()) {
-                                        externalSourceConfigStore.clearValue(sourceId, field.key)
-                                    } else {
-                                        externalSourceConfigStore.saveValue(sourceId, field.key, normalizedValue)
-                                    }
-                                }
-                            }
-                        }
-                        externalWatchRepository?.invalidateSource(sourceId)
-                        onSaved()
-                    },
-                    onCancel = onCancel,
-                )
-                },
-                selectedSourceId = preferences.animeSource.value,
-                onSourceSelected = { sourceId ->
-                    appPreferences.setAnimeSource(SourceId(sourceId))
-                    settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
-                },
-                readClipboardText = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                },
-                copyText = { text ->
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Hibiki source repository", text))
-                },
-            ),
+            sourceCallbacks = sourceCallbacks,
             watchRepository = externalWatchRepository,
             playbackCallbacks = AppPlaybackPlatformCallbacks(
                 onWatchSourceSelected = { titleId, source ->
@@ -374,5 +377,6 @@ internal fun AndroidSharedAppShell(
                 onExitPlayback = playerWindowController::persist,
             ),
         )
+        }
     }
 }
