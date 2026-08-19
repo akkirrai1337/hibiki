@@ -47,7 +47,9 @@ class CatalogBackedHomeDataRepository(
             ).items
         }.getOrDefault(emptyList())
         return HomeUiState(
-            recentlyWatched = recentlyWatched,
+            // Drop the first entry -- it's already spotlighted as continueAnime below, so
+            // repeating it in the "recently watched" row would show the same title twice.
+            recentlyWatched = recentlyWatched.drop(1),
             continueAnime = recentlyWatched.firstOrNull(),
             // Watching is a system bookkeeping category (auto-assigned the moment playback
             // starts, not a deliberate user action), so it shouldn't count as "recently added".
