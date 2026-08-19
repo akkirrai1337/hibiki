@@ -6,7 +6,6 @@ import org.akkirrai.hibiki.shared.player.model.PlaybackSegmentType
 import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
 import org.akkirrai.hibiki.shared.player.model.TitleWatchState
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
-import org.akkirrai.hibiki.shared.player.model.WatchSource
 
 /** Shows the platform playback surface only while the common shell is on Player. */
 fun shouldShowPlaybackHost(
@@ -38,12 +37,6 @@ fun watchNavigationLockKey(
     sourceId == null -> "sources:$animeId"
     else -> "episodes:$animeId:$sourceId"
 }
-
-fun filterProgressForSource(progressItems: List<EpisodeWatchProgress>, selectedSource: WatchSource?): List<EpisodeWatchProgress> =
-    selectedSource?.let { source -> progressItems.filter { it.sourceId == source.sourceId } } ?: progressItems
-
-fun resolveSourceProgress(fallback: TitleWatchState?, progressItems: List<EpisodeWatchProgress>): TitleWatchState? =
-    progressItems.maxByOrNull(EpisodeWatchProgress::updatedAt) ?: fallback
 
 fun resolveResumeWatchState(progressItems: List<EpisodeWatchProgress>): TitleWatchState? =
     progressItems

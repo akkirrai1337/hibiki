@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.shared.player
 
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.hibiki.shared.player.model.PlaybackSelection
-import org.akkirrai.hibiki.shared.player.model.WatchSource
-import org.akkirrai.hibiki.shared.player.model.WatchSourceSelection
 
 fun selectPlaybackLinks(
     links: List<PlayerLink>,
@@ -20,21 +18,6 @@ fun selectPlaybackLinks(
         preferredQuality = preferredQuality,
     ).map(supportedLinks::get)
 }
-
-fun resolveWatchSource(
-    sources: List<WatchSource>,
-    selection: WatchSourceSelection,
-): WatchSource? {
-    if (sources.isEmpty()) return null
-    return if (selection.autoSelect) {
-        sources.first()
-    } else {
-        sources.firstOrNull { it.sourceId == selection.sourceId } ?: sources.first()
-    }
-}
-
-fun hasWatchSource(selectedSource: WatchSource?, selection: WatchSourceSelection): Boolean =
-    selectedSource != null || !selection.sourceTitle.isNullOrBlank()
 
 data class EffectivePlaybackPreferences(
     val playerName: String?,
@@ -96,17 +79,6 @@ fun prioritizePlayerSelection(
         if (matchesPreferredQuality(it.quality, preferredQuality)) 0 else 1
     }.thenBy { playerPriority(it.playerName) }
 ).map(PlayerSelectionCandidate::index)
-
-fun resolvePlayerAttemptTimeoutMillis(
-    preferredPlayerName: String?,
-    candidatePlayerName: String?,
-    preferredTimeoutMs: Long,
-    automaticTimeoutMs: Long,
-): Long = if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
-    preferredTimeoutMs
-} else {
-    automaticTimeoutMs
-}
 
 private fun String?.containsPlayerToken(token: String): Boolean =
     normalizePlayerName().contains(token)

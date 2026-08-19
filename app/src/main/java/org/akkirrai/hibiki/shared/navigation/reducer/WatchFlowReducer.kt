@@ -2,10 +2,6 @@ package org.akkirrai.hibiki.shared.navigation
 
 import org.akkirrai.hibiki.shared.player.model.WatchSource
 
-/** Resume-from-Details has no watch-flow route to retain after Player is popped. */
-fun shouldKeepWatchAnimeAfterPlayerBack(route: AppRoute): Boolean =
-    route is AppRoute.WatchSources || route is AppRoute.Episodes
-
 /** Side effects required after the common watch-flow reducer handles Back. */
 enum class WatchFlowBackEffect {
     None,

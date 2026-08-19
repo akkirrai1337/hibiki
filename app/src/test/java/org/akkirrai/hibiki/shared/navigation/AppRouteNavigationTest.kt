@@ -25,7 +25,6 @@ class AppRouteNavigationTest {
             ),
             state.backStack,
         )
-        assertEquals(AppRoute.Player("source-1", "episode-1", 1.0), state.currentWatchRoute)
         assertEquals(source, state.selectedWatchSource)
         assertEquals(
             AppRoute.Player("source-1", "episode-1", 1.0).transitionKey(),
@@ -228,37 +227,6 @@ class AppRouteNavigationTest {
     }
 
     @Test
-    fun `transition spec keeps route keys and distinguishes push from pop`() {
-        val details = AppRoute.Details("anime-1")
-        val sources = AppRoute.WatchSources("anime-1")
-
-        val push = appTransitionSpec(details, sources, AppTransitionDirection.Forward)
-        val pop = appTransitionSpec(sources, details, AppTransitionDirection.Pop)
-
-        assertEquals(sources.transitionKey(), push.enterKey)
-        assertEquals(details.transitionKey(), push.exitKey)
-        assertEquals(AppTransitionDirection.Forward, push.direction)
-        assertEquals(AppTransitionDirection.Pop, pop.direction)
-        assertEquals(AppTransitionSpec.DefaultDurationMillis, pop.durationMillis)
-    }
-
-    @Test
-    fun `top level profile and library transitions use destination identities`() {
-        val details = AppRoute.Details("anime-1")
-        val profile = AppRoute.TopLevel(AppTopLevelDestination.PROFILE)
-        val library = AppRoute.TopLevel(AppTopLevelDestination.LIBRARY)
-
-        val profileSpec = appTransitionSpec(details, profile, AppTransitionDirection.Forward)
-        val libraryPopSpec = appTransitionSpec(profile, library, AppTransitionDirection.Pop)
-
-        assertEquals(AppTransitionKey("top-level", "profile"), profileSpec.enterKey)
-        assertEquals(details.transitionKey(), profileSpec.exitKey)
-        assertEquals(AppTransitionKey("top-level", "library"), libraryPopSpec.enterKey)
-        assertEquals(profile.transitionKey(), libraryPopSpec.exitKey)
-        assertEquals(AppTransitionDirection.Pop, libraryPopSpec.direction)
-    }
-
-    @Test
     fun `replacing player episode keeps stack depth and back target`() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
@@ -273,14 +241,6 @@ class AppRouteNavigationTest {
         assertEquals(state.backStack.size, replaced.backStack.size)
         assertEquals(AppRoute.Player("source-1", "episode-2", 2.0), replaced.currentRoute)
         assertEquals(AppRoute.Episodes(source), replaced.reduce(AppNavigationEvent.Back).currentRoute)
-        assertEquals(
-            AppRoute.Player("source-1", "episode-2").transitionKey(),
-            appTransitionSpec(
-                AppRoute.Player("source-1", "episode-1"),
-                replaced.currentRoute,
-                AppTransitionDirection.Forward,
-            ).enterKey,
-        )
     }
 
     @Test
@@ -306,13 +266,5 @@ class AppRouteNavigationTest {
         )
 
         assertEquals(AppRoute.Episodes(source), loaded.reduce(AppNavigationEvent.Back).currentRoute)
-    }
-
-    @Test
-    fun `player back keeps watch anime only inside watch flow`() {
-        assertTrue(shouldKeepWatchAnimeAfterPlayerBack(AppRoute.WatchSources("anime-1")))
-        assertTrue(shouldKeepWatchAnimeAfterPlayerBack(AppRoute.Episodes(source)))
-        assertTrue(!shouldKeepWatchAnimeAfterPlayerBack(AppRoute.Details("anime-1")))
-        assertTrue(!shouldKeepWatchAnimeAfterPlayerBack(AppRoute.TopLevel(AppTopLevelDestination.HOME)))
     }
 }

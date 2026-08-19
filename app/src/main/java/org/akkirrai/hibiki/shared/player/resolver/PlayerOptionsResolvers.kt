@@ -12,12 +12,6 @@ fun uniquePlayerNames(links: List<PlaybackLinkOption>): List<String> = links
     .mapNotNull { it.playerName }
     .distinct()
 
-fun VideoScaleMode.localizationKey(): String = when (this) {
-    VideoScaleMode.FIT -> "watch_player_video_scale_fit"
-    VideoScaleMode.CROP -> "watch_player_video_scale_crop"
-    VideoScaleMode.STRETCH -> "watch_player_video_scale_stretch"
-}
-
 fun VideoScaleMode.textKey(): AppTextKey = when (this) {
     VideoScaleMode.FIT -> AppTextKey.PlayerVideoScaleFit
     VideoScaleMode.CROP -> AppTextKey.PlayerVideoScaleCrop
@@ -43,9 +37,3 @@ fun resolveVideoScaleFactors(mode: VideoScaleMode, aspectRatioFactor: Float): Vi
 
 fun playerToggleValueLocalizationKey(enabled: Boolean): String =
     if (enabled) "watch_player_settings_on" else "watch_player_settings_off"
-
-fun pictureInPictureAudioModeLocalizationKey(isAudioOnly: Boolean): String =
-    if (isAudioOnly) "watch_player_show_video" else "watch_player_audio_only"
-
-fun pictureInPicturePlaybackLocalizationKey(isPlaying: Boolean): String =
-    if (isPlaying) "watch_player_pause" else "watch_player_play"

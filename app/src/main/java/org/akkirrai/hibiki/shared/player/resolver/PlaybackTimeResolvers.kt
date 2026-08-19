@@ -4,11 +4,6 @@ import kotlin.math.abs
 
 fun formatPlaybackSpeed(speed: Float): String = if (speed == 1f) "1x" else "${speed}x"
 
-fun resolvePlaybackDuration(
-    playerDurationMs: Long,
-    fallbackDurationMs: Long,
-): Long = playerDurationMs.takeIf { it > 0L } ?: fallbackDurationMs
-
 fun formatPlaybackPosition(positionMs: Long): String {
     val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
     val hours = totalSeconds / 3_600L
@@ -19,19 +14,6 @@ fun formatPlaybackPosition(positionMs: Long): String {
 }
 
 private fun twoDigit(value: Long): String = value.toString().padStart(2, '0')
-
-fun resolveCurrentPlaybackPosition(
-    playerPositionMs: Long,
-    trackedPositionMs: Long,
-    sliderPositionMs: Long,
-): Long {
-    val currentPlayerPositionMs = playerPositionMs.coerceAtLeast(0L)
-    return when {
-        currentPlayerPositionMs > 0L -> currentPlayerPositionMs
-        trackedPositionMs > 0L -> trackedPositionMs
-        else -> sliderPositionMs.coerceAtLeast(0L)
-    }
-}
 
 private const val PLAYBACK_END_WINDOW_MS = 30_000L
 private const val PLAYBACK_END_PERCENT = 5L

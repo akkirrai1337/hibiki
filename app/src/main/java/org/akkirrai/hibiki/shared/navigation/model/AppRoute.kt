@@ -73,13 +73,3 @@ data class AppTransitionSpec(
         const val DefaultDurationMillis = AppMotion.ScreenTransitionDurationMillis
     }
 }
-
-fun appTransitionSpec(
-    from: AppRoute?,
-    to: AppRoute,
-    direction: AppTransitionDirection,
-): AppTransitionSpec = AppTransitionSpec(
-    enterKey = to.transitionKey(),
-    exitKey = from?.transitionKey(),
-    direction = direction,
-)

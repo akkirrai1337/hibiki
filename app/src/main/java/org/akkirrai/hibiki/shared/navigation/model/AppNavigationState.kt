@@ -11,11 +11,6 @@ data class AppNavigationState(
 val AppNavigationState.currentRoute: AppRoute
     get() = backStack.lastOrNull() ?: AppRoute.TopLevel(currentTopLevel)
 
-val AppNavigationState.currentWatchRoute: AppRoute?
-    get() = currentRoute.takeIf {
-        it is AppRoute.WatchSources || it is AppRoute.Episodes || it is AppRoute.Player
-    }
-
 val AppNavigationState.activeOverlay: AppOverlay?
     get() = overlays.lastOrNull()
 
