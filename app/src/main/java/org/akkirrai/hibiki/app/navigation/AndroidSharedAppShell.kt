@@ -75,7 +75,7 @@ import org.akkirrai.hibiki.core.source.extension.repository.SourceRepositoryClie
 import org.akkirrai.hibiki.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.player.SharedAnimeWatchRepository
 import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
-import org.akkirrai.hibiki.app.screen.AppPlatformCallbacks
+import org.akkirrai.hibiki.app.shell.AppPlatformCallbacks
 import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
 
 /** Android adapter for the shared shell, backed entirely by external sources. */

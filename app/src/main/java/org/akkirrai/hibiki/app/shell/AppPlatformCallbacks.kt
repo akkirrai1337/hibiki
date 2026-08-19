@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.app.screen
+package org.akkirrai.hibiki.app.shell
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
