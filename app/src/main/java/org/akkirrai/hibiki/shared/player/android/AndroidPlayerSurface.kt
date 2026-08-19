@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import android.view.LayoutInflater
 import android.view.TextureView
@@ -13,9 +13,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.shared.player.VideoScaleMode
-import org.akkirrai.hibiki.shared.player.VideoScaleFactors
-import org.akkirrai.hibiki.shared.player.resolveVideoScaleFactors
 
 @Composable
 internal fun AndroidPlayerSurface(

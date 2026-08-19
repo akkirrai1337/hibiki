@@ -1,7 +1,6 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import androidx.media3.exoplayer.ExoPlayer
-import org.akkirrai.hibiki.shared.player.PlaybackTransport
 
 /** Media3-only bridge for the common playback controls. */
 internal class AndroidMedia3PlaybackTransport(

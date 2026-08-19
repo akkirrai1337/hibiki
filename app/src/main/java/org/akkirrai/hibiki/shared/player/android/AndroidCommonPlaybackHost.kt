@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

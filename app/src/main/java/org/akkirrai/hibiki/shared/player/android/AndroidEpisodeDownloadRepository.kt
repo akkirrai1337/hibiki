@@ -1,13 +1,10 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.shared.player.model.WatchEpisode
 import org.akkirrai.hibiki.shared.player.model.WatchSource
 import org.akkirrai.hibiki.shared.player.model.PlaybackStream
-import org.akkirrai.hibiki.shared.player.EpisodeDownloadRepository
-import org.akkirrai.hibiki.shared.player.EpisodeDownloadState
-import org.akkirrai.hibiki.shared.player.OfflineWatchDataRepository
 
 /** Android adapter that preserves the existing Media3 download queue semantics. */
 internal class AndroidEpisodeDownloadRepository(

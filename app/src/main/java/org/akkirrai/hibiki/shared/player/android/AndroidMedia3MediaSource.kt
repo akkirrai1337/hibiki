@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import android.content.Context
 import androidx.core.net.toUri
@@ -9,8 +9,8 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
-import org.akkirrai.hibiki.core.model.PlaybackStreamType
-import org.akkirrai.hibiki.core.model.PlaybackStream
+import org.akkirrai.hibiki.shared.player.model.PlaybackStreamType
+import org.akkirrai.hibiki.shared.player.model.PlaybackStream
 
 /** Android Media3 mapping kept outside the shared UI/orchestration layer. */
 internal fun PlaybackStream.toAndroidMediaSource(context: Context): MediaSource {

@@ -43,8 +43,8 @@ import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
 import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
 import org.akkirrai.hibiki.shared.player.AndroidPlayerWindowController
 import org.akkirrai.hibiki.shared.player.AndroidEpisodeDownloadRepository
-import org.akkirrai.hibiki.feature.details.AndroidOfflineTitleMetadataRepository
-import org.akkirrai.hibiki.feature.settings.AndroidDiscordRpcController
+import org.akkirrai.hibiki.shared.details.data.AndroidOfflineTitleMetadataRepository
+import org.akkirrai.hibiki.shared.settings.AndroidDiscordRpcController
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.R
 import android.widget.Toast

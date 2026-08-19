@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.player
+package org.akkirrai.hibiki.shared.player
 
 import android.app.Activity
 import android.app.PictureInPictureParams

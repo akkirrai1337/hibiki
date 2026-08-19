@@ -39,7 +39,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.core.settings.AndroidAppSettingsStore
-import org.akkirrai.hibiki.feature.update.AppUpdateDialog
+import org.akkirrai.hibiki.shared.update.AppUpdateDialog
 import org.akkirrai.hibiki.app.theme.HibikiAndroidTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

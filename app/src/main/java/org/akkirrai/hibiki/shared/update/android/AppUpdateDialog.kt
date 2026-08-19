@@ -1,11 +1,9 @@
-package org.akkirrai.hibiki.feature.update
+package org.akkirrai.hibiki.shared.update
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.update.AppUpdate
-import org.akkirrai.hibiki.shared.update.AppUpdateDialogContent
-import org.akkirrai.hibiki.shared.update.formatDownloadSize
 
 @Composable
 fun AppUpdateDialog(

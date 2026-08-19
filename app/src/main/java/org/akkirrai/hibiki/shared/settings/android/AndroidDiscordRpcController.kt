@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.feature.settings
+package org.akkirrai.hibiki.shared.settings
 
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
@@ -10,9 +10,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
-import org.akkirrai.hibiki.shared.settings.DiscordRpcConnectionStatus
-import org.akkirrai.hibiki.shared.settings.DiscordRpcController
-import org.akkirrai.hibiki.shared.settings.DiscordRpcUiState
 
 /** Android adapter preserving the existing Discord RPC manager and auth lifecycle. */
 internal class AndroidDiscordRpcController(
