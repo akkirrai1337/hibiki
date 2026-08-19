@@ -10,4 +10,5 @@ fun LibraryCategory.localizationKey(): String = when (this) {
     LibraryCategory.OnHold -> "library_category_on_hold"
     LibraryCategory.Favorite -> "library_category_favorite"
     LibraryCategory.Saved -> "library_category_saved"
+    LibraryCategory.Recent -> "library_category_recent"
 }

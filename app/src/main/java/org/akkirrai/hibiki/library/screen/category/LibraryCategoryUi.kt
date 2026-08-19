@@ -19,4 +19,6 @@ fun LibraryCategory.icon(): ImageVector = when (this) {
     LibraryCategory.OnHold -> Icons.Outlined.Pause
     LibraryCategory.Favorite -> Icons.Filled.Bookmark
     LibraryCategory.Saved -> Icons.Outlined.Download
+    // Never rendered -- Recent is filtered out of every visible category list.
+    LibraryCategory.Recent -> Icons.Filled.PlayArrow
 }

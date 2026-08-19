@@ -17,7 +17,11 @@ enum class LibraryCategory(val storageValue: String) {
     Dropped("dropped"),
     OnHold("on_hold"),
     Favorite("favorite"),
-    Saved("saved");
+    Saved("saved"),
+    // Hidden bookkeeping flag, set automatically the moment playback starts. Never a title's
+    // "real" category, never shown as a library tab, and never overwrites Watching/Planned/etc.
+    // Exists purely to drive Home's continue-watching without visibly cluttering the library.
+    Recent("recent");
 
     companion object {
         fun fromStorageValue(value: String): LibraryCategory? =

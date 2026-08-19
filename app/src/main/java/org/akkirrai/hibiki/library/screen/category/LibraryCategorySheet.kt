@@ -72,7 +72,9 @@ fun AppLibraryCategorySheet(
                 }
 
                 items(
-                    items = LibraryCategory.entries.filter { it != LibraryCategory.Saved },
+                    items = LibraryCategory.entries.filter {
+                        it != LibraryCategory.Saved && it != LibraryCategory.Recent
+                    },
                     key = LibraryCategory::name,
                 ) { category ->
                     AppLibraryCategorySheetItem(

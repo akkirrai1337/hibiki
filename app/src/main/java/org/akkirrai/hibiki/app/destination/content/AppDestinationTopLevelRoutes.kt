@@ -44,6 +44,11 @@ internal fun AppDestinationTopLevelRoutes(
     val navigation = input.navigation
     val content = input.watch.state
     val topInsetModifier = Modifier.appTopSystemInsetPadding()
+    // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
+    // shadow a title's actual library status badge on a card.
+    val libraryStatusByAnimeId = library.state.entries
+        .filter { it.category != org.akkirrai.hibiki.library.LibraryCategory.Recent }
+        .associate { it.anime.id to it.category }
 
     Column(
         modifier = platform.hostContext.modifier
@@ -56,7 +61,7 @@ internal fun AppDestinationTopLevelRoutes(
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryEntries = library.state.entries,
-                libraryStatusByAnimeId = library.state.entries.associate { it.anime.id to it.category },
+                libraryStatusByAnimeId = libraryStatusByAnimeId,
                 onQueryChange = home.actions.onQueryChange,
                 homeSearchState = home.state.search,
                 onFilterApply = home.actions.onFilterApply,
@@ -77,7 +82,7 @@ internal fun AppDestinationTopLevelRoutes(
             AppDestination.CATALOG -> SearchScreen(
                 state = catalog.state.ui,
                 listState = catalog.state.listState,
-                libraryStatusByAnimeId = library.state.entries.associate { it.anime.id to it.category },
+                libraryStatusByAnimeId = libraryStatusByAnimeId,
                 query = catalog.state.query,
                 onQueryChange = catalog.actions.onQueryChange,
                 items = catalog.state.items,

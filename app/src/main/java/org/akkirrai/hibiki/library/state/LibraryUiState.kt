@@ -44,9 +44,13 @@ data class LibraryUiState(
         }
 }
 
-fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> =
-    if (entries.any { it.category == LibraryCategory.Saved }) {
-        listOf(LibraryCategory.Saved) + LibraryCategory.entries.filter { it != LibraryCategory.Saved }
+fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> {
+    // Recent is a hidden bookkeeping flag, never a selectable tab -- unlike Saved, which is a
+    // real (if special-ordered) category.
+    val visibleCategories = LibraryCategory.entries.filter { it != LibraryCategory.Recent }
+    return if (entries.any { it.category == LibraryCategory.Saved }) {
+        listOf(LibraryCategory.Saved) + visibleCategories.filter { it != LibraryCategory.Saved }
     } else {
-        LibraryCategory.entries.toList()
+        visibleCategories
     }
+}

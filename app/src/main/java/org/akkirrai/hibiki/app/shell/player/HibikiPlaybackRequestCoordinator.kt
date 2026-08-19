@@ -110,12 +110,13 @@ internal class HibikiPlaybackRequestCoordinator(
             return
         }
 
-        // Auto-add the title to the library so it surfaces in "continue watching" the moment
-        // playback starts, without requiring the user to add it manually first. Only when it
-        // isn't in the library at all yet -- never overrides an existing category.
+        // Flag the title as recently watched so it surfaces in "continue watching" the moment
+        // playback starts, without requiring the user to manually add it to the library first.
+        // Recent is a hidden, supplemental category -- it coexists with (never overrides) a
+        // real category the user picked, and only needs writing once per title.
         watchAnime()?.let { anime ->
-            if (libraryRepository.getLibraryCategory(anime.id) == null) {
-                libraryRepository.saveToLibrary(anime, LibraryCategory.Watching)
+            if (!libraryRepository.hasCategory(anime.id, LibraryCategory.Recent)) {
+                libraryRepository.saveToLibrary(anime, LibraryCategory.Recent)
                 onLibraryChanged()
             }
         }

@@ -42,7 +42,7 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryR
 
     override fun getLibraryCategory(id: String): LibraryCategory? {
         val categories = getLibraryCategories(id)
-        return categories.firstOrNull { it != LibraryCategory.Saved }
+        return categories.firstOrNull { it != LibraryCategory.Saved && it != LibraryCategory.Recent }
             ?: LibraryCategory.Saved.takeIf { LibraryCategory.Saved in categories }
     }
 
@@ -70,6 +70,10 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryR
 
     fun isInLibrary(id: String): Boolean {
         return getLibraryCategory(id) != null
+    }
+
+    override fun hasCategory(id: String, category: LibraryCategory): Boolean {
+        return category in getLibraryCategories(id)
     }
 
     override fun saveToLibrary(anime: Anime, category: LibraryCategory) {
@@ -111,15 +115,15 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryR
     }
 
     fun replacePrimaryCategory(id: String, category: LibraryCategory) {
-        require(category !in setOf(LibraryCategory.Favorite, LibraryCategory.Saved))
+        require(category !in SUPPLEMENTAL_CATEGORIES)
         val categories = getLibraryCategories(id)
-            .filterTo(linkedSetOf()) { it == LibraryCategory.Favorite || it == LibraryCategory.Saved }
+            .filterTo(linkedSetOf()) { it in SUPPLEMENTAL_CATEGORIES }
             .apply { add(category) }
         saveCategoriesOrRemove(id, categories)
     }
 
     fun addSupplementalCategory(id: String, category: LibraryCategory) {
-        require(category == LibraryCategory.Favorite || category == LibraryCategory.Saved)
+        require(category in SUPPLEMENTAL_CATEGORIES)
         saveCategoriesOrRemove(id, getLibraryCategories(id) + category)
     }
 
@@ -407,12 +411,10 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryR
     }
 
     private fun Set<LibraryCategory>.withSelectedCategory(category: LibraryCategory): Set<LibraryCategory> {
-        return if (category == LibraryCategory.Saved || category == LibraryCategory.Favorite) {
+        return if (category in SUPPLEMENTAL_CATEGORIES) {
             this + category
         } else {
-            filterTo(mutableSetOf()) {
-                it == LibraryCategory.Saved || it == LibraryCategory.Favorite
-            } + category
+            filterTo(mutableSetOf()) { it in SUPPLEMENTAL_CATEGORIES } + category
         }
     }
 
@@ -471,6 +473,13 @@ class LibraryRepository(context: Context) : org.akkirrai.hibiki.library.LibraryR
         const val PREFS_NAME = "hibiki_library"
         private const val LIBRARY_IDS_KEY = "library_ids"
         private const val LEGACY_FAVORITE_IDS_KEY = "favorite_ids"
+
+        // Categories that coexist with a title's real category instead of replacing it.
+        private val SUPPLEMENTAL_CATEGORIES = setOf(
+            LibraryCategory.Favorite,
+            LibraryCategory.Saved,
+            LibraryCategory.Recent,
+        )
     }
 }
 

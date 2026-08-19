@@ -19,6 +19,9 @@ internal fun LibraryCategory.libraryText(): String = when (this) {
     LibraryCategory.OnHold -> appText(AppTextKey.LibraryOnHold)
     LibraryCategory.Favorite -> appText(AppTextKey.LibraryFavorite)
     LibraryCategory.Saved -> appText(AppTextKey.LibrarySaved)
+    // Never actually rendered -- Recent is filtered out of every category list/tab/picker
+    // before a label lookup happens. Falls back to the closest real label just in case.
+    LibraryCategory.Recent -> appText(AppTextKey.LibraryWatching)
 }
 
 internal fun NotificationPermissionState.textKey(): AppTextKey = when (this) {

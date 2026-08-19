@@ -37,4 +37,5 @@ fun LibraryCategory.profileColor(): Color = when (this) {
     LibraryCategory.OnHold -> Color(0xFFC593FF)
     LibraryCategory.Favorite -> Color(0xFFFFB86A)
     LibraryCategory.Saved -> Color(0xFF9EA4B2)
+    LibraryCategory.Recent -> Color(0xFF9EA4B2)
 }
