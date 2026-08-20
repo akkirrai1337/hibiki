@@ -487,7 +487,18 @@ internal fun HibikiAppShell(
                         ),
                         includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
                         transitionDirection = navigationState.transitionDirection,
-                        contentRoute = routePresentation.currentRoute,
+                        // Settings is visually an overlay on top of the Profile tab, not a
+                        // distinct destination -- report the underlying Profile route here so
+                        // the root AnimatedContent treats Profile<->Settings as one continuous
+                        // slot (no remount, no crossfade) instead of tearing down and
+                        // rebuilding both screens on every visit. AppDestinationContent still
+                        // knows Settings is actually open via the live selectedTab check below
+                        // (settingsVisible), independent of this value.
+                        contentRoute = if (routePresentation.currentRoute is AppRoute.Settings) {
+                            AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.PROFILE)
+                        } else {
+                            routePresentation.currentRoute
+                        },
                         contentTransitionKey = if (
                             routePresentation.currentRoute is AppRoute.TopLevel ||
                             routePresentation.currentRoute is AppRoute.Details ||

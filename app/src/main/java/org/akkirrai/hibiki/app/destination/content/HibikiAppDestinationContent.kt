@@ -1,8 +1,12 @@
 package org.akkirrai.hibiki.app.destination.content
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.watch.isWatchRouteDriven
+import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.design.component.navigation.AppBottomBarContentExtraPadding
 import org.akkirrai.hibiki.design.component.navigation.AppBottomBarHeight
 import org.akkirrai.hibiki.layout.appBottomSystemInsetValue
@@ -71,30 +76,31 @@ internal fun AppDestinationContent(
     }
 
     if (showBaseRoutes) {
-        // No animation of its own -- same reasoning as details_route_transition below: the
-        // outer root transition already fades every entry/exit of Settings.
-        AnimatedContent(
-            targetState = selectedTab == AppDestination.SETTINGS,
-            transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
-            label = "settings_route_transition",
-            modifier = Modifier.fillMaxSize(),
-        ) { settingsVisible ->
-            if (settingsVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                ) {
-                    AppDestinationTopLevelRoutes(
-                        input = effectiveInput,
-                        selectedTab = AppDestination.SETTINGS,
-                        topLevelBottomContentPadding = bottomSystemInset,
-                        homeSourcesById = homeSourcesById,
-                        editingSourceConfig = editingSourceConfig,
-                        sourceConfigContent = sourceConfigContent,
-                        onEditSourceConfig = { editingSourceConfig = it },
-                    )
-                }
+        // AnimatedVisibility (fade only, matching appScreenTransition's own duration/style),
+        // not AnimatedContent -- it only owns Settings' own subtree, so it can't cause the
+        // outer root transition and this one to fight over the same content the way two
+        // separate AnimatedContents did before. Profile stays mounted underneath the whole
+        // time (the root transition treats Profile<->Settings as one continuous slot), so this
+        // is the only screen-enter animation Settings gets, and it doesn't touch Profile.
+        AnimatedVisibility(
+            visible = selectedTab == AppDestination.SETTINGS,
+            enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
+            exit = fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            ) {
+                AppDestinationTopLevelRoutes(
+                    input = effectiveInput,
+                    selectedTab = AppDestination.SETTINGS,
+                    topLevelBottomContentPadding = bottomSystemInset,
+                    homeSourcesById = homeSourcesById,
+                    editingSourceConfig = editingSourceConfig,
+                    sourceConfigContent = sourceConfigContent,
+                    onEditSourceConfig = { editingSourceConfig = it },
+                )
             }
         }
     }
