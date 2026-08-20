@@ -177,14 +177,14 @@ jobs:
           HIBIKI_RELEASE_STORE_PASSWORD: ${{ secrets.HIBIKI_RELEASE_STORE_PASSWORD }}
           HIBIKI_RELEASE_KEY_ALIAS: ${{ secrets.HIBIKI_RELEASE_KEY_ALIAS }}
           HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleStandardRelease
 
       - name: Verify APK signature
         shell: bash
         run: |
           set -euo pipefail
 
-          APK="app/build/outputs/apk/release/app-release.apk"
+          APK="app/build/outputs/apk/standard/release/app-standard-release.apk"
           if [ ! -s "$APK" ]; then
             echo "Release APK was not created: $APK"
             exit 1
@@ -206,7 +206,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk "release/hibiki-v${{ steps.release.outputs.version }}.apk"
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk "release/hibiki-v${{ steps.release.outputs.version }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
