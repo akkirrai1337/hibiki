@@ -20,3 +20,4 @@ val EpisodesListItemGap = 4.dp
 val EpisodeDownloadActionGap = 6.dp
 val WatchEmptyStateHorizontalPadding = 24.dp
 val EpisodeRowDefaultCornerRadius = 0.dp
+const val EpisodeRowSizeAnimationDurationMillis = 220
