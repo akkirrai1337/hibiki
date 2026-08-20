@@ -14,5 +14,5 @@ val WatchScreenBackButtonTouchSize = 48.dp
 val WatchScreenHeaderRowHeight = 48.dp
 val WatchScreenHeaderEdgePadding = 4.dp
 val WatchScreenHeaderTitleStartPadding = 4.dp
-val WatchScreenContentTopClearance = 20.dp
+val WatchScreenContentTopClearance = 8.dp
 val WatchSourceRowDefaultCornerRadius = 0.dp
