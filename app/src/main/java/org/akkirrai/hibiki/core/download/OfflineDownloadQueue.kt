@@ -447,13 +447,13 @@ object OfflineDownloadQueue {
         }
     }
 
-    private fun activeDownloadCount(manager: DownloadManager): Int {
-        return manager.currentDownloads.count { download ->
-            download.state == Download.STATE_QUEUED ||
-                download.state == Download.STATE_DOWNLOADING ||
-                download.state == Download.STATE_RESTARTING
-        }
-    }
+    private val Download.isQueuedOrRunning: Boolean
+        get() = state == Download.STATE_QUEUED ||
+            state == Download.STATE_DOWNLOADING ||
+            state == Download.STATE_RESTARTING
+
+    private fun activeDownloadCount(manager: DownloadManager): Int =
+        manager.currentDownloads.count { it.isQueuedOrRunning }
 
     private fun pendingEntries(context: Context): List<PendingEpisode> {
         val raw = prefs(context).getString(QUEUE_KEY, null) ?: return emptyList()
@@ -745,11 +745,7 @@ object OfflineDownloadQueue {
     private fun shouldResetSessionProgress(context: Context, manager: DownloadManager): Boolean {
         if (pendingEntries(context).isNotEmpty()) return false
         if (isProcessing) return false
-        return manager.currentDownloads.none { download ->
-            download.state == Download.STATE_DOWNLOADING ||
-            download.state == Download.STATE_QUEUED ||
-            download.state == Download.STATE_RESTARTING
-        }
+        return manager.currentDownloads.none { it.isQueuedOrRunning }
     }
 
     private fun downloadId(sourceId: String, episodeId: String): String =
