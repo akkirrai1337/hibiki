@@ -51,6 +51,7 @@ fun AppWatchSourcesScreen(
         onBackClick = onBackClick,
         backEnabled = enabled,
         backContentDescription = null,
+        title = null,
         modifier = modifier,
     ) { contentPadding ->
         when {

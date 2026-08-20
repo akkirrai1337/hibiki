@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.library.LibraryRepository
@@ -29,11 +28,8 @@ import org.akkirrai.hibiki.player.WatchScreenScaffold
 import org.akkirrai.hibiki.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.player.watchNavigationLockKey
 import org.akkirrai.hibiki.player.rememberEpisodesDownloadControlsVisible
-import org.akkirrai.hibiki.player.EpisodesDownloadToggleEndPadding
-import org.akkirrai.hibiki.player.EpisodesDownloadToggleTopPadding
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
-import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
 
 @Composable
 internal fun HibikiWatchFlowContent(
@@ -63,7 +59,6 @@ internal fun HibikiWatchFlowContent(
         isPlayerRoute = isPlayerRoute,
     )
     var navigationLocked by remember(navigationLockKey) { mutableStateOf(false) }
-    val topInsetModifier = Modifier.appTopSystemInsetPadding()
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
     val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
         sourceId = episodeDownloadSourceId,
@@ -88,6 +83,18 @@ internal fun HibikiWatchFlowContent(
         },
         backEnabled = !navigationLocked,
         backContentDescription = appText(AppTextKey.Back),
+        title = selectedWatchSource?.title ?: anime.title,
+        trailingContent = if (selectedWatchSource != null && episodeDownloadRepository != null) {
+            {
+                AppEpisodesDownloadToggle(
+                    isVisible = downloadControlsVisible.value,
+                    contentDescription = appText(AppTextKey.WatchDownload),
+                    onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
+                )
+            }
+        } else {
+            null
+        },
         modifier = modifier,
     ) { listContentPadding ->
         // The outer root transition now treats sources -> episodes as one continuous slot (so
@@ -119,12 +126,6 @@ internal fun HibikiWatchFlowContent(
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // HibikiEpisodesContent wraps a full-size scrollable episode list, so it must
-                    // be declared (and thus z-ordered) BEFORE the toggle button below -- a Box
-                    // hit-tests overlapping children in declaration order, and a scrollable's
-                    // pointer input spans its whole layout bounds even where it paints nothing, so
-                    // a button declared earlier (= visually underneath for input purposes) never
-                    // receives its taps.
                     HibikiEpisodesContent(
                         state = episodesState,
                         source = targetWatchSource,
@@ -147,20 +148,6 @@ internal fun HibikiWatchFlowContent(
                         onRetry = onWatchRetry,
                         listContentPadding = listContentPadding,
                     )
-                    if (episodeDownloadRepository != null) {
-                        AppEpisodesDownloadToggle(
-                            isVisible = downloadControlsVisible.value,
-                            contentDescription = appText(AppTextKey.WatchDownload),
-                            onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .then(topInsetModifier)
-                                .padding(
-                                    end = EpisodesDownloadToggleEndPadding,
-                                    top = EpisodesDownloadToggleTopPadding,
-                                ),
-                        )
-                    }
                     if (!playbackHostAvailable) {
                         AppPlayerLoadingOverlay(visible = playbackLoading)
                         playbackError?.let { message ->

@@ -42,6 +42,7 @@ fun AppEpisodesScreen(
         onBackClick = onBackClick,
         backEnabled = enabled,
         backContentDescription = null,
+        title = null,
         modifier = modifier,
     ) { contentPadding ->
         downloadToggleContent(
