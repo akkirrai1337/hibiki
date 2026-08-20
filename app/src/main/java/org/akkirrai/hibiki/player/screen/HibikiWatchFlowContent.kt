@@ -1,5 +1,10 @@
 package org.akkirrai.hibiki.player
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -10,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.WatchSource
@@ -84,72 +90,87 @@ internal fun HibikiWatchFlowContent(
         backContentDescription = appText(AppTextKey.Back),
         modifier = modifier,
     ) { listContentPadding ->
-        if (selectedWatchSource == null) {
-            WatchSourcesDestinationContent(
-                state = watchState,
-                navigationLocked = navigationLocked,
-                onWatchRetry = onWatchRetry,
-                onWatchSourceClick = { source ->
-                    navigationLocked = true
-                    onWatchSourceClick(source)
-                },
-                onWatchLoadMore = onWatchLoadMore,
-                listContentPadding = listContentPadding,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            val currentWatchSource = requireNotNull(selectedWatchSource)
-            Box(modifier = Modifier.fillMaxSize()) {
-                // HibikiEpisodesContent wraps a full-size scrollable episode list, so it must be
-                // declared (and thus z-ordered) BEFORE the toggle button below -- a Box hit-tests
-                // overlapping children in declaration order, and a scrollable's pointer input spans
-                // its whole layout bounds even where it paints nothing, so a button declared earlier
-                // (= visually underneath for input purposes) never receives its taps.
-                HibikiEpisodesContent(
-                    state = episodesState,
-                    source = currentWatchSource,
-                    anime = anime,
-                    profileData = profileData,
-                    playbackLoading = playbackLoading,
+        // The outer root transition now treats sources -> episodes as one continuous slot (so
+        // picking a voiceover doesn't cross-fade the *whole* screen, header and all -- see
+        // HibikiAppShell's contentRoute/contentTransitionKey for the watch flow). This inner
+        // AnimatedContent gives that step its own fade instead, matching every other screen
+        // transition's style/duration, just scoped to the content area under the toggle/back bar.
+        AnimatedContent(
+            targetState = selectedWatchSource,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) togetherWith
+                    fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis))
+            },
+            label = "watch_flow_step_transition",
+            modifier = Modifier.fillMaxSize(),
+        ) { targetWatchSource ->
+            if (targetWatchSource == null) {
+                WatchSourcesDestinationContent(
+                    state = watchState,
                     navigationLocked = navigationLocked,
-                    downloadControlsVisible = downloadControlsVisible.value,
-                    episodeDownloadRepository = episodeDownloadRepository,
-                    episodeDownloadStates = episodeDownloadStates,
-                    onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
-                    libraryRepository = libraryRepository,
-                    onEpisodeClick = { episode ->
-                        if (!navigationLocked) {
-                            navigationLocked = true
-                            onWatchEpisodeClick(episode)
-                        }
+                    onWatchRetry = onWatchRetry,
+                    onWatchSourceClick = { source ->
+                        navigationLocked = true
+                        onWatchSourceClick(source)
                     },
-                    onLibraryChanged = onLibraryChanged,
-                    onRetry = onWatchRetry,
+                    onWatchLoadMore = onWatchLoadMore,
                     listContentPadding = listContentPadding,
+                    modifier = Modifier.fillMaxSize(),
                 )
-                if (episodeDownloadRepository != null) {
-                    AppEpisodesDownloadToggle(
-                        isVisible = downloadControlsVisible.value,
-                        contentDescription = appText(AppTextKey.WatchDownload),
-                        onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .then(topInsetModifier)
-                            .padding(
-                                end = EpisodesDownloadToggleEndPadding,
-                                top = EpisodesDownloadToggleTopPadding,
-                            ),
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // HibikiEpisodesContent wraps a full-size scrollable episode list, so it must
+                    // be declared (and thus z-ordered) BEFORE the toggle button below -- a Box
+                    // hit-tests overlapping children in declaration order, and a scrollable's
+                    // pointer input spans its whole layout bounds even where it paints nothing, so
+                    // a button declared earlier (= visually underneath for input purposes) never
+                    // receives its taps.
+                    HibikiEpisodesContent(
+                        state = episodesState,
+                        source = targetWatchSource,
+                        anime = anime,
+                        profileData = profileData,
+                        playbackLoading = playbackLoading,
+                        navigationLocked = navigationLocked,
+                        downloadControlsVisible = downloadControlsVisible.value,
+                        episodeDownloadRepository = episodeDownloadRepository,
+                        episodeDownloadStates = episodeDownloadStates,
+                        onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
+                        libraryRepository = libraryRepository,
+                        onEpisodeClick = { episode ->
+                            if (!navigationLocked) {
+                                navigationLocked = true
+                                onWatchEpisodeClick(episode)
+                            }
+                        },
+                        onLibraryChanged = onLibraryChanged,
+                        onRetry = onWatchRetry,
+                        listContentPadding = listContentPadding,
                     )
-                }
-                if (!playbackHostAvailable) {
-                    AppPlayerLoadingOverlay(visible = playbackLoading)
-                    playbackError?.let { message ->
-                        AppPlayerErrorOverlay(
-                            message = message,
-                            title = appText(AppTextKey.PlayerErrorTitle),
-                            retryLabel = appText(AppTextKey.PlayerRetry),
-                            onRetry = onWatchRetry,
+                    if (episodeDownloadRepository != null) {
+                        AppEpisodesDownloadToggle(
+                            isVisible = downloadControlsVisible.value,
+                            contentDescription = appText(AppTextKey.WatchDownload),
+                            onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .then(topInsetModifier)
+                                .padding(
+                                    end = EpisodesDownloadToggleEndPadding,
+                                    top = EpisodesDownloadToggleTopPadding,
+                                ),
                         )
+                    }
+                    if (!playbackHostAvailable) {
+                        AppPlayerLoadingOverlay(visible = playbackLoading)
+                        playbackError?.let { message ->
+                            AppPlayerErrorOverlay(
+                                message = message,
+                                title = appText(AppTextKey.PlayerErrorTitle),
+                                retryLabel = appText(AppTextKey.PlayerRetry),
+                                onRetry = onWatchRetry,
+                            )
+                        }
                     }
                 }
             }
