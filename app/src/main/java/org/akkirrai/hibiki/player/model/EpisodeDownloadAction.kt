@@ -54,10 +54,12 @@ fun AppEpisodeDownloadAction(
     onResumeClick: () -> Unit,
     onRemoveClick: () -> Unit,
 ) {
-    if (!controlsEnabled) {
-        if (state == EpisodeDownloadActionState.Completed) {
-            EpisodeDownloadedIcon(downloadedContentDescription)
-        }
+    // Only Completed rows stay visible with controls off (shouldShowAction()), swapping to this
+    // simplified checkmark-only look -- anything else is hidden by the caller's AnimatedVisibility,
+    // which needs this to keep rendering the *same* icon it had while collapsing away, not vanish
+    // the instant controlsEnabled flips, or its shrink animation plays over empty space.
+    if (!controlsEnabled && state == EpisodeDownloadActionState.Completed) {
+        EpisodeDownloadedIcon(downloadedContentDescription)
         return
     }
 
