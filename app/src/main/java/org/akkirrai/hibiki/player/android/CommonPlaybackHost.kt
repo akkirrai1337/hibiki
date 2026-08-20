@@ -189,6 +189,12 @@ internal fun CommonPlaybackHost(
     var controlsVisible by remember { mutableStateOf(true) }
     var positionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
     var isPlaying by remember(exoPlayer) { mutableStateOf(true) }
+    // playbackLoading (PlayerUiState.isLoading) only tracks whether the stream URL has been
+    // resolved -- it flips false as soon as that happens, before this exoPlayer has buffered
+    // anything. Without this, the center loading spinner disappears the instant the player is
+    // mounted while STATE_BUFFERING is still in progress, leaving a bare paused-looking screen
+    // until playback actually starts.
+    var playerReady by remember(exoPlayer) { mutableStateOf(false) }
     var lifecycleResumePositionMs by remember(exoPlayer) { mutableLongStateOf(0L) }
     var resumePlaybackAfterLifecyclePause by remember(exoPlayer) { mutableStateOf(false) }
     var playerSkipState by remember(context.episodeId) { mutableStateOf(org.akkirrai.hibiki.player.PlayerSkipState()) }
@@ -405,8 +411,11 @@ internal fun CommonPlaybackHost(
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY && exoPlayer.playWhenReady) {
-                    exoPlayer.play()
+                if (playbackState == Player.STATE_READY) {
+                    playerReady = true
+                    if (exoPlayer.playWhenReady) {
+                        exoPlayer.play()
+                    }
                 }
             }
         }
@@ -530,7 +539,7 @@ internal fun CommonPlaybackHost(
                 },
                 settingsContentDescription = appText(AppTextKey.PlayerSettings),
                 onControlsVisibilityChanged = { controlsVisible = it },
-                playbackLoading = playbackLoading,
+                playbackLoading = playbackLoading || !playerReady,
                 topContentInset = 0.dp,
             )
             },
