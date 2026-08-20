@@ -197,7 +197,6 @@ internal fun HibikiAppShell(
     val watchFlowState = rememberHibikiWatchFlowState()
     var detailsAnime by watchFlowState::detailsAnime
     val watchAnime = detailsAnime ?: state.selectedAnime
-    var detailsResumeState by watchFlowState::detailsResumeState
     var watchLoadGeneration by watchFlowState::watchLoadGeneration
     var forceWatchSourcesRefresh by watchFlowState::forceWatchSourcesRefresh
     var episodesLoadGeneration by watchFlowState::episodesLoadGeneration
@@ -219,6 +218,21 @@ internal fun HibikiAppShell(
     var playbackJob by playbackSession.job
     var homeRefreshJob by remember { mutableStateOf<Job?>(null) }
     var activePlaybackRoute by playbackSession.activeRoute
+    // getAllPlaybackProgress() is a plain (non-suspend) SharedPreferences read, cheap enough to
+    // compute directly during composition -- doing it here instead of inside a LaunchedEffect
+    // (as it was before) means the "Continue watching" banner has the right value on Details'
+    // very first composed frame, rather than popping in/changing one frame after a coroutine
+    // dispatch, which read as a flicker on every entry.
+    val detailsResumeState = remember(progressRepository, state.selectedAnime?.id, activePlaybackRoute == null) {
+        val animeId = state.selectedAnime?.id
+        if (progressRepository != null && animeId != null) {
+            resolveResumeWatchState(
+                progressRepository.getAllPlaybackProgress().filter { it.titleId == animeId },
+            )
+        } else {
+            null
+        }
+    }
     var pendingPlaybackContext by playbackSession.pendingContext
     var playbackReturnRoute by playbackSession.returnRoute
     val libraryPresenter = resources.libraryPresenter
@@ -305,10 +319,8 @@ internal fun HibikiAppShell(
     HibikiWatchDataEffects(
         selectedAnime = state.selectedAnime,
         detailsLoading = state.isDetailsLoading,
-        progressRepository = progressRepository,
         offlineTitleMetadataRepository = offlineTitleMetadataRepository,
         onDetailsAnimeChanged = { detailsAnime = it },
-        onDetailsResumeStateChanged = { detailsResumeState = it },
         watchAnime = watchAnime,
         watchRepository = watchRepository,
         offlineWatchDataRepository = offlineWatchDataRepository,

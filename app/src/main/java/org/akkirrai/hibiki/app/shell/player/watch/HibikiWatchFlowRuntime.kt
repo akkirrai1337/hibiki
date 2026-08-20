@@ -23,7 +23,6 @@ import org.akkirrai.hibiki.player.PlaybackRequest
 import org.akkirrai.hibiki.player.PlayerPresenter
 import org.akkirrai.hibiki.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.player.initialWatchSourcesState
-import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.player.model.WatchSource
 import org.akkirrai.hibiki.player.resetForNavigation
 
@@ -77,7 +76,6 @@ internal class HibikiWatchRetryActions(
 
 internal class HibikiWatchFlowState {
     var detailsAnime by mutableStateOf<Anime?>(null)
-    var detailsResumeState by mutableStateOf<TitleWatchState?>(null)
     var watchLoadGeneration by mutableStateOf(0)
     var forceWatchSourcesRefresh by mutableStateOf(false)
     var episodesLoadGeneration by mutableStateOf(0)

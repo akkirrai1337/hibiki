@@ -10,7 +10,6 @@ import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.PlaybackRoute
-import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.player.model.WatchSource
 import org.akkirrai.hibiki.player.EpisodesPresenter
 import org.akkirrai.hibiki.player.OfflineWatchDataRepository
@@ -23,17 +22,13 @@ import org.akkirrai.hibiki.player.initialEpisodesState
 import org.akkirrai.hibiki.player.initialWatchSourcesState
 import org.akkirrai.hibiki.player.loadedEpisodesState
 import org.akkirrai.hibiki.player.mergeWatchSources
-import org.akkirrai.hibiki.player.resolveResumeWatchState
-import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 
 @Composable
 internal fun HibikiWatchDataEffects(
     selectedAnime: Anime?,
     detailsLoading: Boolean,
-    progressRepository: PlaybackProgressRepository?,
     offlineTitleMetadataRepository: OfflineTitleMetadataRepository?,
     onDetailsAnimeChanged: (Anime?) -> Unit,
-    onDetailsResumeStateChanged: (TitleWatchState?) -> Unit,
     watchAnime: Anime?,
     watchRepository: WatchDataRepository?,
     offlineWatchDataRepository: OfflineWatchDataRepository?,
@@ -54,21 +49,6 @@ internal fun HibikiWatchDataEffects(
     // since they're independent of the presenter state those touch.
     var lastLoadedWatchAnimeId by remember { mutableStateOf<String?>(null) }
     var lastLoadedEpisodesSourceId by remember { mutableStateOf<String?>(null) }
-
-    // Also re-keyed on whether a player is currently active: teardown() persists progress
-    // synchronously before clearing the route, so by the time this flips to null->non-null the
-    // saved position is already there -- without this key, returning to Details for the same
-    // anime never re-reads it and the "Continue" banner keeps showing stale progress.
-    LaunchedEffect(progressRepository, selectedAnime?.id, activePlaybackRoute == null) {
-        val animeId = selectedAnime?.id
-        onDetailsResumeStateChanged(
-            if (progressRepository != null && animeId != null) {
-                resolveResumeWatchState(
-                    progressRepository.getAllPlaybackProgress().filter { it.titleId == animeId },
-                )
-            } else null,
-        )
-    }
 
     LaunchedEffect(offlineTitleMetadataRepository, selectedAnime?.id) {
         onDetailsAnimeChanged(selectedAnime?.let { anime ->
