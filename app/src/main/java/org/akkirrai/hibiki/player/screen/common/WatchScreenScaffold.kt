@@ -69,9 +69,14 @@ fun WatchScreenScaffold(
     ) {
         content(contentPadding)
         Row(
+            // background sits before the top-inset/edge padding in the chain, so it paints the
+            // full width/height of this row *including* that padding (status bar area included)
+            // instead of just the inset content area -- otherwise the list scrolling underneath
+            // showed through both the status bar strip and the row's own padding.
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
                 .then(headerModifier)
                 .padding(
                     start = WatchScreenHeaderEdgePadding,
