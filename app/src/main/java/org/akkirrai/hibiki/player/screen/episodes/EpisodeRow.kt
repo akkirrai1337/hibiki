@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,8 +43,13 @@ fun EpisodeRow(
     val sizeAnimationSpec = tween<androidx.compose.ui.unit.IntSize>(EpisodeRowSizeAnimationDurationMillis)
     val fadeAnimationSpec = tween<Float>(EpisodeRowSizeAnimationDurationMillis)
     androidx.compose.material3.Surface(
+        // clip must precede clickable -- Surface clips its own background/content to `shape`,
+        // but a caller-supplied .clickable() on this outer modifier draws its ripple against the
+        // full rectangular layout bounds unless it's clipped first, so the press highlight bled
+        // past the row's rounded corners (visible on the first/last row of a grouped list).
         modifier = Modifier
             .fillMaxWidth()
+            .clip(shape)
             .clickable(enabled = enabled, onClick = onClick),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
