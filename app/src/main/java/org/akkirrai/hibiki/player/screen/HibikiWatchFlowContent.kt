@@ -100,20 +100,11 @@ internal fun HibikiWatchFlowContent(
         } else {
             val currentWatchSource = requireNotNull(selectedWatchSource)
             Box(modifier = Modifier.fillMaxSize()) {
-                if (episodeDownloadRepository != null) {
-                    AppEpisodesDownloadToggle(
-                        isVisible = downloadControlsVisible.value,
-                        contentDescription = appText(AppTextKey.WatchDownload),
-                        onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .then(topInsetModifier)
-                            .padding(
-                                end = EpisodesDownloadToggleEndPadding,
-                                top = EpisodesDownloadToggleTopPadding,
-                            ),
-                    )
-                }
+                // HibikiEpisodesContent wraps a full-size scrollable episode list, so it must be
+                // declared (and thus z-ordered) BEFORE the toggle button below -- a Box hit-tests
+                // overlapping children in declaration order, and a scrollable's pointer input spans
+                // its whole layout bounds even where it paints nothing, so a button declared earlier
+                // (= visually underneath for input purposes) never receives its taps.
                 HibikiEpisodesContent(
                     state = episodesState,
                     source = currentWatchSource,
@@ -136,6 +127,20 @@ internal fun HibikiWatchFlowContent(
                     onRetry = onWatchRetry,
                     listContentPadding = listContentPadding,
                 )
+                if (episodeDownloadRepository != null) {
+                    AppEpisodesDownloadToggle(
+                        isVisible = downloadControlsVisible.value,
+                        contentDescription = appText(AppTextKey.WatchDownload),
+                        onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .then(topInsetModifier)
+                            .padding(
+                                end = EpisodesDownloadToggleEndPadding,
+                                top = EpisodesDownloadToggleTopPadding,
+                            ),
+                    )
+                }
                 if (!playbackHostAvailable) {
                     AppPlayerLoadingOverlay(visible = playbackLoading)
                     playbackError?.let { message ->
