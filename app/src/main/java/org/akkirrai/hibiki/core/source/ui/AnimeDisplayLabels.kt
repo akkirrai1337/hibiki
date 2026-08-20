@@ -1,6 +1,14 @@
 package org.akkirrai.hibiki.core.source
 
+import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.home.ui.resolveDisplayTypeLabel
+
+/** English-first when preferred, Russian-first otherwise -- either way the other stays as fallback. */
+fun preferredSourceLanguages(preferEnglish: Boolean): List<SourceLanguage> = if (preferEnglish) {
+    listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
+} else {
+    listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
+}
 
 fun resolveAlternativeTitles(
     primaryTitle: String,

@@ -28,7 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import org.akkirrai.beakokit.api.DefaultSourceContext
-import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogLevel
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
@@ -40,6 +39,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.isEnglishAppLanguage
 import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
 import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
+import org.akkirrai.hibiki.core.source.preferredSourceLanguages
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
 import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
 import org.akkirrai.hibiki.player.CommonPlaybackHost
@@ -186,11 +186,7 @@ internal fun HibikiApp(
             contextProvider = { sourceId ->
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
-                    preferredLanguages = if (preferEnglishForSources) {
-                        listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
-                    } else {
-                        listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
-                    },
+                    preferredLanguages = preferredSourceLanguages(preferEnglishForSources),
                     config = externalSourceConfigStore.load(sourceId),
                     logger = SourceLogger { level, message, throwable ->
                         val tag = "BeakoKit/${sourceId.value}"

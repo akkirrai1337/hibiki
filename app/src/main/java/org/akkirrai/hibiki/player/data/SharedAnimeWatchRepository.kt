@@ -16,7 +16,6 @@ import org.akkirrai.beakokit.api.SourceExecutionPolicy
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceLogger
 import org.akkirrai.beakokit.api.SourceUnavailableException
 import org.akkirrai.beakokit.api.StreamExtractor
@@ -29,6 +28,7 @@ import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.commonPlaybackExtractors
 import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
+import org.akkirrai.hibiki.core.source.preferredSourceLanguages
 import org.akkirrai.hibiki.player.model.PlaybackStream
 import org.akkirrai.hibiki.player.model.PlaybackLinkOption
 import org.akkirrai.hibiki.player.model.PlaybackSettingsOptions
@@ -234,11 +234,7 @@ class SharedAnimeWatchRepository(
     private fun sourceFor(sourceId: SourceId): AnimeSource = sources.getOrPut(sourceId) {
         val context = DefaultSourceContext(
                 httpClient = sourceHttpClient,
-                preferredLanguages = if (preferEnglish) {
-                    listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
-                } else {
-                    listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
-                },
+                preferredLanguages = preferredSourceLanguages(preferEnglish),
                 config = sourceConfigProvider(sourceId),
                 sourceHealthReporter = sourceHealthReporter,
                 sourceExecutionPolicy = sourceExecutionPolicy,
