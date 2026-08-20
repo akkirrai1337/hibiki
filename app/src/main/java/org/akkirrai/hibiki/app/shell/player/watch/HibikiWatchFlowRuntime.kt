@@ -13,6 +13,7 @@ import org.akkirrai.hibiki.app.navigation.WatchFlowBackEffect
 import org.akkirrai.hibiki.app.navigation.currentRoute
 import org.akkirrai.hibiki.app.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.app.navigation.navigateToWatchSources
+import org.akkirrai.hibiki.app.navigation.replaceWatchSourcesWithEpisodes
 import org.akkirrai.hibiki.app.navigation.resolveWatchFlowBackTransition
 import org.akkirrai.hibiki.player.EpisodesPresenter
 import org.akkirrai.hibiki.player.EpisodesScreenState
@@ -119,6 +120,18 @@ internal class HibikiWatchFlowNavigationActions(
         onSourceSelected(animeId.orEmpty(), source)
         cancelPlaybackAndResetPlayer()
         setNavigationState(navigationState().navigateToEpisodes(source, downloadMode, animeId))
+    }
+
+    /**
+     * Called once sources finish loading with exactly one voiceover -- skips the single-item
+     * sources list and lands directly on its episodes. Guarded on still being on WatchSources so
+     * a late callback (e.g. after the user already backed out) can't hijack navigation elsewhere.
+     */
+    fun autoSelectSingleWatchSource(source: WatchSource, animeId: String?, downloadMode: Boolean) {
+        if (navigationState().currentRoute !is AppRoute.WatchSources) return
+        onSourceSelected(animeId.orEmpty(), source)
+        cancelPlaybackAndResetPlayer()
+        setNavigationState(navigationState().replaceWatchSourcesWithEpisodes(source, downloadMode, animeId))
     }
 
     private fun cancelPlaybackAndResetPlayer() {

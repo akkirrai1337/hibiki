@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.player.errorEpisodesState
 import org.akkirrai.hibiki.player.initialEpisodesState
 import org.akkirrai.hibiki.player.initialWatchSourcesState
 import org.akkirrai.hibiki.player.loadedEpisodesState
+import org.akkirrai.hibiki.player.mergeWatchSources
 import org.akkirrai.hibiki.player.resolveResumeWatchState
 import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 
@@ -44,6 +45,7 @@ internal fun HibikiWatchDataEffects(
     selectedWatchSource: WatchSource?,
     episodesPresenter: EpisodesPresenter,
     episodesLoadGeneration: Int,
+    onSingleWatchSourceLoaded: (WatchSource) -> Unit,
 ) {
     // Re-entering the same anime's sources / same source's episodes after they were already
     // loaded once shouldn't blank the screen back to Loading while the (cache-hit, near-instant)
@@ -100,14 +102,18 @@ internal fun HibikiWatchDataEffects(
             } else {
                 repositoryForWatch.loadSources(anime.id)
             }
+            val offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty()
             watchPresenter.update { state ->
                 state.withLoadedSources(
                     sources = sourcesForWatch,
-                    offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
+                    offlineSources = offlineSources,
                     isLoading = false,
                 )
             }
             lastLoadedWatchAnimeId = anime.id
+            // Nothing to pick between -- skip straight to that source's episodes instead of
+            // making the user tap through a list with exactly one row.
+            mergeWatchSources(sourcesForWatch, offlineSources).singleOrNull()?.let(onSingleWatchSourceLoaded)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {

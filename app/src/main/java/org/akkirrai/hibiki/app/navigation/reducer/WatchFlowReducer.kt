@@ -111,6 +111,25 @@ fun AppNavigationState.navigateToEpisodes(
     ),
 )
 
+/**
+ * Swaps the current WatchSources route out for Episodes instead of pushing on top of it, so a
+ * title with exactly one voiceover skips straight to its episode list -- Back from there then
+ * returns to Details directly rather than bouncing through the single-item sources list.
+ */
+fun AppNavigationState.replaceWatchSourcesWithEpisodes(
+    source: WatchSource,
+    downloadMode: Boolean = false,
+    animeId: String? = null,
+): AppNavigationState = reduce(
+    AppNavigationEvent.Replace(
+        AppRoute.Episodes(
+            source = source,
+            downloadMode = downloadMode,
+            animeId = animeId,
+        ),
+    ),
+)
+
 /** Uses Replace for an already visible player and Navigate for a new player route. */
 fun AppNavigationState.navigateToPlayer(
     sourceId: String,

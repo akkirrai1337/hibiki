@@ -201,6 +201,9 @@ internal fun HibikiAppShell(
     var watchLoadGeneration by watchFlowState::watchLoadGeneration
     var forceWatchSourcesRefresh by watchFlowState::forceWatchSourcesRefresh
     var episodesLoadGeneration by watchFlowState::episodesLoadGeneration
+    // Set by HibikiWatchDataEffects when sources finish loading with exactly one voiceover;
+    // consumed by a LaunchedEffect further below once watchFlowNavigationActions exists.
+    var singleWatchSourceCandidate by remember { mutableStateOf<org.akkirrai.hibiki.player.model.WatchSource?>(null) }
     val episodesPresenter = resources.episodesPresenter
     val episodesState by episodesPresenter.state.collectAsState()
     val shellNavigationState = rememberHibikiAppShellNavigationState()
@@ -317,6 +320,7 @@ internal fun HibikiAppShell(
         selectedWatchSource = selectedWatchSource,
         episodesPresenter = episodesPresenter,
         episodesLoadGeneration = episodesLoadGeneration,
+        onSingleWatchSourceLoaded = { source -> singleWatchSourceCandidate = source },
     )
     val homeActions = createHibikiHomeActions(
         repository = homeRepository,
@@ -422,6 +426,16 @@ internal fun HibikiAppShell(
         resetPlayerState = playbackEffects::resetPlayerState,
         applyBackEffect = playbackEffects::applyWatchFlowBackEffect,
     )
+    LaunchedEffect(singleWatchSourceCandidate) {
+        singleWatchSourceCandidate?.let { source ->
+            watchFlowNavigationActions.autoSelectSingleWatchSource(
+                source = source,
+                animeId = watchAnime?.id,
+                downloadMode = navigationState.currentRoute.downloadModeEnabled(),
+            )
+            singleWatchSourceCandidate = null
+        }
+    }
     val playbackOverlayActions = HibikiAppShellPlaybackOverlayActions(
         playbackSession = playbackSession,
         playbackEffects = playbackEffects,
