@@ -15,7 +15,7 @@ import androidx.media3.ui.PlayerView
 import org.akkirrai.hibiki.R
 
 @Composable
-internal fun AndroidPlayerSurface(
+internal fun PlayerSurface(
     exoPlayer: ExoPlayer,
     isAudioOnly: Boolean,
     videoScaleMode: VideoScaleMode,

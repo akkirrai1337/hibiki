@@ -11,7 +11,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-internal class AndroidKeystoreStringStore(
+internal class KeystoreStringStore(
     context: Context,
     prefsName: String,
     private val keyAlias: String,

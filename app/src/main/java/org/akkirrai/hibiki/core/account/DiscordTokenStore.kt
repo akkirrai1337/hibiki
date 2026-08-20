@@ -5,7 +5,7 @@ import android.content.Context
 class DiscordTokenStore(
     context: Context,
 ) {
-    private val secureStore = AndroidKeystoreStringStore(
+    private val secureStore = KeystoreStringStore(
         context = context.applicationContext,
         prefsName = PREFS_NAME,
         keyAlias = KEY_ALIAS,

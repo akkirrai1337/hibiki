@@ -5,7 +5,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 
-object AndroidHttpClientFactory {
+object HttpClientFactory {
     fun create(): HttpClient = HttpClient(OkHttp) {
         installBeakoKitHttpDefaults(BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android"))
     }

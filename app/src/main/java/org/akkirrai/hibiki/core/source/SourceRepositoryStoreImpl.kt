@@ -10,7 +10,7 @@ import org.akkirrai.beakokit.api.SourceRepositoryStateException
 import org.akkirrai.beakokit.api.SourceRepositoryStore
 
 /** Android repository store backed by one synchronously replaceable preference value. */
-class AndroidSourceRepositoryStore(
+class SourceRepositoryStoreImpl(
     context: Context,
     private val json: Json = Json { ignoreUnknownKeys = false },
     private val preferences: SharedPreferences = context.applicationContext.getSharedPreferences(

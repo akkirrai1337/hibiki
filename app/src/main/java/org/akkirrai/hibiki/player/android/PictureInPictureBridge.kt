@@ -14,7 +14,7 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import org.akkirrai.hibiki.R
 
-internal object AndroidPictureInPictureActions {
+internal object PictureInPictureActions {
     const val ToggleAudioOnly = "org.akkirrai.hibiki.action.TOGGLE_AUDIO_ONLY"
     const val TogglePlayback = "org.akkirrai.hibiki.action.TOGGLE_PLAYBACK"
     const val PreviousEpisode = "org.akkirrai.hibiki.action.PREVIOUS_EPISODE"
@@ -27,7 +27,7 @@ internal fun Context.findHibikiActivity(): Activity? = when (this) {
     else -> null
 }
 
-internal fun createAndroidPictureInPictureParams(
+internal fun createPictureInPictureParams(
     context: Context,
     isPlaying: Boolean,
     isAudioOnly: Boolean,
@@ -38,7 +38,7 @@ internal fun createAndroidPictureInPictureParams(
         add(
             createPictureInPictureAction(
                 context = context,
-                action = AndroidPictureInPictureActions.ToggleAudioOnly,
+                action = PictureInPictureActions.ToggleAudioOnly,
                 requestCode = 1001,
                 iconResId = R.drawable.ic_player_headphones_24,
                 titleResId = if (isAudioOnly) R.string.watch_player_show_video else R.string.watch_player_audio_only,
@@ -47,7 +47,7 @@ internal fun createAndroidPictureInPictureParams(
         add(
             createPictureInPictureAction(
                 context = context,
-                action = AndroidPictureInPictureActions.TogglePlayback,
+                action = PictureInPictureActions.TogglePlayback,
                 requestCode = 1002,
                 iconResId = if (isPlaying) R.drawable.ic_player_media_pause_24 else R.drawable.ic_player_media_play_arrow_24,
                 titleResId = if (isPlaying) R.string.watch_player_pause else R.string.watch_player_play,
@@ -57,7 +57,7 @@ internal fun createAndroidPictureInPictureParams(
             add(
                 createPictureInPictureAction(
                     context = context,
-                    action = AndroidPictureInPictureActions.PreviousEpisode,
+                    action = PictureInPictureActions.PreviousEpisode,
                     requestCode = 1003,
                     iconResId = R.drawable.ic_player_media_skip_previous_24,
                     titleResId = R.string.watch_player_previous_episode,
@@ -68,7 +68,7 @@ internal fun createAndroidPictureInPictureParams(
             add(
                 createPictureInPictureAction(
                     context = context,
-                    action = AndroidPictureInPictureActions.NextEpisode,
+                    action = PictureInPictureActions.NextEpisode,
                     requestCode = 1004,
                     iconResId = R.drawable.ic_player_media_skip_next_24,
                     titleResId = R.string.watch_player_next_episode,
@@ -106,10 +106,10 @@ internal fun registerPictureInPictureReceiver(
     val receiver = object : BroadcastReceiver() {
         override fun onReceive(receiverContext: Context, intent: Intent) {
             when (intent.action) {
-                AndroidPictureInPictureActions.ToggleAudioOnly -> onToggleAudioOnly()
-                AndroidPictureInPictureActions.TogglePlayback -> onTogglePlayback()
-                AndroidPictureInPictureActions.PreviousEpisode -> onPreviousEpisode()
-                AndroidPictureInPictureActions.NextEpisode -> onNextEpisode()
+                PictureInPictureActions.ToggleAudioOnly -> onToggleAudioOnly()
+                PictureInPictureActions.TogglePlayback -> onTogglePlayback()
+                PictureInPictureActions.PreviousEpisode -> onPreviousEpisode()
+                PictureInPictureActions.NextEpisode -> onNextEpisode()
             }
         }
     }
@@ -117,10 +117,10 @@ internal fun registerPictureInPictureReceiver(
         context,
         receiver,
         IntentFilter().apply {
-            addAction(AndroidPictureInPictureActions.ToggleAudioOnly)
-            addAction(AndroidPictureInPictureActions.TogglePlayback)
-            addAction(AndroidPictureInPictureActions.PreviousEpisode)
-            addAction(AndroidPictureInPictureActions.NextEpisode)
+            addAction(PictureInPictureActions.ToggleAudioOnly)
+            addAction(PictureInPictureActions.TogglePlayback)
+            addAction(PictureInPictureActions.PreviousEpisode)
+            addAction(PictureInPictureActions.NextEpisode)
         },
         ContextCompat.RECEIVER_NOT_EXPORTED,
     )

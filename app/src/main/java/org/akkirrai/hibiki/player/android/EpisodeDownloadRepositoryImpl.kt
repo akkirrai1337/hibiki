@@ -7,7 +7,7 @@ import org.akkirrai.hibiki.player.model.WatchSource
 import org.akkirrai.hibiki.player.model.PlaybackStream
 
 /** Android adapter that preserves the existing Media3 download queue semantics. */
-internal class AndroidEpisodeDownloadRepository(
+internal class EpisodeDownloadRepositoryImpl(
     private val delegate: OfflineDownloadRepository,
 ) : EpisodeDownloadRepository, OfflineWatchDataRepository {
     override suspend fun enqueueEpisodes(

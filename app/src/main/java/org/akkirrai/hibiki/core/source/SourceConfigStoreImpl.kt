@@ -11,7 +11,7 @@ import org.akkirrai.beakokit.api.SourceConfigStore
 import org.akkirrai.beakokit.api.SourceId
 
 /** Android source configuration storage kept separate from package activation metadata. */
-class AndroidSourceConfigStore(
+class SourceConfigStoreImpl(
     context: Context,
     private val json: Json = Json { ignoreUnknownKeys = false },
     private val preferences: SharedPreferences = context.applicationContext.getSharedPreferences(

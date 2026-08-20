@@ -7,7 +7,7 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.profile.LocalProfileRepository
-import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
 
 class HibikiDependencies(
     context: Context,
@@ -26,7 +26,7 @@ class HibikiDependencies(
 
     fun resumeFrameRepository(): ResumeFrameRepository = ResumeFrameRepository(appContext)
 
-    fun appSettingsStore(): AndroidAppSettingsStore = AndroidAppSettingsStore(appContext)
+    fun appSettingsStore(): AppSettingsStoreImpl = AppSettingsStoreImpl(appContext)
 }
 
 fun Context.hibikiDependencies(): HibikiDependencies = HibikiDependencies(applicationContext)

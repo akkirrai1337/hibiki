@@ -29,7 +29,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
-import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
+import org.akkirrai.hibiki.app.navigation.HibikiApp
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -40,9 +40,9 @@ import org.akkirrai.hibiki.core.update.AppUpdateRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
-import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
+import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
 import org.akkirrai.hibiki.core.update.AppUpdateDialog
-import org.akkirrai.hibiki.app.theme.HibikiAndroidTheme
+import org.akkirrai.hibiki.app.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -176,17 +176,17 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides this@MainActivity) {
                 HibikiSettingsProvider(appPreferences = appPreferences) {
                     val preferences = LocalAppPreferencesState.current
-                    HibikiAndroidTheme(
+                    HibikiTheme(
                         themeMode = preferences.themeMode,
                         dynamicColor = preferences.useSystemColorScheme,
                         amoled = preferences.useAmoledTheme,
                     ) {
-                        AndroidSharedAppShell(
+                        HibikiApp(
                             activity = this@MainActivity,
                             onCheckForUpdates = { checkForAppUpdate(showNoUpdateMessage = true) },
                             onConfigureNotifications = ::configureNotifications,
                             enableOnboarding = false,
-                            settingsStoreOverride = AndroidAppSettingsStore(appPreferences),
+                            settingsStoreOverride = AppSettingsStoreImpl(appPreferences),
                             onFirstContentReady = { isHomeContentReady = true },
                         )
                         if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {

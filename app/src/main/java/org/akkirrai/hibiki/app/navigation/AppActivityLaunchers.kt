@@ -12,15 +12,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 
-internal class AndroidSharedAppActivityLaunchers(
+internal class AppActivityLaunchers(
     val editAvatar: (((String) -> Unit) -> Unit),
     val signInWithDiscord: (((String) -> Unit) -> Unit),
 )
 
 @Composable
-internal fun rememberAndroidSharedAppActivityLaunchers(
+internal fun rememberAppActivityLaunchers(
     context: Context,
-): AndroidSharedAppActivityLaunchers {
+): AppActivityLaunchers {
     var pendingAvatarCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var pendingDiscordTokenCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -38,7 +38,7 @@ internal fun rememberAndroidSharedAppActivityLaunchers(
         pendingDiscordTokenCallback = null
     }
     return remember(avatarPicker, discordAuthLauncher, context) {
-        AndroidSharedAppActivityLaunchers(
+        AppActivityLaunchers(
             editAvatar = { onPicked ->
                 pendingAvatarCallback = onPicked
                 avatarPicker.launch(arrayOf("image/*"))

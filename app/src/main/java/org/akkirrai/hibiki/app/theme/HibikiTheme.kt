@@ -15,7 +15,7 @@ import org.akkirrai.hibiki.design.HibikiLightColorScheme
 import org.akkirrai.hibiki.design.HibikiTypography
 
 @Composable
-fun HibikiAndroidTheme(
+fun HibikiTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
     amoled: Boolean = false,

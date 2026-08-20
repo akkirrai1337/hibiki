@@ -17,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
+import org.akkirrai.hibiki.core.network.HttpClientFactory
 
 data class DiscordAccount(
     val username: String,
@@ -27,7 +27,7 @@ data class DiscordAccount(
 class DiscordAuthenticationException : IllegalStateException()
 
 class DiscordRepository(
-    private val client: HttpClient = AndroidHttpClientFactory.create(),
+    private val client: HttpClient = HttpClientFactory.create(),
 ) {
     suspend fun getAccount(token: String): DiscordAccount {
         val response = client.get("https://discord.com/api/v10/users/@me") {

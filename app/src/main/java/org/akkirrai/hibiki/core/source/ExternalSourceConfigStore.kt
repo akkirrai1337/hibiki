@@ -5,10 +5,10 @@ import android.content.SharedPreferences
 import org.akkirrai.beakokit.api.MapSourceConfig
 import org.akkirrai.beakokit.api.SourceConfig
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.core.account.AndroidKeystoreStringStore
+import org.akkirrai.hibiki.core.account.KeystoreStringStore
 
 /** Persistent per-source configuration; secret values are encrypted by Android Keystore. */
-internal class AndroidExternalSourceConfigStore(
+internal class ExternalSourceConfigStore(
     context: Context,
     private val valuesPreferences: SharedPreferences = context.applicationContext.getSharedPreferences(
         VALUES_PREFERENCES,
@@ -18,7 +18,7 @@ internal class AndroidExternalSourceConfigStore(
         SECRET_KEYS_PREFERENCES,
         Context.MODE_PRIVATE,
     ),
-    private val secretStore: AndroidKeystoreStringStore = AndroidKeystoreStringStore(
+    private val secretStore: KeystoreStringStore = KeystoreStringStore(
         context = context.applicationContext,
         prefsName = SECRETS_PREFERENCES,
         keyAlias = SECRETS_KEY_ALIAS,

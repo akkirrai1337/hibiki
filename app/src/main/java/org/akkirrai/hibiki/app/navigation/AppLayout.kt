@@ -10,7 +10,7 @@ import org.akkirrai.hibiki.layout.AppNavigationBarMode
 import org.akkirrai.hibiki.layout.AppScreenEdgePolicy
 
 @Composable
-internal fun androidSharedAppLayoutEnvironment(density: Density): AppLayoutEnvironment =
+internal fun appLayoutEnvironment(density: Density): AppLayoutEnvironment =
     AppLayoutEnvironment(
         isProvided = true,
         topSystemInset = with(density) { WindowInsets.statusBars.getTop(this).toDp() },

@@ -93,7 +93,7 @@ import org.akkirrai.hibiki.app.navigation.AppOverlay
 import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 
 /** Coordinates Android window restoration with the shared player route lifecycle. */
-internal class AndroidPlayerWindowController {
+internal class PlayerWindowController {
     private var restoreAction: (() -> Unit)? = null
 
     // Lets the platform-agnostic system-back handler (which has no access to the ExoPlayer
@@ -121,14 +121,14 @@ internal class AndroidPlayerWindowController {
 
 /** Android platform host for the common playback controls and Media3 transport. */
 @Composable
-internal fun AndroidCommonPlaybackHost(
+internal fun CommonPlaybackHost(
     playback: PlaybackStream?,
     context: PlaybackContext,
     navigationState: AppNavigationState,
     playbackLoading: Boolean,
     progressRepository: PlaybackProgressRepository,
     resumeFrameRepository: ResumeFrameRepository,
-    windowController: AndroidPlayerWindowController,
+    windowController: PlayerWindowController,
     onBack: () -> Unit,
     onEpisodeSelected: (WatchEpisode, PlaybackContext) -> Unit,
     onSettingsAction: (PlaybackSettingsAction) -> Unit,
@@ -170,7 +170,7 @@ internal fun AndroidCommonPlaybackHost(
             .setId("hibiki-playback-${UUID.randomUUID()}")
             .build()
     }
-    val transport = remember(exoPlayer) { AndroidMedia3PlaybackTransport(exoPlayer) }
+    val transport = remember(exoPlayer) { Media3PlaybackTransport(exoPlayer) }
     val progressCoordinator = remember(exoPlayer) {
         PlaybackProgressCoordinator { progress ->
             progressRepository.saveEpisodeProgress(
@@ -370,7 +370,7 @@ internal fun AndroidCommonPlaybackHost(
     ) {
         if (isPictureInPictureActive) {
             activity?.setPictureInPictureParams(
-                createAndroidPictureInPictureParams(
+                createPictureInPictureParams(
                     context = androidContext,
                     isPlaying = exoPlayer.isPlaying,
                     isAudioOnly = isAudioOnly,
@@ -462,7 +462,7 @@ internal fun AndroidCommonPlaybackHost(
     Box(modifier = modifier.fillMaxSize()) {
         AppPlayerChrome(
             surface = {
-                AndroidPlayerSurface(
+                PlayerSurface(
                 exoPlayer = exoPlayer,
                     isAudioOnly = isAudioOnly,
                     videoScaleMode = videoScaleMode,
@@ -509,7 +509,7 @@ internal fun AndroidCommonPlaybackHost(
                     DiscordRpcManager.get(androidContext).setPictureInPictureActive(true)
                     val entered = runCatching {
                         activity?.enterPictureInPictureMode(
-                            createAndroidPictureInPictureParams(
+                            createPictureInPictureParams(
                                 context = androidContext,
                                 isPlaying = exoPlayer.isPlaying,
                                 isAudioOnly = isAudioOnly,
@@ -797,9 +797,9 @@ private fun AndroidPlaybackLoadingChrome(
 }
 
 @Composable
-internal fun AndroidPlayerWindowMode(
+internal fun PlayerWindowMode(
     active: Boolean,
-    controller: AndroidPlayerWindowController,
+    controller: PlayerWindowController,
     activity: android.app.Activity,
 ) {
     DisposableEffect(activity, active) {

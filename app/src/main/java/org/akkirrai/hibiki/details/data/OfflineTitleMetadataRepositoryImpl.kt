@@ -4,7 +4,7 @@ import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository as CoreOff
 import org.akkirrai.hibiki.catalog.model.Anime
 
 /** Android bridge for the existing title metadata cache. */
-internal class AndroidOfflineTitleMetadataRepository(
+internal class OfflineTitleMetadataRepositoryImpl(
     private val delegate: CoreOfflineTitleMetadataRepository,
 ) : OfflineTitleMetadataRepository {
     override fun get(id: String): Anime? = delegate.get(id)

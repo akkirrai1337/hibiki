@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.api.SourceConfigState
 import org.akkirrai.beakokit.api.SourceConfigStateException
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.core.source.AndroidSourceConfigStore
+import org.akkirrai.hibiki.core.source.SourceConfigStoreImpl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -27,12 +27,12 @@ class SourceConfigStoreInstrumentedTest {
         )
         val secondState = SourceConfigState(values = mapOf("mode" to "mirror"))
 
-        AndroidSourceConfigStore(context).also { store ->
+        SourceConfigStoreImpl(context).also { store ->
             store.persistAtomically(first, firstState)
             store.persistAtomically(second, secondState)
         }
 
-        val recreated = AndroidSourceConfigStore(context)
+        val recreated = SourceConfigStoreImpl(context)
         assertEquals(firstState, recreated.load(first))
         assertEquals(secondState, recreated.load(second))
         val third = SourceId("config-source-three")
@@ -41,7 +41,7 @@ class SourceConfigStoreInstrumentedTest {
         assertEquals(SourceConfigState(), recreated.loadOrNull(third))
 
         recreated.remove(first)
-        assertEquals(SourceConfigState(), AndroidSourceConfigStore(context).load(first))
+        assertEquals(SourceConfigState(), SourceConfigStoreImpl(context).load(first))
         recreated.remove(second)
         recreated.remove(third)
     }
@@ -57,7 +57,7 @@ class SourceConfigStoreInstrumentedTest {
 
         try {
             assertThrows(SourceConfigStateException::class.java) {
-                AndroidSourceConfigStore(context).load(sourceId)
+                SourceConfigStoreImpl(context).load(sourceId)
             }
         } finally {
             preferences.edit().remove("config.${sourceId.value}").commit()

@@ -37,16 +37,16 @@ import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
-import org.akkirrai.hibiki.core.source.AndroidExternalSourceConfigStore
+import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
+import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
-import org.akkirrai.hibiki.app.settings.AndroidAppSettingsStore
-import org.akkirrai.hibiki.player.AndroidCommonPlaybackHost
-import org.akkirrai.hibiki.player.AndroidPlayerWindowController
-import org.akkirrai.hibiki.player.AndroidPlayerWindowMode
-import org.akkirrai.hibiki.player.AndroidEpisodeDownloadRepository
-import org.akkirrai.hibiki.details.data.AndroidOfflineTitleMetadataRepository
-import org.akkirrai.hibiki.app.settings.AndroidDiscordRpcController
+import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
+import org.akkirrai.hibiki.player.CommonPlaybackHost
+import org.akkirrai.hibiki.player.PlayerWindowController
+import org.akkirrai.hibiki.player.PlayerWindowMode
+import org.akkirrai.hibiki.player.EpisodeDownloadRepositoryImpl
+import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepositoryImpl
+import org.akkirrai.hibiki.app.settings.DiscordRpcControllerImpl
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.R
 import android.widget.Toast
@@ -78,26 +78,26 @@ import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
 import org.akkirrai.hibiki.app.shell.AppPlatformCallbacks
 import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
 
-/** Android adapter for the shared shell, backed entirely by external sources. */
+/** Android composition root for HibikiAppShell, backed entirely by external sources. */
 @Composable
-internal fun AndroidSharedAppShell(
+internal fun HibikiApp(
     activity: Activity,
     onCheckForUpdates: () -> Unit,
     onConfigureNotifications: () -> Unit,
     enableOnboarding: Boolean = false,
-    settingsStoreOverride: AndroidAppSettingsStore? = null,
+    settingsStoreOverride: AppSettingsStoreImpl? = null,
     onFirstContentReady: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val externalSourceConfigStore = remember(context) { AndroidExternalSourceConfigStore(context) }
-    val androidChallengeSessionProvider = remember(context) { AndroidChallengeSessionProvider(context) }
+    val externalSourceConfigStore = remember(context) { ExternalSourceConfigStore(context) }
+    val androidChallengeSessionProvider = remember(context) { ChallengeSessionProviderImpl(context) }
     val animePaheWebViewExtractor = remember(context) { AnimePaheWebViewExtractor(context) }
     val uriHandler = LocalUriHandler.current
-    val activityLaunchers = rememberAndroidSharedAppActivityLaunchers(context)
+    val activityLaunchers = rememberAppActivityLaunchers(context)
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = settingsStoreOverride ?: remember(dependencies) { dependencies.appSettingsStore() }
-    val discordRpcController = remember(context) { AndroidDiscordRpcController(context) }
+    val discordRpcController = remember(context) { DiscordRpcControllerImpl(context) }
     var installedExtensionsRevision by remember { mutableIntStateOf(0) }
     DisposableEffect(context) {
         val filter = IntentFilter().apply {
@@ -228,11 +228,11 @@ internal fun AndroidSharedAppShell(
         )
     }
     val episodeDownloadRepository = remember(dependencies) {
-        AndroidEpisodeDownloadRepository(dependencies.offlineDownloadRepository())
+        EpisodeDownloadRepositoryImpl(dependencies.offlineDownloadRepository())
     }
-    val playerWindowController = remember { AndroidPlayerWindowController() }
+    val playerWindowController = remember { PlayerWindowController() }
     val offlineTitleMetadataRepository = remember(dependencies) {
-        AndroidOfflineTitleMetadataRepository(dependencies.offlineTitleMetadataRepository())
+        OfflineTitleMetadataRepositoryImpl(dependencies.offlineTitleMetadataRepository())
     }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val preferences = LocalAppPreferencesState.current
@@ -245,7 +245,7 @@ internal fun AndroidSharedAppShell(
     }
     val density = LocalDensity.current
     val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
-    val layoutEnvironment = androidSharedAppLayoutEnvironment(density)
+    val layoutEnvironment = appLayoutEnvironment(density)
     val sources = remember(packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(
             builtIn = emptyList(),
@@ -367,7 +367,7 @@ internal fun AndroidSharedAppShell(
                 onPlaybackSelectionChanged = watchStateRepository::savePlaybackSelection,
                 loadPlaybackSelection = watchStateRepository::loadPlaybackSelectionOrNull,
                 playbackHost = { playback, playbackContext, navigationState, playbackLoading, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                    AndroidCommonPlaybackHost(
+                    CommonPlaybackHost(
                         playback = playback,
                         context = playbackContext,
                         navigationState = navigationState,
@@ -382,7 +382,7 @@ internal fun AndroidSharedAppShell(
                     )
                 },
                 playerWindowMode = { active ->
-                    AndroidPlayerWindowMode(
+                    PlayerWindowMode(
                         active = active,
                         controller = playerWindowController,
                         activity = activity,

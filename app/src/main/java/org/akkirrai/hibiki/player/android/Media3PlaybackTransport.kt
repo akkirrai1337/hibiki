@@ -3,7 +3,7 @@ package org.akkirrai.hibiki.player
 import androidx.media3.exoplayer.ExoPlayer
 
 /** Media3-only bridge for the common playback controls. */
-internal class AndroidMedia3PlaybackTransport(
+internal class Media3PlaybackTransport(
     private val player: ExoPlayer,
 ) : PlaybackTransport {
     override fun play() {

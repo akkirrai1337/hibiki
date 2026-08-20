@@ -12,7 +12,7 @@ import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 
 /** Android adapter preserving the existing Discord RPC manager and auth lifecycle. */
-internal class AndroidDiscordRpcController(
+internal class DiscordRpcControllerImpl(
     context: Context,
 ) : DiscordRpcController {
     private val appContext = context.applicationContext

@@ -16,7 +16,7 @@ import org.akkirrai.beakokit.api.ChallengeSessionProvider
 import org.akkirrai.beakokit.api.ChallengeSessionRequest
 import org.akkirrai.beakokit.api.SourceUnavailableException
 
-class AndroidChallengeSessionProvider(
+class ChallengeSessionProviderImpl(
     context: Context,
 ) : ChallengeSessionProvider {
     private val appContext = context.applicationContext

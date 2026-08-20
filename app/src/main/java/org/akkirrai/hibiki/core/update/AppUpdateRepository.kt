@@ -9,7 +9,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
+import org.akkirrai.hibiki.core.network.HttpClientFactory
 
 private const val RELEASES_URL = "https://api.github.com/repos/akkirrai1337/hibiki/releases?per_page=20"
 private const val APK_CONTENT_TYPE = "application/vnd.android.package-archive"
@@ -26,7 +26,7 @@ data class AppUpdate(
 
 class AppUpdateRepository(
     private val currentVersionName: String,
-    private val client: HttpClient = AndroidHttpClientFactory.create(),
+    private val client: HttpClient = HttpClientFactory.create(),
 ) {
     suspend fun findAvailableUpdate(): AppUpdate? {
         val response: HttpResponse = client.get(RELEASES_URL) {

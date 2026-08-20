@@ -5,7 +5,7 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.app.settings.AppPreferences
 
 /** Android adapter for the shared settings contract backed by existing preferences. */
-class AndroidAppSettingsStore(
+class AppSettingsStoreImpl(
     private val preferences: AppPreferences,
 ) : AppSettingsStore, AutoCloseable {
     constructor(context: Context) : this(AppPreferences(context.applicationContext))

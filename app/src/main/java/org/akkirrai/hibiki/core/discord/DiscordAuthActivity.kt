@@ -60,7 +60,7 @@ import org.akkirrai.hibiki.app.settings.HibikiSettingsProvider
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.app.theme.HibikiAndroidTheme
+import org.akkirrai.hibiki.app.theme.HibikiTheme
 
 class DiscordAuthActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -332,7 +332,7 @@ private fun DiscordAuthTheme(
 ) {
     HibikiSettingsProvider(appPreferences = appPreferences) {
         val preferences = LocalAppPreferencesState.current
-        HibikiAndroidTheme(
+        HibikiTheme(
             themeMode = preferences.themeMode,
             dynamicColor = preferences.useSystemColorScheme,
             amoled = preferences.useAmoledTheme,
