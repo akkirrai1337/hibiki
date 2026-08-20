@@ -80,47 +80,36 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
         return getEpisodeProgress(normalizedTitleId).maxByOrNull(EpisodeWatchProgress::updatedAt)
     }
 
-    fun getRecentTitleWatchState(): TitleWatchState? {
-        return prefs.all.entries
-            .asSequence()
-            .filter { (key, value) ->
-                key.startsWith(PROGRESS_PREFIX) && value is String
-            }
-            .mapNotNull { (key, value) ->
-                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
-                parseProgress(
-                    titleId = progressKey.titleId,
-                    episodeId = progressKey.episodeId,
-                    encoded = value as String,
-                )
-            }
-            .distinctBy { it.titleId to it.episodeId }
-            .groupBy(EpisodeWatchProgress::titleId)
-            .values
-            .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
-            .maxByOrNull(EpisodeWatchProgress::updatedAt)
-    }
+    fun getRecentTitleWatchState(): TitleWatchState? =
+        latestProgressPerTitle().maxByOrNull(EpisodeWatchProgress::updatedAt)
 
     fun getRecentTitleWatchStates(limit: Int): List<TitleWatchState> {
         if (limit <= 0) return emptyList()
-        return prefs.all.entries
-            .asSequence()
-            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
-            .mapNotNull { (key, value) ->
-                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
-                parseProgress(
-                    titleId = progressKey.titleId,
-                    episodeId = progressKey.episodeId,
-                    encoded = value as String,
-                )
-            }
-            .distinctBy { it.titleId to it.episodeId }
-            .groupBy(EpisodeWatchProgress::titleId)
-            .values
-            .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
+        return latestProgressPerTitle()
             .sortedByDescending(EpisodeWatchProgress::updatedAt)
             .take(limit)
     }
+
+    /** Every stored title's most recently updated episode, one entry per title. */
+    private fun latestProgressPerTitle(): List<EpisodeWatchProgress> =
+        allProgressEntries()
+            .groupBy(EpisodeWatchProgress::titleId)
+            .values
+            .mapNotNull { items -> items.maxByOrNull(EpisodeWatchProgress::updatedAt) }
+
+    private fun allProgressEntries(): List<EpisodeWatchProgress> = prefs.all.entries
+        .asSequence()
+        .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
+        .mapNotNull { (key, value) ->
+            val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
+            parseProgress(
+                titleId = progressKey.titleId,
+                episodeId = progressKey.episodeId,
+                encoded = value as String,
+            )
+        }
+        .distinctBy { it.titleId to it.episodeId }
+        .toList()
 
     fun getEpisodeProgress(titleId: String): List<EpisodeWatchProgress> {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
@@ -373,21 +362,7 @@ class WatchStateRepository(context: Context) : LocalWatchStateRepository, Playba
      * title and episode, so this remains independent of the streaming source used to
      * play an episode.
      */
-    override fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
-        return prefs.all.entries
-            .asSequence()
-            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
-            .mapNotNull { (key, value) ->
-                val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
-                parseProgress(
-                    titleId = progressKey.titleId,
-                    episodeId = progressKey.episodeId,
-                    encoded = value as String,
-                )
-            }
-            .distinctBy { it.titleId to it.episodeId }
-            .toList()
-    }
+    override fun getAllEpisodeProgress(): List<EpisodeWatchProgress> = allProgressEntries()
 
     /** Daily local playback aggregates used by the profile. Resume state remains separate. */
     override fun getDailyWatchActivity(): List<DailyWatchActivity> {
