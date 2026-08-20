@@ -2,6 +2,10 @@ package org.akkirrai.hibiki.app.shell.player.watch
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CancellationException
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -41,6 +45,14 @@ internal fun HibikiWatchDataEffects(
     episodesPresenter: EpisodesPresenter,
     episodesLoadGeneration: Int,
 ) {
+    // Re-entering the same anime's sources / same source's episodes after they were already
+    // loaded once shouldn't blank the screen back to Loading while the (cache-hit, near-instant)
+    // refetch resolves -- that blank-then-refill is what reads as "flickers like a reload".
+    // These survive the generation bumps and the eager blank reset on back-navigation below,
+    // since they're independent of the presenter state those touch.
+    var lastLoadedWatchAnimeId by remember { mutableStateOf<String?>(null) }
+    var lastLoadedEpisodesSourceId by remember { mutableStateOf<String?>(null) }
+
     // Also re-keyed on whether a player is currently active: teardown() persists progress
     // synchronously before clearing the route, so by the time this flips to null->non-null the
     // saved position is already there -- without this key, returning to Details for the same
@@ -72,13 +84,16 @@ internal fun HibikiWatchDataEffects(
     LaunchedEffect(watchRepository, watchAnime?.id, watchLoadGeneration) {
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val anime = watchAnime ?: return@LaunchedEffect
-        watchPresenter.setState(
-            initialWatchSourcesState(
-                cachedSources = null,
-                offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
-                forceRefresh = true,
-            ),
-        )
+        val alreadyLoaded = !forceWatchSourcesRefresh && lastLoadedWatchAnimeId == anime.id
+        if (!alreadyLoaded) {
+            watchPresenter.setState(
+                initialWatchSourcesState(
+                    cachedSources = null,
+                    offlineSources = offlineWatchDataRepository?.getOfflineSources(anime.id).orEmpty(),
+                    forceRefresh = true,
+                ),
+            )
+        }
         try {
             val sourcesForWatch = if (forceWatchSourcesRefresh) {
                 repositoryForWatch.refreshSources(anime.id)
@@ -92,6 +107,7 @@ internal fun HibikiWatchDataEffects(
                     isLoading = false,
                 )
             }
+            lastLoadedWatchAnimeId = anime.id
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -127,10 +143,13 @@ internal fun HibikiWatchDataEffects(
         val repositoryForWatch = watchRepository ?: return@LaunchedEffect
         val source = selectedWatchSource ?: return@LaunchedEffect
         val offlineEpisodes = offlineWatchDataRepository?.getOfflineEpisodes(source.sourceId).orEmpty()
-        episodesPresenter.setState(initialEpisodesState(offlineEpisodes))
+        if (lastLoadedEpisodesSourceId != source.sourceId) {
+            episodesPresenter.setState(initialEpisodesState(offlineEpisodes))
+        }
         try {
             val episodes = repositoryForWatch.getEpisodes(source.sourceId)
             episodesPresenter.setState(loadedEpisodesState(episodes, offlineEpisodes))
+            lastLoadedEpisodesSourceId = source.sourceId
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
