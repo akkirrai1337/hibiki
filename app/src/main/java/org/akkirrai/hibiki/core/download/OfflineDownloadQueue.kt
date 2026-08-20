@@ -47,6 +47,14 @@ object OfflineDownloadQueue {
     private val installedManagers = mutableSetOf<Int>()
     private val downloadsBeingRemoved = mutableSetOf<String>()
 
+    /**
+     * Download ids currently being resolved in [drain]'s background coroutine -- i.e. already
+     * taken off the persisted pending queue but not yet handed to Media3's `DownloadManager` (or
+     * marked failed). Without this, [getEpisodeStates] would report `NotDownloaded` for that whole
+     * window, visibly reverting the UI's optimistic "queued" state until resolution finishes.
+     */
+    private val resolvingIds = mutableSetOf<String>()
+
     @Volatile
     private var isProcessing = false
 
@@ -179,13 +187,14 @@ object OfflineDownloadQueue {
             .map { it.episodeId }
             .toSet()
         val failedIds = failedEntryIds(context)
+        val resolving = synchronized(requestLock) { resolvingIds.toSet() }
         return buildMap {
             episodeIds.forEach { episodeId ->
                 val id = downloadId(sourceId, episodeId)
                 val current = manager.currentDownloads.firstOrNull { it.request.id == id }
                 val stored = current ?: runCatching { manager.downloadIndex.getDownload(id) }.getOrNull()
                 val state = when {
-                    episodeId in pendingIds -> OfflineEpisodeDownloadState.Queued
+                    episodeId in pendingIds || id in resolving -> OfflineEpisodeDownloadState.Queued
                     stored != null -> stored.toEpisodeDownloadState()
                     id in failedIds -> OfflineEpisodeDownloadState.Failed
                     else -> OfflineEpisodeDownloadState.NotDownloaded
@@ -340,6 +349,9 @@ object OfflineDownloadQueue {
             synchronized(processingLock) { isProcessing = false }
             return
         }
+        synchronized(requestLock) {
+            entries.mapTo(resolvingIds) { it.downloadId }
+        }
 
         scope.launch {
             var addedAny = false
@@ -381,6 +393,7 @@ object OfflineDownloadQueue {
                         markFailedEntry(context, entry)
                         removeFromSession(context, entry.downloadId)
                     }
+                    synchronized(requestLock) { resolvingIds.remove(entry.downloadId) }
                 }
             } finally {
                 synchronized(processingLock) { isProcessing = false }
