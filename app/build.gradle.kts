@@ -107,6 +107,7 @@ dependencies {
     implementation(project(":parsers"))
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)

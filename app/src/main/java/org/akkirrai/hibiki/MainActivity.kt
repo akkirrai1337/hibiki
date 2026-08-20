@@ -26,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import org.akkirrai.hibiki.app.navigation.AndroidSharedAppShell
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -69,6 +71,15 @@ class MainActivity : ComponentActivity() {
     private var updateDownloadId: Long = NO_DOWNLOAD_ID
     private var updateDownloadJob: Job? = null
     private var isStartingInstaller = false
+
+    // Keeps the system splash on screen until the very first real WindowInsets delivery,
+    // instead of the default "first frame drawn" heuristic -- edge-to-edge Compose content
+    // reads WindowInsets.statusBars/navigationBars as zero until that first delivery, so
+    // without this the splash would disappear a frame early and reveal the layout snapping
+    // into its correct (inset-aware) position in front of the user (bottom bar sliding down,
+    // search bar sliding up). Guarded by a short fallback so a device that never delivers
+    // insets for some reason can't hang the splash screen forever.
+    private var isContentReady = false
     private val updateDownloadReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
@@ -128,8 +139,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_Hibiki)
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        splashScreen.setKeepOnScreenCondition { !isContentReady }
         AppLogger.install(applicationContext)
         if (BuildConfig.GITHUB_UPDATES_ENABLED) {
             cleanupInstalledUpdate()
@@ -141,6 +153,15 @@ class MainActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
+        if (ViewCompat.getRootWindowInsets(window.decorView) != null) {
+            isContentReady = true
+        } else {
+            ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets ->
+                isContentReady = true
+                insets
+            }
+        }
+        window.decorView.postDelayed({ isContentReady = true }, SPLASH_MAX_HOLD_MS)
         synchronizeNotificationPermissionState()
 
         setContent {
@@ -433,5 +454,6 @@ class MainActivity : ComponentActivity() {
         private const val KEY_LAST_SHOWN_UPDATE_VERSION = "last_shown_update_version"
         private const val NO_DOWNLOAD_ID = -1L
         private const val DOWNLOAD_STATUS_MISSING = -1
+        private const val SPLASH_MAX_HOLD_MS = 1500L
     }
 }
