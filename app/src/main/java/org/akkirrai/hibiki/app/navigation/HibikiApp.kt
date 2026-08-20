@@ -37,6 +37,7 @@ import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.app.settings.isEnglishAppLanguage
 import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
 import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
@@ -90,6 +91,14 @@ internal fun HibikiApp(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val preferences = LocalAppPreferencesState.current
+    val appPreferences = LocalAppPreferences.current
+    val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
+    // Drives which language external sources are asked to return catalog/details text in --
+    // must track the app's own language setting so e.g. episode-count wording and release
+    // season names match the UI instead of always defaulting to whichever the source itself
+    // happens to prefer.
+    val preferEnglishForSources = isEnglishAppLanguage(preferences.languageMode, systemLanguage)
     val externalSourceConfigStore = remember(context) { ExternalSourceConfigStore(context) }
     val androidChallengeSessionProvider = remember(context) { ChallengeSessionProviderImpl(context) }
     val animePaheWebViewExtractor = remember(context) { AnimePaheWebViewExtractor(context) }
@@ -169,6 +178,7 @@ internal fun HibikiApp(
         packageManagerSourceCatalog,
         externalHttpClient,
         externalStatusLabels,
+        preferEnglishForSources,
     ) {
         ExternalSourceCatalogRepository(
             registryProvider = { mergedExternalRegistry() },
@@ -176,7 +186,11 @@ internal fun HibikiApp(
             contextProvider = { sourceId ->
                 DefaultSourceContext(
                     httpClient = externalHttpClient,
-                    preferredLanguages = listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
+                    preferredLanguages = if (preferEnglishForSources) {
+                        listOf(SourceLanguage.ENGLISH, SourceLanguage.RUSSIAN)
+                    } else {
+                        listOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH)
+                    },
                     config = externalSourceConfigStore.load(sourceId),
                     logger = SourceLogger { level, message, throwable ->
                         val tag = "BeakoKit/${sourceId.value}"
@@ -235,8 +249,6 @@ internal fun HibikiApp(
         OfflineTitleMetadataRepositoryImpl(dependencies.offlineTitleMetadataRepository())
     }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
-    val preferences = LocalAppPreferencesState.current
-    val appPreferences = LocalAppPreferences.current
     androidx.compose.runtime.LaunchedEffect(
         catalogRepository,
         preferences.animeSource.value,
@@ -244,7 +256,6 @@ internal fun HibikiApp(
         preferences.animeSource.value.let(catalogRepository::selectSource)
     }
     val density = LocalDensity.current
-    val systemLanguage = LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" }
     val layoutEnvironment = appLayoutEnvironment(density)
     val sources = remember(packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(

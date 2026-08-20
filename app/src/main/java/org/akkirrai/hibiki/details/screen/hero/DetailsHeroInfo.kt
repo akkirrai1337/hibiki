@@ -16,7 +16,6 @@ data class DetailsHeroInfo(
 
 fun resolveDetailsHeroInfo(
     anime: Anime,
-    localizedEpisodeWord: String,
 ): DetailsHeroInfo {
     val parts = anime.subtitle
         .split(Regex("\\s*[\\u00B7|]\\s*"))
@@ -29,8 +28,11 @@ fun resolveDetailsHeroInfo(
         .orEmpty()
         .ifBlank { "TV" }
     val year = parts.getOrNull(1).orEmpty()
+    // episodesLabel already comes fully localized/pluralized from resolveEpisodesLabel -- an
+    // English "episode(s)" -> localizedEpisodeWord swap used to live here to patch around that
+    // not being true yet, but it undid correct singular/plural wording and always capitalized
+    // the result, so it's gone now that the label is right at the source.
     val rawEpisodes = anime.episodesLabel
-        .replace(Regex("\\bepisodes?\\b", RegexOption.IGNORE_CASE), localizedEpisodeWord)
         .takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
         .orEmpty()
     val episodeCount = Regex("\\d+").find(rawEpisodes)?.value?.toIntOrNull()

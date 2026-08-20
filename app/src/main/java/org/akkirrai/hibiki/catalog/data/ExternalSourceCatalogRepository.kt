@@ -128,7 +128,7 @@ class ExternalSourceCatalogRepository(
         }.map { title ->
             title.toAppAnime(
                 sourceId = sourceId,
-                preferEnglish = SourceLanguage.ENGLISH in contextProvider(sourceId).preferredLanguages,
+                preferEnglish = contextProvider(sourceId).preferredLanguages.firstOrNull() == SourceLanguage.ENGLISH,
                 statusLabels = statusLabels,
             )
         }

@@ -56,6 +56,19 @@ fun resolveEpisodesLabel(
     return when (val count = releasedCount) {
         null -> fallbackLabel.orEmpty().takeUnless { fallbackIsUnknown || it.isBlank() } ?:
             if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
-        else -> if (preferEnglish) "$count episodes" else "$count серий"
+        else -> "$count ${episodeCountWord(count, preferEnglish)}"
+    }
+}
+
+/** "1 episode" / "2 episodes"; "1 серия" / "2 серии" / "5 серий" -- lowercase either way. */
+private fun episodeCountWord(count: Int, preferEnglish: Boolean): String {
+    if (preferEnglish) return if (count == 1) "episode" else "episodes"
+    val hundredRemainder = count % 100
+    val tenRemainder = count % 10
+    return when {
+        hundredRemainder in 11..14 -> "серий"
+        tenRemainder == 1 -> "серия"
+        tenRemainder in 2..4 -> "серии"
+        else -> "серий"
     }
 }

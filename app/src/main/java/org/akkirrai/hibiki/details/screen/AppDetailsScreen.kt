@@ -91,7 +91,6 @@ fun AppDetailsScreen(
     librarySheetOpen: Boolean? = null,
     onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
-    val localizedEpisodeWord = appText(AppTextKey.Episodes)
     val relatedTitle = appText(AppTextKey.DetailsRelatedTitle)
     val similarTitle = appText(AppTextKey.Similar)
     val announcementLabel = appText(AppTextKey.Announcement)
@@ -123,8 +122,8 @@ fun AppDetailsScreen(
             original = appText(AppTextKey.SourceMaterialOriginal),
         ),
     )
-    val heroInfo = remember(anime, localizedEpisodeWord, localizedStatus) {
-        resolveDetailsHeroInfo(anime, localizedEpisodeWord).copy(status = localizedStatus)
+    val heroInfo = remember(anime, localizedStatus) {
+        resolveDetailsHeroInfo(anime).copy(status = localizedStatus)
     }
     val uiModel = remember(anime, heroInfo) {
         buildDetailsUiModel(
