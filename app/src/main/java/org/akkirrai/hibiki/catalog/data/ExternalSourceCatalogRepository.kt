@@ -128,7 +128,7 @@ class ExternalSourceCatalogRepository(
         }.map { title ->
             title.toAppAnime(
                 sourceId = sourceId,
-                preferEnglish = contextProvider(sourceId).preferredLanguages.firstOrNull() == SourceLanguage.ENGLISH,
+                preferEnglish = preferEnglish(sourceId),
                 statusLabels = statusLabels,
             )
         }
@@ -153,10 +153,14 @@ class ExternalSourceCatalogRepository(
         }
         return title.toAppAnime(
             sourceId = sourceId,
-            preferEnglish = contextProvider(sourceId).preferredLanguages.firstOrNull() == SourceLanguage.ENGLISH,
+            preferEnglish = preferEnglish(sourceId),
             statusLabels = statusLabels,
         )
     }
+
+    /** Whether English is this source's *preferred* language, not merely present as a fallback. */
+    private fun preferEnglish(sourceId: SourceId): Boolean =
+        contextProvider(sourceId).preferredLanguages.firstOrNull() == SourceLanguage.ENGLISH
 
     private fun requireSelectedSource(): SourceId =
         selectedSourceId ?: error("An external source must be selected before searching")
