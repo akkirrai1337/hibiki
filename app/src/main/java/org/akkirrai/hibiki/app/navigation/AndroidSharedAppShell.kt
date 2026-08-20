@@ -86,6 +86,7 @@ internal fun AndroidSharedAppShell(
     onConfigureNotifications: () -> Unit,
     enableOnboarding: Boolean = false,
     settingsStoreOverride: AndroidAppSettingsStore? = null,
+    onFirstContentReady: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -355,6 +356,7 @@ internal fun AndroidSharedAppShell(
                 profileAvatarEditAvailable = true,
                 onOpenUrl = uriHandler::openUri,
                 onDiscordBrowserSignIn = activityLaunchers.signInWithDiscord,
+                onFirstContentReady = onFirstContentReady,
             ),
             sourceCallbacks = sourceCallbacks,
             watchRepository = externalWatchRepository,

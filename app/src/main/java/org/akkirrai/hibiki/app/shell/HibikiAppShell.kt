@@ -296,6 +296,7 @@ internal fun HibikiAppShell(
         setHomeState = ::setHomeStatePreservingDescriptions,
         profileRepository = profileRepository,
         profilePresenter = profilePresenter,
+        onHomeContentReady = platformCallbacks.onFirstContentReady,
     )
 
     HibikiWatchDataEffects(

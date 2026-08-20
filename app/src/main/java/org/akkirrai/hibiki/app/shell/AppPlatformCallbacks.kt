@@ -18,4 +18,8 @@ class AppPlatformCallbacks(
     val profileAvatarEditAvailable: Boolean = false,
     val onGitHubClick: () -> Unit = {},
     val onDiscordBrowserSignIn: (((String) -> Unit) -> Unit) = {},
+    // Fired once on cold start, after Home's first real data (not just the loading state) is
+    // ready to display -- lets a platform host hold its own launch splash screen up until
+    // then instead of revealing an empty Home that fills in a moment later.
+    val onFirstContentReady: () -> Unit = {},
 )

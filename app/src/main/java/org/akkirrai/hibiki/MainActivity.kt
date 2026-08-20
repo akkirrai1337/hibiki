@@ -72,14 +72,21 @@ class MainActivity : ComponentActivity() {
     private var updateDownloadJob: Job? = null
     private var isStartingInstaller = false
 
-    // Keeps the system splash on screen until the very first real WindowInsets delivery,
-    // instead of the default "first frame drawn" heuristic -- edge-to-edge Compose content
-    // reads WindowInsets.statusBars/navigationBars as zero until that first delivery, so
-    // without this the splash would disappear a frame early and reveal the layout snapping
-    // into its correct (inset-aware) position in front of the user (bottom bar sliding down,
-    // search bar sliding up). Guarded by a short fallback so a device that never delivers
-    // insets for some reason can't hang the splash screen forever.
-    private var isContentReady = false
+    // Keeps the system splash on screen until BOTH of these are true, instead of the default
+    // "first frame drawn" heuristic:
+    // - real WindowInsets have been delivered at least once (edge-to-edge Compose content
+    //   reads WindowInsets.statusBars/navigationBars as zero until then, so without this the
+    //   splash would disappear a frame early and reveal the layout snapping into its correct,
+    //   inset-aware position in front of the user -- bottom bar sliding down, search bar
+    //   sliding up);
+    // - Home's first real data has loaded (AppPlatformCallbacks.onFirstContentReady), so the
+    //   user never sees Home render empty and fill in a moment later.
+    // Both are guarded by a short fallback so a device that never delivers one of these
+    // signals for some reason can't hang the splash screen forever.
+    private var isInsetsReady = false
+    private var isHomeContentReady = false
+    private val isContentReady: Boolean
+        get() = isInsetsReady && isHomeContentReady
     private val updateDownloadReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
@@ -154,14 +161,15 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         if (ViewCompat.getRootWindowInsets(window.decorView) != null) {
-            isContentReady = true
+            isInsetsReady = true
         } else {
             ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets ->
-                isContentReady = true
+                isInsetsReady = true
                 insets
             }
         }
-        window.decorView.postDelayed({ isContentReady = true }, SPLASH_MAX_HOLD_MS)
+        window.decorView.postDelayed({ isInsetsReady = true }, SPLASH_MAX_HOLD_MS)
+        window.decorView.postDelayed({ isHomeContentReady = true }, SPLASH_MAX_HOLD_MS)
         synchronizeNotificationPermissionState()
 
         setContent {
@@ -179,6 +187,7 @@ class MainActivity : ComponentActivity() {
                             onConfigureNotifications = ::configureNotifications,
                             enableOnboarding = false,
                             settingsStoreOverride = AndroidAppSettingsStore(appPreferences),
+                            onFirstContentReady = { isHomeContentReady = true },
                         )
                         if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
                             availableUpdate?.let { update ->

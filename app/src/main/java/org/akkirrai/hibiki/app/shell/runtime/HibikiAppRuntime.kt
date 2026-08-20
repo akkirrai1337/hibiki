@@ -75,6 +75,10 @@ internal fun HibikiAppDataEffects(
     setHomeState: (HomeUiState) -> Unit,
     profileRepository: LocalProfileDataRepository,
     profilePresenter: LocalProfilePresenter,
+    // Fired once Home's locally-derived sections (continue watching, recently added) are
+    // ready to show -- lets the platform host keep its own launch splash up until then, so the
+    // user never sees Home render empty and then fill in.
+    onHomeContentReady: () -> Unit = {},
 ) {
     LaunchedEffect(libraryRepository, profileRepository) {
         val entries = try {
@@ -98,11 +102,13 @@ internal fun HibikiAppDataEffects(
         try {
             if (homeRepository == null) {
                 homePresenter.setState(HomeUiState())
+                onHomeContentReady()
             } else {
                 // Paint the locally-derived sections (continue watching, recently added) first
                 // -- they're already on disk and don't need to wait on the catalog network
                 // calls that loadHomeState() also has to make.
                 homePresenter.setState(homeRepository.loadLocalHomeState())
+                onHomeContentReady()
                 setHomeState(homeRepository.loadHomeState())
             }
         } catch (cancelled: CancellationException) {
@@ -113,6 +119,7 @@ internal fun HibikiAppDataEffects(
                     errorMessage = throwable.message ?: "Home loading failed",
                 ),
             )
+            onHomeContentReady()
         }
     }
 
