@@ -327,7 +327,6 @@ internal fun HibikiAppShell(
     )
 
     val playbackEffects = HibikiAppShellPlaybackEffects(
-        episodesPresenter = episodesPresenter,
         playerPresenter = playerPresenter,
         invalidateEpisodes = { episodesLoadGeneration++ },
     )

@@ -34,13 +34,17 @@ internal fun applyHibikiWatchFlowBackEffect(
     effect: WatchFlowBackEffect,
     invalidateEpisodes: Boolean,
     onEpisodesInvalidated: () -> Unit,
-    episodesPresenter: EpisodesPresenter,
     playerPresenter: PlayerPresenter,
 ) {
     when (effect) {
         WatchFlowBackEffect.ResetEpisodesAndPlayer -> {
+            // Not blanking episodesPresenter here: HibikiWatchDataEffects' episodes LaunchedEffect
+            // already resets to Loading itself when the next selected source actually differs from
+            // the last one it loaded, and skips that reset when it's the same source. Blanking
+            // eagerly here too raced with the exit animation of this screen -- the fading-out
+            // Episodes slot reads presenter state live, so it would flash to a loading spinner
+            // over itself the instant Back was pressed, before the fade even started.
             if (invalidateEpisodes) onEpisodesInvalidated()
-            episodesPresenter.setState(EpisodesScreenState())
             resetHibikiPlayerState(playerPresenter)
         }
         WatchFlowBackEffect.ResetPlayer,
@@ -132,7 +136,6 @@ internal class HibikiWatchFlowNavigationActions(
 }
 
 internal class HibikiAppShellPlaybackEffects(
-    private val episodesPresenter: EpisodesPresenter,
     private val playerPresenter: PlayerPresenter,
     private val invalidateEpisodes: () -> Unit,
 ) {
@@ -148,7 +151,6 @@ internal class HibikiAppShellPlaybackEffects(
             effect = effect,
             invalidateEpisodes = invalidateEpisodesState,
             onEpisodesInvalidated = invalidateEpisodes,
-            episodesPresenter = episodesPresenter,
             playerPresenter = playerPresenter,
         )
     }
