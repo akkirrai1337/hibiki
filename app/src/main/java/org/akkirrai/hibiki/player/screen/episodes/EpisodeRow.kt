@@ -2,11 +2,11 @@ package org.akkirrai.hibiki.player
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -89,8 +89,12 @@ fun EpisodeRow(
             }
             AnimatedVisibility(
                 visible = showDownloadAction,
-                enter = fadeIn(fadeAnimationSpec) + expandHorizontally(sizeAnimationSpec),
-                exit = fadeOut(fadeAnimationSpec) + shrinkHorizontally(sizeAnimationSpec),
+                // expandIn/shrinkOut (not -Horizontally) animate both axes together: the download
+                // action is taller than the row's text content, so animating width alone reported
+                // this element's full height to the parent Row from frame one, snapping the whole
+                // card's height instantly while only its width visibly slid in.
+                enter = fadeIn(fadeAnimationSpec) + expandIn(sizeAnimationSpec, expandFrom = Alignment.Center),
+                exit = fadeOut(fadeAnimationSpec) + shrinkOut(sizeAnimationSpec, shrinkTowards = Alignment.Center),
             ) {
                 downloadAction?.invoke()
             }
