@@ -90,6 +90,7 @@ import org.akkirrai.hibiki.app.navigation.appBackHandlerEnabled
 import org.akkirrai.hibiki.app.navigation.appBottomBarVisible
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.app.navigation.appShellTransitionKey
+import org.akkirrai.hibiki.app.navigation.isWatchFlowRoute
 import org.akkirrai.hibiki.app.navigation.currentRoute
 import org.akkirrai.hibiki.app.navigation.currentTransitionKey
 import org.akkirrai.hibiki.app.navigation.selectedWatchSource
@@ -522,11 +523,7 @@ internal fun HibikiAppShell(
                         // (settingsVisible), independent of this value.
                         contentRoute = if (routePresentation.currentRoute is AppRoute.Settings) {
                             AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.PROFILE)
-                        } else if (
-                            routePresentation.currentRoute is AppRoute.WatchSources ||
-                            routePresentation.currentRoute is AppRoute.Episodes ||
-                            routePresentation.currentRoute is AppRoute.Player
-                        ) {
+                        } else if (routePresentation.currentRoute.isWatchFlowRoute()) {
                             // Sources -> episodes -> player for the same anime is one continuous
                             // flow: report a route stable across those three (keyed only on the
                             // anime id) so AppRootContentState stays equal across them and the root
@@ -552,11 +549,7 @@ internal fun HibikiAppShell(
                                     "${topLevelDestination.name}:${selectedTab.name}"
                                 },
                             )
-                        } else if (
-                            routePresentation.currentRoute is AppRoute.WatchSources ||
-                            routePresentation.currentRoute is AppRoute.Episodes ||
-                            routePresentation.currentRoute is AppRoute.Player
-                        ) {
+                        } else if (routePresentation.currentRoute.isWatchFlowRoute()) {
                             // Sources -> episodes -> player for the same anime is one continuous
                             // flow, not a sequence of separate screens -- keying this on just the
                             // anime id (like Details keys on animeId, not the full route) means

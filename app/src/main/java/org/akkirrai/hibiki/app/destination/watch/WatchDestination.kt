@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.app.navigation.AppRoute
+import org.akkirrai.hibiki.app.navigation.isWatchFlowRoute
 import org.akkirrai.hibiki.player.EpisodeDownloadRepository
 import org.akkirrai.hibiki.player.EpisodesScreenState
 import org.akkirrai.hibiki.player.OfflineWatchDataRepository
@@ -56,9 +57,7 @@ internal data class AppDestinationPlaybackContext(
 )
 
 internal fun AppDestinationContentState.isWatchRouteDriven(): Boolean =
-    currentRoute?.let { route ->
-        route is AppRoute.WatchSources || route is AppRoute.Episodes || route is AppRoute.Player
-    } ?: (watchAnime != null)
+    currentRoute?.isWatchFlowRoute() ?: (watchAnime != null)
 
 internal fun AppDestinationContentState.isDetailsRouteDriven(): Boolean =
     currentRoute?.let { it is AppRoute.Details } ?: (selectedAnime != null)

@@ -44,6 +44,10 @@ enum class AppPlayerSettingsDestination {
 
 data class AppTransitionKey(val route: String, val identity: String)
 
+/** Sources -> episodes -> player for one anime, treated as a single continuous flow. */
+fun AppRoute?.isWatchFlowRoute(): Boolean =
+    this is AppRoute.WatchSources || this is AppRoute.Episodes || this is AppRoute.Player
+
 fun AppRoute.transitionKey(): AppTransitionKey = when (this) {
     is AppRoute.TopLevel -> AppTransitionKey("top-level", destination.route)
     is AppRoute.Details -> AppTransitionKey("details", animeId)
