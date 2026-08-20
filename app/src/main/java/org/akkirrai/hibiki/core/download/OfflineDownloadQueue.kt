@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.player.model.PlaybackSegment
 import org.akkirrai.hibiki.player.model.PlaybackSegmentType
@@ -38,6 +39,7 @@ object OfflineDownloadQueue {
     private const val SESSION_DOWNLOAD_IDS_KEY = "session_download_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
+    private val RESOLVE_RETRY_DELAYS_MS = longArrayOf(0L, 1_000L, 3_000L)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val processingLock = Any()
@@ -241,6 +243,9 @@ object OfflineDownloadQueue {
             )
             clearFailedEntries(appContext, setOf(id))
             removeFromSession(appContext, id)
+            prefs(appContext).getString(playbackKey(sourceId, episodeId), null)
+                ?.let { encoded -> runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull() }
+                ?.let { playback -> OfflineStreamHeaders.remove(appContext, playback.streamUrl) }
             prefs(appContext).edit()
                 .remove(playbackKey(sourceId, episodeId))
                 .apply()
@@ -343,15 +348,10 @@ object OfflineDownloadQueue {
                     runCatching {
                         val source = entry.toWatchSource()
                         val episode = entry.toWatchEpisode()
-                        // Offline downloads resolved streams through the built-in source
-                        // runtime, which was removed in favor of external sources only.
-                        // External sources are only reachable from the Compose-scoped
-                        // ExternalSourceRuntimeCoordinator, not from this background queue,
-                        // so download requests fail until a background-reachable external
-                        // source runtime is wired in as a follow-up.
-                        val playback: PlaybackStream = error(
-                            "Offline downloads are unavailable: built-in source support was removed " +
-                                "and background access to external sources is not wired up yet",
+                        val playback = resolvePlaybackWithRetry(
+                            context = context,
+                            sourceId = source.sourceId,
+                            episodeId = episode.id,
                         )
                         synchronized(requestLock) {
                             if (!isCurrentRequest(context, entry)) return@runCatching
@@ -361,6 +361,7 @@ object OfflineDownloadQueue {
                                 episodeId = episode.id,
                                 playback = playback,
                             )
+                            OfflineStreamHeaders.save(context, playback.streamUrl, playback.headers)
                             clearFailedEntries(context, setOf(entry.downloadId))
                             HibikiDownloadService.cancelPreparingNotification(context)
                             DownloadService.sendAddDownload(
@@ -393,6 +394,30 @@ object OfflineDownloadQueue {
         }
     }
 
+
+    private suspend fun resolvePlaybackWithRetry(
+        context: Context,
+        sourceId: String,
+        episodeId: String,
+    ): PlaybackStream {
+        val repository = BackgroundExternalWatchRepositoryFactory.get(context)
+        var lastError: Throwable? = null
+        RESOLVE_RETRY_DELAYS_MS.forEachIndexed { attempt, delayMs ->
+            if (attempt > 0) delay(delayMs)
+            try {
+                return repository.resolvePlayback(sourceId = sourceId, episodeId = episodeId)
+            } catch (error: Throwable) {
+                lastError = error
+                AppLogger.w(
+                    TAG,
+                    "Playback resolution attempt ${attempt + 1}/${RESOLVE_RETRY_DELAYS_MS.size} " +
+                        "failed for $sourceId:$episodeId",
+                    error,
+                )
+            }
+        }
+        throw lastError ?: IllegalStateException("Unable to resolve playback for $sourceId:$episodeId")
+    }
 
     private fun Download.toEpisodeDownloadState(): OfflineEpisodeDownloadState {
         return when (state) {

@@ -5,8 +5,11 @@ import android.content.SharedPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.NoOpCacheEvictor
@@ -90,9 +93,30 @@ object OfflineMediaCache {
             appContext,
             getDatabaseProvider(appContext),
             getDownloadCache(appContext),
-            buildUpstreamDataSourceFactory(appContext, emptyMap()),
+            buildDownloadUpstreamDataSourceFactory(appContext),
             Executors.newFixedThreadPool(2),
         ).also { downloadManager = it }
+    }
+
+    /**
+     * Media3's `DownloadRequest` cannot carry per-download HTTP headers, and this manager's
+     * upstream factory is a single process-wide instance shared by every active download -- so
+     * headers a source requires (Referer/Cookie/User-Agent) are instead looked up per request URL
+     * from [OfflineStreamHeaders], which [OfflineDownloadQueue] populates with the headers of each
+     * resolved [org.akkirrai.hibiki.player.model.PlaybackStream] right before queueing its download.
+     */
+    private fun buildDownloadUpstreamDataSourceFactory(context: Context): DataSource.Factory {
+        val appContext = context.applicationContext
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(PLAYER_CONNECT_TIMEOUT_MS)
+            .setReadTimeoutMs(PLAYER_READ_TIMEOUT_MS)
+            .setUserAgent(PLAYER_HTTP_USER_AGENT)
+            .setDefaultRequestProperties(buildPlaybackRequestHeaders(emptyMap()))
+        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(httpFactory) { url ->
+            OfflineStreamHeaders.get(appContext, url)
+        }
+        return DefaultDataSource.Factory(appContext, headerInjectingFactory)
     }
 
     @Synchronized
@@ -174,4 +198,34 @@ object OfflineMediaCache {
 
     private const val LEGACY_CACHE_DIRECTORY = "offline_media"
     private const val MIGRATION_PREFERENCES = "hibiki_media_cache"
+}
+
+/** Wraps an [HttpDataSource.Factory], adding [headersForUrl]'s headers to every request it opens. */
+private class HeaderInjectingHttpDataSourceFactory(
+    private val delegateFactory: HttpDataSource.Factory,
+    private val headersForUrl: (String) -> Map<String, String>,
+) : HttpDataSource.Factory {
+    override fun createDataSource(): HttpDataSource =
+        HeaderInjectingHttpDataSource(delegateFactory.createDataSource(), headersForUrl)
+
+    override fun setDefaultRequestProperties(defaultRequestProperties: MutableMap<String, String>): HttpDataSource.Factory {
+        delegateFactory.setDefaultRequestProperties(defaultRequestProperties)
+        return this
+    }
+}
+
+private class HeaderInjectingHttpDataSource(
+    private val delegate: HttpDataSource,
+    private val headersForUrl: (String) -> Map<String, String>,
+) : HttpDataSource by delegate {
+    override fun open(dataSpec: DataSpec): Long {
+        headersForUrl(dataSpec.uri.toString()).forEach { (name, value) ->
+            delegate.setRequestProperty(name, value)
+        }
+        return delegate.open(dataSpec)
+    }
+
+    override fun addTransferListener(transferListener: TransferListener) {
+        delegate.addTransferListener(transferListener)
+    }
 }
