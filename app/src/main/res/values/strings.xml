@@ -194,7 +194,7 @@
     <string name="watch_episode_headline">Episode %s</string>
     <string name="watch_episode_headline_watched">✓ Episode %s</string>
     <string name="watch_status_queued">Queued</string>
-    <string name="watch_status_downloading">Downloading %s%%</string>
+    <string name="watch_status_downloading">Downloading %s%</string>
     <string name="watch_status_paused">Paused</string>
     <string name="watch_status_failed">Download failed</string>
     <string name="watch_status_watched">Watched</string>
