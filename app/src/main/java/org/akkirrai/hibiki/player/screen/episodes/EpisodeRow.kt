@@ -1,7 +1,13 @@
 package org.akkirrai.hibiki.player
 
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,10 +35,15 @@ fun EpisodeRow(
     onClick: () -> Unit,
     downloadAction: @Composable (() -> Unit)? = null,
 ) {
+    // Each toggled piece (subtitle line, download action) animates its own fade + size instead of
+    // relying on animateContentSize() for the whole row: that animates the container's bounds
+    // while its children pop in/out instantly, so the label visibly jumps mid-animation and the
+    // two animations end up fighting each other instead of reading as one smooth resize.
+    val sizeAnimationSpec = tween<androidx.compose.ui.unit.IntSize>(EpisodeRowSizeAnimationDurationMillis)
+    val fadeAnimationSpec = tween<Float>(EpisodeRowSizeAnimationDurationMillis)
     androidx.compose.material3.Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(EpisodeRowSizeAnimationDurationMillis))
             .clickable(enabled = enabled, onClick = onClick),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
@@ -56,9 +67,13 @@ fun EpisodeRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (!subtitle.isNullOrBlank()) {
+                AnimatedVisibility(
+                    visible = !subtitle.isNullOrBlank(),
+                    enter = fadeIn(fadeAnimationSpec) + expandVertically(sizeAnimationSpec),
+                    exit = fadeOut(fadeAnimationSpec) + shrinkVertically(sizeAnimationSpec),
+                ) {
                     Text(
-                        text = subtitle,
+                        text = subtitle.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -66,7 +81,13 @@ fun EpisodeRow(
                     )
                 }
             }
-            if (showDownloadAction) downloadAction?.invoke()
+            AnimatedVisibility(
+                visible = showDownloadAction,
+                enter = fadeIn(fadeAnimationSpec) + expandHorizontally(sizeAnimationSpec),
+                exit = fadeOut(fadeAnimationSpec) + shrinkHorizontally(sizeAnimationSpec),
+            ) {
+                downloadAction?.invoke()
+            }
         }
     }
 }
