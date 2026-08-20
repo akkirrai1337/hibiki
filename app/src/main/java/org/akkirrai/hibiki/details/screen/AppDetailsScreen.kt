@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import coil3.Image
 import com.materialkolor.PaletteStyle
@@ -52,6 +53,9 @@ import org.akkirrai.hibiki.player.formatEpisodeNumber
 import org.akkirrai.hibiki.player.formatPlaybackPosition
 import org.akkirrai.hibiki.platform.currentEpochSeconds
 import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.isEnglishAppLanguage
+import org.akkirrai.hibiki.core.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
@@ -91,6 +95,10 @@ fun AppDetailsScreen(
     librarySheetOpen: Boolean? = null,
     onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
 ) {
+    val preferEnglish = isEnglishAppLanguage(
+        LocalAppLanguage.current,
+        LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" },
+    )
     val relatedTitle = appText(AppTextKey.DetailsRelatedTitle)
     val similarTitle = appText(AppTextKey.Similar)
     val announcementLabel = appText(AppTextKey.Announcement)
@@ -378,7 +386,7 @@ fun AppDetailsScreen(
                     similarTitle = similarTitle,
                     announcementLabel = announcementLabel,
                     horizontalPadding = DetailsContentHorizontalPadding,
-                    onItemClick = { related -> onRelatedAnimeClick(related.toPreviewAnime()) },
+                    onItemClick = { related -> onRelatedAnimeClick(related.toPreviewAnime(preferEnglish)) },
                     poster = { related ->
                         AppPosterImage(
                             primaryUrl = related.posterUrl,
@@ -473,11 +481,20 @@ fun AppDetailsScreen(
     }
 }
 
-private fun RelatedAnime.toPreviewAnime(): Anime = Anime(
+/**
+ * Optimistic placeholder shown the instant a related/similar title is tapped, before its real
+ * details finish loading -- localized the same way resolveEpisodesLabel() would, so it doesn't
+ * flash English text on a Russian UI while the real (also-localized) details resolve.
+ */
+private fun RelatedAnime.toPreviewAnime(preferEnglish: Boolean): Anime = Anime(
     id = id,
     title = title,
     subtitle = listOfNotNull(type, year?.toString()).joinToString(" · "),
-    episodesLabel = episodeCount?.let { "$it episodes" } ?: "Episodes unknown",
+    episodesLabel = resolveEpisodesLabel(
+        releasedCount = episodeCount,
+        fallbackLabel = null,
+        preferEnglish = preferEnglish,
+    ),
     status = status ?: "Unknown",
     posterUrl = posterUrl,
 )
