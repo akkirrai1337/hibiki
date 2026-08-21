@@ -41,6 +41,7 @@ import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
 import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.preferredSourceLanguages
 import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
+import org.akkirrai.hibiki.core.source.KickAssAnimeWebViewExtractor
 import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
 import org.akkirrai.hibiki.player.CommonPlaybackHost
 import org.akkirrai.hibiki.player.PlayerWindowController
@@ -102,6 +103,7 @@ internal fun HibikiApp(
     val externalSourceConfigStore = remember(context) { ExternalSourceConfigStore(context) }
     val androidChallengeSessionProvider = remember(context) { ChallengeSessionProviderImpl(context) }
     val animePaheWebViewExtractor = remember(context) { AnimePaheWebViewExtractor(context) }
+    val kickAssAnimeWebViewExtractor = remember(context) { KickAssAnimeWebViewExtractor(context) }
     val uriHandler = LocalUriHandler.current
     val activityLaunchers = rememberAppActivityLaunchers(context)
     val dependencies = remember(context) { context.hibikiDependencies() }
@@ -223,7 +225,7 @@ internal fun HibikiApp(
             },
             sourceConfigProvider = externalSourceConfigStore::load,
             challengeSessionProvider = androidChallengeSessionProvider,
-            additionalExtractors = listOf(animePaheWebViewExtractor),
+            additionalExtractors = listOf(animePaheWebViewExtractor, kickAssAnimeWebViewExtractor),
         )
     }
     DisposableEffect(externalWatchRepository) {
