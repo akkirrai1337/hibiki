@@ -5,6 +5,7 @@ import org.akkirrai.hibiki.catalog.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +49,21 @@ class AnimeCatalogPresenter(
 
     fun onQueryChange(query: String) {
         setQuery(query)
-        search()
+        // Short prefixes (0-2 chars) either 400 on sources that reject too-short queries or just
+        // waste a request on results the next keystroke immediately invalidates -- wait for a
+        // real query. An empty box means "back to browsing", so that one searches right away
+        // instead of debouncing a no-op.
+        scheduleSearch(immediate = query.isBlank())
+    }
+
+    private fun scheduleSearch(immediate: Boolean) {
+        searchJob?.cancel()
+        val query = state.value.query.trim()
+        if (query.isNotEmpty() && query.length < MIN_QUERY_LENGTH) return
+        searchJob = scope.launch {
+            if (!immediate) delay(SEARCH_DEBOUNCE_MS)
+            performSearch()
+        }
     }
 
     fun setQuery(query: String) {
@@ -111,42 +126,43 @@ class AnimeCatalogPresenter(
     }
 
     fun search() {
-        searchJob?.cancel()
-        searchJob = scope.launch {
-            val current = state.value
+        scheduleSearch(immediate = true)
+    }
+
+    private suspend fun performSearch() {
+        val current = state.value
+        _state.update {
+            it.copy(
+                items = emptyList(),
+                isLoading = true,
+                isLoadingMore = false,
+                error = null,
+                page = 1,
+                canLoadMore = false,
+            )
+        }
+        try {
+            val result = repository.search(
+                AnimeCatalogQuery(
+                    text = current.query.trim(),
+                    page = 1,
+                    pageSize = pageSize,
+                    filters = current.filters,
+                ),
+            )
             _state.update {
                 it.copy(
-                    items = emptyList(),
-                    isLoading = true,
+                    items = preserveLoadedDescriptions(it.items, result.items),
+                    page = result.page,
+                    canLoadMore = canRequestNextPage(result),
+                    isLoading = false,
                     isLoadingMore = false,
-                    error = null,
-                    page = 1,
-                    canLoadMore = false,
                 )
             }
-            try {
-                val result = repository.search(
-                    AnimeCatalogQuery(
-                        text = current.query.trim(),
-                        page = 1,
-                        pageSize = pageSize,
-                        filters = current.filters,
-                    ),
-                )
-                _state.update {
-                    it.copy(
-                        items = preserveLoadedDescriptions(it.items, result.items),
-                        page = result.page,
-                        canLoadMore = canRequestNextPage(result),
-                        isLoading = false,
-                        isLoadingMore = false,
-                    )
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (throwable: Throwable) {
-                _state.update { it.copy(isLoading = false, isLoadingMore = false, error = throwable.message ?: "Catalog request failed") }
-            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (throwable: Throwable) {
+            _state.update { it.copy(isLoading = false, isLoadingMore = false, error = throwable.message ?: "Catalog request failed") }
         }
     }
 
@@ -211,6 +227,8 @@ class AnimeCatalogPresenter(
 
     private companion object {
         const val DEFAULT_PAGE_SIZE = 20
+        const val MIN_QUERY_LENGTH = 3
+        const val SEARCH_DEBOUNCE_MS = 400L
     }
 
     fun restore(state: AnimeCatalogUiState) {

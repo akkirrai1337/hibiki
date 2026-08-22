@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
@@ -42,6 +43,41 @@ class AnimeCatalogPresenterTest {
         advanceUntilIdle()
         assertEquals(listOf("1", "2", "3"), presenter.state.value.items.map { it.id })
         assertFalse(presenter.state.value.canLoadMore)
+    }
+
+    @Test
+    fun onQueryChangeSkipsSearchBelowMinLengthAndDebouncesLongerQueries() = runTest {
+        val searchCalls = mutableListOf<String>()
+        val repository = object : AnimeCatalogRepository {
+            override val initialItems: List<Anime> = emptyList()
+            override suspend fun search(query: AnimeCatalogQuery): AnimeCatalogPage {
+                searchCalls += query.text
+                return AnimeCatalogPage(emptyList(), query.page, false)
+            }
+        }
+        val presenter = AnimeCatalogPresenter(repository, this)
+
+        // A single short keystroke must not fire a request -- some sources 400 on a 1-2 char
+        // query, and it's about to be invalidated by the next keystroke anyway.
+        presenter.onQueryChange("r")
+        advanceUntilIdle()
+        assertEquals(emptyList(), searchCalls)
+
+        // Typing the rest of a real query quickly should collapse into a single request once
+        // typing settles, not one request per keystroke.
+        presenter.onQueryChange("re")
+        testScheduler.advanceTimeBy(100)
+        presenter.onQueryChange("rel")
+        testScheduler.advanceTimeBy(100)
+        presenter.onQueryChange("release")
+        advanceUntilIdle()
+        assertEquals(listOf("release"), searchCalls)
+
+        // Clearing the box back to empty means "go back to browsing" and should search
+        // immediately rather than waiting out the debounce.
+        presenter.onQueryChange("")
+        runCurrent()
+        assertEquals(listOf("release", ""), searchCalls)
     }
 
     @Test

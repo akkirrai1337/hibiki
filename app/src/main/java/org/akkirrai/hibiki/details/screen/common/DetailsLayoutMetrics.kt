@@ -87,3 +87,7 @@ val DetailsInformationHorizontalPadding = 12.dp
 val DetailsContentBottomPadding = 100.dp
 val DetailsHeroPosterExpandedOffset = 0.dp
 val DetailsHeroPosterCollapsedOffset = 28.dp
+
+/** Scroll offset tolerance before the hero poster starts collapsing -- absorbs the few pixels
+ *  a fast up-down flick passes through on its way back to the top, see AppDetailsScreen. */
+val DetailsHeroCollapseThreshold = 12.dp

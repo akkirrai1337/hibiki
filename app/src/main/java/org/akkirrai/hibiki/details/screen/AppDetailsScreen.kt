@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil3.Image
 import com.materialkolor.PaletteStyle
@@ -142,9 +143,15 @@ fun AppDetailsScreen(
             includeSimilar = true,
         )
     }
-    val isAtTop by remember(listState) {
+    // A fast up-down flick genuinely passes through a few pixels of scroll offset before
+    // settling back at the top, so collapsing on any nonzero offset made the poster visibly
+    // flash/shrink even when the user never meant to scroll down. A small tolerance absorbs
+    // that without noticeably delaying the collapse once someone actually scrolls.
+    val heroCollapseThresholdPx = with(LocalDensity.current) { DetailsHeroCollapseThreshold.toPx() }
+    val isAtTop by remember(listState, heroCollapseThresholdPx) {
         derivedStateOf {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+            listState.firstVisibleItemIndex == 0 &&
+                listState.firstVisibleItemScrollOffset <= heroCollapseThresholdPx
         }
     }
     val savedScrollPosition = detailsScrollStateCache[anime.id]
