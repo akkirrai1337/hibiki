@@ -7,11 +7,13 @@ val EpisodeRowVerticalPadding = 12.dp
 val EpisodeRowContentGap = 12.dp
 val EpisodeRowProgressTextGap = 4.dp
 val EpisodeRowTextGap = 6.dp
-// Small enough to fit inside a row's natural (text-only) height so a persistently visible
-// download action no longer forces every row taller than one without it -- see EpisodeRow's
-// verticalAlignment = CenterVertically, which stretches to fit its tallest child.
-val EpisodeDownloadActionSize = 28.dp
-val EpisodeDownloadIconSize = 16.dp
+// EpisodeDownloadActionSize is an invisible click box (no background chip -- see DownloadUi.kt),
+// a bit larger than the glyph itself for a comfortable tap target. Both stay small enough to fit
+// inside a row's natural (text-only) height so a persistently visible download action doesn't
+// force every row taller than one without it -- see EpisodeRow's verticalAlignment =
+// CenterVertically, which stretches to fit its tallest child.
+val EpisodeDownloadActionSize = 32.dp
+val EpisodeDownloadIconSize = 22.dp
 val EpisodeDownloadProgressStrokeWidth = 2.dp
 val EpisodesListHorizontalPadding = 12.dp
 val EpisodesListTopPadding = 56.dp
