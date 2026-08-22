@@ -20,6 +20,8 @@ import org.akkirrai.hibiki.player.EpisodesScreenState
 import org.akkirrai.hibiki.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.player.toEpisodeDownloadActionState
+import org.akkirrai.hibiki.details.model.rememberNextEpisodeEta
+import org.akkirrai.hibiki.platform.currentEpochSeconds
 import org.akkirrai.hibiki.profile.LocalProfileData
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
@@ -43,6 +45,17 @@ internal fun HibikiEpisodesContent(
     listContentPadding: androidx.compose.foundation.layout.PaddingValues,
 ) {
     val downloadScope = rememberCoroutineScope()
+    val loadedEpisodes = (state.result as? EpisodesUiState.Content)?.items.orEmpty()
+    val nextEpisodeNumber = (loadedEpisodes.maxOfOrNull(WatchEpisode::number)?.toInt() ?: 0) + 1
+    val nextEpisodeEta = rememberNextEpisodeEta(
+        nextEpisodeAt = anime.nextEpisodeAt,
+        nowEpochSeconds = ::currentEpochSeconds,
+        daysHoursLabel = { days, hours -> appText(AppTextKey.NextEpisodeEtaDaysHours).formatAppText(days, hours) },
+        hoursMinutesSecondsLabel = { hours, minutes, seconds ->
+            appText(AppTextKey.NextEpisodeEtaHoursMinutesSeconds).formatAppText(hours, minutes, seconds)
+        },
+        minutesSecondsLabel = { minutes, seconds -> appText(AppTextKey.NextEpisodeEtaMinutesSeconds).formatAppText(minutes, seconds) },
+    )
     Column(modifier = Modifier.fillMaxSize()) {
         AppEpisodesContent(
             result = state.result,
@@ -131,6 +144,19 @@ internal fun HibikiEpisodesContent(
             },
             listContentPadding = listContentPadding,
             modifier = Modifier.weight(1f),
+            upcomingContent = nextEpisodeEta?.let { eta ->
+                { shape: androidx.compose.foundation.shape.RoundedCornerShape ->
+                    UpcomingEpisodeRow(
+                        headline = appText(AppTextKey.WatchEpisodeHeadline).replace("%s", nextEpisodeNumber.toString()),
+                        countdownText = appText(AppTextKey.NextEpisodeCountdownNumbered).formatAppText(nextEpisodeNumber, eta),
+                        shape = shape,
+                    )
+                }
+            },
         )
     }
+}
+
+private fun String.formatAppText(vararg args: Any): String = args.fold(this) { text, argument ->
+    text.replaceFirst(Regex("%[sd]"), argument.toString())
 }

@@ -15,6 +15,7 @@ fun AppEpisodesContent(
     episodeContent: @Composable (WatchEpisode, androidx.compose.foundation.shape.RoundedCornerShape) -> Unit,
     listContentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
+    upcomingContent: (@Composable (androidx.compose.foundation.shape.RoundedCornerShape) -> Unit)? = null,
 ) {
     AppEpisodesStateContent(
         result = result,
@@ -28,6 +29,7 @@ fun AppEpisodesContent(
             episodes = episodes,
             episodeContent = episodeContent,
             contentPadding = listContentPadding,
+            upcomingContent = upcomingContent,
         )
     }
 }
