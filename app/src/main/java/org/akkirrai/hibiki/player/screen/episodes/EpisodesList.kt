@@ -16,11 +16,12 @@ fun EpisodesList(
     episodeContent: @Composable (WatchEpisode, androidx.compose.foundation.shape.RoundedCornerShape) -> Unit,
     contentPadding: PaddingValues? = null,
     modifier: Modifier = Modifier,
-    // Trailing, non-episode row (e.g. the not-yet-released next episode's countdown) -- shaped as
-    // if it were one more item in the list, so it visually continues the same rounded group.
-    upcomingContent: (@Composable (androidx.compose.foundation.shape.RoundedCornerShape) -> Unit)? = null,
+    // Trailing, non-episode row (e.g. the not-yet-released next episode's countdown). It's a
+    // standalone pill, not one more card in the same full-width group, so the real episode rows'
+    // shapes are computed as if it weren't there -- the last real episode still gets a proper
+    // bottom-rounded "end of the group" shape.
+    upcomingContent: (@Composable () -> Unit)? = null,
 ) {
-    val itemCount = episodes.size + if (upcomingContent != null) 1 else 0
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = contentPadding ?: PaddingValues(
@@ -32,11 +33,11 @@ fun EpisodesList(
         verticalArrangement = Arrangement.spacedBy(EpisodesListItemGap),
     ) {
         itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
-            episodeContent(episode, sourceItemShape(index, itemCount))
+            episodeContent(episode, sourceItemShape(index, episodes.size))
         }
         if (upcomingContent != null) {
             item(key = "upcoming_episode") {
-                upcomingContent(sourceItemShape(episodes.size, itemCount))
+                upcomingContent()
             }
         }
     }

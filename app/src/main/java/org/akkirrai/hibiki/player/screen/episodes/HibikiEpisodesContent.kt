@@ -145,11 +145,10 @@ internal fun HibikiEpisodesContent(
             listContentPadding = listContentPadding,
             modifier = Modifier.weight(1f),
             upcomingContent = nextEpisodeEta?.let { eta ->
-                { shape: androidx.compose.foundation.shape.RoundedCornerShape ->
+                {
                     UpcomingEpisodeRow(
                         headline = appText(AppTextKey.WatchEpisodeHeadline).replace("%s", nextEpisodeNumber.toString()),
                         countdownText = appText(AppTextKey.NextEpisodeCountdownNumbered).formatAppText(nextEpisodeNumber, eta),
-                        shape = shape,
                     )
                 }
             },

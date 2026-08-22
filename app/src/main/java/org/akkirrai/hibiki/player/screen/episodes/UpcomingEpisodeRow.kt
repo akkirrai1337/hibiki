@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -24,18 +23,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 
 /**
- * Read-only row for the episode the source hasn't published yet -- laid out as a trailing list
- * row instead of a floating badge. Not clickable: there's nothing to play yet.
+ * Read-only row for the episode the source hasn't published yet. Unlike a real episode row, this
+ * one doesn't stretch to the full list width -- it wraps its own content (headline + chip) so it
+ * reads as a small trailing note rather than one more full-width card, and left-aligns within the
+ * list. Not clickable: there's nothing to play yet.
  */
 @Composable
 fun UpcomingEpisodeRow(
     headline: String,
     countdownText: String,
-    shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
 ) {
+    // A full pill, not the squarer shape real episode cards use -- this row isn't part of that
+    // full-width group anymore, so it reads better as its own small, clearly-different shape.
+    val shape = RoundedCornerShape(50)
     Surface(
-        modifier = modifier.fillMaxWidth().clip(shape),
+        modifier = modifier.clip(shape),
         color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
         shape = shape,
     ) {
@@ -51,7 +54,6 @@ fun UpcomingEpisodeRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
             )
             UpcomingEpisodeCountdownChip(countdownText)
         }
