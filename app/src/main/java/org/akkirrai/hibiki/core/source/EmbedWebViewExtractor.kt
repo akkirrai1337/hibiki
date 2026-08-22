@@ -13,7 +13,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.StreamExtractor
-import org.akkirrai.beakokit.http.hostOf
 import org.akkirrai.beakokit.http.normalizeUrl
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
@@ -22,19 +21,27 @@ import org.akkirrai.beakokit.model.VideoStream
 import kotlin.coroutines.resume
 
 /**
- * Resolves KickAssAnime's server embeds (VidStreaming/CatStream/BirdStream/DuckStream, served
- * from krussdomi.com's cat-player) by loading the page in a real browser engine and sniffing the
- * HLS/DASH manifest request it makes, instead of reimplementing the site's own signing scheme.
+ * Last-resort resolver for any source's EMBED player link: loads the page in a real WebView and
+ * sniffs the HLS/DASH manifest request it ends up making, instead of every source needing its
+ * own host-specific extractor. Many embed pages are JS-driven and either sign their manifest URL
+ * per request or gate it behind a check only a real browser engine satisfies (TLS/JA3
+ * fingerprinting, hydration that only runs in a visible page, etc.) -- scraping them server-side
+ * from the source extension is either impossible or unreliable, so this is the generic fallback
+ * a source can rely on simply by returning `PlayerType.EMBED` links.
+ *
+ * Registered after every host-specific [StreamExtractor] (see [commonPlaybackExtractors] and the
+ * per-app `additionalExtractors` lists), so it only runs when nothing more specific claims the
+ * link first.
  */
-class KickAssAnimeWebViewExtractor(
+class EmbedWebViewExtractor(
     private val context: Context,
 ) : StreamExtractor {
-    override fun supports(link: PlayerLink): Boolean = isKickAssAnimePlayerLink(link)
+    override fun supports(link: PlayerLink): Boolean = link.type == PlayerType.EMBED
 
     override suspend fun extract(link: PlayerLink): VideoStream = withContext(Dispatchers.Main) {
         val playerUrl = normalizeUrl(link.url)
         val captured = capture(playerUrl, link.headers)
-            ?: throw SourceException("KickAssAnime player did not expose a video stream")
+            ?: throw SourceException("Embed player did not expose a video stream: $playerUrl")
         VideoStream(
             url = captured.url,
             type = captured.type,
@@ -122,6 +129,7 @@ class KickAssAnimeWebViewExtractor(
                     when {
                         path.endsWith(".m3u8", ignoreCase = true) -> handler.post { captureStream(request, StreamType.HLS) }
                         path.endsWith(".mpd", ignoreCase = true) -> handler.post { captureStream(request, StreamType.DASH) }
+                        path.endsWith(".mp4", ignoreCase = true) -> handler.post { captureStream(request, StreamType.MP4) }
                     }
                     return null
                 }
@@ -163,10 +171,4 @@ class KickAssAnimeWebViewExtractor(
             })();
         """
     }
-}
-
-internal fun isKickAssAnimePlayerLink(link: PlayerLink): Boolean {
-    if (link.type != PlayerType.EMBED) return false
-    val host = hostOf(link.url)?.lowercase().orEmpty()
-    return host == "krussdomi.com" || host.endsWith(".krussdomi.com")
 }

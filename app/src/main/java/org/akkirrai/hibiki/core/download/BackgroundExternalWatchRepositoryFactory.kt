@@ -7,7 +7,7 @@ import org.akkirrai.beakokit.api.ExternalSourceRegistry
 import org.akkirrai.beakokit.http.BeakoKitHttpPolicy
 import org.akkirrai.beakokit.http.installBeakoKitHttpDefaults
 import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
-import org.akkirrai.hibiki.core.source.AnimePaheWebViewExtractor
+import org.akkirrai.hibiki.core.source.EmbedWebViewExtractor
 import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
 import org.akkirrai.hibiki.player.SharedAnimeWatchRepository
@@ -41,7 +41,7 @@ internal object BackgroundExternalWatchRepositoryFactory {
         }
         val configStore = ExternalSourceConfigStore(appContext)
         val challengeSessionProvider = ChallengeSessionProviderImpl(appContext)
-        val animePaheWebViewExtractor = AnimePaheWebViewExtractor(appContext)
+        val embedWebViewExtractor = EmbedWebViewExtractor(appContext)
         return SharedAnimeWatchRepository(
             client = HttpClient(OkHttp) {
                 installBeakoKitHttpDefaults(
@@ -57,7 +57,7 @@ internal object BackgroundExternalWatchRepositoryFactory {
             },
             sourceConfigProvider = configStore::load,
             challengeSessionProvider = challengeSessionProvider,
-            additionalExtractors = listOf(animePaheWebViewExtractor),
+            additionalExtractors = listOf(embedWebViewExtractor),
         )
     }
 }
