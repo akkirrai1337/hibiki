@@ -23,3 +23,9 @@ val EpisodeDownloadActionGap = 6.dp
 val WatchEmptyStateHorizontalPadding = 24.dp
 val EpisodeRowDefaultCornerRadius = 0.dp
 const val EpisodeRowSizeAnimationDurationMillis = 220
+// Deliberately smaller than DetailsNextEpisodeChip's own sizing (DetailsLayoutMetrics) -- that
+// chip is sized for the large details hero, and read as too wide/heavy in a compact list row.
+val UpcomingEpisodeChipHorizontalPadding = 6.dp
+val UpcomingEpisodeChipVerticalPadding = 2.dp
+val UpcomingEpisodeChipContentGap = 3.dp
+val UpcomingEpisodeChipIconSize = 12.dp
