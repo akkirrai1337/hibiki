@@ -3,7 +3,9 @@ package org.akkirrai.hibiki.player
 import androidx.compose.ui.unit.dp
 
 val EpisodeRowHorizontalPadding = 16.dp
-val EpisodeRowVerticalPadding = 12.dp
+// Shrunk from 12dp -- with the download action always visible now (no toggle), released-episode
+// rows read as noticeably bulkier than they need to; this is the main lever for their height.
+val EpisodeRowVerticalPadding = 8.dp
 val EpisodeRowContentGap = 12.dp
 val EpisodeRowProgressTextGap = 4.dp
 val EpisodeRowTextGap = 6.dp
