@@ -1,17 +1,17 @@
 package org.akkirrai.hibiki.player
 
 import androidx.compose.ui.unit.dp
-import org.akkirrai.hibiki.design.UiDimens
 
-val EpisodesDownloadToggleEndPadding = UiDimens.ScreenPadding
-val EpisodesDownloadToggleTopPadding = 8.dp
 val EpisodeRowHorizontalPadding = 16.dp
 val EpisodeRowVerticalPadding = 12.dp
 val EpisodeRowContentGap = 12.dp
 val EpisodeRowProgressTextGap = 4.dp
 val EpisodeRowTextGap = 6.dp
-val EpisodeDownloadActionSize = 40.dp
-val EpisodeDownloadIconSize = 20.dp
+// Small enough to fit inside a row's natural (text-only) height so a persistently visible
+// download action no longer forces every row taller than one without it -- see EpisodeRow's
+// verticalAlignment = CenterVertically, which stretches to fit its tallest child.
+val EpisodeDownloadActionSize = 28.dp
+val EpisodeDownloadIconSize = 16.dp
 val EpisodeDownloadProgressStrokeWidth = 2.dp
 val EpisodesListHorizontalPadding = 12.dp
 val EpisodesListTopPadding = 56.dp

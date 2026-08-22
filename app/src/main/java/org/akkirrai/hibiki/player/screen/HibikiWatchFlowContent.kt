@@ -18,7 +18,6 @@ import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.WatchSource
-import org.akkirrai.hibiki.player.AppEpisodesDownloadToggle
 import org.akkirrai.hibiki.player.AppPlayerErrorOverlay
 import org.akkirrai.hibiki.player.AppPlayerLoadingOverlay
 import org.akkirrai.hibiki.player.EpisodeDownloadRepository
@@ -27,7 +26,6 @@ import org.akkirrai.hibiki.player.EpisodesScreenState
 import org.akkirrai.hibiki.player.WatchScreenScaffold
 import org.akkirrai.hibiki.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.player.watchNavigationLockKey
-import org.akkirrai.hibiki.player.rememberEpisodesDownloadControlsVisible
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
@@ -41,7 +39,10 @@ internal fun HibikiWatchFlowContent(
     playbackError: String?,
     playbackLoading: Boolean,
     playbackHostAvailable: Boolean,
-    downloadMode: Boolean,
+    // No longer drives anything here -- download actions are always visible per-row now, not
+    // toggled -- but the deep-link route that sets it still passes it through, see
+    // AppDestinationSpecialRoutes.
+    @Suppress("UNUSED_PARAMETER") downloadMode: Boolean,
     isPlayerRoute: Boolean,
     episodeDownloadRepository: EpisodeDownloadRepository?,
     libraryRepository: LibraryRepository,
@@ -60,10 +61,6 @@ internal fun HibikiWatchFlowContent(
     )
     var navigationLocked by remember(navigationLockKey) { mutableStateOf(false) }
     val episodeDownloadSourceId = selectedWatchSource?.sourceId.orEmpty()
-    val downloadControlsVisible = rememberEpisodesDownloadControlsVisible(
-        sourceId = episodeDownloadSourceId,
-        downloadMode = downloadMode,
-    )
     var episodeDownloadStates by remember(episodeDownloadSourceId) {
         mutableStateOf<Map<String, EpisodeDownloadState>>(emptyMap())
     }
@@ -84,17 +81,6 @@ internal fun HibikiWatchFlowContent(
         backEnabled = !navigationLocked,
         backContentDescription = appText(AppTextKey.Back),
         title = selectedWatchSource?.title ?: anime.title,
-        trailingContent = if (selectedWatchSource != null && episodeDownloadRepository != null) {
-            {
-                AppEpisodesDownloadToggle(
-                    isVisible = downloadControlsVisible.value,
-                    contentDescription = appText(AppTextKey.WatchDownload),
-                    onClick = { downloadControlsVisible.value = !downloadControlsVisible.value },
-                )
-            }
-        } else {
-            null
-        },
         modifier = modifier,
     ) { listContentPadding ->
         // The outer root transition now treats sources -> episodes as one continuous slot (so
@@ -133,7 +119,9 @@ internal fun HibikiWatchFlowContent(
                         profileData = profileData,
                         playbackLoading = playbackLoading,
                         navigationLocked = navigationLocked,
-                        downloadControlsVisible = downloadControlsVisible.value,
+                        // Download actions are always visible per-row now -- see EpisodeRow --
+                        // instead of toggled by a top-bar button that used to live here.
+                        downloadControlsVisible = true,
                         episodeDownloadRepository = episodeDownloadRepository,
                         episodeDownloadStates = episodeDownloadStates,
                         onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
