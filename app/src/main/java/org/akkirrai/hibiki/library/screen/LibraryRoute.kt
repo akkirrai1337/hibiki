@@ -42,14 +42,9 @@ import org.akkirrai.hibiki.text.appText
 internal fun ColumnScope.LibraryRoute(
     sources: List<AppSourceDescriptor>,
     state: LibraryUiState,
-    onAnimeClick: (Anime) -> Unit,
-    onCategorySelected: (LibraryCategory) -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchClear: () -> Unit,
+    actions: LibraryActions,
     onFiltersApply: (org.akkirrai.hibiki.library.state.LibrarySearchFilters) -> Unit,
     filterOverlayOpen: Boolean,
-    onFilterOpen: () -> Unit,
-    onFilterVisibilityChange: (Boolean) -> Unit,
     languageMode: LanguageMode,
     systemLanguage: String,
     bottomContentPadding: Dp,
@@ -58,21 +53,14 @@ internal fun ColumnScope.LibraryRoute(
     val sourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
     LibraryScreen(
         state = state,
-        actions = LibraryActions(
-            onAnimeClick = onAnimeClick,
-            onSearchQueryChange = onSearchQueryChange,
-            onClearSearch = onSearchClear,
-            onFilterClick = onFilterOpen,
-            onCategorySelected = onCategorySelected,
-            onFilterVisibilityChange = onFilterVisibilityChange,
-        ),
+        actions = actions,
         bottomContentPadding = bottomContentPadding,
         entryContent = { entry, entryModifier ->
             AppLibraryEntryCard(
                 entry = entry,
                 announcementLabel = appText(AppTextKey.Announcement),
                 movieLabel = appText(AppTextKey.Type),
-                onClick = { onAnimeClick(entry.anime) },
+                onClick = { actions.onAnimeClick(entry.anime) },
                 libraryStatusLabel = { category -> category.libraryText() },
                 sourceBadgeContent = { titleId ->
                     AnimeKey.parse(titleId)?.sourceId?.value

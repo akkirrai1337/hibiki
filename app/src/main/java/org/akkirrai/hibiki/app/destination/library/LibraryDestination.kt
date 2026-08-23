@@ -15,15 +15,6 @@ internal class HibikiLibraryActions(
     val onFiltersApply: (LibrarySearchFilters) -> Unit = presenter::applySearchFilters
 }
 
-internal data class AppDestinationLibraryActions(
-    val onCategorySelected: (LibraryCategory) -> Unit,
-    val onSearchQueryChange: (String) -> Unit,
-    val onSearchClear: () -> Unit,
-    val onFiltersApply: (LibrarySearchFilters) -> Unit,
-    val onFilterOpen: () -> Unit,
-    val onFilterVisibilityChange: (Boolean) -> Unit,
-)
-
 internal data class AppDestinationLibraryState(
     val entries: List<LibraryEntry>,
     val ui: LibraryUiState,

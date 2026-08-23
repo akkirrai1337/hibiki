@@ -17,6 +17,8 @@ import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 import org.akkirrai.hibiki.catalog.screen.CatalogActions
+import org.akkirrai.hibiki.library.screen.LibraryActions
+import org.akkirrai.hibiki.library.state.LibrarySearchFilters
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -46,7 +48,8 @@ internal data class HomeContentInput(
 
 internal data class LibraryContentInput(
     val state: AppDestinationLibraryState,
-    val actions: AppDestinationLibraryActions,
+    val actions: LibraryActions,
+    val onFiltersApply: (LibrarySearchFilters) -> Unit,
 )
 
 internal data class SettingsContentInput(

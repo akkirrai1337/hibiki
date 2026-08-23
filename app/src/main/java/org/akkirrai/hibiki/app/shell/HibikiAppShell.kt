@@ -60,6 +60,7 @@ import org.akkirrai.hibiki.design.HibikiTypography
 import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.library.presentation.LibraryPresenter
 import org.akkirrai.hibiki.library.LibraryRepository
+import org.akkirrai.hibiki.library.screen.LibraryActions
 import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.home.data.HomeDataRepository
 import org.akkirrai.hibiki.home.presentation.HomePresenter
@@ -627,14 +628,15 @@ internal fun HibikiAppShell(
                                     ui = libraryState,
                                     filterOverlayOpen = isLibraryFilterOverlayOpen,
                                 ),
-                                actions = AppDestinationLibraryActions(
-                                    onCategorySelected = libraryActions.onCategorySelected,
+                                actions = LibraryActions(
+                                    onAnimeClick = navigationActions.onAnimeClick,
                                     onSearchQueryChange = libraryActions.onSearchQueryChange,
-                                    onSearchClear = libraryActions.onSearchClear,
-                                    onFiltersApply = libraryActions.onFiltersApply,
-                                    onFilterOpen = { overlayActions.setLibraryFilterVisible(true) },
+                                    onClearSearch = libraryActions.onSearchClear,
+                                    onFilterClick = { overlayActions.setLibraryFilterVisible(true) },
+                                    onCategorySelected = libraryActions.onCategorySelected,
                                     onFilterVisibilityChange = overlayActions::setLibraryFilterVisible,
                                 ),
+                                onFiltersApply = libraryActions.onFiltersApply,
                             ),
                             navigation = NavigationContentInput(
                                 actions = navigationActions,
