@@ -70,8 +70,6 @@ import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.profile.LocalProfileData
 import org.akkirrai.hibiki.profile.LocalProfilePresenter
-import org.akkirrai.hibiki.layout.appRootTopInsetPadding
-import org.akkirrai.hibiki.layout.AppLayoutOptions
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.app.settings.AppSettingsStore
 import org.akkirrai.hibiki.app.settings.InMemoryAppSettingsStore
@@ -152,7 +150,6 @@ internal fun HibikiAppShell(
     sourceCallbacks: AppSourcePlatformCallbacks = AppSourcePlatformCallbacks(),
     watchRepository: WatchDataRepository? = null,
     playbackCallbacks: AppPlaybackPlatformCallbacks = AppPlaybackPlatformCallbacks(),
-    layoutOptions: AppLayoutOptions = AppLayoutOptions(),
     catalogRefreshKey: Any? = null,
     catalogReady: Boolean = true,
 ) {
@@ -492,7 +489,7 @@ internal fun HibikiAppShell(
                             selectedTab = selectedTab,
                             currentRoute = routePresentation.currentRoute,
                         ),
-                        includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
+                        includeNavigationBarPadding = true,
                         transitionDirection = navigationState.transitionDirection,
                         // Settings is visually an overlay on top of the Profile tab, not a
                         // distinct destination -- report the underlying Profile route here so
@@ -550,9 +547,7 @@ internal fun HibikiAppShell(
                                 routeKey = routePresentation.currentTransitionKey,
                             )
                         },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .appRootTopInsetPadding(layoutOptions.applyStatusBarPadding),
+                        modifier = Modifier.fillMaxSize(),
                     ) { animatedDestination, animatedRoute ->
                         val animatedTab = animatedDestination.toAppDestination(
                             settingsVisible = selectedTab == AppDestination.SETTINGS,
@@ -678,7 +673,7 @@ internal fun HibikiAppShell(
                                 ),
                                 hostContext = AppDestinationHostContext(
                                     systemLanguage = systemLanguage,
-                                    includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
+                                    includeNavigationBarPadding = true,
                                     onLibraryChanged = refreshLocalData,
                                     modifier = Modifier.fillMaxSize(),
                                 ),
@@ -707,7 +702,7 @@ internal fun HibikiAppShell(
                                     useAmoledTheme = appSettingsState.useAmoledTheme,
                                     autoSkipSegments = appSettingsState.autoSkipSegments,
                                     notificationPermissionState = appSettingsState.notificationPermissionState,
-                                    showBackButton = layoutOptions.showSettingsBackButton,
+                                    showBackButton = true,
                                     discordEnabled = platformCallbacks.discordRpcController?.isEnabled() == true,
                                     discordAvailable = platformCallbacks.discordRpcController != null,
                                     notificationsAvailable = platformCallbacks.notificationsAvailable,

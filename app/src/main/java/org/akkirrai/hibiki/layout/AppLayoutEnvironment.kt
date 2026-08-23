@@ -22,13 +22,6 @@ enum class AppScreenEdgePolicy {
     EdgeToEdge,
 }
 
-/** Layout policy supplied by a platform host to the shared app shell. */
-class AppLayoutOptions(
-    val showSettingsBackButton: Boolean = true,
-    val includeNavigationBarPadding: Boolean = true,
-    val applyStatusBarPadding: Boolean = false,
-)
-
 /** Platform-neutral window geometry supplied by each host. */
 data class AppLayoutEnvironment(
     val isProvided: Boolean = false,
@@ -66,7 +59,3 @@ fun Modifier.appTopSystemInsetPadding(): Modifier {
     if (!environment.isProvided) return statusBarsPadding()
     return padding(top = environment.topSystemInset)
 }
-
-@Composable
-fun Modifier.appRootTopInsetPadding(enabled: Boolean): Modifier =
-    if (enabled) appTopSystemInsetPadding() else this
