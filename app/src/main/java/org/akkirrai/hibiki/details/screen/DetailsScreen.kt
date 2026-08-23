@@ -515,8 +515,8 @@ private data class DetailsScrollPosition(
     val offset: Int,
 )
 
-private val detailsScrollStateCache = mutableMapOf<String, DetailsScrollPosition>()
-private val detailsTitleSeedColorCache = mutableMapOf<String, Long>()
+private val detailsScrollStateCache = DetailsSessionCache<DetailsScrollPosition>()
+private val detailsTitleSeedColorCache = DetailsSessionCache<Long>()
 
 @Composable
 private fun AppLibraryCategorySheet(
