@@ -87,12 +87,15 @@ fun AppProductionRoot(
         // recomposition's presenters/state), so without rememberUpdatedState the tab NavHost
         // would keep calling the very first tabContent forever.
         val currentTabContent = rememberUpdatedState(tabContent)
-        AnimatedVisibility(
-            visible = tabLayerVisible,
-            enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
-            exit = fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        // Hidden instantly, not faded: an independent AnimatedVisibility fade here ran as a
+        // second animation system alongside the AnimatedContent crossfade below, and the two
+        // could visibly desync (a stray extra transition on open, or a frame of the wrong
+        // content while toggling quickly). Details/the watch flow are full-screen with an
+        // opaque background, and the AnimatedContent below already fades its own incoming
+        // content in over whatever is behind it, so hiding the tab layer immediately reads the
+        // same as fading it -- it's covered either way, without a second clock to fall out of
+        // sync with the first.
+        if (tabLayerVisible) {
             NavHost(
                 navController = navController,
                 startDestination = startTabRoute,
