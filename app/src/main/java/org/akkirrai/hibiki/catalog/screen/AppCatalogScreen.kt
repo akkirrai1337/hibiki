@@ -68,6 +68,17 @@ data class AppCatalogScreenLabels(
     val optionText: @Composable (org.akkirrai.hibiki.catalog.model.AnimeCatalogFilterOption) -> String,
 )
 
+data class CatalogActions(
+    val onQueryChange: (String) -> Unit,
+    val onRetry: () -> Unit,
+    val onRefresh: () -> Unit,
+    val onLoadMoreRetry: () -> Unit,
+    val onItemVisible: (Anime) -> Unit,
+    val onSortSelected: (CatalogSort) -> Unit,
+    val onFiltersApply: (AnimeSearchFilters) -> Unit,
+    val onAnimeClick: (Anime) -> Unit,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppCatalogScreen(
@@ -77,53 +88,7 @@ fun AppCatalogScreen(
     currentYear: Int,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     labels: AppCatalogScreenLabels,
-    onQueryChange: (String) -> Unit,
-    onRetry: () -> Unit,
-    onRefresh: () -> Unit,
-    onLoadMoreRetry: () -> Unit,
-    onItemVisible: (Anime) -> Unit,
-    onSortSelected: (CatalogSort) -> Unit,
-    onFiltersApply: (AnimeSearchFilters) -> Unit,
-    onAnimeClick: (Anime) -> Unit,
-    sortMenuContent: @Composable (
-        selectedSort: CatalogSort,
-        availableSorts: List<CatalogSort>,
-        expanded: Boolean,
-        onExpandedChange: (Boolean) -> Unit,
-        onSortSelected: (CatalogSort) -> Unit,
-        title: String,
-        label: (CatalogSort) -> String,
-    ) -> Unit = { selectedSort, availableSorts, expanded, onExpandedChange, onSortSelected, title, label ->
-        val layoutDirection = LocalLayoutDirection.current
-        val density = LocalDensity.current
-        val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
-        val offsetX = (screenWidthDp - (UiDimens.ScreenPadding * 2) - CatalogSortMenuWidth) / 2
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
-            modifier = Modifier.width(CatalogSortMenuWidth),
-            offset = DpOffset(
-                x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
-                y = CatalogSortMenuOffsetY,
-            ),
-            shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
-        ) {
-            AppCatalogSortMenuContent(
-                title = title,
-                sorts = availableSorts,
-                selectedSort = selectedSort,
-                label = label,
-                expanded = expanded,
-                onSortSelected = {
-                    onExpandedChange(false)
-                    onSortSelected(it)
-                },
-                orderContent = { atEnd, orderModifier ->
-                    AppCatalogSortOrderIcon(atEnd = atEnd, modifier = orderModifier)
-                },
-            )
-        }
-    },
+    actions: CatalogActions,
     modifier: Modifier = Modifier,
 ) {
     var isFilterSheetOpen by remember { mutableStateOf(false) }
@@ -153,7 +118,7 @@ fun AppCatalogScreen(
             fallbackCatalogSort(
                 supportedSortAlias = state.filterCatalog?.capabilities?.supportedSorts?.firstOrNull(),
                 availableSorts = availableSorts,
-            )?.let(onSortSelected)
+            )?.let(actions.onSortSelected)
         }
     }
 
@@ -165,7 +130,7 @@ fun AppCatalogScreen(
     AppCatalogPaginationEffect(
         listState = listState,
         state = state,
-        onLoadMore = onLoadMoreRetry,
+        onLoadMore = actions.onLoadMoreRetry,
     )
 
     LaunchedEffect(state.isLoading, state.isLoadingMore) {
@@ -187,7 +152,7 @@ fun AppCatalogScreen(
             isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
             onRefresh = {
                 isPullRefreshing = true
-                onRefresh()
+                actions.onRefresh()
             },
             state = pullToRefreshState,
             indicator = {
@@ -211,18 +176,18 @@ fun AppCatalogScreen(
             movieLabel = labels.movieLabel,
             libraryStatusByAnimeId = libraryStatusByAnimeId,
             libraryStatusLabel = labels.libraryStatusLabel,
-            onAnimeClick = onAnimeClick,
-            onItemVisible = onItemVisible,
-            onRetry = onRetry,
-            onLoadMoreRetry = onLoadMoreRetry,
+            onAnimeClick = actions.onAnimeClick,
+            onItemVisible = actions.onItemVisible,
+            onRetry = actions.onRetry,
+            onLoadMoreRetry = actions.onLoadMoreRetry,
             isPullRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
         )
         }
 
         AppCatalogTopOverlay(
             query = state.query,
-            onQueryChange = onQueryChange,
-            onClear = { onQueryChange("") },
+            onQueryChange = actions.onQueryChange,
+            onClear = { actions.onQueryChange("") },
             placeholder = labels.searchPlaceholder,
             filterContentDescription = labels.filterContentDescription,
             clearContentDescription = labels.clearContentDescription,
@@ -249,15 +214,35 @@ fun AppCatalogScreen(
                         )
                     },
                     menuContent = {
-                        sortMenuContent(
-                            selectedSort,
-                            availableSorts,
-                            isSortMenuOpen,
-                            { isSortMenuOpen = it },
-                            onSortSelected,
-                            labels.sortTitle,
-                            labels.sortLabels::getValue,
-                        )
+                        val layoutDirection = LocalLayoutDirection.current
+                        val density = LocalDensity.current
+                        val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
+                        val offsetX = (screenWidthDp - (UiDimens.ScreenPadding * 2) - CatalogSortMenuWidth) / 2
+                        DropdownMenu(
+                            expanded = isSortMenuOpen,
+                            onDismissRequest = { isSortMenuOpen = false },
+                            modifier = Modifier.width(CatalogSortMenuWidth),
+                            offset = DpOffset(
+                                x = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) offsetX else -offsetX,
+                                y = CatalogSortMenuOffsetY,
+                            ),
+                            shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
+                        ) {
+                            AppCatalogSortMenuContent(
+                                title = labels.sortTitle,
+                                sorts = availableSorts,
+                                selectedSort = selectedSort,
+                                label = labels.sortLabels::getValue,
+                                expanded = isSortMenuOpen,
+                                onSortSelected = {
+                                    isSortMenuOpen = false
+                                    actions.onSortSelected(it)
+                                },
+                                orderContent = { atEnd, orderModifier ->
+                                    AppCatalogSortOrderIcon(atEnd = atEnd, modifier = orderModifier)
+                                },
+                            )
+                        }
                     },
                 )
             },
@@ -269,7 +254,7 @@ fun AppCatalogScreen(
             initialFilters = state.filters,
             filterCatalog = state.filterCatalog,
             isFilterCatalogLoading = state.isFilterCatalogLoading,
-            onApply = onFiltersApply,
+            onApply = actions.onFiltersApply,
             onDismissRequest = { isFilterSheetOpen = false },
             unavailableLabel = labels.filterUnavailable,
             typeTitle = labels.typeTitle,

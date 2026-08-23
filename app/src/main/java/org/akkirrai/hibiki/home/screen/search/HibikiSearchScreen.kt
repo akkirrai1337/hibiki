@@ -12,6 +12,7 @@ import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.hibiki.catalog.screen.AppCatalogScreen
+import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -39,14 +40,16 @@ internal fun ColumnScope.SearchScreen(
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
         labels = defaultCatalogScreenLabels(),
-        onQueryChange = onQueryChange,
-        onRetry = onRetry,
-        onRefresh = onRefresh,
-        onLoadMoreRetry = onLoadMoreRetry,
-        onItemVisible = {},
-        onSortSelected = onSortSelected,
-        onFiltersApply = onFiltersChange,
-        onAnimeClick = onAnimeClick,
+        actions = CatalogActions(
+            onQueryChange = onQueryChange,
+            onRetry = onRetry,
+            onRefresh = onRefresh,
+            onLoadMoreRetry = onLoadMoreRetry,
+            onItemVisible = {},
+            onSortSelected = onSortSelected,
+            onFiltersApply = onFiltersChange,
+            onAnimeClick = onAnimeClick,
+        ),
         modifier = Modifier.fillMaxSize(),
     )
 }
