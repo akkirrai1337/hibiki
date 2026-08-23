@@ -772,6 +772,7 @@ internal fun HibikiAppShell(
                                     readClipboardText = sourceCallbacks.readClipboardText,
                                     copyText = sourceCallbacks.copyText,
                                 ),
+                                sourceConfigContent = sourceCallbacks.sourceConfigContent,
                             ),
                             ),
                         )

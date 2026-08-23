@@ -394,6 +394,7 @@ fun SourcePackageInfoScreen(
     onBack: () -> Unit,
     onUninstall: () -> Unit,
     onUpdate: () -> Unit,
+    onConfigure: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -476,6 +477,22 @@ fun SourcePackageInfoScreen(
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(appText(AppTextKey.SettingsExternalPackageUpdate))
+                        }
+                    }
+                }
+                if (onConfigure != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 8.dp),
+                    ) {
+                        Button(
+                            onClick = onConfigure,
+                            enabled = !isBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(appText(AppTextKey.SettingsExternalPackageConfigure))
                         }
                     }
                 }

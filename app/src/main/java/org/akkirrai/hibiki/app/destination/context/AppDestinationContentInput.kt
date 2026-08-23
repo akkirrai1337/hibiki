@@ -8,6 +8,7 @@ import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.destination.watch.*
 import org.akkirrai.hibiki.app.shell.navigation.AppDestinationNavigationActions
+import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.profile.LocalProfileDataRepository
@@ -64,6 +65,7 @@ internal data class SettingsContentInput(
 internal data class SourcesContentInput(
     val state: AppDestinationSourceState,
     val externalSourcesState: AppDestinationExternalSourcesState,
+    val sourceConfigContent: AppSourceConfigContent?,
 )
 
 internal data class ProfileContentInput(

@@ -568,6 +568,7 @@
     <string name="settings_external_package_installed">Installed</string>
     <string name="settings_external_package_manage">Manage</string>
     <string name="settings_external_package_uninstall">Uninstall</string>
+    <string name="settings_external_package_configure">Configure</string>
     <string name="sources_external_package_info">Extension info</string>
     <string name="sources_external_package_version">Version</string>
     <string name="sources_external_package_language">Language</string>

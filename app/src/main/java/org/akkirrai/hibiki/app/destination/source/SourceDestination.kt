@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppAddSourceRepositoryDialog
+import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.core.source.SourcePackageInfoScreen
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.SourceRepositoriesScreen
@@ -56,9 +57,11 @@ internal fun SourcesRoute(
     state: SourcesRouteState,
     actions: SourcesRouteActions,
     externalSourcesController: ExternalSourceRepositoryController?,
+    sourceConfigContent: AppSourceConfigContent?,
     bottomContentPadding: Dp,
 ) {
     var isAddRepositoryDialogOpen by remember { mutableStateOf(false) }
+    var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val selectSource: (String) -> Unit = actions.onSourceSelected
     val externalSourcesState = state.externalSourcesState
 
@@ -79,32 +82,47 @@ internal fun SourcesRoute(
             modifier = Modifier.fillMaxSize(),
         )
         is AppRoute.SourcePackageInfo -> {
-            val packageStatus = externalSourcesState?.repositoryContents
-                ?.firstOrNull { it.endpoint.url == currentRoute.repositoryUrl }
-                ?.packages
-                ?.firstOrNull { it.sourceId.value == currentRoute.sourceId }
-            SourcePackageInfoScreen(
-                packageStatus = packageStatus,
-                isBusy = externalSourcesState?.isBusy == true,
-                bottomContentPadding = bottomContentPadding,
-                onBack = actions.onBack,
-                onUninstall = externalSourcesController?.let { controller ->
-                    {
-                        // Uninstalling hands off to the system confirmation dialog and
-                        // completes asynchronously -- don't navigate away or reassign the
-                        // selected source yet, the user hasn't actually confirmed anything.
-                        // The package-change broadcast receiver refreshes this screen's state
-                        // once the OS reports the uninstall really happened.
-                        controller.uninstallPackage(
-                            sourceId = org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId),
-                        )
-                    }
-                } ?: {},
-                onUpdate = externalSourcesController?.let { controller ->
-                    { controller.installPackage(org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId)) }
-                } ?: {},
-                modifier = Modifier.fillMaxSize(),
-            )
+            val configuring = editingSourceConfig
+            if (configuring != null && sourceConfigContent != null) {
+                sourceConfigContent(
+                    configuring,
+                    { editingSourceConfig = null },
+                    { editingSourceConfig = null },
+                )
+            } else {
+                val packageStatus = externalSourcesState?.repositoryContents
+                    ?.firstOrNull { it.endpoint.url == currentRoute.repositoryUrl }
+                    ?.packages
+                    ?.firstOrNull { it.sourceId.value == currentRoute.sourceId }
+                val configurableSource = sourceConfigContent?.let {
+                    state.sources
+                        .firstOrNull { it.id == currentRoute.sourceId }
+                        ?.takeIf { it.configSchema.fields.isNotEmpty() }
+                }
+                SourcePackageInfoScreen(
+                    packageStatus = packageStatus,
+                    isBusy = externalSourcesState?.isBusy == true,
+                    bottomContentPadding = bottomContentPadding,
+                    onBack = actions.onBack,
+                    onUninstall = externalSourcesController?.let { controller ->
+                        {
+                            // Uninstalling hands off to the system confirmation dialog and
+                            // completes asynchronously -- don't navigate away or reassign the
+                            // selected source yet, the user hasn't actually confirmed anything.
+                            // The package-change broadcast receiver refreshes this screen's state
+                            // once the OS reports the uninstall really happened.
+                            controller.uninstallPackage(
+                                sourceId = org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId),
+                            )
+                        }
+                    } ?: {},
+                    onUpdate = externalSourcesController?.let { controller ->
+                        { controller.installPackage(org.akkirrai.beakokit.api.SourceId(currentRoute.sourceId)) }
+                    } ?: {},
+                    onConfigure = configurableSource?.let { source -> { editingSourceConfig = source } },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
         else -> SourcesTabsScreen(
             selectedTab = state.selectedSourcesTab,

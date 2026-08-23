@@ -103,6 +103,7 @@ internal fun AppDestinationTopLevelRoutes(
                     copyText = sources.externalSourcesState.copyText,
                 ),
                 externalSourcesController = sources.externalSourcesState.controller,
+                sourceConfigContent = sources.sourceConfigContent,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.SETTINGS -> SettingsRoute(
