@@ -65,6 +65,7 @@ import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.home.data.HomeDataRepository
 import org.akkirrai.hibiki.home.presentation.HomePresenter
 import org.akkirrai.hibiki.home.presentation.HomeSearchPresenter
+import org.akkirrai.hibiki.home.screen.HomeActions
 import org.akkirrai.hibiki.home.state.preserveLoadedDescriptions as preserveHomeDescriptions
 import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.profile.PlaybackProgressRepository
@@ -612,15 +613,18 @@ internal fun HibikiAppShell(
                                     search = homeSearchState,
                                     listState = homeListState,
                                 ),
-                                actions = AppDestinationHomeActions(
+                                actions = HomeActions(
                                     onQueryChange = homeSearchActions.onQueryChange,
-                                    onSearchClear = homeSearchActions.onClear,
+                                    onClearSearch = homeSearchActions.onClear,
                                     onFilterApply = homeSearchActions.onFilterApply,
-                                    onSearchLoadMore = homeSearchActions.onLoadMore,
-                                    onSearchRetry = homeSearchActions.onRetry,
+                                    onLoadMoreSearch = homeSearchActions.onLoadMore,
+                                    onRetrySearch = homeSearchActions.onRetry,
+                                    onAnimeClick = navigationActions.onAnimeClick,
+                                    onBrowseCatalog = navigationActions.onBrowseCatalog,
+                                    onOpenLibrary = navigationActions.onOpenLibrary,
                                     onItemVisible = homeActions.onItemVisible,
-                                    onRefresh = homeActions.onRefresh,
                                 ),
+                                onRefresh = homeActions.onRefresh,
                             ),
                             library = LibraryContentInput(
                                 state = AppDestinationLibraryState(

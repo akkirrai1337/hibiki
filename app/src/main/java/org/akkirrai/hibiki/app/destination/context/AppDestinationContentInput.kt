@@ -17,6 +17,7 @@ import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 import org.akkirrai.hibiki.catalog.screen.CatalogActions
+import org.akkirrai.hibiki.home.screen.HomeActions
 import org.akkirrai.hibiki.library.screen.LibraryActions
 import org.akkirrai.hibiki.library.state.LibrarySearchFilters
 
@@ -43,7 +44,8 @@ internal data class CatalogContentInput(
 
 internal data class HomeContentInput(
     val state: AppDestinationHomeState,
-    val actions: AppDestinationHomeActions,
+    val actions: HomeActions,
+    val onRefresh: () -> Unit,
 )
 
 internal data class LibraryContentInput(

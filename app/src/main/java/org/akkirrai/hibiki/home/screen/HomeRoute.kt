@@ -20,8 +20,6 @@ import org.akkirrai.hibiki.home.state.resolveHomeUiState
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryEntry
 import org.akkirrai.hibiki.design.component.source.AppSourceBadge
-import org.akkirrai.hibiki.catalog.model.Anime
-import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceIconImage
 import org.akkirrai.hibiki.text.AppTextKey
@@ -34,16 +32,8 @@ internal fun ColumnScope.HomeRoute(
     sourcesById: Map<String, AppSourceDescriptor>,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryEntries: List<LibraryEntry>,
-    onQueryChange: (String) -> Unit,
     homeSearchState: HomeSearchUiState,
-    onFilterApply: (AnimeSearchFilters) -> Unit,
-    onSearchClear: () -> Unit,
-    onSearchLoadMore: () -> Unit,
-    onSearchRetry: () -> Unit,
-    onAnimeClick: (Anime) -> Unit,
-    onBrowseCatalog: () -> Unit,
-    onOpenLibrary: () -> Unit,
-    onItemVisible: (Anime) -> Unit = {},
+    actions: HomeActions,
     onHomeRefresh: () -> Unit,
     bottomContentPadding: Dp,
 ) {
@@ -66,17 +56,7 @@ internal fun ColumnScope.HomeRoute(
     }
     HomeScreen(
         state = homeState,
-        actions = HomeActions(
-            onQueryChange = onQueryChange,
-            onClearSearch = onSearchClear,
-            onFilterApply = onFilterApply,
-            onLoadMoreSearch = onSearchLoadMore,
-            onRetrySearch = onSearchRetry,
-            onAnimeClick = onAnimeClick,
-            onBrowseCatalog = onBrowseCatalog,
-            onOpenLibrary = onOpenLibrary,
-            onItemVisible = onItemVisible,
-        ),
+        actions = actions,
         listState = listState,
         bottomContentPadding = bottomContentPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,

@@ -62,16 +62,6 @@ internal class HibikiHomeSearchActions(
     val onRetry: () -> Unit = presenter::retrySearch
 }
 
-internal data class AppDestinationHomeActions(
-    val onQueryChange: (String) -> Unit,
-    val onSearchClear: () -> Unit,
-    val onFilterApply: (AnimeSearchFilters) -> Unit,
-    val onSearchLoadMore: () -> Unit,
-    val onSearchRetry: () -> Unit,
-    val onItemVisible: (Anime) -> Unit,
-    val onRefresh: () -> Unit,
-)
-
 internal data class AppDestinationHomeState(
     val ui: HomeUiState,
     val search: HomeSearchUiState,

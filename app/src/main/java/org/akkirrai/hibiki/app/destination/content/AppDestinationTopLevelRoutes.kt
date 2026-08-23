@@ -56,22 +56,14 @@ internal fun AppDestinationTopLevelRoutes(
     ) {
         when (selectedTab) {
             AppDestination.HOME -> HomeRoute(
+                baseHomeState = home.state.ui,
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
-                libraryEntries = library.state.entries,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
-                onQueryChange = home.actions.onQueryChange,
+                libraryEntries = library.state.entries,
                 homeSearchState = home.state.search,
-                onFilterApply = home.actions.onFilterApply,
-                onSearchClear = home.actions.onSearchClear,
-                onSearchLoadMore = home.actions.onSearchLoadMore,
-                onSearchRetry = home.actions.onSearchRetry,
-                onAnimeClick = navigation.actions.onAnimeClick,
-                onBrowseCatalog = navigation.actions.onBrowseCatalog,
-                onOpenLibrary = navigation.actions.onOpenLibrary,
-                baseHomeState = home.state.ui,
-                onItemVisible = home.actions.onItemVisible,
-                onHomeRefresh = home.actions.onRefresh,
+                actions = home.actions,
+                onHomeRefresh = home.onRefresh,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.CATALOG -> CatalogRoute(
