@@ -224,6 +224,10 @@
     <string name="download_notification_channel_name">Загрузки</string>
     <string name="download_notification_channel_description">Скачивание серий для офлайн-просмотра</string>
     <string name="download_notification_active">Скачивание серий: %1$d</string>
+    <string name="episode_reminder_notification_channel_name">Напоминания о сериях</string>
+    <string name="episode_reminder_notification_channel_description">Уведомляет, когда выходит серия, которую вы ждёте</string>
+    <string name="episode_reminder_notification_title">%1$s</string>
+    <string name="episode_reminder_notification_text">Серия %1$d уже вышла</string>
     <string name="download_notification_waiting">Загрузки ожидают подключения</string>
     <string name="download_notification_preparing">Подготавливаю загрузки • %1$d/%2$d</string>
     <string name="download_notification_progress">Скачиваю &lt;3 • %1$d/%2$d • %3$d%%</string>
@@ -626,6 +630,8 @@
     <string name="next_episode_eta_days_hours">%dд %dч</string>
     <string name="next_episode_eta_hours_minutes_seconds">%dч %dм %dс</string>
     <string name="next_episode_eta_minutes_seconds">%dм %dс</string>
+    <string name="episode_reminder_schedule">Напомнить, когда выйдет</string>
+    <string name="episode_reminder_scheduled">Напоминание установлено</string>
     <string name="information">Информация</string>
     <string name="status">Статус</string>
     <string name="episodes">Эпизоды</string>

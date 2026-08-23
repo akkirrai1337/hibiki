@@ -1,11 +1,23 @@
 package org.akkirrai.hibiki.player
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
+import org.akkirrai.hibiki.core.reminder.EpisodeReminderScheduler
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.WatchEpisode
@@ -45,8 +57,34 @@ internal fun HibikiEpisodesContent(
     listContentPadding: androidx.compose.foundation.layout.PaddingValues,
 ) {
     val downloadScope = rememberCoroutineScope()
+    val context = LocalContext.current
     val loadedEpisodes = (state.result as? EpisodesUiState.Content)?.items.orEmpty()
     val nextEpisodeNumber = (loadedEpisodes.maxOfOrNull(WatchEpisode::number)?.toInt() ?: 0) + 1
+    var isEpisodeReminderSet by remember(anime.id, nextEpisodeNumber) {
+        mutableStateOf(EpisodeReminderScheduler.isScheduled(context, anime.id, nextEpisodeNumber))
+    }
+    fun scheduleEpisodeReminder() {
+        val nextEpisodeAt = anime.nextEpisodeAt ?: return
+        EpisodeReminderScheduler.schedule(context, anime.id, anime.title, nextEpisodeNumber, nextEpisodeAt)
+        isEpisodeReminderSet = true
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) scheduleEpisodeReminder() }
+    val onEpisodeReminderClick: () -> Unit = onEpisodeReminderClick@{
+        if (isEpisodeReminderSet) {
+            EpisodeReminderScheduler.cancel(context, anime.id, nextEpisodeNumber)
+            isEpisodeReminderSet = false
+            return@onEpisodeReminderClick
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            scheduleEpisodeReminder()
+        }
+    }
     val nextEpisodeEta = rememberNextEpisodeEta(
         nextEpisodeAt = anime.nextEpisodeAt,
         nowEpochSeconds = ::currentEpochSeconds,
@@ -150,6 +188,10 @@ internal fun HibikiEpisodesContent(
                         headline = appText(AppTextKey.WatchEpisodeHeadline).replace("%s", nextEpisodeNumber.toString()),
                         countdownText = appText(AppTextKey.NextEpisodeCountdownNumbered).formatAppText(nextEpisodeNumber, eta),
                         shape = shape,
+                        isReminderSet = isEpisodeReminderSet,
+                        onReminderClick = onEpisodeReminderClick,
+                        reminderScheduleContentDescription = appText(AppTextKey.EpisodeReminderSchedule),
+                        reminderScheduledContentDescription = appText(AppTextKey.EpisodeReminderScheduled),
                     )
                 }
             },

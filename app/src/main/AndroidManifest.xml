@@ -37,6 +37,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/log_export_paths" />
         </provider>
+        <receiver
+            android:name=".core.reminder.EpisodeReminderReceiver"
+            android:exported="false" />
+
         <service
             android:name=".core.download.HibikiDownloadService"
             android:exported="false"

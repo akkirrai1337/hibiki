@@ -240,6 +240,10 @@
     <string name="download_notification_channel_name">Downloads</string>
     <string name="download_notification_channel_description">Episode downloads for offline playback</string>
     <string name="download_notification_active">Downloading episodes: %1$d</string>
+    <string name="episode_reminder_notification_channel_name">Episode reminders</string>
+    <string name="episode_reminder_notification_channel_description">Notifies you when an episode you\'re waiting for airs</string>
+    <string name="episode_reminder_notification_title">%1$s</string>
+    <string name="episode_reminder_notification_text">Episode %1$d is out now</string>
     <string name="download_notification_waiting">Downloads are waiting for connection</string>
     <string name="download_notification_preparing">Preparing downloads • %1$d/%2$d</string>
     <string name="download_notification_progress">Downloading &lt;3 • %1$d/%2$d • %3$d%%</string>
@@ -624,6 +628,8 @@
     <string name="next_episode_eta_days_hours">%dd %dh</string>
     <string name="next_episode_eta_hours_minutes_seconds">%dh %dm %ds</string>
     <string name="next_episode_eta_minutes_seconds">%dm %ds</string>
+    <string name="episode_reminder_schedule">Remind me when it airs</string>
+    <string name="episode_reminder_scheduled">Reminder set</string>
     <string name="information">Information</string>
     <string name="status">Status</string>
     <string name="episodes">Episodes</string>

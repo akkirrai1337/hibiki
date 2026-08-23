@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +34,10 @@ fun UpcomingEpisodeRow(
     headline: String,
     countdownText: String,
     shape: RoundedCornerShape,
+    isReminderSet: Boolean,
+    onReminderClick: () -> Unit,
+    reminderScheduleContentDescription: String,
+    reminderScheduledContentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -54,6 +60,12 @@ fun UpcomingEpisodeRow(
                 modifier = Modifier.weight(1f),
             )
             UpcomingEpisodeCountdownChip(countdownText)
+            DownloadIconButton(
+                icon = if (isReminderSet) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationAdd,
+                contentDescription = if (isReminderSet) reminderScheduledContentDescription else reminderScheduleContentDescription,
+                active = isReminderSet,
+                onClick = onReminderClick,
+            )
         }
     }
 }
