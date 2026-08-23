@@ -182,9 +182,7 @@ internal fun HibikiAppShell(
     val state by presenter.state.collectAsState()
     val homeSearchPresenter = resources.homeSearchPresenter
     val homeSearchActions = HibikiHomeSearchActions(homeSearchPresenter)
-    val homeSearchState by homeSearchPresenter.state.collectAsState()
     val homePresenter = resources.homePresenter
-    val homeState by homePresenter.state.collectAsState()
 
     fun setHomeStatePreservingDescriptions(state: HomeUiState) {
         homePresenter.setState(state.preserveHomeDescriptions(homePresenter.state.value))
@@ -609,8 +607,8 @@ internal fun HibikiAppShell(
                             ),
                             home = HomeContentInput(
                                 state = AppDestinationHomeState(
-                                    ui = homeState,
-                                    search = homeSearchState,
+                                    homePresenter = homePresenter,
+                                    homeSearchPresenter = homeSearchPresenter,
                                     listState = homeListState,
                                 ),
                                 actions = HomeActions(

@@ -48,12 +48,12 @@ internal fun AppDestinationTopLevelRoutes(
     ) {
         when (selectedTab) {
             AppDestination.HOME -> HomeRoute(
-                baseHomeState = home.state.ui,
+                homePresenter = home.state.homePresenter,
+                homeSearchPresenter = home.state.homeSearchPresenter,
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
                 libraryEntries = library.state.entries,
-                homeSearchState = home.state.search,
                 actions = home.actions,
                 onHomeRefresh = home.onRefresh,
                 bottomContentPadding = topLevelBottomContentPadding,

@@ -8,7 +8,6 @@ import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.home.data.HomeDataRepository
 import org.akkirrai.hibiki.home.presentation.HomePresenter
 import org.akkirrai.hibiki.home.presentation.HomeSearchPresenter
-import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
 import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.home.state.launchHomeDescriptionEnrichment
 import org.akkirrai.hibiki.library.LibraryCategory
@@ -63,7 +62,7 @@ internal class HibikiHomeSearchActions(
 }
 
 internal data class AppDestinationHomeState(
-    val ui: HomeUiState,
-    val search: HomeSearchUiState,
+    val homePresenter: HomePresenter,
+    val homeSearchPresenter: HomeSearchPresenter,
     val listState: LazyListState,
 )

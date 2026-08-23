@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import kotlin.time.Clock
@@ -11,10 +13,10 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.design.component.state.AppCenteredLoading
+import org.akkirrai.hibiki.home.presentation.HomePresenter
+import org.akkirrai.hibiki.home.presentation.HomeSearchPresenter
 import org.akkirrai.hibiki.home.state.HomeContentState
 import org.akkirrai.hibiki.home.state.HomeErrorState
-import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
-import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.home.state.resolveHomeContentState
 import org.akkirrai.hibiki.home.state.resolveHomeUiState
 import org.akkirrai.hibiki.library.LibraryCategory
@@ -27,16 +29,18 @@ import org.akkirrai.hibiki.text.appText
 
 @Composable
 internal fun ColumnScope.HomeRoute(
-    baseHomeState: HomeUiState,
+    homePresenter: HomePresenter,
+    homeSearchPresenter: HomeSearchPresenter,
     listState: LazyListState,
     sourcesById: Map<String, AppSourceDescriptor>,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
     libraryEntries: List<LibraryEntry>,
-    homeSearchState: HomeSearchUiState,
     actions: HomeActions,
     onHomeRefresh: () -> Unit,
     bottomContentPadding: Dp,
 ) {
+    val baseHomeState by homePresenter.state.collectAsState()
+    val homeSearchState by homeSearchPresenter.state.collectAsState()
     val homeState = resolveHomeUiState(baseHomeState, libraryEntries, homeSearchState)
     when (val contentState = resolveHomeContentState(homeState)) {
         is HomeContentState.Loading -> AppCenteredLoading(modifier = Modifier.fillMaxSize())
