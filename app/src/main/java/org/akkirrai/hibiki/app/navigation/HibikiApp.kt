@@ -39,7 +39,7 @@ import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.preferredSourceLanguages
 import org.akkirrai.hibiki.core.source.EmbedWebViewExtractor
 import org.akkirrai.hibiki.app.settings.AppSettingsStoreImpl
-import org.akkirrai.hibiki.player.CommonPlaybackHost
+import org.akkirrai.hibiki.player.PlaybackHostContent
 import org.akkirrai.hibiki.player.PlayerWindowController
 import org.akkirrai.hibiki.player.PlayerWindowMode
 import org.akkirrai.hibiki.player.EpisodeDownloadRepositoryImpl
@@ -70,7 +70,7 @@ import org.akkirrai.hibiki.core.source.extension.repository.ApkSourceRepositoryA
 import org.akkirrai.hibiki.core.source.extension.repository.SourceExtensionInstaller
 import org.akkirrai.hibiki.core.source.extension.repository.SourceRepositoryClient
 import org.akkirrai.hibiki.home.data.CatalogBackedHomeDataRepository
-import org.akkirrai.hibiki.player.SharedAnimeWatchRepository
+import org.akkirrai.hibiki.player.ExternalSourceWatchRepository
 import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
 import org.akkirrai.hibiki.app.shell.AppPlatformCallbacks
 import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
@@ -205,7 +205,7 @@ internal fun HibikiApp(
     val externalWatchRepository = remember(
         packageManagerSourceCatalog,
     ) {
-        SharedAnimeWatchRepository(
+        ExternalSourceWatchRepository(
             client = HttpClient(OkHttp) {
                 installBeakoKitHttpDefaults(
                     BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-playback"),
@@ -359,7 +359,7 @@ internal fun HibikiApp(
                 onPlaybackSelectionChanged = watchStateRepository::savePlaybackSelection,
                 loadPlaybackSelection = watchStateRepository::loadPlaybackSelectionOrNull,
                 playbackHost = { playback, playbackContext, navigationState, playbackLoading, onBack, onEpisodeSelected, onSettingsAction, onOverlayEvent ->
-                    CommonPlaybackHost(
+                    PlaybackHostContent(
                         playback = playback,
                         context = playbackContext,
                         navigationState = navigationState,

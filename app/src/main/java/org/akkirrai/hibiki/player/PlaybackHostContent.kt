@@ -120,7 +120,7 @@ internal class PlayerWindowController {
 
 /** Android platform host for the common playback controls and Media3 transport. */
 @Composable
-internal fun CommonPlaybackHost(
+internal fun PlaybackHostContent(
     playback: PlaybackStream?,
     context: PlaybackContext,
     navigationState: AppNavigationState,

@@ -19,7 +19,7 @@ import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 
-class SharedAnimeWatchRepositoryTest {
+class ExternalSourceWatchRepositoryTest {
     @Test
     fun externalSourceFactoryFeedsWatchSourcesAndEpisodes() = runBlocking {
         val client = HttpClient()
@@ -41,7 +41,7 @@ class SharedAnimeWatchRepositoryTest {
             catalogCapabilities = CatalogCapabilities.FULL,
             runtime = FakePlaybackRuntime(group),
         )
-        val repository = SharedAnimeWatchRepository(
+        val repository = ExternalSourceWatchRepository(
             client = client,
             sourceHttpClient = sourceClient,
             externalSourceFactory = { requestedId, context ->
@@ -91,7 +91,7 @@ class SharedAnimeWatchRepositoryTest {
                 PlaybackGroup("group-1", "Dub", listOf(Episode("episode-1", 1.0, "Episode 1"))),
             ),
         )
-        val repository = SharedAnimeWatchRepository(
+        val repository = ExternalSourceWatchRepository(
             client = client,
             externalSourceFactory = { requestedId, _ ->
                 if (requestedId == sourceId) {

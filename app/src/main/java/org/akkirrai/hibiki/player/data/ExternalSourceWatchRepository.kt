@@ -36,8 +36,8 @@ import org.akkirrai.hibiki.player.model.WatchEpisode
 import org.akkirrai.hibiki.player.model.WatchSource
 import kotlin.time.Clock
 
-/** Shared source/runtime adapter used by non-Android hosts. */
-class SharedAnimeWatchRepository(
+/** Resolves watch sources, episodes, and playback streams via the installed external sources. */
+class ExternalSourceWatchRepository(
     private val client: HttpClient,
     private val sourceHttpClient: HttpClient = client,
     private val preferEnglish: Boolean = false,

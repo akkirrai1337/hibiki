@@ -10,19 +10,19 @@ import org.akkirrai.hibiki.core.network.ChallengeSessionProviderImpl
 import org.akkirrai.hibiki.core.source.EmbedWebViewExtractor
 import org.akkirrai.hibiki.core.source.ExternalSourceConfigStore
 import org.akkirrai.hibiki.core.source.extension.PackageManagerSourceCatalog
-import org.akkirrai.hibiki.player.SharedAnimeWatchRepository
+import org.akkirrai.hibiki.player.ExternalSourceWatchRepository
 
 /**
- * Background-reachable twin of the [SharedAnimeWatchRepository] built inside the Compose-scoped
+ * Background-reachable twin of the [ExternalSourceWatchRepository] built inside the Compose-scoped
  * HibikiApp composition. Offline downloads resolve their stream from [OfflineDownloadQueue]'s
  * plain IO-dispatcher scope, outside any Composable, so they cannot reuse the UI's `remember`ed
  * instance and need one built from just a [Context] instead.
  */
 internal object BackgroundExternalWatchRepositoryFactory {
     @Volatile
-    private var instance: SharedAnimeWatchRepository? = null
+    private var instance: ExternalSourceWatchRepository? = null
 
-    fun get(context: Context): SharedAnimeWatchRepository {
+    fun get(context: Context): ExternalSourceWatchRepository {
         instance?.let { return it }
         synchronized(this) {
             instance?.let { return it }
@@ -32,7 +32,7 @@ internal object BackgroundExternalWatchRepositoryFactory {
         }
     }
 
-    private fun create(appContext: Context): SharedAnimeWatchRepository {
+    private fun create(appContext: Context): ExternalSourceWatchRepository {
         val sourceHttpClient = HttpClient(OkHttp) {
             installBeakoKitHttpDefaults(
                 BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-source"),
@@ -42,7 +42,7 @@ internal object BackgroundExternalWatchRepositoryFactory {
         val configStore = ExternalSourceConfigStore(appContext)
         val challengeSessionProvider = ChallengeSessionProviderImpl(appContext)
         val embedWebViewExtractor = EmbedWebViewExtractor(appContext)
-        return SharedAnimeWatchRepository(
+        return ExternalSourceWatchRepository(
             client = HttpClient(OkHttp) {
                 installBeakoKitHttpDefaults(
                     BeakoKitHttpPolicy(userAgent = "Hibiki/0.1 Android external-playback"),
