@@ -77,10 +77,8 @@ import org.akkirrai.hibiki.app.settings.AppSettingsStore
 import org.akkirrai.hibiki.app.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.app.settings.DiscordRpcUiState
-import org.akkirrai.hibiki.app.settings.resolveAppLanguageTag
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
 import org.akkirrai.hibiki.app.settings.SettingsScreenActions
-import org.akkirrai.hibiki.text.AppTextResourceLocale
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 import org.akkirrai.hibiki.app.navigation.AppDestination
@@ -455,10 +453,7 @@ internal fun HibikiAppShell(
         closeDetails = presenter::closeDetails,
     )
 
-    AppTextResourceLocale(
-        languageTag = resolveAppLanguageTag(appSettingsState.languageMode, systemLanguage),
-    ) {
-        MaterialTheme(
+    MaterialTheme(
             colorScheme = hibikiAppColorScheme(appSettingsState.themeMode, appSettingsState.useAmoledTheme),
             typography = HibikiTypography,
         ) {
@@ -791,7 +786,6 @@ internal fun HibikiAppShell(
                     )
                 }
             }
-        }
     }
 }
 }
