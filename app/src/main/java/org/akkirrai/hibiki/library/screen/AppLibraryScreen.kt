@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -67,21 +66,15 @@ fun AppLibraryScreen(
     onFilterClick: () -> Unit,
     onCategorySelected: (LibraryCategory) -> Unit,
     entryContent: @Composable (LibraryEntry, Modifier) -> Unit,
+    filterVisible: Boolean,
+    onFilterVisibilityChange: (Boolean) -> Unit,
     filterContent: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
-    filterVisible: Boolean? = null,
-    onFilterVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var localFilterVisible by remember { mutableStateOf(false) }
-    val isFilterVisible = filterVisible ?: localFilterVisible
     val categoryEntryCount = state.categoryCounts[state.selectedCategory] ?: 0
     val filterAvailable = categoryEntryCount >= LIBRARY_FILTER_MINIMUM_ENTRY_COUNT
-    fun setFilterVisible(visible: Boolean) {
-        if (filterVisible == null) localFilterVisible = visible
-        onFilterVisibilityChange(visible)
-    }
     LaunchedEffect(filterAvailable) {
-        if (!filterAvailable) setFilterVisible(false)
+        if (!filterAvailable) onFilterVisibilityChange(false)
     }
 
     AppLibraryEntriesContent(
@@ -101,7 +94,7 @@ fun AppLibraryScreen(
                         clearContentDescription = labels.clearContentDescription,
                         onFilterClick = {
                             onFilterClick()
-                            setFilterVisible(true)
+                            onFilterVisibilityChange(true)
                         },
                         showFilterButton = filterAvailable,
                         modifier = searchModifier,
@@ -132,8 +125,8 @@ fun AppLibraryScreen(
         entryContent = { entry, entryModifier -> entryContent(entry, entryModifier) },
     )
 
-    if (isFilterVisible && filterAvailable && filterContent != null) {
-        filterContent { setFilterVisible(false) }
+    if (filterVisible && filterAvailable && filterContent != null) {
+        filterContent { onFilterVisibilityChange(false) }
     }
 }
 
