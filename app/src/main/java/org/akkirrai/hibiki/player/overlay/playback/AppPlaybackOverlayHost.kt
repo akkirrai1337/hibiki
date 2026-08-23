@@ -69,13 +69,19 @@ fun AppPlaybackOverlayHost(
         } else {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black))
         }
-        playbackError?.let { message ->
-            AppPlayerErrorOverlay(
-                message = message,
-                title = appText(AppTextKey.PlayerErrorTitle),
-                retryLabel = appText(AppTextKey.PlayerRetry),
-                onRetry = onRetry,
-            )
+        // Not shown while Playlist/PlayerSettings is open -- this Box draws its children in
+        // order, and content() (which includes those panels) is declared first, so the error
+        // overlay would otherwise always paint on top of them regardless of which one the user
+        // actually has open.
+        if (!navigationState.isPlaylistOverlayActive && !navigationState.isPlayerSettingsOverlayActive) {
+            playbackError?.let { message ->
+                AppPlayerErrorOverlay(
+                    message = message,
+                    title = appText(AppTextKey.PlayerErrorTitle),
+                    retryLabel = appText(AppTextKey.PlayerRetry),
+                    onRetry = onRetry,
+                )
+            }
         }
     }
 }
