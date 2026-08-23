@@ -68,8 +68,14 @@ fun AppProductionRoot(
         val navController = rememberNavController()
         val startTabRoute = remember { currentDestination.toTabRoute() }
         LaunchedEffect(currentDestination) {
+            // inclusive = true: the tab backstack must never grow past one entry. Tabs have no
+            // back-stack of their own today (switching tabs is always a full reset, never
+            // undoable), and a NavHost with more than one backstack entry registers its own
+            // system-back interception that fires ahead of AppSystemBackHandler -- with
+            // inclusive = false that swallowed the gesture used to close Settings/Details
+            // instead of letting it reach the app's own back coordinator.
             navController.navigate(currentDestination.toTabRoute()) {
-                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 launchSingleTop = true
             }
         }
