@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.app.destination.source
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +27,6 @@ internal data class AppDestinationSourceState(
 )
 
 internal data class AppDestinationExternalSourcesState(
-    val repository: ExternalSourceRepositoryUiState?,
     val controller: ExternalSourceRepositoryController?,
     val selectedTab: Int = 0,
     val onSelectedTabChange: (Int) -> Unit = {},
@@ -38,7 +38,6 @@ internal data class SourcesRouteState(
     val sources: List<AppSourceDescriptor>,
     val selectedSourceId: String?,
     val currentRoute: AppRoute,
-    val externalSourcesState: ExternalSourceRepositoryUiState?,
     val selectedSourcesTab: Int,
 )
 
@@ -63,7 +62,7 @@ internal fun SourcesRoute(
     var isAddRepositoryDialogOpen by remember { mutableStateOf(false) }
     var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val selectSource: (String) -> Unit = actions.onSourceSelected
-    val externalSourcesState = state.externalSourcesState
+    val externalSourcesState = externalSourcesController?.state?.collectAsState()?.value
 
     when (val currentRoute = state.currentRoute) {
         AppRoute.SourceRepositories -> SourceRepositoriesScreen(

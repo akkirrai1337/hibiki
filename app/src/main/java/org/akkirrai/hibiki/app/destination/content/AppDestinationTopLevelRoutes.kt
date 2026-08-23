@@ -92,7 +92,6 @@ internal fun AppDestinationTopLevelRoutes(
                     selectedSourceId = sources.state.selectedSourceId,
                     currentRoute = content.currentRoute
                         ?: AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.SOURCES),
-                    externalSourcesState = sources.externalSourcesState.repository,
                     selectedSourcesTab = sources.externalSourcesState.selectedTab,
                 ),
                 actions = SourcesRouteActions(
