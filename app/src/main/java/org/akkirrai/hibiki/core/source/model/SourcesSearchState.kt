@@ -17,15 +17,8 @@ data class SourcesSearchUiState(
     val hasSearched: Boolean = false,
 )
 
-fun isSourceSearchActive(query: String): Boolean = query.trim().length >= SOURCE_SEARCH_MIN_QUERY_LENGTH
-
 fun shouldRestrictSourceSearchToRussian(query: String): Boolean =
     query.any { it in '\u0400'..'\u052F' }
-
-fun <T> List<SourceSearchSectionState<T>>.visibleSourceSearchSections(): List<SourceSearchSectionState<T>> =
-    filter { section ->
-        section.isLoading || section.hasError || section.items.isNotEmpty()
-    }
 
 const val SOURCE_SEARCH_MIN_QUERY_LENGTH = 3
 const val SOURCE_SEARCH_DEBOUNCE_MS = 400L

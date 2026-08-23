@@ -93,28 +93,3 @@ fun HomePersonalEmptyState(
             .padding(horizontal = UiDimens.ScreenPadding),
     )
 }
-
-@Composable
-fun AppTrendingContentState(
-    isLoading: Boolean,
-    hasContent: Boolean,
-    errorMessage: String?,
-    errorTitle: String,
-    retryLabel: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    AppContentState(
-        isLoading = isLoading,
-        hasContent = hasContent,
-        errorMessage = errorMessage,
-        errorTitle = errorTitle,
-        retryLabel = retryLabel,
-        onRetry = onRetry,
-        errorIcon = Icons.Outlined.WarningAmber,
-        errorIconTint = MaterialTheme.colorScheme.error,
-        modifier = modifier,
-        content = content,
-    )
-}

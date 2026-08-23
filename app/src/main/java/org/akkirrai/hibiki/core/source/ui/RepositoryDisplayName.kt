@@ -31,9 +31,6 @@ fun repositoryDisplayName(url: String): String {
         .let { if (normalized.length > it.length) "$it…" else it }
 }
 
-fun repositoryShortName(url: String): String = repositoryDisplayName(url)
-    .substringAfterLast('/')
-
 /** Returns the public repository page when it can be derived from an index URL. */
 fun repositoryBrowseUrl(url: String): String {
     val normalized = url.trim().substringBefore('#').substringBefore('?').trimEnd('/')
