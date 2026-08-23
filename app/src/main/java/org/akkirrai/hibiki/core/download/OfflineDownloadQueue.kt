@@ -375,7 +375,11 @@ object OfflineDownloadQueue {
                             )
                             OfflineStreamHeaders.save(context, playback.streamUrl, playback.headers)
                             clearFailedEntries(context, setOf(entry.downloadId))
-                            HibikiDownloadService.cancelPreparingNotification(context)
+                            // Not cancelling the preparing notification here -- it shares the
+                            // real download notification's ID, so sendAddDownload's foreground
+                            // notification replaces it in place moments later instead of it
+                            // disappearing for the gap between this call and the service
+                            // actually starting.
                             DownloadService.sendAddDownload(
                                 context,
                                 HibikiDownloadService::class.java,
