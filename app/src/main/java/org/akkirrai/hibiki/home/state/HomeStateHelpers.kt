@@ -1,6 +1,10 @@
 package org.akkirrai.hibiki.home.state
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.home.data.HomeDataRepository
+import org.akkirrai.hibiki.home.presentation.HomePresenter
 import org.akkirrai.hibiki.search.model.SearchUiState
 
 fun mergeAnimePreservingOrder(primary: List<Anime>, additions: List<Anime>): List<Anime> =
@@ -73,6 +77,26 @@ fun HomeUiState.preserveLoadedDescriptions(previous: HomeUiState): HomeUiState {
         trending = trending.mergeMissingDescriptions(descriptions),
         recentlyUpdated = recentlyUpdated.mergeMissingDescriptions(descriptions),
     )
+}
+
+internal fun launchHomeDescriptionEnrichment(
+    anime: Anime,
+    repository: HomeDataRepository?,
+    presenter: HomePresenter,
+    requests: MutableSet<String>,
+    scope: CoroutineScope,
+) {
+    val targetRepository = repository ?: return
+    if (!anime.description.isNullOrBlank() || !requests.add(anime.id)) return
+
+    scope.launch {
+        val enriched = runCatching { targetRepository.enrichDescription(anime) }.getOrNull()
+        requests.remove(anime.id)
+        if (repository !== targetRepository || enriched?.description.isNullOrBlank()) return@launch
+        presenter.update { state ->
+            state.applyDescriptionUpdates(mapOf(enriched.id to enriched))
+        }
+    }
 }
 
 private fun SearchUiState.applyDescriptionUpdates(updates: Map<String, Anime>): SearchUiState = when (this) {
