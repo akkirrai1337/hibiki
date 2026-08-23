@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,8 +37,6 @@ typealias AppSourceConfigContent = @Composable (
     onSaved: () -> Unit,
     onCancel: () -> Unit,
 ) -> Unit
-
-val LocalAppSourceConfigContent = staticCompositionLocalOf<AppSourceConfigContent?> { null }
 
 /** Shared editor for one source's declared configuration schema. */
 @Composable

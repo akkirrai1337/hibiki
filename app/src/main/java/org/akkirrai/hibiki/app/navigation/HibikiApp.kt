@@ -50,7 +50,6 @@ import org.akkirrai.hibiki.R
 import android.widget.Toast
 import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.app.shell.HibikiAppShell
-import org.akkirrai.hibiki.core.source.LocalAppSourceConfigContent
 import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceConfigLabels
@@ -309,7 +308,6 @@ internal fun HibikiApp(
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
             },
         )
-        CompositionLocalProvider(LocalAppSourceConfigContent provides sourceCallbacks.sourceConfigContent) {
         HibikiAppShell(
             modifier = modifier,
             repository = catalogRepository,
@@ -385,6 +383,5 @@ internal fun HibikiApp(
                 onExitPlayback = playerWindowController::persist,
             ),
         )
-        }
     }
 }
