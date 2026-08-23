@@ -1,10 +1,10 @@
 package org.akkirrai.hibiki.catalog.filters
 
-import org.akkirrai.hibiki.catalog.*
-import org.akkirrai.hibiki.catalog.model.AnimeTypeAlias
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import org.akkirrai.hibiki.catalog.model.AnimeCatalogCapabilities
 import org.akkirrai.hibiki.catalog.model.AnimeCatalogFilter
+import org.akkirrai.hibiki.catalog.model.AnimeTypeAlias
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 
 fun AnimeSearchFilters.applyCatalogFilterDraft(
@@ -30,3 +30,18 @@ fun AnimeSearchFilters.applyCatalogFilterDraft(
     yearTo = yearRange.last
         .takeIf { capabilities.supports(AnimeCatalogFilter.YEAR_RANGE) && yearRange != defaultYearRange },
 )
+
+@Composable
+fun AppCatalogFilterVisibilityEffect(
+    hasFilters: Boolean,
+    onFiltersUnavailable: () -> Unit,
+) {
+    LaunchedEffect(hasFilters) {
+        if (!hasFilters) onFiltersUnavailable()
+    }
+}
+
+fun defaultCatalogFilterYearRange(currentYear: Int): IntRange =
+    CatalogFilterMinimumYear..(currentYear + 1)
+
+private const val CatalogFilterMinimumYear = 1940
