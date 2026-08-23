@@ -246,7 +246,13 @@ internal class HibikiSystemBackCoordinator(
             playbackReturnRoute = playbackReturnRoute(),
         )
         if (!result.handled) return
-        setNavigationState(result.state)
+        // Cleanup (teardown() in particular, which captures the resume frame from the still-
+        // mounted player surface) runs *before* setNavigationState -- matching the player's own
+        // in-UI dismiss button (HibikiAppShellPlaybackOverlayActions.dismiss()), which has always
+        // called teardown() first. This coordinator used to update the nav state first instead;
+        // capturing the frame after the route already changed risked racing the player
+        // composable being torn down/reused for the next screen before its TextureView could be
+        // read.
         if (result.cleanup == HibikiBackCleanup.Details) closeDetails()
         if (result.clearPlaybackReturnRoute) setPlaybackReturnRoute(null)
         when (result.cleanup) {
@@ -264,6 +270,7 @@ internal class HibikiSystemBackCoordinator(
             HibikiBackCleanup.Details -> Unit
             HibikiBackCleanup.None -> Unit
         }
+        setNavigationState(result.state)
     }
 }
 

@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.app.shell.layout
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -87,15 +88,28 @@ fun AppProductionRoot(
         // recomposition's presenters/state), so without rememberUpdatedState the tab NavHost
         // would keep calling the very first tabContent forever.
         val currentTabContent = rememberUpdatedState(tabContent)
-        // Hidden instantly, not faded: an independent AnimatedVisibility fade here ran as a
-        // second animation system alongside the AnimatedContent crossfade below, and the two
-        // could visibly desync (a stray extra transition on open, or a frame of the wrong
-        // content while toggling quickly). Details/the watch flow are full-screen with an
-        // opaque background, and the AnimatedContent below already fades its own incoming
-        // content in over whatever is behind it, so hiding the tab layer immediately reads the
-        // same as fading it -- it's covered either way, without a second clock to fall out of
-        // sync with the first.
-        if (tabLayerVisible) {
+        // Asymmetric on purpose. Hiding the tab layer (entering Details/watch-flow) is instant,
+        // not faded: a symmetric AnimatedVisibility fade here ran as a second animation system
+        // alongside the AnimatedContent crossfade below and the two could visibly desync (a
+        // stray extra transition on open, or a frame of the wrong content while toggling
+        // quickly) -- Details' own content fades in on top regardless, so hiding the tab
+        // underneath immediately reads the same as fading it.
+        //
+        // But revealing it (leaving Details/watch-flow back to a tab) does still need its own
+        // fade: Details' inner AnimatedContent (see AppDestinationContent) uses
+        // EnterTransition.None/ExitTransition.None deliberately, since it used to rely on the
+        // outer AnimatedContent's crossfade for its own visible fade -- but the outer
+        // AnimatedContent no longer renders any tab content on the "leaving" side (that moved to
+        // this NavHost in an earlier change), so there's nothing left for it to fade. Without
+        // this reveal fade, Details would cut to the tab instantly with no transition at all.
+        // This doesn't reintroduce the desync risk above: only one side (enter) animates here,
+        // so there's no second clock running concurrently with the outer crossfade's own fade.
+        AnimatedVisibility(
+            visible = tabLayerVisible,
+            enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
+            exit = ExitTransition.None,
+            modifier = Modifier.fillMaxSize(),
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startTabRoute,
