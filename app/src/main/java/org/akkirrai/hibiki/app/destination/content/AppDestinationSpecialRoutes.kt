@@ -6,6 +6,8 @@ import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.details.screen.DetailsOverlay
 import org.akkirrai.hibiki.details.screen.DetailsRoute
+import org.akkirrai.hibiki.details.screen.DetailsRouteActions
+import org.akkirrai.hibiki.details.screen.DetailsRouteState
 import org.akkirrai.hibiki.details.screen.DetailsOverlayState
 import org.akkirrai.hibiki.player.HibikiWatchFlowContent
 
@@ -52,42 +54,46 @@ internal fun AppDestinationDetailsRoute(
     val anime = animeOverride ?: requireNotNull(content.selectedAnime)
 
     DetailsRoute(
-        anime = anime,
-        watchRepositoryAvailable = content.watchRepositoryAvailable,
-        sources = source.sources,
-        selectedSourceId = source.selectedSourceId,
-        libraryRepository = platform.dataContext.libraryRepository,
-        detailsError = content.detailsError,
-        detailsResumeState = content.detailsResumeState,
-        resumeFrameContent = playback.resumeFrameContent,
-        overlayState = DetailsOverlayState(
-            overlay = when {
-                overlay.posterPreviewOpen == true -> DetailsOverlay.Poster
-                overlay.titleSheetOpen == true -> DetailsOverlay.Title
-                overlay.librarySheetOpen == true -> DetailsOverlay.Library
-                else -> null
-            },
-            onOverlayChange = { next ->
-                // Close whichever overlay is currently active before opening the next one --
-                // the shell tracks these as a navigation overlay stack, so closing after opening
-                // the replacement would try to pop the wrong (new) entry instead.
-                if (next != DetailsOverlay.Poster) overlay.onPosterPreviewOpenChange?.invoke(false)
-                if (next != DetailsOverlay.Title) overlay.onTitleSheetOpenChange?.invoke(false)
-                if (next != DetailsOverlay.Library) overlay.onLibrarySheetOpenChange?.invoke(false)
-                when (next) {
-                    DetailsOverlay.Poster -> overlay.onPosterPreviewOpenChange?.invoke(true)
-                    DetailsOverlay.Title -> overlay.onTitleSheetOpenChange?.invoke(true)
-                    DetailsOverlay.Library -> overlay.onLibrarySheetOpenChange?.invoke(true)
-                    null -> Unit
-                }
-            },
+        state = DetailsRouteState(
+            anime = anime,
+            watchRepositoryAvailable = content.watchRepositoryAvailable,
+            sources = source.sources,
+            selectedSourceId = source.selectedSourceId,
+            detailsError = content.detailsError,
+            detailsResumeState = content.detailsResumeState,
+            overlayState = DetailsOverlayState(
+                overlay = when {
+                    overlay.posterPreviewOpen == true -> DetailsOverlay.Poster
+                    overlay.titleSheetOpen == true -> DetailsOverlay.Title
+                    overlay.librarySheetOpen == true -> DetailsOverlay.Library
+                    else -> null
+                },
+                onOverlayChange = { next ->
+                    // Close whichever overlay is currently active before opening the next one --
+                    // the shell tracks these as a navigation overlay stack, so closing after opening
+                    // the replacement would try to pop the wrong (new) entry instead.
+                    if (next != DetailsOverlay.Poster) overlay.onPosterPreviewOpenChange?.invoke(false)
+                    if (next != DetailsOverlay.Title) overlay.onTitleSheetOpenChange?.invoke(false)
+                    if (next != DetailsOverlay.Library) overlay.onLibrarySheetOpenChange?.invoke(false)
+                    when (next) {
+                        DetailsOverlay.Poster -> overlay.onPosterPreviewOpenChange?.invoke(true)
+                        DetailsOverlay.Title -> overlay.onTitleSheetOpenChange?.invoke(true)
+                        DetailsOverlay.Library -> overlay.onLibrarySheetOpenChange?.invoke(true)
+                        null -> Unit
+                    }
+                },
+            ),
         ),
-        onBackFromDetails = input.navigation.actions.onBackFromDetails,
-        onRelatedAnimeClick = input.navigation.actions.onAnimeClick,
-        onWatchClick = { input.navigation.actions.onWatchClick(anime) },
-        onOpenUrl = platform.hostContext.onOpenUrl,
-        onResumePlayback = input.watch.actions.onResumePlayback,
-        onLibraryChanged = platform.hostContext.onLibraryChanged,
+        actions = DetailsRouteActions(
+            onBackFromDetails = input.navigation.actions.onBackFromDetails,
+            onRelatedAnimeClick = input.navigation.actions.onAnimeClick,
+            onWatchClick = { input.navigation.actions.onWatchClick(anime) },
+            onOpenUrl = platform.hostContext.onOpenUrl,
+            onResumePlayback = input.watch.actions.onResumePlayback,
+            onLibraryChanged = platform.hostContext.onLibraryChanged,
+        ),
+        libraryRepository = platform.dataContext.libraryRepository,
+        resumeFrameContent = playback.resumeFrameContent,
         modifier = platform.hostContext.modifier.fillMaxSize(),
     )
 }

@@ -14,29 +14,38 @@ import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 
+internal data class DetailsRouteState(
+    val anime: Anime,
+    val watchRepositoryAvailable: Boolean,
+    val sources: List<AppSourceDescriptor>,
+    val selectedSourceId: String?,
+    val detailsError: String?,
+    val detailsResumeState: TitleWatchState?,
+    val overlayState: DetailsOverlayState,
+)
+
+internal data class DetailsRouteActions(
+    val onBackFromDetails: () -> Unit,
+    val onRelatedAnimeClick: (Anime) -> Unit,
+    val onWatchClick: () -> Unit,
+    val onOpenUrl: (String) -> Unit,
+    val onResumePlayback: (TitleWatchState) -> Unit,
+    val onLibraryChanged: () -> Unit,
+)
+
 @Composable
 internal fun DetailsRoute(
-    anime: Anime,
-    watchRepositoryAvailable: Boolean,
-    sources: List<AppSourceDescriptor>,
-    selectedSourceId: String?,
+    state: DetailsRouteState,
+    actions: DetailsRouteActions,
     libraryRepository: LibraryRepository,
-    detailsError: String?,
-    detailsResumeState: TitleWatchState?,
     resumeFrameContent: (@Composable (String, Modifier) -> Unit)?,
-    overlayState: DetailsOverlayState,
-    onBackFromDetails: () -> Unit,
-    onRelatedAnimeClick: (Anime) -> Unit,
-    onWatchClick: () -> Unit,
-    onOpenUrl: (String) -> Unit,
-    onResumePlayback: (TitleWatchState) -> Unit,
-    onLibraryChanged: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val anime = state.anime
     val canWatch = resolveDetailsPlaybackAvailability(
-        watchRepositoryAvailable = watchRepositoryAvailable,
-        sources = sources,
-        selectedSourceId = selectedSourceId,
+        watchRepositoryAvailable = state.watchRepositoryAvailable,
+        sources = state.sources,
+        selectedSourceId = state.selectedSourceId,
         status = anime.status,
         episodesLabel = anime.episodesLabel,
     )
@@ -46,11 +55,11 @@ internal fun DetailsRoute(
     DetailsScreen(
         anime = anime,
         actions = DetailsActions(
-            onBackClick = onBackFromDetails,
-            onRelatedAnimeClick = onRelatedAnimeClick,
-            onWatchClick = onWatchClick,
-            onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
-            onResumeClick = onResumePlayback,
+            onBackClick = actions.onBackFromDetails,
+            onRelatedAnimeClick = actions.onRelatedAnimeClick,
+            onWatchClick = actions.onWatchClick,
+            onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { actions.onOpenUrl(url) } },
+            onResumeClick = actions.onResumePlayback,
             onLibraryCategorySelected = { category ->
                 if (category != null) {
                     libraryRepository.saveToLibrary(anime, category)
@@ -58,20 +67,20 @@ internal fun DetailsRoute(
                     libraryRepository.removeFromLibrary(anime.id)
                 }
                 libraryCategory = category
-                onLibraryChanged()
+                actions.onLibraryChanged()
             },
         ),
         backHandler = { onBack ->
             AppSystemBackHandler(enabled = true, onBack = onBack) {}
         },
         canWatch = canWatch,
-        resumeState = detailsResumeState,
-        resumeFrameContent = detailsResumeState?.let { state ->
-            resumeFrameContent?.let { content -> { frameModifier -> content(state.titleId, frameModifier) } }
+        resumeState = state.detailsResumeState,
+        resumeFrameContent = state.detailsResumeState?.let { resumeState ->
+            resumeFrameContent?.let { content -> { frameModifier -> content(resumeState.titleId, frameModifier) } }
         },
         libraryCategory = libraryCategory,
         modifier = modifier,
-        detailsError = detailsError,
-        overlayState = overlayState,
+        detailsError = state.detailsError,
+        overlayState = state.overlayState,
     )
 }
