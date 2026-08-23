@@ -1,11 +1,14 @@
 package org.akkirrai.hibiki.library.screen
 import org.akkirrai.hibiki.library.*
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,8 +21,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
 
@@ -126,6 +131,57 @@ fun AppLibraryCategorySheet(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppLibraryCategorySheetItem(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    iconContent: @Composable (Modifier) -> Unit,
+    selectedIconContent: @Composable (Modifier) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(LibraryCategorySheetItemCornerRadius),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.46f)
+        },
+        border = BorderStroke(
+            width = LibraryCategorySheetItemBorderWidth,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.14f)
+            },
+        ),
+        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = LibraryCategorySheetItemMinHeight)
+                .padding(horizontal = LibraryCategorySheetItemHorizontalPadding, vertical = LibraryCategorySheetItemVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(LibraryCategorySheetItemContentGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            iconContent(Modifier.size(LibraryCategorySheetItemIconSize))
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (selected) {
+                selectedIconContent(Modifier.size(LibraryCategorySheetItemSelectedIconSize))
             }
         }
     }
