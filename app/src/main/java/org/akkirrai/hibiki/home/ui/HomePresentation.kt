@@ -6,7 +6,14 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.design.UiDimens
-import org.akkirrai.hibiki.home.model.TrendingFilter
+
+enum class TrendingFilter(
+    val typeAlias: String?,
+) {
+    All(typeAlias = null),
+    Movies(typeAlias = "movie"),
+    Ona(typeAlias = "ona"),
+}
 
 val HomeContentTopPadding = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
