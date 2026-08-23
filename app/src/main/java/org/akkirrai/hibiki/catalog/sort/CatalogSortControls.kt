@@ -51,7 +51,7 @@ fun AppCatalogSortMenuContent(
     title: String,
     sorts: List<CatalogSort>,
     selectedSort: CatalogSort,
-    label: (CatalogSort) -> String,
+    label: @Composable (CatalogSort) -> String,
     expanded: Boolean,
     onSortSelected: (CatalogSort) -> Unit,
     orderContent: @Composable (Boolean, Modifier) -> Unit,

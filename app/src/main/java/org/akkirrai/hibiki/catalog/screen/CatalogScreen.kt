@@ -37,34 +37,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.library.LibraryCategory
+import org.akkirrai.hibiki.app.libraryText
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
-data class AppCatalogScreenLabels(
-    val errorTitle: String,
-    val retryLabel: String,
-    val announcementLabel: String,
-    val movieLabel: String,
-    val searchPlaceholder: String,
-    val filterContentDescription: String,
-    val clearContentDescription: String,
-    val sortTitle: String,
-    val sortLabels: Map<CatalogSort, String>,
-    val filterUnavailable: String,
-    val typeTitle: String,
-    val genresTitle: String,
-    val yearTitle: String,
-    val yearAllLabel: String,
-    val yearFromLabel: String,
-    val yearToLabel: String,
-    val statusTitle: String,
-    val resetLabel: String,
-    val applyLabel: String,
-    val libraryStatusLabel: @Composable (LibraryCategory) -> String,
-    val optionText: @Composable (org.akkirrai.hibiki.catalog.model.AnimeCatalogFilterOption) -> String,
-)
+private fun catalogSortLabel(sort: CatalogSort): AppTextKey = when (sort) {
+    CatalogSort.Alphabetical -> AppTextKey.CatalogSortAlphabetical
+    CatalogSort.Popular -> AppTextKey.CatalogSortPopular
+    CatalogSort.Updated -> AppTextKey.CatalogSortUpdated
+}
 
 data class CatalogActions(
     val onQueryChange: (String) -> Unit,
@@ -79,13 +62,12 @@ data class CatalogActions(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppCatalogScreen(
+fun CatalogScreen(
     state: AnimeCatalogUiState,
     listState: LazyListState,
     bottomContentPadding: androidx.compose.ui.unit.Dp,
     currentYear: Int,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
-    labels: AppCatalogScreenLabels,
     actions: CatalogActions,
     modifier: Modifier = Modifier,
 ) {
@@ -168,12 +150,12 @@ fun AppCatalogScreen(
             listState = listState,
             topContentPadding = contentTopPadding,
             bottomContentPadding = bottomContentPadding,
-            errorTitle = labels.errorTitle,
-            retryLabel = labels.retryLabel,
-            announcementLabel = labels.announcementLabel,
-            movieLabel = labels.movieLabel,
+            errorTitle = appText(AppTextKey.CatalogError),
+            retryLabel = appText(AppTextKey.SearchRetry),
+            announcementLabel = appText(AppTextKey.Announcement),
+            movieLabel = appText(AppTextKey.Type),
             libraryStatusByAnimeId = libraryStatusByAnimeId,
-            libraryStatusLabel = labels.libraryStatusLabel,
+            libraryStatusLabel = { category -> category.libraryText() },
             onAnimeClick = actions.onAnimeClick,
             onItemVisible = actions.onItemVisible,
             onRetry = actions.onRetry,
@@ -186,9 +168,9 @@ fun AppCatalogScreen(
             query = state.query,
             onQueryChange = actions.onQueryChange,
             onClear = { actions.onQueryChange("") },
-            placeholder = labels.searchPlaceholder,
-            filterContentDescription = labels.filterContentDescription,
-            clearContentDescription = labels.clearContentDescription,
+            placeholder = appText(AppTextKey.SearchPlaceholder),
+            filterContentDescription = appText(AppTextKey.SearchFilters),
+            clearContentDescription = appText(AppTextKey.Back),
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = hasCatalogFilters,
             showSort = isSortVisible &&
@@ -201,7 +183,7 @@ fun AppCatalogScreen(
                 AppCatalogSortControl(
                     sortKey = selectedSort.name,
                     icon = selectedSort.icon(),
-                    label = labels.sortLabels.getValue(selectedSort),
+                    label = appText(catalogSortLabel(selectedSort)),
                     expanded = isSortMenuOpen,
                     onExpandedChange = { isSortMenuOpen = it },
                     orderContent = { orderModifier ->
@@ -227,10 +209,10 @@ fun AppCatalogScreen(
                             shape = RoundedCornerShape(CatalogSortMenuCornerRadius),
                         ) {
                             AppCatalogSortMenuContent(
-                                title = labels.sortTitle,
+                                title = appText(AppTextKey.CatalogSortTitle),
                                 sorts = availableSorts,
                                 selectedSort = selectedSort,
-                                label = labels.sortLabels::getValue,
+                                label = { sort -> appText(catalogSortLabel(sort)) },
                                 expanded = isSortMenuOpen,
                                 onSortSelected = {
                                     isSortMenuOpen = false
@@ -254,18 +236,18 @@ fun AppCatalogScreen(
             isFilterCatalogLoading = state.isFilterCatalogLoading,
             onApply = actions.onFiltersApply,
             onDismissRequest = { isFilterSheetOpen = false },
-            unavailableLabel = labels.filterUnavailable,
-            typeTitle = labels.typeTitle,
-            genresTitle = labels.genresTitle,
-            yearTitle = labels.yearTitle,
-            yearAllLabel = labels.yearAllLabel,
-            yearFromLabel = labels.yearFromLabel,
-            yearToLabel = labels.yearToLabel,
-            statusTitle = labels.statusTitle,
-            resetLabel = labels.resetLabel,
-            applyLabel = labels.applyLabel,
+            unavailableLabel = appText(AppTextKey.FilterUnavailable),
+            typeTitle = appText(AppTextKey.Type),
+            genresTitle = appText(AppTextKey.Genres),
+            yearTitle = appText(AppTextKey.ReleaseDate),
+            yearAllLabel = appText(AppTextKey.FilterAllYears),
+            yearFromLabel = appText(AppTextKey.FilterFromYear),
+            yearToLabel = appText(AppTextKey.FilterToYear),
+            statusTitle = appText(AppTextKey.Status),
+            resetLabel = appText(AppTextKey.FilterReset),
+            applyLabel = appText(AppTextKey.FilterApply),
             defaultYearRange = defaultCatalogFilterYearRange(currentYear),
-            optionText = labels.optionText,
+            optionText = { it.title },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(UiDimens.LargeCorner),
             )
         }

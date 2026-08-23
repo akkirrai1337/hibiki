@@ -1,8 +1,6 @@
 package org.akkirrai.hibiki.app
 
 import androidx.compose.runtime.Composable
-import org.akkirrai.hibiki.catalog.screen.AppCatalogScreenLabels
-import org.akkirrai.hibiki.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.home.screen.AppHomeScreenLabels
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
@@ -28,38 +26,6 @@ internal fun NotificationPermissionState.textKey(): AppTextKey = when (this) {
     NotificationPermissionState.NOT_ASKED -> AppTextKey.SettingsNotificationsStatus
     NotificationPermissionState.GRANTED -> AppTextKey.SettingsNotificationsGranted
     NotificationPermissionState.DENIED -> AppTextKey.SettingsNotificationsDenied
-}
-
-@Composable
-internal fun defaultCatalogScreenLabels(): AppCatalogScreenLabels {
-    val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
-    return AppCatalogScreenLabels(
-        errorTitle = appText(AppTextKey.CatalogError),
-        retryLabel = appText(AppTextKey.SearchRetry),
-        announcementLabel = appText(AppTextKey.Announcement),
-        movieLabel = appText(AppTextKey.Type),
-        searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
-        filterContentDescription = appText(AppTextKey.SearchFilters),
-        clearContentDescription = appText(AppTextKey.Back),
-        sortTitle = appText(AppTextKey.CatalogSortTitle),
-        sortLabels = mapOf(
-            CatalogSort.Alphabetical to appText(AppTextKey.CatalogSortAlphabetical),
-            CatalogSort.Popular to appText(AppTextKey.CatalogSortPopular),
-            CatalogSort.Updated to appText(AppTextKey.CatalogSortUpdated),
-        ),
-        filterUnavailable = appText(AppTextKey.FilterUnavailable),
-        typeTitle = appText(AppTextKey.Type),
-        genresTitle = appText(AppTextKey.Genres),
-        yearTitle = appText(AppTextKey.ReleaseDate),
-        yearAllLabel = appText(AppTextKey.FilterAllYears),
-        yearFromLabel = appText(AppTextKey.FilterFromYear),
-        yearToLabel = appText(AppTextKey.FilterToYear),
-        statusTitle = appText(AppTextKey.Status),
-        resetLabel = appText(AppTextKey.FilterReset),
-        applyLabel = appText(AppTextKey.FilterApply),
-        libraryStatusLabel = { category -> categoryLabels.getValue(category) },
-        optionText = { it.title },
-    )
 }
 
 @Composable

@@ -15,7 +15,7 @@ import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.settings.SettingsRoute
 import org.akkirrai.hibiki.app.shell.navigation.shouldApplyTopSystemInset
 import org.akkirrai.hibiki.home.screen.HomeScreen
-import org.akkirrai.hibiki.home.screen.SearchScreen
+import org.akkirrai.hibiki.home.screen.CatalogRoute
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.library.screen.LibraryScreen
 import org.akkirrai.hibiki.profile.ProfileDestinationContent
@@ -75,7 +75,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onHomeRefresh = home.actions.onRefresh,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.CATALOG -> SearchScreen(
+            AppDestination.CATALOG -> CatalogRoute(
                 state = catalog.state.ui,
                 listState = catalog.state.listState,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
