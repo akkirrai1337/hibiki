@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.settings.DiscordRpcController
 
-/** Platform callbacks and availability flags used by shared settings/profile UI. */
-class AppPlatformCallbacks(
+/** Activity-scoped callbacks and availability flags for Settings/Profile that Compose can't reach on its own. */
+class AppShellCallbacks(
     val resumeFrameContent: (@Composable (String, Modifier) -> Unit)? = null,
     val discordRpcController: DiscordRpcController? = null,
     val onRequestOnboardingNotificationPermission: () -> Unit = {},

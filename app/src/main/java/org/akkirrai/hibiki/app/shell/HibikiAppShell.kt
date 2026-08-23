@@ -8,7 +8,7 @@ import org.akkirrai.hibiki.app.destination.content.AppDestinationContent
 import org.akkirrai.hibiki.app.destination.content.AppDestinationTabContent
 import org.akkirrai.hibiki.app.destination.context.*
 import org.akkirrai.hibiki.app.destination.watch.*
-import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
+import org.akkirrai.hibiki.core.source.AppSourceCallbacks
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -98,7 +98,7 @@ import org.akkirrai.hibiki.app.navigation.toTopLevelDestination
 import org.akkirrai.hibiki.app.navigation.toAppDestination
 import org.akkirrai.hibiki.player.PlayerPresenter
 import org.akkirrai.hibiki.player.PlayerUiState
-import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
+import org.akkirrai.hibiki.player.AppPlaybackCallbacks
 import org.akkirrai.hibiki.player.EpisodesUiState
 import org.akkirrai.hibiki.player.WatchDataRepository
 import org.akkirrai.hibiki.player.EpisodeDownloadRepository
@@ -146,10 +146,10 @@ internal fun HibikiAppShell(
     appVersionName: String = "dev",
     enableOnboarding: Boolean = false,
     onboardingNotificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
-    platformCallbacks: AppPlatformCallbacks = AppPlatformCallbacks(),
-    sourceCallbacks: AppSourcePlatformCallbacks = AppSourcePlatformCallbacks(),
+    platformCallbacks: AppShellCallbacks = AppShellCallbacks(),
+    sourceCallbacks: AppSourceCallbacks = AppSourceCallbacks(),
     watchRepository: WatchDataRepository? = null,
-    playbackCallbacks: AppPlaybackPlatformCallbacks = AppPlaybackPlatformCallbacks(),
+    playbackCallbacks: AppPlaybackCallbacks = AppPlaybackCallbacks(),
     catalogRefreshKey: Any? = null,
     catalogReady: Boolean = true,
 ) {

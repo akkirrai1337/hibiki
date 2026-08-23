@@ -9,7 +9,7 @@ import org.akkirrai.hibiki.player.model.WatchSource
 import org.akkirrai.hibiki.app.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.app.navigation.AppNavigationState
 
-/** Platform-owned playback surface hosted by the shared player shell. */
+/** Playback surface rendered by the Activity, hosted inside the player shell. */
 typealias AppPlaybackHost = @Composable (
     PlaybackStream?,
     PlaybackContext,
@@ -24,8 +24,8 @@ typealias AppPlaybackHost = @Composable (
     (AppNavigationEvent) -> Unit,
 ) -> Unit
 
-/** Platform-owned playback integration points used by the shared app shell. */
-class AppPlaybackPlatformCallbacks(
+/** Playback integration points the app shell needs from the Activity-owned player. */
+class AppPlaybackCallbacks(
     val onPlaybackReady: (PlaybackStream, PlaybackContext) -> Unit = { _, _ -> },
     val onPlaybackSelectionChanged: (PlaybackSelection) -> Unit = {},
     val loadPlaybackSelection: (String) -> PlaybackSelection? = { null },

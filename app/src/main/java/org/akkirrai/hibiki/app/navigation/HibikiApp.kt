@@ -68,9 +68,9 @@ import org.akkirrai.hibiki.core.source.extension.repository.SourceExtensionInsta
 import org.akkirrai.hibiki.core.source.extension.repository.SourceRepositoryClient
 import org.akkirrai.hibiki.home.data.CatalogBackedHomeDataRepository
 import org.akkirrai.hibiki.player.ExternalSourceWatchRepository
-import org.akkirrai.hibiki.player.AppPlaybackPlatformCallbacks
-import org.akkirrai.hibiki.app.shell.AppPlatformCallbacks
-import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
+import org.akkirrai.hibiki.player.AppPlaybackCallbacks
+import org.akkirrai.hibiki.app.shell.AppShellCallbacks
+import org.akkirrai.hibiki.core.source.AppSourceCallbacks
 
 /** Android composition root for HibikiAppShell, backed entirely by external sources. */
 @Composable
@@ -254,7 +254,7 @@ internal fun HibikiApp(
             )
         }
     }
-    val sourceCallbacks = AppSourcePlatformCallbacks(
+    val sourceCallbacks = AppSourceCallbacks(
             externalSourceRepositoryController = externalRepositoryController,
             sources = sources,
             sourceConfigContent = { source, onSaved, onCancel ->
@@ -318,7 +318,7 @@ internal fun HibikiApp(
             enableOnboarding = enableOnboarding,
             catalogRefreshKey = installedExtensionsRevision.toString(),
             catalogReady = true,
-            platformCallbacks = AppPlatformCallbacks(
+            platformCallbacks = AppShellCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->
                     resumeFrameRepository.getFrame(titleId)?.let { frame ->
@@ -346,7 +346,7 @@ internal fun HibikiApp(
             ),
             sourceCallbacks = sourceCallbacks,
             watchRepository = externalWatchRepository,
-            playbackCallbacks = AppPlaybackPlatformCallbacks(
+            playbackCallbacks = AppPlaybackCallbacks(
                 onWatchSourceSelected = { titleId, source ->
                     watchStateRepository.savePlaybackSourceSelection(titleId, source)
                 },

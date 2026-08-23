@@ -1,6 +1,6 @@
 package org.akkirrai.hibiki.core.source
 
-class AppSourcePlatformCallbacks(
+class AppSourceCallbacks(
     val externalSourceRepositoryController: ExternalSourceRepositoryController? = null,
     val sources: List<AppSourceDescriptor> = emptyList(),
     val sourceConfigContent: AppSourceConfigContent? = null,

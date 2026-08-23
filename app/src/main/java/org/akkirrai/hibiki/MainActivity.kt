@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
     //   splash would disappear a frame early and reveal the layout snapping into its correct,
     //   inset-aware position in front of the user -- bottom bar sliding down, search bar
     //   sliding up);
-    // - Home's first real data has loaded (AppPlatformCallbacks.onFirstContentReady), so the
+    // - Home's first real data has loaded (AppShellCallbacks.onFirstContentReady), so the
     //   user never sees Home render empty and fill in a moment later.
     // Both are guarded by a short fallback so a device that never delivers one of these
     // signals for some reason can't hang the splash screen forever.
