@@ -86,7 +86,6 @@ internal data class PlatformContentInput(
 
 internal data class NavigationContentInput(
     val actions: AppDestinationNavigationActions,
-    val detailsOverlayState: AppDestinationDetailsOverlayState,
 )
 
 internal data class AppDestinationDataContext(

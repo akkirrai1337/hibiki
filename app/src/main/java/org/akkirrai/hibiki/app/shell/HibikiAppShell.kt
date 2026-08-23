@@ -110,7 +110,6 @@ import org.akkirrai.hibiki.app.navigation.navigateToEpisodes
 import org.akkirrai.hibiki.app.navigation.navigateToSettings
 import org.akkirrai.hibiki.app.navigation.navigateToPlayer
 import org.akkirrai.hibiki.app.navigation.navigateToWatchSources
-import org.akkirrai.hibiki.app.navigation.reduceDetailsOverlayChange
 import org.akkirrai.hibiki.app.navigation.reduceOverlayVisibilityChange
 import org.akkirrai.hibiki.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.player.errorEpisodesState
@@ -540,14 +539,6 @@ internal fun HibikiAppShell(
                         ),
                         navigation = NavigationContentInput(
                             actions = navigationActions,
-                            detailsOverlayState = AppDestinationDetailsOverlayState(
-                                posterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
-                                onPosterPreviewOpenChange = overlayActions::setDetailsPosterPreviewOpen,
-                                titleSheetOpen = navigationState.activeOverlay == AppOverlay.DetailsTitleSheet,
-                                onTitleSheetOpenChange = overlayActions::setDetailsTitleSheetOpen,
-                                librarySheetOpen = navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet,
-                                onLibrarySheetOpenChange = overlayActions::setDetailsLibrarySheetOpen,
-                            ),
                         ),
                         watch = WatchContentInput(
                             actions = AppDestinationWatchActions(

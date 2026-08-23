@@ -7,7 +7,6 @@ import org.akkirrai.hibiki.app.navigation.AppNavigationState
 import org.akkirrai.hibiki.app.navigation.AppOverlay
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.app.navigation.activeOverlay
-import org.akkirrai.hibiki.app.navigation.reduceDetailsOverlayChange
 import org.akkirrai.hibiki.app.navigation.reduceOverlayVisibilityChange
 import org.akkirrai.hibiki.onboarding.AppOnboardingScreen
 import org.akkirrai.hibiki.player.AppPlaybackHost
@@ -36,23 +35,6 @@ internal class HibikiOverlayActions(
         )
     }
 
-    fun setDetailsPosterPreviewOpen(open: Boolean) {
-        setNavigationState(
-            navigationState().reduceDetailsOverlayChange(AppOverlay.DetailsPosterPreview, open),
-        )
-    }
-
-    fun setDetailsTitleSheetOpen(open: Boolean) {
-        setNavigationState(
-            navigationState().reduceDetailsOverlayChange(AppOverlay.DetailsTitleSheet, open),
-        )
-    }
-
-    fun setDetailsLibrarySheetOpen(open: Boolean) {
-        setNavigationState(
-            navigationState().reduceDetailsOverlayChange(AppOverlay.DetailsLibrarySheet, open),
-        )
-    }
 }
 
 @Composable

@@ -3,6 +3,9 @@ package org.akkirrai.hibiki.app.destination.content
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -61,8 +64,11 @@ internal fun AppDestinationDetailsRoute(
     val platform = input.platform
     val playback = input.watch.playbackContext
     val source = input.sources.state
-    val overlay = input.navigation.detailsOverlayState
     val anime = animeOverride ?: requireNotNull(content.selectedAnime)
+    // Local to this screen, not part of the navigation overlay stack -- DetailsScreen already
+    // owns closing this on system back itself (see its own AppSystemBackHandler), so there's
+    // nothing left for a shared overlay stack to coordinate.
+    var detailsOverlay by remember { mutableStateOf<DetailsOverlay?>(null) }
 
     DetailsRoute(
         state = DetailsRouteState(
@@ -73,26 +79,8 @@ internal fun AppDestinationDetailsRoute(
             detailsError = content.detailsError,
             detailsResumeState = content.detailsResumeState,
             overlayState = DetailsOverlayState(
-                overlay = when {
-                    overlay.posterPreviewOpen == true -> DetailsOverlay.Poster
-                    overlay.titleSheetOpen == true -> DetailsOverlay.Title
-                    overlay.librarySheetOpen == true -> DetailsOverlay.Library
-                    else -> null
-                },
-                onOverlayChange = { next ->
-                    // Close whichever overlay is currently active before opening the next one --
-                    // the shell tracks these as a navigation overlay stack, so closing after opening
-                    // the replacement would try to pop the wrong (new) entry instead.
-                    if (next != DetailsOverlay.Poster) overlay.onPosterPreviewOpenChange?.invoke(false)
-                    if (next != DetailsOverlay.Title) overlay.onTitleSheetOpenChange?.invoke(false)
-                    if (next != DetailsOverlay.Library) overlay.onLibrarySheetOpenChange?.invoke(false)
-                    when (next) {
-                        DetailsOverlay.Poster -> overlay.onPosterPreviewOpenChange?.invoke(true)
-                        DetailsOverlay.Title -> overlay.onTitleSheetOpenChange?.invoke(true)
-                        DetailsOverlay.Library -> overlay.onLibrarySheetOpenChange?.invoke(true)
-                        null -> Unit
-                    }
-                },
+                overlay = detailsOverlay,
+                onOverlayChange = { next -> detailsOverlay = next },
             ),
         ),
         actions = DetailsRouteActions(

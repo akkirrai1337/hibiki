@@ -36,15 +36,6 @@ internal data class AppDestinationContentState(
     val currentRoute: AppRoute?,
 )
 
-internal data class AppDestinationDetailsOverlayState(
-    val posterPreviewOpen: Boolean?,
-    val onPosterPreviewOpenChange: ((Boolean) -> Unit)?,
-    val titleSheetOpen: Boolean?,
-    val onTitleSheetOpenChange: ((Boolean) -> Unit)?,
-    val librarySheetOpen: Boolean?,
-    val onLibrarySheetOpenChange: ((Boolean) -> Unit)?,
-)
-
 internal data class AppDestinationPlaybackContext(
     val episodeDownloadRepository: EpisodeDownloadRepository?,
     val offlineWatchDataRepository: OfflineWatchDataRepository?,
