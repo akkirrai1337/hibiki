@@ -36,7 +36,7 @@ fun watchScreenContentPadding(statusBarHeight: Dp): PaddingValues = PaddingValue
 )
 
 /**
- * Header row (back button + title, matching AppSettingsScreen's back-button-row style) instead of
+ * Header row (back button + title, matching SettingsScreen's back-button-row style) instead of
  * the previously bare floating back button, so these screens aren't just an empty top area over
  * the list -- an optional [trailingContent] slot lets Episodes place its download toggle in the
  * same row instead of floating it separately over the list.

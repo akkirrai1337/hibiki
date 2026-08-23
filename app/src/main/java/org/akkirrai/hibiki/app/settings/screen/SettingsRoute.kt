@@ -1,23 +1,14 @@
 package org.akkirrai.hibiki.app.settings
 
-import org.akkirrai.hibiki.app.textKey
-
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import org.akkirrai.hibiki.app.settings.AppSettingsScreen
-import org.akkirrai.hibiki.app.settings.AppSettingsScreenLabels
-import org.akkirrai.hibiki.app.settings.LanguageMode
-import org.akkirrai.hibiki.app.settings.NotificationPermissionState
-import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryUiState
-import org.akkirrai.hibiki.text.AppTextKey
-import org.akkirrai.hibiki.text.appText
 
 @Composable
-internal fun SettingsScreen(
+internal fun SettingsRoute(
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
@@ -48,20 +39,23 @@ internal fun SettingsScreen(
     listState: LazyListState,
     bottomContentPadding: Dp,
 ) {
-    AppSettingsScreen(
-        state = SettingsUiState(
+    SettingsScreen(
+        state = SettingsScreenState(
             languageMode = languageMode,
             darkTheme = darkTheme,
             themeMode = themeMode,
+            versionName = versionName,
             useSystemColorScheme = useSystemColorScheme,
             useAmoledTheme = useAmoledTheme,
             autoSkipSegments = autoSkipSegments,
+            notificationPermissionState = notificationPermissionState,
             discordEnabled = discordEnabled,
             discordAvailable = discordAvailable,
             notificationsAvailable = notificationsAvailable,
             externalSourcesCount = externalSourceRepositoryState?.repositories?.size ?: 0,
+            showBackButton = showBackButton,
         ),
-        actions = SettingsActions(
+        actions = SettingsScreenActions(
             onLanguageModeChange = onLanguageModeChange,
             onThemeChange = onThemeChange,
             onThemeModeChange = onThemeModeChange,
@@ -75,43 +69,10 @@ internal fun SettingsScreen(
             onNotificationsClick = onConfigureNotifications,
             onGitHubClick = onGitHubClick,
             onExternalSourcesClick = onExternalSourcesClick,
-        ),
-        labels = AppSettingsScreenLabels(
-            title = appText(AppTextKey.Settings),
-            appearance = appText(AppTextKey.SettingsAppearance),
-            theme = appText(AppTextKey.SettingsTheme),
-            themeSystem = appText(AppTextKey.ThemeSystem),
-            themeLight = appText(AppTextKey.ThemeLight),
-            themeDark = appText(AppTextKey.ThemeDark),
-            systemColorScheme = appText(AppTextKey.SettingsSystemColorScheme),
-            amoled = appText(AppTextKey.SettingsAmoled),
-            preferences = appText(AppTextKey.SettingsPreferences),
-            language = appText(AppTextKey.SettingsLanguage),
-            languageSystem = appText(AppTextKey.LanguageSystem),
-            languageRussian = appText(AppTextKey.LanguageRussian),
-            languageEnglish = appText(AppTextKey.LanguageEnglish),
-            notifications = appText(AppTextKey.SettingsNotifications),
-            notificationsStatus = appText(notificationPermissionState.textKey()),
-            externalSources = appText(AppTextKey.SettingsExternalSources),
-            externalSourcesSubtitle = appText(AppTextKey.SettingsExternalSourcesCount)
-                .replace("%s", (externalSourceRepositoryState?.repositories?.size ?: 0).toString()),
-            player = appText(AppTextKey.SettingsPlayer),
-            autoSkip = appText(AppTextKey.SettingsAutoSkip),
-            experimental = appText(AppTextKey.SettingsExperimental),
-            discord = appText(AppTextKey.SettingsDiscord),
-            updates = appText(AppTextKey.SettingsUpdates),
-            checkUpdates = appText(AppTextKey.SettingsCheckUpdates),
-            support = appText(AppTextKey.SettingsSupport),
-            exportLogs = appText(AppTextKey.SettingsExportLogs),
-            about = appText(AppTextKey.SettingsAbout),
-            appName = appText(AppTextKey.AppName),
-            versionName = versionName,
+            onBackClick = onBackClick,
         ),
         listState = listState,
         modifier = Modifier.fillMaxSize(),
         bottomContentPadding = bottomContentPadding,
-        showBackButton = showBackButton,
-        onBackClick = onBackClick,
-        backContentDescription = appText(AppTextKey.Back),
     )
 }

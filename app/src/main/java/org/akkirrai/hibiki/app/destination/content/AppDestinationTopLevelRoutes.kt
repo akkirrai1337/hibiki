@@ -12,7 +12,7 @@ import org.akkirrai.hibiki.app.destination.library.*
 import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
-import org.akkirrai.hibiki.app.settings.SettingsScreen
+import org.akkirrai.hibiki.app.settings.SettingsRoute
 import org.akkirrai.hibiki.app.shell.navigation.shouldApplyTopSystemInset
 import org.akkirrai.hibiki.home.screen.HomeScreen
 import org.akkirrai.hibiki.home.screen.SearchScreen
@@ -151,7 +151,7 @@ internal fun AppDestinationTopLevelRoutes(
                 readClipboardText = sources.externalSourcesState.readClipboardText,
                 copyText = sources.externalSourcesState.copyText,
             )
-            AppDestination.SETTINGS -> SettingsScreen(
+            AppDestination.SETTINGS -> SettingsRoute(
                 languageMode = platform.dataContext.languageMode,
                 onLanguageModeChange = settings.actions.onLanguageModeChange,
                 darkTheme = settings.state.darkTheme,

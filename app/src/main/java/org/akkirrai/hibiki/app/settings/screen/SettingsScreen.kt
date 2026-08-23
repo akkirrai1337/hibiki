@@ -26,56 +26,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.textKey
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
+import org.akkirrai.hibiki.text.AppTextKey
+import org.akkirrai.hibiki.text.appText
 
-data class AppSettingsScreenLabels(
-    val title: String,
-    val appearance: String,
-    val theme: String,
-    val themeSystem: String,
-    val themeLight: String,
-    val themeDark: String,
-    val systemColorScheme: String,
-    val amoled: String,
-    val preferences: String,
-    val language: String,
-    val languageSystem: String,
-    val languageRussian: String,
-    val languageEnglish: String,
-    val notifications: String,
-    val notificationsStatus: String,
-    val externalSources: String,
-    val externalSourcesSubtitle: String,
-    val player: String,
-    val autoSkip: String,
-    val experimental: String,
-    val discord: String,
-    val updates: String,
-    val checkUpdates: String,
-    val support: String,
-    val exportLogs: String,
-    val about: String,
-    val appName: String,
-    val versionName: String,
-)
-
-data class SettingsUiState(
+data class SettingsScreenState(
     val languageMode: LanguageMode,
     val darkTheme: Boolean,
     val useSystemColorScheme: Boolean,
     val useAmoledTheme: Boolean,
     val autoSkipSegments: Boolean,
+    val versionName: String,
+    val notificationPermissionState: NotificationPermissionState,
     val themeMode: ThemeMode? = null,
     val discordAvailable: Boolean = true,
     val notificationsAvailable: Boolean = true,
     val discordEnabled: Boolean = false,
     val showUpdates: Boolean = true,
     val externalSourcesCount: Int = 0,
+    val showBackButton: Boolean = false,
 )
 
-data class SettingsActions(
+data class SettingsScreenActions(
     val onLanguageModeChange: (LanguageMode) -> Unit,
     val onThemeChange: (Boolean) -> Unit,
     val onThemeModeChange: ((ThemeMode) -> Unit)? = null,
@@ -89,19 +65,16 @@ data class SettingsActions(
     val onExportLogs: () -> Unit = {},
     val onGitHubClick: () -> Unit = {},
     val onExternalSourcesClick: () -> Unit = {},
+    val onBackClick: () -> Unit = {},
 )
 
 @Composable
-fun AppSettingsScreen(
-    state: SettingsUiState,
-    actions: SettingsActions,
-    labels: AppSettingsScreenLabels,
+fun SettingsScreen(
+    state: SettingsScreenState,
+    actions: SettingsScreenActions,
     modifier: Modifier = Modifier,
-    bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
+    bottomContentPadding: Dp = SettingsScreenDefaultBottomContentPadding,
     listState: LazyListState = rememberLazyListState(),
-    showBackButton: Boolean = false,
-    onBackClick: () -> Unit = {},
-    backContentDescription: String = "Back",
 ) {
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     val topSystemInset = if (layoutEnvironment.isProvided) {
@@ -113,17 +86,17 @@ fun AppSettingsScreen(
         AppSettingsContentList(
             bottomContentPadding = bottomContentPadding,
             state = listState,
-            topContentPadding = if (showBackButton) {
+            topContentPadding = if (state.showBackButton) {
                 settingsContentTopPaddingWithBackButton(topSystemInset)
             } else {
                 SettingsContentTopPadding
             },
             modifier = Modifier.fillMaxSize(),
             content = {
-        if (!showBackButton) {
+        if (!state.showBackButton) {
             item(key = "settings-header") {
                 Text(
-                    text = labels.title,
+                    text = appText(AppTextKey.Settings),
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -134,56 +107,57 @@ fun AppSettingsScreen(
         }
         item(key = SettingsSection.Appearance.key) {
             AppSettingsAppearanceSection(
-                sectionTitle = labels.appearance,
-                themeTitle = labels.theme,
+                sectionTitle = appText(AppTextKey.SettingsAppearance),
+                themeTitle = appText(AppTextKey.SettingsTheme),
                 themeOptions = themeModeOptions,
                 selectedTheme = state.themeMode ?: if (state.darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
                 themeLabel = { mode ->
                     when (mode) {
-                        ThemeMode.SYSTEM -> labels.themeSystem
-                        ThemeMode.LIGHT -> labels.themeLight
-                        ThemeMode.DARK -> labels.themeDark
+                        ThemeMode.SYSTEM -> appText(AppTextKey.ThemeSystem)
+                        ThemeMode.LIGHT -> appText(AppTextKey.ThemeLight)
+                        ThemeMode.DARK -> appText(AppTextKey.ThemeDark)
                     }
                 },
                 onThemeSelected = { mode ->
                     actions.onThemeModeChange?.invoke(mode) ?: actions.onThemeChange(mode == ThemeMode.DARK)
                 },
-                systemColorSchemeTitle = labels.systemColorScheme,
+                systemColorSchemeTitle = appText(AppTextKey.SettingsSystemColorScheme),
                 useSystemColorScheme = state.useSystemColorScheme,
                 onSystemColorSchemeChange = actions.onSystemColorSchemeChange,
-                amoledTitle = labels.amoled,
+                amoledTitle = appText(AppTextKey.SettingsAmoled),
                 useAmoledTheme = state.useAmoledTheme,
                 onAmoledChange = actions.onAmoledChange,
             )
         }
         item(key = SettingsSection.Preferences.key) {
             AppSettingsPreferencesSection(
-                sectionTitle = labels.preferences,
-                languageTitle = labels.language,
+                sectionTitle = appText(AppTextKey.SettingsPreferences),
+                languageTitle = appText(AppTextKey.SettingsLanguage),
                 languageOptions = languageModeOptions,
                 selectedLanguage = state.languageMode,
                 languageLabel = { mode ->
                     when (mode) {
-                        LanguageMode.SYSTEM -> labels.languageSystem
-                        LanguageMode.RUSSIAN -> labels.languageRussian
-                        LanguageMode.ENGLISH -> labels.languageEnglish
+                        LanguageMode.SYSTEM -> appText(AppTextKey.LanguageSystem)
+                        LanguageMode.RUSSIAN -> appText(AppTextKey.LanguageRussian)
+                        LanguageMode.ENGLISH -> appText(AppTextKey.LanguageEnglish)
                     }
                 },
                 onLanguageSelected = actions.onLanguageModeChange,
-                notificationsTitle = labels.notifications,
-                notificationsSubtitle = labels.notificationsStatus,
+                notificationsTitle = appText(AppTextKey.SettingsNotifications),
+                notificationsSubtitle = appText(state.notificationPermissionState.textKey()),
                 notificationsAvailable = state.notificationsAvailable,
                 onNotificationsClick = actions.onNotificationsClick,
-                externalSourcesTitle = labels.externalSources,
-                externalSourcesSubtitle = labels.externalSourcesSubtitle,
+                externalSourcesTitle = appText(AppTextKey.SettingsExternalSources),
+                externalSourcesSubtitle = appText(AppTextKey.SettingsExternalSourcesCount)
+                    .replace("%s", state.externalSourcesCount.toString()),
                 externalSourcesCount = state.externalSourcesCount,
                 onExternalSourcesClick = actions.onExternalSourcesClick,
             )
         }
         item(key = SettingsSection.Player.key) {
             AppSettingsPlayerSection(
-                sectionTitle = labels.player,
-                autoSkipTitle = labels.autoSkip,
+                sectionTitle = appText(AppTextKey.SettingsPlayer),
+                autoSkipTitle = appText(AppTextKey.SettingsAutoSkip),
                 autoSkipEnabled = state.autoSkipSegments,
                 onAutoSkipChange = actions.onAutoSkipChange,
             )
@@ -191,7 +165,7 @@ fun AppSettingsScreen(
         if (state.discordAvailable) {
             item(key = SettingsSection.Experimental.key) {
                 AppSettingsExperimentalSection(
-                    sectionTitle = labels.experimental,
+                    sectionTitle = appText(AppTextKey.SettingsExperimental),
                     discordIconContent = { iconModifier ->
                         Image(
                             painter = painterResource(R.drawable.ic_discord),
@@ -199,7 +173,7 @@ fun AppSettingsScreen(
                             modifier = iconModifier,
                         )
                     },
-                    discordTitle = labels.discord,
+                    discordTitle = appText(AppTextKey.SettingsDiscord),
                     discordEnabled = state.discordEnabled,
                     onDiscordClick = actions.onDiscordClick,
                     onDiscordChange = actions.onDiscordChange,
@@ -209,24 +183,24 @@ fun AppSettingsScreen(
         if (state.showUpdates) {
             item(key = SettingsSection.Updates.key) {
                 AppSettingsUpdatesSection(
-                    sectionTitle = labels.updates,
-                    checkForUpdatesTitle = labels.checkUpdates,
+                    sectionTitle = appText(AppTextKey.SettingsUpdates),
+                    checkForUpdatesTitle = appText(AppTextKey.SettingsCheckUpdates),
                     onCheckForUpdates = actions.onCheckForUpdates,
                 )
             }
         }
         item(key = SettingsSection.Support.key) {
             AppSettingsSupportSection(
-                sectionTitle = labels.support,
-                exportLogsTitle = labels.exportLogs,
+                sectionTitle = appText(AppTextKey.SettingsSupport),
+                exportLogsTitle = appText(AppTextKey.SettingsExportLogs),
                 onExportLogs = actions.onExportLogs,
             )
         }
         item(key = SettingsSection.About.key) {
-            AppSettingsSection(title = labels.about) {
+            AppSettingsSection(title = appText(AppTextKey.SettingsAbout)) {
                 AppSettingsAboutCard(
-                    appName = labels.appName,
-                    versionName = labels.versionName,
+                    appName = appText(AppTextKey.AppName),
+                    versionName = state.versionName,
                     appIconContent = { iconModifier ->
                         Image(
                             painter = painterResource(R.drawable.hibiki_app_icon),
@@ -247,7 +221,7 @@ fun AppSettingsScreen(
         }
             },
         )
-        if (showBackButton) {
+        if (state.showBackButton) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -263,15 +237,15 @@ fun AppSettingsScreen(
                         .height(SettingsBackButtonSize),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = actions.onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = backContentDescription,
+                            contentDescription = appText(AppTextKey.Back),
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                     }
                     Text(
-                        text = labels.title,
+                        text = appText(AppTextKey.Settings),
                         color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
