@@ -131,29 +131,31 @@ internal fun HibikiEpisodesContent(
                         pauseContentDescription = appText(AppTextKey.WatchPause),
                         resumeContentDescription = appText(AppTextKey.WatchResume),
                         removeContentDescription = appText(AppTextKey.WatchRemoveDownload),
-                        onClick = { onEpisodeClick(episode) },
-                        onDownloadClick = {
-                            onEpisodeDownloadStatesChange(episodeDownloadStates +
-                                (episode.id to EpisodeDownloadState.Queued)
-                            )
-                            downloadScope.launch {
-                                episodeDownloadRepository.enqueueEpisodes(source, listOf(episode))
-                            }
-                        },
-                        onPauseClick = { episodeDownloadRepository.pauseEpisode(source.sourceId, episode.id) },
-                        onResumeClick = { episodeDownloadRepository.resumeEpisode(source.sourceId, episode.id) },
-                        onRemoveClick = {
-                            episodeDownloadRepository.removeEpisode(source.sourceId, episode.id)
-                            onEpisodeDownloadStatesChange(
-                                episodeDownloadStates + (episode.id to EpisodeDownloadState.NotDownloaded),
-                            )
-                            // Checked across all of the title's sources, not just this one --
-                            // another dub can still have completed downloads.
-                            if (!episodeDownloadRepository.hasDownloadsForTitle(anime.id)) {
-                                libraryRepository.removeSavedFromLibrary(anime.id)
-                            }
-                            onLibraryChanged()
-                        },
+                        actions = EpisodeDownloadActions(
+                            onClick = { onEpisodeClick(episode) },
+                            onDownloadClick = {
+                                onEpisodeDownloadStatesChange(episodeDownloadStates +
+                                    (episode.id to EpisodeDownloadState.Queued)
+                                )
+                                downloadScope.launch {
+                                    episodeDownloadRepository.enqueueEpisodes(source, listOf(episode))
+                                }
+                            },
+                            onPauseClick = { episodeDownloadRepository.pauseEpisode(source.sourceId, episode.id) },
+                            onResumeClick = { episodeDownloadRepository.resumeEpisode(source.sourceId, episode.id) },
+                            onRemoveClick = {
+                                episodeDownloadRepository.removeEpisode(source.sourceId, episode.id)
+                                onEpisodeDownloadStatesChange(
+                                    episodeDownloadStates + (episode.id to EpisodeDownloadState.NotDownloaded),
+                                )
+                                // Checked across all of the title's sources, not just this one --
+                                // another dub can still have completed downloads.
+                                if (!episodeDownloadRepository.hasDownloadsForTitle(anime.id)) {
+                                    libraryRepository.removeSavedFromLibrary(anime.id)
+                                }
+                                onLibraryChanged()
+                            },
+                        ),
                     )
                 } else {
                     val genericEpisodeTitle = defaultHeadline.replace("%s", formatEpisodeNumber(episode.number))

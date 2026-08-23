@@ -24,6 +24,14 @@ fun EpisodeDownloadActionState.forDisplay(controlsEnabled: Boolean): EpisodeDown
 fun EpisodeDownloadActionState.shouldShowAction(controlsEnabled: Boolean): Boolean =
     controlsEnabled || this == EpisodeDownloadActionState.Completed
 
+data class EpisodeDownloadActions(
+    val onClick: () -> Unit,
+    val onDownloadClick: () -> Unit,
+    val onPauseClick: () -> Unit,
+    val onResumeClick: () -> Unit,
+    val onRemoveClick: () -> Unit,
+)
+
 fun resolveEpisodeDownloadSubtitle(
     state: EpisodeDownloadActionState,
     queuedLabel: String,
@@ -49,10 +57,7 @@ fun AppEpisodeDownloadAction(
     pauseContentDescription: String,
     resumeContentDescription: String,
     removeContentDescription: String,
-    onDownloadClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onRemoveClick: () -> Unit,
+    actions: EpisodeDownloadActions,
 ) {
     // Only Completed rows stay visible with controls off (shouldShowAction()), swapping to this
     // simplified checkmark-only look -- anything else is hidden by the caller's AnimatedVisibility,
@@ -65,26 +70,26 @@ fun AppEpisodeDownloadAction(
 
     when (state) {
         EpisodeDownloadActionState.NotDownloaded,
-        EpisodeDownloadActionState.Failed -> EpisodeDownloadIcon(downloadContentDescription, onDownloadClick)
+        EpisodeDownloadActionState.Failed -> EpisodeDownloadIcon(downloadContentDescription, actions.onDownloadClick)
         EpisodeDownloadActionState.Queued -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
-            EpisodePauseIcon(pauseContentDescription, onPauseClick)
-            EpisodeRemoveDownloadIcon(removeContentDescription, onRemoveClick)
+            EpisodePauseIcon(pauseContentDescription, actions.onPauseClick)
+            EpisodeRemoveDownloadIcon(removeContentDescription, actions.onRemoveClick)
         }
         is EpisodeDownloadActionState.Downloading -> Row(
             horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DownloadProgressBadge(state.progress)
-            EpisodePauseIcon(pauseContentDescription, onPauseClick)
-            EpisodeRemoveDownloadIcon(removeContentDescription, onRemoveClick)
+            EpisodePauseIcon(pauseContentDescription, actions.onPauseClick)
+            EpisodeRemoveDownloadIcon(removeContentDescription, actions.onRemoveClick)
         }
         EpisodeDownloadActionState.Paused -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
-            EpisodeResumeIcon(resumeContentDescription, onResumeClick)
-            EpisodeRemoveDownloadIcon(removeContentDescription, onRemoveClick)
+            EpisodeResumeIcon(resumeContentDescription, actions.onResumeClick)
+            EpisodeRemoveDownloadIcon(removeContentDescription, actions.onRemoveClick)
         }
         EpisodeDownloadActionState.Completed -> Row(horizontalArrangement = Arrangement.spacedBy(EpisodeDownloadActionGap)) {
             EpisodeDownloadedIcon(downloadedContentDescription)
-            EpisodeRemoveDownloadIcon(removeContentDescription, onRemoveClick)
+            EpisodeRemoveDownloadIcon(removeContentDescription, actions.onRemoveClick)
         }
     }
 }

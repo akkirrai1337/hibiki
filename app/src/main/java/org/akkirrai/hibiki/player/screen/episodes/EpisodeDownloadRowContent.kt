@@ -29,11 +29,7 @@ fun AppEpisodeDownloadRowContent(
     pauseContentDescription: String,
     resumeContentDescription: String,
     removeContentDescription: String,
-    onClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onRemoveClick: () -> Unit,
+    actions: EpisodeDownloadActions,
 ) {
     val visibleDownloadState = downloadState.forDisplay(showDownloadControls)
     val downloadingProgress = (visibleDownloadState as? EpisodeDownloadActionState.Downloading)?.progress ?: 0f
@@ -58,7 +54,6 @@ fun AppEpisodeDownloadRowContent(
         enabled = enabled,
         showDownloadAction = downloadState.shouldShowAction(showDownloadControls),
         shape = shape,
-        onClick = onClick,
         downloadState = downloadState,
         controlsEnabled = showDownloadControls,
         downloadedContentDescription = downloadedContentDescription,
@@ -66,10 +61,7 @@ fun AppEpisodeDownloadRowContent(
         pauseContentDescription = pauseContentDescription,
         resumeContentDescription = resumeContentDescription,
         removeContentDescription = removeContentDescription,
-        onDownloadClick = onDownloadClick,
-        onPauseClick = onPauseClick,
-        onResumeClick = onResumeClick,
-        onRemoveClick = onRemoveClick,
+        actions = actions,
     )
 }
 
@@ -88,11 +80,7 @@ private fun AppEpisodeDownloadRow(
     resumeContentDescription: String,
     removeContentDescription: String,
     shape: RoundedCornerShape,
-    onClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onRemoveClick: () -> Unit,
+    actions: EpisodeDownloadActions,
 ) {
     EpisodeRow(
         headline = headline,
@@ -101,7 +89,7 @@ private fun AppEpisodeDownloadRow(
         enabled = enabled,
         showDownloadAction = showDownloadAction,
         shape = shape,
-        onClick = onClick,
+        onClick = actions.onClick,
         downloadAction = {
             AppEpisodeDownloadAction(
                 state = downloadState,
@@ -111,10 +99,7 @@ private fun AppEpisodeDownloadRow(
                 pauseContentDescription = pauseContentDescription,
                 resumeContentDescription = resumeContentDescription,
                 removeContentDescription = removeContentDescription,
-                onDownloadClick = onDownloadClick,
-                onPauseClick = onPauseClick,
-                onResumeClick = onResumeClick,
-                onRemoveClick = onRemoveClick,
+                actions = actions,
             )
         },
     )
