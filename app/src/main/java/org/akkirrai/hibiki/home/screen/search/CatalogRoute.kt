@@ -11,10 +11,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.hibiki.catalog.screen.CatalogScreen
 import org.akkirrai.hibiki.catalog.screen.CatalogActions
-import org.akkirrai.hibiki.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.library.LibraryCategory
-import org.akkirrai.hibiki.catalog.model.Anime
-import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 
 @Composable
@@ -22,13 +19,7 @@ internal fun ColumnScope.CatalogRoute(
     state: AnimeCatalogUiState,
     listState: LazyListState,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
-    onQueryChange: (String) -> Unit,
-    onFiltersChange: (AnimeSearchFilters) -> Unit,
-    onAnimeClick: (Anime) -> Unit,
-    onRetry: () -> Unit,
-    onRefresh: () -> Unit,
-    onLoadMoreRetry: () -> Unit,
-    onSortSelected: (CatalogSort) -> Unit,
+    actions: CatalogActions,
     bottomContentPadding: Dp,
 ) {
     CatalogScreen(
@@ -37,16 +28,7 @@ internal fun ColumnScope.CatalogRoute(
         bottomContentPadding = bottomContentPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
-        actions = CatalogActions(
-            onQueryChange = onQueryChange,
-            onRetry = onRetry,
-            onRefresh = onRefresh,
-            onLoadMoreRetry = onLoadMoreRetry,
-            onItemVisible = {},
-            onSortSelected = onSortSelected,
-            onFiltersApply = onFiltersChange,
-            onAnimeClick = onAnimeClick,
-        ),
+        actions = actions,
         modifier = Modifier.fillMaxSize(),
     )
 }

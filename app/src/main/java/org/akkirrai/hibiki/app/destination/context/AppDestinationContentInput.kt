@@ -1,7 +1,7 @@
 package org.akkirrai.hibiki.app.destination.context
 
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.Modifier
-import org.akkirrai.hibiki.app.destination.catalog.*
 import org.akkirrai.hibiki.app.destination.home.*
 import org.akkirrai.hibiki.app.destination.library.*
 import org.akkirrai.hibiki.app.destination.profile.*
@@ -15,6 +15,8 @@ import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
+import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
+import org.akkirrai.hibiki.catalog.screen.CatalogActions
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -32,8 +34,9 @@ internal class AppDestinationContentInput(
 }
 
 internal data class CatalogContentInput(
-    val actions: AppDestinationCatalogActions,
-    val state: AppDestinationCatalogState,
+    val state: AnimeCatalogUiState,
+    val listState: LazyListState,
+    val actions: CatalogActions,
 )
 
 internal data class HomeContentInput(

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import org.akkirrai.hibiki.app.destination.catalog.*
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.home.*
 import org.akkirrai.hibiki.app.destination.library.*
@@ -76,16 +75,10 @@ internal fun AppDestinationTopLevelRoutes(
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.CATALOG -> CatalogRoute(
-                state = catalog.state.ui,
-                listState = catalog.state.listState,
+                state = catalog.state,
+                listState = catalog.listState,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
-                onQueryChange = catalog.actions.onQueryChange,
-                onFiltersChange = catalog.actions.onFiltersChange,
-                onAnimeClick = navigation.actions.onAnimeClick,
-                onRetry = catalog.actions.onRetry,
-                onRefresh = catalog.actions.onRefresh,
-                onLoadMoreRetry = catalog.actions.onLoadMoreRetry,
-                onSortSelected = catalog.actions.onSortSelected,
+                actions = catalog.actions,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.LIBRARY -> LibraryRoute(

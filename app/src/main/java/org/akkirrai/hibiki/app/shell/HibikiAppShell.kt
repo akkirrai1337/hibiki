@@ -39,7 +39,6 @@ import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.shell.profile.*
-import org.akkirrai.hibiki.app.destination.catalog.*
 import org.akkirrai.hibiki.app.destination.home.*
 import org.akkirrai.hibiki.app.shell.catalog.*
 import org.akkirrai.hibiki.app.shell.player.*
@@ -50,6 +49,7 @@ import org.akkirrai.hibiki.app.destination.library.*
 import org.akkirrai.hibiki.app.shell.overlay.*
 import org.akkirrai.hibiki.app.shell.source.*
 import org.akkirrai.hibiki.catalog.AnimeCatalogRepository
+import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.catalog.presentation.SourcesSearchPresenter
 import org.akkirrai.hibiki.catalog.EmptyAnimeCatalogRepository
@@ -592,21 +592,17 @@ internal fun HibikiAppShell(
                             input = AppDestinationContentInput(
                             selectedTab = animatedTab,
                             catalog = CatalogContentInput(
-                                actions = AppDestinationCatalogActions(
+                                state = state,
+                                listState = catalogListState,
+                                actions = CatalogActions(
                                     onQueryChange = catalogActions.onQueryChange,
-                                    onFiltersChange = catalogActions.onFiltersChange,
                                     onRetry = catalogActions.onRetry,
                                     onRefresh = catalogActions.onRefresh,
                                     onLoadMoreRetry = catalogActions.onLoadMoreRetry,
+                                    onItemVisible = {},
                                     onSortSelected = catalogActions.onSortSelected,
-                                ),
-                                state = AppDestinationCatalogState(
-                                    query = state.query,
-                                    items = state.items,
-                                    filters = state.filters,
-                                    filterCatalog = state.filterCatalog,
-                                    ui = state,
-                                    listState = catalogListState,
+                                    onFiltersApply = catalogActions.onFiltersChange,
+                                    onAnimeClick = navigationActions.onAnimeClick,
                                 ),
                             ),
                             home = HomeContentInput(
