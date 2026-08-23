@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.design.UiDimens
-import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.layout.appBottomSystemInsetPadding
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
 
@@ -52,12 +51,7 @@ fun WatchScreenScaffold(
     content: @Composable BoxScope.(PaddingValues) -> Unit,
 ) {
     val density = LocalDensity.current
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val statusBarHeight = if (layoutEnvironment.isProvided) {
-        layoutEnvironment.topSystemInset
-    } else {
-        with(density) { WindowInsets.statusBars.getTop(density).toDp() }
-    }
+    val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
     val contentModifier = Modifier.appBottomSystemInsetPadding()
     val headerModifier = Modifier.appTopSystemInsetPadding()
     val contentPadding = watchScreenContentPadding(statusBarHeight)

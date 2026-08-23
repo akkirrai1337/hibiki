@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.textKey
 import org.akkirrai.hibiki.design.UiDimens
-import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
@@ -73,12 +72,7 @@ fun SettingsScreen(
     bottomContentPadding: Dp = SettingsScreenDefaultBottomContentPadding,
     listState: LazyListState = rememberLazyListState(),
 ) {
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
-    val topSystemInset = if (layoutEnvironment.isProvided) {
-        layoutEnvironment.topSystemInset
-    } else {
-        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    }
+    val topSystemInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(modifier = modifier.fillMaxSize()) {
         AppSettingsContentList(
             bottomContentPadding = bottomContentPadding,

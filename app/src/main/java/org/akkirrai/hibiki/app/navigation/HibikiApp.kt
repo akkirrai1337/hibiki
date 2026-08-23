@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +48,6 @@ import org.akkirrai.hibiki.R
 import android.widget.Toast
 import coil3.compose.AsyncImage
 import org.akkirrai.hibiki.app.shell.HibikiAppShell
-import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceConfigLabels
 import org.akkirrai.hibiki.core.source.AppSourceConfigScreen
@@ -246,8 +243,6 @@ internal fun HibikiApp(
     ) {
         preferences.animeSource.value.let(catalogRepository::selectSource)
     }
-    val density = LocalDensity.current
-    val layoutEnvironment = appLayoutEnvironment(density)
     val sources = remember(packageManagerSourceCatalog) {
         mergeAppSourceDescriptors(
             builtIn = emptyList(),
@@ -259,8 +254,7 @@ internal fun HibikiApp(
             )
         }
     }
-    CompositionLocalProvider(LocalAppLayoutEnvironment provides layoutEnvironment) {
-        val sourceCallbacks = AppSourcePlatformCallbacks(
+    val sourceCallbacks = AppSourcePlatformCallbacks(
             externalSourceRepositoryController = externalRepositoryController,
             sources = sources,
             sourceConfigContent = { source, onSaved, onCancel ->
@@ -308,7 +302,7 @@ internal fun HibikiApp(
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
             },
         )
-        HibikiAppShell(
+    HibikiAppShell(
             modifier = modifier,
             repository = catalogRepository,
             homeRepository = homeRepository,
@@ -382,6 +376,5 @@ internal fun HibikiApp(
                 },
                 onExitPlayback = playerWindowController::persist,
             ),
-        )
-    }
+    )
 }

@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.design.component.navigation.AppBackButton
-import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 
 fun detailsHeroOverlayBackButtonPadding(topSystemInset: Dp): PaddingValues = PaddingValues(
     start = UiDimens.ScreenPadding,
@@ -28,7 +27,6 @@ fun AppDetailsHeroOverlayBackButton(
     contentDescription: String?,
     modifier: Modifier = Modifier,
 ) {
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
     AppBackButton(
         onClick = onClick,
         iconContent = {
@@ -39,15 +37,10 @@ fun AppDetailsHeroOverlayBackButton(
             )
         },
         modifier = modifier
-            .then(
-                if (layoutEnvironment.isProvided) {
-                    Modifier.padding(detailsHeroOverlayBackButtonPadding(layoutEnvironment.topSystemInset))
-                } else {
-                    Modifier.statusBarsPadding().padding(
-                        start = UiDimens.ScreenPadding,
-                        top = DetailsHeroOverlayBackButtonTopPadding,
-                    )
-                },
+            .statusBarsPadding()
+            .padding(
+                start = UiDimens.ScreenPadding,
+                top = DetailsHeroOverlayBackButtonTopPadding,
             )
             .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.58f)),

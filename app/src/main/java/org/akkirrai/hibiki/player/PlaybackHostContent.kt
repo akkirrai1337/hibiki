@@ -89,7 +89,6 @@ import org.akkirrai.hibiki.player.model.WatchEpisode
 import org.akkirrai.hibiki.app.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.app.navigation.AppNavigationState
 import org.akkirrai.hibiki.app.navigation.AppOverlay
-import org.akkirrai.hibiki.layout.LocalAppLayoutEnvironment
 
 /** Coordinates Android window restoration with the shared player route lifecycle. */
 internal class PlayerWindowController {
@@ -155,7 +154,6 @@ internal fun PlaybackHostContent(
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = remember(androidContext) { androidContext.findHibikiActivity() }
-    val layoutEnvironment = LocalAppLayoutEnvironment.current
     val exoPlayer = remember(androidContext, playback.sessionKey()) {
         ExoPlayer.Builder(androidContext).build()
     }
