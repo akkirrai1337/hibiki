@@ -21,63 +21,37 @@ import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.platform.AppSystemBackHandler
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.library.LibraryCategory
+import org.akkirrai.hibiki.app.libraryText
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.catalog.model.buildCardMeta
+import org.akkirrai.hibiki.text.AppTextKey
+import org.akkirrai.hibiki.text.appSearchResultsCount
+import org.akkirrai.hibiki.text.appText
 
-data class AppHomeScreenLabels(
-    val searchPlaceholder: String,
-    val searchFilters: String,
-    val searchClear: String,
-    val searchLoadMore: String,
-    val searchEmptyTitle: String,
-    val searchEmptyMessage: String,
-    val resultsCountLabel: @Composable (Int) -> String,
-    val continueTitle: String,
-    val continueEmptyTitle: String,
-    val continueEmptyMessage: String,
-    val continueOpenHint: String,
-    val recentlyWatchedTitle: String,
-    val recentlyAddedTitle: String,
-    val announcementLabel: String,
-    val movieLabel: String,
-    val personalEmptyTitle: String,
-    val personalEmptyMessage: String,
-    val personalEmptyActionLabel: String,
-    val filterUnavailable: String,
-    val typeTitle: String,
-    val genresTitle: String,
-    val yearTitle: String,
-    val yearAllLabel: String,
-    val yearFromLabel: String,
-    val yearToLabel: String,
-    val statusTitle: String,
-    val resetLabel: String,
-    val applyLabel: String,
-    val libraryStatusLabel: @Composable (LibraryCategory) -> String,
-    val optionText: @Composable (org.akkirrai.hibiki.catalog.model.AnimeCatalogFilterOption) -> String,
+data class HomeActions(
+    val onQueryChange: (String) -> Unit,
+    val onClearSearch: () -> Unit,
+    val onFilterApply: (AnimeSearchFilters) -> Unit,
+    val onLoadMoreSearch: () -> Unit,
+    val onAnimeClick: (Anime) -> Unit,
+    val onBrowseCatalog: () -> Unit,
+    val onOpenLibrary: () -> Unit,
+    val onItemVisible: (Anime) -> Unit,
+    val onRetrySearch: () -> Unit = {},
+    val onDismissIme: () -> Unit = {},
 )
 
 @Composable
-fun AppHomeScreen(
+fun HomeScreen(
     state: HomeUiState,
+    actions: HomeActions,
     listState: LazyListState,
     bottomContentPadding: Dp,
     currentYear: Int,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
-    labels: AppHomeScreenLabels,
-    onQueryChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-    onFilterApply: (AnimeSearchFilters) -> Unit,
-    onLoadMoreSearch: () -> Unit,
-    onRetrySearch: () -> Unit = {},
-    onAnimeClick: (Anime) -> Unit,
-    onBrowseCatalog: () -> Unit,
-    onOpenLibrary: () -> Unit,
     sourceBadgeContent: @Composable (Anime) -> Unit = {},
-    onItemVisible: (Anime) -> Unit,
     isImeVisible: Boolean = false,
-    onDismissIme: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var searchFieldFocused by remember { mutableStateOf(false) }
@@ -95,9 +69,9 @@ fun AppHomeScreen(
                     focusManager.clearFocus()
                     keyboardController?.hide()
                     searchFieldFocused = false
-                    onDismissIme()
+                    actions.onDismissIme()
                 }
-                HomeSearchBackAction.ClearSearch -> onClearSearch()
+                HomeSearchBackAction.ClearSearch -> actions.onClearSearch()
                 HomeSearchBackAction.None -> Unit
             }
         },
@@ -111,23 +85,23 @@ fun AppHomeScreen(
                     state = state.searchResult,
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
-                    onAnimeClick = onAnimeClick,
+                    onAnimeClick = actions.onAnimeClick,
                     metaText = { anime ->
                         anime.buildCardMeta(
-                            labels.announcementLabel,
-                            labels.movieLabel,
+                            appText(AppTextKey.Announcement),
+                            appText(AppTextKey.Type),
                         )
                     },
-                    onLoadMore = onLoadMoreSearch,
-                    onRetrySearch = onRetrySearch,
-                    loadMoreLabel = labels.searchLoadMore,
-                    resultsCountLabel = labels.resultsCountLabel,
-                    emptyTitle = labels.searchEmptyTitle,
-                    emptyMessage = labels.searchEmptyMessage,
+                    onLoadMore = actions.onLoadMoreSearch,
+                    onRetrySearch = actions.onRetrySearch,
+                    loadMoreLabel = appText(AppTextKey.HomeSearchLoadMore),
+                    resultsCountLabel = { count -> appSearchResultsCount(count) },
+                    emptyTitle = appText(AppTextKey.HomeSearchEmptyTitle),
+                    emptyMessage = appText(AppTextKey.HomeSearchEmptyBody),
                     emptyIcon = Icons.Outlined.SearchOff,
                     libraryStatusByAnimeId = libraryStatusByAnimeId,
-                    libraryStatusLabel = labels.libraryStatusLabel,
-                    onItemVisible = onItemVisible,
+                    libraryStatusLabel = { category -> category.libraryText() },
+                    onItemVisible = actions.onItemVisible,
                 )
             },
             feedContent = {
@@ -136,31 +110,31 @@ fun AppHomeScreen(
                     listState = listState,
                     topContentPadding = HomeContentTopPadding,
                     bottomContentPadding = bottomContentPadding,
-                    continueSectionTitle = labels.continueTitle,
-                    continueEmptyTitle = labels.continueEmptyTitle,
-                    continueEmptyMessage = labels.continueEmptyMessage,
-                    continueOpenHint = labels.continueOpenHint,
-                    recentlyWatchedTitle = labels.recentlyWatchedTitle,
-                    recentlyAddedTitle = labels.recentlyAddedTitle,
-                    announcementLabel = labels.announcementLabel,
-                    movieLabel = labels.movieLabel,
-                    personalEmptyTitle = labels.personalEmptyTitle,
-                    personalEmptyMessage = labels.personalEmptyMessage,
-                    personalEmptyActionLabel = labels.personalEmptyActionLabel,
-                    onAnimeClick = onAnimeClick,
-                    onBrowseCatalog = onBrowseCatalog,
-                    onOpenLibrary = onOpenLibrary,
+                    continueSectionTitle = appText(AppTextKey.HomeContinueTitle),
+                    continueEmptyTitle = appText(AppTextKey.HomeContinueEmptyTitle),
+                    continueEmptyMessage = appText(AppTextKey.HomeContinueEmptyBody),
+                    continueOpenHint = appText(AppTextKey.HomeContinueOpenHint),
+                    recentlyWatchedTitle = appText(AppTextKey.HomeRecentlyWatched),
+                    recentlyAddedTitle = appText(AppTextKey.HomeRecentlyAdded),
+                    announcementLabel = appText(AppTextKey.Announcement),
+                    movieLabel = appText(AppTextKey.Type),
+                    personalEmptyTitle = appText(AppTextKey.HomePersonalEmptyTitle),
+                    personalEmptyMessage = appText(AppTextKey.HomePersonalEmptyBody),
+                    personalEmptyActionLabel = appText(AppTextKey.HomeBrowseCatalog),
+                    onAnimeClick = actions.onAnimeClick,
+                    onBrowseCatalog = actions.onBrowseCatalog,
+                    onOpenLibrary = actions.onOpenLibrary,
                     sourceBadgeContent = sourceBadgeContent,
                 )
             },
         )
         AppHomeSearchOverlay(
             query = state.searchQuery,
-            onQueryChange = onQueryChange,
-            onClear = onClearSearch,
-            placeholder = labels.searchPlaceholder,
-            filterContentDescription = labels.searchFilters,
-            clearContentDescription = labels.searchClear,
+            onQueryChange = actions.onQueryChange,
+            onClear = actions.onClearSearch,
+            placeholder = appText(AppTextKey.SearchPlaceholder),
+            filterContentDescription = appText(AppTextKey.SearchFilters),
+            clearContentDescription = appText(AppTextKey.Back),
             onFilterClick = { isFilterSheetOpen = true },
             showFilterButton = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() == true ||
                 state.isSearchFilterCatalogLoading,
@@ -175,22 +149,22 @@ fun AppHomeScreen(
             filterCatalog = state.searchFilterCatalog,
             isFilterCatalogLoading = state.isSearchFilterCatalogLoading,
             onApply = { filters ->
-                onFilterApply(filters)
+                actions.onFilterApply(filters)
                 isFilterSheetOpen = false
             },
             onDismissRequest = { isFilterSheetOpen = false },
-            unavailableLabel = labels.filterUnavailable,
-            typeTitle = labels.typeTitle,
-            genresTitle = labels.genresTitle,
-            yearTitle = labels.yearTitle,
-            yearAllLabel = labels.yearAllLabel,
-            yearFromLabel = labels.yearFromLabel,
-            yearToLabel = labels.yearToLabel,
-            statusTitle = labels.statusTitle,
-            resetLabel = labels.resetLabel,
-            applyLabel = labels.applyLabel,
+            unavailableLabel = appText(AppTextKey.FilterUnavailable),
+            typeTitle = appText(AppTextKey.Type),
+            genresTitle = appText(AppTextKey.Genres),
+            yearTitle = appText(AppTextKey.ReleaseDate),
+            yearAllLabel = appText(AppTextKey.FilterAllYears),
+            yearFromLabel = appText(AppTextKey.FilterFromYear),
+            yearToLabel = appText(AppTextKey.FilterToYear),
+            statusTitle = appText(AppTextKey.Status),
+            resetLabel = appText(AppTextKey.FilterReset),
+            applyLabel = appText(AppTextKey.FilterApply),
             defaultYearRange = defaultCatalogFilterYearRange(currentYear),
-            optionText = labels.optionText,
+            optionText = { it.title },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
             )
         }

@@ -14,7 +14,7 @@ import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.settings.SettingsRoute
 import org.akkirrai.hibiki.app.shell.navigation.shouldApplyTopSystemInset
-import org.akkirrai.hibiki.home.screen.HomeScreen
+import org.akkirrai.hibiki.home.screen.HomeRoute
 import org.akkirrai.hibiki.home.screen.CatalogRoute
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.library.screen.LibraryRoute
@@ -56,7 +56,7 @@ internal fun AppDestinationTopLevelRoutes(
             .then(if (shouldApplyTopSystemInset(selectedTab)) topInsetModifier else Modifier),
     ) {
         when (selectedTab) {
-            AppDestination.HOME -> HomeScreen(
+            AppDestination.HOME -> HomeRoute(
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryEntries = library.state.entries,

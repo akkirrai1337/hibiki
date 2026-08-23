@@ -1,7 +1,5 @@
 package org.akkirrai.hibiki.home.screen
 
-import org.akkirrai.hibiki.app.defaultHomeScreenLabels
-
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
@@ -30,7 +28,7 @@ import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
 @Composable
-internal fun ColumnScope.HomeScreen(
+internal fun ColumnScope.HomeRoute(
     baseHomeState: HomeUiState,
     listState: LazyListState,
     sourcesById: Map<String, AppSourceDescriptor>,
@@ -66,21 +64,23 @@ internal fun ColumnScope.HomeScreen(
             return
         }
     }
-    AppHomeScreen(
+    HomeScreen(
         state = homeState,
+        actions = HomeActions(
+            onQueryChange = onQueryChange,
+            onClearSearch = onSearchClear,
+            onFilterApply = onFilterApply,
+            onLoadMoreSearch = onSearchLoadMore,
+            onRetrySearch = onSearchRetry,
+            onAnimeClick = onAnimeClick,
+            onBrowseCatalog = onBrowseCatalog,
+            onOpenLibrary = onOpenLibrary,
+            onItemVisible = onItemVisible,
+        ),
         listState = listState,
         bottomContentPadding = bottomContentPadding,
         currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
         libraryStatusByAnimeId = libraryStatusByAnimeId,
-        labels = defaultHomeScreenLabels(),
-        onQueryChange = onQueryChange,
-        onClearSearch = onSearchClear,
-        onFilterApply = onFilterApply,
-        onLoadMoreSearch = onSearchLoadMore,
-        onRetrySearch = onSearchRetry,
-        onAnimeClick = onAnimeClick,
-        onBrowseCatalog = onBrowseCatalog,
-        onOpenLibrary = onOpenLibrary,
         sourceBadgeContent = { anime ->
             AnimeKey.parse(anime.id)?.sourceId?.value
                 ?.let(sourcesById::get)
@@ -97,7 +97,6 @@ internal fun ColumnScope.HomeScreen(
                     )
                 }
         },
-        onItemVisible = onItemVisible,
         modifier = Modifier.fillMaxSize(),
     )
 }
