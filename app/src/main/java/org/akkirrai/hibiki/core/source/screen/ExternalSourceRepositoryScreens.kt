@@ -71,33 +71,37 @@ import org.akkirrai.hibiki.design.component.button.AppSplitActionButton
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
+data class SourceRepositoriesActions(
+    val onBack: () -> Unit,
+    val onRepositoryClick: (String) -> Unit,
+    val onRemoveRepository: (String) -> Unit,
+    val onRefresh: () -> Unit,
+    val onCopyUrl: (String) -> Unit,
+    val onOpenUrl: (String) -> Unit,
+    val onAddRepository: () -> Unit,
+)
+
 @Composable
-fun AppSourceRepositoriesScreen(
+fun SourceRepositoriesScreen(
     state: ExternalSourceRepositoryUiState,
+    actions: SourceRepositoriesActions,
     bottomContentPadding: Dp,
-    onBack: () -> Unit,
-    onRepositoryClick: (String) -> Unit,
-    onRemoveRepository: (String) -> Unit,
-    onRefresh: () -> Unit,
-    onCopyUrl: (String) -> Unit,
-    onOpenUrl: (String) -> Unit,
-    onAddRepository: () -> Unit,
     customRepositoriesSupported: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         SourceRepositoryTopBar(
             title = appText(AppTextKey.SourcesExternalRepositories),
-            onBack = onBack,
+            onBack = actions.onBack,
             actions = {
-                IconButton(onClick = onRefresh) {
+                IconButton(onClick = actions.onRefresh) {
                     Icon(
                         imageVector = Icons.Outlined.Refresh,
                         contentDescription = appText(AppTextKey.SettingsExternalRepositoryRefresh),
                     )
                 }
                 if (customRepositoriesSupported) {
-                    IconButton(onClick = onAddRepository) {
+                    IconButton(onClick = actions.onAddRepository) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = appText(AppTextKey.SourcesExternalRepositoryAddTitle),
@@ -127,10 +131,10 @@ fun AppSourceRepositoriesScreen(
                 items(state.repositoryContents, key = { it.endpoint.url }) { repository ->
                     SourceRepositoryCard(
                         repository = repository,
-                        onClick = { onRepositoryClick(repository.endpoint.url) },
-                        onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
-                        onRemove = { onRemoveRepository(repository.endpoint.url) },
-                        onCopy = { onCopyUrl(repository.endpoint.url) },
+                        onClick = { actions.onRepositoryClick(repository.endpoint.url) },
+                        onOpenUrl = { actions.onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
+                        onRemove = { actions.onRemoveRepository(repository.endpoint.url) },
+                        onCopy = { actions.onCopyUrl(repository.endpoint.url) },
                         showRemove = customRepositoriesSupported,
                         clickable = customRepositoriesSupported,
                     )
@@ -142,7 +146,7 @@ fun AppSourceRepositoriesScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = bottomContentPadding + 12.dp),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                TextButton(onClick = onAddRepository) {
+                TextButton(onClick = actions.onAddRepository) {
                     Icon(Icons.Outlined.Add, contentDescription = null)
                     Text(appText(AppTextKey.SourcesExternalRepositoryAddTitle))
                 }
@@ -151,23 +155,27 @@ fun AppSourceRepositoriesScreen(
     }
 }
 
+data class SourcesTabsActions(
+    val onSelectedTabChange: (Int) -> Unit,
+    val onRepositoryClick: (String) -> Unit,
+    val onRemoveRepository: (String) -> Unit,
+    val onRefresh: () -> Unit,
+    val onCopyUrl: (String) -> Unit,
+    val onOpenUrl: (String) -> Unit,
+    val onAddRepository: () -> Unit,
+    val onInstall: (SourceId) -> Unit,
+    val onSourceSelected: (String) -> Unit,
+    val onManage: (SourceId) -> Unit,
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AppSourcesTabsScreen(
+fun SourcesTabsScreen(
     selectedTab: Int,
     selectedSourceId: String?,
     state: ExternalSourceRepositoryUiState,
+    actions: SourcesTabsActions,
     bottomContentPadding: Dp,
-    onSelectedTabChange: (Int) -> Unit,
-    onRepositoryClick: (String) -> Unit,
-    onRemoveRepository: (String) -> Unit,
-    onRefresh: () -> Unit,
-    onCopyUrl: (String) -> Unit,
-    onOpenUrl: (String) -> Unit,
-    onAddRepository: () -> Unit,
-    onInstall: (SourceId) -> Unit,
-    onSourceSelected: (String) -> Unit,
-    onManage: (SourceId) -> Unit,
     customRepositoriesSupported: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -209,7 +217,7 @@ fun AppSourcesTabsScreen(
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
             .distinctUntilChanged()
-            .collect(onSelectedTabChange)
+            .collect(actions.onSelectedTabChange)
     }
 
     AppSystemBackHandler(
@@ -255,8 +263,8 @@ fun AppSourcesTabsScreen(
             filterContentDescription = appText(AppTextKey.SourcesExternalRepositoryLanguages),
             showFilter = extensionsTabSelected,
             titleStyle = MaterialTheme.typography.titleLarge,
-            onRefresh = onRefresh,
-            onAddClick = if (extensionsTabSelected || !customRepositoriesSupported) null else onAddRepository,
+            onRefresh = actions.onRefresh,
+            onAddClick = if (extensionsTabSelected || !customRepositoriesSupported) null else actions.onAddRepository,
             onSearchFocusChanged = { searchFieldFocused = it },
             tabContent = {
                 AppSourcesTabs(
@@ -308,17 +316,17 @@ fun AppSourcesTabsScreen(
                             SourcePackageCard(
                                 packageStatus = packageStatus,
                                 busy = isBusy,
-                                onInstall = { onInstall(packageStatus.sourceId) },
+                                onInstall = { actions.onInstall(packageStatus.sourceId) },
                                 onPackageClick = {
                                     if (packageStatus.activePackage != null) {
                                         displayedSelectedSourceId = packageStatus.sourceId.value
-                                        onSourceSelected(packageStatus.sourceId.value)
+                                        actions.onSourceSelected(packageStatus.sourceId.value)
                                     }
                                 },
                                 selected = packageStatus.activePackage != null &&
                                     displayedSelectedSourceId == packageStatus.sourceId.value,
-                                onManage = { onManage(packageStatus.sourceId) },
-                                onUpdate = { onInstall(packageStatus.sourceId) },
+                                onManage = { actions.onManage(packageStatus.sourceId) },
+                                onUpdate = { actions.onInstall(packageStatus.sourceId) },
                             )
                         }
                     }
@@ -348,10 +356,10 @@ fun AppSourcesTabsScreen(
                         items(visibleRepositories, key = { it.endpoint.url }) { repository ->
                             SourceRepositoryCard(
                                 repository = repository,
-                                onClick = { onRepositoryClick(repository.endpoint.url) },
-                                onOpenUrl = { onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
-                                onRemove = { onRemoveRepository(repository.endpoint.url) },
-                                onCopy = { onCopyUrl(repository.endpoint.url) },
+                                onClick = { actions.onRepositoryClick(repository.endpoint.url) },
+                                onOpenUrl = { actions.onOpenUrl(repositoryBrowseUrl(repository.endpoint.url)) },
+                                onRemove = { actions.onRemoveRepository(repository.endpoint.url) },
+                                onCopy = { actions.onCopyUrl(repository.endpoint.url) },
                                 showRemove = customRepositoriesSupported,
                                 clickable = customRepositoriesSupported,
                             )
@@ -379,7 +387,7 @@ fun AppSourcesTabsScreen(
 }
 
 @Composable
-fun AppExternalSourcePackageInfoScreen(
+fun SourcePackageInfoScreen(
     packageStatus: ExternalSourcePackageStatus?,
     isBusy: Boolean,
     bottomContentPadding: Dp,

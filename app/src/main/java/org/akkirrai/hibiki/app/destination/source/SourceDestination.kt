@@ -10,11 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppAddSourceRepositoryDialog
-import org.akkirrai.hibiki.core.source.AppExternalSourcePackageInfoScreen
+import org.akkirrai.hibiki.core.source.SourcePackageInfoScreen
 import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
-import org.akkirrai.hibiki.core.source.AppSourceRepositoriesScreen
-import org.akkirrai.hibiki.core.source.AppSourcesTabsScreen
+import org.akkirrai.hibiki.core.source.SourceRepositoriesScreen
+import org.akkirrai.hibiki.core.source.SourceRepositoriesActions
+import org.akkirrai.hibiki.core.source.SourcesTabsScreen
+import org.akkirrai.hibiki.core.source.SourcesTabsActions
 import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryUiState
 import org.akkirrai.hibiki.core.source.SourcesSearchUiState
@@ -42,7 +44,7 @@ internal data class AppDestinationExternalSourcesState(
 )
 
 @Composable
-internal fun SourcesDestinationRoute(
+internal fun SourcesRoute(
     editingSourceConfig: AppSourceDescriptor?,
     sourceConfigContent: AppSourceConfigContent?,
     sources: List<AppSourceDescriptor>,
@@ -74,16 +76,18 @@ internal fun SourcesDestinationRoute(
     val selectSource: (String) -> Unit = onSourceSelected
 
     when (currentRoute) {
-        AppRoute.SourceRepositories -> AppSourceRepositoriesScreen(
+        AppRoute.SourceRepositories -> SourceRepositoriesScreen(
             state = externalSourcesState ?: ExternalSourceRepositoryUiState(),
+            actions = SourceRepositoriesActions(
+                onBack = onBack,
+                onRepositoryClick = {},
+                onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
+                onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
+                onCopyUrl = copyText,
+                onOpenUrl = onOpenUrl,
+                onAddRepository = { isAddRepositoryDialogOpen = true },
+            ),
             bottomContentPadding = bottomContentPadding,
-            onBack = onBack,
-            onRepositoryClick = {},
-            onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
-            onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-            onCopyUrl = copyText,
-            onOpenUrl = onOpenUrl,
-            onAddRepository = { isAddRepositoryDialogOpen = true },
             customRepositoriesSupported = false,
             modifier = Modifier.fillMaxSize(),
         )
@@ -92,7 +96,7 @@ internal fun SourcesDestinationRoute(
                 ?.firstOrNull { it.endpoint.url == currentRoute.repositoryUrl }
                 ?.packages
                 ?.firstOrNull { it.sourceId.value == currentRoute.sourceId }
-            AppExternalSourcePackageInfoScreen(
+            SourcePackageInfoScreen(
                 packageStatus = packageStatus,
                 isBusy = externalSourcesState?.isBusy == true,
                 bottomContentPadding = bottomContentPadding,
@@ -115,28 +119,30 @@ internal fun SourcesDestinationRoute(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        else -> AppSourcesTabsScreen(
+        else -> SourcesTabsScreen(
             selectedTab = selectedSourcesTab,
             selectedSourceId = selectedSourceId,
             state = externalSourcesState ?: ExternalSourceRepositoryUiState(),
+            actions = SourcesTabsActions(
+                onSelectedTabChange = onSelectedSourcesTabChange,
+                onRepositoryClick = {},
+                onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
+                onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
+                onCopyUrl = copyText,
+                onOpenUrl = onOpenUrl,
+                onAddRepository = { isAddRepositoryDialogOpen = true },
+                onInstall = externalSourcesController?.let { controller ->
+                    { sourceId -> controller.installPackage(sourceId) }
+                } ?: {},
+                onSourceSelected = selectSource,
+                onManage = { sourceId ->
+                    externalSourcesState?.repositoryContents
+                        ?.firstOrNull { content -> content.packages.any { it.sourceId == sourceId } }
+                        ?.endpoint?.url
+                        ?.let { repositoryUrl -> onOpenPackageInfo(repositoryUrl, sourceId.value) }
+                },
+            ),
             bottomContentPadding = bottomContentPadding,
-            onSelectedTabChange = onSelectedSourcesTabChange,
-            onRepositoryClick = {},
-            onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
-            onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-            onCopyUrl = copyText,
-            onOpenUrl = onOpenUrl,
-            onAddRepository = { isAddRepositoryDialogOpen = true },
-            onInstall = externalSourcesController?.let { controller ->
-                { sourceId -> controller.installPackage(sourceId) }
-            } ?: {},
-            onSourceSelected = selectSource,
-            onManage = { sourceId ->
-                externalSourcesState?.repositoryContents
-                    ?.firstOrNull { content -> content.packages.any { it.sourceId == sourceId } }
-                    ?.endpoint?.url
-                    ?.let { repositoryUrl -> onOpenPackageInfo(repositoryUrl, sourceId.value) }
-            },
             customRepositoriesSupported = false,
             modifier = Modifier.fillMaxSize(),
         )

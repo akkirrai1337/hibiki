@@ -120,7 +120,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onProfileAvatarPicked = profile.actions.onAvatarPicked,
                 modifier = Modifier.fillMaxSize(),
             )
-            AppDestination.SOURCES -> SourcesDestinationRoute(
+            AppDestination.SOURCES -> SourcesRoute(
                 editingSourceConfig = editingSourceConfig,
                 sourceConfigContent = sourceConfigContent,
                 sources = sources.state.sources,
