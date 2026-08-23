@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -79,6 +80,13 @@ fun AppProductionRoot(
                 launchSingleTop = true
             }
         }
+        // NavHost's graph builder (the trailing lambda below) only runs once, memoized on
+        // (navController, startDestination) -- so the composable() blocks close over whatever
+        // `tabContent` was on the FIRST composition, not later ones. tabContent is a fresh
+        // closure every recomposition of AppProductionRoot's caller (capturing that
+        // recomposition's presenters/state), so without rememberUpdatedState the tab NavHost
+        // would keep calling the very first tabContent forever.
+        val currentTabContent = rememberUpdatedState(tabContent)
         AnimatedVisibility(
             visible = tabLayerVisible,
             enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
@@ -94,11 +102,11 @@ fun AppProductionRoot(
                 popEnterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
                 popExitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
             ) {
-                composable<AndroidNavigationRoute.Home> { tabContent(AppTopLevelDestination.HOME) }
-                composable<AndroidNavigationRoute.Catalog> { tabContent(AppTopLevelDestination.CATALOG) }
-                composable<AndroidNavigationRoute.Library> { tabContent(AppTopLevelDestination.LIBRARY) }
-                composable<AndroidNavigationRoute.Sources> { tabContent(AppTopLevelDestination.SOURCES) }
-                composable<AndroidNavigationRoute.Profile> { tabContent(AppTopLevelDestination.PROFILE) }
+                composable<AndroidNavigationRoute.Home> { currentTabContent.value(AppTopLevelDestination.HOME) }
+                composable<AndroidNavigationRoute.Catalog> { currentTabContent.value(AppTopLevelDestination.CATALOG) }
+                composable<AndroidNavigationRoute.Library> { currentTabContent.value(AppTopLevelDestination.LIBRARY) }
+                composable<AndroidNavigationRoute.Sources> { currentTabContent.value(AppTopLevelDestination.SOURCES) }
+                composable<AndroidNavigationRoute.Profile> { currentTabContent.value(AppTopLevelDestination.PROFILE) }
             }
         }
         AnimatedContent(

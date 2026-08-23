@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -45,6 +46,17 @@ fun AppPlayerSettingsSheet(
         // page `destination` currently says is active. Its own backstack is pinned to exactly
         // one entry at all times (inclusive = true) so it never registers system-back
         // interception of its own, same fix as the tab NavHost's back-gesture bug.
+        //
+        // NavHost's graph builder (the trailing lambda below) only runs once, memoized on
+        // (navController, startDestination) -- so composable() blocks close over whatever
+        // `content`/`title`/`onBack`/`backContent` were on the FIRST composition, not later
+        // ones. rememberUpdatedState keeps a live reference so plain values captured deeper in
+        // `content` (like the auto-skip/auto-play toggle booleans) don't freeze after the first
+        // render instead of reflecting later changes.
+        val currentContent = rememberUpdatedState(content)
+        val currentTitle = rememberUpdatedState(title)
+        val currentOnBack = rememberUpdatedState(onBack)
+        val currentBackContent = rememberUpdatedState(backContent)
         val navController = rememberNavController()
         LaunchedEffect(destination) {
             navController.navigate(destination.name) {
@@ -81,10 +93,10 @@ fun AppPlayerSettingsSheet(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (pageDestination != PlayerSettingsDestination.Root) {
                             PlayerSettingsHeader(
-                                title = title(pageDestination),
+                                title = currentTitle.value(pageDestination),
                                 showBack = true,
-                                onBack = onBack,
-                                backContent = backContent,
+                                onBack = { currentOnBack.value() },
+                                backContent = { currentBackContent.value() },
                             )
                         }
 
@@ -96,7 +108,7 @@ fun AppPlayerSettingsSheet(
                             verticalArrangement = Arrangement.spacedBy(PlayerSettingsSheetItemGap),
                             userScrollEnabled = true,
                         ) {
-                            content(pageDestination)
+                            currentContent.value.invoke(this, pageDestination)
                         }
                     }
                 }

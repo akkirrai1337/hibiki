@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -118,6 +119,28 @@ internal fun HibikiWatchFlowContent(
         // own backstack is pinned to one entry at all times (inclusive = true) so it never
         // registers system-back interception -- WatchScreenScaffold's onBackClick above (wired to
         // the real navigation actions) stays the only way back, same as before this change.
+        //
+        // NavHost's graph builder (the trailing lambda below) only runs once, memoized on
+        // (navController, startDestination) -- so the composable() blocks close over whatever
+        // plain values (watchState, episodesState, ...) existed on the FIRST composition, not
+        // later ones. rememberUpdatedState keeps live references so episode-list/loading/error
+        // updates that arrive after the destination first mounts aren't silently dropped.
+        val currentWatchState = rememberUpdatedState(watchState)
+        val currentEpisodesState = rememberUpdatedState(episodesState)
+        val currentSelectedWatchSource = rememberUpdatedState(selectedWatchSource)
+        val currentProfileData = rememberUpdatedState(profileData)
+        val currentPlaybackError = rememberUpdatedState(playbackError)
+        val currentPlaybackLoading = rememberUpdatedState(playbackLoading)
+        val currentPlaybackHostAvailable = rememberUpdatedState(playbackHostAvailable)
+        val currentListContentPadding = rememberUpdatedState(listContentPadding)
+        val currentOnWatchRetry = rememberUpdatedState(onWatchRetry)
+        val currentOnWatchSourceClick = rememberUpdatedState(onWatchSourceClick)
+        val currentOnWatchLoadMore = rememberUpdatedState(onWatchLoadMore)
+        val currentOnWatchEpisodeClick = rememberUpdatedState(onWatchEpisodeClick)
+        val currentOnLibraryChanged = rememberUpdatedState(onLibraryChanged)
+        val currentAnime = rememberUpdatedState(anime)
+        val currentEpisodeDownloadRepository = rememberUpdatedState(episodeDownloadRepository)
+        val currentLibraryRepository = rememberUpdatedState(libraryRepository)
         val watchStepDestination = if (selectedWatchSource == null) "sources" else "episodes"
         val navController = rememberNavController()
         LaunchedEffect(watchStepDestination) {
@@ -137,54 +160,54 @@ internal fun HibikiWatchFlowContent(
         ) {
             composable("sources") {
                 WatchSourcesDestinationContent(
-                    state = watchState,
+                    state = currentWatchState.value,
                     navigationLocked = navigationLocked,
-                    onWatchRetry = onWatchRetry,
+                    onWatchRetry = { currentOnWatchRetry.value() },
                     onWatchSourceClick = { source ->
                         navigationLocked = true
-                        onWatchSourceClick(source)
+                        currentOnWatchSourceClick.value(source)
                     },
-                    onWatchLoadMore = onWatchLoadMore,
-                    listContentPadding = listContentPadding,
+                    onWatchLoadMore = { currentOnWatchLoadMore.value() },
+                    listContentPadding = currentListContentPadding.value,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             composable("episodes") {
-                val targetWatchSource = selectedWatchSource
+                val targetWatchSource = currentSelectedWatchSource.value
                 if (targetWatchSource != null) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         HibikiEpisodesContent(
-                            state = episodesState,
+                            state = currentEpisodesState.value,
                             source = targetWatchSource,
-                            anime = anime,
-                            profileData = profileData,
-                            playbackLoading = playbackLoading,
+                            anime = currentAnime.value,
+                            profileData = currentProfileData.value,
+                            playbackLoading = currentPlaybackLoading.value,
                             navigationLocked = navigationLocked,
                             // Download actions are always visible per-row now -- see EpisodeRow --
                             // instead of toggled by a top-bar button that used to live here.
                             downloadControlsVisible = true,
-                            episodeDownloadRepository = episodeDownloadRepository,
+                            episodeDownloadRepository = currentEpisodeDownloadRepository.value,
                             episodeDownloadStates = episodeDownloadStates,
                             onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
-                            libraryRepository = libraryRepository,
+                            libraryRepository = currentLibraryRepository.value,
                             onEpisodeClick = { episode ->
                                 if (!navigationLocked) {
                                     navigationLocked = true
-                                    onWatchEpisodeClick(episode)
+                                    currentOnWatchEpisodeClick.value(episode)
                                 }
                             },
-                            onLibraryChanged = onLibraryChanged,
-                            onRetry = onWatchRetry,
-                            listContentPadding = listContentPadding,
+                            onLibraryChanged = { currentOnLibraryChanged.value() },
+                            onRetry = { currentOnWatchRetry.value() },
+                            listContentPadding = currentListContentPadding.value,
                         )
-                        if (!playbackHostAvailable) {
-                            AppPlayerLoadingOverlay(visible = playbackLoading)
-                            playbackError?.let { message ->
+                        if (!currentPlaybackHostAvailable.value) {
+                            AppPlayerLoadingOverlay(visible = currentPlaybackLoading.value)
+                            currentPlaybackError.value?.let { message ->
                                 AppPlayerErrorOverlay(
                                     message = message,
                                     title = appText(AppTextKey.PlayerErrorTitle),
                                     retryLabel = appText(AppTextKey.PlayerRetry),
-                                    onRetry = onWatchRetry,
+                                    onRetry = { currentOnWatchRetry.value() },
                                 )
                             }
                         }
