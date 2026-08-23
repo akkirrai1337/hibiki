@@ -138,7 +138,13 @@ internal class HibikiWatchFlowNavigationActions(
     }
 
     fun backFromWatch() {
-        playbackSession.cancelAndInvalidate()
+        // teardown(), not cancelAndInvalidate() -- this is the in-screen "back" action leaving
+        // an active/pending playback screen, the same case HibikiPlaybackSession.teardown()'s own
+        // doc comment describes. cancelAndInvalidate() alone skips onExitPlayback, so backing out
+        // of the player via this button (as opposed to the system back gesture, which already
+        // goes through teardown()) never saved the resume frame/progress -- Details would then
+        // show the poster instead of the last-played frame.
+        playbackSession.teardown()
         val transition = resolveWatchFlowBackTransition(navigationState(), getPlaybackReturnRoute())
         setNavigationState(transition.state)
         if (navigationState().currentRoute !is AppRoute.Player) setPlaybackReturnRoute(null)
