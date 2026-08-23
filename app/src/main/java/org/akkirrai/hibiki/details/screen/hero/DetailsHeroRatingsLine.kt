@@ -14,6 +14,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import org.akkirrai.hibiki.catalog.model.AnimeRating
+import org.akkirrai.hibiki.details.model.formatCompactCount
+import org.akkirrai.hibiki.details.model.formatRating
+
+data class DetailsHeroRatingsData(
+    val rating: String?,
+    val viewCount: String?,
+)
+
+fun resolveDetailsHeroRatings(ratings: List<AnimeRating>, viewCount: Long?): DetailsHeroRatingsData? {
+    val rating = ratings.firstOrNull()?.value?.let(::formatRating)
+    val formattedViewCount = viewCount?.takeIf { it > 0 }?.let(::formatCompactCount)
+    return if (rating == null && formattedViewCount == null) null
+    else DetailsHeroRatingsData(rating, formattedViewCount)
+}
 
 @Composable
 fun DetailsHeroRatingsLine(
