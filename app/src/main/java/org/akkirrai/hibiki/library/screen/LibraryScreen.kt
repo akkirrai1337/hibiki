@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -55,6 +55,7 @@ data class LibraryActions(
 fun LibraryScreen(
     state: LibraryUiState,
     actions: LibraryActions,
+    listState: LazyListState,
     bottomContentPadding: Dp,
     entryContent: @Composable (LibraryEntry, Modifier) -> Unit,
     filterVisible: Boolean,
@@ -69,6 +70,7 @@ fun LibraryScreen(
 
     AppLibraryEntriesContent(
         state = state,
+        listState = listState,
         modifier = modifier,
         bottomContentPadding = bottomContentPadding,
         onEntryClick = { entry -> actions.onAnimeClick(entry.anime) },
@@ -125,6 +127,7 @@ private const val LIBRARY_FILTER_MINIMUM_ENTRY_COUNT = 2
 @Composable
 private fun AppLibraryEntriesContent(
     state: LibraryUiState,
+    listState: LazyListState,
     bottomContentPadding: Dp,
     onEntryClick: (LibraryEntry) -> Unit,
     emptyContent: @Composable (filtered: Boolean) -> Unit,
@@ -132,7 +135,6 @@ private fun AppLibraryEntriesContent(
     headerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
     var visibleLimit by remember { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
     val visibleEntries = state.visibleEntries
 

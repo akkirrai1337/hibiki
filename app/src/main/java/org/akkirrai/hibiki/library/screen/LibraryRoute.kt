@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ internal fun ColumnScope.LibraryRoute(
     sources: List<AppSourceDescriptor>,
     state: LibraryUiState,
     actions: LibraryActions,
+    listState: LazyListState,
     onFiltersApply: (org.akkirrai.hibiki.library.state.LibrarySearchFilters) -> Unit,
     filterOverlayOpen: Boolean,
     languageMode: LanguageMode,
@@ -54,6 +56,7 @@ internal fun ColumnScope.LibraryRoute(
     LibraryScreen(
         state = state,
         actions = actions,
+        listState = listState,
         bottomContentPadding = bottomContentPadding,
         entryContent = { entry, entryModifier ->
             AppLibraryEntryCard(

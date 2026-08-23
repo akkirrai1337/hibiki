@@ -73,6 +73,7 @@ internal fun AppDestinationTopLevelRoutes(
                 sources = sources.state.sources,
                 state = library.state.ui,
                 actions = library.actions,
+                listState = library.state.listState,
                 onFiltersApply = library.onFiltersApply,
                 filterOverlayOpen = library.state.filterOverlayOpen,
                 languageMode = platform.dataContext.languageMode,

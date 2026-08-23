@@ -191,6 +191,7 @@ internal fun HibikiAppShell(
     val homeListState = resources.homeListState
     val catalogListState = resources.catalogListState
     val settingsListState = resources.settingsListState
+    val libraryListState = resources.libraryListState
     val sourceSearchPresenter = resources.sourceSearchPresenter
     val sourceSearchActions = HibikiSourceSearchActions(sourceSearchPresenter)
     val sourceSearchState by sourceSearchPresenter.state.collectAsState()
@@ -631,6 +632,7 @@ internal fun HibikiAppShell(
                                     entries = libraryState.visibleEntries,
                                     ui = libraryState,
                                     filterOverlayOpen = isLibraryFilterOverlayOpen,
+                                    listState = libraryListState,
                                 ),
                                 actions = LibraryActions(
                                     onAnimeClick = navigationActions.onAnimeClick,
