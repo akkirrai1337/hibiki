@@ -11,11 +11,6 @@ fun AppNavigationState.reduceOverlayVisibilityChange(
     this
 }
 
-fun AppNavigationState.reduceDetailsOverlayChange(
-    overlay: AppOverlay,
-    open: Boolean,
-): AppNavigationState = reduceOverlayVisibilityChange(overlay = overlay, visible = open)
-
 /** Maps the shared destination model to the root navigation destination. */
 fun AppDestination.toTopLevelDestination(): AppTopLevelDestination = when (this) {
     AppDestination.HOME -> AppTopLevelDestination.HOME

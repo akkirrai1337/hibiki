@@ -160,43 +160,13 @@ class AppNavigationStateTest {
     }
 
     @Test
-    fun detailsPosterPreviewParticipatesInOverlayBackStack() {
+    fun overlayBackThenNavigatePreservesRouteOrder() {
+        // Regression coverage for the (now-removed) Details poster/title/library sheets, which
+        // used to route through this same generic overlay stack -- kept as a generic Sheet
+        // overlay since the reducer treats every AppOverlay value identically here.
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
-
-        assertEquals(listOf(AppOverlay.DetailsPosterPreview), state.overlays)
-        assertEquals(AppRoute.Details("anime-1"), state.reduce(AppNavigationEvent.Back).currentRoute)
-        assertEquals(emptyList(), state.reduce(AppNavigationEvent.Back).overlays)
-    }
-
-    @Test
-    fun detailsTitleSheetParticipatesInOverlayBackStack() {
-        val state = AppNavigationState()
-            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
-
-        assertEquals(listOf(AppOverlay.DetailsTitleSheet), state.overlays)
-        assertEquals(emptyList(), state.reduce(AppNavigationEvent.Back).overlays)
-        assertEquals(AppRoute.Details("anime-1"), state.reduce(AppNavigationEvent.Back).currentRoute)
-    }
-
-    @Test
-    fun detailsLibrarySheetParticipatesInOverlayBackStack() {
-        val state = AppNavigationState()
-            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsLibrarySheet))
-
-        assertEquals(listOf(AppOverlay.DetailsLibrarySheet), state.overlays)
-        assertEquals(emptyList(), state.reduce(AppNavigationEvent.Back).overlays)
-        assertEquals(AppRoute.Details("anime-1"), state.reduce(AppNavigationEvent.Back).currentRoute)
-    }
-
-    @Test
-    fun detailsOverlayBackThenWatchSourcesPreservesRouteOrder() {
-        val state = AppNavigationState()
-            .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsPosterPreview))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("test-sheet")))
 
         val details = state.reduce(AppNavigationEvent.Back)
         val sources = details.reduce(AppNavigationEvent.Navigate(AppRoute.WatchSources("anime-1")))

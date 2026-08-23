@@ -24,7 +24,7 @@ class RootNavigationTest {
     fun selectingSettingsUsesProfileRootAndClearsNestedState() {
         val state = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("test-sheet")))
             .selectRootDestination(AppDestination.SETTINGS)
 
         assertEquals(AppTopLevelDestination.PROFILE, state.currentTopLevel)

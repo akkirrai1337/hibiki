@@ -64,7 +64,7 @@ class AppRouteNavigationTest {
     fun `details overlay dismisses before entering watch flow`() {
         val details = AppNavigationState()
             .reduce(AppNavigationEvent.Navigate(AppRoute.Details("anime-1")))
-            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.DetailsTitleSheet))
+            .reduce(AppNavigationEvent.PresentOverlay(AppOverlay.Sheet("test-sheet")))
 
         val detailsAfterDismiss = details.reduce(AppNavigationEvent.Back)
         val player = detailsAfterDismiss

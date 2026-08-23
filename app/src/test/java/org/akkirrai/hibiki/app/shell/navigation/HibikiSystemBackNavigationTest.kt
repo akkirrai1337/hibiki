@@ -19,7 +19,7 @@ class HibikiSystemBackNavigationTest {
     fun overlayIsDismissedBeforeRouteBack() {
         val state = AppNavigationState(
             backStack = listOf(AppRoute.Details("anime")),
-            overlays = listOf(AppOverlay.DetailsTitleSheet),
+            overlays = listOf(AppOverlay.Sheet("test-sheet")),
         )
 
         val result = reduceHibikiSystemBack(state, AppDestination.HOME, false, null)
