@@ -2,6 +2,25 @@ package org.akkirrai.hibiki.app.settings
 
 import org.akkirrai.hibiki.player.VideoScaleMode
 
+/** User-selected application language, independent from the host platform locale. */
+enum class LanguageMode(val tag: String?) {
+    SYSTEM(null),
+    RUSSIAN("ru"),
+    ENGLISH("en"),
+}
+
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+}
+
+enum class NotificationPermissionState {
+    NOT_ASKED,
+    GRANTED,
+    DENIED,
+}
+
 data class AppSettingsState(
     val languageMode: LanguageMode = LanguageMode.SYSTEM,
     val darkTheme: Boolean = false,

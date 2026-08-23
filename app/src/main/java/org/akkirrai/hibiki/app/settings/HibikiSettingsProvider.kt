@@ -11,11 +11,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
+
+val LocalAppPreferences = staticCompositionLocalOf<AppPreferences> {
+    error("LocalAppPreferences not provided")
+}
+
+val LocalAppPreferencesState = staticCompositionLocalOf {
+    AppPreferencesState()
+}
+
+val LocalAppLanguage = staticCompositionLocalOf {
+    LanguageMode.SYSTEM
+}
+
+val LocalThemeMode = staticCompositionLocalOf {
+    ThemeMode.SYSTEM
+}
 
 @Composable
 fun HibikiSettingsProvider(
@@ -74,3 +91,12 @@ fun Context.withLanguage(languageMode: LanguageMode): Context {
 
     return createConfigurationContext(configuration)
 }
+
+fun resolveAppLanguageTag(languageMode: LanguageMode, systemLanguage: String): String = when (languageMode) {
+    LanguageMode.ENGLISH -> "en"
+    LanguageMode.RUSSIAN -> "ru"
+    LanguageMode.SYSTEM -> if (systemLanguage.lowercase().startsWith("ru")) "ru" else "en"
+}
+
+fun isEnglishAppLanguage(languageMode: LanguageMode, systemLanguage: String): Boolean =
+    resolveAppLanguageTag(languageMode, systemLanguage) == "en"
