@@ -23,18 +23,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.app.libraryText
 import org.akkirrai.hibiki.design.UiDimens
@@ -135,27 +128,10 @@ private fun AppLibraryEntriesContent(
     headerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var visibleLimit by remember { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
     val visibleEntries = state.visibleEntries
 
     LaunchedEffect(state.selectedCategory, state.searchQuery, state.searchFilters) {
-        visibleLimit = LIBRARY_PAGE_SIZE
         listState.scrollToItem(0)
-    }
-
-    LaunchedEffect(listState, visibleEntries.size) {
-        snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisibleIndex >= layoutInfo.totalItemsCount - 3
-        }
-            .distinctUntilChanged()
-            .filter { it }
-            .collect {
-                if (visibleLimit < visibleEntries.size) {
-                    visibleLimit = (visibleLimit + LIBRARY_PAGE_SIZE).coerceAtMost(visibleEntries.size)
-                }
-            }
     }
 
     LazyColumn(
@@ -184,7 +160,7 @@ private fun AppLibraryEntriesContent(
         } else if (visibleEntries.isEmpty()) {
             item { emptyContent(true) }
         } else {
-            items(visibleEntries.take(visibleLimit).chunked(2), key = { row -> row.first().anime.id }) { row ->
+            items(visibleEntries.chunked(2), key = { row -> row.first().anime.id }) { row ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -203,8 +179,6 @@ private fun AppLibraryEntriesContent(
         }
     }
 }
-
-private const val LIBRARY_PAGE_SIZE = 12
 
 @Composable
 private fun AppLibraryEmptyState(
