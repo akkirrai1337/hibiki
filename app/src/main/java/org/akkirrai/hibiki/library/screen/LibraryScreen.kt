@@ -151,11 +151,13 @@ private fun AppLibraryEntriesContent(
                 }
             }
         }
-        // Recent is a hidden bookkeeping flag (auto-assigned the moment playback starts) --
-        // its presence alone shouldn't make the library look "filtered" instead of genuinely
-        // empty when every visible category has nothing in it.
-        val hasVisibleEntries = state.entries.any { it.category != LibraryCategory.Recent }
-        if (!hasVisibleEntries) {
+        // Generic ("library empty") vs filtered ("nothing found") is decided per the selected
+        // category, not the library as a whole -- an empty category should read as "nothing
+        // here yet", the same message you'd see with a genuinely empty library, regardless of
+        // whether other categories happen to have entries. "Filtered" is reserved for when the
+        // category itself has entries but the search query/filters narrowed them to zero.
+        val hasEntriesInSelectedCategory = state.entries.any { it.category == state.selectedCategory }
+        if (!hasEntriesInSelectedCategory) {
             item { emptyContent(false) }
         } else if (visibleEntries.isEmpty()) {
             item { emptyContent(true) }
