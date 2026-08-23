@@ -51,7 +51,7 @@ class EpisodeReminderReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(localizedContext, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_stat_hibiki)
             .setContentTitle(
                 localizedContext.getString(R.string.episode_reminder_notification_title, animeTitle),
             )
