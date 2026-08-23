@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.player
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -143,18 +146,38 @@ internal fun HibikiWatchFlowContent(
         val currentLibraryRepository = rememberUpdatedState(libraryRepository)
         val watchStepDestination = if (selectedWatchSource == null) "sources" else "episodes"
         val navController = rememberNavController()
+        // The very first sources->episodes settle within a freshly-opened watch flow (most
+        // visibly the single-voiceover auto-skip, which can resolve while the outer
+        // Details->watch-flow entrance fade is still running) doesn't get its own fade -- it
+        // would otherwise run concurrently with that outer fade and read as a jerky double
+        // animation. withFrameNanos defers flipping the flag to the frame after this
+        // navigate() call, so THIS transition still reads the pre-flip (suppressed) value; any
+        // later, deliberately re-picked voiceover still gets the normal fade.
+        var suppressNextWatchStepTransition by remember { mutableStateOf(true) }
         LaunchedEffect(watchStepDestination) {
+            val suppressThisTransition = suppressNextWatchStepTransition
             navController.navigate(watchStepDestination) {
                 popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 launchSingleTop = true
             }
+            if (suppressThisTransition) {
+                withFrameNanos {}
+                suppressNextWatchStepTransition = false
+            }
         }
+        val currentSuppressTransition = rememberUpdatedState(suppressNextWatchStepTransition)
         NavHost(
             navController = navController,
             startDestination = watchStepDestination,
             modifier = Modifier.fillMaxSize(),
-            enterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
-            exitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+            enterTransition = {
+                if (currentSuppressTransition.value) EnterTransition.None
+                else fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis))
+            },
+            exitTransition = {
+                if (currentSuppressTransition.value) ExitTransition.None
+                else fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis))
+            },
             popEnterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
             popExitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
         ) {
