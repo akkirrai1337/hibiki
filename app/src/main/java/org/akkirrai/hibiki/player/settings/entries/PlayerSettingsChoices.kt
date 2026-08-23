@@ -3,6 +3,17 @@ package org.akkirrai.hibiki.player
 import org.akkirrai.hibiki.player.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.player.model.WatchSource
 
+data class PlayerSettingsValue(
+    val id: String,
+    val label: String,
+    val description: String? = null,
+    val selected: Boolean,
+    val onClick: () -> Unit,
+)
+
+fun List<PlayerSettingsValue>.firstSelectedLabelOrDefault(defaultLabel: String = first().label): String =
+    firstOrNull { it.selected }?.label ?: defaultLabel
+
 data class PlayerSettingsChoices(
     val speed: List<PlayerSettingsValue>,
     val voiceover: List<PlayerSettingsValue>,
@@ -58,3 +69,15 @@ fun buildPlayerSettingsChoices(
             )
         },
 )
+
+private fun String?.orEmptyValue(): String = this.orEmpty()
+
+fun PlayerUiState.settingsOptionsKey(): String = buildString {
+    append(currentSourceId)
+    append(':')
+    append(currentEpisodeId)
+    append(':')
+    append(selectedPlayerName.orEmptyValue())
+    append(':')
+    append(selectedQualityLabel.orEmptyValue())
+}

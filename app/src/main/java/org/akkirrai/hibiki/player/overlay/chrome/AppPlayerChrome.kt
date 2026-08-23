@@ -21,3 +21,23 @@ fun AppPlayerChrome(
         overlayContent()
     }
 }
+
+/** Shared z-order for player overlays around a platform playback surface. */
+@Composable
+fun AppPlayerOverlayStack(
+    lockState: PlayerLockState,
+    unlockLabel: String,
+    onUnlock: () -> Unit,
+    unlockModifier: Modifier,
+    includeSystemBottomInset: Boolean,
+    panelContent: @Composable () -> Unit,
+) {
+    AppPlayerLockOverlay(
+        state = lockState,
+        label = unlockLabel,
+        onUnlock = onUnlock,
+        modifier = unlockModifier,
+        includeSystemBottomInset = includeSystemBottomInset,
+    )
+    panelContent()
+}

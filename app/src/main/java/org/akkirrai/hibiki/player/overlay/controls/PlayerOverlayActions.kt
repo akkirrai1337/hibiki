@@ -4,6 +4,13 @@ import org.akkirrai.hibiki.app.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.app.navigation.AppOverlay
 import org.akkirrai.hibiki.app.navigation.AppPlayerSettingsDestination
 
+fun shouldShowSkipSegmentPrompt(
+    controlsVisible: Boolean,
+    playerLocked: Boolean,
+    playlistVisible: Boolean,
+    settingsVisible: Boolean,
+): Boolean = controlsVisible && !playerLocked && !playlistVisible && !settingsVisible
+
 fun dispatchPlayerPlaylistOpen(onOverlayEvent: (AppNavigationEvent) -> Unit) {
     onOverlayEvent(AppNavigationEvent.PresentOverlay(AppOverlay.Playlist))
 }

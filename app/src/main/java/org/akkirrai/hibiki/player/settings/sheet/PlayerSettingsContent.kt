@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import org.akkirrai.hibiki.design.component.navigation.AppBackButton
 import org.akkirrai.hibiki.app.navigation.AppPlayerSettingsDestination as PlayerSettingsDestination
 import org.akkirrai.hibiki.player.model.PlaybackSettingsOptions
@@ -112,4 +114,42 @@ private fun String.toPlayerSettingsTextKey(): AppTextKey = when (this) {
     "watch_player_settings_on" -> AppTextKey.PlayerSettingsOn
     "watch_player_settings_off" -> AppTextKey.PlayerSettingsOff
     else -> error("Unknown player settings value localization key")
+}
+
+fun LazyListScope.appPlayerSettingsItems(
+    destination: PlayerSettingsDestination,
+    rootEntries: List<PlayerSettingsEntry>,
+    speedValues: List<PlayerSettingsValue>,
+    voiceoverValues: List<PlayerSettingsValue>,
+    playerValues: List<PlayerSettingsValue>,
+    qualityValues: List<PlayerSettingsValue>,
+    entryContent: @Composable (PlayerSettingsEntry) -> Unit,
+    choiceContent: @Composable (PlayerSettingsValue) -> Unit,
+) {
+    when (destination) {
+        PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntry::id) { entry ->
+            entryContent(entry)
+        }
+        PlayerSettingsDestination.Speed -> appPlayerSettingsChoices(speedValues, choiceContent)
+        PlayerSettingsDestination.Voiceover -> appPlayerSettingsChoices(voiceoverValues, choiceContent)
+        PlayerSettingsDestination.Player -> appPlayerSettingsChoices(playerValues, choiceContent)
+        PlayerSettingsDestination.Quality -> appPlayerSettingsChoices(qualityValues, choiceContent)
+    }
+}
+
+private fun LazyListScope.appPlayerSettingsChoices(
+    values: List<PlayerSettingsValue>,
+    choiceContent: @Composable (PlayerSettingsValue) -> Unit,
+) {
+    items(values, key = PlayerSettingsValue::id) { value ->
+        choiceContent(value)
+    }
+}
+
+fun PlayerSettingsDestination.localizationKey(): String = when (this) {
+    PlayerSettingsDestination.Root -> "watch_player_settings_root"
+    PlayerSettingsDestination.Speed -> "watch_player_settings_speed"
+    PlayerSettingsDestination.Voiceover -> "watch_player_settings_voiceover"
+    PlayerSettingsDestination.Player -> "watch_player_settings_player"
+    PlayerSettingsDestination.Quality -> "watch_player_settings_quality"
 }

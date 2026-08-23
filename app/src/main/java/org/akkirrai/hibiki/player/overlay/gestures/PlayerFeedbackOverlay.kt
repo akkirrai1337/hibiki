@@ -47,3 +47,31 @@ fun AppPlayerFeedbackOverlay(
         }
     }
 }
+
+@Composable
+fun AppPlayerSeekOverlay(
+    visible: Boolean,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    AppPlayerFeedbackOverlay(
+        visible = visible,
+        label = label,
+        horizontalPadding = PlayerSeekOverlayHorizontalPadding,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun AppPlayerSpeedOverlay(
+    visible: Boolean,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    AppPlayerFeedbackOverlay(
+        visible = visible,
+        label = label,
+        horizontalPadding = PlayerSpeedOverlayHorizontalPadding,
+        modifier = modifier,
+    )
+}
