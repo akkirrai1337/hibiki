@@ -8,8 +8,6 @@ import org.akkirrai.hibiki.app.destination.watch.isDetailsRouteDriven
 import org.akkirrai.hibiki.app.destination.watch.isWatchRouteDriven
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.app.navigation.AppRoute
-import org.akkirrai.hibiki.player.EpisodesScreenState
-import org.akkirrai.hibiki.player.WatchSourcesScreenState
 import org.akkirrai.hibiki.player.model.WatchSource
 
 class AppDestinationRoutePolicyTest {
@@ -41,8 +39,6 @@ class AppDestinationRoutePolicyTest {
     ) = AppDestinationContentState(
         selectedAnime = selectedAnime,
         watchAnime = watchAnime,
-        watchState = WatchSourcesScreenState(),
-        episodesState = EpisodesScreenState(),
         selectedWatchSource = null,
         playbackError = null,
         playbackLoading = false,

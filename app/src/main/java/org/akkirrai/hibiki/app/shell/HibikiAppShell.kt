@@ -191,7 +191,6 @@ internal fun HibikiAppShell(
     val libraryListState = resources.libraryListState
     val sourceSearchPresenter = resources.sourceSearchPresenter
     val watchPresenter = resources.watchPresenter
-    val watchState by watchPresenter.state.collectAsState()
     val watchFlowState = rememberHibikiWatchFlowState()
     var detailsAnime by watchFlowState::detailsAnime
     val watchAnime = detailsAnime ?: detailsNavState.selectedAnime
@@ -202,7 +201,6 @@ internal fun HibikiAppShell(
     // consumed by a LaunchedEffect further below once watchFlowNavigationActions exists.
     var singleWatchSourceCandidate by remember { mutableStateOf<org.akkirrai.hibiki.player.model.WatchSource?>(null) }
     val episodesPresenter = resources.episodesPresenter
-    val episodesState by episodesPresenter.state.collectAsState()
     val shellNavigationState = rememberHibikiAppShellNavigationState()
     var navigationState by shellNavigationState.route
     val libraryFilterOverlay = shellNavigationState.libraryFilterOverlay
@@ -362,7 +360,7 @@ internal fun HibikiAppShell(
         setNavigationState = { navigationState = it },
         selectedWatchSource = { selectedWatchSource },
         watchAnime = { watchAnime },
-        episodesState = { episodesState },
+        episodesState = { episodesPresenter.state.value },
         activePlaybackRoute = { activePlaybackRoute },
         loadPlaybackSelection = playbackCallbacks.loadPlaybackSelection,
         onPlaybackSelectionChanged = playbackCallbacks.onPlaybackSelectionChanged,
@@ -657,8 +655,6 @@ internal fun HibikiAppShell(
                                 state = AppDestinationContentState(
                                     selectedAnime = detailsAnime ?: detailsNavState.selectedAnime,
                                     watchAnime = watchAnime,
-                                    watchState = watchState,
-                                    episodesState = episodesState,
                                     selectedWatchSource = selectedWatchSource,
                                     playbackError = playerState.errorMessage,
                                     playbackLoading = playerState.isLoading,
@@ -675,6 +671,8 @@ internal fun HibikiAppShell(
                                     offlineTitleMetadataRepository = offlineTitleMetadataRepository,
                                     resumeFrameContent = platformCallbacks.resumeFrameContent,
                                     downloadMode = activeDownloadMode,
+                                    watchPresenter = watchPresenter,
+                                    episodesPresenter = episodesPresenter,
                                 ),
                             ),
                             platform = PlatformContentInput(

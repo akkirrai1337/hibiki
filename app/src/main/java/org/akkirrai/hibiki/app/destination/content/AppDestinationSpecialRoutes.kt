@@ -22,12 +22,14 @@ internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
     val playback = watch.playbackContext
     val content = watch.state
     val profileState by input.profile.profilePresenter.state.collectAsState()
+    val watchState by playback.watchPresenter.state.collectAsState()
+    val episodesState by playback.episodesPresenter.state.collectAsState()
 
     HibikiWatchFlowContent(
         state = WatchRouteState(
             anime = requireNotNull(content.watchAnime),
-            watchState = content.watchState,
-            episodesState = content.episodesState,
+            watchState = watchState,
+            episodesState = episodesState,
             selectedWatchSource = content.selectedWatchSource,
             profileData = profileState.data,
             playbackError = content.playbackError,

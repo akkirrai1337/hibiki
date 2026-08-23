@@ -7,9 +7,9 @@ import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.app.navigation.isWatchFlowRoute
 import org.akkirrai.hibiki.player.EpisodeDownloadRepository
-import org.akkirrai.hibiki.player.EpisodesScreenState
+import org.akkirrai.hibiki.player.EpisodesPresenter
 import org.akkirrai.hibiki.player.OfflineWatchDataRepository
-import org.akkirrai.hibiki.player.WatchSourcesScreenState
+import org.akkirrai.hibiki.player.WatchSourcesPresenter
 import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.player.model.WatchEpisode
 import org.akkirrai.hibiki.player.model.WatchSource
@@ -25,8 +25,6 @@ internal data class AppDestinationWatchActions(
 internal data class AppDestinationContentState(
     val selectedAnime: Anime?,
     val watchAnime: Anime?,
-    val watchState: WatchSourcesScreenState,
-    val episodesState: EpisodesScreenState,
     val selectedWatchSource: WatchSource?,
     val playbackError: String?,
     val playbackLoading: Boolean,
@@ -53,6 +51,8 @@ internal data class AppDestinationPlaybackContext(
     val offlineTitleMetadataRepository: OfflineTitleMetadataRepository?,
     val resumeFrameContent: (@Composable (String, Modifier) -> Unit)?,
     val downloadMode: Boolean,
+    val watchPresenter: WatchSourcesPresenter,
+    val episodesPresenter: EpisodesPresenter,
 )
 
 internal fun AppDestinationContentState.isWatchRouteDriven(): Boolean =
