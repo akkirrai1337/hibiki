@@ -5,10 +5,37 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.home.data.HomeDataRepository
 import org.akkirrai.hibiki.home.presentation.HomePresenter
+import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
+import org.akkirrai.hibiki.library.LibraryCategory
+import org.akkirrai.hibiki.library.LibraryEntry
 import org.akkirrai.hibiki.search.model.SearchUiState
 
 fun mergeAnimePreservingOrder(primary: List<Anime>, additions: List<Anime>): List<Anime> =
     (primary + additions).distinctBy(Anime::id)
+
+/**
+ * Merges the base feed state with the current search state and, when the feed hasn't reported
+ * its own "recently added to library" list yet, falls back to deriving one from the raw library
+ * entries (excluding the Saved/Recent bookkeeping categories).
+ */
+fun resolveHomeUiState(
+    baseState: HomeUiState,
+    libraryEntries: List<LibraryEntry>,
+    searchState: HomeSearchUiState,
+): HomeUiState = baseState.copy(
+    recentlyAddedToLibrary = if (baseState.recentlyAddedToLibrary.isEmpty()) {
+        libraryEntries
+            .filter { it.category != LibraryCategory.Saved && it.category != LibraryCategory.Recent }
+            .map { it.anime }
+    } else {
+        baseState.recentlyAddedToLibrary
+    },
+    searchQuery = searchState.query,
+    searchResult = searchState.result,
+    searchFilterCatalog = searchState.filterCatalog,
+    isSearchFilterCatalogLoading = searchState.isFilterCatalogLoading,
+    searchFilters = searchState.filters,
+)
 
 /** True when Home should render search results instead of the feed. */
 val HomeUiState.isSearchActive: Boolean

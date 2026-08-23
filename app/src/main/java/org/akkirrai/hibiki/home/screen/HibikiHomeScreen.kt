@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
 import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.home.state.hasFeedContent
 import org.akkirrai.hibiki.home.state.isSearchActive
+import org.akkirrai.hibiki.home.state.resolveHomeUiState
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryEntry
 import org.akkirrai.hibiki.design.component.source.AppSourceBadge
@@ -48,20 +49,7 @@ internal fun ColumnScope.HomeScreen(
     onHomeRefresh: () -> Unit,
     bottomContentPadding: Dp,
 ) {
-    val homeState = baseHomeState.copy(
-        recentlyAddedToLibrary = if (baseHomeState.recentlyAddedToLibrary.isEmpty()) {
-            libraryEntries
-                .filter { it.category != LibraryCategory.Saved && it.category != LibraryCategory.Recent }
-                .map { it.anime }
-        } else {
-            baseHomeState.recentlyAddedToLibrary
-        },
-        searchQuery = homeSearchState.query,
-        searchResult = homeSearchState.result,
-        searchFilterCatalog = homeSearchState.filterCatalog,
-        isSearchFilterCatalogLoading = homeSearchState.isFilterCatalogLoading,
-        searchFilters = homeSearchState.filters,
-    )
+    val homeState = resolveHomeUiState(baseHomeState, libraryEntries, homeSearchState)
     if (homeState.isLoading && !homeState.hasFeedContent && !homeState.isSearchActive) {
         AppCenteredLoading(modifier = Modifier.fillMaxSize())
         return
