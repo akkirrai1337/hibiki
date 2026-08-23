@@ -10,15 +10,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.design.component.navigation.AppBottomBar
+import org.akkirrai.hibiki.app.navigation.AndroidNavigationRoute
 import org.akkirrai.hibiki.app.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.app.navigation.AppTopLevelDestination
 import org.akkirrai.hibiki.app.navigation.AppTransitionDirection
 import org.akkirrai.hibiki.app.navigation.AppTransitionKey
 import org.akkirrai.hibiki.app.navigation.AppRoute
+import org.akkirrai.hibiki.app.navigation.isWatchFlowRoute
+import org.akkirrai.hibiki.app.navigation.toAndroidNavigationRoute
 import org.akkirrai.hibiki.text.appText
 
 /** Shared production shell used by platform hosts while they own screen orchestration. */
@@ -40,6 +49,7 @@ fun AppProductionRoot(
             modifier = iconModifier,
         )
     },
+    tabContent: @Composable (AppTopLevelDestination) -> Unit,
     content: @Composable (AppTopLevelDestination, AppRoute?) -> Unit,
 ) {
     val targetRootState = AppRootContentState(
@@ -48,7 +58,43 @@ fun AppProductionRoot(
             ?: AppTransitionKey("top-level", currentDestination.route),
         route = contentRoute,
     )
+    // Details and the watch flow are full-screen destinations that replace the tab UI
+    // entirely (see AppDestinationContent's own showBaseRoutes/early-return handling of the
+    // same two cases). The tab NavHost below fades out for the duration of that transition
+    // instead of disappearing instantly, so it crossfades against the incoming Details/watch
+    // content the same way the old single-AnimatedContent implementation did.
+    val tabLayerVisible = contentRoute !is AppRoute.Details && contentRoute?.isWatchFlowRoute() != true
     Box(modifier = modifier.fillMaxSize()) {
+        val navController = rememberNavController()
+        val startTabRoute = remember { currentDestination.toTabRoute() }
+        LaunchedEffect(currentDestination) {
+            navController.navigate(currentDestination.toTabRoute()) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+        AnimatedVisibility(
+            visible = tabLayerVisible,
+            enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
+            exit = fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = startTabRoute,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+                exitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+                popExitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+            ) {
+                composable<AndroidNavigationRoute.Home> { tabContent(AppTopLevelDestination.HOME) }
+                composable<AndroidNavigationRoute.Catalog> { tabContent(AppTopLevelDestination.CATALOG) }
+                composable<AndroidNavigationRoute.Library> { tabContent(AppTopLevelDestination.LIBRARY) }
+                composable<AndroidNavigationRoute.Sources> { tabContent(AppTopLevelDestination.SOURCES) }
+                composable<AndroidNavigationRoute.Profile> { tabContent(AppTopLevelDestination.PROFILE) }
+            }
+        }
         AnimatedContent(
             modifier = Modifier.fillMaxSize(),
             targetState = targetRootState,
@@ -88,6 +134,9 @@ private data class AppRootContentState(
     val transitionKey: AppTransitionKey,
     val route: AppRoute?,
 )
+
+private fun AppTopLevelDestination.toTabRoute(): AndroidNavigationRoute =
+    AppRoute.TopLevel(this).toAndroidNavigationRoute()
 
 internal fun appScreenTransition(direction: AppTransitionDirection) = when (direction) {
     AppTransitionDirection.Forward,

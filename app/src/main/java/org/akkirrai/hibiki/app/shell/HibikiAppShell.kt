@@ -5,6 +5,7 @@ import org.akkirrai.hibiki.player.HibikiPlaybackSession
 import org.akkirrai.hibiki.app.navigation.resolveWatchFlowBackTransition
 import org.akkirrai.hibiki.home.state.launchHomeDescriptionEnrichment
 import org.akkirrai.hibiki.app.destination.content.AppDestinationContent
+import org.akkirrai.hibiki.app.destination.content.AppDestinationTabContent
 import org.akkirrai.hibiki.app.destination.context.*
 import org.akkirrai.hibiki.app.destination.watch.*
 import org.akkirrai.hibiki.core.source.AppSourcePlatformCallbacks
@@ -476,6 +477,181 @@ internal fun HibikiAppShell(
                         episodesPresenter = episodesPresenter,
                         resetPlayerState = playbackEffects::resetPlayerState,
                     )
+                    val navigationActions = createHibikiAppShellDestinationNavigationActions(
+                        detailsNavigationActions = detailsNavigationActions,
+                        watchFlowNavigationActions = watchFlowNavigationActions,
+                        rootNavigationCoordinator = rootNavigationCoordinator,
+                        activeDownloadMode = activeDownloadMode,
+                        updateNavigationState = { reduce ->
+                            navigationState = reduce(navigationState)
+                        },
+                        onSourceSelected = sourceSelectionCoordinator::select,
+                    )
+                    fun destinationInputFor(tab: AppDestination): AppDestinationContentInput = AppDestinationContentInput(
+                        selectedTab = tab,
+                        catalog = CatalogContentInput(
+                            presenter = presenter,
+                            listState = catalogListState,
+                            actions = CatalogActions(
+                                onQueryChange = catalogActions.onQueryChange,
+                                onRetry = catalogActions.onRetry,
+                                onRefresh = catalogActions.onRefresh,
+                                onLoadMoreRetry = catalogActions.onLoadMoreRetry,
+                                onItemVisible = {},
+                                onSortSelected = catalogActions.onSortSelected,
+                                onFiltersApply = catalogActions.onFiltersChange,
+                                onAnimeClick = navigationActions.onAnimeClick,
+                            ),
+                        ),
+                        home = HomeContentInput(
+                            state = AppDestinationHomeState(
+                                homePresenter = homePresenter,
+                                homeSearchPresenter = homeSearchPresenter,
+                                listState = homeListState,
+                            ),
+                            actions = HomeActions(
+                                onQueryChange = homeSearchActions.onQueryChange,
+                                onClearSearch = homeSearchActions.onClear,
+                                onFilterApply = homeSearchActions.onFilterApply,
+                                onLoadMoreSearch = homeSearchActions.onLoadMore,
+                                onRetrySearch = homeSearchActions.onRetry,
+                                onAnimeClick = navigationActions.onAnimeClick,
+                                onBrowseCatalog = navigationActions.onBrowseCatalog,
+                                onOpenLibrary = navigationActions.onOpenLibrary,
+                                onItemVisible = homeActions.onItemVisible,
+                            ),
+                            onRefresh = homeActions.onRefresh,
+                        ),
+                        library = LibraryContentInput(
+                            state = AppDestinationLibraryState(
+                                libraryPresenter = libraryPresenter,
+                                filterOverlayOpen = isLibraryFilterOverlayOpen,
+                                listState = libraryListState,
+                            ),
+                            actions = LibraryActions(
+                                onAnimeClick = navigationActions.onAnimeClick,
+                                onSearchQueryChange = libraryActions.onSearchQueryChange,
+                                onClearSearch = libraryActions.onSearchClear,
+                                onFilterClick = { overlayActions.setLibraryFilterVisible(true) },
+                                onCategorySelected = libraryActions.onCategorySelected,
+                                onFilterVisibilityChange = overlayActions::setLibraryFilterVisible,
+                            ),
+                            onFiltersApply = libraryActions.onFiltersApply,
+                        ),
+                        navigation = NavigationContentInput(
+                            actions = navigationActions,
+                            detailsOverlayState = AppDestinationDetailsOverlayState(
+                                posterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
+                                onPosterPreviewOpenChange = overlayActions::setDetailsPosterPreviewOpen,
+                                titleSheetOpen = navigationState.activeOverlay == AppOverlay.DetailsTitleSheet,
+                                onTitleSheetOpenChange = overlayActions::setDetailsTitleSheetOpen,
+                                librarySheetOpen = navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet,
+                                onLibrarySheetOpenChange = overlayActions::setDetailsLibrarySheetOpen,
+                            ),
+                        ),
+                        watch = WatchContentInput(
+                            actions = AppDestinationWatchActions(
+                                onRetry = watchRetryActions.onRetry,
+                                onLoadMore = { watchPresenter.update(WatchSourcesScreenState::showAllWatchSources) },
+                                onSourceClick = { source ->
+                                    watchFlowNavigationActions.openEpisodes(
+                                        source = source,
+                                        animeId = watchAnime?.id,
+                                        downloadMode = activeDownloadMode,
+                                    )
+                                },
+                                onEpisodeClick = playbackRequestCoordinator::request,
+                                onResumePlayback = { progress ->
+                                    playbackRequestCoordinator.requestResume(progress)
+                                },
+                            ),
+                            state = AppDestinationContentState(
+                                selectedAnime = detailsAnime ?: detailsNavState.selectedAnime,
+                                watchAnime = watchAnime,
+                                selectedWatchSource = selectedWatchSource,
+                                playbackError = playerState.errorMessage,
+                                playbackLoading = playerState.isLoading,
+                                watchRepositoryAvailable = watchRepository != null,
+                                detailsError = detailsNavState.detailsError,
+                                detailsResumeState = detailsResumeState,
+                                isPlayerRoute = routePresentation.isPlayerRoute,
+                                playbackHostAvailable = playbackCallbacks.playbackHost != null,
+                                currentRoute = routePresentation.currentRoute,
+                            ),
+                            playbackContext = AppDestinationPlaybackContext(
+                                episodeDownloadRepository = episodeDownloadRepository,
+                                offlineWatchDataRepository = offlineWatchDataRepository,
+                                offlineTitleMetadataRepository = offlineTitleMetadataRepository,
+                                resumeFrameContent = platformCallbacks.resumeFrameContent,
+                                downloadMode = activeDownloadMode,
+                                watchPresenter = watchPresenter,
+                                episodesPresenter = episodesPresenter,
+                            ),
+                        ),
+                        platform = PlatformContentInput(
+                            dataContext = AppDestinationDataContext(
+                                libraryRepository = libraryRepository,
+                                profileRepository = profileRepository,
+                                languageMode = appSettingsState.languageMode,
+                            ),
+                            hostContext = AppDestinationHostContext(
+                                systemLanguage = systemLanguage,
+                                includeNavigationBarPadding = true,
+                                onLibraryChanged = refreshLocalData,
+                                modifier = Modifier.fillMaxSize(),
+                            ),
+                        ),
+                        settings = SettingsContentInput(
+                            actions = SettingsScreenActions(
+                                onLanguageModeChange = settingsActions.onLanguageModeChange,
+                                onThemeChange = settingsActions.onThemeChange,
+                                onThemeModeChange = settingsActions.onThemeModeChange,
+                                onSystemColorSchemeChange = settingsActions.onSystemColorSchemeChange,
+                                onAmoledChange = settingsActions.onAmoledChange,
+                                onAutoSkipChange = settingsActions.onAutoSkipChange,
+                                onNotificationsClick = platformCallbacks.onConfigureNotifications,
+                                onDiscordClick = discordSettingsActions.onClick,
+                                onDiscordChange = discordSettingsActions.onChange,
+                                onCheckForUpdates = platformCallbacks.onCheckForUpdates,
+                                onExportLogs = platformCallbacks.onExportLogs,
+                                onBackClick = navigationActions.onSettingsBack,
+                            ),
+                            state = SettingsScreenState(
+                                languageMode = appSettingsState.languageMode,
+                                darkTheme = appSettingsState.darkTheme,
+                                themeMode = appSettingsState.themeMode,
+                                versionName = appVersionName,
+                                useSystemColorScheme = appSettingsState.useSystemColorScheme,
+                                useAmoledTheme = appSettingsState.useAmoledTheme,
+                                autoSkipSegments = appSettingsState.autoSkipSegments,
+                                notificationPermissionState = appSettingsState.notificationPermissionState,
+                                showBackButton = true,
+                                discordEnabled = platformCallbacks.discordRpcController?.isEnabled() == true,
+                                discordAvailable = platformCallbacks.discordRpcController != null,
+                                notificationsAvailable = platformCallbacks.notificationsAvailable,
+                            ),
+                            listsState = AppDestinationSettingsListsState(
+                                settings = settingsListState,
+                            ),
+                        ),
+                        profile = ProfileContentInput(
+                            profilePresenter = profilePresenter,
+                            avatarEditAvailable = platformCallbacks.profileAvatarEditAvailable,
+                            onAvatarEdit = platformCallbacks.onProfileAvatarEdit,
+                        ),
+                        sources = SourcesContentInput(
+                            state = AppDestinationSourceState(
+                                sources = sourceCallbacks.sources,
+                                selectedSourceId = appSettingsState.currentSelectedSourceId,
+                            ),
+                            externalSourcesState = AppDestinationExternalSourcesState(
+                                controller = sourceCallbacks.externalSourceRepositoryController,
+                                selectedTab = selectedSourcesTab,
+                                onSelectedTabChange = { selectedSourcesTab = it },
+                            ),
+                            sourceConfigContent = sourceCallbacks.sourceConfigContent,
+                        ),
+                    )
                     if (!enableOnboarding || appSettingsState.onboardingCompleted) {
                     AppProductionRoot(
 
@@ -548,187 +724,17 @@ internal fun HibikiAppShell(
                             )
                         },
                         modifier = Modifier.fillMaxSize(),
+                        tabContent = { tab ->
+                            val appDestination = tab.toAppDestination()
+                            AppDestinationTabContent(input = destinationInputFor(appDestination), tab = appDestination)
+                        },
                     ) { animatedDestination, animatedRoute ->
                         val animatedTab = animatedDestination.toAppDestination(
                             settingsVisible = selectedTab == AppDestination.SETTINGS,
                         )
-                        val navigationActions = createHibikiAppShellDestinationNavigationActions(
-                            detailsNavigationActions = detailsNavigationActions,
-                            watchFlowNavigationActions = watchFlowNavigationActions,
-                            rootNavigationCoordinator = rootNavigationCoordinator,
-                            activeDownloadMode = activeDownloadMode,
-                            updateNavigationState = { reduce ->
-                                navigationState = reduce(navigationState)
-                            },
-                            onSourceSelected = sourceSelectionCoordinator::select,
-                        )
                         AppDestinationContent(
                             routeOverride = animatedRoute,
-                            input = AppDestinationContentInput(
-                            selectedTab = animatedTab,
-                            catalog = CatalogContentInput(
-                                presenter = presenter,
-                                listState = catalogListState,
-                                actions = CatalogActions(
-                                    onQueryChange = catalogActions.onQueryChange,
-                                    onRetry = catalogActions.onRetry,
-                                    onRefresh = catalogActions.onRefresh,
-                                    onLoadMoreRetry = catalogActions.onLoadMoreRetry,
-                                    onItemVisible = {},
-                                    onSortSelected = catalogActions.onSortSelected,
-                                    onFiltersApply = catalogActions.onFiltersChange,
-                                    onAnimeClick = navigationActions.onAnimeClick,
-                                ),
-                            ),
-                            home = HomeContentInput(
-                                state = AppDestinationHomeState(
-                                    homePresenter = homePresenter,
-                                    homeSearchPresenter = homeSearchPresenter,
-                                    listState = homeListState,
-                                ),
-                                actions = HomeActions(
-                                    onQueryChange = homeSearchActions.onQueryChange,
-                                    onClearSearch = homeSearchActions.onClear,
-                                    onFilterApply = homeSearchActions.onFilterApply,
-                                    onLoadMoreSearch = homeSearchActions.onLoadMore,
-                                    onRetrySearch = homeSearchActions.onRetry,
-                                    onAnimeClick = navigationActions.onAnimeClick,
-                                    onBrowseCatalog = navigationActions.onBrowseCatalog,
-                                    onOpenLibrary = navigationActions.onOpenLibrary,
-                                    onItemVisible = homeActions.onItemVisible,
-                                ),
-                                onRefresh = homeActions.onRefresh,
-                            ),
-                            library = LibraryContentInput(
-                                state = AppDestinationLibraryState(
-                                    libraryPresenter = libraryPresenter,
-                                    filterOverlayOpen = isLibraryFilterOverlayOpen,
-                                    listState = libraryListState,
-                                ),
-                                actions = LibraryActions(
-                                    onAnimeClick = navigationActions.onAnimeClick,
-                                    onSearchQueryChange = libraryActions.onSearchQueryChange,
-                                    onClearSearch = libraryActions.onSearchClear,
-                                    onFilterClick = { overlayActions.setLibraryFilterVisible(true) },
-                                    onCategorySelected = libraryActions.onCategorySelected,
-                                    onFilterVisibilityChange = overlayActions::setLibraryFilterVisible,
-                                ),
-                                onFiltersApply = libraryActions.onFiltersApply,
-                            ),
-                            navigation = NavigationContentInput(
-                                actions = navigationActions,
-                                detailsOverlayState = AppDestinationDetailsOverlayState(
-                                    posterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
-                                    onPosterPreviewOpenChange = overlayActions::setDetailsPosterPreviewOpen,
-                                    titleSheetOpen = navigationState.activeOverlay == AppOverlay.DetailsTitleSheet,
-                                    onTitleSheetOpenChange = overlayActions::setDetailsTitleSheetOpen,
-                                    librarySheetOpen = navigationState.activeOverlay == AppOverlay.DetailsLibrarySheet,
-                                    onLibrarySheetOpenChange = overlayActions::setDetailsLibrarySheetOpen,
-                                ),
-                            ),
-                            watch = WatchContentInput(
-                                actions = AppDestinationWatchActions(
-                                    onRetry = watchRetryActions.onRetry,
-                                    onLoadMore = { watchPresenter.update(WatchSourcesScreenState::showAllWatchSources) },
-                                    onSourceClick = { source ->
-                                        watchFlowNavigationActions.openEpisodes(
-                                            source = source,
-                                            animeId = watchAnime?.id,
-                                            downloadMode = activeDownloadMode,
-                                        )
-                                    },
-                                    onEpisodeClick = playbackRequestCoordinator::request,
-                                    onResumePlayback = { progress ->
-                                        playbackRequestCoordinator.requestResume(progress)
-                                    },
-                                ),
-                                state = AppDestinationContentState(
-                                    selectedAnime = detailsAnime ?: detailsNavState.selectedAnime,
-                                    watchAnime = watchAnime,
-                                    selectedWatchSource = selectedWatchSource,
-                                    playbackError = playerState.errorMessage,
-                                    playbackLoading = playerState.isLoading,
-                                    watchRepositoryAvailable = watchRepository != null,
-                                    detailsError = detailsNavState.detailsError,
-                                    detailsResumeState = detailsResumeState,
-                                    isPlayerRoute = routePresentation.isPlayerRoute,
-                                    playbackHostAvailable = playbackCallbacks.playbackHost != null,
-                                    currentRoute = routePresentation.currentRoute,
-                                ),
-                                playbackContext = AppDestinationPlaybackContext(
-                                    episodeDownloadRepository = episodeDownloadRepository,
-                                    offlineWatchDataRepository = offlineWatchDataRepository,
-                                    offlineTitleMetadataRepository = offlineTitleMetadataRepository,
-                                    resumeFrameContent = platformCallbacks.resumeFrameContent,
-                                    downloadMode = activeDownloadMode,
-                                    watchPresenter = watchPresenter,
-                                    episodesPresenter = episodesPresenter,
-                                ),
-                            ),
-                            platform = PlatformContentInput(
-                                dataContext = AppDestinationDataContext(
-                                    libraryRepository = libraryRepository,
-                                    profileRepository = profileRepository,
-                                    languageMode = appSettingsState.languageMode,
-                                ),
-                                hostContext = AppDestinationHostContext(
-                                    systemLanguage = systemLanguage,
-                                    includeNavigationBarPadding = true,
-                                    onLibraryChanged = refreshLocalData,
-                                    modifier = Modifier.fillMaxSize(),
-                                ),
-                            ),
-                            settings = SettingsContentInput(
-                                actions = SettingsScreenActions(
-                                    onLanguageModeChange = settingsActions.onLanguageModeChange,
-                                    onThemeChange = settingsActions.onThemeChange,
-                                    onThemeModeChange = settingsActions.onThemeModeChange,
-                                    onSystemColorSchemeChange = settingsActions.onSystemColorSchemeChange,
-                                    onAmoledChange = settingsActions.onAmoledChange,
-                                    onAutoSkipChange = settingsActions.onAutoSkipChange,
-                                    onNotificationsClick = platformCallbacks.onConfigureNotifications,
-                                    onDiscordClick = discordSettingsActions.onClick,
-                                    onDiscordChange = discordSettingsActions.onChange,
-                                    onCheckForUpdates = platformCallbacks.onCheckForUpdates,
-                                    onExportLogs = platformCallbacks.onExportLogs,
-                                    onBackClick = navigationActions.onSettingsBack,
-                                ),
-                                state = SettingsScreenState(
-                                    languageMode = appSettingsState.languageMode,
-                                    darkTheme = appSettingsState.darkTheme,
-                                    themeMode = appSettingsState.themeMode,
-                                    versionName = appVersionName,
-                                    useSystemColorScheme = appSettingsState.useSystemColorScheme,
-                                    useAmoledTheme = appSettingsState.useAmoledTheme,
-                                    autoSkipSegments = appSettingsState.autoSkipSegments,
-                                    notificationPermissionState = appSettingsState.notificationPermissionState,
-                                    showBackButton = true,
-                                    discordEnabled = platformCallbacks.discordRpcController?.isEnabled() == true,
-                                    discordAvailable = platformCallbacks.discordRpcController != null,
-                                    notificationsAvailable = platformCallbacks.notificationsAvailable,
-                                ),
-                                listsState = AppDestinationSettingsListsState(
-                                    settings = settingsListState,
-                                ),
-                            ),
-                            profile = ProfileContentInput(
-                                profilePresenter = profilePresenter,
-                                avatarEditAvailable = platformCallbacks.profileAvatarEditAvailable,
-                                onAvatarEdit = platformCallbacks.onProfileAvatarEdit,
-                            ),
-                            sources = SourcesContentInput(
-                                state = AppDestinationSourceState(
-                                    sources = sourceCallbacks.sources,
-                                    selectedSourceId = appSettingsState.currentSelectedSourceId,
-                                ),
-                                externalSourcesState = AppDestinationExternalSourcesState(
-                                    controller = sourceCallbacks.externalSourceRepositoryController,
-                                    selectedTab = selectedSourcesTab,
-                                    onSelectedTabChange = { selectedSourcesTab = it },
-                                ),
-                                sourceConfigContent = sourceCallbacks.sourceConfigContent,
-                            ),
-                            ),
+                            input = destinationInputFor(animatedTab),
                         )
                     }
                     }

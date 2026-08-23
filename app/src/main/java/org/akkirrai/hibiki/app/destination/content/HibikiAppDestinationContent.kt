@@ -28,21 +28,14 @@ import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.library.LibraryCategory
 @Composable
-internal fun AppDestinationContent(
-    input: AppDestinationContentInput,
-    routeOverride: AppRoute? = null,
-) {
-    val effectiveInput = input.withRouteOverride(routeOverride)
-    val selectedTab = effectiveInput.selectedTab
-    val contentState = effectiveInput.watch.state
-    val sourceState = effectiveInput.sources.state
-    val hostContext = effectiveInput.platform.hostContext
+internal fun AppDestinationTabContent(input: AppDestinationContentInput, tab: AppDestination) {
+    val sourceState = input.sources.state
     val homeSourcesById = remember(sourceState.sources) { sourceState.sources.associateBy(AppSourceDescriptor::id) }
     // Collected here (not in the shell) so the shell's own recomposition scope is decoupled
     // from library changes -- this scope is still shared by every tab because Home's feed
     // needs libraryEntries and every tab's cards need libraryStatusByAnimeId, but it's a much
     // smaller blast radius than the root shell composable.
-    val libraryUiState by effectiveInput.library.state.libraryPresenter.state.collectAsState()
+    val libraryUiState by input.library.state.libraryPresenter.state.collectAsState()
     val libraryEntries = libraryUiState.visibleEntries
     // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
     // shadow a title's actual library status badge on a card.
@@ -51,40 +44,39 @@ internal fun AppDestinationContent(
             .filter { it.category != LibraryCategory.Recent }
             .associate { it.anime.id to it.category }
     }
-    val bottomSystemInset = appBottomSystemInsetValue(hostContext.includeNavigationBarPadding)
+    val bottomSystemInset = appBottomSystemInsetValue(input.platform.hostContext.includeNavigationBarPadding)
+    AppDestinationTopLevelRoutes(
+        input = input,
+        selectedTab = tab,
+        topLevelBottomContentPadding = if (input.watch.state.currentRoute is AppRoute.TopLevel) {
+            AppBottomBarHeight + bottomSystemInset + AppBottomBarContentExtraPadding
+        } else {
+            bottomSystemInset
+        },
+        homeSourcesById = homeSourcesById,
+        libraryStatusByAnimeId = libraryStatusByAnimeId,
+        libraryEntries = libraryEntries,
+    )
+}
+
+@Composable
+internal fun AppDestinationContent(
+    input: AppDestinationContentInput,
+    routeOverride: AppRoute? = null,
+) {
+    val effectiveInput = input.withRouteOverride(routeOverride)
+    val selectedTab = effectiveInput.selectedTab
+    val contentState = effectiveInput.watch.state
     if (contentState.isWatchRouteDriven() && contentState.watchAnime != null) {
         AppDestinationWatchRoute(effectiveInput)
         return
     }
 
-    val baseSelectedTab = if (selectedTab == AppDestination.SETTINGS) {
-        AppDestination.PROFILE
-    } else {
-        selectedTab
-    }
+    // Details is a full-screen destination -- it hides Settings too, same as it hides the
+    // tab NavHost (see AppProductionRoot's tabLayerVisible).
+    val showSettingsOverlay = contentState.currentRoute !is AppRoute.Details
 
-    // Details is a full-screen destination. Do not keep composing the whole
-    // underlying top-level screen while the root transition is already
-    // retaining the outgoing screen for its fade-out.
-    val showBaseRoutes = contentState.currentRoute !is AppRoute.Details
-    if (showBaseRoutes) {
-        AppDestinationTopLevelRoutes(
-            input = effectiveInput,
-            selectedTab = baseSelectedTab,
-            topLevelBottomContentPadding = if (
-                baseSelectedTab != AppDestination.SETTINGS && contentState.currentRoute is AppRoute.TopLevel
-            ) {
-                AppBottomBarHeight + bottomSystemInset + AppBottomBarContentExtraPadding
-            } else {
-                bottomSystemInset
-            },
-            homeSourcesById = homeSourcesById,
-            libraryStatusByAnimeId = libraryStatusByAnimeId,
-            libraryEntries = libraryEntries,
-        )
-    }
-
-    if (showBaseRoutes) {
+    if (showSettingsOverlay) {
         // AnimatedVisibility (fade only, matching appScreenTransition's own duration/style),
         // not AnimatedContent -- it only owns Settings' own subtree, so it can't cause the
         // outer root transition and this one to fight over the same content the way two
@@ -101,14 +93,7 @@ internal fun AppDestinationContent(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
             ) {
-                AppDestinationTopLevelRoutes(
-                    input = effectiveInput,
-                    selectedTab = AppDestination.SETTINGS,
-                    topLevelBottomContentPadding = bottomSystemInset,
-                    homeSourcesById = homeSourcesById,
-                    libraryStatusByAnimeId = libraryStatusByAnimeId,
-                    libraryEntries = libraryEntries,
-                )
+                AppDestinationTabContent(input = effectiveInput, tab = AppDestination.SETTINGS)
             }
         }
     }
