@@ -28,6 +28,7 @@ internal fun AppDestinationTopLevelRoutes(
     topLevelBottomContentPadding: Dp,
     homeSourcesById: Map<String, AppSourceDescriptor>,
     libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.library.LibraryCategory>,
+    libraryEntries: List<org.akkirrai.hibiki.library.LibraryEntry>,
 ) {
     val catalog = input.catalog
     val home = input.home
@@ -52,7 +53,7 @@ internal fun AppDestinationTopLevelRoutes(
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
-                libraryEntries = library.state.entries,
+                libraryEntries = libraryEntries,
                 actions = home.actions,
                 onHomeRefresh = home.onRefresh,
                 bottomContentPadding = topLevelBottomContentPadding,
@@ -66,7 +67,7 @@ internal fun AppDestinationTopLevelRoutes(
             )
             AppDestination.LIBRARY -> LibraryRoute(
                 sources = sources.state.sources,
-                state = library.state.ui,
+                libraryPresenter = library.state.libraryPresenter,
                 actions = library.actions,
                 listState = library.state.listState,
                 onFiltersApply = library.onFiltersApply,

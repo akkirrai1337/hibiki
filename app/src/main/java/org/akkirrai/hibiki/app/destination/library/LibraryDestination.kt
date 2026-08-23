@@ -2,10 +2,8 @@ package org.akkirrai.hibiki.app.destination.library
 
 import androidx.compose.foundation.lazy.LazyListState
 import org.akkirrai.hibiki.library.LibraryCategory
-import org.akkirrai.hibiki.library.LibraryEntry
 import org.akkirrai.hibiki.library.presentation.LibraryPresenter
 import org.akkirrai.hibiki.library.state.LibrarySearchFilters
-import org.akkirrai.hibiki.library.state.LibraryUiState
 
 internal class HibikiLibraryActions(
     presenter: LibraryPresenter,
@@ -17,8 +15,7 @@ internal class HibikiLibraryActions(
 }
 
 internal data class AppDestinationLibraryState(
-    val entries: List<LibraryEntry>,
-    val ui: LibraryUiState,
+    val libraryPresenter: LibraryPresenter,
     val filterOverlayOpen: Boolean,
     val listState: LazyListState,
 )

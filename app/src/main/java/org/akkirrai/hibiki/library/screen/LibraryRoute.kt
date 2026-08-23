@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +30,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.design.component.source.AppSourceBadge
-import org.akkirrai.hibiki.library.state.LibraryUiState
+import org.akkirrai.hibiki.library.presentation.LibraryPresenter
 import org.akkirrai.hibiki.library.state.buildLibraryFilterCatalog
 import org.akkirrai.hibiki.library.state.toAnimeSearchFilters
 import org.akkirrai.hibiki.library.state.toLibrarySearchFilters
@@ -42,7 +44,7 @@ import org.akkirrai.hibiki.text.appText
 @Composable
 internal fun ColumnScope.LibraryRoute(
     sources: List<AppSourceDescriptor>,
-    state: LibraryUiState,
+    libraryPresenter: LibraryPresenter,
     actions: LibraryActions,
     listState: LazyListState,
     onFiltersApply: (org.akkirrai.hibiki.library.state.LibrarySearchFilters) -> Unit,
@@ -51,6 +53,7 @@ internal fun ColumnScope.LibraryRoute(
     systemLanguage: String,
     bottomContentPadding: Dp,
 ) {
+    val state by libraryPresenter.state.collectAsState()
     val isRussian = isRussianLibraryLanguage(languageMode, systemLanguage)
     val sourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
     LibraryScreen(

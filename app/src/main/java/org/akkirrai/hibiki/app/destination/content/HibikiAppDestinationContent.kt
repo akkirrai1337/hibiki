@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
@@ -36,10 +38,16 @@ internal fun AppDestinationContent(
     val sourceState = effectiveInput.sources.state
     val hostContext = effectiveInput.platform.hostContext
     val homeSourcesById = remember(sourceState.sources) { sourceState.sources.associateBy(AppSourceDescriptor::id) }
+    // Collected here (not in the shell) so the shell's own recomposition scope is decoupled
+    // from library changes -- this scope is still shared by every tab because Home's feed
+    // needs libraryEntries and every tab's cards need libraryStatusByAnimeId, but it's a much
+    // smaller blast radius than the root shell composable.
+    val libraryUiState by effectiveInput.library.state.libraryPresenter.state.collectAsState()
+    val libraryEntries = libraryUiState.visibleEntries
     // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
     // shadow a title's actual library status badge on a card.
-    val libraryStatusByAnimeId = remember(effectiveInput.library.state.entries) {
-        effectiveInput.library.state.entries
+    val libraryStatusByAnimeId = remember(libraryEntries) {
+        libraryEntries
             .filter { it.category != LibraryCategory.Recent }
             .associate { it.anime.id to it.category }
     }
@@ -72,6 +80,7 @@ internal fun AppDestinationContent(
             },
             homeSourcesById = homeSourcesById,
             libraryStatusByAnimeId = libraryStatusByAnimeId,
+            libraryEntries = libraryEntries,
         )
     }
 
@@ -98,6 +107,7 @@ internal fun AppDestinationContent(
                     topLevelBottomContentPadding = bottomSystemInset,
                     homeSourcesById = homeSourcesById,
                     libraryStatusByAnimeId = libraryStatusByAnimeId,
+                    libraryEntries = libraryEntries,
                 )
             }
         }

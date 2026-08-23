@@ -234,7 +234,6 @@ internal fun HibikiAppShell(
     var playbackReturnRoute by playbackSession.returnRoute
     val libraryPresenter = resources.libraryPresenter
     val libraryActions = HibikiLibraryActions(libraryPresenter)
-    val libraryState by libraryPresenter.state.collectAsState()
     val profilePresenter = resources.profilePresenter
     val homeDescriptionRequests = resources.homeDescriptionRequests
     val discordRpcState by (platformCallbacks.discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
@@ -613,8 +612,7 @@ internal fun HibikiAppShell(
                             ),
                             library = LibraryContentInput(
                                 state = AppDestinationLibraryState(
-                                    entries = libraryState.visibleEntries,
-                                    ui = libraryState,
+                                    libraryPresenter = libraryPresenter,
                                     filterOverlayOpen = isLibraryFilterOverlayOpen,
                                     listState = libraryListState,
                                 ),
