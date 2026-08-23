@@ -61,39 +61,47 @@ data class AppSettingsScreenLabels(
     val versionName: String,
 )
 
+data class SettingsUiState(
+    val languageMode: LanguageMode,
+    val darkTheme: Boolean,
+    val useSystemColorScheme: Boolean,
+    val useAmoledTheme: Boolean,
+    val autoSkipSegments: Boolean,
+    val themeMode: ThemeMode? = null,
+    val discordAvailable: Boolean = true,
+    val notificationsAvailable: Boolean = true,
+    val discordEnabled: Boolean = false,
+    val showUpdates: Boolean = true,
+    val externalSourcesCount: Int = 0,
+)
+
+data class SettingsActions(
+    val onLanguageModeChange: (LanguageMode) -> Unit,
+    val onThemeChange: (Boolean) -> Unit,
+    val onThemeModeChange: ((ThemeMode) -> Unit)? = null,
+    val onSystemColorSchemeChange: (Boolean) -> Unit = {},
+    val onAmoledChange: (Boolean) -> Unit = {},
+    val onNotificationsClick: () -> Unit = {},
+    val onAutoSkipChange: (Boolean) -> Unit = {},
+    val onDiscordClick: () -> Unit = {},
+    val onDiscordChange: (Boolean) -> Unit = {},
+    val onCheckForUpdates: () -> Unit = {},
+    val onExportLogs: () -> Unit = {},
+    val onGitHubClick: () -> Unit = {},
+    val onExternalSourcesClick: () -> Unit = {},
+)
+
 @Composable
 fun AppSettingsScreen(
-    languageMode: LanguageMode,
-    darkTheme: Boolean,
+    state: SettingsUiState,
+    actions: SettingsActions,
     labels: AppSettingsScreenLabels,
-    useSystemColorScheme: Boolean,
-    useAmoledTheme: Boolean,
-    autoSkipSegments: Boolean,
-    themeMode: ThemeMode? = null,
-    discordAvailable: Boolean = true,
-    notificationsAvailable: Boolean = true,
-    discordEnabled: Boolean = false,
-    showUpdates: Boolean = true,
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = SettingsScreenDefaultBottomContentPadding,
     listState: LazyListState = rememberLazyListState(),
     showBackButton: Boolean = false,
     onBackClick: () -> Unit = {},
     backContentDescription: String = "Back",
-    onLanguageModeChange: (LanguageMode) -> Unit,
-    onThemeChange: (Boolean) -> Unit,
-    onThemeModeChange: ((ThemeMode) -> Unit)? = null,
-    onSystemColorSchemeChange: (Boolean) -> Unit = {},
-    onAmoledChange: (Boolean) -> Unit = {},
-    onNotificationsClick: () -> Unit = {},
-    onAutoSkipChange: (Boolean) -> Unit = {},
-    onDiscordClick: () -> Unit = {},
-    onDiscordChange: (Boolean) -> Unit = {},
-    onCheckForUpdates: () -> Unit = {},
-    onExportLogs: () -> Unit = {},
-    onGitHubClick: () -> Unit = {},
-    externalSourcesCount: Int = 0,
-    onExternalSourcesClick: () -> Unit = {},
 ) {
     val layoutEnvironment = LocalAppLayoutEnvironment.current
     val topSystemInset = if (layoutEnvironment.isProvided) {
@@ -129,7 +137,7 @@ fun AppSettingsScreen(
                 sectionTitle = labels.appearance,
                 themeTitle = labels.theme,
                 themeOptions = themeModeOptions,
-                selectedTheme = themeMode ?: if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
+                selectedTheme = state.themeMode ?: if (state.darkTheme) ThemeMode.DARK else ThemeMode.LIGHT,
                 themeLabel = { mode ->
                     when (mode) {
                         ThemeMode.SYSTEM -> labels.themeSystem
@@ -138,14 +146,14 @@ fun AppSettingsScreen(
                     }
                 },
                 onThemeSelected = { mode ->
-                    onThemeModeChange?.invoke(mode) ?: onThemeChange(mode == ThemeMode.DARK)
+                    actions.onThemeModeChange?.invoke(mode) ?: actions.onThemeChange(mode == ThemeMode.DARK)
                 },
                 systemColorSchemeTitle = labels.systemColorScheme,
-                useSystemColorScheme = useSystemColorScheme,
-                onSystemColorSchemeChange = onSystemColorSchemeChange,
+                useSystemColorScheme = state.useSystemColorScheme,
+                onSystemColorSchemeChange = actions.onSystemColorSchemeChange,
                 amoledTitle = labels.amoled,
-                useAmoledTheme = useAmoledTheme,
-                onAmoledChange = onAmoledChange,
+                useAmoledTheme = state.useAmoledTheme,
+                onAmoledChange = actions.onAmoledChange,
             )
         }
         item(key = SettingsSection.Preferences.key) {
@@ -153,7 +161,7 @@ fun AppSettingsScreen(
                 sectionTitle = labels.preferences,
                 languageTitle = labels.language,
                 languageOptions = languageModeOptions,
-                selectedLanguage = languageMode,
+                selectedLanguage = state.languageMode,
                 languageLabel = { mode ->
                     when (mode) {
                         LanguageMode.SYSTEM -> labels.languageSystem
@@ -161,26 +169,26 @@ fun AppSettingsScreen(
                         LanguageMode.ENGLISH -> labels.languageEnglish
                     }
                 },
-                onLanguageSelected = onLanguageModeChange,
+                onLanguageSelected = actions.onLanguageModeChange,
                 notificationsTitle = labels.notifications,
                 notificationsSubtitle = labels.notificationsStatus,
-                notificationsAvailable = notificationsAvailable,
-                onNotificationsClick = onNotificationsClick,
+                notificationsAvailable = state.notificationsAvailable,
+                onNotificationsClick = actions.onNotificationsClick,
                 externalSourcesTitle = labels.externalSources,
                 externalSourcesSubtitle = labels.externalSourcesSubtitle,
-                externalSourcesCount = externalSourcesCount,
-                onExternalSourcesClick = onExternalSourcesClick,
+                externalSourcesCount = state.externalSourcesCount,
+                onExternalSourcesClick = actions.onExternalSourcesClick,
             )
         }
         item(key = SettingsSection.Player.key) {
             AppSettingsPlayerSection(
                 sectionTitle = labels.player,
                 autoSkipTitle = labels.autoSkip,
-                autoSkipEnabled = autoSkipSegments,
-                onAutoSkipChange = onAutoSkipChange,
+                autoSkipEnabled = state.autoSkipSegments,
+                onAutoSkipChange = actions.onAutoSkipChange,
             )
         }
-        if (discordAvailable) {
+        if (state.discordAvailable) {
             item(key = SettingsSection.Experimental.key) {
                 AppSettingsExperimentalSection(
                     sectionTitle = labels.experimental,
@@ -192,18 +200,18 @@ fun AppSettingsScreen(
                         )
                     },
                     discordTitle = labels.discord,
-                    discordEnabled = discordEnabled,
-                    onDiscordClick = onDiscordClick,
-                    onDiscordChange = onDiscordChange,
+                    discordEnabled = state.discordEnabled,
+                    onDiscordClick = actions.onDiscordClick,
+                    onDiscordChange = actions.onDiscordChange,
                 )
             }
         }
-        if (showUpdates) {
+        if (state.showUpdates) {
             item(key = SettingsSection.Updates.key) {
                 AppSettingsUpdatesSection(
                     sectionTitle = labels.updates,
                     checkForUpdatesTitle = labels.checkUpdates,
-                    onCheckForUpdates = onCheckForUpdates,
+                    onCheckForUpdates = actions.onCheckForUpdates,
                 )
             }
         }
@@ -211,7 +219,7 @@ fun AppSettingsScreen(
             AppSettingsSupportSection(
                 sectionTitle = labels.support,
                 exportLogsTitle = labels.exportLogs,
-                onExportLogs = onExportLogs,
+                onExportLogs = actions.onExportLogs,
             )
         }
         item(key = SettingsSection.About.key) {
@@ -233,7 +241,7 @@ fun AppSettingsScreen(
                             modifier = iconModifier,
                         )
                     },
-                    onGitHubClick = onGitHubClick,
+                    onGitHubClick = actions.onGitHubClick,
                 )
             }
         }
