@@ -3,6 +3,7 @@ import org.akkirrai.hibiki.library.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import org.akkirrai.hibiki.design.UiDimens
+import org.akkirrai.hibiki.design.component.state.AppMessageState
 
 @Composable
 fun AppLibraryEmptyState(
@@ -45,5 +48,30 @@ fun AppLibraryEmptyState(
                 iconContent(Modifier.size(LibraryEmptyStateIconSize))
             }
         },
+    )
+}
+
+@Composable
+fun LibraryEmptyState(
+    title: String,
+    message: String,
+    iconContent: @Composable (Modifier) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppMessageState(
+        title = title,
+        message = message,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = LibraryEmptyStateTopPadding),
+        titleStyle = MaterialTheme.typography.titleLarge,
+        messageModifier = Modifier.padding(
+            top = LibraryEmptyStateMessageTopPadding,
+            start = LibraryEmptyStateMessageHorizontalPadding,
+            end = LibraryEmptyStateMessageHorizontalPadding,
+        ),
+        messageMaxLines = 2,
+        messageOverflow = TextOverflow.Ellipsis,
+        iconSlot = { iconContent(Modifier) },
     )
 }
