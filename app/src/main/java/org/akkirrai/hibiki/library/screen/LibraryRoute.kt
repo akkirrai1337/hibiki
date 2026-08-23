@@ -1,10 +1,10 @@
 package org.akkirrai.hibiki.library.screen
 import org.akkirrai.hibiki.library.*
-import org.akkirrai.hibiki.library.ui.isRussianLibraryLanguage
 
 import org.akkirrai.hibiki.catalog.filters.*
 
 import org.akkirrai.hibiki.app.libraryText
+import org.akkirrai.hibiki.library.ui.isRussianLibraryLanguage
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -39,7 +39,7 @@ import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
 @Composable
-internal fun ColumnScope.LibraryScreen(
+internal fun ColumnScope.LibraryRoute(
     sources: List<AppSourceDescriptor>,
     state: LibraryUiState,
     onAnimeClick: (Anime) -> Unit,
@@ -55,38 +55,25 @@ internal fun ColumnScope.LibraryScreen(
     bottomContentPadding: Dp,
 ) {
     val isRussian = isRussianLibraryLanguage(languageMode, systemLanguage)
-    val categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() }
     val sourcesById = remember(sources) { sources.associateBy(AppSourceDescriptor::id) }
-    AppLibraryScreen(
+    LibraryScreen(
         state = state,
-        labels = AppLibraryScreenLabels(
-            searchPlaceholder = appText(AppTextKey.SearchPlaceholder),
-            filterContentDescription = appText(AppTextKey.SearchFilters),
-            clearContentDescription = appText(AppTextKey.Back),
-            categoryLabels = categoryLabels,
-            emptyTitle = appText(AppTextKey.LibraryEmptyTitle),
-            emptyMessage = appText(AppTextKey.LibraryEmptyBody),
-            filteredTitle = appText(AppTextKey.LibraryFilteredEmptyTitle),
-            searchTitle = appText(AppTextKey.LibrarySearchEmptyTitle),
-            filteredMessage = appText(AppTextKey.LibraryFilteredEmptyBody),
-            categoryEmptyLabels = categoryLabels,
-            announcementLabel = appText(AppTextKey.Announcement),
-            movieLabel = appText(AppTextKey.Type),
-            libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+        actions = LibraryActions(
+            onAnimeClick = onAnimeClick,
+            onSearchQueryChange = onSearchQueryChange,
+            onClearSearch = onSearchClear,
+            onFilterClick = onFilterOpen,
+            onCategorySelected = onCategorySelected,
+            onFilterVisibilityChange = onFilterVisibilityChange,
         ),
         bottomContentPadding = bottomContentPadding,
-        onAnimeClick = onAnimeClick,
-        onSearchQueryChange = onSearchQueryChange,
-        onClearSearch = onSearchClear,
-        onFilterClick = onFilterOpen,
-        onCategorySelected = onCategorySelected,
         entryContent = { entry, entryModifier ->
             AppLibraryEntryCard(
                 entry = entry,
                 announcementLabel = appText(AppTextKey.Announcement),
                 movieLabel = appText(AppTextKey.Type),
                 onClick = { onAnimeClick(entry.anime) },
-                libraryStatusLabel = { category -> categoryLabels.getValue(category) },
+                libraryStatusLabel = { category -> category.libraryText() },
                 sourceBadgeContent = { titleId ->
                     AnimeKey.parse(titleId)?.sourceId?.value
                         ?.let(sourcesById::get)
@@ -141,7 +128,6 @@ internal fun ColumnScope.LibraryScreen(
             )
         },
         filterVisible = filterOverlayOpen,
-        onFilterVisibilityChange = onFilterVisibilityChange,
         modifier = Modifier.fillMaxSize(),
     )
 }

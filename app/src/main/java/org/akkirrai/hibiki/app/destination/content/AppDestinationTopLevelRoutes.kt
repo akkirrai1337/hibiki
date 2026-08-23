@@ -17,7 +17,7 @@ import org.akkirrai.hibiki.app.shell.navigation.shouldApplyTopSystemInset
 import org.akkirrai.hibiki.home.screen.HomeScreen
 import org.akkirrai.hibiki.home.screen.CatalogRoute
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
-import org.akkirrai.hibiki.library.screen.LibraryScreen
+import org.akkirrai.hibiki.library.screen.LibraryRoute
 import org.akkirrai.hibiki.profile.ProfileDestinationContent
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
@@ -88,7 +88,7 @@ internal fun AppDestinationTopLevelRoutes(
                 onSortSelected = catalog.actions.onSortSelected,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.LIBRARY -> LibraryScreen(
+            AppDestination.LIBRARY -> LibraryRoute(
                 sources = sources.state.sources,
                 state = library.state.ui,
                 onAnimeClick = navigation.actions.onAnimeClick,

@@ -36,65 +36,55 @@ import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.app.libraryText
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.design.component.state.AppMessageState
+import org.akkirrai.hibiki.text.AppTextKey
+import org.akkirrai.hibiki.text.appText
 
-data class AppLibraryScreenLabels(
-    val searchPlaceholder: String,
-    val filterContentDescription: String,
-    val clearContentDescription: String,
-    val categoryLabels: Map<LibraryCategory, String>,
-    val emptyTitle: String,
-    val emptyMessage: String,
-    val filteredTitle: String,
-    val searchTitle: String,
-    val filteredMessage: String,
-    val categoryEmptyLabels: Map<LibraryCategory, String>,
-    val announcementLabel: String,
-    val movieLabel: String,
-    val libraryStatusLabel: @Composable (LibraryCategory) -> String,
+data class LibraryActions(
+    val onAnimeClick: (Anime) -> Unit,
+    val onSearchQueryChange: (String) -> Unit,
+    val onClearSearch: () -> Unit,
+    val onFilterClick: () -> Unit,
+    val onCategorySelected: (LibraryCategory) -> Unit,
+    val onFilterVisibilityChange: (Boolean) -> Unit,
 )
 
 @Composable
-fun AppLibraryScreen(
+fun LibraryScreen(
     state: LibraryUiState,
-    labels: AppLibraryScreenLabels,
+    actions: LibraryActions,
     bottomContentPadding: Dp,
-    onAnimeClick: (Anime) -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-    onFilterClick: () -> Unit,
-    onCategorySelected: (LibraryCategory) -> Unit,
     entryContent: @Composable (LibraryEntry, Modifier) -> Unit,
     filterVisible: Boolean,
-    onFilterVisibilityChange: (Boolean) -> Unit,
     filterContent: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val categoryEntryCount = state.categoryCounts[state.selectedCategory] ?: 0
     val filterAvailable = categoryEntryCount >= LIBRARY_FILTER_MINIMUM_ENTRY_COUNT
     LaunchedEffect(filterAvailable) {
-        if (!filterAvailable) onFilterVisibilityChange(false)
+        if (!filterAvailable) actions.onFilterVisibilityChange(false)
     }
 
     AppLibraryEntriesContent(
         state = state,
         modifier = modifier,
         bottomContentPadding = bottomContentPadding,
-        onEntryClick = { entry -> onAnimeClick(entry.anime) },
+        onEntryClick = { entry -> actions.onAnimeClick(entry.anime) },
         headerContent = {
             AppLibraryHeader(
                 searchContent = { searchModifier ->
                     AppLibrarySearchBar(
                         query = state.searchQuery,
-                        onQueryChange = onSearchQueryChange,
-                        onClear = onClearSearch,
-                        placeholder = labels.searchPlaceholder,
-                        filterContentDescription = labels.filterContentDescription,
-                        clearContentDescription = labels.clearContentDescription,
+                        onQueryChange = actions.onSearchQueryChange,
+                        onClear = actions.onClearSearch,
+                        placeholder = appText(AppTextKey.SearchPlaceholder),
+                        filterContentDescription = appText(AppTextKey.SearchFilters),
+                        clearContentDescription = appText(AppTextKey.Back),
                         onFilterClick = {
-                            onFilterClick()
-                            onFilterVisibilityChange(true)
+                            actions.onFilterClick()
+                            actions.onFilterVisibilityChange(true)
                         },
                         showFilterButton = filterAvailable,
                         modifier = searchModifier,
@@ -103,9 +93,9 @@ fun AppLibraryScreen(
                 selected = state.selectedCategory,
                 categories = state.orderedCategories,
                 counts = state.categoryCounts,
-                label = { category -> labels.categoryLabels[category].orEmpty() },
+                label = { category -> category.libraryText() },
                 icon = LibraryCategory::icon,
-                onSelected = onCategorySelected,
+                onSelected = actions.onCategorySelected,
             )
         },
         emptyContent = { filtered ->
@@ -113,12 +103,12 @@ fun AppLibraryScreen(
                 filtered = filtered,
                 searchQuery = state.searchQuery,
                 category = state.selectedCategory,
-                emptyTitle = labels.emptyTitle,
-                emptyMessage = labels.emptyMessage,
-                filteredTitle = labels.filteredTitle,
-                searchTitle = labels.searchTitle,
-                filteredMessage = labels.filteredMessage,
-                categoryLabels = labels.categoryEmptyLabels,
+                emptyTitle = appText(AppTextKey.LibraryEmptyTitle),
+                emptyMessage = appText(AppTextKey.LibraryEmptyBody),
+                filteredTitle = appText(AppTextKey.LibraryFilteredEmptyTitle),
+                searchTitle = appText(AppTextKey.LibrarySearchEmptyTitle),
+                filteredMessage = appText(AppTextKey.LibraryFilteredEmptyBody),
+                categoryLabels = LibraryCategory.entries.associateWith { it.libraryText() },
             )
             AppLibraryEmptyState(title = emptyState.title, message = emptyState.message)
         },
@@ -126,7 +116,7 @@ fun AppLibraryScreen(
     )
 
     if (filterVisible && filterAvailable && filterContent != null) {
-        filterContent { onFilterVisibilityChange(false) }
+        filterContent { actions.onFilterVisibilityChange(false) }
     }
 }
 
