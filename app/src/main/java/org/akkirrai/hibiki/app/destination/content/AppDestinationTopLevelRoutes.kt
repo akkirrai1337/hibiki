@@ -20,7 +20,6 @@ import org.akkirrai.hibiki.library.screen.LibraryRoute
 import org.akkirrai.hibiki.profile.ProfileRoute
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
-import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 
 @Composable
@@ -30,9 +29,6 @@ internal fun AppDestinationTopLevelRoutes(
     topLevelBottomContentPadding: Dp,
     homeSourcesById: Map<String, AppSourceDescriptor>,
     libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.library.LibraryCategory>,
-    editingSourceConfig: AppSourceDescriptor?,
-    sourceConfigContent: AppSourceConfigContent?,
-    onEditSourceConfig: (AppSourceDescriptor?) -> Unit,
 ) {
     val catalog = input.catalog
     val home = input.home
@@ -89,35 +85,30 @@ internal fun AppDestinationTopLevelRoutes(
                 modifier = Modifier.fillMaxSize(),
             )
             AppDestination.SOURCES -> SourcesRoute(
-                editingSourceConfig = editingSourceConfig,
-                sourceConfigContent = sourceConfigContent,
-                sources = sources.state.sources,
-                selectedSourceId = sources.state.selectedSourceId,
-                sourceSearchState = sources.state.search,
-                bottomContentPadding = topLevelBottomContentPadding,
-                onSourceSelected = navigation.actions.onSourceSelected,
-                onEditSourceConfig = onEditSourceConfig,
-                onSourceConfigSaved = { source ->
-                    navigation.actions.onSourceSelected(source.id)
-                    onEditSourceConfig(null)
-                },
-                onSourceConfigCancel = { onEditSourceConfig(null) },
-                onSourceSearchQueryChange = sources.searchActions.onQueryChange,
-                onSourceSearchClear = sources.searchActions.onClear,
-                onSourceSearchRetry = sources.searchActions.onRetry,
-                onSearchRetryForSource = sources.searchActions.onRetryForSource,
-                onAnimeClick = navigation.actions.onAnimeClick,
-                currentRoute = content.currentRoute ?: AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.SOURCES),
-                externalSourcesState = sources.externalSourcesState.repository,
+                state = SourcesRouteState(
+                    sources = sources.state.sources,
+                    selectedSourceId = sources.state.selectedSourceId,
+                    sourceSearchState = sources.state.search,
+                    currentRoute = content.currentRoute
+                        ?: AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.SOURCES),
+                    externalSourcesState = sources.externalSourcesState.repository,
+                    selectedSourcesTab = sources.externalSourcesState.selectedTab,
+                ),
+                actions = SourcesRouteActions(
+                    onSourceSelected = navigation.actions.onSourceSelected,
+                    onSourceSearchQueryChange = sources.searchActions.onQueryChange,
+                    onSourceSearchClear = sources.searchActions.onClear,
+                    onSourceSearchRetry = sources.searchActions.onRetry,
+                    onSearchRetryForSource = sources.searchActions.onRetryForSource,
+                    onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
+                    onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
+                    onBack = navigation.actions.onSettingsBack,
+                    onOpenUrl = platform.hostContext.onOpenUrl,
+                    readClipboardText = sources.externalSourcesState.readClipboardText,
+                    copyText = sources.externalSourcesState.copyText,
+                ),
                 externalSourcesController = sources.externalSourcesState.controller,
-                selectedSourcesTab = sources.externalSourcesState.selectedTab,
-                onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
-                onOpenRepositories = navigation.actions.onSourceRepositoriesClick,
-                onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
-                onBack = navigation.actions.onSettingsBack,
-                onOpenUrl = platform.hostContext.onOpenUrl,
-                readClipboardText = sources.externalSourcesState.readClipboardText,
-                copyText = sources.externalSourcesState.copyText,
+                bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.SETTINGS -> SettingsRoute(
                 state = settings.state,

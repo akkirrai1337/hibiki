@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppAddSourceRepositoryDialog
 import org.akkirrai.hibiki.core.source.SourcePackageInfoScreen
-import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.SourceRepositoriesScreen
 import org.akkirrai.hibiki.core.source.SourceRepositoriesActions
@@ -43,48 +42,54 @@ internal data class AppDestinationExternalSourcesState(
     val copyText: (String) -> Unit = {},
 )
 
+internal data class SourcesRouteState(
+    val sources: List<AppSourceDescriptor>,
+    val selectedSourceId: String?,
+    // Not read by this Route yet -- see the spawned investigation task on the presenter-backed
+    // search state vs. SourcesTabsScreen's own local search remember-state before wiring or
+    // removing this.
+    val sourceSearchState: SourcesSearchUiState,
+    val currentRoute: AppRoute,
+    val externalSourcesState: ExternalSourceRepositoryUiState?,
+    val selectedSourcesTab: Int,
+)
+
+internal data class SourcesRouteActions(
+    val onSourceSelected: (String) -> Unit,
+    // Not called by this Route yet -- see the spawned investigation task.
+    val onSourceSearchQueryChange: (String) -> Unit,
+    val onSourceSearchClear: () -> Unit,
+    val onSourceSearchRetry: () -> Unit,
+    val onSearchRetryForSource: (String) -> Unit,
+    val onSelectedSourcesTabChange: (Int) -> Unit,
+    val onOpenPackageInfo: (String, String) -> Unit,
+    val onBack: () -> Unit,
+    val onOpenUrl: (String) -> Unit,
+    val readClipboardText: () -> String?,
+    val copyText: (String) -> Unit,
+)
+
 @Composable
 internal fun SourcesRoute(
-    editingSourceConfig: AppSourceDescriptor?,
-    sourceConfigContent: AppSourceConfigContent?,
-    sources: List<AppSourceDescriptor>,
-    selectedSourceId: String?,
-    sourceSearchState: SourcesSearchUiState,
-    bottomContentPadding: Dp,
-    onSourceSelected: (String) -> Unit,
-    onEditSourceConfig: (AppSourceDescriptor) -> Unit,
-    onSourceConfigSaved: (AppSourceDescriptor) -> Unit,
-    onSourceConfigCancel: () -> Unit,
-    onSourceSearchQueryChange: (String) -> Unit,
-    onSourceSearchClear: () -> Unit,
-    onSourceSearchRetry: () -> Unit,
-    onSearchRetryForSource: (String) -> Unit,
-    onAnimeClick: (org.akkirrai.hibiki.catalog.model.Anime) -> Unit,
-    currentRoute: AppRoute,
-    externalSourcesState: ExternalSourceRepositoryUiState?,
+    state: SourcesRouteState,
+    actions: SourcesRouteActions,
     externalSourcesController: ExternalSourceRepositoryController?,
-    selectedSourcesTab: Int,
-    onSelectedSourcesTabChange: (Int) -> Unit,
-    onOpenRepositories: () -> Unit,
-    onOpenPackageInfo: (String, String) -> Unit,
-    onBack: () -> Unit,
-    onOpenUrl: (String) -> Unit,
-    readClipboardText: () -> String?,
-    copyText: (String) -> Unit,
+    bottomContentPadding: Dp,
 ) {
     var isAddRepositoryDialogOpen by remember { mutableStateOf(false) }
-    val selectSource: (String) -> Unit = onSourceSelected
+    val selectSource: (String) -> Unit = actions.onSourceSelected
+    val externalSourcesState = state.externalSourcesState
 
-    when (currentRoute) {
+    when (val currentRoute = state.currentRoute) {
         AppRoute.SourceRepositories -> SourceRepositoriesScreen(
             state = externalSourcesState ?: ExternalSourceRepositoryUiState(),
             actions = SourceRepositoriesActions(
-                onBack = onBack,
+                onBack = actions.onBack,
                 onRepositoryClick = {},
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-                onCopyUrl = copyText,
-                onOpenUrl = onOpenUrl,
+                onCopyUrl = actions.copyText,
+                onOpenUrl = actions.onOpenUrl,
                 onAddRepository = { isAddRepositoryDialogOpen = true },
             ),
             bottomContentPadding = bottomContentPadding,
@@ -100,7 +105,7 @@ internal fun SourcesRoute(
                 packageStatus = packageStatus,
                 isBusy = externalSourcesState?.isBusy == true,
                 bottomContentPadding = bottomContentPadding,
-                onBack = onBack,
+                onBack = actions.onBack,
                 onUninstall = externalSourcesController?.let { controller ->
                     {
                         // Uninstalling hands off to the system confirmation dialog and
@@ -120,16 +125,16 @@ internal fun SourcesRoute(
             )
         }
         else -> SourcesTabsScreen(
-            selectedTab = selectedSourcesTab,
-            selectedSourceId = selectedSourceId,
+            selectedTab = state.selectedSourcesTab,
+            selectedSourceId = state.selectedSourceId,
             state = externalSourcesState ?: ExternalSourceRepositoryUiState(),
             actions = SourcesTabsActions(
-                onSelectedTabChange = onSelectedSourcesTabChange,
+                onSelectedTabChange = actions.onSelectedSourcesTabChange,
                 onRepositoryClick = {},
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-                onCopyUrl = copyText,
-                onOpenUrl = onOpenUrl,
+                onCopyUrl = actions.copyText,
+                onOpenUrl = actions.onOpenUrl,
                 onAddRepository = { isAddRepositoryDialogOpen = true },
                 onInstall = externalSourcesController?.let { controller ->
                     { sourceId -> controller.installPackage(sourceId) }
@@ -139,7 +144,7 @@ internal fun SourcesRoute(
                     externalSourcesState?.repositoryContents
                         ?.firstOrNull { content -> content.packages.any { it.sourceId == sourceId } }
                         ?.endpoint?.url
-                        ?.let { repositoryUrl -> onOpenPackageInfo(repositoryUrl, sourceId.value) }
+                        ?.let { repositoryUrl -> actions.onOpenPackageInfo(repositoryUrl, sourceId.value) }
                 },
             ),
             bottomContentPadding = bottomContentPadding,
@@ -161,7 +166,7 @@ internal fun SourcesRoute(
                     isAddRepositoryDialogOpen = false
                 }
             },
-            onPaste = readClipboardText,
+            onPaste = actions.readClipboardText,
         )
     }
 }

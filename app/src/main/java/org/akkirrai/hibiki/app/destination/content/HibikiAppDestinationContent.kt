@@ -13,10 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.watch.isWatchRouteDriven
@@ -27,7 +24,6 @@ import org.akkirrai.hibiki.layout.appBottomSystemInsetValue
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
-import org.akkirrai.hibiki.core.source.LocalAppSourceConfigContent
 import org.akkirrai.hibiki.library.LibraryCategory
 @Composable
 internal fun AppDestinationContent(
@@ -39,8 +35,6 @@ internal fun AppDestinationContent(
     val contentState = effectiveInput.watch.state
     val sourceState = effectiveInput.sources.state
     val hostContext = effectiveInput.platform.hostContext
-    var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
-    val sourceConfigContent = LocalAppSourceConfigContent.current
     val homeSourcesById = remember(sourceState.sources) { sourceState.sources.associateBy(AppSourceDescriptor::id) }
     // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
     // shadow a title's actual library status badge on a card.
@@ -78,9 +72,6 @@ internal fun AppDestinationContent(
             },
             homeSourcesById = homeSourcesById,
             libraryStatusByAnimeId = libraryStatusByAnimeId,
-            editingSourceConfig = editingSourceConfig,
-            sourceConfigContent = sourceConfigContent,
-            onEditSourceConfig = { editingSourceConfig = it },
         )
     }
 
@@ -106,10 +97,7 @@ internal fun AppDestinationContent(
                     selectedTab = AppDestination.SETTINGS,
                     topLevelBottomContentPadding = bottomSystemInset,
                     homeSourcesById = homeSourcesById,
-            libraryStatusByAnimeId = libraryStatusByAnimeId,
-                    editingSourceConfig = editingSourceConfig,
-                    sourceConfigContent = sourceConfigContent,
-                    onEditSourceConfig = { editingSourceConfig = it },
+                    libraryStatusByAnimeId = libraryStatusByAnimeId,
                 )
             }
         }
