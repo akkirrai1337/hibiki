@@ -35,7 +35,6 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import org.akkirrai.hibiki.app.shell.navigation.*
 import org.akkirrai.hibiki.app.shell.settings.*
-import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.shell.profile.*
@@ -71,6 +70,8 @@ import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.profile.PlaybackProgressRepository
 import org.akkirrai.hibiki.profile.LocalProfileData
 import org.akkirrai.hibiki.profile.LocalProfilePresenter
+import org.akkirrai.hibiki.profile.ProfileScreenActions
+import org.akkirrai.hibiki.profile.ProfileScreenState
 import org.akkirrai.hibiki.layout.appRootTopInsetPadding
 import org.akkirrai.hibiki.layout.AppLayoutOptions
 import org.akkirrai.hibiki.app.settings.ThemeMode
@@ -744,17 +745,18 @@ internal fun HibikiAppShell(
                                 ),
                             ),
                             profile = ProfileContentInput(
-                                state = AppDestinationProfileState(
+                                state = ProfileScreenState(
                                     data = profileState.data,
                                     isEditing = profileEditingState.isEditing,
                                     editedName = profileEditingState.editedName,
                                     isLoading = profileState.isLoading,
                                     avatarEditAvailable = platformCallbacks.profileAvatarEditAvailable,
                                 ),
-                                actions = AppDestinationProfileActions(
+                                actions = ProfileScreenActions(
                                     onNameChange = profileActions.onNameChange,
                                     onEditClick = profileActions.onEditClick,
                                     onSaveClick = profileActions.onSaveClick,
+                                    onSettingsClick = navigationActions.onProfileSettingsClick,
                                     onAvatarEdit = platformCallbacks.onProfileAvatarEdit,
                                     onAvatarPicked = profileActions.onAvatarPicked,
                                 ),

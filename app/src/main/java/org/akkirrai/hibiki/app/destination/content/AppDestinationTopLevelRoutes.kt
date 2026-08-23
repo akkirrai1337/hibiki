@@ -17,7 +17,7 @@ import org.akkirrai.hibiki.home.screen.HomeRoute
 import org.akkirrai.hibiki.home.screen.CatalogRoute
 import org.akkirrai.hibiki.layout.appTopSystemInsetPadding
 import org.akkirrai.hibiki.library.screen.LibraryRoute
-import org.akkirrai.hibiki.profile.ProfileDestinationContent
+import org.akkirrai.hibiki.profile.ProfileRoute
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppSourceConfigContent
@@ -80,21 +80,12 @@ internal fun AppDestinationTopLevelRoutes(
                 systemLanguage = platform.hostContext.systemLanguage,
                 bottomContentPadding = topLevelBottomContentPadding,
             )
-            AppDestination.PROFILE -> ProfileDestinationContent(
-                profileData = profile.state.data,
-                profileLoading = profile.state.isLoading,
-                profileAvatarEditAvailable = profile.state.avatarEditAvailable,
-                isEditingProfile = profile.state.isEditing,
-                editedProfileName = profile.state.editedName,
+            AppDestination.PROFILE -> ProfileRoute(
+                state = profile.state,
+                actions = profile.actions,
                 languageMode = platform.dataContext.languageMode,
                 systemLanguage = platform.hostContext.systemLanguage,
                 bottomContentPadding = topLevelBottomContentPadding,
-                onProfileNameChange = profile.actions.onNameChange,
-                onProfileEditClick = profile.actions.onEditClick,
-                onProfileSaveClick = profile.actions.onSaveClick,
-                onProfileSettingsClick = navigation.actions.onProfileSettingsClick,
-                onProfileAvatarEdit = profile.actions.onAvatarEdit,
-                onProfileAvatarPicked = profile.actions.onAvatarPicked,
                 modifier = Modifier.fillMaxSize(),
             )
             AppDestination.SOURCES -> SourcesRoute(

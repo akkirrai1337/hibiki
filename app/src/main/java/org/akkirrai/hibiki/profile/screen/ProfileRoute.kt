@@ -20,22 +20,30 @@ import org.akkirrai.hibiki.app.settings.resolveAppLanguageTag
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
+data class ProfileScreenState(
+    val data: LocalProfileData,
+    val isEditing: Boolean,
+    val editedName: String,
+    val isLoading: Boolean,
+    val avatarEditAvailable: Boolean,
+)
+
+data class ProfileScreenActions(
+    val onNameChange: (String) -> Unit,
+    val onEditClick: () -> Unit,
+    val onSaveClick: () -> Unit,
+    val onSettingsClick: () -> Unit,
+    val onAvatarEdit: (((String) -> Unit) -> Unit),
+    val onAvatarPicked: (String) -> Unit,
+)
+
 @Composable
-internal fun ProfileDestinationContent(
-    profileData: LocalProfileData,
-    profileLoading: Boolean,
-    profileAvatarEditAvailable: Boolean,
-    isEditingProfile: Boolean,
-    editedProfileName: String,
+internal fun ProfileRoute(
+    state: ProfileScreenState,
+    actions: ProfileScreenActions,
     languageMode: LanguageMode,
     systemLanguage: String,
     bottomContentPadding: Dp,
-    onProfileNameChange: (String) -> Unit,
-    onProfileEditClick: () -> Unit,
-    onProfileSaveClick: () -> Unit,
-    onProfileSettingsClick: () -> Unit,
-    onProfileAvatarEdit: (((String) -> Unit) -> Unit),
-    onProfileAvatarPicked: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val profileDateTodayLabel = appText(AppTextKey.ProfileDateToday)
@@ -51,7 +59,7 @@ internal fun ProfileDestinationContent(
         LibraryCategory.Saved to appText(AppTextKey.LibrarySaved),
     )
     val snapshot = buildLocalProfileSnapshot(
-        data = profileData,
+        data = state.data,
         activityDateStrings = defaultProfileActivityDateStrings(),
         labels = LocalProfileSnapshotLabels(
             durationLabel = { duration -> "${formatDurationHours(duration)} h" },
@@ -70,11 +78,11 @@ internal fun ProfileDestinationContent(
     )
     AppLocalProfileScreen(
         snapshot = snapshot,
-        profileName = profileData.profileName.ifBlank { appText(AppTextKey.AppName) },
-        isLoading = profileLoading,
-        avatarEditAvailable = profileAvatarEditAvailable,
-        isEditing = isEditingProfile,
-        editedName = editedProfileName,
+        profileName = state.data.profileName.ifBlank { appText(AppTextKey.AppName) },
+        isLoading = state.isLoading,
+        avatarEditAvailable = state.avatarEditAvailable,
+        isEditing = state.isEditing,
+        editedName = state.editedName,
         bottomContentPadding = bottomContentPadding,
         labels = AppLocalProfileLabels(
             overviewTab = appText(AppTextKey.ProfileTabOverview),
@@ -100,12 +108,12 @@ internal fun ProfileDestinationContent(
             watchStatLabel = appText(AppTextKey.ProfileAnalyticsWatched),
             activityTitle = appText(AppTextKey.ProfileActivity),
         ),
-        onNameChange = onProfileNameChange,
-        onAvatarEditClick = { onProfileAvatarEdit(onProfileAvatarPicked) },
-        onEditActionClick = if (isEditingProfile) onProfileSaveClick else onProfileEditClick,
-        onSettingsClick = onProfileSettingsClick,
+        onNameChange = actions.onNameChange,
+        onAvatarEditClick = { actions.onAvatarEdit(actions.onAvatarPicked) },
+        onEditActionClick = if (state.isEditing) actions.onSaveClick else actions.onEditClick,
+        onSettingsClick = actions.onSettingsClick,
         avatarContent = { avatarModifier ->
-            profileData.profileAvatarUri?.let { ProfileAvatarImage(it) }
+            state.data.profileAvatarUri?.let { ProfileAvatarImage(it) }
                 ?: ProfileAvatarPlaceholder(avatarModifier)
         },
         modifier = modifier,

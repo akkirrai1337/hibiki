@@ -4,7 +4,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.app.destination.home.*
 import org.akkirrai.hibiki.app.destination.library.*
-import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.destination.watch.*
@@ -20,6 +19,8 @@ import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.home.screen.HomeActions
 import org.akkirrai.hibiki.library.screen.LibraryActions
 import org.akkirrai.hibiki.library.state.LibrarySearchFilters
+import org.akkirrai.hibiki.profile.ProfileScreenActions
+import org.akkirrai.hibiki.profile.ProfileScreenState
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -67,8 +68,8 @@ internal data class SourcesContentInput(
 )
 
 internal data class ProfileContentInput(
-    val state: AppDestinationProfileState,
-    val actions: AppDestinationProfileActions,
+    val state: ProfileScreenState,
+    val actions: ProfileScreenActions,
 )
 
 internal data class WatchContentInput(
