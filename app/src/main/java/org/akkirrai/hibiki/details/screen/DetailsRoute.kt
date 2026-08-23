@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import org.akkirrai.hibiki.details.state.resolveDetailsPlaybackAvailability
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryRepository
@@ -28,7 +29,6 @@ internal data class DetailsRouteActions(
     val onBackFromDetails: () -> Unit,
     val onRelatedAnimeClick: (Anime) -> Unit,
     val onWatchClick: () -> Unit,
-    val onOpenUrl: (String) -> Unit,
     val onResumePlayback: (TitleWatchState) -> Unit,
     val onLibraryChanged: () -> Unit,
 )
@@ -42,6 +42,7 @@ internal fun DetailsRoute(
     modifier: Modifier = Modifier,
 ) {
     val anime = state.anime
+    val uriHandler = LocalUriHandler.current
     val canWatch = resolveDetailsPlaybackAvailability(
         watchRepositoryAvailable = state.watchRepositoryAvailable,
         sources = state.sources,
@@ -58,7 +59,7 @@ internal fun DetailsRoute(
             onBackClick = actions.onBackFromDetails,
             onRelatedAnimeClick = actions.onRelatedAnimeClick,
             onWatchClick = actions.onWatchClick,
-            onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { actions.onOpenUrl(url) } },
+            onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { uriHandler.openUri(url) } },
             onResumeClick = actions.onResumePlayback,
             onLibraryCategorySelected = { category ->
                 if (category != null) {

@@ -100,7 +100,6 @@ internal fun AppDestinationTopLevelRoutes(
                     onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
                     onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
                     onBack = navigation.actions.onSettingsBack,
-                    onOpenUrl = platform.hostContext.onOpenUrl,
                     readClipboardText = sources.externalSourcesState.readClipboardText,
                     copyText = sources.externalSourcesState.copyText,
                 ),

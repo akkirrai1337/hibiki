@@ -19,7 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+
+private const val HibikiGitHubUrl = "https://github.com/akkirrai1337/hibiki"
 
 @Composable
 fun AppSettingsAboutCard(
@@ -27,8 +30,8 @@ fun AppSettingsAboutCard(
     versionName: String,
     appIconContent: @Composable (Modifier) -> Unit,
     githubIconContent: @Composable (Modifier) -> Unit,
-    onGitHubClick: () -> Unit,
 ) {
+    val uriHandler = LocalUriHandler.current
     val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val background = if (isDarkMode) Color(0x190FFF66) else Color(0x59FFC0CB)
     val textColor = if (isDarkMode) Color(0xFF3BFF84) else Color(0xFFDA6482)
@@ -71,7 +74,7 @@ fun AppSettingsAboutCard(
                 .size(SettingsAboutCardActionSize)
                 .clip(CircleShape)
                 .background(Color.White)
-                .clickable(onClick = onGitHubClick),
+                .clickable(onClick = { uriHandler.openUri(HibikiGitHubUrl) }),
             contentAlignment = Alignment.Center,
         ) {
             githubIconContent(Modifier.size(SettingsAboutCardGithubIconSize))

@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
@@ -102,7 +101,6 @@ internal fun HibikiApp(
     val externalSourceConfigStore = remember(context) { ExternalSourceConfigStore(context) }
     val androidChallengeSessionProvider = remember(context) { ChallengeSessionProviderImpl(context) }
     val embedWebViewExtractor = remember(context) { EmbedWebViewExtractor(context) }
-    val uriHandler = LocalUriHandler.current
     val activityLaunchers = rememberAppActivityLaunchers(context)
     val dependencies = remember(context) { context.hibikiDependencies() }
     val settingsStore = settingsStoreOverride ?: remember(dependencies) { dependencies.appSettingsStore() }
@@ -361,7 +359,6 @@ internal fun HibikiApp(
                 },
                 onProfileAvatarEdit = activityLaunchers.editAvatar,
                 profileAvatarEditAvailable = true,
-                onOpenUrl = uriHandler::openUri,
                 onDiscordBrowserSignIn = activityLaunchers.signInWithDiscord,
                 onFirstContentReady = onFirstContentReady,
             ),

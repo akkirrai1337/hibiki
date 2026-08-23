@@ -99,7 +99,5 @@ internal data class AppDestinationHostContext(
     val systemLanguage: String,
     val includeNavigationBarPadding: Boolean,
     val onLibraryChanged: () -> Unit,
-    val onOpenUrl: (String) -> Unit,
-    val onGitHubClick: () -> Unit,
     val modifier: Modifier,
 )

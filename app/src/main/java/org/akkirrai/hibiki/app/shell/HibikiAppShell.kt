@@ -685,8 +685,6 @@ internal fun HibikiAppShell(
                                     systemLanguage = systemLanguage,
                                     includeNavigationBarPadding = layoutOptions.includeNavigationBarPadding,
                                     onLibraryChanged = refreshLocalData,
-                                    onOpenUrl = platformCallbacks.onOpenUrl,
-                                    onGitHubClick = platformCallbacks.onGitHubClick,
                                     modifier = Modifier.fillMaxSize(),
                                 ),
                             ),
@@ -703,7 +701,6 @@ internal fun HibikiAppShell(
                                     onDiscordChange = discordSettingsActions.onChange,
                                     onCheckForUpdates = platformCallbacks.onCheckForUpdates,
                                     onExportLogs = platformCallbacks.onExportLogs,
-                                    onGitHubClick = platformCallbacks.onGitHubClick,
                                     onBackClick = navigationActions.onSettingsBack,
                                 ),
                                 state = SettingsScreenState(

@@ -62,7 +62,6 @@ data class SettingsScreenActions(
     val onDiscordChange: (Boolean) -> Unit = {},
     val onCheckForUpdates: () -> Unit = {},
     val onExportLogs: () -> Unit = {},
-    val onGitHubClick: () -> Unit = {},
     val onBackClick: () -> Unit = {},
 )
 
@@ -208,7 +207,6 @@ fun SettingsScreen(
                             modifier = iconModifier,
                         )
                     },
-                    onGitHubClick = actions.onGitHubClick,
                 )
             }
         }

@@ -99,7 +99,6 @@ internal fun AppDestinationDetailsRoute(
             onBackFromDetails = input.navigation.actions.onBackFromDetails,
             onRelatedAnimeClick = input.navigation.actions.onAnimeClick,
             onWatchClick = { input.navigation.actions.onWatchClick(anime) },
-            onOpenUrl = platform.hostContext.onOpenUrl,
             onResumePlayback = input.watch.actions.onResumePlayback,
             onLibraryChanged = platform.hostContext.onLibraryChanged,
         ),

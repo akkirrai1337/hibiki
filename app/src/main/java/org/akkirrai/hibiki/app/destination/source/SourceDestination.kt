@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppAddSourceRepositoryDialog
@@ -46,7 +47,6 @@ internal data class SourcesRouteActions(
     val onSelectedSourcesTabChange: (Int) -> Unit,
     val onOpenPackageInfo: (String, String) -> Unit,
     val onBack: () -> Unit,
-    val onOpenUrl: (String) -> Unit,
     val readClipboardText: () -> String?,
     val copyText: (String) -> Unit,
 )
@@ -62,6 +62,7 @@ internal fun SourcesRoute(
     var isAddRepositoryDialogOpen by remember { mutableStateOf(false) }
     var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val selectSource: (String) -> Unit = actions.onSourceSelected
+    val uriHandler = LocalUriHandler.current
     val externalSourcesState = externalSourcesController?.state?.collectAsState()?.value
 
     when (val currentRoute = state.currentRoute) {
@@ -73,7 +74,7 @@ internal fun SourcesRoute(
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
                 onCopyUrl = actions.copyText,
-                onOpenUrl = actions.onOpenUrl,
+                onOpenUrl = { url -> uriHandler.openUri(url) },
                 onAddRepository = { isAddRepositoryDialogOpen = true },
             ),
             bottomContentPadding = bottomContentPadding,
@@ -133,7 +134,7 @@ internal fun SourcesRoute(
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
                 onCopyUrl = actions.copyText,
-                onOpenUrl = actions.onOpenUrl,
+                onOpenUrl = { url -> uriHandler.openUri(url) },
                 onAddRepository = { isAddRepositoryDialogOpen = true },
                 onInstall = externalSourcesController?.let { controller ->
                     { sourceId -> controller.installPackage(sourceId) }
