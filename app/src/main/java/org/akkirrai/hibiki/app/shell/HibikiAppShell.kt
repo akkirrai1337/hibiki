@@ -735,8 +735,6 @@ internal fun HibikiAppShell(
                                     controller = sourceCallbacks.externalSourceRepositoryController,
                                     selectedTab = selectedSourcesTab,
                                     onSelectedTabChange = { selectedSourcesTab = it },
-                                    readClipboardText = sourceCallbacks.readClipboardText,
-                                    copyText = sourceCallbacks.copyText,
                                 ),
                                 sourceConfigContent = sourceCallbacks.sourceConfigContent,
                             ),

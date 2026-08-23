@@ -8,7 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppAddSourceRepositoryDialog
@@ -31,8 +33,6 @@ internal data class AppDestinationExternalSourcesState(
     val controller: ExternalSourceRepositoryController?,
     val selectedTab: Int = 0,
     val onSelectedTabChange: (Int) -> Unit = {},
-    val readClipboardText: () -> String? = { null },
-    val copyText: (String) -> Unit = {},
 )
 
 internal data class SourcesRouteState(
@@ -47,8 +47,6 @@ internal data class SourcesRouteActions(
     val onSelectedSourcesTabChange: (Int) -> Unit,
     val onOpenPackageInfo: (String, String) -> Unit,
     val onBack: () -> Unit,
-    val readClipboardText: () -> String?,
-    val copyText: (String) -> Unit,
 )
 
 @Composable
@@ -63,6 +61,9 @@ internal fun SourcesRoute(
     var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val selectSource: (String) -> Unit = actions.onSourceSelected
     val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val copyText: (String) -> Unit = { text -> clipboardManager.setText(AnnotatedString(text)) }
+    val readClipboardText: () -> String? = { clipboardManager.getText()?.text }
     val externalSourcesState = externalSourcesController?.state?.collectAsState()?.value
 
     when (val currentRoute = state.currentRoute) {
@@ -73,7 +74,7 @@ internal fun SourcesRoute(
                 onRepositoryClick = {},
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-                onCopyUrl = actions.copyText,
+                onCopyUrl = copyText,
                 onOpenUrl = { url -> uriHandler.openUri(url) },
                 onAddRepository = { isAddRepositoryDialogOpen = true },
             ),
@@ -133,7 +134,7 @@ internal fun SourcesRoute(
                 onRepositoryClick = {},
                 onRemoveRepository = externalSourcesController?.let { it::removeRepository } ?: {},
                 onRefresh = externalSourcesController?.let { it::refreshRepositories } ?: {},
-                onCopyUrl = actions.copyText,
+                onCopyUrl = copyText,
                 onOpenUrl = { url -> uriHandler.openUri(url) },
                 onAddRepository = { isAddRepositoryDialogOpen = true },
                 onInstall = externalSourcesController?.let { controller ->
@@ -166,7 +167,7 @@ internal fun SourcesRoute(
                     isAddRepositoryDialogOpen = false
                 }
             },
-            onPaste = actions.readClipboardText,
+            onPaste = readClipboardText,
         )
     }
 }

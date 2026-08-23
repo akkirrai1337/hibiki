@@ -2,8 +2,6 @@ package org.akkirrai.hibiki.app.navigation
 
 import android.app.Activity
 import android.content.BroadcastReceiver
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -309,14 +307,6 @@ internal fun HibikiApp(
             onSourceSelected = { sourceId ->
                 appPreferences.setAnimeSource(SourceId(sourceId))
                 settingsStore.save(settingsStore.load().copy(selectedSourceId = sourceId))
-            },
-            readClipboardText = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-            },
-            copyText = { text ->
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Hibiki source repository", text))
             },
         )
         CompositionLocalProvider(LocalAppSourceConfigContent provides sourceCallbacks.sourceConfigContent) {
