@@ -675,7 +675,6 @@ internal fun HibikiAppShell(
                                     playbackError = playerState.errorMessage,
                                     playbackLoading = playerState.isLoading,
                                     watchRepositoryAvailable = watchRepository != null,
-                                    isDetailsLoading = state.isDetailsLoading,
                                     detailsError = state.detailsError,
                                     detailsResumeState = detailsResumeState,
                                     isPlayerRoute = routePresentation.isPlayerRoute,

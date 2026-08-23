@@ -31,7 +31,6 @@ internal data class AppDestinationContentState(
     val playbackError: String?,
     val playbackLoading: Boolean,
     val watchRepositoryAvailable: Boolean,
-    val isDetailsLoading: Boolean,
     val detailsError: String?,
     val detailsResumeState: TitleWatchState?,
     val isPlayerRoute: Boolean,

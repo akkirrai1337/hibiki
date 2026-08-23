@@ -47,7 +47,6 @@ class AppDestinationRoutePolicyTest {
         playbackError = null,
         playbackLoading = false,
         watchRepositoryAvailable = false,
-        isDetailsLoading = false,
         detailsError = null,
         detailsResumeState = null,
         isPlayerRoute = currentRoute is AppRoute.Player,

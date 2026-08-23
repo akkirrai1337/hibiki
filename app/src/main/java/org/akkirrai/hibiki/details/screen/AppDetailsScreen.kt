@@ -76,6 +76,16 @@ import org.akkirrai.hibiki.core.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
+/** Groups the open/change controls for the three details overlays (poster preview, title sheet, library sheet). */
+data class DetailsOverlayState(
+    val posterPreviewOpen: Boolean? = null,
+    val onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
+    val titleSheetOpen: Boolean? = null,
+    val onTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
+    val librarySheetOpen: Boolean? = null,
+    val onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
+)
+
 /**
  * Shared Details visual composition. Playback and library persistence stay in
  * the host; this screen keeps the Android geometry and renders those actions
@@ -103,14 +113,8 @@ fun AppDetailsScreen(
     listState: LazyListState = rememberLazyListState(),
     initialLibraryCategory: LibraryCategory? = null,
     onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
-    isDetailsLoading: Boolean = false,
     detailsError: String? = null,
-    posterPreviewOpen: Boolean? = null,
-    onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
-    titleSheetOpen: Boolean? = null,
-    onTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
-    librarySheetOpen: Boolean? = null,
-    onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
+    overlayState: DetailsOverlayState = DetailsOverlayState(),
 ) {
     val preferEnglish = isEnglishAppLanguage(
         LocalAppLanguage.current,
@@ -209,17 +213,17 @@ fun AppDetailsScreen(
     var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
         mutableStateOf(initialTitleSeedColor ?: detailsTitleSeedColorCache[anime.id])
     }
-    val posterPreviewVisible = posterPreviewOpen ?: isPosterPreviewOpen
-    val titleSheetVisible = titleSheetOpen ?: isTitleDetailsSheetOpen
-    val librarySheetVisible = librarySheetOpen ?: isLibrarySheetOpen
+    val posterPreviewVisible = overlayState.posterPreviewOpen ?: isPosterPreviewOpen
+    val titleSheetVisible = overlayState.titleSheetOpen ?: isTitleDetailsSheetOpen
+    val librarySheetVisible = overlayState.librarySheetOpen ?: isLibrarySheetOpen
     fun setPosterPreviewVisible(visible: Boolean) {
-        onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
+        overlayState.onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
     }
     fun setTitleSheetVisible(visible: Boolean) {
-        onTitleSheetOpenChange?.invoke(visible) ?: run { isTitleDetailsSheetOpen = visible }
+        overlayState.onTitleSheetOpenChange?.invoke(visible) ?: run { isTitleDetailsSheetOpen = visible }
     }
     fun setLibrarySheetVisible(visible: Boolean) {
-        onLibrarySheetOpenChange?.invoke(visible) ?: run { isLibrarySheetOpen = visible }
+        overlayState.onLibrarySheetOpenChange?.invoke(visible) ?: run { isLibrarySheetOpen = visible }
     }
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme

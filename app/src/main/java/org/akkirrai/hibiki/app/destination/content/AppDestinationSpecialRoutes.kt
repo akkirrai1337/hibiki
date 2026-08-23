@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.details.screen.DetailsDestinationContent
+import org.akkirrai.hibiki.details.screen.DetailsOverlayState
 import org.akkirrai.hibiki.player.HibikiWatchFlowContent
 
 @Composable
@@ -55,16 +56,17 @@ internal fun AppDestinationDetailsRoute(
         sources = source.sources,
         selectedSourceId = source.selectedSourceId,
         libraryRepository = platform.dataContext.libraryRepository,
-        isDetailsLoading = content.isDetailsLoading,
         detailsError = content.detailsError,
         detailsResumeState = content.detailsResumeState,
         resumeFrameContent = playback.resumeFrameContent,
-        detailsPosterPreviewOpen = overlay.posterPreviewOpen,
-        onDetailsPosterPreviewOpenChange = overlay.onPosterPreviewOpenChange,
-        detailsTitleSheetOpen = overlay.titleSheetOpen,
-        onDetailsTitleSheetOpenChange = overlay.onTitleSheetOpenChange,
-        detailsLibrarySheetOpen = overlay.librarySheetOpen,
-        onDetailsLibrarySheetOpenChange = overlay.onLibrarySheetOpenChange,
+        overlayState = DetailsOverlayState(
+            posterPreviewOpen = overlay.posterPreviewOpen,
+            onPosterPreviewOpenChange = overlay.onPosterPreviewOpenChange,
+            titleSheetOpen = overlay.titleSheetOpen,
+            onTitleSheetOpenChange = overlay.onTitleSheetOpenChange,
+            librarySheetOpen = overlay.librarySheetOpen,
+            onLibrarySheetOpenChange = overlay.onLibrarySheetOpenChange,
+        ),
         onBackFromDetails = input.navigation.actions.onBackFromDetails,
         onRelatedAnimeClick = input.navigation.actions.onAnimeClick,
         onWatchClick = { input.navigation.actions.onWatchClick(anime) },
