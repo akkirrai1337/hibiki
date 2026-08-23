@@ -12,7 +12,7 @@ class WatchScreenScaffoldPaddingTest {
 
         assertEquals(12.dp, padding.calculateLeftPadding(LayoutDirection.Ltr))
         assertEquals(12.dp, padding.calculateRightPadding(LayoutDirection.Ltr))
-        assertEquals(76.dp, padding.calculateTopPadding())
+        assertEquals(88.dp, padding.calculateTopPadding())
         assertEquals(12.dp, padding.calculateBottomPadding())
     }
 }
