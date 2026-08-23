@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import org.akkirrai.hibiki.design.animation.continuousRotation
 
 @Composable
 fun ProfileAvatar(
@@ -46,4 +52,61 @@ fun ProfileAvatar(
             }
         }
     }
+}
+
+@Composable
+fun ProfileAvatarImage(
+    url: String,
+) {
+    AsyncImage(
+        model = url,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+@Composable
+fun ProfileAvatarPlaceholder(
+    modifier: Modifier = Modifier,
+) {
+    Icon(
+        imageVector = Icons.Outlined.Person,
+        contentDescription = null,
+        modifier = modifier,
+        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
+}
+
+@Composable
+fun ProfileEditActionButton(
+    isEditing: Boolean,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ProfileActionButton(
+        icon = if (isEditing) Icons.Rounded.Check else Icons.Rounded.Edit,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ProfileSettingsActionButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ProfileActionButton(
+        icon = Icons.Rounded.Settings,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        iconModifier = Modifier.continuousRotation(
+            durationMillis = 10_000,
+            label = "settings_icon_rotation",
+        ),
+    )
 }
