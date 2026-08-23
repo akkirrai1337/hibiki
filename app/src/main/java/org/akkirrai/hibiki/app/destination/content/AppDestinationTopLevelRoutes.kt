@@ -59,7 +59,7 @@ internal fun AppDestinationTopLevelRoutes(
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.CATALOG -> CatalogRoute(
-                state = catalog.state,
+                presenter = catalog.presenter,
                 listState = catalog.listState,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
                 actions = catalog.actions,

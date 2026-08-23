@@ -49,6 +49,7 @@ import org.akkirrai.hibiki.app.shell.source.*
 import org.akkirrai.hibiki.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
+import org.akkirrai.hibiki.catalog.presentation.CatalogDetailsNavigationState
 import org.akkirrai.hibiki.catalog.presentation.SourcesSearchPresenter
 import org.akkirrai.hibiki.catalog.EmptyAnimeCatalogRepository
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
@@ -176,7 +177,7 @@ internal fun HibikiAppShell(
     )
     val presenter = resources.presenter
     val catalogActions = HibikiCatalogActions(presenter)
-    val state by presenter.state.collectAsState()
+    val detailsNavState by presenter.detailsNavigationState.collectAsState(initial = CatalogDetailsNavigationState())
     val homeSearchPresenter = resources.homeSearchPresenter
     val homeSearchActions = HibikiHomeSearchActions(homeSearchPresenter)
     val homePresenter = resources.homePresenter
@@ -193,7 +194,7 @@ internal fun HibikiAppShell(
     val watchState by watchPresenter.state.collectAsState()
     val watchFlowState = rememberHibikiWatchFlowState()
     var detailsAnime by watchFlowState::detailsAnime
-    val watchAnime = detailsAnime ?: state.selectedAnime
+    val watchAnime = detailsAnime ?: detailsNavState.selectedAnime
     var watchLoadGeneration by watchFlowState::watchLoadGeneration
     var forceWatchSourcesRefresh by watchFlowState::forceWatchSourcesRefresh
     var episodesLoadGeneration by watchFlowState::episodesLoadGeneration
@@ -220,8 +221,8 @@ internal fun HibikiAppShell(
     // (as it was before) means the "Continue watching" banner has the right value on Details'
     // very first composed frame, rather than popping in/changing one frame after a coroutine
     // dispatch, which read as a flicker on every entry.
-    val detailsResumeState = remember(progressRepository, state.selectedAnime?.id, activePlaybackRoute == null) {
-        val animeId = state.selectedAnime?.id
+    val detailsResumeState = remember(progressRepository, detailsNavState.selectedAnime?.id, activePlaybackRoute == null) {
+        val animeId = detailsNavState.selectedAnime?.id
         if (progressRepository != null && animeId != null) {
             resolveResumeWatchState(
                 progressRepository.getAllPlaybackProgress().filter { it.titleId == animeId },
@@ -304,8 +305,8 @@ internal fun HibikiAppShell(
     )
 
     HibikiWatchDataEffects(
-        selectedAnime = state.selectedAnime,
-        detailsLoading = state.isDetailsLoading,
+        selectedAnime = detailsNavState.selectedAnime,
+        detailsLoading = detailsNavState.isDetailsLoading,
         offlineTitleMetadataRepository = offlineTitleMetadataRepository,
         onDetailsAnimeChanged = { detailsAnime = it },
         watchAnime = watchAnime,
@@ -550,7 +551,7 @@ internal fun HibikiAppShell(
                             appShellTransitionKey(
                                 topLevelDestination = topLevelDestination,
                                 selectedTab = selectedTab.name,
-                                detailsId = state.selectedAnime?.id,
+                                detailsId = detailsNavState.selectedAnime?.id,
                                 watchId = watchAnime?.id,
                                 sourceId = selectedWatchSource?.sourceId,
                                 routeKey = routePresentation.currentTransitionKey,
@@ -578,7 +579,7 @@ internal fun HibikiAppShell(
                             input = AppDestinationContentInput(
                             selectedTab = animatedTab,
                             catalog = CatalogContentInput(
-                                state = state,
+                                presenter = presenter,
                                 listState = catalogListState,
                                 actions = CatalogActions(
                                     onQueryChange = catalogActions.onQueryChange,
@@ -654,7 +655,7 @@ internal fun HibikiAppShell(
                                     },
                                 ),
                                 state = AppDestinationContentState(
-                                    selectedAnime = detailsAnime ?: state.selectedAnime,
+                                    selectedAnime = detailsAnime ?: detailsNavState.selectedAnime,
                                     watchAnime = watchAnime,
                                     watchState = watchState,
                                     episodesState = episodesState,
@@ -662,7 +663,7 @@ internal fun HibikiAppShell(
                                     playbackError = playerState.errorMessage,
                                     playbackLoading = playerState.isLoading,
                                     watchRepositoryAvailable = watchRepository != null,
-                                    detailsError = state.detailsError,
+                                    detailsError = detailsNavState.detailsError,
                                     detailsResumeState = detailsResumeState,
                                     isPlayerRoute = routePresentation.isPlayerRoute,
                                     playbackHostAvailable = playbackCallbacks.playbackHost != null,

@@ -6,9 +6,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -31,6 +34,18 @@ data class AnimeCatalogUiState(
     val isFilterCatalogLoading: Boolean = false,
 )
 
+/**
+ * The slice of [AnimeCatalogUiState] that drives navigation to Details/Watch from outside the
+ * Catalog screen. Hosts (the app shell) that only care about "is a title selected right now"
+ * should collect this instead of the full state, so a change to the catalog's own query/items/
+ * filters/pagination doesn't ripple into a shell-wide recomposition.
+ */
+data class CatalogDetailsNavigationState(
+    val selectedAnime: Anime? = null,
+    val isDetailsLoading: Boolean = false,
+    val detailsError: String? = null,
+)
+
 /** Lifecycle-neutral presenter that can be hosted by Android ViewModel or Desktop Compose. */
 class AnimeCatalogPresenter(
     private val repository: AnimeCatalogRepository,
@@ -41,6 +56,14 @@ class AnimeCatalogPresenter(
         AnimeCatalogUiState(items = repository.initialItems),
     )
     val state: StateFlow<AnimeCatalogUiState> = _state.asStateFlow()
+
+    // A plain Flow, not stateIn'd: this projection should only be collected while a composable
+    // is actually watching it (Compose's collectAsState honors that lifecycle on its own). A
+    // stateIn(scope, SharingStarted.Eagerly, ...) here would launch a collector that outlives
+    // every test's TestScope, since Eagerly never stops -- runTest then fails waiting for it.
+    val detailsNavigationState: Flow<CatalogDetailsNavigationState> = state
+        .map { CatalogDetailsNavigationState(it.selectedAnime, it.isDetailsLoading, it.detailsError) }
+        .distinctUntilChanged()
 
     private var searchJob: Job? = null
     private var filterCatalogJob: Job? = null

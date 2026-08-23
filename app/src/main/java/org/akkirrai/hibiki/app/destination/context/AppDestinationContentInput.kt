@@ -16,7 +16,7 @@ import org.akkirrai.hibiki.profile.LocalProfilePresenter
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
-import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
+import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.home.screen.HomeActions
 import org.akkirrai.hibiki.library.screen.LibraryActions
@@ -38,7 +38,7 @@ internal class AppDestinationContentInput(
 }
 
 internal data class CatalogContentInput(
-    val state: AnimeCatalogUiState,
+    val presenter: AnimeCatalogPresenter,
     val listState: LazyListState,
     val actions: CatalogActions,
 )
