@@ -47,7 +47,6 @@ data class SettingsScreenState(
     val notificationsAvailable: Boolean = true,
     val discordEnabled: Boolean = false,
     val showUpdates: Boolean = true,
-    val externalSourcesCount: Int = 0,
     val showBackButton: Boolean = false,
 )
 
@@ -64,7 +63,6 @@ data class SettingsScreenActions(
     val onCheckForUpdates: () -> Unit = {},
     val onExportLogs: () -> Unit = {},
     val onGitHubClick: () -> Unit = {},
-    val onExternalSourcesClick: () -> Unit = {},
     val onBackClick: () -> Unit = {},
 )
 
@@ -147,11 +145,6 @@ fun SettingsScreen(
                 notificationsSubtitle = appText(state.notificationPermissionState.textKey()),
                 notificationsAvailable = state.notificationsAvailable,
                 onNotificationsClick = actions.onNotificationsClick,
-                externalSourcesTitle = appText(AppTextKey.SettingsExternalSources),
-                externalSourcesSubtitle = appText(AppTextKey.SettingsExternalSourcesCount)
-                    .replace("%s", state.externalSourcesCount.toString()),
-                externalSourcesCount = state.externalSourcesCount,
-                onExternalSourcesClick = actions.onExternalSourcesClick,
             )
         }
         item(key = SettingsSection.Player.key) {

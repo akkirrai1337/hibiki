@@ -554,8 +554,6 @@
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
     <string name="settings_external_repositories">External repositories</string>
-    <string name="settings_external_sources">External sources</string>
-    <string name="settings_external_sources_count">%s repositories</string>
     <string name="settings_external_repository_url">Repository link</string>
     <string name="settings_external_repository_url_hint">GitHub blob/raw link or direct index.json URL</string>
     <string name="settings_external_repository_invalid_url">Enter a valid HTTPS index.json or GitHub file link</string>

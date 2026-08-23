@@ -556,8 +556,6 @@
     <string name="cancel">Отмена</string>
     <string name="apply">Применить</string>
     <string name="settings_external_repositories">Внешние источники</string>
-    <string name="settings_external_sources">Внешние источники</string>
-    <string name="settings_external_sources_count">%s репозиториев</string>
     <string name="settings_external_repository_url">Ссылка на repository</string>
     <string name="settings_external_repository_url_hint">GitHub blob/raw или прямой URL index.json</string>
     <string name="settings_external_repository_invalid_url">Укажи корректную HTTPS-ссылку на index.json или GitHub-файл</string>

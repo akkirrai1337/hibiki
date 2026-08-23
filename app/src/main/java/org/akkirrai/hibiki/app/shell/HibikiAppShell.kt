@@ -720,11 +720,6 @@ internal fun HibikiAppShell(
                                     onExportLogs = platformCallbacks.onExportLogs,
                                     onGitHubClick = platformCallbacks.onGitHubClick,
                                     onBackClick = navigationActions.onSettingsBack,
-                                    // No host currently supplies an external-sources repository
-                                    // state to this destination -- preserved as-is (matches the
-                                    // previous defaulted params) rather than wired up here, since
-                                    // that would be a behavior change, not a refactor.
-                                    onExternalSourcesClick = {},
                                 ),
                                 state = SettingsScreenState(
                                     languageMode = appSettingsState.languageMode,
@@ -739,7 +734,6 @@ internal fun HibikiAppShell(
                                     discordEnabled = platformCallbacks.discordRpcController?.isEnabled() == true,
                                     discordAvailable = platformCallbacks.discordRpcController != null,
                                     notificationsAvailable = platformCallbacks.notificationsAvailable,
-                                    externalSourcesCount = 0,
                                 ),
                                 listsState = AppDestinationSettingsListsState(
                                     settings = settingsListState,
