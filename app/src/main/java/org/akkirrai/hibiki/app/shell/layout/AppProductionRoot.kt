@@ -2,19 +2,22 @@ package org.akkirrai.hibiki.app.shell.layout
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -62,10 +65,24 @@ fun AppProductionRoot(
     )
     // Details and the watch flow are full-screen destinations that replace the tab UI
     // entirely (see AppDestinationContent's own showBaseRoutes/early-return handling of the
-    // same two cases). The tab NavHost below fades out for the duration of that transition
-    // instead of disappearing instantly, so it crossfades against the incoming Details/watch
-    // content the same way the old single-AnimatedContent implementation did.
-    val tabLayerVisible = contentRoute !is AppRoute.Details && contentRoute?.isWatchFlowRoute() != true
+    // same two cases). The tab layer fades out for the duration of that transition instead of
+    // disappearing instantly, so it crossfades against the incoming Details/watch content the
+    // same way the old single-AnimatedContent implementation did.
+    //
+    // Driven by the *same* Transition<AppRootContentState> as the content crossfade below
+    // (updateTransition + transition.animateFloat/transition.AnimatedContent), not a second,
+    // independently-triggered AnimatedVisibility -- two separately-triggered animations with
+    // the same nominal duration are not guaranteed to start on the same frame, and any drift
+    // between them read as a stray extra transition, worse the faster you toggle in and out.
+    // Sharing one Transition makes that desync structurally impossible: both are just different
+    // properties of the same clock.
+    fun tabLayerAlphaFor(state: AppRootContentState): Float =
+        if (state.route !is AppRoute.Details && state.route?.isWatchFlowRoute() != true) 1f else 0f
+    val transition = updateTransition(targetState = targetRootState, label = "top_level_screen_transition")
+    val tabLayerAlpha by transition.animateFloat(
+        transitionSpec = { tween(AppMotion.ScreenTransitionDurationMillis) },
+        label = "tab_layer_alpha",
+    ) { state -> tabLayerAlphaFor(state) }
     Box(modifier = modifier.fillMaxSize()) {
         val navController = rememberNavController()
         val startTabRoute = remember { currentDestination.toTabRoute() }
@@ -88,27 +105,13 @@ fun AppProductionRoot(
         // recomposition's presenters/state), so without rememberUpdatedState the tab NavHost
         // would keep calling the very first tabContent forever.
         val currentTabContent = rememberUpdatedState(tabContent)
-        // Asymmetric on purpose. Hiding the tab layer (entering Details/watch-flow) is instant,
-        // not faded: a symmetric AnimatedVisibility fade here ran as a second animation system
-        // alongside the AnimatedContent crossfade below and the two could visibly desync (a
-        // stray extra transition on open, or a frame of the wrong content while toggling
-        // quickly) -- Details' own content fades in on top regardless, so hiding the tab
-        // underneath immediately reads the same as fading it.
-        //
-        // But revealing it (leaving Details/watch-flow back to a tab) does still need its own
-        // fade: Details' inner AnimatedContent (see AppDestinationContent) uses
-        // EnterTransition.None/ExitTransition.None deliberately, since it used to rely on the
-        // outer AnimatedContent's crossfade for its own visible fade -- but the outer
-        // AnimatedContent no longer renders any tab content on the "leaving" side (that moved to
-        // this NavHost in an earlier change), so there's nothing left for it to fade. Without
-        // this reveal fade, Details would cut to the tab instantly with no transition at all.
-        // This doesn't reintroduce the desync risk above: only one side (enter) animates here,
-        // so there's no second clock running concurrently with the outer crossfade's own fade.
-        AnimatedVisibility(
-            visible = tabLayerVisible,
-            enter = fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)),
-            exit = ExitTransition.None,
-            modifier = Modifier.fillMaxSize(),
+        // Always composed; visibility is purely tabLayerAlpha (see above), driven by the same
+        // Transition the content crossfade below uses. Kept mounted regardless of alpha so its
+        // NavController/backstack survive Details/watch-flow visits, same as before.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = tabLayerAlpha },
         ) {
             NavHost(
                 navController = navController,
@@ -126,11 +129,9 @@ fun AppProductionRoot(
                 composable<AndroidNavigationRoute.Profile> { currentTabContent.value(AppTopLevelDestination.PROFILE) }
             }
         }
-        AnimatedContent(
+        transition.AnimatedContent(
             modifier = Modifier.fillMaxSize(),
-            targetState = targetRootState,
             transitionSpec = { appScreenTransition(transitionDirection) },
-            label = "top_level_screen_transition",
         ) { state ->
             Box(
                 modifier = Modifier
