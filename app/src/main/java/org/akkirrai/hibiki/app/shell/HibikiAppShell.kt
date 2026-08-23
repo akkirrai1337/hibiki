@@ -214,16 +214,26 @@ internal fun HibikiAppShell(
     // (as it was before) means the "Continue watching" banner has the right value on Details'
     // very first composed frame, rather than popping in/changing one frame after a coroutine
     // dispatch, which read as a flicker on every entry.
-    val detailsResumeState = remember(progressRepository, detailsNavState.selectedAnime?.id, activePlaybackRoute == null) {
-        val animeId = detailsNavState.selectedAnime?.id
-        if (progressRepository != null && animeId != null) {
+    val detailsAnimeIdForResume = detailsNavState.selectedAnime?.id
+    val computedDetailsResumeState = remember(progressRepository, detailsAnimeIdForResume, activePlaybackRoute == null) {
+        if (progressRepository != null && detailsAnimeIdForResume != null) {
             resolveResumeWatchState(
-                progressRepository.getAllPlaybackProgress().filter { it.titleId == animeId },
+                progressRepository.getAllPlaybackProgress().filter { it.titleId == detailsAnimeIdForResume },
             )
         } else {
             null
         }
     }
+    // Retained, not read live, once selectedAnime clears -- closing Details sets it to null
+    // immediately, but the root AnimatedContent keeps rendering the outgoing Details screen for
+    // the duration of its exit fade. Reading detailsResumeState live would go null the instant
+    // you press back, showing the poster instead of the resume banner's last frame for that
+    // whole fade instead of only after it completes.
+    var retainedDetailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
+    if (detailsAnimeIdForResume != null) {
+        retainedDetailsResumeState = computedDetailsResumeState
+    }
+    val detailsResumeState = retainedDetailsResumeState
     var pendingPlaybackContext by playbackSession.pendingContext
     var playbackReturnRoute by playbackSession.returnRoute
     val libraryPresenter = resources.libraryPresenter
