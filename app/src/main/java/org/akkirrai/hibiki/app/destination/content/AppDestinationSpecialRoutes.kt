@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.app.destination.content
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -19,6 +21,7 @@ internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
     val platform = input.platform
     val playback = watch.playbackContext
     val content = watch.state
+    val profileState by input.profile.profilePresenter.state.collectAsState()
 
     HibikiWatchFlowContent(
         state = WatchRouteState(
@@ -26,7 +29,7 @@ internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
             watchState = content.watchState,
             episodesState = content.episodesState,
             selectedWatchSource = content.selectedWatchSource,
-            profileData = input.profile.state.data,
+            profileData = profileState.data,
             playbackError = content.playbackError,
             playbackLoading = content.playbackLoading,
             playbackHostAvailable = content.playbackHostAvailable,

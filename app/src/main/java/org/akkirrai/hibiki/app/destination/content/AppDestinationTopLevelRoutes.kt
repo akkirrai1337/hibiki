@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.home.*
 import org.akkirrai.hibiki.app.destination.library.*
-import org.akkirrai.hibiki.app.destination.profile.*
 import org.akkirrai.hibiki.app.destination.settings.*
 import org.akkirrai.hibiki.app.destination.source.*
 import org.akkirrai.hibiki.app.settings.SettingsRoute
@@ -77,8 +76,11 @@ internal fun AppDestinationTopLevelRoutes(
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.PROFILE -> ProfileRoute(
-                state = profile.state,
-                actions = profile.actions,
+                profilePresenter = profile.profilePresenter,
+                profileRepository = platform.dataContext.profileRepository,
+                avatarEditAvailable = profile.avatarEditAvailable,
+                onAvatarEdit = profile.onAvatarEdit,
+                onSettingsClick = navigation.actions.onProfileSettingsClick,
                 languageMode = platform.dataContext.languageMode,
                 systemLanguage = platform.hostContext.systemLanguage,
                 bottomContentPadding = topLevelBottomContentPadding,

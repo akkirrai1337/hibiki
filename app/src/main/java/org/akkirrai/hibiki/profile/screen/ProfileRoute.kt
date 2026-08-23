@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.profile
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.library.LibraryCategory
@@ -39,13 +41,40 @@ data class ProfileScreenActions(
 
 @Composable
 internal fun ProfileRoute(
-    state: ProfileScreenState,
-    actions: ProfileScreenActions,
+    profilePresenter: LocalProfilePresenter,
+    profileRepository: LocalProfileDataRepository,
+    avatarEditAvailable: Boolean,
+    onAvatarEdit: (((String) -> Unit) -> Unit),
+    onSettingsClick: () -> Unit,
     languageMode: LanguageMode,
     systemLanguage: String,
     bottomContentPadding: Dp,
     modifier: Modifier = Modifier,
 ) {
+    val profilePresenterState by profilePresenter.state.collectAsState()
+    val editingState = rememberProfileEditingState(profilePresenterState.data.profileName)
+    val editingActions = ProfileEditingActions(
+        repository = profileRepository,
+        presenter = profilePresenter,
+        setEditing = { editingState.isEditing = it },
+        getEditedName = { editingState.editedName },
+        setEditedName = { editingState.editedName = it },
+    )
+    val state = ProfileScreenState(
+        data = profilePresenterState.data,
+        isEditing = editingState.isEditing,
+        editedName = editingState.editedName,
+        isLoading = profilePresenterState.isLoading,
+        avatarEditAvailable = avatarEditAvailable,
+    )
+    val actions = ProfileScreenActions(
+        onNameChange = editingActions.onNameChange,
+        onEditClick = editingActions.onEditClick,
+        onSaveClick = editingActions.onSaveClick,
+        onSettingsClick = onSettingsClick,
+        onAvatarEdit = onAvatarEdit,
+        onAvatarPicked = editingActions.onAvatarPicked,
+    )
     val profileDateTodayLabel = appText(AppTextKey.ProfileDateToday)
     val profileDateYesterdayLabel = appText(AppTextKey.ProfileDateYesterday)
     val profileDateDaysAgoTemplate = appText(AppTextKey.ProfileDateDaysAgo)

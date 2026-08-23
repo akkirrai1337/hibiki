@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.app.shell.profile
+package org.akkirrai.hibiki.profile
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,7 +10,7 @@ import org.akkirrai.hibiki.app.shell.runtime.DEFAULT_PROFILE_NAME
 import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.profile.LocalProfilePresenter
 
-internal class HibikiProfileActions(
+internal class ProfileEditingActions(
     private val repository: LocalProfileDataRepository,
     private val presenter: LocalProfilePresenter,
     private val setEditing: (Boolean) -> Unit,
@@ -38,15 +38,15 @@ internal class HibikiProfileActions(
     }
 }
 
-internal class HibikiProfileEditingState(initialProfileName: String) {
+internal class ProfileEditingState(initialProfileName: String) {
     var isEditing by mutableStateOf(false)
     var editedName by mutableStateOf(initialProfileName)
 }
 
 @Composable
-internal fun rememberHibikiProfileEditingState(profileName: String): HibikiProfileEditingState {
+internal fun rememberProfileEditingState(profileName: String): ProfileEditingState {
     val state = remember {
-        HibikiProfileEditingState(profileName.ifBlank { DEFAULT_PROFILE_NAME })
+        ProfileEditingState(profileName.ifBlank { DEFAULT_PROFILE_NAME })
     }
     LaunchedEffect(profileName) {
         state.editedName = profileName.ifBlank { DEFAULT_PROFILE_NAME }

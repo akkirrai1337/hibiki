@@ -12,6 +12,7 @@ import org.akkirrai.hibiki.core.source.AppSourceConfigContent
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.profile.LocalProfileDataRepository
+import org.akkirrai.hibiki.profile.LocalProfilePresenter
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.app.settings.SettingsScreenState
@@ -20,8 +21,6 @@ import org.akkirrai.hibiki.catalog.screen.CatalogActions
 import org.akkirrai.hibiki.home.screen.HomeActions
 import org.akkirrai.hibiki.library.screen.LibraryActions
 import org.akkirrai.hibiki.library.state.LibrarySearchFilters
-import org.akkirrai.hibiki.profile.ProfileScreenActions
-import org.akkirrai.hibiki.profile.ProfileScreenState
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -69,8 +68,9 @@ internal data class SourcesContentInput(
 )
 
 internal data class ProfileContentInput(
-    val state: ProfileScreenState,
-    val actions: ProfileScreenActions,
+    val profilePresenter: LocalProfilePresenter,
+    val avatarEditAvailable: Boolean,
+    val onAvatarEdit: (((String) -> Unit) -> Unit),
 )
 
 internal data class WatchContentInput(
