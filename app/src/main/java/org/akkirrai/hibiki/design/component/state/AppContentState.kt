@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.design.UiDimens
 
 @Composable
@@ -40,4 +42,25 @@ fun AppContentState(
         )
         else -> content()
     }
+}
+
+@Composable
+fun AppErrorState(
+    title: String,
+    message: String,
+    retryLabel: String,
+    onRetry: () -> Unit,
+    iconContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle? = null,
+) {
+    AppMessageState(
+        title = title,
+        message = message,
+        modifier = modifier.fillMaxSize().padding(16.dp),
+        actionLabel = retryLabel,
+        onActionClick = onRetry,
+        iconSlot = iconContent,
+        titleStyle = titleStyle ?: androidx.compose.material3.MaterialTheme.typography.titleMedium,
+    )
 }

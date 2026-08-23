@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -71,4 +74,17 @@ fun AppCollapsibleFilterSection(
             content()
         }
     }
+}
+
+@Composable
+fun AppFilterExpandIcon(
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Icon(
+        imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+        contentDescription = null,
+        modifier = modifier,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+    )
 }
