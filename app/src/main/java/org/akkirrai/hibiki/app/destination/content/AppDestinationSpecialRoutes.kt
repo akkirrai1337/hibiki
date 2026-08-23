@@ -4,7 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.catalog.model.Anime
-import org.akkirrai.hibiki.details.screen.DetailsDestinationContent
+import org.akkirrai.hibiki.details.screen.DetailsOverlay
+import org.akkirrai.hibiki.details.screen.DetailsRoute
 import org.akkirrai.hibiki.details.screen.DetailsOverlayState
 import org.akkirrai.hibiki.player.HibikiWatchFlowContent
 
@@ -50,7 +51,7 @@ internal fun AppDestinationDetailsRoute(
     val overlay = input.navigation.detailsOverlayState
     val anime = animeOverride ?: requireNotNull(content.selectedAnime)
 
-    DetailsDestinationContent(
+    DetailsRoute(
         anime = anime,
         watchRepositoryAvailable = content.watchRepositoryAvailable,
         sources = source.sources,
@@ -60,12 +61,26 @@ internal fun AppDestinationDetailsRoute(
         detailsResumeState = content.detailsResumeState,
         resumeFrameContent = playback.resumeFrameContent,
         overlayState = DetailsOverlayState(
-            posterPreviewOpen = overlay.posterPreviewOpen,
-            onPosterPreviewOpenChange = overlay.onPosterPreviewOpenChange,
-            titleSheetOpen = overlay.titleSheetOpen,
-            onTitleSheetOpenChange = overlay.onTitleSheetOpenChange,
-            librarySheetOpen = overlay.librarySheetOpen,
-            onLibrarySheetOpenChange = overlay.onLibrarySheetOpenChange,
+            overlay = when {
+                overlay.posterPreviewOpen == true -> DetailsOverlay.Poster
+                overlay.titleSheetOpen == true -> DetailsOverlay.Title
+                overlay.librarySheetOpen == true -> DetailsOverlay.Library
+                else -> null
+            },
+            onOverlayChange = { next ->
+                // Close whichever overlay is currently active before opening the next one --
+                // the shell tracks these as a navigation overlay stack, so closing after opening
+                // the replacement would try to pop the wrong (new) entry instead.
+                if (next != DetailsOverlay.Poster) overlay.onPosterPreviewOpenChange?.invoke(false)
+                if (next != DetailsOverlay.Title) overlay.onTitleSheetOpenChange?.invoke(false)
+                if (next != DetailsOverlay.Library) overlay.onLibrarySheetOpenChange?.invoke(false)
+                when (next) {
+                    DetailsOverlay.Poster -> overlay.onPosterPreviewOpenChange?.invoke(true)
+                    DetailsOverlay.Title -> overlay.onTitleSheetOpenChange?.invoke(true)
+                    DetailsOverlay.Library -> overlay.onLibrarySheetOpenChange?.invoke(true)
+                    null -> Unit
+                }
+            },
         ),
         onBackFromDetails = input.navigation.actions.onBackFromDetails,
         onRelatedAnimeClick = input.navigation.actions.onAnimeClick,

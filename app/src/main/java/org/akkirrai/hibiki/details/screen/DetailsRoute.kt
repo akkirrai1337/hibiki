@@ -10,7 +10,7 @@ import org.akkirrai.hibiki.platform.AppSystemBackHandler
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 
 @Composable
-internal fun DetailsDestinationContent(
+internal fun DetailsRoute(
     anime: Anime,
     watchRepositoryAvailable: Boolean,
     sources: List<AppSourceDescriptor>,
@@ -35,23 +35,25 @@ internal fun DetailsDestinationContent(
         status = anime.status,
         episodesLabel = anime.episodesLabel,
     )
-    AppDetailsScreen(
+    DetailsScreen(
         anime = anime,
-        onBackClick = onBackFromDetails,
-        onRelatedAnimeClick = onRelatedAnimeClick,
+        actions = DetailsActions(
+            onBackClick = onBackFromDetails,
+            onRelatedAnimeClick = onRelatedAnimeClick,
+            onWatchClick = onWatchClick,
+            onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
+            onResumeClick = onResumePlayback,
+            onLibraryCategoryChange = { onLibraryChanged() },
+        ),
         backHandler = { onBack ->
             AppSystemBackHandler(enabled = true, onBack = onBack) {}
         },
         canWatch = canWatch,
-        onWatchClick = onWatchClick,
-        onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
         resumeState = detailsResumeState,
-        onResumeClick = onResumePlayback,
         resumeFrameContent = detailsResumeState?.let { state ->
             resumeFrameContent?.let { content -> { frameModifier -> content(state.titleId, frameModifier) } }
         },
         libraryRepository = libraryRepository,
-        onLibraryCategoryChange = { onLibraryChanged() },
         modifier = modifier,
         detailsError = detailsError,
         overlayState = overlayState,

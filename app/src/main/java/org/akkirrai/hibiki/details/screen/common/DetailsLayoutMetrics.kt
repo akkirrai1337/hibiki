@@ -89,5 +89,5 @@ val DetailsHeroPosterExpandedOffset = 0.dp
 val DetailsHeroPosterCollapsedOffset = 28.dp
 
 /** Scroll offset tolerance before the hero poster starts collapsing -- absorbs the few pixels
- *  a fast up-down flick passes through on its way back to the top, see AppDetailsScreen. */
+ *  a fast up-down flick passes through on its way back to the top, see DetailsScreen. */
 val DetailsHeroCollapseThreshold = 12.dp

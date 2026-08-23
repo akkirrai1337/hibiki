@@ -76,14 +76,27 @@ import org.akkirrai.hibiki.core.source.resolveEpisodesLabel
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
-/** Groups the open/change controls for the three details overlays (poster preview, title sheet, library sheet). */
+/** The three mutually-exclusive overlays Details can show -- only one can be open at a time. */
+sealed interface DetailsOverlay {
+    data object Poster : DetailsOverlay
+    data object Title : DetailsOverlay
+    data object Library : DetailsOverlay
+}
+
+/** Which overlay (if any) is currently open, and how to change it -- a single owner, not three independent flags. */
 data class DetailsOverlayState(
-    val posterPreviewOpen: Boolean? = null,
-    val onPosterPreviewOpenChange: ((Boolean) -> Unit)? = null,
-    val titleSheetOpen: Boolean? = null,
-    val onTitleSheetOpenChange: ((Boolean) -> Unit)? = null,
-    val librarySheetOpen: Boolean? = null,
-    val onLibrarySheetOpenChange: ((Boolean) -> Unit)? = null,
+    val overlay: DetailsOverlay? = null,
+    val onOverlayChange: ((DetailsOverlay?) -> Unit)? = null,
+)
+
+data class DetailsActions(
+    val onBackClick: () -> Unit,
+    val onRelatedAnimeClick: (Anime) -> Unit,
+    val onResumeClick: ((TitleWatchState) -> Unit)? = null,
+    val onTrailerClick: (() -> Unit)? = null,
+    val onWatchClick: () -> Unit = {},
+    val onTitleSeedColorChange: (Long) -> Unit = {},
+    val onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
 )
 
 /**
@@ -93,26 +106,20 @@ data class DetailsOverlayState(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppDetailsScreen(
+fun DetailsScreen(
     anime: Anime,
-    onBackClick: () -> Unit,
-    onRelatedAnimeClick: (Anime) -> Unit,
+    actions: DetailsActions,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     libraryRepository: LibraryRepository? = null,
     resumeState: TitleWatchState? = null,
     resumeFrameContent: (@Composable (Modifier) -> Unit)? = null,
-    onResumeClick: ((TitleWatchState) -> Unit)? = null,
-    onTrailerClick: (() -> Unit)? = null,
     canWatch: Boolean = false,
-    onWatchClick: () -> Unit = {},
     initialTitleSeedColor: Long? = null,
-    onTitleSeedColorChange: (Long) -> Unit = {},
     titleSheetShape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     initialLibraryCategory: LibraryCategory? = null,
-    onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
     detailsError: String? = null,
     overlayState: DetailsOverlayState = DetailsOverlayState(),
 ) {
@@ -204,27 +211,20 @@ fun AppDetailsScreen(
             appText(AppTextKey.NextEpisodeEtaMinutesSeconds).formatAppText(minutes, seconds)
         },
     )
-    var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
-    var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
-    var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
+    var localOverlay by remember(anime.id) { mutableStateOf<DetailsOverlay?>(null) }
     var libraryCategory by remember(anime.id, initialLibraryCategory) {
         mutableStateOf(libraryRepository?.getLibraryCategory(anime.id) ?: initialLibraryCategory)
     }
     var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
         mutableStateOf(initialTitleSeedColor ?: detailsTitleSeedColorCache[anime.id])
     }
-    val posterPreviewVisible = overlayState.posterPreviewOpen ?: isPosterPreviewOpen
-    val titleSheetVisible = overlayState.titleSheetOpen ?: isTitleDetailsSheetOpen
-    val librarySheetVisible = overlayState.librarySheetOpen ?: isLibrarySheetOpen
-    fun setPosterPreviewVisible(visible: Boolean) {
-        overlayState.onPosterPreviewOpenChange?.invoke(visible) ?: run { isPosterPreviewOpen = visible }
+    val currentOverlay = if (overlayState.onOverlayChange != null) overlayState.overlay else localOverlay
+    fun setOverlay(overlay: DetailsOverlay?) {
+        overlayState.onOverlayChange?.invoke(overlay) ?: run { localOverlay = overlay }
     }
-    fun setTitleSheetVisible(visible: Boolean) {
-        overlayState.onTitleSheetOpenChange?.invoke(visible) ?: run { isTitleDetailsSheetOpen = visible }
-    }
-    fun setLibrarySheetVisible(visible: Boolean) {
-        overlayState.onLibrarySheetOpenChange?.invoke(visible) ?: run { isLibrarySheetOpen = visible }
-    }
+    val posterPreviewVisible = currentOverlay == DetailsOverlay.Poster
+    val titleSheetVisible = currentOverlay == DetailsOverlay.Title
+    val librarySheetVisible = currentOverlay == DetailsOverlay.Library
     val screenScope = rememberCoroutineScope()
     val fallbackColorScheme = MaterialTheme.colorScheme
     val detailsColorScheme = titleSeedColor?.let { seedColor ->
@@ -237,19 +237,8 @@ fun AppDetailsScreen(
 
     MaterialTheme(colorScheme = detailsColorScheme) {
         AppSystemBackHandler(
-            enabled = detailsOverlayBackTarget(
-                librarySheetOpen = librarySheetVisible,
-                titleSheetOpen = titleSheetVisible,
-                posterPreviewOpen = posterPreviewVisible,
-            ) != DetailsOverlayBackTarget.None,
-            onBack = {
-                when (detailsOverlayBackTarget(librarySheetVisible, titleSheetVisible, posterPreviewVisible)) {
-                    DetailsOverlayBackTarget.Library -> setLibrarySheetVisible(false)
-                    DetailsOverlayBackTarget.Title -> setTitleSheetVisible(false)
-                    DetailsOverlayBackTarget.Poster -> setPosterPreviewVisible(false)
-                    DetailsOverlayBackTarget.None -> Unit
-                }
-            },
+            enabled = currentOverlay != null,
+            onBack = { setOverlay(null) },
         ) {
             Surface(
                 modifier = modifier.fillMaxSize(),
@@ -269,9 +258,9 @@ fun AppDetailsScreen(
                         canWatch = canWatch,
                         libraryLabel = appText(AppTextKey.DetailsFavorite),
                         watchLabel = appText(AppTextKey.Watch),
-                        onPosterClick = { setPosterPreviewVisible(true) },
-                        onLibraryClick = { setLibrarySheetVisible(true) },
-                        onPrimaryClick = onWatchClick,
+                        onPosterClick = { setOverlay(DetailsOverlay.Poster) },
+                        onLibraryClick = { setOverlay(DetailsOverlay.Library) },
+                        onPrimaryClick = actions.onWatchClick,
                         posterContent = {
                             AppPosterImage(
                                 primaryUrl = uiModel.anime.posterUrl,
@@ -285,7 +274,7 @@ fun AppDetailsScreen(
                                             extractTitleSeedColor(image)?.let { color ->
                                                 titleSeedColor = color
                                                 detailsTitleSeedColorCache[anime.id] = color
-                                                onTitleSeedColorChange(color)
+                                                actions.onTitleSeedColorChange(color)
                                             }
                                         }
                                     }
@@ -335,10 +324,10 @@ fun AppDetailsScreen(
                                             )
                                         },
                                         onResumeClick = resumeState?.let { state ->
-                                            onResumeClick?.let { callback -> { callback(state) } }
+                                            actions.onResumeClick?.let { callback -> { callback(state) } }
                                         },
-                                        trailerEnabled = mediaData.trailer != null && onTrailerClick != null,
-                                        onTrailerClick = onTrailerClick ?: {},
+                                        trailerEnabled = mediaData.trailer != null && actions.onTrailerClick != null,
+                                        onTrailerClick = actions.onTrailerClick ?: {},
                                         trailerContentDescription = appText(AppTextKey.DetailsTrailer),
                                     )
                                 },
@@ -350,7 +339,7 @@ fun AppDetailsScreen(
                                 title = uiModel.anime.title,
                                 description = uiModel.description,
                                 backgroundColor = MaterialTheme.colorScheme.background,
-                                onTitleClick = { setTitleSheetVisible(true) },
+                                onTitleClick = { setOverlay(DetailsOverlay.Title) },
                                 ratingsContent = resolveDetailsHeroRatings(
                                     uiModel.anime.ratings,
                                     uiModel.anime.viewCount,
@@ -413,7 +402,7 @@ fun AppDetailsScreen(
                     similarTitle = similarTitle,
                     announcementLabel = announcementLabel,
                     horizontalPadding = DetailsContentHorizontalPadding,
-                    onItemClick = { related -> onRelatedAnimeClick(related.toPreviewAnime(preferEnglish)) },
+                    onItemClick = { related -> actions.onRelatedAnimeClick(related.toPreviewAnime(preferEnglish)) },
                     poster = { related ->
                         AppPosterImage(
                             primaryUrl = related.posterUrl,
@@ -431,7 +420,7 @@ fun AppDetailsScreen(
                 modifier = Modifier.align(Alignment.TopStart),
             )
             AppDetailsHeroOverlayBackButton(
-                onClick = onBackClick,
+                onClick = actions.onBackClick,
                 contentDescription = appText(AppTextKey.Back),
                 modifier = Modifier.align(Alignment.TopStart),
             )
@@ -439,7 +428,7 @@ fun AppDetailsScreen(
 
         if (posterPreviewVisible) {
             AppDetailsPosterPreviewOverlay(
-                onDismissRequest = { setPosterPreviewVisible(false) },
+                onDismissRequest = { setOverlay(null) },
                 backHandler = backHandler,
                 posterContent = { posterModifier ->
                     AppPosterImage(
@@ -463,7 +452,7 @@ fun AppDetailsScreen(
         if (titleSheetVisible) {
             val titleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
             AppModalBottomSheet(
-                onDismissRequest = { setTitleSheetVisible(false) },
+                onDismissRequest = { setOverlay(null) },
                 sheetState = titleSheetState,
                 modifier = Modifier.fillMaxHeight(),
                 shape = titleSheetShape,
@@ -491,16 +480,16 @@ fun AppDetailsScreen(
                 onCategoryClick = { category ->
                     libraryRepository?.saveToLibrary(uiModel.anime, category)
                     libraryCategory = category
-                    onLibraryCategoryChange(category)
-                    setLibrarySheetVisible(false)
+                    actions.onLibraryCategoryChange(category)
+                    setOverlay(null)
                 },
                 onRemoveClick = {
                     libraryRepository?.removeFromLibrary(uiModel.anime.id)
                     libraryCategory = null
-                    onLibraryCategoryChange(null)
-                    setLibrarySheetVisible(false)
+                    actions.onLibraryCategoryChange(null)
+                    setOverlay(null)
                 },
-                onDismiss = { setLibrarySheetVisible(false) },
+                onDismiss = { setOverlay(null) },
             )
         }
             }
