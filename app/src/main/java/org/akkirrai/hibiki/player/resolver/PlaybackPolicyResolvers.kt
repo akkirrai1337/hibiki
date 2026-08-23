@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.player
 
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.player.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.player.model.PlaybackSegment
 import org.akkirrai.hibiki.player.model.PlaybackSegmentType
 import org.akkirrai.hibiki.player.model.PlaybackStreamType
 import org.akkirrai.hibiki.player.model.TitleWatchState
@@ -56,6 +57,24 @@ fun resolvePlaybackSegmentType(rawType: String): PlaybackSegmentType = when (raw
     "ENDING" -> PlaybackSegmentType.Ending
     "UNKNOWN" -> PlaybackSegmentType.Unknown
     else -> error("Unknown playback segment type: $rawType")
+}
+
+fun resolveActivePlaybackSegment(
+    segments: List<PlaybackSegment>?,
+    positionMs: Long,
+): PlaybackSegment? = segments?.firstOrNull { segment ->
+    positionMs >= segment.startMs && positionMs < segment.endMs
+}
+
+fun selectPlaybackSegments(
+    apiSegments: List<PlaybackSegment>,
+    extractedSegments: List<PlaybackSegment>,
+): List<PlaybackSegment> {
+    val preferred = apiSegments.ifEmpty { extractedSegments }
+    return preferred
+        .filter { it.endMs > it.startMs }
+        .filter { it.startMs >= 0L }
+        .filterNot { it.startMs == 0L && it.type != PlaybackSegmentType.Unknown }
 }
 
 /**
