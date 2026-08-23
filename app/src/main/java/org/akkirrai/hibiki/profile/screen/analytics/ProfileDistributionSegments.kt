@@ -21,13 +21,13 @@ fun LocalProfileData.buildLibraryStatusSegments(
 }
 
 fun LocalProfileData.profileGenreTrackedTitlesCount(): Int =
-    library
+    trackedProfileLibraryItems()
         .map { it.anime }
         .distinctBy { it.id }
         .count { it.genres.isNotEmpty() }
 
 fun LocalProfileData.buildGenreSegments(): List<DistributionSegment> =
-    library
+    trackedProfileLibraryItems()
         .map { it.anime }
         .distinctBy { it.id }
         .flatMap { it.genres }
