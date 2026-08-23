@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import org.akkirrai.hibiki.design.component.poster.AppPosterImage
@@ -137,5 +138,15 @@ fun ProfileRecentPosterMarker(
             .size(ProfileRecentPosterMarkerSize)
             .clip(CircleShape)
             .background(color),
+    )
+}
+
+@Composable
+private fun ProfileEmptyState(text: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodySmall) {
+    Text(
+        text = text,
+        modifier = modifier.fillMaxWidth(),
+        style = style,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

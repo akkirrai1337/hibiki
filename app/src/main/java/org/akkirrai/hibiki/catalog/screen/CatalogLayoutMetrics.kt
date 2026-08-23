@@ -38,4 +38,3 @@ fun catalogContentTopPadding(hasSort: Boolean) = if (hasSort) {
 } else {
     CatalogHeaderTopPadding + CatalogSearchBarHeight + CatalogSortVerticalGap
 }
-const val CatalogSortAnimationDurationMs = 220

@@ -247,3 +247,19 @@ fun AppPlaybackControls(
 private const val AppPlaybackPositionPollMillis = 500L
 private const val AppPlaybackControlsAutoHideMillis = 4_000L
 private const val AppPlaybackControlsDoubleTapTimeoutMillis = 260L
+
+@Composable
+private fun AppAutoHideVisibilityEffect(
+    enabled: Boolean,
+    visible: Boolean,
+    interactionTick: Int,
+    blocked: Boolean,
+    hideDelayMillis: Long,
+    onHide: () -> Unit,
+) {
+    LaunchedEffect(enabled, visible, interactionTick, blocked) {
+        if (!enabled || !visible || blocked) return@LaunchedEffect
+        delay(hideDelayMillis)
+        onHide()
+    }
+}

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -96,4 +97,21 @@ fun AppPlayerCenterControls(
             )
         }
     }
+}
+
+@Composable
+private fun AppPlayerControlButton(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    iconContent: @Composable () -> Unit,
+) {
+    AppFilledIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .padding(horizontal = PlayerControlButtonHorizontalPadding)
+            .size(PlayerControlButtonSize),
+        style = AppFilledIconButtonStyle.DarkOverlay,
+        content = iconContent,
+    )
 }

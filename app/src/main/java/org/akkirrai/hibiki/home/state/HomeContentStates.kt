@@ -1,10 +1,13 @@
 package org.akkirrai.hibiki.home.state
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -15,12 +18,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.design.component.state.AppContentState
 import org.akkirrai.hibiki.design.component.state.AppErrorState
 import org.akkirrai.hibiki.design.component.state.AppMessageState
-import org.akkirrai.hibiki.home.screen.AppHomeErrorIconContainer
 
 @Composable
 fun HomeErrorState(
@@ -92,4 +95,20 @@ fun HomePersonalEmptyState(
             .heightIn(min = 260.dp)
             .padding(horizontal = UiDimens.ScreenPadding),
     )
+}
+
+@Composable
+private fun AppHomeErrorIconContainer(
+    modifier: Modifier = Modifier,
+    iconContent: @Composable () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .size(72.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.errorContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        iconContent()
+    }
 }

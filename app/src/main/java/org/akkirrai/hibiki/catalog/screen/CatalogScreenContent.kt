@@ -4,6 +4,7 @@ import org.akkirrai.hibiki.catalog.state.*
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.design.UiDimens
+import org.akkirrai.hibiki.design.component.content.appVerticalAnimeListContent
 import org.akkirrai.hibiki.design.component.poster.AppPosterImage
 import org.akkirrai.hibiki.design.component.poster.AppPosterPlaceholder
 import org.akkirrai.hibiki.design.component.state.AppCenteredLoading
@@ -22,6 +27,7 @@ import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.screen.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.library.screen.icon
 import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.catalog.model.buildCardMeta
 
 @Composable
 fun AppCatalogScreenContent(
@@ -115,5 +121,41 @@ private fun AppCatalogContentList(
         ),
         verticalArrangement = Arrangement.spacedBy(CatalogContentItemGap),
         content = content,
+    )
+}
+
+private fun LazyListScope.appCatalogResultsContent(
+    items: List<Anime>,
+    announcementLabel: String,
+    movieLabel: String,
+    onAnimeClick: (Anime) -> Unit,
+    posterContent: @Composable BoxScope.(Anime) -> Unit,
+    posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    onItemVisible: ((Anime) -> Unit)? = null,
+    isLoadingMore: Boolean,
+    paginationErrorMessage: String?,
+    paginationErrorIcon: ImageVector = Icons.Outlined.WarningAmber,
+    onLoadMoreRetry: () -> Unit,
+) {
+    appVerticalAnimeListContent(
+        items = items,
+        metaText = { anime ->
+            anime.buildCardMeta(
+                announcementLabel = announcementLabel,
+                movieLabel = movieLabel,
+                maxSubtitleParts = 2,
+                separator = " • ",
+            )
+        },
+        onAnimeClick = onAnimeClick,
+        posterContent = posterContent,
+        posterFooterContent = posterFooterContent,
+        onItemVisible = onItemVisible,
+    )
+    appCatalogPaginationStates(
+        isLoadingMore = isLoadingMore,
+        errorMessage = paginationErrorMessage,
+        errorIcon = paginationErrorIcon,
+        onRetry = onLoadMoreRetry,
     )
 }
