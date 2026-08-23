@@ -45,6 +45,20 @@ val HomeUiState.isSearchActive: Boolean
 val HomeUiState.hasFeedContent: Boolean
     get() = continueAnime != null || recentlyWatched.isNotEmpty() || recentlyAddedToLibrary.isNotEmpty()
 
+/** Mutually-exclusive top-level render states for the Home screen. */
+sealed interface HomeContentState {
+    data object Loading : HomeContentState
+    data class Error(val message: String) : HomeContentState
+    data class Content(val state: HomeUiState) : HomeContentState
+}
+
+fun resolveHomeContentState(state: HomeUiState): HomeContentState = when {
+    state.isLoading && !state.hasFeedContent && !state.isSearchActive -> HomeContentState.Loading
+    state.errorMessage != null && !state.hasFeedContent && !state.isSearchActive ->
+        HomeContentState.Error(state.errorMessage)
+    else -> HomeContentState.Content(state)
+}
+
 enum class HomeSearchBackAction {
     DismissIme,
     ClearSearch,

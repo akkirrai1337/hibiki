@@ -11,11 +11,11 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.design.component.state.AppCenteredLoading
+import org.akkirrai.hibiki.home.state.HomeContentState
 import org.akkirrai.hibiki.home.state.HomeErrorState
 import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
 import org.akkirrai.hibiki.home.state.HomeUiState
-import org.akkirrai.hibiki.home.state.hasFeedContent
-import org.akkirrai.hibiki.home.state.isSearchActive
+import org.akkirrai.hibiki.home.state.resolveHomeContentState
 import org.akkirrai.hibiki.home.state.resolveHomeUiState
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryEntry
@@ -38,45 +38,39 @@ internal fun ColumnScope.HomeRoute(
     bottomContentPadding: Dp,
 ) {
     val homeState = resolveHomeUiState(baseHomeState, libraryEntries, homeSearchState)
-    if (homeState.isLoading && !homeState.hasFeedContent && !homeState.isSearchActive) {
-        AppCenteredLoading(modifier = Modifier.fillMaxSize())
-        return
+    when (val contentState = resolveHomeContentState(homeState)) {
+        is HomeContentState.Loading -> AppCenteredLoading(modifier = Modifier.fillMaxSize())
+        is HomeContentState.Error -> HomeErrorState(
+            title = appText(AppTextKey.HomeErrorTitle),
+            message = contentState.message,
+            retryLabel = appText(AppTextKey.SearchRetry),
+            onRetry = onHomeRefresh,
+            modifier = Modifier.fillMaxSize(),
+        )
+        is HomeContentState.Content -> HomeScreen(
+            state = contentState.state,
+            actions = actions,
+            listState = listState,
+            bottomContentPadding = bottomContentPadding,
+            currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
+            sourceBadgeContent = { anime ->
+                AnimeKey.parse(anime.id)?.sourceId?.value
+                    ?.let(sourcesById::get)
+                    ?.let { source ->
+                        AppSourceBadge(
+                            title = source.name,
+                            iconContent = { iconModifier ->
+                                AppSourceIconImage(
+                                    url = source.iconUrl,
+                                    modifier = iconModifier,
+                                    debugTag = "home-badge",
+                                )
+                            },
+                        )
+                    }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
     }
-    homeState.errorMessage?.let { errorMessage ->
-        if (!homeState.hasFeedContent && !homeState.isSearchActive) {
-            HomeErrorState(
-                title = appText(AppTextKey.HomeErrorTitle),
-                message = errorMessage,
-                retryLabel = appText(AppTextKey.SearchRetry),
-                onRetry = onHomeRefresh,
-                modifier = Modifier.fillMaxSize(),
-            )
-            return
-        }
-    }
-    HomeScreen(
-        state = homeState,
-        actions = actions,
-        listState = listState,
-        bottomContentPadding = bottomContentPadding,
-        currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
-        libraryStatusByAnimeId = libraryStatusByAnimeId,
-        sourceBadgeContent = { anime ->
-            AnimeKey.parse(anime.id)?.sourceId?.value
-                ?.let(sourcesById::get)
-                ?.let { source ->
-                    AppSourceBadge(
-                        title = source.name,
-                        iconContent = { iconModifier ->
-                            AppSourceIconImage(
-                                url = source.iconUrl,
-                                modifier = iconModifier,
-                                debugTag = "home-badge",
-                            )
-                        },
-                    )
-                }
-        },
-        modifier = Modifier.fillMaxSize(),
-    )
 }
