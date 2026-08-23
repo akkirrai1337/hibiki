@@ -1,8 +1,13 @@
 package org.akkirrai.hibiki.details.screen
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.akkirrai.hibiki.details.state.resolveDetailsPlaybackAvailability
+import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.TitleWatchState
@@ -35,6 +40,9 @@ internal fun DetailsRoute(
         status = anime.status,
         episodesLabel = anime.episodesLabel,
     )
+    var libraryCategory: LibraryCategory? by remember(anime.id) {
+        mutableStateOf(libraryRepository.getLibraryCategory(anime.id))
+    }
     DetailsScreen(
         anime = anime,
         actions = DetailsActions(
@@ -43,7 +51,15 @@ internal fun DetailsRoute(
             onWatchClick = onWatchClick,
             onTrailerClick = anime.trailer?.playbackUrl?.let { url -> { onOpenUrl(url) } },
             onResumeClick = onResumePlayback,
-            onLibraryCategoryChange = { onLibraryChanged() },
+            onLibraryCategorySelected = { category ->
+                if (category != null) {
+                    libraryRepository.saveToLibrary(anime, category)
+                } else {
+                    libraryRepository.removeFromLibrary(anime.id)
+                }
+                libraryCategory = category
+                onLibraryChanged()
+            },
         ),
         backHandler = { onBack ->
             AppSystemBackHandler(enabled = true, onBack = onBack) {}
@@ -53,7 +69,7 @@ internal fun DetailsRoute(
         resumeFrameContent = detailsResumeState?.let { state ->
             resumeFrameContent?.let { content -> { frameModifier -> content(state.titleId, frameModifier) } }
         },
-        libraryRepository = libraryRepository,
+        libraryCategory = libraryCategory,
         modifier = modifier,
         detailsError = detailsError,
         overlayState = overlayState,

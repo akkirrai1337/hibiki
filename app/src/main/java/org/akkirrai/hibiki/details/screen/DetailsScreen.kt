@@ -62,7 +62,6 @@ import org.akkirrai.hibiki.design.component.poster.AppPosterImage
 import org.akkirrai.hibiki.design.component.modal.AppModalBottomSheet
 import org.akkirrai.hibiki.library.screen.*
 import org.akkirrai.hibiki.library.LibraryCategory
-import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.catalog.model.RelatedAnime
 import org.akkirrai.hibiki.player.model.TitleWatchState
@@ -96,7 +95,7 @@ data class DetailsActions(
     val onTrailerClick: (() -> Unit)? = null,
     val onWatchClick: () -> Unit = {},
     val onTitleSeedColorChange: (Long) -> Unit = {},
-    val onLibraryCategoryChange: (LibraryCategory?) -> Unit = {},
+    val onLibraryCategorySelected: (LibraryCategory?) -> Unit = {},
 )
 
 /**
@@ -110,7 +109,7 @@ fun DetailsScreen(
     anime: Anime,
     actions: DetailsActions,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
-    libraryRepository: LibraryRepository? = null,
+    libraryCategory: LibraryCategory? = null,
     resumeState: TitleWatchState? = null,
     resumeFrameContent: (@Composable (Modifier) -> Unit)? = null,
     canWatch: Boolean = false,
@@ -119,7 +118,6 @@ fun DetailsScreen(
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
-    initialLibraryCategory: LibraryCategory? = null,
     detailsError: String? = null,
     overlayState: DetailsOverlayState = DetailsOverlayState(),
 ) {
@@ -212,9 +210,6 @@ fun DetailsScreen(
         },
     )
     var localOverlay by remember(anime.id) { mutableStateOf<DetailsOverlay?>(null) }
-    var libraryCategory by remember(anime.id, initialLibraryCategory) {
-        mutableStateOf(libraryRepository?.getLibraryCategory(anime.id) ?: initialLibraryCategory)
-    }
     var titleSeedColor by remember(anime.id, initialTitleSeedColor) {
         mutableStateOf(initialTitleSeedColor ?: detailsTitleSeedColorCache[anime.id])
     }
@@ -478,15 +473,11 @@ fun DetailsScreen(
                 removeAction = appText(AppTextKey.LibraryRemoveAction),
                 categoryLabels = categoryLabels,
                 onCategoryClick = { category ->
-                    libraryRepository?.saveToLibrary(uiModel.anime, category)
-                    libraryCategory = category
-                    actions.onLibraryCategoryChange(category)
+                    actions.onLibraryCategorySelected(category)
                     setOverlay(null)
                 },
                 onRemoveClick = {
-                    libraryRepository?.removeFromLibrary(uiModel.anime.id)
-                    libraryCategory = null
-                    actions.onLibraryCategoryChange(null)
+                    actions.onLibraryCategorySelected(null)
                     setOverlay(null)
                 },
                 onDismiss = { setOverlay(null) },
