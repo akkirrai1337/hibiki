@@ -1,19 +1,22 @@
 package org.akkirrai.hibiki.player
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -109,18 +112,30 @@ internal fun HibikiWatchFlowContent(
         // The outer root transition now treats sources -> episodes as one continuous slot (so
         // picking a voiceover doesn't cross-fade the *whole* screen, header and all -- see
         // HibikiAppShell's contentRoute/contentTransitionKey for the watch flow). This inner
-        // AnimatedContent gives that step its own fade instead, matching every other screen
-        // transition's style/duration, just scoped to the content area under the toggle/back bar.
-        AnimatedContent(
-            targetState = selectedWatchSource,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) togetherWith
-                    fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis))
-            },
-            label = "watch_flow_step_transition",
+        // NavHost gives that step its own fade instead, matching every other screen transition's
+        // style/duration, just scoped to the content area under the toggle/back bar. It mirrors
+        // selectedWatchSource one-way (same pattern as AppProductionRoot's tab NavHost) and its
+        // own backstack is pinned to one entry at all times (inclusive = true) so it never
+        // registers system-back interception -- WatchScreenScaffold's onBackClick above (wired to
+        // the real navigation actions) stays the only way back, same as before this change.
+        val watchStepDestination = if (selectedWatchSource == null) "sources" else "episodes"
+        val navController = rememberNavController()
+        LaunchedEffect(watchStepDestination) {
+            navController.navigate(watchStepDestination) {
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+        NavHost(
+            navController = navController,
+            startDestination = watchStepDestination,
             modifier = Modifier.fillMaxSize(),
-        ) { targetWatchSource ->
-            if (targetWatchSource == null) {
+            enterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+            exitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+            popExitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+        ) {
+            composable("sources") {
                 WatchSourcesDestinationContent(
                     state = watchState,
                     navigationLocked = navigationLocked,
@@ -133,41 +148,45 @@ internal fun HibikiWatchFlowContent(
                     listContentPadding = listContentPadding,
                     modifier = Modifier.fillMaxSize(),
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    HibikiEpisodesContent(
-                        state = episodesState,
-                        source = targetWatchSource,
-                        anime = anime,
-                        profileData = profileData,
-                        playbackLoading = playbackLoading,
-                        navigationLocked = navigationLocked,
-                        // Download actions are always visible per-row now -- see EpisodeRow --
-                        // instead of toggled by a top-bar button that used to live here.
-                        downloadControlsVisible = true,
-                        episodeDownloadRepository = episodeDownloadRepository,
-                        episodeDownloadStates = episodeDownloadStates,
-                        onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
-                        libraryRepository = libraryRepository,
-                        onEpisodeClick = { episode ->
-                            if (!navigationLocked) {
-                                navigationLocked = true
-                                onWatchEpisodeClick(episode)
+            }
+            composable("episodes") {
+                val targetWatchSource = selectedWatchSource
+                if (targetWatchSource != null) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        HibikiEpisodesContent(
+                            state = episodesState,
+                            source = targetWatchSource,
+                            anime = anime,
+                            profileData = profileData,
+                            playbackLoading = playbackLoading,
+                            navigationLocked = navigationLocked,
+                            // Download actions are always visible per-row now -- see EpisodeRow --
+                            // instead of toggled by a top-bar button that used to live here.
+                            downloadControlsVisible = true,
+                            episodeDownloadRepository = episodeDownloadRepository,
+                            episodeDownloadStates = episodeDownloadStates,
+                            onEpisodeDownloadStatesChange = { episodeDownloadStates = it },
+                            libraryRepository = libraryRepository,
+                            onEpisodeClick = { episode ->
+                                if (!navigationLocked) {
+                                    navigationLocked = true
+                                    onWatchEpisodeClick(episode)
+                                }
+                            },
+                            onLibraryChanged = onLibraryChanged,
+                            onRetry = onWatchRetry,
+                            listContentPadding = listContentPadding,
+                        )
+                        if (!playbackHostAvailable) {
+                            AppPlayerLoadingOverlay(visible = playbackLoading)
+                            playbackError?.let { message ->
+                                AppPlayerErrorOverlay(
+                                    message = message,
+                                    title = appText(AppTextKey.PlayerErrorTitle),
+                                    retryLabel = appText(AppTextKey.PlayerRetry),
+                                    onRetry = onWatchRetry,
+                                )
                             }
-                        },
-                        onLibraryChanged = onLibraryChanged,
-                        onRetry = onWatchRetry,
-                        listContentPadding = listContentPadding,
-                    )
-                    if (!playbackHostAvailable) {
-                        AppPlayerLoadingOverlay(visible = playbackLoading)
-                        playbackError?.let { message ->
-                            AppPlayerErrorOverlay(
-                                message = message,
-                                title = appText(AppTextKey.PlayerErrorTitle),
-                                retryLabel = appText(AppTextKey.PlayerRetry),
-                                onRetry = onWatchRetry,
-                            )
                         }
                     }
                 }
