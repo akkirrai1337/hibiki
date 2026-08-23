@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppRoute
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.LocalAppSourceConfigContent
+import org.akkirrai.hibiki.library.LibraryCategory
 @Composable
 internal fun AppDestinationContent(
     input: AppDestinationContentInput,
@@ -41,6 +42,13 @@ internal fun AppDestinationContent(
     var editingSourceConfig by remember { mutableStateOf<AppSourceDescriptor?>(null) }
     val sourceConfigContent = LocalAppSourceConfigContent.current
     val homeSourcesById = remember(sourceState.sources) { sourceState.sources.associateBy(AppSourceDescriptor::id) }
+    // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
+    // shadow a title's actual library status badge on a card.
+    val libraryStatusByAnimeId = remember(effectiveInput.library.state.entries) {
+        effectiveInput.library.state.entries
+            .filter { it.category != LibraryCategory.Recent }
+            .associate { it.anime.id to it.category }
+    }
     val bottomSystemInset = appBottomSystemInsetValue(hostContext.includeNavigationBarPadding)
     if (contentState.isWatchRouteDriven() && contentState.watchAnime != null) {
         AppDestinationWatchRoute(effectiveInput)
@@ -69,6 +77,7 @@ internal fun AppDestinationContent(
                 bottomSystemInset
             },
             homeSourcesById = homeSourcesById,
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
             editingSourceConfig = editingSourceConfig,
             sourceConfigContent = sourceConfigContent,
             onEditSourceConfig = { editingSourceConfig = it },
@@ -97,6 +106,7 @@ internal fun AppDestinationContent(
                     selectedTab = AppDestination.SETTINGS,
                     topLevelBottomContentPadding = bottomSystemInset,
                     homeSourcesById = homeSourcesById,
+            libraryStatusByAnimeId = libraryStatusByAnimeId,
                     editingSourceConfig = editingSourceConfig,
                     sourceConfigContent = sourceConfigContent,
                     onEditSourceConfig = { editingSourceConfig = it },

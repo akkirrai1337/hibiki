@@ -29,6 +29,7 @@ internal fun AppDestinationTopLevelRoutes(
     selectedTab: AppDestination,
     topLevelBottomContentPadding: Dp,
     homeSourcesById: Map<String, AppSourceDescriptor>,
+    libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.library.LibraryCategory>,
     editingSourceConfig: AppSourceDescriptor?,
     sourceConfigContent: AppSourceConfigContent?,
     onEditSourceConfig: (AppSourceDescriptor?) -> Unit,
@@ -43,11 +44,6 @@ internal fun AppDestinationTopLevelRoutes(
     val navigation = input.navigation
     val content = input.watch.state
     val topInsetModifier = Modifier.appTopSystemInsetPadding()
-    // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
-    // shadow a title's actual library status badge on a card.
-    val libraryStatusByAnimeId = library.state.entries
-        .filter { it.category != org.akkirrai.hibiki.library.LibraryCategory.Recent }
-        .associate { it.anime.id to it.category }
 
     Column(
         modifier = platform.hostContext.modifier
