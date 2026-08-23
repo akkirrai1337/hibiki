@@ -10,6 +10,8 @@ import org.akkirrai.hibiki.details.screen.DetailsRouteActions
 import org.akkirrai.hibiki.details.screen.DetailsRouteState
 import org.akkirrai.hibiki.details.screen.DetailsOverlayState
 import org.akkirrai.hibiki.player.HibikiWatchFlowContent
+import org.akkirrai.hibiki.player.WatchRouteActions
+import org.akkirrai.hibiki.player.WatchRouteState
 
 @Composable
 internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
@@ -19,24 +21,28 @@ internal fun AppDestinationWatchRoute(input: AppDestinationContentInput) {
     val content = watch.state
 
     HibikiWatchFlowContent(
-        anime = requireNotNull(content.watchAnime),
-        watchState = content.watchState,
-        episodesState = content.episodesState,
-        selectedWatchSource = content.selectedWatchSource,
-        profileData = input.profile.state.data,
-        playbackError = content.playbackError,
-        playbackLoading = content.playbackLoading,
-        playbackHostAvailable = content.playbackHostAvailable,
-        downloadMode = playback.downloadMode,
-        isPlayerRoute = content.isPlayerRoute,
+        state = WatchRouteState(
+            anime = requireNotNull(content.watchAnime),
+            watchState = content.watchState,
+            episodesState = content.episodesState,
+            selectedWatchSource = content.selectedWatchSource,
+            profileData = input.profile.state.data,
+            playbackError = content.playbackError,
+            playbackLoading = content.playbackLoading,
+            playbackHostAvailable = content.playbackHostAvailable,
+            downloadMode = playback.downloadMode,
+            isPlayerRoute = content.isPlayerRoute,
+        ),
+        actions = WatchRouteActions(
+            onBack = input.navigation.actions.onBackFromWatch,
+            onWatchRetry = watch.actions.onRetry,
+            onWatchLoadMore = watch.actions.onLoadMore,
+            onWatchSourceClick = watch.actions.onSourceClick,
+            onWatchEpisodeClick = watch.actions.onEpisodeClick,
+            onLibraryChanged = platform.hostContext.onLibraryChanged,
+        ),
         episodeDownloadRepository = playback.episodeDownloadRepository,
         libraryRepository = platform.dataContext.libraryRepository,
-        onBack = input.navigation.actions.onBackFromWatch,
-        onWatchRetry = watch.actions.onRetry,
-        onWatchLoadMore = watch.actions.onLoadMore,
-        onWatchSourceClick = watch.actions.onSourceClick,
-        onWatchEpisodeClick = watch.actions.onEpisodeClick,
-        onLibraryChanged = platform.hostContext.onLibraryChanged,
         modifier = platform.hostContext.modifier,
     )
 }

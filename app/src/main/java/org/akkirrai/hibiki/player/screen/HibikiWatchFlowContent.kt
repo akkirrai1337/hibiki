@@ -29,31 +29,54 @@ import org.akkirrai.hibiki.player.watchNavigationLockKey
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
 
-@Composable
-internal fun HibikiWatchFlowContent(
-    anime: Anime,
-    watchState: WatchSourcesScreenState,
-    episodesState: EpisodesScreenState,
-    selectedWatchSource: WatchSource?,
-    profileData: org.akkirrai.hibiki.profile.LocalProfileData,
-    playbackError: String?,
-    playbackLoading: Boolean,
-    playbackHostAvailable: Boolean,
+internal data class WatchRouteState(
+    val anime: Anime,
+    val watchState: WatchSourcesScreenState,
+    val episodesState: EpisodesScreenState,
+    val selectedWatchSource: WatchSource?,
+    val profileData: org.akkirrai.hibiki.profile.LocalProfileData,
+    val playbackError: String?,
+    val playbackLoading: Boolean,
+    val playbackHostAvailable: Boolean,
     // No longer drives anything here -- download actions are always visible per-row now, not
     // toggled -- but the deep-link route that sets it still passes it through, see
     // AppDestinationSpecialRoutes.
-    @Suppress("UNUSED_PARAMETER") downloadMode: Boolean,
-    isPlayerRoute: Boolean,
+    @Suppress("UNUSED") val downloadMode: Boolean,
+    val isPlayerRoute: Boolean,
+)
+
+internal data class WatchRouteActions(
+    val onBack: () -> Unit,
+    val onWatchRetry: () -> Unit,
+    val onWatchLoadMore: () -> Unit,
+    val onWatchSourceClick: (WatchSource) -> Unit,
+    val onWatchEpisodeClick: (org.akkirrai.hibiki.player.model.WatchEpisode) -> Unit,
+    val onLibraryChanged: () -> Unit,
+)
+
+@Composable
+internal fun HibikiWatchFlowContent(
+    state: WatchRouteState,
+    actions: WatchRouteActions,
     episodeDownloadRepository: EpisodeDownloadRepository?,
     libraryRepository: LibraryRepository,
-    onBack: () -> Unit,
-    onWatchRetry: () -> Unit,
-    onWatchLoadMore: () -> Unit,
-    onWatchSourceClick: (WatchSource) -> Unit,
-    onWatchEpisodeClick: (org.akkirrai.hibiki.player.model.WatchEpisode) -> Unit,
-    onLibraryChanged: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val anime = state.anime
+    val watchState = state.watchState
+    val episodesState = state.episodesState
+    val selectedWatchSource = state.selectedWatchSource
+    val profileData = state.profileData
+    val playbackError = state.playbackError
+    val playbackLoading = state.playbackLoading
+    val playbackHostAvailable = state.playbackHostAvailable
+    val isPlayerRoute = state.isPlayerRoute
+    val onBack = actions.onBack
+    val onWatchRetry = actions.onWatchRetry
+    val onWatchLoadMore = actions.onWatchLoadMore
+    val onWatchSourceClick = actions.onWatchSourceClick
+    val onWatchEpisodeClick = actions.onWatchEpisodeClick
+    val onLibraryChanged = actions.onLibraryChanged
     val navigationLockKey = watchNavigationLockKey(
         animeId = anime.id,
         sourceId = selectedWatchSource?.sourceId,
