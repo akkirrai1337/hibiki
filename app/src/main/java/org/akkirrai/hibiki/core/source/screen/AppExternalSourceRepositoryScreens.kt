@@ -155,10 +155,8 @@ fun AppSourceRepositoriesScreen(
 @Composable
 fun AppSourcesTabsScreen(
     selectedTab: Int,
-    packages: List<ExternalSourcePackageStatus>,
     selectedSourceId: String?,
     state: ExternalSourceRepositoryUiState,
-    isBusy: Boolean,
     bottomContentPadding: Dp,
     onSelectedTabChange: (Int) -> Unit,
     onRepositoryClick: (String) -> Unit,
@@ -173,6 +171,8 @@ fun AppSourcesTabsScreen(
     customRepositoriesSupported: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val packages = state.packages
+    val isBusy = state.isBusy
     var extensionsQuery by remember { mutableStateOf("") }
     var extensionsSearchOpen by remember { mutableStateOf(false) }
     var sourcesQuery by remember { mutableStateOf("") }

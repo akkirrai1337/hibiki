@@ -12,8 +12,6 @@ import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
-import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
-import org.akkirrai.hibiki.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.design.component.state.AppCenteredLoading
 import org.akkirrai.hibiki.home.state.HomeErrorState
 import org.akkirrai.hibiki.home.presentation.HomeSearchUiState
@@ -32,7 +30,6 @@ import org.akkirrai.hibiki.text.appText
 
 @Composable
 internal fun ColumnScope.HomeScreen(
-    state: AnimeCatalogUiState,
     baseHomeState: HomeUiState,
     listState: LazyListState,
     sourcesById: Map<String, AppSourceDescriptor>,
@@ -45,9 +42,6 @@ internal fun ColumnScope.HomeScreen(
     onSearchLoadMore: () -> Unit,
     onSearchRetry: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
-    onRetry: () -> Unit,
-    onLoadMoreRetry: () -> Unit,
-    onSortSelected: (CatalogSort) -> Unit,
     onBrowseCatalog: () -> Unit,
     onOpenLibrary: () -> Unit,
     onItemVisible: (Anime) -> Unit = {},

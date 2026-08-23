@@ -15,7 +15,6 @@ import org.akkirrai.hibiki.catalog.screen.AppCatalogScreen
 import org.akkirrai.hibiki.catalog.sort.CatalogSort
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.catalog.model.Anime
-import org.akkirrai.hibiki.catalog.model.AnimeCatalogFilterCatalog
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 
@@ -24,11 +23,7 @@ internal fun ColumnScope.SearchScreen(
     state: AnimeCatalogUiState,
     listState: LazyListState,
     libraryStatusByAnimeId: Map<String, LibraryCategory>,
-    query: String,
     onQueryChange: (String) -> Unit,
-    items: List<Anime>,
-    filters: AnimeSearchFilters,
-    filterCatalog: AnimeCatalogFilterCatalog?,
     onFiltersChange: (AnimeSearchFilters) -> Unit,
     onAnimeClick: (Anime) -> Unit,
     onRetry: () -> Unit,

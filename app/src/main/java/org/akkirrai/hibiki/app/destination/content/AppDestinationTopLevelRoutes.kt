@@ -57,7 +57,6 @@ internal fun AppDestinationTopLevelRoutes(
     ) {
         when (selectedTab) {
             AppDestination.HOME -> HomeScreen(
-                state = catalog.state.ui,
                 listState = home.state.listState,
                 sourcesById = homeSourcesById,
                 libraryEntries = library.state.entries,
@@ -69,9 +68,6 @@ internal fun AppDestinationTopLevelRoutes(
                 onSearchLoadMore = home.actions.onSearchLoadMore,
                 onSearchRetry = home.actions.onSearchRetry,
                 onAnimeClick = navigation.actions.onAnimeClick,
-                onRetry = catalog.actions.onRetry,
-                onLoadMoreRetry = catalog.actions.onLoadMoreRetry,
-                onSortSelected = catalog.actions.onSortSelected,
                 onBrowseCatalog = navigation.actions.onBrowseCatalog,
                 onOpenLibrary = navigation.actions.onOpenLibrary,
                 baseHomeState = home.state.ui,
@@ -83,11 +79,7 @@ internal fun AppDestinationTopLevelRoutes(
                 state = catalog.state.ui,
                 listState = catalog.state.listState,
                 libraryStatusByAnimeId = libraryStatusByAnimeId,
-                query = catalog.state.query,
                 onQueryChange = catalog.actions.onQueryChange,
-                items = catalog.state.items,
-                filters = catalog.state.filters,
-                filterCatalog = catalog.state.filterCatalog,
                 onFiltersChange = catalog.actions.onFiltersChange,
                 onAnimeClick = navigation.actions.onAnimeClick,
                 onRetry = catalog.actions.onRetry,
@@ -97,7 +89,6 @@ internal fun AppDestinationTopLevelRoutes(
                 bottomContentPadding = topLevelBottomContentPadding,
             )
             AppDestination.LIBRARY -> LibraryScreen(
-                entries = library.state.entries,
                 sources = sources.state.sources,
                 state = library.state.ui,
                 onAnimeClick = navigation.actions.onAnimeClick,
@@ -161,7 +152,6 @@ internal fun AppDestinationTopLevelRoutes(
                 copyText = sources.externalSourcesState.copyText,
             )
             AppDestination.SETTINGS -> SettingsScreen(
-                profileData = profile.state.data,
                 languageMode = platform.dataContext.languageMode,
                 onLanguageModeChange = settings.actions.onLanguageModeChange,
                 darkTheme = settings.state.darkTheme,

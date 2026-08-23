@@ -117,10 +117,8 @@ internal fun SourcesDestinationRoute(
         }
         else -> AppSourcesTabsScreen(
             selectedTab = selectedSourcesTab,
-            packages = externalSourcesState?.packages.orEmpty(),
             selectedSourceId = selectedSourceId,
             state = externalSourcesState ?: ExternalSourceRepositoryUiState(),
-            isBusy = externalSourcesState?.isBusy == true,
             bottomContentPadding = bottomContentPadding,
             onSelectedTabChange = onSelectedSourcesTabChange,
             onRepositoryClick = {},

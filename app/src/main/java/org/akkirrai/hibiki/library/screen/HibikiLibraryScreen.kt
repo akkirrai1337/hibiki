@@ -45,7 +45,6 @@ import org.akkirrai.hibiki.text.appText
 
 @Composable
 internal fun ColumnScope.LibraryScreen(
-    entries: List<LibraryEntry>,
     sources: List<AppSourceDescriptor>,
     state: LibraryUiState,
     onAnimeClick: (Anime) -> Unit,

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import org.akkirrai.hibiki.profile.LocalProfileData
 import org.akkirrai.hibiki.app.settings.AppSettingsScreen
 import org.akkirrai.hibiki.app.settings.AppSettingsScreenLabels
 import org.akkirrai.hibiki.app.settings.LanguageMode
@@ -19,7 +18,6 @@ import org.akkirrai.hibiki.text.appText
 
 @Composable
 internal fun SettingsScreen(
-    profileData: LocalProfileData,
     languageMode: LanguageMode,
     onLanguageModeChange: (LanguageMode) -> Unit,
     darkTheme: Boolean,
