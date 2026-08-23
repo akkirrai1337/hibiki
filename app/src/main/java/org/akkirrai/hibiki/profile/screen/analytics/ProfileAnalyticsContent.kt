@@ -1,10 +1,13 @@
 package org.akkirrai.hibiki.profile
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -71,6 +74,58 @@ fun AppProfileAnalyticsContent(
             )
         },
     )
+}
+
+fun buildProfileAnalyticsPages(
+    snapshot: LocalProfileSnapshot,
+    watchTimeTitle: String,
+    totalLabel: String,
+    genresTitle: String,
+    genresLabel: String,
+): List<ProfileAnalyticsPage> = listOf(
+    ProfileAnalyticsPage(
+        title = watchTimeTitle,
+        centerPrimary = snapshot.libraryTotal.toString(),
+        centerSecondary = totalLabel,
+        segments = snapshot.libraryStatusSegments.map { segment ->
+            ProfileAnalyticsSegment(
+                label = segment.label,
+                valueLabel = segment.count.toString(),
+                weight = segment.count.toFloat(),
+                color = segment.color,
+            )
+        },
+        legendColumns = 2,
+    ),
+    ProfileAnalyticsPage(
+        title = genresTitle,
+        centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
+        centerSecondary = genresLabel,
+        segments = snapshot.genreSegments.map { segment ->
+            ProfileAnalyticsSegment(
+                label = segment.label,
+                valueLabel = segment.count.toString(),
+                weight = segment.count.toFloat(),
+                color = segment.color,
+            )
+        },
+        legendColumns = 3,
+    ),
+)
+
+@Composable
+fun AppProfileAnalyticsCard(
+    donutContent: @Composable () -> Unit,
+    activityContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
+    ) {
+        donutContent()
+        activityContent()
+    }
 }
 
 private const val PROFILE_ACTIVITY_MIN_SCALE_EPISODES = 8
