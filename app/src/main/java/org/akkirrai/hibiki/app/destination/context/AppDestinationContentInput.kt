@@ -63,7 +63,6 @@ internal data class SettingsContentInput(
 
 internal data class SourcesContentInput(
     val state: AppDestinationSourceState,
-    val searchActions: AppDestinationSourceSearchActions,
     val externalSourcesState: AppDestinationExternalSourcesState,
 )
 

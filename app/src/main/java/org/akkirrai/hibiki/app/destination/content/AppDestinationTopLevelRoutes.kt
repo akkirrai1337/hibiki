@@ -88,7 +88,6 @@ internal fun AppDestinationTopLevelRoutes(
                 state = SourcesRouteState(
                     sources = sources.state.sources,
                     selectedSourceId = sources.state.selectedSourceId,
-                    sourceSearchState = sources.state.search,
                     currentRoute = content.currentRoute
                         ?: AppRoute.TopLevel(org.akkirrai.hibiki.app.navigation.AppTopLevelDestination.SOURCES),
                     externalSourcesState = sources.externalSourcesState.repository,
@@ -96,10 +95,6 @@ internal fun AppDestinationTopLevelRoutes(
                 ),
                 actions = SourcesRouteActions(
                     onSourceSelected = navigation.actions.onSourceSelected,
-                    onSourceSearchQueryChange = sources.searchActions.onQueryChange,
-                    onSourceSearchClear = sources.searchActions.onClear,
-                    onSourceSearchRetry = sources.searchActions.onRetry,
-                    onSearchRetryForSource = sources.searchActions.onRetryForSource,
                     onSelectedSourcesTabChange = sources.externalSourcesState.onSelectedTabChange,
                     onOpenPackageInfo = navigation.actions.onSourcePackageInfoClick,
                     onBack = navigation.actions.onSettingsBack,

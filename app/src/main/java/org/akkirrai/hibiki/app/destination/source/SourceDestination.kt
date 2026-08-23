@@ -18,19 +18,10 @@ import org.akkirrai.hibiki.core.source.SourcesTabsScreen
 import org.akkirrai.hibiki.core.source.SourcesTabsActions
 import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryController
 import org.akkirrai.hibiki.core.source.ExternalSourceRepositoryUiState
-import org.akkirrai.hibiki.core.source.SourcesSearchUiState
-
-internal data class AppDestinationSourceSearchActions(
-    val onQueryChange: (String) -> Unit,
-    val onClear: () -> Unit,
-    val onRetry: () -> Unit,
-    val onRetryForSource: (String) -> Unit,
-)
 
 internal data class AppDestinationSourceState(
     val sources: List<AppSourceDescriptor>,
     val selectedSourceId: String?,
-    val search: SourcesSearchUiState,
 )
 
 internal data class AppDestinationExternalSourcesState(
@@ -45,10 +36,6 @@ internal data class AppDestinationExternalSourcesState(
 internal data class SourcesRouteState(
     val sources: List<AppSourceDescriptor>,
     val selectedSourceId: String?,
-    // Not read by this Route yet -- see the spawned investigation task on the presenter-backed
-    // search state vs. SourcesTabsScreen's own local search remember-state before wiring or
-    // removing this.
-    val sourceSearchState: SourcesSearchUiState,
     val currentRoute: AppRoute,
     val externalSourcesState: ExternalSourceRepositoryUiState?,
     val selectedSourcesTab: Int,
@@ -56,11 +43,6 @@ internal data class SourcesRouteState(
 
 internal data class SourcesRouteActions(
     val onSourceSelected: (String) -> Unit,
-    // Not called by this Route yet -- see the spawned investigation task.
-    val onSourceSearchQueryChange: (String) -> Unit,
-    val onSourceSearchClear: () -> Unit,
-    val onSourceSearchRetry: () -> Unit,
-    val onSearchRetryForSource: (String) -> Unit,
     val onSelectedSourcesTabChange: (Int) -> Unit,
     val onOpenPackageInfo: (String, String) -> Unit,
     val onBack: () -> Unit,

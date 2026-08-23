@@ -11,15 +11,6 @@ import org.akkirrai.hibiki.home.presentation.HomeSearchPresenter
 import org.akkirrai.hibiki.home.state.HomeUiState
 import org.akkirrai.hibiki.core.source.launchSourceSelection
 
-internal class HibikiSourceSearchActions(
-    presenter: SourcesSearchPresenter,
-) {
-    val onQueryChange: (String) -> Unit = presenter::onQueryChange
-    val onClear: () -> Unit = presenter::clear
-    val onRetry: () -> Unit = presenter::search
-    val onRetryForSource: (String) -> Unit = presenter::retry
-}
-
 internal class HibikiSourceSelectionCoordinator(
     private val repository: AnimeCatalogRepository,
     private val presenter: AnimeCatalogPresenter,

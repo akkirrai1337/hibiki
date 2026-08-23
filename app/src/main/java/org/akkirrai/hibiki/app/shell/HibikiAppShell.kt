@@ -194,8 +194,6 @@ internal fun HibikiAppShell(
     val settingsListState = resources.settingsListState
     val libraryListState = resources.libraryListState
     val sourceSearchPresenter = resources.sourceSearchPresenter
-    val sourceSearchActions = HibikiSourceSearchActions(sourceSearchPresenter)
-    val sourceSearchState by sourceSearchPresenter.state.collectAsState()
     val externalSourceRepositoryState = sourceCallbacks.externalSourceRepositoryController?.state?.collectAsState()?.value
     val watchPresenter = resources.watchPresenter
     val watchState by watchPresenter.state.collectAsState()
@@ -765,13 +763,6 @@ internal fun HibikiAppShell(
                                 state = AppDestinationSourceState(
                                     sources = sourceCallbacks.sources,
                                     selectedSourceId = appSettingsState.currentSelectedSourceId,
-                                    search = sourceSearchState,
-                                ),
-                                searchActions = AppDestinationSourceSearchActions(
-                                    onQueryChange = sourceSearchActions.onQueryChange,
-                                    onClear = sourceSearchActions.onClear,
-                                    onRetry = sourceSearchActions.onRetry,
-                                    onRetryForSource = sourceSearchActions.onRetryForSource,
                                 ),
                                 externalSourcesState = AppDestinationExternalSourcesState(
                                     repository = externalSourceRepositoryState,
