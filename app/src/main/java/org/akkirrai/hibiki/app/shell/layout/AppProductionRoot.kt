@@ -5,19 +5,15 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -65,24 +61,13 @@ fun AppProductionRoot(
     )
     // Details and the watch flow are full-screen destinations that replace the tab UI
     // entirely (see AppDestinationContent's own showBaseRoutes/early-return handling of the
-    // same two cases). The tab layer fades out for the duration of that transition instead of
-    // disappearing instantly, so it crossfades against the incoming Details/watch content the
-    // same way the old single-AnimatedContent implementation did.
-    //
-    // Driven by the *same* Transition<AppRootContentState> as the content crossfade below
-    // (updateTransition + transition.animateFloat/transition.AnimatedContent), not a second,
-    // independently-triggered AnimatedVisibility -- two separately-triggered animations with
-    // the same nominal duration are not guaranteed to start on the same frame, and any drift
-    // between them read as a stray extra transition, worse the faster you toggle in and out.
-    // Sharing one Transition makes that desync structurally impossible: both are just different
-    // properties of the same clock.
-    fun tabLayerAlphaFor(state: AppRootContentState): Float =
-        if (state.route !is AppRoute.Details && state.route?.isWatchFlowRoute() != true) 1f else 0f
-    val transition = updateTransition(targetState = targetRootState, label = "top_level_screen_transition")
-    val tabLayerAlpha by transition.animateFloat(
-        transitionSpec = { tween(AppMotion.ScreenTransitionDurationMillis) },
-        label = "tab_layer_alpha",
-    ) { state -> tabLayerAlphaFor(state) }
+    // same two cases). Every attempt to also animate the tab layer's own hide/reveal (a second
+    // AnimatedVisibility, then a second Transition property sharing one clock with the content
+    // crossfade) still left two things capable of moving at once -- simplest and most robust is
+    // one animation, full stop: the tab layer just cuts instantly, and the content crossfade
+    // below (which already fades its own incoming content in over whatever's behind it) is the
+    // only thing that ever animates here.
+    val tabLayerVisible = contentRoute !is AppRoute.Details && contentRoute?.isWatchFlowRoute() != true
     Box(modifier = modifier.fillMaxSize()) {
         val navController = rememberNavController()
         val startTabRoute = remember { currentDestination.toTabRoute() }
@@ -105,14 +90,7 @@ fun AppProductionRoot(
         // recomposition's presenters/state), so without rememberUpdatedState the tab NavHost
         // would keep calling the very first tabContent forever.
         val currentTabContent = rememberUpdatedState(tabContent)
-        // Always composed; visibility is purely tabLayerAlpha (see above), driven by the same
-        // Transition the content crossfade below uses. Kept mounted regardless of alpha so its
-        // NavController/backstack survive Details/watch-flow visits, same as before.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = tabLayerAlpha },
-        ) {
+        if (tabLayerVisible) {
             NavHost(
                 navController = navController,
                 startDestination = startTabRoute,
@@ -129,9 +107,11 @@ fun AppProductionRoot(
                 composable<AndroidNavigationRoute.Profile> { currentTabContent.value(AppTopLevelDestination.PROFILE) }
             }
         }
-        transition.AnimatedContent(
+        AnimatedContent(
             modifier = Modifier.fillMaxSize(),
+            targetState = targetRootState,
             transitionSpec = { appScreenTransition(transitionDirection) },
+            label = "top_level_screen_transition",
         ) { state ->
             Box(
                 modifier = Modifier
